@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { PageContainer } from "@/components/layouts/page-container"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
@@ -30,7 +31,7 @@ export function SiteHeader() {
   return (
     <>
       <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-        <div className="flex w-full items-center gap-1 px-4 py-3 lg:gap-2 lg:px-6">
+        <PageContainer className="flex items-center gap-1 py-3 lg:gap-2">
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -43,7 +44,7 @@ export function SiteHeader() {
             <Button variant="outline" size="icon" aria-label="Customize theme and layout" onClick={() => setCustomizerOpen(true)}><Palette /></Button>
             <ModeToggle />
           </div>
-        </div>
+        </PageContainer>
       </header>
       <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
       <React.Suspense fallback={null}><ThemeCustomizer open={customizerOpen} onOpenChange={setCustomizerOpen} /></React.Suspense>

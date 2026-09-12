@@ -21,7 +21,7 @@ export default function JournalPage() {
       title="Journal"
       description="What happened, who did it, and the evidence left behind."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <div className="flex items-center gap-3">
           <Label htmlFor="actor-filter">Actor</Label>
           <Select

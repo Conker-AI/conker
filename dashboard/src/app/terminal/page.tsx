@@ -16,7 +16,7 @@ export default function TerminalPage() {
       title="Terminal"
       description="Your server, when you need to work directly."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <Alert>
           <Shield />
           <AlertTitle>A separate owner-authenticated shell</AlertTitle>
@@ -25,7 +25,7 @@ export default function TerminalPage() {
             connection and accepts no commands.
           </AlertDescription>
         </Alert>
-        <Card className="gap-0 overflow-hidden py-0 shadow-none">
+        <Card className="terminal-surface gap-0 overflow-hidden bg-background text-foreground py-0 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Terminal className="size-4" />
@@ -43,12 +43,12 @@ export default function TerminalPage() {
               Waiting for a separate shell transport.
             </p>
             <p className="mt-5 text-muted-foreground" aria-hidden="true">
-              ${" "}
-              <span className="inline-block h-4 w-2 translate-y-0.5 bg-muted-foreground/40" />
+              alexey@conker:~${" "}
+              <span className="terminal-cursor inline-block h-4 w-2 translate-y-0.5 bg-foreground" />
             </p>
           </CardContent>
         </Card>
-        <Card className="max-w-3xl gap-4 py-4 shadow-none">
+        <Card className="gap-4 py-4 shadow-none">
           <CardHeader className="px-4">
             <CardTitle className="flex items-center gap-2 text-sm">
               <FolderGit2 className="size-4" />

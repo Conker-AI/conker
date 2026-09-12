@@ -10,7 +10,7 @@ export default function ChatDetailPage() {
   const session = sessions.find((item) => item.id === id)
   return (
     <BaseLayout title={session?.title || "Conversation not found"}>
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <Button variant="ghost" size="sm" asChild className="self-start">
           <Link to="/chat">
             <ArrowLeft />

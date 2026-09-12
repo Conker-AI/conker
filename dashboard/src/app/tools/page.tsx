@@ -9,7 +9,7 @@ export default function ToolsPage() {
       title="Tools"
       description="What each tool can do, and who is scoped to it. Availability is not permission."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <DataTable
           columns={columns}
           data={tools}

@@ -11,7 +11,7 @@ export default function JobsPage() {
       title="Jobs"
       description="What runs on its own, and when it should stop."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <DataTable
           columns={columns}
           data={jobs}

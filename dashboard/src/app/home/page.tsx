@@ -7,7 +7,7 @@ export default function HomePage() {
       title="Home"
       description="Your day, with a little room left in it."
     >
-      <div className="px-4 lg:px-6">
+      <div className="">
         <Conversation session={sessions[0]} />
       </div>
     </BaseLayout>

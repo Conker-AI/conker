@@ -10,7 +10,7 @@ export default function PlaceholderPage({
 }) {
   return (
     <BaseLayout title={title} description={description}>
-      <div className="px-4 lg:px-6">
+      <div className="">
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center text-sm">
             The {title} screen lives here. Layout and content land next.

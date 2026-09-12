@@ -9,7 +9,7 @@ export default function AgentsPage() {
       title="Agents"
       description="Persistent identities. Readable contracts. Temporary workers stay inside their runs."
     >
-      <div className="px-4 lg:px-6">
+      <div className="">
         <DataTable
           columns={columns}
           data={agents}

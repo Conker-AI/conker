@@ -69,7 +69,7 @@ export default function CharacterStudioPage() {
       title="Character Studio"
       description="A familiar face. A way of speaking. Still entirely your say."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <Button variant="ghost" size="sm" asChild className="self-start">
           <Link to="/">
             <ArrowLeft />

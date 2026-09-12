@@ -23,7 +23,7 @@ export default function SystemPage() {
       title="System"
       description="A clear picture of the machine. Configuration is not a health check."
     >
-      <div className="flex flex-col gap-6 px-4 lg:px-6">
+      <div className="flex flex-col gap-6 ">
         <Alert variant="warning">
           <TriangleAlert />
           <AlertTitle>Degraded · meaning search is paused</AlertTitle>

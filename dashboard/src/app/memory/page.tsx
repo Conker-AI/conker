@@ -11,7 +11,7 @@ export default function MemoryPage() {
       title="Memory"
       description="What Conker thinks it knows. Evidence first; confidence is not certainty."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <Alert variant="warning">
           <TriangleAlert />
           <AlertTitle>Degraded search</AlertTitle>

@@ -11,7 +11,7 @@ export default function ChatsPage() {
   const navigate = useNavigate()
   return (
     <BaseLayout title="Chats" description="Pick up where you left off.">
-      <Tabs defaultValue="sessions" className="gap-4 px-4 lg:px-6">
+      <Tabs defaultValue="sessions" className="gap-4 ">
         <TabsList className="border">
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>

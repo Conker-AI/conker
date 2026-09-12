@@ -54,7 +54,7 @@ export default function ApprovalDetailPage() {
       title={ticket?.effect === "Proposal" ? "Proposal" : "Approval detail"}
       description="Review the exact request before making a decision."
     >
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 ">
         <Button variant="ghost" size="sm" asChild className="self-start">
           <Link to="/inbox">
             <ArrowLeft />
@@ -71,7 +71,7 @@ export default function ApprovalDetailPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <Card className="max-w-4xl gap-5 py-5 shadow-none">
+          <Card className="gap-5 py-5 shadow-none">
             <CardHeader className="gap-3 px-5">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <Icon className="mr-1 size-5 text-muted-foreground" />

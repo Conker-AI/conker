@@ -14,7 +14,7 @@ export default function InboxPage() {
       title="Inbox"
       description="The intent, the effect, and your say. Fixture decisions reset on reload."
     >
-      <Tabs defaultValue="pending" className="gap-4 px-4 lg:px-6">
+      <Tabs defaultValue="pending" className="gap-4 ">
         <TabsList className="border">
           <TabsTrigger value="pending">
             Needs you{" "}
