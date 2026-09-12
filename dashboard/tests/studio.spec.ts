@@ -9,7 +9,7 @@ test("Character Studio saves the profile without implying a live renderer or new
   await page.getByRole("tab", { name: "Appearance" }).click();
   await page.getByLabel("Renderer", { exact: true }).selectOption("live-3d");
   await expect(
-    page.getByRole("img", { name: "Juniper neutral portrait" }),
+    page.locator("#main").getByRole("img", { name: "Juniper neutral portrait" }),
   ).toBeVisible();
   await expect(
     page.getByText("Live renderer is not installed.", { exact: false }),

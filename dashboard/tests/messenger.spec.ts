@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
 const workshop = (page: import("@playwright/test").Page) =>
-  page.locator(".contact-pane .contact").filter({ hasText: "Workshop" });
+  page.locator('.contact-pane .contact[href="/chat/build"]');
 const home = (page: import("@playwright/test").Page) =>
   page.getByRole("link", { name: "Open Companion home" });
 test("contact switching preserves each draft and scroll position", async ({
