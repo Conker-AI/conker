@@ -1,15 +1,17 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwind from "@tailwindcss/vite";
-import { fileURLToPath, URL } from "node:url";
+import path from "path"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
 
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwind()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    // The source package's internal alias belongs to the design system, not this app.
     alias: {
-      "@": fileURLToPath(new URL("../design-system/src", import.meta.url)),
+      "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "radix-ui"],
   },
-});
+  define: {
+    'import.meta.env.VITE_BASENAME': JSON.stringify(process.env.VITE_BASENAME || ''),
+  }
+})
