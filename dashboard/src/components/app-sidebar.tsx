@@ -14,7 +14,6 @@ import {
   Settings,
   Server,
   Terminal,
-  Sprout,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useConker } from "@/lib/api/store"
@@ -78,8 +77,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem className="flex items-center gap-1">
             <SidebarMenuButton size="lg" asChild>
               <Link to="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Sprout className="size-5" />
+                <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg border border-primary/30 bg-primary/10">
+                  <img src="/conker.png" alt="" className="size-full object-cover" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Conker</span>

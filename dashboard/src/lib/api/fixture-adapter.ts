@@ -17,8 +17,8 @@ export function createFixtureClient(): ConkerClient {
     profile: {
       name: "Conker", speakingPreset: "warm", speakingStyle: "Warm, direct, and concise. A little dry humour when it fits.",
       personality: "Curious and steady. Help me make room for school, judo, and building things. Ask before making assumptions. Be honest when you don’t know.",
-      renderer: "static", portrait: "", face: "sprout", tone: "green", mood: "Thoughtful · ready to listen",
-      emotions: { neutral: "default", happy: "round", thinking: "sprout", concerned: "default", celebrating: "cat" },
+      renderer: "static", portrait: "/conker.png", face: "sprout", tone: "green", mood: "Thoughtful · ready to listen",
+      emotions: { neutral: "default", happy: "portrait", thinking: "portrait", concerned: "default", celebrating: "portrait" },
     },
     threads, messages: {}, replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
     connections: connectionConfig.read(),
