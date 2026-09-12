@@ -4,7 +4,7 @@ import { Bot } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
-import type { Agent } from "./data"
+import type { Agent } from "@/lib/api/models"
 
 export const columns: ColumnDef<Agent>[] = [
   {

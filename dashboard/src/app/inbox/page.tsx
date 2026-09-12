@@ -3,11 +3,11 @@ import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { columns } from "./columns"
-import { useInbox } from "./store"
+import { useConker } from "@/lib/api/store"
 
 export default function InboxPage() {
   const navigate = useNavigate()
-  const tickets = useInbox((state) => state.tickets)
+  const tickets = useConker((state) => state.tickets)
   const pending = tickets.filter((ticket) => ticket.status === "Needs you")
   return (
     <BaseLayout

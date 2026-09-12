@@ -1,11 +1,12 @@
+import { useConker } from "@/lib/api/store"
 import { TriangleAlert } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { columns } from "./columns"
-import { memories } from "./data"
 
 export default function MemoryPage() {
+  const memories = useConker(data => data.memories)
   return (
     <BaseLayout
       title="Memory"

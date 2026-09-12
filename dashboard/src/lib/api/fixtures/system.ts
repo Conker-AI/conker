@@ -1,3 +1,4 @@
+import type { Service } from "../models"
 export const vitals = [
   {
     name: "Memory",
@@ -21,13 +22,6 @@ export const vitals = [
     detail: "172 GB free on the system drive",
   },
 ]
-export type Service = {
-  name: string
-  purpose: string
-  version: string
-  status: "Live" | "Degraded"
-  evidence: string
-}
 export const services: Service[] = [
   {
     name: "Pi",

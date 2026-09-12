@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import { JobActions } from "./row-actions"
-import type { Job } from "./data"
+import type { Job } from "@/lib/api/models"
 
 export const columns: ColumnDef<Job>[] = [
   {

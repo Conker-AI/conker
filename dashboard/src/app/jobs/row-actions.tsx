@@ -7,11 +7,11 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { useJobs } from "./store"
-import type { Job } from "./data"
+import { useConkerStore } from "@/lib/api/store"
+import type { Job } from "@/lib/api/models"
 
 export function JobActions({ job }: { job: Job }) {
-  const { toggle, run } = useJobs()
+  const { toggle, run } = useConkerStore()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

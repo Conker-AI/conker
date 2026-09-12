@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { StatusBadge } from "@/components/status-badge"
-import type { Service } from "./data"
+import type { Service } from "@/lib/api/models"
 export const columns: ColumnDef<Service>[] = [
   {
     accessorKey: "name",

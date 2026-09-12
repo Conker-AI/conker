@@ -1,9 +1,10 @@
+import { useConker } from "@/lib/api/store"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { tools } from "./data"
 
 export default function ToolsPage() {
+  const tools = useConker(data => data.tools)
   return (
     <BaseLayout
       title="Tools"

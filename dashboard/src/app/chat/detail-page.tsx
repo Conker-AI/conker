@@ -1,11 +1,12 @@
+import { useConker } from "@/lib/api/store"
 import { Link, useParams } from "react-router-dom"
 import { ArrowLeft, MessageCircle } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Conversation } from "./conversation"
-import { sessions } from "./data"
 export default function ChatDetailPage() {
+  const sessions = useConker(data => data.sessions)
   const { id } = useParams()
   const session = sessions.find((item) => item.id === id)
   return (

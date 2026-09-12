@@ -1,11 +1,4 @@
-export type JournalEntry = {
-  id: string
-  time: string
-  actor: string
-  event: string
-  detail: string
-  source: string
-}
+import type { JournalEntry } from "../models"
 export const entries: JournalEntry[] = [
   {
     id: "j1",

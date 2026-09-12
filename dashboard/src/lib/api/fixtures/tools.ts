@@ -1,11 +1,4 @@
-export type Tool = {
-  id: string
-  name: string
-  purpose: string
-  sensitivity: "Observe" | "Prepare" | "Act locally" | "Act outward"
-  scope: string
-  recentUse: string
-}
+import type { Tool } from "../models"
 export const tools: Tool[] = [
   {
     id: "calendar",

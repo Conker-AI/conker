@@ -20,7 +20,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { useInbox } from "./store"
+import { useConker, useConkerStore } from "@/lib/api/store"
 
 const outcomes: Record<string, string> = {
   "Approved once":
@@ -39,10 +39,10 @@ const outcomes: Record<string, string> = {
 
 export default function ApprovalDetailPage() {
   const { id } = useParams()
-  const ticket = useInbox((state) =>
+  const ticket = useConker((state) =>
     state.tickets.find((item) => item.id === id)
   )
-  const decide = useInbox((state) => state.decide)
+  const decide = useConkerStore((state) => state.decide)
   const Icon =
     ticket?.effect === "Deletion"
       ? Files

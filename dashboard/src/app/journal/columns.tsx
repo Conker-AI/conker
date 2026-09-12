@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
-import type { JournalEntry } from "./data"
+import type { JournalEntry } from "@/lib/api/models"
 
 export const columns: ColumnDef<JournalEntry>[] = [
   {

@@ -1,9 +1,10 @@
+import { useConker } from "@/lib/api/store"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { agents } from "./data"
 
 export default function AgentsPage() {
+  const agents = useConker(data => data.agents)
   return (
     <BaseLayout
       title="Agents"

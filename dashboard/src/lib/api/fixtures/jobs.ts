@@ -1,13 +1,4 @@
-export type Job = {
-  id: string
-  name: string
-  purpose: string
-  schedule: string
-  lastRun: string
-  nextRun: string
-  status: "Scheduled" | "Paused"
-  runs: number
-}
+import type { Job } from "../models"
 export const jobs: Job[] = [
   {
     id: "backup",

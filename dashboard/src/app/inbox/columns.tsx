@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
-import type { Ticket } from "./data"
+import type { Ticket } from "@/lib/api/models"
 
 export const columns: ColumnDef<Ticket>[] = [
   {

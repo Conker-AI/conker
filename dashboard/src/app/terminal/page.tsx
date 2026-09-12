@@ -1,3 +1,4 @@
+import { useConker } from "@/lib/api/store"
 import { Terminal, Shield, FolderGit2 } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { StatusBadge } from "@/components/status-badge"
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/card"
 
 export default function TerminalPage() {
+  const terminal = useConker(data => data.terminal)
   return (
     <BaseLayout
       title="Terminal"
@@ -29,7 +31,7 @@ export default function TerminalPage() {
           <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Terminal className="size-4" />
-              alexey@conker
+              {terminal.prompt}
             </CardTitle>
             <StatusBadge>Offline</StatusBadge>
           </CardHeader>
@@ -43,7 +45,7 @@ export default function TerminalPage() {
               Waiting for a separate shell transport.
             </p>
             <p className="mt-5 text-muted-foreground" aria-hidden="true">
-              alexey@conker:~${" "}
+              {terminal.prompt}:~${" "}
               <span className="terminal-cursor inline-block h-4 w-2 translate-y-0.5 bg-foreground" />
             </p>
           </CardContent>
@@ -60,12 +62,7 @@ export default function TerminalPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4 px-4">
             <dl className="grid gap-4 sm:grid-cols-2">
-              {[
-                ["Repository", "companion"],
-                ["Branch", "feat/dashboard"],
-                ["Working tree", "Unknown · no filesystem probe"],
-                ["Last commit", "Dashboard shell scaffold · fixture"],
-              ].map(([label, value]) => (
+              {terminal.context.map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-xs text-muted-foreground">{label}</dt>
                   <dd className="mt-1 font-mono text-sm">{value}</dd>

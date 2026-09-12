@@ -1,31 +1,4 @@
-export type TicketStatus =
-  | "Needs you"
-  | "Approved once"
-  | "Denied"
-  | "Consumed"
-  | "Expired"
-  | "Accepted"
-  | "Dismissed"
-export type Ticket = {
-  id: string
-  effect: "External" | "Deletion" | "Proposal"
-  request: string
-  agent: string
-  service: string
-  tool: string
-  version: string
-  decideBy: string
-  spendWindow: string
-  status: TicketStatus
-  asked: string
-  wants: string
-  source: string
-  args: { label: string; value: string }[]
-  delta: string
-  grant: string
-  record: string
-}
-
+import type { Ticket } from "../models"
 export const tickets: Ticket[] = [
   {
     id: "coach",

@@ -3,9 +3,10 @@ import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { columns } from "./columns"
-import { useJobs } from "./store"
+import { useConker, useConkerStore } from "@/lib/api/store"
 export default function JobsPage() {
-  const { jobs, notice } = useJobs()
+  const jobs = useConker(data => data.jobs)
+  const notice = useConkerStore(state => state.notice)
   return (
     <BaseLayout
       title="Jobs"

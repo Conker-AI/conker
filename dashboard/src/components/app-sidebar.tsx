@@ -15,7 +15,7 @@ import {
   Sprout,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useInbox } from "@/app/inbox/store"
+import { useConker } from "@/lib/api/store"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -65,7 +65,8 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pendingCount = useInbox((state) => state.tickets.filter((ticket) => ticket.status === "Needs you").length)
+  const owner = useConker(data => data.auth.ownerName)
+  const pendingCount = useConker((state) => state.tickets.filter((ticket) => ticket.status === "Needs you").length)
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -93,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={{ ...data.user, name: owner }} />
       </SidebarFooter>
     </Sidebar>
   )

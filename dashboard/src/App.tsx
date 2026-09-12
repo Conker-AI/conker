@@ -1,3 +1,4 @@
+import { DataProvider } from "@/lib/api/provider"
 import { BrowserRouter as Router } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
@@ -19,7 +20,7 @@ function App() {
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <SidebarConfigProvider>
           <Router basename={basename}>
-            <AppRouter />
+            <DataProvider><AppRouter /></DataProvider>
           </Router>
         </SidebarConfigProvider>
       </ThemeProvider>

@@ -1,14 +1,4 @@
-export type Agent = {
-  id: string
-  name: string
-  role: string
-  kind: "companion" | "agent"
-  model: string
-  grants: number
-  cost: string
-  status: "active" | "idle"
-}
-
+import type { Agent } from "../models"
 export const agents: Agent[] = [
   {
     id: "conker",

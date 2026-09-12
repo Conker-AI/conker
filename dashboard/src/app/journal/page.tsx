@@ -1,3 +1,4 @@
+import { useConker } from "@/lib/api/store"
 import { useSearchParams } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
@@ -11,9 +12,9 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { columns } from "./columns"
-import { entries } from "./data"
 
 export default function JournalPage() {
+  const entries = useConker(data => data.entries)
   const [params, setParams] = useSearchParams()
   const actor = params.get("actor") || "all"
   return (

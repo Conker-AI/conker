@@ -10,9 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { useCharacter } from "@/app/companion/store"
-import { useConversations } from "./store"
-import { plan, planningIntent, type Session } from "./data"
+import { useConker, useConkerStore } from "@/lib/api/store"
+import type { Session } from "@/lib/api/models"
 
 function UserMessage({
   children,
@@ -34,10 +33,13 @@ function UserMessage({
   )
 }
 export function Conversation({ session }: { session: Session }) {
+  const plan = useConker(data => data.plan)
+  const planningIntent = useConker(data => data.planningIntent)
   const { hash } = useLocation()
-  const { messages, drafts, setDraft, send } = useConversations()
-  const name = useCharacter((state) => state.profile.name)
-  const portrait = useCharacter((state) => state.profile.portrait)
+  const messages = useConker(data => data.messages)
+  const { drafts, setDraft, send } = useConkerStore()
+  const name = useConker((state) => state.profile.name)
+  const portrait = useConker((state) => state.profile.portrait)
   const [replyRequested, setReplyRequested] = useState(false)
   const draft = drafts[session.id] || ""
   const localMessages = messages[session.id] || []

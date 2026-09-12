@@ -1,13 +1,4 @@
-export type Session = {
-  id: string
-  title: string
-  agent: string
-  subtitle: string
-  updated: string
-  minutesAgo: number
-  pinned: boolean
-  mode: "plan" | "receipt" | "quiet" | "reading" | "project"
-}
+import type { Session } from "../models"
 export const sessions: Session[] = [
   {
     id: "week",

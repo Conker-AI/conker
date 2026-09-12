@@ -1,13 +1,14 @@
+import { useConker } from "@/lib/api/store"
 import { useNavigate } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { columns as agentColumns } from "@/app/agents/columns"
-import { agents } from "@/app/agents/data"
 import { columns } from "./columns"
-import { sessions } from "./data"
 
 export default function ChatsPage() {
+  const sessions = useConker(data => data.sessions)
+  const agents = useConker(data => data.agents)
   const navigate = useNavigate()
   return (
     <BaseLayout title="Chats" description="Pick up where you left off.">

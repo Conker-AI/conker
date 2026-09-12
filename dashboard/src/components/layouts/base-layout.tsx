@@ -1,3 +1,4 @@
+import { useConkerStore } from "@/lib/api/store"
 "use client"
 
 import * as React from "react"
@@ -17,6 +18,7 @@ interface BaseLayoutProps {
 }
 
 export function BaseLayout({ children, title, description }: BaseLayoutProps) {
+  const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
 
   const content = (
@@ -37,6 +39,7 @@ export function BaseLayout({ children, title, description }: BaseLayoutProps) {
                 </div>
               </div>
             )}
+            {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
             {children}
           </PageContainer>
         </div>

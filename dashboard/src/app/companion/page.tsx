@@ -31,10 +31,11 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
-import { useCharacter } from "./store"
+import { useConker, useConkerStore } from "@/lib/api/store"
 
 export default function CharacterStudioPage() {
-  const { profile: savedProfile, save } = useCharacter()
+  const savedProfile = useConker(data => data.profile)
+  const save = useConkerStore(state => state.save)
   const [profile, setProfile] = useState(savedProfile)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -81,8 +82,7 @@ export default function CharacterStudioPage() {
             onSubmit={(event) => {
               event.preventDefault()
               if (profile.name.trim()) {
-                save({ ...profile, name: profile.name.trim() })
-                setSaved(true)
+                void save({ ...profile, name: profile.name.trim() }).then(setSaved)
               }
             }}
           >
@@ -183,7 +183,7 @@ export default function CharacterStudioPage() {
                         <FieldLabel htmlFor="renderer">Renderer</FieldLabel>
                         <Select
                           value={profile.renderer}
-                          onValueChange={(renderer) => update({ renderer })}
+                          onValueChange={(renderer) => update({ renderer: renderer as typeof profile.renderer })}
                         >
                           <SelectTrigger id="renderer" className="w-full">
                             <SelectValue />

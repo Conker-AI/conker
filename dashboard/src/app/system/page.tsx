@@ -1,3 +1,4 @@
+import { useConker } from "@/lib/api/store"
 import { Link } from "react-router-dom"
 import { TriangleAlert, Server, Database, Cpu, HardDrive } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -13,11 +14,12 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { vitals, services } from "./data"
 import { columns } from "./columns"
 
 const icons = [Database, Cpu, HardDrive]
 export default function SystemPage() {
+  const vitals = useConker(data => data.vitals)
+  const services = useConker(data => data.services)
   return (
     <BaseLayout
       title="System"

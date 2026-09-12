@@ -1,13 +1,4 @@
-export type Memory = {
-  id: string
-  text: string
-  category: string
-  confidence: string
-  age: string
-  provenance: string
-  source: string
-  language?: string
-}
+import type { Memory } from "../models"
 export const memories: Memory[] = [
   {
     id: "judo",

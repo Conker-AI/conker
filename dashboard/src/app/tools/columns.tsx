@@ -3,7 +3,7 @@ import { Wrench } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import { cn } from "@/lib/utils"
-import type { Tool } from "./data"
+import type { Tool } from "@/lib/api/models"
 
 export const columns: ColumnDef<Tool>[] = [
   {

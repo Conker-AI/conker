@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Link } from "react-router-dom"
 import { Pin } from "lucide-react"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
-import type { Session } from "./data"
+import type { Session } from "@/lib/api/models"
 
 export const columns: ColumnDef<Session>[] = [
   {
