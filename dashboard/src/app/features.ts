@@ -12,6 +12,8 @@ import { JournalPage } from "../pages/journal";
 import { JobsPage } from "../pages/jobs";
 import { SystemPage } from "../pages/system";
 import { SetupPage } from "../pages/setup";
+import { replyFeature } from "../features/reply";
+import { emotionFeature } from "../features/emotion";
 
 const screens: Feature = { id: "core.screens", shipped: true, routes: [
   { id: "home", path: "/", Component: Home }, { id: "chats", path: "/chat", Component: Messenger }, { id: "session", path: "/chat/:sessionId", Component: Messenger },
@@ -21,4 +23,4 @@ const screens: Feature = { id: "core.screens", shipped: true, routes: [
   { id: "nav.memory", routeId: "memory", label: "Memory", to: "/memory", icon: BookOpen, group: "Reference" }, { id: "nav.journal", routeId: "journal", label: "Journal", to: "/journal", icon: History, group: "Reference" },
   { id: "nav.agents", routeId: "agents", label: "Agents", to: "/agents", icon: Bot, group: "Control" }, { id: "nav.tools", routeId: "tools", label: "Tools", to: "/tools", icon: Wrench, group: "Control" }, { id: "nav.jobs", routeId: "jobs", label: "Jobs", to: "/jobs", icon: CalendarClock, group: "Control" }, { id: "nav.system", routeId: "system", label: "System", to: "/system", icon: Server, group: "Control" }, { id: "nav.terminal", routeId: "terminal", label: "Terminal", to: "/terminal", icon: TerminalSquare, group: "Control" },
 ] };
-export const features: Feature[] = [screens, messengerCommands];
+export const features: Feature[] = [screens, messengerCommands, replyFeature, emotionFeature];
