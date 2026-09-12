@@ -10,22 +10,32 @@ export function Portrait({
   expression?: string;
   size?: "small" | "large";
 }) {
-  const [failed, setFailed] = useState<string>();
-  const mapped =
-    profile?.expressions[expression] ?? profile?.expressions.neutral;
-  const asset = profile?.assets.find(
-    (item) => item.id === mapped && item.kind === "portrait",
-  );
-  const available =
-    profile?.renderer === "static" && asset?.url && failed !== asset.url;
+  const [failed, setFailed] = useState<string[]>([]);
+  const candidates = [expression, "neutral"].map((name) => ({
+    name,
+    asset: profile?.assets.find(
+      (item) =>
+        item.id === profile?.expressions[name] &&
+        item.kind === "portrait" &&
+        !!item.url &&
+        !failed.includes(item.url),
+    ),
+  }));
+  const resolved = candidates.find((candidate) => candidate.asset);
+  const asset = resolved?.asset;
+  const available = profile?.renderer === "static" && !!asset?.url;
   return (
     <span
       className={`portrait portrait-${size}`}
       role="img"
-      aria-label={`${profile?.name ?? "Companion"} ${available ? expression : "neutral"} portrait`}
+      aria-label={`${profile?.name ?? "Companion"} ${available ? resolved?.name : "neutral"} portrait`}
     >
       {available ? (
-        <img src={asset.url} alt="" onError={() => setFailed(asset.url)} />
+        <img
+          src={asset!.url}
+          alt=""
+          onError={() => setFailed((old) => [...old, asset!.url!])}
+        />
       ) : (
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <path

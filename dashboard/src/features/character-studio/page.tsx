@@ -33,12 +33,17 @@ export function CharacterStudio() {
 }
 function StudioForm({ initial }: { initial: CharacterProfile }) {
   const [profile, setProfile] = useState(initial);
+  const [savedProfile, setSavedProfile] = useState<string>();
   const [expression, setExpression] = useState("neutral");
   const [tab, setTab] = useState("character");
   const [error, setError] = useState("");
   const mutation = useMutation({
-    mutationFn: () => api("/character/companion", profile),
-    onSuccess: () => refresh("character", "contacts", "profile"),
+    mutationFn: (submitted: CharacterProfile) =>
+      api("/character/companion", submitted),
+    onSuccess: async (_, submitted) => {
+      setSavedProfile(JSON.stringify(submitted));
+      await refresh("character", "contacts", "profile");
+    },
   });
   async function importAsset(file?: File) {
     if (!file) return;
@@ -104,7 +109,7 @@ function StudioForm({ initial }: { initial: CharacterProfile }) {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            mutation.mutate();
+            mutation.mutate(profile);
           }}
         >
           <Tabs value={tab} onValueChange={setTab}>
@@ -201,6 +206,14 @@ function StudioForm({ initial }: { initial: CharacterProfile }) {
                     onClick={() =>
                       setProfile((old) => ({
                         ...old,
+                        expressions: Object.fromEntries(
+                          Object.entries(old.expressions).map(
+                            ([name, mapped]) => [
+                              name,
+                              mapped === asset.id ? null : mapped,
+                            ],
+                          ),
+                        ),
                         assets: old.assets.filter(
                           (item) => item.id !== asset.id,
                         ),
@@ -269,7 +282,7 @@ function StudioForm({ initial }: { initial: CharacterProfile }) {
             >
               {mutation.isPending ? "Saving…" : "Save character"}
             </Button>
-            {mutation.isSuccess && (
+            {mutation.isSuccess && savedProfile === JSON.stringify(profile) && (
               <span role="status">Saved in this preview.</span>
             )}
           </div>
