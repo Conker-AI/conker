@@ -1,53 +1,26 @@
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, useRoutes } from "react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider, TooltipProvider } from "./ui";
-import { PreviewProvider, usePreview } from "./state";
+import { PreviewProvider } from "./state";
 import { Shell } from "./components/shell";
 import { NotFound } from "./components/common";
-import { Chat } from "./pages/chat";
-import { InboxPage } from "./pages/inbox";
-import { SystemPage } from "./pages/system";
-import { AgentsPage } from "./pages/agents";
-import { ToolsPage } from "./pages/tools";
-import { MemoryPage } from "./pages/memory";
-import { JournalPage } from "./pages/journal";
-import { JobsPage } from "./pages/jobs";
-import { SetupPage } from "./pages/setup";
+import { features } from "./app/features";
+import { createRegistry, RegistryContext } from "./platform/contributions";
+import { queryClient } from "./data/queries";
+import { runs } from "./data/runs";
+import { startMocks } from "./mocks/browser";
 import "./styles.css";
+import "./app/reshape.css";
 
-function RecentChat() {
-  const { sessions } = usePreview();
-  return <Navigate to={`/chat/${sessions[0].id}`} replace />;
+const registry = createRegistry(features);
+function AppRoutes() {
+  return useRoutes([{ element: <Shell />, children: [...registry.routes.filter(route => !route.outsideShell).map(route => ({ path: route.path, element: <route.Component /> })), { path: "*", element: <NotFound /> }] }, ...registry.routes.filter(route => route.outsideShell).map(route => ({ path: route.path, element: <route.Component /> }))]);
 }
-
-createRoot(document.getElementById("root")!).render(
-  <ThemeProvider>
-    <TooltipProvider>
-      <PreviewProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Shell />}>
-              <Route index element={<RecentChat />} />
-              <Route path="chat" element={<RecentChat />} />
-              <Route path="chat/:sessionId" element={<Chat />} />
-              <Route path="inbox" element={<InboxPage />} />
-              <Route path="inbox/:id" element={<InboxPage />} />
-              <Route path="system" element={<SystemPage />} />
-              <Route path="agents" element={<AgentsPage />} />
-              <Route path="agents/:id" element={<AgentsPage />} />
-              <Route path="tools" element={<ToolsPage />} />
-              <Route path="tools/:id" element={<ToolsPage />} />
-              <Route path="memory" element={<MemoryPage />} />
-              <Route path="memory/:id" element={<MemoryPage />} />
-              <Route path="journal" element={<JournalPage />} />
-              <Route path="jobs" element={<JobsPage />} />
-              <Route path="jobs/:id" element={<JobsPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route path="setup" element={<SetupPage />} />
-          </Routes>
-        </BrowserRouter>
-      </PreviewProvider>
-    </TooltipProvider>
-  </ThemeProvider>,
-);
+const root = createRoot(document.getElementById("root")!);
+startMocks().then(stopMocks => {
+  root.render(<QueryClientProvider client={queryClient}><RegistryContext value={registry}><ThemeProvider initialTheme="dark"><TooltipProvider><PreviewProvider><BrowserRouter><AppRoutes /></BrowserRouter></PreviewProvider></TooltipProvider></ThemeProvider></RegistryContext></QueryClientProvider>);
+  if (import.meta.hot) import.meta.hot.dispose(() => { runs.dispose(); stopMocks(); root.unmount(); });
+}).catch(error => {
+  root.render(<ThemeProvider><div className="setup-layout"><h1>The fixture connection could not start.</h1><p>{String(error)}</p><p>Open this preview on localhost with service workers enabled, then reload. No real backend was used.</p></div></ThemeProvider>);
+});
