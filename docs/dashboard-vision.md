@@ -79,20 +79,28 @@ override exists only for the rare case. So: every agent can have a face, and whe
 depends on whether you are relating to it or using it. A spawned subagent never becomes a contact to
 manage — delegation shows inside the run.
 
-## Extensions — the stance
+## Add-ons, not extensions
 
-Extensions are the path to community and composition, and worth designing for from the start. But
-two kinds, with very different risk:
+**Decided (2026-09-13): no plugin store.** A public marketplace of third-party UI plugins was
+considered and rejected — it makes the app feel commercial and adds a lot of complexity and security
+surface for little the owner actually wants. Conker is not a platform for strangers' code to run
+inside; it is one person's companion. What stays is the ability to *add functionality* — cleanly,
+two ways, both already safe:
 
-- **Capabilities (what the AI can do) already have a safe extension mechanism: ToolGate.** A shared
-  registry of tools/skills is the first, safe marketplace — every one is scoped and approved, so a
-  community tool can do nothing a tool could not already do. Build this first.
-- **UI extensions (panels, actions, views):** build on contribution points now so contributors add
-  by PR; a *runtime third-party UI plugin store* is a later, **sandboxed** milestone (iframe + a
-  narrow message API) that may **never** touch the approval flow, session tokens or memory — a bad
-  UI extension with the dashboard's trust could fake an approval or drain the card. The modular
-  register-a-feature core is the foundation extensions stand on; what a stranger's code may touch is
-  strictly bounded.
+- **A new capability (what the AI can do) is a tool through ToolGate.** This is the add-on mechanism
+  for capability, and it is already safe: every tool is scoped to an agent and approved per its
+  sensitivity, so anything added this way can do nothing a tool could not already do. A shared
+  tool/skill registry the owner can pull from is possible later — but it is a catalogue of scoped,
+  approved tools, not a marketplace of code that runs with the dashboard's trust. Build this first.
+- **A new piece of UI is a bundled feature-module.** Panels, actions, views, chat features — each is
+  ordinary TypeScript that registers into a slot/command/route and is composed at one root, added by
+  PR or fork and shipped in the build. There is no runtime third-party plugin host, no iframe
+  sandbox, no message API — that is the complexity and risk the owner turned down. The
+  register-a-feature core (see "The one hard architectural rule") is the whole story: it is how *the
+  owner* adds features without rebuilding the shell, and how a contributor proposes one.
+
+So "add-ons" here means *scoped tools* and *contributed feature-modules* — never a stranger's code
+executing live inside the dashboard next to the approval flow, session tokens or memory.
 
 ## Character Studio
 
