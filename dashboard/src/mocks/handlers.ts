@@ -11,7 +11,10 @@ import type {
 const base = "/__fixture/v1";
 const headers = { "x-conker-fixture": "true" };
 const json = (value: unknown, status = 200) =>
-  HttpResponse.json(value, { status, headers });
+  HttpResponse.json(value as Parameters<typeof HttpResponse.json>[0], {
+    status,
+    headers,
+  });
 const problem = (message: string, status: number) => json({ message }, status);
 const events = new Map<string, StreamEvent[]>();
 const scenarios = new Map<string, Scenario>();
