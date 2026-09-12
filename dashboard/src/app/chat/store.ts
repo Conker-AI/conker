@@ -6,13 +6,21 @@ export const useConversations = create<{
   setDraft: (id: string, text: string) => void
   send: (id: string) => void
 }>((set) => ({
-  messages: {}, drafts: {},
-  setDraft: (id, text) => set((state) => ({ drafts: { ...state.drafts, [id]: text } })),
-  send: (id) => set((state) => {
-    const text = state.drafts[id]?.trim()
-    if (!text) return state
-    const existing = state.messages[id] || []
-    return { messages: { ...state.messages, [id]: [...existing, { id: existing.length + 1, text }] }, drafts: { ...state.drafts, [id]: "" } }
-  }),
+  messages: {},
+  drafts: {},
+  setDraft: (id, text) =>
+    set((state) => ({ drafts: { ...state.drafts, [id]: text } })),
+  send: (id) =>
+    set((state) => {
+      const text = state.drafts[id]?.trim()
+      if (!text) return state
+      const existing = state.messages[id] || []
+      return {
+        messages: {
+          ...state.messages,
+          [id]: [...existing, { id: existing.length + 1, text }],
+        },
+        drafts: { ...state.drafts, [id]: "" },
+      }
+    }),
 }))
-

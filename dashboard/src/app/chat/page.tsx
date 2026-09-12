@@ -9,13 +9,34 @@ import { sessions } from "./data"
 
 export default function ChatsPage() {
   const navigate = useNavigate()
-  return <BaseLayout title="Chats" description="Pick up where you left off.">
-    <Tabs defaultValue="sessions" className="gap-4 px-4 lg:px-6">
-      <TabsList className="border"><TabsTrigger value="sessions">Sessions</TabsTrigger><TabsTrigger value="agents">Agents</TabsTrigger></TabsList>
-      <TabsContent value="sessions"><DataTable columns={columns} data={sessions} searchColumn="title" searchPlaceholder="Find a conversation…" onRowClick={(session) => navigate(`/chat/${session.id}`)} /></TabsContent>
-      <TabsContent value="agents"><DataTable columns={agentColumns} data={agents} searchColumn="name" searchPlaceholder="Find an agent…" /></TabsContent>
-      <p className="text-xs text-muted-foreground">Fixture conversations · relative times at 12 September 2026, 16:43.</p>
-    </Tabs>
-  </BaseLayout>
+  return (
+    <BaseLayout title="Chats" description="Pick up where you left off.">
+      <Tabs defaultValue="sessions" className="gap-4 px-4 lg:px-6">
+        <TabsList className="border">
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
+        </TabsList>
+        <TabsContent value="sessions">
+          <DataTable
+            columns={columns}
+            data={sessions}
+            searchColumn="title"
+            searchPlaceholder="Find a conversation…"
+            onRowClick={(session) => navigate(`/chat/${session.id}`)}
+          />
+        </TabsContent>
+        <TabsContent value="agents">
+          <DataTable
+            columns={agentColumns}
+            data={agents}
+            searchColumn="name"
+            searchPlaceholder="Find an agent…"
+          />
+        </TabsContent>
+        <p className="text-xs text-muted-foreground">
+          Fixture conversations · relative times at 12 September 2026, 16:43.
+        </p>
+      </Tabs>
+    </BaseLayout>
+  )
 }
-

@@ -14,7 +14,11 @@ const TerminalPage = lazy(() => import("@/app/terminal/page"))
 const CharacterStudioPage = lazy(() => import("@/app/companion/page"))
 const NotFound = lazy(() => import("@/app/errors/not-found/page"))
 
-export interface RouteConfig { path: string; element: React.ReactNode; children?: RouteConfig[] }
+export interface RouteConfig {
+  path: string
+  element: React.ReactNode
+  children?: RouteConfig[]
+}
 export const routes: RouteConfig[] = [
   { path: "/", element: <HomePage /> },
   { path: "/chat", element: <ChatsPage /> },
@@ -31,4 +35,3 @@ export const routes: RouteConfig[] = [
   { path: "/companion", element: <CharacterStudioPage /> },
   { path: "*", element: <NotFound /> },
 ]
-

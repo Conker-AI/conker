@@ -7,7 +7,12 @@ export const useInbox = create<{
   decide: (id: string, status: TicketStatus) => void
 }>((set) => ({
   tickets,
-  decide: (id, status) => set((state) => ({
-    tickets: state.tickets.map((ticket) => ticket.id === id && ticket.status === "Needs you" ? { ...ticket, status } : ticket),
-  })),
+  decide: (id, status) =>
+    set((state) => ({
+      tickets: state.tickets.map((ticket) =>
+        ticket.id === id && ticket.status === "Needs you"
+          ? { ...ticket, status }
+          : ticket
+      ),
+    })),
 }))
