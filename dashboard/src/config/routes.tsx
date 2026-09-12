@@ -1,4 +1,6 @@
 import { lazy } from "react"
+const SetupPage = lazy(() => import("@/app/setup/page"))
+const LoginPage = lazy(() => import("@/app/login/page"))
 const SettingsPage = lazy(() => import("@/app/settings/page"))
 const HomePage = lazy(() => import("@/app/home/page"))
 const ChatsPage = lazy(() => import("@/app/chat/page"))
@@ -21,6 +23,8 @@ export interface RouteConfig {
   children?: RouteConfig[]
 }
 export const routes: RouteConfig[] = [
+  { path: "/setup", element: <SetupPage /> },
+  { path: "/login", element: <LoginPage /> },
   { path: "/settings", element: <SettingsPage /> },
   { path: "/", element: <HomePage /> },
   { path: "/chat", element: <ChatsPage /> },
