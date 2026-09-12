@@ -17,6 +17,9 @@ test("Reply and emotion contribute without shell wiring and the host caps direct
   await expect(
     message.locator('[data-slot-name="message.actions"] > button'),
   ).toHaveCount(3);
+  await expect(
+    message.getByRole("button", { name: "Reply", exact: true }),
+  ).toBeVisible();
   await message.getByRole("button", { name: "Reply", exact: true }).click();
   await expect(page.locator(".reply-attachment")).toContainText(
     "Replying to You",

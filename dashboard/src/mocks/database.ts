@@ -38,6 +38,7 @@ export const policy: ConversationPolicy = {
   memoryRead: true,
   memoryWrite: true,
 };
+const seededSessionTime = new Date(Date.now() - 86_400_000).toISOString();
 const session = (
   id: string,
   contactId: string,
@@ -50,7 +51,7 @@ const session = (
   title,
   participantIds,
   policy,
-  updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
+  updatedAt: seededSessionTime,
   ...extra,
 });
 const message = (
