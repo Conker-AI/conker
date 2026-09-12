@@ -19,7 +19,7 @@ import { useInbox } from "../data/inbox";
 import { useObject } from "../data/queries";
 import type { CharacterProfile } from "../domain/model";
 import { Portrait } from "../features/character-studio/portrait";
-import { companionPlacement } from "../app/config";
+import { useChromePreference } from "../platform/chrome-preferences";
 
 function Navigation({ close }: { close?: () => void }) {
   const registry = useRegistry();
@@ -34,17 +34,13 @@ function Navigation({ close }: { close?: () => void }) {
         <Link className="wordmark" to="/" onClick={close}>
           <span aria-hidden="true">🌱</span>Conker
         </Link>
-        {companionPlacement === "title" && (
+        {
           <Button variant="ghost" size="icon" asChild>
-            <Link
-              to="/companion"
-              aria-label="Companion settings"
-              onClick={close}
-            >
+            <Link to="/" aria-label="Companion home" onClick={close}>
               <Portrait profile={character.data} />
             </Link>
           </Button>
-        )}
+        }
       </div>
       <nav aria-label="Main navigation" data-slot-name="nav.groups">
         {(["Daily loop", "Reference", "Control"] as const).map((group) => (
@@ -71,10 +67,16 @@ function Navigation({ close }: { close?: () => void }) {
                       aria-label={
                         inbox.error
                           ? "Inbox unavailable"
-                          : `${inbox.pending.length} decisions`
+                          : inbox.isPending || inbox.isFetching
+                            ? "Checking inbox"
+                            : `${inbox.pending.length} decisions`
                       }
                     >
-                      {inbox.error ? "?" : inbox.pending.length}
+                      {inbox.error
+                        ? "?"
+                        : inbox.isPending || inbox.isFetching
+                          ? "?"
+                          : inbox.pending.length}
                     </Badge>
                   )}
                 </NavLink>
@@ -150,6 +152,7 @@ function Navigation({ close }: { close?: () => void }) {
 }
 export function Shell() {
   const [open, setOpen] = useState(false);
+  const [navHidden, setNavHidden] = useChromePreference("navHidden");
   const location = useLocation();
   const { signedOut, signIn } = usePreview();
   const messenger =
@@ -166,16 +169,24 @@ export function Shell() {
       </div>
     );
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${navHidden ? "nav-collapsed" : ""}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <aside className="desktop-sidebar">
+      <aside className="desktop-sidebar" hidden={navHidden}>
         <Navigation />
       </aside>
       <div className="workspace">
         <div className="topbar">
           <div className="topbar-left">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setNavHidden(!navHidden)}
+              aria-expanded={!navHidden}
+            >
+              {navHidden ? "Show navigation" : "Hide navigation"}
+            </Button>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button

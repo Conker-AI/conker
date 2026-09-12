@@ -21,8 +21,10 @@ test("Reply and emotion contribute without shell wiring and the host caps direct
   await expect(page.locator(".reply-attachment")).toContainText(
     "Replying to You",
   );
-  await page.locator('.contact-pane .contact[href="/chat/build"]').click();
+  await page.getByRole("link", { name: "Back to chats" }).click();
+  await page.locator('.contact-pane .session-item[href="/chat/build"]').click();
   await expect(page.locator(".reply-attachment")).toHaveCount(0);
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await page.getByRole("link", { name: "Open Companion home" }).click();
   await expect(page.locator(".reply-attachment")).toContainText(
     "Replying to You",

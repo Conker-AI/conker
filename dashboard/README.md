@@ -29,10 +29,10 @@ The production preview is **http://127.0.0.1:4173/**. It still uses MSW fixtures
 static host must serve `index.html` for client routes and allow service workers. PWA
 installation, offline data, and native packaging are deliberately deferred.
 
-For the two Companion placement variants, change the one line in `src/app/config.ts`, or
-set `VITE_COMPANION_PLACEMENT=tile` before starting Vite. Default is `title`. Both variants
-keep the Companion pinned and Home resolves to its last visited session. The face opens
-Companion settings; the contact body opens the conversation.
+Chats opens the full list with Sessions / Agents modes. Select a row to converse, or start
+with New conversation. Home and the face beside Conker open the remembered Companion
+conversation. Character Studio is in the owner menu. Hide navigation and Hide contacts
+are independent; only these two boolean preferences persist across reloads.
 
 ## Architecture
 

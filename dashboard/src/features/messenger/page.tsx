@@ -15,8 +15,6 @@ import {
   Plus,
   Search,
   Square,
-  Users,
-  Settings2,
   X,
 } from "lucide-react";
 import { Popover } from "radix-ui";
@@ -28,7 +26,15 @@ import type {
   Run,
   Session,
 } from "../../domain/model";
-import { Button, Input, Status, Badge } from "../../ui";
+import {
+  Button,
+  Input,
+  Status,
+  Badge,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "../../ui";
 import { api } from "../../data/client";
 import { useList, useObject, keys, refresh } from "../../data/queries";
 import { runs } from "../../data/runs";
@@ -48,7 +54,7 @@ import {
 } from "../../components/object-inspector";
 import { ActionRecord } from "../../components/action-record";
 import { Portrait } from "../character-studio/portrait";
-import { companionPlacement } from "../../app/config";
+import { useChromePreference } from "../../platform/chrome-preferences";
 
 export function Home() {
   const query = useObject<Contact>("contacts", "home");
@@ -61,132 +67,132 @@ export function Home() {
     <QueryState loading={query.isPending} error={query.error} />
   );
 }
-function ContactList() {
+function ContactList({ compact = false }: { compact?: boolean }) {
   useContactVersion();
   const query = useList<Contact>("contacts");
   const sessions = useList<Session>("sessions");
   const character = useObject<CharacterProfile>("character", "companion");
-  const { sessionId } = useParams();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const selected = sessions.data?.find((s) => s.id === sessionId);
-  const home = query.data?.find((c) => c.id === "home");
+  const [mode, setMode] = useState("sessions");
+  const [creating, setCreating] = useState(false);
+  const create = useMutation({
+    mutationFn: (contactId: string) =>
+      api<Session>("/sessions", { id: crypto.randomUUID(), contactId }),
+    onSuccess: async (session) => {
+      await refresh("sessions", "contacts");
+      navigate(`/chat/${session.id}`);
+      setCreating(false);
+    },
+  });
+  const ordered = [...(sessions.data ?? [])].sort(
+    (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
+  );
+  const latestHome = ordered.find((session) => session.contactId === "home");
+  const entries =
+    mode === "sessions"
+      ? ordered
+          .sort(
+            (a, b) =>
+              Number(b.id === latestHome?.id) - Number(a.id === latestHome?.id),
+          )
+          .map((session) => ({
+            id: session.id,
+            title: session.title,
+            subtitle: `${query.data?.find((c) => c.id === session.contactId)?.name ?? "Conversation"}${session.id === latestHome?.id ? " ? pinned" : ""}`,
+            to: `/chat/${session.id}`,
+            home: session.id === latestHome?.id,
+          }))
+      : [...(query.data ?? [])]
+          .sort((a, b) => Number(b.id === "home") - Number(a.id === "home"))
+          .map((contact) => ({
+            id: contact.id,
+            title:
+              contact.id === "home"
+                ? (character.data?.name ?? contact.name)
+                : contact.name,
+            subtitle:
+              contact.id === "home"
+                ? "Your companion ? pinned"
+                : contact.subtitle,
+            to: `/chat/${contactSession(contact.id, contact.sessionIds[0])}`,
+            home: contact.id === "home",
+          }));
+  const visible = entries.filter((entry) =>
+    `${entry.title} ${entry.subtitle}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
   return (
-    <aside className="contact-pane" aria-label="Messenger contacts">
+    <aside
+      className="contact-pane"
+      aria-label={compact ? "Conversation contacts" : "Chats list"}
+    >
       <header>
         <h1>Chats</h1>
         <span className="fine-print">A place for every conversation</span>
       </header>
+      <Tabs value={mode} onValueChange={setMode}>
+        <TabsList aria-label="Conversation filter">
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="contact-search">
         <Search />
         <Input
           aria-label="Search contacts and conversations"
-          placeholder="Search…"
+          placeholder="Search?"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select
-          aria-label="Conversation filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="agents">Agents</option>
-          <option value="groups">Groups</option>
-          <option value="sessions">Sessions</option>
-        </select>
       </div>
-      {home && (
-        <div
-          className={
-            companionPlacement === "tile" ? "companion-tile" : "pinned-contact"
-          }
-        >
-          <Link
-            className={
-              selected?.contactId === "home"
-                ? "contact selected-contact"
-                : "contact"
-            }
-            to={`/chat/${contactSession("home", home.sessionIds[0])}`}
-            aria-label="Open Companion home"
-          >
-            <Portrait
-              profile={character.data}
-              size={companionPlacement === "tile" ? "large" : "small"}
-            />
-            <span>
-              <strong>{character.data?.name ?? home.name}</strong>
-              <small>
-                Your companion <span aria-hidden="true">·</span> pinned
-              </small>
-            </span>
-          </Link>
-          {companionPlacement === "tile" && (
-            <Button variant="ghost" size="icon-sm" asChild>
-              <Link to="/companion" aria-label="Companion settings">
-                <Settings2 />
-              </Link>
+      <Button
+        variant="ghost"
+        onClick={() => setCreating(!creating)}
+        aria-expanded={creating}
+      >
+        <Plus />
+        New conversation
+      </Button>
+      {creating && (
+        <div aria-label="Choose a contact" className="stack">
+          {query.data?.map((contact) => (
+            <Button
+              key={contact.id}
+              variant="outline"
+              disabled={create.isPending}
+              onClick={() => create.mutate(contact.id)}
+            >
+              Start with {contact.name}
             </Button>
-          )}
+          ))}
+          {create.error && <p role="alert">{create.error.message}</p>}
         </div>
       )}
-      <p className="list-label">
-        {filter === "sessions" || search ? "Conversations" : "Contacts"}
-      </p>
-      {!query.data && (
-        <QueryState loading={query.isPending} error={query.error} />
+      {query.isPending ||
+      sessions.isPending ||
+      query.error ||
+      sessions.error ? (
+        <QueryState
+          loading={query.isPending || sessions.isPending}
+          error={query.error ?? sessions.error}
+        />
+      ) : visible.length ? (
+        visible.map((entry) => (
+          <Link
+            key={entry.id}
+            className="session-item"
+            to={entry.to}
+            aria-label={entry.home ? "Open Companion home" : undefined}
+          >
+            <strong>{entry.title}</strong>
+            <small>{entry.subtitle}</small>
+          </Link>
+        ))
+      ) : (
+        <QueryState empty="No matching conversations or contacts." />
       )}
-      {filter !== "sessions" &&
-        !search &&
-        query.data
-          ?.filter(
-            (c) =>
-              c.id !== "home" &&
-              (filter === "all" ||
-                (filter === "groups" && c.target.kind === "group") ||
-                (filter === "agents" && c.target.kind === "agent")),
-          )
-          .map((contact) => (
-            <Link
-              key={contact.id}
-              className={
-                selected?.contactId === contact.id
-                  ? "contact selected-contact"
-                  : "contact"
-              }
-              to={`/chat/${contactSession(contact.id, contact.sessionIds[0])}`}
-            >
-              <span className="contact-avatar">
-                {contact.target.kind === "group" ? <Users /> : contact.initials}
-              </span>
-              <span>
-                <strong>{contact.name}</strong>
-                <small>{contact.subtitle}</small>
-              </span>
-            </Link>
-          ))}
-      {(filter === "sessions" || !!search) &&
-        sessions.data
-          ?.filter((s) =>
-            `${s.title} ${query.data?.find((c) => c.id === s.contactId)?.name}`
-              .toLowerCase()
-              .includes(search.toLowerCase()),
-          )
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-          .map((session) => (
-            <Link
-              className="session-item"
-              to={`/chat/${session.id}`}
-              key={session.id}
-            >
-              <strong>{session.title}</strong>
-              <small>
-                {query.data?.find((c) => c.id === session.contactId)?.name}
-                {session.parentId ? " · fork" : ""}
-              </small>
-            </Link>
-          ))}
       <footer>
         <p>No extra people to manage.</p>
         <small>Temporary workers stay inside the run.</small>
@@ -196,23 +202,13 @@ function ContactList() {
 }
 export function Messenger() {
   const { sessionId } = useParams();
+  const [contactsHidden] = useChromePreference("contactsHidden");
   return (
     <div
       className={`messenger ${sessionId ? "has-conversation" : "shows-contacts"}`}
     >
-      <ContactList />
-      {sessionId ? (
-        <Conversation key={sessionId} id={sessionId} />
-      ) : (
-        <div className="conversation-welcome">
-          <Portrait size="large" />
-          <h2>Who’s on your mind?</h2>
-          <p>Pick a conversation, or come home to Conker.</p>
-          <Button variant="outline" asChild>
-            <Link to="/">Open Home</Link>
-          </Button>
-        </div>
-      )}
+      {(!sessionId || !contactsHidden) && <ContactList compact={!!sessionId} />}
+      {sessionId && <Conversation key={sessionId} id={sessionId} />}
     </div>
   );
 }
@@ -411,6 +407,8 @@ function MessageRow({ message }: { message: Message }) {
   );
 }
 function Conversation({ id }: { id: string }) {
+  const [contactsHidden, setContactsHidden] =
+    useChromePreference("contactsHidden");
   const query = useObject<Session>("sessions", id);
   const contact = useObject<Contact>("contacts", query.data?.contactId ?? "");
   const sessions = useList<Session>("sessions");
@@ -447,7 +445,7 @@ function Conversation({ id }: { id: string }) {
       document.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (target) target.scrollIntoView({ block: "center" });
     else scroller.current.scrollTop = readView(id).scrollTop;
-  }, [id, !!messages.data, location.hash]);
+  }, [id, !!messages.data, location.hash, params.get("inspect")]);
   useLayoutEffect(() => {
     if (nearBottom.current && scroller.current)
       scroller.current.scrollTop = scroller.current.scrollHeight;
@@ -470,6 +468,16 @@ function Conversation({ id }: { id: string }) {
   const session = query.data;
   return (
     <section className="conversation-pane" aria-label="Conversation">
+      <div className="conversation-chrome">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setContactsHidden(!contactsHidden)}
+          aria-expanded={!contactsHidden}
+        >
+          {contactsHidden ? "Show contacts" : "Hide contacts"}
+        </Button>
+      </div>
       <header className="conversation-header">
         <Button
           className="back-to-contacts"

@@ -63,7 +63,7 @@ export class RunCoordinator {
     );
     this.cursors.set(run.id, snapshot.run.cursor);
     void this.subscribe(run.id);
-    void refresh("journal");
+    void refresh("journal", "sessions");
   }
   async recover(id: string) {
     await this.accept(await api<Run>(`/runs/${id}`));

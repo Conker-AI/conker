@@ -24,8 +24,12 @@ async function inspect(directory) {
         if (
           pattern.test(source) &&
           !(
-            label === "network client" &&
-            relative(root, path).replaceAll("\\", "/") === "data/client.ts"
+            (label === "network client" &&
+              relative(root, path).replaceAll("\\", "/") ===
+                "data/client.ts") ||
+            (label === "persistent browser data" &&
+              relative(root, path).replaceAll("\\", "/") ===
+                "platform/chrome-preferences.ts")
           )
         )
           failures.push(`${relative(root, path)}: ${label}`);

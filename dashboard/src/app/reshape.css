@@ -200,27 +200,6 @@
   width: 33px;
   height: 33px;
 }
-.companion-tile {
-  position: relative;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.companion-tile .contact {
-  flex-direction: column;
-  text-align: center;
-  gap: 14px;
-  padding: 24px 12px 18px;
-}
-.companion-tile .portrait-large {
-  width: 98px;
-  height: 98px;
-  border-radius: 25px;
-}
-.companion-tile > [data-slot="button"] {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
 .conversation-pane {
   min-width: 0;
   flex: 1;
@@ -262,7 +241,7 @@
   font-size: 0.71rem;
 }
 .back-to-contacts {
-  display: none;
+  display: inline-flex;
 }
 .conversation-scroll {
   flex: 1;
@@ -852,5 +831,32 @@
   }
   .portrait-preview [data-slot="status"] {
     max-width: 330px;
+  }
+}
+
+/* List-first routing and independently collapsible conversation chrome. */
+.shows-contacts .contact-pane {
+  width: 100%;
+  border-right: 0;
+}
+.nav-collapsed .desktop-sidebar {
+  display: none;
+}
+.nav-collapsed .workspace {
+  margin-left: 0;
+  width: 100%;
+}
+.conversation-chrome {
+  display: flex;
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .has-conversation:has(.contact-pane) {
+    flex-direction: column;
+  }
+  .has-conversation .contact-pane {
+    display: flex;
+    width: 100%;
+    max-height: 30%;
   }
 }

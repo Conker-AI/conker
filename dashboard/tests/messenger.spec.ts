@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
 const workshop = (page: import("@playwright/test").Page) =>
-  page.locator('.contact-pane .contact[href="/chat/build"]');
+  page.locator('.contact-pane .session-item[href="/chat/build"]');
 const home = (page: import("@playwright/test").Page) =>
   page.getByRole("link", { name: "Open Companion home" });
 test("contact switching preserves each draft and scroll position", async ({
@@ -19,10 +19,12 @@ test("contact switching preserves each draft and scroll position", async ({
     element.dispatchEvent(new Event("scroll"));
   });
   const scroll = await scroller.evaluate((element) => element.scrollTop);
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await workshop(page).click();
   await page
     .getByRole("textbox", { name: "Message", exact: true })
     .fill("Check the WAL first");
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await home(page).click();
   await expect(
     page.getByRole("textbox", { name: "Message", exact: true }),
@@ -30,6 +32,7 @@ test("contact switching preserves each draft and scroll position", async ({
   await expect
     .poll(() => scroller.evaluate((element) => element.scrollTop))
     .toBe(scroll);
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await workshop(page).click();
   await expect(
     page.getByRole("textbox", { name: "Message", exact: true }),
@@ -51,8 +54,10 @@ test("a running session keeps its stream while another contact is open", async (
     .locator(".role-assistant .message-body")
     .last()
     .innerText();
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await workshop(page).click();
   await page.waitForTimeout(900);
+  await page.getByRole("link", { name: "Back to chats" }).click();
   await home(page).click();
   await expect
     .poll(
