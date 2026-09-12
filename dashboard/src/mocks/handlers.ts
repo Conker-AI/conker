@@ -17,6 +17,7 @@ function generate(run: Run) {
     const next = reply.slice(output.text.length, output.text.length + 9);
     output.text += next;
     run.cursor += 1;
+    output.streamCursor = run.cursor;
     run.status = next ? "streaming" : "completed";
     events.get(run.id)!.push({ id: run.cursor, runId: run.id, type: next ? "delta" : "complete", text: next });
     if (next) setTimeout(tick, 110);
@@ -45,6 +46,10 @@ export const handlers = [
   http.get(`${base}/submissions/:id`, ({ params }) => {
     const id = db.submissions[String(params.id)];
     return id ? json(db.runs[id]) : problem("Submission is not known. No automatic second submission was made.", 404);
+  }),
+  http.get(`${base}/runs/:id/snapshot`, ({ params }) => {
+    const run = db.runs[String(params.id)]; if (!run) return problem("Run not found.", 404);
+    return json({ run, messages: Object.values(db.messages).filter(message => message.sessionId === run.sessionId) });
   }),
   http.get(`${base}/runs/:id/events`, ({ params, request }) => {
     const id = String(params.id); const run = db.runs[id];

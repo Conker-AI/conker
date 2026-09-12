@@ -13,7 +13,7 @@ import { readView, updateView } from "../platform/session-view-state";
 export function ActionStatus({ action }: { action: Action }) {
   if (action.status === "outcome_unknown") return <Status evidence={{ state: "degraded", detail: "Outcome unknown. The connection ended without a receipt; the action may have run." }} />;
   if (action.replyMissing) return <Status evidence={{ state: "degraded", detail: "acted_no_reply · the action ran; only the model reply is missing." }} />;
-  if (action.status === "completed") return <Status evidence={fixtureLive(action.receipt ?? "Receipt missing. Inspect the retained record.")} />;
+  if (action.status === "completed") return <Status evidence={action.receipt ? fixtureLive(action.receipt) : { state: "unknown", detail: "Completion was reported, but its receipt is missing. Inspect the retained record." }} />;
   if (action.status === "in_progress") return <Status evidence={{ state: "unknown", detail: "Approved, awaiting an execution receipt. Approval is not completion." }} />;
   return <Status evidence={{ state: "blocked", detail: action.status === "denied" ? "Denied by you. No execution authorised." : action.status === "expired" ? "Authority expired. Nothing was dispatched under this request." : "Waiting for your decision. Nothing has been sent." }} />;
 }

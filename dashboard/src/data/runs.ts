@@ -19,9 +19,13 @@ export class RunCoordinator {
   }
   async resolveSubmission(id: string) { await this.accept(await api<Run>(`/submissions/${id}`)); }
   private async accept(run: Run) {
-    queryClient.setQueryData(keys.object("runs", run.id), run);
-    queryClient.setQueryData(keys.messages(run.sessionId), await api(`/messages/${run.sessionId}`));
-    this.cursors.set(run.id, run.cursor);
+    const snapshot = await api<{ run: Run; messages: Message[] }>(`/runs/${run.id}/snapshot`);
+    queryClient.setQueryData(keys.object("runs", run.id), snapshot.run);
+    queryClient.setQueryData<Message[]>(keys.messages(run.sessionId), old => snapshot.messages.map(message => {
+      const current = old?.find(item => item.id === message.id);
+      return current && (current.streamCursor ?? 0) > (message.streamCursor ?? 0) ? current : message;
+    }));
+    this.cursors.set(run.id, snapshot.run.cursor);
     void this.subscribe(run.id);
     void refresh("journal");
   }
@@ -38,7 +42,7 @@ export class RunCoordinator {
     this.cursors.set(event.runId, event.id);
     const run = queryClient.getQueryData<Run>(keys.object("runs", event.runId)); if (!run) return;
     queryClient.setQueryData<Run>(keys.object("runs", event.runId), { ...run, cursor: event.id, status: event.type === "complete" ? "completed" : "streaming" });
-    if (event.type === "delta") queryClient.setQueryData<Message[]>(keys.messages(run.sessionId), old => old?.map(message => message.id === run.messageId ? { ...message, text: message.text + (event.text ?? "") } : message));
+    if (event.type === "delta") queryClient.setQueryData<Message[]>(keys.messages(run.sessionId), old => old?.map(message => message.id === run.messageId && event.id > (message.streamCursor ?? 0) ? { ...message, text: message.text + (event.text ?? ""), streamCursor: event.id } : message));
   }
   private async subscribe(id: string) {
     if (this.subscriptions.has(id)) return;

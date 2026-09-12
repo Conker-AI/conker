@@ -48,7 +48,7 @@ export function createDatabase() {
     inbox: recordMap<InboxItem>(inboxFixtures.map(row => ({ id: row.id, kind: row.kind, resourceId: row.id }))),
     proposals: recordMap<ProposalRecord>(inboxFixtures.filter((row): row is ProposalRecord => row.kind === "proposal")),
     journal: recordMap<JournalEvent>(journalFixtures.map(row => ({ ...row, ...(row.id === "j1" ? { actionId: "action-coach" } : row.id === "j2" ? { actionId: "calendar" } : row.id === "j3" ? { actionId: "action-cleanup" } : row.id === "j4" ? { actionId: "reminder" } : {}) }))),
-    citations: { training: { id: "training", sessionId: "week", messageId: "week-user", excerpt: "Judo is Tuesday and Thursday at 18:30", deleted: false } as Citation },
+    citations: { training: { id: "training", sessionId: "week", messageId: "week-user", excerpt: "Judo is Tuesday and Thursday at 18:30", deleted: false } as Citation } as Record<string, Citation>,
     character: { companion: character },
     capabilities: recordMap<Capability>(["reply", "emotion", "fork", "policy", "studio"].map(id => ({ id, supported: true, authorised: true })).concat([{ id: "deep-search", supported: false, authorised: true }, { id: "terminal", supported: false, authorised: false }])),
     agents: recordMap(agentFixtures), tools: recordMap(toolFixtures), memory: recordMap(memoryFixtures.map(row => ({ ...row, forgotten: false, correction: "" }))), jobs: recordMap(jobFixtures.map(row => ({ ...row, paused: false, runs: 0 }))),
