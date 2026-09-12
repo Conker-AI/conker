@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner",
+    "dev:sandbox": "node scripts/dev-sandbox.mjs",
     "build": "tsc -b && vite build --configLoader runner",
     "lint": "eslint .",
     "preview": "vite preview"
