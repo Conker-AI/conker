@@ -2,6 +2,8 @@ import { lazy } from "react"
 
 const PlaceholderPage = lazy(() => import("@/app/_conker/placeholder-page"))
 const AgentsPage = lazy(() => import("@/app/agents/page"))
+const InboxPage = lazy(() => import("@/app/inbox/page"))
+const ApprovalDetailPage = lazy(() => import("@/app/inbox/detail-page"))
 
 // Error pages (kept from the template shell)
 const NotFound = lazy(() => import("@/app/errors/not-found/page"))
@@ -20,7 +22,8 @@ export const routes: RouteConfig[] = [
   // Daily loop
   { path: "/", element: screen("Home", "Your companion.") },
   { path: "/chat", element: screen("Chats", "Find any conversation.") },
-  { path: "/inbox", element: screen("Inbox", "The intent, the effect, and your say.") },
+  { path: "/inbox", element: <InboxPage /> },
+  { path: "/inbox/:id", element: <ApprovalDetailPage /> },
 
   // Reference
   { path: "/memory", element: screen("Memory", "What Conker thinks it knows.") },

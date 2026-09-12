@@ -27,6 +27,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-warning: var(--warning);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -43,6 +44,7 @@
 }
 
 :root {
+  --warning: oklch(0.48 0.12 75);
   --font-inter: 'Inter', system-ui, sans-serif;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -79,6 +81,7 @@
 }
 
 .dark {
+  --warning: oklch(0.79 0.12 75);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
