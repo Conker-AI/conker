@@ -1,9 +1,70 @@
 export const agentFixtures = [
-  { id: "conker", name: "Conker", role: "The daily companion", initials: "C", description: "Keeps the thread between school, training and everything you’re building.", model: "Qwen 2.5 3B", routing: "Local first. Hosted escalation requires an explicit choice.", spend: "$0.00 reported · 2 calls with unknown cost", activity: ["16:42 · Read next week’s calendar", "16:43 · Prepared a message to coach", "11:08 · Saved a Sunday reminder"], grants: [
-    { id: "calendar-read", subject: "Personal calendar", operation: "Read events", frequency: 20, period: "per day", budget: "$0", expiry: "30 September 2026", recovery: "No external change to reverse", boundary: "This calendar only; no edits or invitations" },
-    { id: "mail-drafts", subject: "Personal mail", operation: "Prepare drafts", frequency: 3, period: "per day", budget: "$0", expiry: "30 September 2026", recovery: "Discard the draft", boundary: "Cannot send, delete or change recipients outside the draft" },
-  ] },
-  { id: "workshop", name: "Workshop", role: "A second pair of hands", initials: "W", description: "Reads your project notes and prepares small changes for review.", model: "Qwen 2.5 Coder 3B", routing: "Local only. No automatic hosted fallback.", spend: "Cost unknown · local usage not metered", activity: ["15:21 · Read four project notes", "15:22 · Deletion held for owner review"], grants: [
-    { id: "reading-notes", subject: "Downloads / reading notes", operation: "Read files", frequency: 10, period: "per hour", budget: "$0", expiry: "20 September 2026", recovery: "No external change to reverse", boundary: "Observe only; no deletion or shell access" },
-  ] },
-]
+  {
+    id: "conker",
+    name: "Conker",
+    role: "The daily companion",
+    initials: "C",
+    description:
+      "Keeps the thread between school, training and everything you’re building.",
+    model: "Qwen 2.5 3B",
+    routing: "Local first. Hosted escalation requires an explicit choice.",
+    spend: "$0.00 reported · 2 calls with unknown cost",
+    activity: [
+      "16:42 · Read next week’s calendar",
+      "16:43 · Prepared a message to coach",
+      "11:08 · Saved a Sunday reminder",
+    ],
+    grants: [
+      {
+        id: "calendar-read",
+        subject: "Personal calendar",
+        operation: "Read events",
+        frequency: 20,
+        period: "per day",
+        budget: "$0",
+        expiry: "30 September 2026",
+        recovery: "No external change to reverse",
+        boundary: "This calendar only; no edits or invitations",
+      },
+      {
+        id: "mail-drafts",
+        subject: "Personal mail",
+        operation: "Prepare drafts",
+        frequency: 3,
+        period: "per day",
+        budget: "$0",
+        expiry: "30 September 2026",
+        recovery: "Discard the draft",
+        boundary: "Cannot send, delete or change recipients outside the draft",
+      },
+    ],
+  },
+  {
+    id: "workshop",
+    name: "Workshop",
+    role: "A second pair of hands",
+    initials: "W",
+    description:
+      "Reads your project notes and prepares small changes for review.",
+    model: "Qwen 2.5 Coder 3B",
+    routing: "Local only. No automatic hosted fallback.",
+    spend: "Cost unknown · local usage not metered",
+    activity: [
+      "15:21 · Read four project notes",
+      "15:22 · Deletion held for owner review",
+    ],
+    grants: [
+      {
+        id: "reading-notes",
+        subject: "Downloads / reading notes",
+        operation: "Read files",
+        frequency: 10,
+        period: "per hour",
+        budget: "$0",
+        expiry: "20 September 2026",
+        recovery: "No external change to reverse",
+        boundary: "Observe only; no deletion or shell access",
+      },
+    ],
+  },
+];

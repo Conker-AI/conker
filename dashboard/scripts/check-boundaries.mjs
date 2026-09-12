@@ -4,7 +4,10 @@ import { join, relative } from "node:path";
 
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const rules = [
-  ["network client", /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/],
+  [
+    "network client",
+    /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/,
+  ],
   ["remote endpoint", /https?:\/\//],
   ["literal colour", /#[\da-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|oklch)\s*\(/i],
   ["font family outside the design system", /font-family\s*:/i],
@@ -18,7 +21,8 @@ async function inspect(directory) {
     else if (/\.(tsx?|css)$/.test(entry.name)) {
       const source = await readFile(path, "utf8");
       for (const [label, pattern] of rules) {
-        if (pattern.test(source)) failures.push(`${relative(root, path)}: ${label}`);
+        if (pattern.test(source))
+          failures.push(`${relative(root, path)}: ${label}`);
       }
     }
   }
@@ -26,6 +30,8 @@ async function inspect(directory) {
 await inspect(root);
 if (failures.length) {
   console.error(failures.join("\n"));
-  console.error("Keep preview data in src/fixtures and use design-system tokens.");
+  console.error(
+    "Keep preview data in src/fixtures and use design-system tokens.",
+  );
   process.exitCode = 1;
 } else console.log("Fixture boundary and design-token checks passed.");
