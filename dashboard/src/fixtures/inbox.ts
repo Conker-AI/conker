@@ -13,7 +13,7 @@ export const inboxFixtures: (Approval | Proposal)[] = [
       body: "Hi Daniel, is open mat running this Friday at 17:00? I’d like to come if there’s space. Thanks, Alexey",
     },
     asked: "Also ask coach if Friday’s open mat is on.",
-    source: "/chat/week#intent",
+    source: "/chat/week#week-user",
     reversible: "This email cannot be unsent once delivered.",
     reason:
       "Sending mail acts outward. Your current grant covers reading mail and preparing drafts only.",
@@ -42,7 +42,12 @@ export const inboxFixtures: (Approval | Proposal)[] = [
     agent: "Workshop",
     args: { directory: "/home/alexey/Downloads", count: 47, pattern: "*.pdf" },
     asked: "Summarise the reading notes in my Downloads folder.",
-    source: "/journal?actor=Workshop",
+    source: "/chat/reading#reading-user",
+    intentEvidence: {
+      matches: false,
+      detail:
+        "Intent mismatch: summarising notes does not require deleting them.",
+    },
     reversible:
       "Permanent deletion. These files are outside the last verified backup.",
     reason:
@@ -65,7 +70,7 @@ export const inboxFixtures: (Approval | Proposal)[] = [
       body: "Yes, 14:00 works. See you then!",
     },
     asked: "Reply to Mum about Sunday.",
-    source: "/journal",
+    source: "/chat/week#sent-user",
     reversible: "Delivered emails cannot be unsent.",
     reason: "Sending mail acts outward.",
     grant: "mail-drafts · prepare only",
@@ -86,7 +91,7 @@ export const inboxFixtures: (Approval | Proposal)[] = [
       body: "Which room is Monday’s maths exam in?",
     },
     asked: "Check where my exam is.",
-    source: "/journal",
+    source: "/chat/week#expired-user",
     reversible: "Delivered emails cannot be unsent.",
     reason: "Sending mail acts outward.",
     grant: "mail-drafts · prepare only",

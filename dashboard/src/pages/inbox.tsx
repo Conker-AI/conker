@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ShieldCheck,
   Clock3,
+  Wrench,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -19,13 +20,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "../ui";
-import { approvalTitle, toolTemplates } from "../domain/approval-description";
+import { approvalTitle, toolDefinition } from "../domain/approval-description";
 import type { Approval, ProposalRecord } from "../domain/model";
 import { useInbox } from "../data/inbox";
 import { api } from "../data/client";
 import { refresh } from "../data/queries";
 import { ActionRecord } from "../components/action-record";
-import { PageHeading, EmptyState, SourceLink } from "../components/common";
+import { PageHeading, SourceLink } from "../components/common";
 import { QueryState, DetailFields } from "../components/object-inspector";
 
 function ApprovalCard({
@@ -38,8 +39,9 @@ function ApprovalCard({
   const [open, setOpen] = useState(expanded);
   const [reason, setReason] = useState("");
   const [scenario, setScenario] = useState("normal");
-  const definition = toolTemplates[item.tool];
-  const actionable = item.decision === "pending";
+  const definition = toolDefinition(item.tool);
+  const actionable =
+    item.decision === "pending" && definition.effect !== "Unknown";
   const mutation = useMutation({
     mutationFn: (decision: "approved" | "denied") =>
       api(`/approvals/${item.id}/decision`, {
@@ -52,7 +54,12 @@ function ApprovalCard({
       await refresh("approvals", "actions", "journal");
     },
   });
-  const Icon = item.tool === "email.send" ? Mail : FileMinus;
+  const Icon =
+    item.tool === "email.send"
+      ? Mail
+      : item.tool === "files.delete"
+        ? FileMinus
+        : Wrench;
   return (
     <article className="approval-ticket" id={item.id}>
       <header className="approval-glance">
@@ -84,9 +91,7 @@ function ApprovalCard({
             <div>
               <span className="eyebrow">You asked</span>
               <p>“{item.asked}”</p>
-              <SourceLink to={item.source.replace("#intent", "#week-user")}>
-                Original conversation
-              </SourceLink>
+              <SourceLink to={item.source}>Original conversation</SourceLink>
             </div>
             <div>
               <span className="eyebrow">It wants to</span>
@@ -94,6 +99,20 @@ function ApprovalCard({
               <small>{item.tool} · version 2</small>
             </div>
           </div>
+          <div className="grant-delta" aria-label="Authority requested">
+            <span>Current: {item.grant}</span>
+            <span>?</span>
+            <strong>Once: {approvalTitle(item)}</strong>
+          </div>
+          {definition.effect === "Unknown" && (
+            <Status
+              evidence={{
+                state: "unknown",
+                detail:
+                  "Tool definition unavailable. Review is read-only until its effect is known.",
+              }}
+            />
+          )}
           <dl className="argument-list">
             {Object.entries(item.args).map(([key, value]) => (
               <div key={key}>
@@ -111,12 +130,11 @@ function ApprovalCard({
               <p>{item.reason}</p>
             </div>
           </div>
-          {item.id === "cleanup" && (
+          {item.intentEvidence?.matches === false && (
             <Status
               evidence={{
                 state: "blocked",
-                detail:
-                  "Intent mismatch: summarising notes does not require deleting them.",
+                detail: item.intentEvidence.detail,
               }}
             />
           )}
@@ -303,6 +321,41 @@ function ProposalCard({ item }: { item: ProposalRecord }) {
     </article>
   );
 }
+function InboxRow({ item }: { item: Approval | ProposalRecord }) {
+  const definition =
+    item.kind === "approval"
+      ? toolDefinition(item.tool)
+      : { service: "Suggestion", effect: "Proposal" };
+  const Icon =
+    item.kind === "proposal"
+      ? Lightbulb
+      : item.tool === "email.send"
+        ? Mail
+        : item.tool === "files.delete"
+          ? FileMinus
+          : Wrench;
+  return (
+    <Link className="approval-ticket approval-glance" to={`/inbox/${item.id}`}>
+      <span className="service-icon">
+        <Icon aria-hidden="true" />
+      </span>
+      <div>
+        <div className="card-kicker">
+          {definition.service}
+          <Badge variant="outline">{definition.effect}</Badge>
+        </div>
+        <strong>
+          {item.kind === "approval" ? approvalTitle(item) : item.title}
+        </strong>
+        <p className="fine-print">
+          {item.kind === "approval"
+            ? `Decide by ${item.decideBy} ? Spend window ${item.spendSeconds / 60} min once approved`
+            : "No decision deadline ? No execution window (proposal)"}
+        </p>
+      </div>
+    </Link>
+  );
+}
 export function InboxPage() {
   const { id } = useParams();
   const inbox = useInbox();
@@ -312,18 +365,24 @@ export function InboxPage() {
     : tab === "pending"
       ? inbox.pending
       : inbox.records.filter((item) => !inbox.pending.includes(item));
+  const unavailable = !!inbox.error;
+  const loading = inbox.isPending || inbox.isFetching;
   return (
     <div className="page inbox-page">
       <PageHeading
         eyebrow="The daily loop"
         title={
-          inbox.pending.length
-            ? "A few things for your judgement."
-            : "Nothing waiting on you."
+          unavailable
+            ? "Inbox unavailable"
+            : loading
+              ? "Checking your inbox?"
+              : "Inbox"
         }
         description="The intent, the effect, and your say. Nothing more than it needs to be."
       >
-        <span className="quiet-count">{inbox.pending.length} decisions</span>
+        {!loading && !unavailable && (
+          <span className="quiet-count">{inbox.pending.length} decisions</span>
+        )}
       </PageHeading>
       {id ? (
         <Button asChild variant="ghost" className="back-link">
@@ -340,26 +399,31 @@ export function InboxPage() {
           </TabsList>
         </Tabs>
       )}
-      {inbox.isPending || inbox.error ? (
-        <QueryState loading={inbox.isPending} error={inbox.error} />
+      {unavailable || inbox.isPending || (loading && !visible.length) ? (
+        <QueryState loading={loading} error={inbox.error} />
       ) : (
         <div className="inbox-list">
-          {visible.map((item, index) =>
-            item.kind === "approval" ? (
-              <ApprovalCard
-                key={item.id}
-                item={item}
-                expanded={!!id || index === 0}
-              />
+          {visible.map((item) =>
+            !id ? (
+              <InboxRow key={item.id} item={item} />
+            ) : item.kind === "approval" ? (
+              <ApprovalCard key={item.id} item={item} expanded />
             ) : (
               <ProposalCard key={item.id} item={item} />
             ),
           )}
           {!visible.length && (
-            <EmptyState title="A quiet inbox is a good inbox.">
-              No hidden queue to catch up on. Your decisions remain in the
-              history.
-            </EmptyState>
+            <QueryState
+              empty={
+                id
+                  ? "This inbox record is missing. Return to the list to choose an available record."
+                  : !inbox.records.length
+                    ? "Verified empty inbox. No retained items."
+                    : tab === "pending"
+                      ? "Nothing waiting on you. Retained decisions are in Decision history."
+                      : "No decisions match Decision history. Pending items are under Needs you."
+              }
+            />
           )}
         </div>
       )}

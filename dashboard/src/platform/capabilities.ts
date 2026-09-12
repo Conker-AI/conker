@@ -7,9 +7,9 @@ export function capabilityReason(
   if (!id) return;
   const capability = capabilities?.find((item) => item.id === id);
   if (!capability) return "Capability evidence is unavailable.";
-  if (!capability.supported)
+  if (capability.supported !== true)
     return capability.reason ?? "Not supported by this fixture connection.";
-  if (!capability.authorised)
+  if (capability.authorised !== true)
     return capability.reason ?? "The owner has not authorised this operation.";
 }
 export function commandReason(

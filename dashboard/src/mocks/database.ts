@@ -136,7 +136,7 @@ export function createDatabase() {
     }));
   const actions: Action[] = approvals.map((row) => ({
     id: row.actionId,
-    sessionId: row.id === "cleanup" ? "reading" : "week",
+    sessionId: row.source.split("/")[2].split("#")[0],
     tool: row.tool,
     args: row.args,
     approvalId: row.id,
@@ -178,6 +178,8 @@ export function createDatabase() {
   );
   const messages = [
     message("week-user", "week", "user", planningFixture.intent),
+    message("sent-user", "week", "user", "Reply to Mum about Sunday."),
+    message("expired-user", "week", "user", "Check where my exam is."),
     message(
       "week-plan",
       "week",

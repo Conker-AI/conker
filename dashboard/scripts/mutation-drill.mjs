@@ -78,7 +78,7 @@ const mutants = [
   {
     name: "owner authority ignored",
     file: "src/platform/capabilities.ts",
-    change: replace("if (!capability.authorised)", "if (false)"),
+    change: replace("if (capability.authorised !== true)", "if (false)"),
     test: "domain.spec.ts",
     title: "capability evidence",
   },

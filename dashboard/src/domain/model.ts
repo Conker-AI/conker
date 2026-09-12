@@ -97,6 +97,7 @@ export type Action = {
     | "expired";
   approvalId?: string;
   receipt?: string;
+  receiptAt?: string;
   replyMissing?: boolean;
 };
 export type Approval = Omit<ApprovalDescription, "decision"> & {

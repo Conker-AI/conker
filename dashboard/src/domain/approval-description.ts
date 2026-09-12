@@ -1,7 +1,8 @@
 export type Approval = {
   kind: "approval";
   id: string;
-  tool: "email.send" | "files.delete";
+  tool: string;
+  intentEvidence?: { matches: boolean; detail: string };
   agent: string;
   args: Record<string, string | number>;
   asked: string;
@@ -39,8 +40,19 @@ export const toolTemplates = {
   },
 } as const;
 export function approvalTitle(item: Approval) {
-  return toolTemplates[item.tool].template.replace(
+  return toolDefinition(item.tool).template.replace(
     /\{(\w+)\}/g,
     (_, key: string) => String(item.args[key] ?? "[missing argument]"),
   );
+}
+
+export function toolDefinition(tool: string) {
+  return Object.hasOwn(toolTemplates, tool)
+    ? toolTemplates[tool as keyof typeof toolTemplates]
+    : {
+        service: tool,
+        effect: "Unknown",
+        template: "Review unsupported tool: " + tool,
+        fields: {},
+      };
 }

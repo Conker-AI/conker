@@ -30,14 +30,12 @@ function generate(run: Run) {
     run.cursor += 1;
     output.streamCursor = run.cursor;
     run.status = next ? "streaming" : "completed";
-    events
-      .get(run.id)!
-      .push({
-        id: run.cursor,
-        runId: run.id,
-        type: next ? "delta" : "complete",
-        text: next,
-      });
+    events.get(run.id)!.push({
+      id: run.cursor,
+      runId: run.id,
+      type: next ? "delta" : "complete",
+      text: next,
+    });
     if (next) setTimeout(tick, 110);
   };
   setTimeout(tick, 120);
@@ -88,6 +86,7 @@ export const handlers = [
       },
       delegations: [],
     };
+    session.updatedAt = new Date().toISOString();
     db.submissions[input.id] = id;
     db.messages[userMessage.id] = userMessage;
     db.messages[run.messageId] = {
@@ -267,9 +266,11 @@ export const handlers = [
       setTimeout(() => {
         action.status =
           input.scenario === "unknown" ? "outcome_unknown" : "completed";
-        if (action.status === "completed")
+        if (action.status === "completed") {
+          action.receiptAt = new Date().toISOString();
           action.receipt =
             "Stateful fixture receipt: the sample action completed. No real effect.";
+        }
       }, 1400);
     return json(approval);
   }),

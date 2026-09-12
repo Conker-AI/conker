@@ -6,7 +6,6 @@ import type { Action, Approval } from "../domain/model";
 import { api } from "../data/client";
 import { useObject, keys, refresh } from "../data/queries";
 import { Button, Status } from "../ui";
-import { fixtureLive } from "../fixtures/shared";
 import { QueryState } from "./object-inspector";
 import { readView, updateView } from "../platform/session-view-state";
 
@@ -36,7 +35,18 @@ export function ActionStatus({ action }: { action: Action }) {
       <Status
         evidence={
           action.receipt
-            ? fixtureLive(action.receipt)
+            ? action.receiptAt
+              ? {
+                  state: "live",
+                  source: "Fixture receipt",
+                  checkedAt: action.receiptAt,
+                  staleAfterMs: 3_600_000,
+                  detail: action.receipt,
+                }
+              : {
+                  state: "unknown",
+                  detail: `${action.receipt} Receipt age unknown.`,
+                }
             : {
                 state: "unknown",
                 detail:

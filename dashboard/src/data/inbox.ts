@@ -9,6 +9,7 @@ export function useInbox() {
     queries: (index.data ?? []).map((item) => {
       const resource = item.kind === "approval" ? "approvals" : "proposals";
       return {
+        refetchInterval: 15_000,
         queryKey: keys.object(resource, item.resourceId),
         queryFn: async () =>
           adaptRecord(
@@ -26,6 +27,7 @@ export function useInbox() {
   return {
     records,
     pending,
+    isFetching: index.isFetching || objects.some((query) => query.isFetching),
     isPending: index.isPending || objects.some((query) => query.isPending),
     error: index.error ?? objects.find((query) => query.error)?.error,
   };

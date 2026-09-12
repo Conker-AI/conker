@@ -41,6 +41,7 @@ export function useList<T>(resource: string) {
   return useQuery<T[]>({
     queryKey: keys.list(resource),
     queryFn: async () => adaptList(resource, await api(`/${resource}`)) as T[],
+    refetchInterval: resource === "inbox" ? 15_000 : false,
     refetchOnMount: resource === "capabilities" ? "always" : true,
   });
 }
