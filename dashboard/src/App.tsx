@@ -1,3 +1,4 @@
+import { ThemeRuntime } from "@/components/theme-customizer/runtime"
 import { DataProvider } from "@/lib/api/provider"
 import { BrowserRouter as Router } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -19,6 +20,7 @@ function App() {
     <div className="font-sans antialiased" style={{ fontFamily: 'var(--font-inter)' }}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <SidebarConfigProvider>
+          <ThemeRuntime />
           <Router basename={basename}>
             <DataProvider><AppRouter /></DataProvider>
           </Router>

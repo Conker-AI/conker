@@ -6,15 +6,10 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Palette } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useCustomizerPreferences } from "@/components/theme-customizer/preferences"
 
-const ThemeCustomizer = React.lazy(() => import("@/components/theme-customizer").then((module) => ({ default: module.ThemeCustomizer })))
 
 export function SiteHeader() {
   const [searchOpen, setSearchOpen] = React.useState(false)
-  const { open: customizerOpen, setOpen: setCustomizerOpen } = useCustomizerPreferences()
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -41,13 +36,11 @@ export function SiteHeader() {
             <SearchTrigger onClick={() => setSearchOpen(true)} />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="icon" aria-label="Customize theme and layout" onClick={() => setCustomizerOpen(true)}><Palette /></Button>
             <ModeToggle />
           </div>
         </PageContainer>
       </header>
       <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      <React.Suspense fallback={null}><ThemeCustomizer open={customizerOpen} onOpenChange={setCustomizerOpen} /></React.Suspense>
     </>
   )
 }

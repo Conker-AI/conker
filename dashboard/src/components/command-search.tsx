@@ -13,6 +13,7 @@ import {
   Bot,
   Wrench,
   Briefcase,
+  Settings,
   Server,
   Terminal,
   type LucideIcon,
@@ -138,6 +139,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     { title: "Jobs", url: "/jobs", group: "Control", icon: Briefcase },
     { title: "System", url: "/system", group: "Control", icon: Server },
     { title: "Terminal", url: "/terminal", group: "Control", icon: Terminal },
+    { title: "Settings", url: "/settings", group: "Control", icon: Settings },
   ]
 
   const groupedItems = searchItems.reduce((acc, item) => {

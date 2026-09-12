@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Settings,
   Server,
   EllipsisVertical,
   BellDot,
@@ -78,6 +79,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link to="/companion">
                   <CircleUser />

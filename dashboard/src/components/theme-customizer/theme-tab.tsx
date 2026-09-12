@@ -1,3 +1,4 @@
+import { useCustomizerPreferences } from "./preferences"
 "use client"
 
 import { Palette, Dices, Upload, ExternalLink, Sun, Moon } from 'lucide-react'
@@ -43,9 +44,13 @@ export function ThemeTab({
     applyTheme,
     applyTweakcnTheme,
     applyRadius,
-    handleColorChange
+    handleColorChange: applyColor
   } = useThemeManager()
 
+  const { colors, setColors } = useCustomizerPreferences()
+  const handleColorChange = (key: string, value: string) => {
+    if (CSS.supports("color", value)) { applyColor(key, value); setColors({ ...colors, [key]: value }) }
+  }
   const { toggleTheme } = useCircularTransition()
 
   const handleRandomShadcn = () => {
@@ -262,11 +267,11 @@ export function ThemeTab({
         </Button>
       </div>
 
-      {/* Brand Colors Section */}
+      {/* Accent & token colors Section */}
       <Accordion type="single" collapsible className="w-full border-b rounded-lg">
         <AccordionItem value="brand-colors" className="border border-border rounded-lg overflow-hidden">
           <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
-            <Label className="text-sm font-medium cursor-pointer">Brand Colors</Label>
+            <Label className="text-sm font-medium cursor-pointer">Accent & token colors</Label>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t border-border bg-muted/20">
             {baseColors.map((color) => (
@@ -274,7 +279,7 @@ export function ThemeTab({
                 <ColorPicker
                   label={color.name}
                   cssVar={color.cssVar}
-                  value={brandColorsValues[color.cssVar] || ""}
+                  value={colors[color.cssVar] || brandColorsValues[color.cssVar] || ""}
                   onChange={handleColorChange}
                 />
               </div>

@@ -1,4 +1,5 @@
 import { lazy } from "react"
+const SettingsPage = lazy(() => import("@/app/settings/page"))
 const HomePage = lazy(() => import("@/app/home/page"))
 const ChatsPage = lazy(() => import("@/app/chat/page"))
 const ChatDetailPage = lazy(() => import("@/app/chat/detail-page"))
@@ -20,6 +21,7 @@ export interface RouteConfig {
   children?: RouteConfig[]
 }
 export const routes: RouteConfig[] = [
+  { path: "/settings", element: <SettingsPage /> },
   { path: "/", element: <HomePage /> },
   { path: "/chat", element: <ChatsPage /> },
   { path: "/chat/:id", element: <ChatDetailPage /> },
