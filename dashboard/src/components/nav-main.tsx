@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, NavLink, useLocation } from "react-router-dom"
 
 import {
   Collapsible,
@@ -13,6 +13,7 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuBadge,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -29,6 +30,7 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     isActive?: boolean
+    badge?: number
     items?: {
       title: string
       url: string
@@ -84,13 +86,14 @@ export function NavMain({
                   </CollapsibleContent>
                 </>
               ) : (
-                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer" isActive={location.pathname === item.url}>
-                  <Link to={item.url}>
+                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer" isActive={location.pathname === item.url || (item.url !== "/" && location.pathname.startsWith(item.url + "/"))}>
+                  <NavLink to={item.url} end={item.url === "/"}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
-                  </Link>
+                  </NavLink>
                 </SidebarMenuButton>
               )}
+              {item.badge !== undefined && item.badge > 0 && <SidebarMenuBadge aria-label={`${item.badge} requests need you`}>{item.badge}</SidebarMenuBadge>}
             </SidebarMenuItem>
           </Collapsible>
         ))}

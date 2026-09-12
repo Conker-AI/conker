@@ -13,6 +13,7 @@ import { LayoutTab } from './layout-tab'
 import { ImportModal } from './import-modal'
 import { cn } from '@/lib/utils'
 import type { ImportedTheme } from '@/types/theme-customizer'
+import { useCustomizerPreferences } from './preferences'
 
 interface ThemeCustomizerProps {
   open: boolean
@@ -24,11 +25,8 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
   const { config: sidebarConfig, updateConfig: updateSidebarConfig } = useSidebarConfig()
 
   const [activeTab, setActiveTab] = React.useState("theme")
-  const [selectedTheme, setSelectedTheme] = React.useState("default")
-  const [selectedTweakcnTheme, setSelectedTweakcnTheme] = React.useState("")
-  const [selectedRadius, setSelectedRadius] = React.useState("0.5rem")
+  const { selectedTheme, setSelectedTheme, selectedTweakcnTheme, setSelectedTweakcnTheme, selectedRadius, setSelectedRadius, importedTheme, setImportedTheme } = useCustomizerPreferences()
   const [importModalOpen, setImportModalOpen] = React.useState(false)
-  const [importedTheme, setImportedTheme] = React.useState<ImportedTheme | null>(null)
 
   const handleReset = () => {
     // Complete reset to application defaults
@@ -36,7 +34,7 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
     // 1. Reset all state variables to initial values
     setSelectedTheme("")  // Clear theme selection after reset
     setSelectedTweakcnTheme("")
-    setSelectedRadius("0.5rem")
+    setSelectedRadius("0.625rem")
     setImportedTheme(null) // Clear imported theme
     setBrandColorsValues({}) // Clear brand colors state
 
@@ -44,7 +42,7 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
     resetTheme()
 
     // 3. Reset the radius to default
-    applyRadius("0.5rem")
+    applyRadius("0.625rem")
 
     // 4. Reset sidebar to defaults
     updateSidebarConfig({ variant: "inset", collapsible: "offcanvas", side: "left" })
@@ -98,10 +96,10 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
               </div>
               <SheetTitle className="text-lg font-semibold">Customizer</SheetTitle>
               <div className="ml-auto flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={handleReset} className="cursor-pointer h-8 w-8">
+                <Button variant="outline" size="icon" aria-label="Reset theme and layout" onClick={handleReset} className="cursor-pointer h-8 w-8">
                   <RotateCcw className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={() => onOpenChange(false)} className="cursor-pointer h-8 w-8">
+                <Button variant="outline" size="icon" aria-label="Close customizer" onClick={() => onOpenChange(false)} className="cursor-pointer h-8 w-8">
                   <X className="h-4 w-4" />
                 </Button>
               </div>

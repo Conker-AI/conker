@@ -1,15 +1,14 @@
 "use client"
 
 import {
-  CreditCard,
+  Server,
   EllipsisVertical,
-  LogOut,
   BellDot,
   CircleUser,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import { Logo } from "@/components/logo"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +46,7 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-                < Logo size={28} />
+                <Avatar><AvatarFallback>AL</AvatarFallback></Avatar>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -67,7 +66,7 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <div className="h-8 w-8 rounded-lg">
-                  < Logo size={28} />
+                  <Avatar><AvatarFallback>AL</AvatarFallback></Avatar>
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -80,31 +79,26 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/account">
+                <Link to="/companion">
                   <CircleUser />
-                  Account
+                  Character Studio
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/billing">
-                  <CreditCard />
-                  Billing
+                <Link to="/system">
+                  <Server />
+                  System
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/notifications">
+                <Link to="/inbox">
                   <BellDot />
-                  Notifications
+                  Inbox
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link to="/sign-in">
-                <LogOut />
-                Log out
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Local fixture · no account connection</DropdownMenuLabel>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
