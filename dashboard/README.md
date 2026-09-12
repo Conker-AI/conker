@@ -1,13 +1,14 @@
-# Conker dashboard preview
+# Conker messenger preview
 
-A browser-only sketch of Conker. Start with Chat, review the coach’s message in Inbox,
-then look at System’s deliberately imperfect health evidence. Nothing calls a backend,
-model, or third party. Every action changes fixtures in this tab only; reloading resets
-the preview, including appearance. Do not enter real passwords in setup.
+Frontend only. The browser owns an explicitly fictional MSW database. No gate, model,
+shell, external service, or secret is involved. This prototype always starts interception
+before mounting the application, including in production builds. There is no real transport
+fallback. Resource requests are confined to `/__fixture/v1/` and require a fixture response
+marker. Reloading resets the mock records, imported assets, drafts, and running work.
 
 ## Run
 
-From `companion/dashboard`, with Node 22.12 or newer:
+Use Node 22.12 or newer. From `companion/dashboard`:
 
 ```sh
 npm --prefix ../design-system install
@@ -15,67 +16,128 @@ npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173/**. First-run setup is **http://127.0.0.1:5173/setup**.
-The port is fixed so browser checks and the shared review URL agree. If it is occupied,
-stop the other preview on that port before starting this one.
+Open **http://127.0.0.1:5173/**. The predev script copies the installed MSW worker into
+`public/`; it is generated dependency code, not a handwritten worker. Use localhost with
+service workers enabled. Do not enter real secrets or personal records in this preview.
 
-`../design-system` is a local package dependency; keep it alongside this app. Its styles,
-fonts, theme provider, eight-state Status and Radix primitives are consumed directly.
-There is no second component theme here. The owner popover composes Radix with the
-design-system Button. React Router owns navigation; no server routing is required in dev.
-A production static host must route unknown paths back to `index.html`.
+```sh
+npm run build
+npm run preview
+```
 
-## Review and checks
+The production preview is **http://127.0.0.1:4173/**. It still uses MSW fixtures. A deployed
+static host must serve `index.html` for client routes and allow service workers. PWA
+installation, offline data, and native packaging are deliberately deferred.
+
+For the two Companion placement variants, change the one line in `src/app/config.ts`, or
+set `VITE_COMPANION_PLACEMENT=tile` before starting Vite. Default is `title`. Both variants
+keep the Companion pinned and Home resolves to its last visited session. The face opens
+Companion settings; the contact body opens the conversation.
+
+## Architecture
+
+- `domain/`: Companion, agent identity, contact, group, session, message, run, action,
+  approval, citation, character profile and effective conversation policy are distinct.
+  A run snapshots participants/group revision and policy. Delegation is inside a run.
+- `data/`: identity-based TanStack Query keys, response adapters, mutations, and an
+  application-owned stream coordinator. Components never own stream subscriptions.
+  Query freshness is separate from dated status evidence.
+- `mocks/`: stateful MSW handlers below the data model. Submissions have stable IDs;
+  acceptance is delayed. Streams carry event IDs, cursor replay, and atomic snapshots.
+  Approval decisions are revision-bound and distinct from execution receipts.
+- `platform/`: commands, capability checks, constrained slots, and a small session-keyed
+  interaction store for drafts, reply target, scroll position, and expanded details.
+- `app/features.ts`: the only composition list. Features are ordinary bundled TypeScript,
+  with separate command definitions, placements, routes, navigation and view contributions.
+- `features/`: messenger, management inspectors, Character Studio, terminal, Reply and
+  emotion. Core action/approval renderers are not replaceable contribution points.
+
+The host permits two direct message actions plus overflow. Composer commands use one tools
+menu. Capability diagnostics distinguish shipped code, supported transport, owner authority,
+and applicability. This is presentation, never backend authorisation or a plugin sandbox.
+
+Chat, Inbox and Journal use the same `actions/<id>` and `approvals/<id>` queries. Journal
+stores links to those records, not a second opinion about whether an action happened.
+Unknown outcomes offer **check existing action**, not another dispatch. Confirmed actions
+with a missing response offer **ask only for the reply**.
+
+Replacing the fixture transport requires implementing the documented domain adapter against
+the authenticated owner gateway and agreeing real service contracts. It must not require
+rewriting screens, and must not forward owner authority through Pi. The mock endpoints are
+prototype contracts, not claims about existing gateway endpoints.
+
+## Journeys to review
+
+1. `/` opens the Companion. Switch to Workshop or Study room, then back. Session titles
+   open the contact's other conversations; a new conversation and fork keep explicit IDs.
+2. Write different drafts in different sessions. Use Reply, switch away, and return.
+   Send a message, switch contacts while it streams, then come back.
+3. Composer **Preview scenario** offers delayed acceptance, duplicated events, interrupted
+   streaming, and a lost acceptance response. The latter checks the existing submission.
+4. `/inbox/coach` keeps the “you asked / it wants to” judgement layer. Approve and watch
+   pending → accepted → receipt. Preview alternatives include expired authority, a changed
+   request revision, and outcome unknown after dispatch.
+5. Preview a deleted citation in Chat. The source becomes a tombstone. `/chat/server`
+   demonstrates reply-only recovery; `/chat/exam` shows group snapshots and delegation.
+6. `/companion` edits a character and maps a 2D emotion pack. PNG/JPEG/WebP images are read
+   locally. Future 2D/3D model imports retain file names only. No model loader executes.
+   Missing expressions/renderers fall back to neutral. Personality changes no permissions.
+7. `/terminal` is a disconnected, disabled owner workspace. Its connection state is separate
+   from read-only System telemetry. Git context is fixture text; no Git operations exist.
+
+Agents, Tools, Memory, Jobs and Journal share `ObjectInspector` and `DetailFields`. Memory
+search intentionally demonstrates the degraded word-search path. Setup is three short
+steps; the full Character Studio can wait until after the first conversation.
+
+## Extensibility proof
+
+Commit `5774a42` adds Reply and emotion after the messenger foundation. Its entire footprint
+is `src/features/reply/index.tsx`, `src/features/emotion/index.tsx`, and `src/app/features.ts`.
+The shell and slot renderer were byte-for-byte unchanged. The behavioural tests exercise
+both additions and the visibility cap; removing either contribution is a mutation target.
+
+This supports additions within the existing interaction families. A fundamentally new
+interaction can legitimately require a new typed contribution point. There is no arbitrary
+“insert anything anywhere” API or runtime extension store.
+
+## Checks and current verification status
 
 ```sh
 npm run check
 npm run build
 npx playwright install chromium
 npm test
+npm run test:mutations
 ```
 
-The browser tests cover each screen, fixture decisions, reply-only recovery, corrections,
-forgetting, filters, job controls, setup, phone layout, and actual light → dark → light
-component colours. A runtime check rejects data requests and third-party origins.
-`scripts/check-boundaries.mjs` also checks source for network clients, literal colours,
-font declarations and persistent browser storage. These checks guard the prototype’s
-scope; they are not security enforcement for a future connected dashboard.
+Pure model checks can run without starting the app:
 
-Dependency verification on this machine used the existing design-system install and cached
-packages: shell registry access was unavailable. A clean `npm ci` and Linux build have not
-been verified. The inherited lock metadata has the design system's documented native-package
-caveat; regenerate and verify the lockfiles on a networked machine before release.
+```sh
+npx playwright test --config playwright.unit.config.ts
+node scripts/mutation-drill.mjs --unit
+```
 
-## Where data lives
+The mutation drill first requires a passing baseline, then requires the intended behavioural
+assertion to fail. A compiler/startup error is not a caught mutant. It saves a recovery journal
+before each mutation and restores the source in `finally`; an interrupted drill restores on
+its next invocation, refusing to overwrite a concurrent edit.
 
-- `src/fixtures/`: named, typed examples per screen. Approval wording comes from registered
-  fixture tool templates filled with exact arguments, never agent prose.
-- `src/state.tsx`: decisions, journal events, memory edits/tombstones, grants, jobs,
-  conversations and profile choices shared across routes for the lifetime of the page.
-- `src/pages/`: screen composition. `src/ui.ts` is the design-system import seam.
-- `src/styles.css`: app layout and type scale, using the design-system tokens.
+**Not ready for merge yet:** this session's registry access returns EACCES, and MSW is not
+installed or cached. The dependency install was requested from the owner's terminal.
+Three pure model tests and their three mutants pass; the source token/transport boundary
+check passes. The new browser tests, remaining nine mutants, production build, phone and
+dark-theme visual checks have not run. The lockfile must be regenerated by the dependency
+install. Do not reuse the first-pass dashboard's 18-test result as evidence for this reshape.
 
-The fixture story is Saturday 12 September: a Monday maths exam, Tuesday/Thursday judo,
-a coach email waiting for approval, and a server that needs attention. Evidence dates
-labelled “Fixture receipt” are captured once per page load and become stale; refreshing
-System does not manufacture a successful health check. Missing cost remains unknown.
+## Decisions clarified while building
 
-## Deliberate limits
+The vision's earlier “terminal inside System” wording yields to its boundary note and the
+critique: Terminal is a distinct owner workspace. Home and pinned Companion share a contact
+destination, not a duplicate summary screen. The old autonomy-level text in `screens.md`
+remains superseded by standing grants. Live rendering, native apps and installation remain
+deferred as the locked vision requires.
 
-Chat replies stream a fixed sample. Approvals record a decision but execute nothing;
-their two clocks explain the contract and do not mint or consume tokens. Old consumed
-and expired examples cannot be approved again. Proposal acceptance prepares no real work.
-Grants edit only a fixture frequency. Tool governance is read-only. Memory search is
-explicitly a degraded, literal word match; it does not simulate semantic retrieval.
-Forget leaves a local tombstone and does not erase the source conversation.
-Jobs replay receipts rather than start work. Image tags are examples, not live versions.
-
-Setup discards the password field when advancing and creates no account. Its explanation
-describes the intended real owner flow: a server-side password check and temporary browser
-session, with terminal password reset on the owner’s server. Such a reset signs out browser
-sessions; it cannot restore lost storage, backups or vault recovery keys. This app implements
-none of that authentication and must not be deployed as an authenticated control plane.
-
-The navigation in `docs/screens.md` worked as written. Its resolved standing-grant model
-supersedes the older autonomy-level examples in the same document. This prototype chooses
-the five setup steps requested in the brief; their order was still open in the document.
+There is also a necessary stream detail beyond “stable event IDs”: the snapshot's text and
+cursor must be captured together. Otherwise loading a snapshot and replaying from an earlier
+cursor duplicates text even if the event handler itself deduplicates perfectly. This mock
+uses atomic snapshots and per-message cursors, including when several runs share a session.

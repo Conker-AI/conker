@@ -18,7 +18,10 @@ import {
   Badge,
 } from "../ui";
 import { useObject } from "../data/queries";
-import type { ServiceRecord as ServiceFixture, SystemRecord } from "../features/management/types";
+import type {
+  ServiceRecord as ServiceFixture,
+  SystemRecord,
+} from "../features/management/types";
 import { QueryState } from "../components/object-inspector";
 import { PageHeading } from "../components/common";
 
@@ -45,8 +48,19 @@ function ServiceRows({ rows }: { rows: ServiceFixture[] }) {
 export function SystemPage() {
   const [refreshed, setRefreshed] = useState(false);
   const query = useObject<SystemRecord>("system", "overview");
-  if (!query.data) return <div className="page"><QueryState loading={query.isPending} error={query.error} /></div>;
-  const { services: serviceFixtures, databases: databaseFixtures, host: hostFixtures, backup: backupFixture, manifest: backupManifestFixture } = query.data;
+  if (!query.data)
+    return (
+      <div className="page">
+        <QueryState loading={query.isPending} error={query.error} />
+      </div>
+    );
+  const {
+    services: serviceFixtures,
+    databases: databaseFixtures,
+    host: hostFixtures,
+    backup: backupFixture,
+    manifest: backupManifestFixture,
+  } = query.data;
   return (
     <div className="page system-page">
       <PageHeading

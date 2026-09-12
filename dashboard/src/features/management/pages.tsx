@@ -2,36 +2,556 @@ import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Search, Pause, Play } from "lucide-react";
-import { Button, Badge, Input, Status, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Field, FieldLabel } from "../../ui";
+import {
+  Button,
+  Badge,
+  Input,
+  Status,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Field,
+  FieldLabel,
+} from "../../ui";
 import { useList, useObject, refresh } from "../../data/queries";
 import { api } from "../../data/client";
 import { PageHeading, SourceLink } from "../../components/common";
-import { ObjectInspector, DetailFields, QueryState } from "../../components/object-inspector";
-import type { AgentRecord, ToolRecord, MemoryRecord, JobRecord, Grant } from "./types";
+import {
+  ObjectInspector,
+  DetailFields,
+  QueryState,
+} from "../../components/object-inspector";
+import type {
+  AgentRecord,
+  ToolRecord,
+  MemoryRecord,
+  JobRecord,
+  Grant,
+} from "./types";
 
-function Collection<T extends { id: string }>({ resource, title, description, label, summary, children, notice }: { resource: string; title: string; description: string; label: (item: T) => string; summary: (item: T) => ReactNode; children: (item: T) => ReactNode; notice?: ReactNode }) {
-  const { id } = useParams(); const query = useList<T>(resource); const detail = useObject<T>(resource, id ?? ""); const [search, setSearch] = useState("");
-  const rows = query.data?.filter(item => label(item).toLowerCase().includes(search.toLowerCase())) ?? [];
-  return <div className="page collection-page"><PageHeading eyebrow={`${["memory"].includes(resource) ? "Reference" : "Control"} / ${resource}`} title={title} description={description} />{notice}
-    {id ? <><Button variant="ghost" asChild className="back-link"><Link to={`/${resource}`}><ArrowLeft />All {resource === "memory" ? "memories" : resource}</Link></Button>{detail.data ? <ObjectInspector resource={resource} id={id} title={label(detail.data)}>{children(detail.data)}</ObjectInspector> : <QueryState loading={detail.isPending} error={detail.error} />}</> : <><div className="filter-bar"><div className="search-field"><Search /><Input aria-label={`Search ${resource}`} placeholder={`Search ${resource}…`} value={search} onChange={e => setSearch(e.target.value)} /></div></div>{query.isPending || query.error ? <QueryState loading={query.isPending} error={query.error} /> : rows.length ? <div className="resource-list">{rows.map(item => <div className="resource-row" key={item.id}><Link className="resource-title" to={`/${resource}/${item.id}`}>{label(item)}<ArrowUpRight /></Link><div className="resource-summary">{summary(item)}</div></div>)}</div> : <QueryState empty="No matching records. Try another word." />}</>}
-  </div>;
+function Collection<T extends { id: string }>({
+  resource,
+  title,
+  description,
+  label,
+  summary,
+  children,
+  notice,
+}: {
+  resource: string;
+  title: string;
+  description: string;
+  label: (item: T) => string;
+  summary: (item: T) => ReactNode;
+  children: (item: T) => ReactNode;
+  notice?: ReactNode;
+}) {
+  const { id } = useParams();
+  const query = useList<T>(resource);
+  const detail = useObject<T>(resource, id ?? "");
+  const [search, setSearch] = useState("");
+  const rows =
+    query.data?.filter((item) =>
+      label(item).toLowerCase().includes(search.toLowerCase()),
+    ) ?? [];
+  return (
+    <div className="page collection-page">
+      <PageHeading
+        eyebrow={`${["memory"].includes(resource) ? "Reference" : "Control"} / ${resource}`}
+        title={title}
+        description={description}
+      />
+      {notice}
+      {id ? (
+        <>
+          <Button variant="ghost" asChild className="back-link">
+            <Link to={`/${resource}`}>
+              <ArrowLeft />
+              All {resource === "memory" ? "memories" : resource}
+            </Link>
+          </Button>
+          {detail.data ? (
+            <ObjectInspector
+              resource={resource}
+              id={id}
+              title={label(detail.data)}
+            >
+              {children(detail.data)}
+            </ObjectInspector>
+          ) : (
+            <QueryState loading={detail.isPending} error={detail.error} />
+          )}
+        </>
+      ) : (
+        <>
+          <div className="filter-bar">
+            <div className="search-field">
+              <Search />
+              <Input
+                aria-label={`Search ${resource}`}
+                placeholder={`Search ${resource}…`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          {query.isPending || query.error ? (
+            <QueryState loading={query.isPending} error={query.error} />
+          ) : rows.length ? (
+            <div className="resource-list">
+              {rows.map((item) => (
+                <div className="resource-row" key={item.id}>
+                  <Link
+                    className="resource-title"
+                    to={`/${resource}/${item.id}`}
+                  >
+                    {label(item)}
+                    <ArrowUpRight />
+                  </Link>
+                  <div className="resource-summary">{summary(item)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <QueryState empty="No matching records. Try another word." />
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 function GrantEditor({ grant, agentId }: { grant: Grant; agentId: string }) {
-  const [open, setOpen] = useState(false); const [frequency, setFrequency] = useState(grant.frequency);
-  const mutation = useMutation({ mutationFn: () => api(`/agents/${agentId}/grant`, { id: grant.id, frequency }), onSuccess: async () => { await refresh("agents", "journal"); setOpen(false); } });
-  return <div className="grant-record"><h3>{grant.operation}</h3><DetailFields fields={[{ label: "Subject", value: grant.subject }, { label: "Frequency", value: `${grant.frequency} ${grant.period}` }, { label: "Budget", value: grant.budget }, { label: "Expires", value: grant.expiry }, { label: "Boundary", value: grant.boundary }, { label: "Recovery", value: grant.recovery }]} /><Button variant="outline" size="sm" onClick={() => { setFrequency(grant.frequency); setOpen(true); }}>Review bounds</Button><Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Review this standing grant</DialogTitle><DialogDescription>{grant.operation} · {grant.subject}. Editing this does not approve any pending action.</DialogDescription></DialogHeader><form onSubmit={e => { e.preventDefault(); mutation.mutate(); }}><Field><FieldLabel htmlFor="frequency">Maximum uses {grant.period}</FieldLabel><Input id="frequency" type="number" min={1} max={100} required value={frequency} onChange={e => setFrequency(Number(e.target.value))} /></Field><div className="grant-delta"><span>Current: {grant.frequency} {grant.period}</span><span>→</span><strong>Proposed: {frequency} {grant.period}</strong></div><p className="body-copy">Budget stays {grant.budget}. Expiry stays {grant.expiry}. No sending or deletion is newly authorised.</p><DialogFooter><Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={mutation.isPending}>Apply to preview</Button></DialogFooter>{mutation.error && <p role="alert">{mutation.error.message}</p>}</form></DialogContent></Dialog></div>;
+  const [open, setOpen] = useState(false);
+  const [frequency, setFrequency] = useState(grant.frequency);
+  const mutation = useMutation({
+    mutationFn: () =>
+      api(`/agents/${agentId}/grant`, { id: grant.id, frequency }),
+    onSuccess: async () => {
+      await refresh("agents", "journal");
+      setOpen(false);
+    },
+  });
+  return (
+    <div className="grant-record">
+      <h3>{grant.operation}</h3>
+      <DetailFields
+        fields={[
+          { label: "Subject", value: grant.subject },
+          { label: "Frequency", value: `${grant.frequency} ${grant.period}` },
+          { label: "Budget", value: grant.budget },
+          { label: "Expires", value: grant.expiry },
+          { label: "Boundary", value: grant.boundary },
+          { label: "Recovery", value: grant.recovery },
+        ]}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setFrequency(grant.frequency);
+          setOpen(true);
+        }}
+      >
+        Review bounds
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Review this standing grant</DialogTitle>
+            <DialogDescription>
+              {grant.operation} · {grant.subject}. Editing this does not approve
+              any pending action.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate();
+            }}
+          >
+            <Field>
+              <FieldLabel htmlFor="frequency">
+                Maximum uses {grant.period}
+              </FieldLabel>
+              <Input
+                id="frequency"
+                type="number"
+                min={1}
+                max={100}
+                required
+                value={frequency}
+                onChange={(e) => setFrequency(Number(e.target.value))}
+              />
+            </Field>
+            <div className="grant-delta">
+              <span>
+                Current: {grant.frequency} {grant.period}
+              </span>
+              <span>→</span>
+              <strong>
+                Proposed: {frequency} {grant.period}
+              </strong>
+            </div>
+            <p className="body-copy">
+              Budget stays {grant.budget}. Expiry stays {grant.expiry}. No
+              sending or deletion is newly authorised.
+            </p>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button disabled={mutation.isPending}>Apply to preview</Button>
+            </DialogFooter>
+            {mutation.error && <p role="alert">{mutation.error.message}</p>}
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
-export function AgentsPage() { return <Collection<AgentRecord> resource="agents" title="Useful, within clear limits." description="Persistent identities. Readable contracts. Temporary workers stay inside their runs." label={agent => agent.name} summary={agent => <><span>{agent.role}</span><span>{agent.grants.length} bounded grants</span><small>{agent.model} · {agent.spend}</small></>}>{agent => <><p className="body-copy">{agent.description}</p><div className="section-heading"><h3>Standing grants</h3><Badge variant="outline">Bounded contracts</Badge></div>{agent.grants.map(grant => <GrantEditor key={grant.id} grant={grant} agentId={agent.id} />)}<section className="section-gap"><h3>Model routing & spend</h3><DetailFields fields={[{ label: "Model", value: agent.model }, { label: "Routing", value: agent.routing }, { label: "Spend", value: agent.spend }]} /><Status evidence={{ state: "unknown", detail: "Unknown charges are not counted as free." }} /></section><section className="section-gap"><h3>Recent activity</h3>{agent.activity.map(item => <p className="activity-line" key={item}>{item}</p>)}<SourceLink to={`/journal?actor=${agent.name}`}>Full audit trail</SourceLink></section></>}</Collection>; }
-export function ToolsPage() { return <Collection<ToolRecord> resource="tools" title="Capability, with consequence." description="Observe → prepare → act locally → act outward. Scope does not imply approval." label={tool => `${tool.title} · ${tool.name}`} summary={tool => <><Badge variant="outline">{tool.sensitivity}</Badge><span>{tool.agents.join(", ")}</span><small>{tool.recent}</small></>}>{tool => <><p className="body-copy">{tool.description}</p><DetailFields fields={[{ label: "Sensitivity", value: tool.sensitivity }, { label: "Scope", value: tool.scope }, { label: "Scoped agents", value: tool.agents.map(agent => <SourceLink key={agent} to={`/agents/${agent.toLowerCase()}`}>{agent}</SourceLink>) }, { label: "Recovery", value: tool.recovery }, { label: "Recent use", value: tool.recent }]} /><details open><summary>Example arguments</summary><pre>{JSON.stringify(tool.args, null, 2)}</pre></details><p className="fine-print">Sensitivity editing is governance. This catalogue is read-only in the preview.</p></>}</Collection>; }
+export function AgentsPage() {
+  return (
+    <Collection<AgentRecord>
+      resource="agents"
+      title="Useful, within clear limits."
+      description="Persistent identities. Readable contracts. Temporary workers stay inside their runs."
+      label={(agent) => agent.name}
+      summary={(agent) => (
+        <>
+          <span>{agent.role}</span>
+          <span>{agent.grants.length} bounded grants</span>
+          <small>
+            {agent.model} · {agent.spend}
+          </small>
+        </>
+      )}
+    >
+      {(agent) => (
+        <>
+          <p className="body-copy">{agent.description}</p>
+          <div className="section-heading">
+            <h3>Standing grants</h3>
+            <Badge variant="outline">Bounded contracts</Badge>
+          </div>
+          {agent.grants.map((grant) => (
+            <GrantEditor key={grant.id} grant={grant} agentId={agent.id} />
+          ))}
+          <section className="section-gap">
+            <h3>Model routing & spend</h3>
+            <DetailFields
+              fields={[
+                { label: "Model", value: agent.model },
+                { label: "Routing", value: agent.routing },
+                { label: "Spend", value: agent.spend },
+              ]}
+            />
+            <Status
+              evidence={{
+                state: "unknown",
+                detail: "Unknown charges are not counted as free.",
+              }}
+            />
+          </section>
+          <section className="section-gap">
+            <h3>Recent activity</h3>
+            {agent.activity.map((item) => (
+              <p className="activity-line" key={item}>
+                {item}
+              </p>
+            ))}
+            <SourceLink to={`/journal?actor=${agent.name}`}>
+              Full audit trail
+            </SourceLink>
+          </section>
+        </>
+      )}
+    </Collection>
+  );
+}
+export function ToolsPage() {
+  return (
+    <Collection<ToolRecord>
+      resource="tools"
+      title="Capability, with consequence."
+      description="Observe → prepare → act locally → act outward. Scope does not imply approval."
+      label={(tool) => `${tool.title} · ${tool.name}`}
+      summary={(tool) => (
+        <>
+          <Badge variant="outline">{tool.sensitivity}</Badge>
+          <span>{tool.agents.join(", ")}</span>
+          <small>{tool.recent}</small>
+        </>
+      )}
+    >
+      {(tool) => (
+        <>
+          <p className="body-copy">{tool.description}</p>
+          <DetailFields
+            fields={[
+              { label: "Sensitivity", value: tool.sensitivity },
+              { label: "Scope", value: tool.scope },
+              {
+                label: "Scoped agents",
+                value: tool.agents.map((agent) => (
+                  <SourceLink key={agent} to={`/agents/${agent.toLowerCase()}`}>
+                    {agent}
+                  </SourceLink>
+                )),
+              },
+              { label: "Recovery", value: tool.recovery },
+              { label: "Recent use", value: tool.recent },
+            ]}
+          />
+          <details open>
+            <summary>Example arguments</summary>
+            <pre>{JSON.stringify(tool.args, null, 2)}</pre>
+          </details>
+          <p className="fine-print">
+            Sensitivity editing is governance. This catalogue is read-only in
+            the preview.
+          </p>
+        </>
+      )}
+    </Collection>
+  );
+}
 function MemoryDetail({ item }: { item: MemoryRecord }) {
-  const [mode, setMode] = useState<"correct" | "forget" | null>(null); const [text, setText] = useState(item.correction || item.text);
-  const mutation = useMutation({ mutationFn: () => api(`/memory/${item.id}`, mode === "forget" ? { forgotten: true } : { correction: text }), onSuccess: async () => { await refresh("memory", "journal"); setMode(null); } });
-  if (item.forgotten) return <Status evidence={{ state: "empty", detail: "Memory forgotten. A content-free tombstone remains; the source conversation has not been erased." }} />;
-  return <><DetailFields fields={[{ label: "Confidence", value: item.correction ? "Owner correction" : item.confidence }, { label: "Age", value: item.age }, { label: "Provenance", value: item.provenance }]} /><blockquote className="memory-quote">“{item.quote}”</blockquote><SourceLink to={item.source.replace("#intent", "#week-user")}>Read the source</SourceLink>{item.correction && <p>Earlier belief, now superseded: {item.text}</p>}<p className="fine-print">Source statement → evidence → {item.id === "study" ? "tentative analysis" : "quoted owner statement"} → memory.</p><div className="detail-actions"><Button variant="outline" onClick={() => setMode("correct")}>Correct</Button><Button variant="ghost" onClick={() => setMode("forget")}>Forget</Button></div><Dialog open={!!mode} onOpenChange={open => !open && setMode(null)}><DialogContent><DialogHeader><DialogTitle>{mode === "forget" ? "Forget this fixture memory?" : "What should Conker understand instead?"}</DialogTitle><DialogDescription>{mode === "forget" ? "The text disappears and a tombstone remains. The source conversation is a separate record." : "Your correction supersedes this belief. Earlier evidence remains readable."}</DialogDescription></DialogHeader><form onSubmit={e => { e.preventDefault(); mutation.mutate(); }}>{mode === "correct" && <Field><FieldLabel htmlFor="correction">Your correction</FieldLabel><textarea id="correction" rows={4} required maxLength={16000} value={text} onChange={e => setText(e.target.value)} /></Field>}<DialogFooter><Button type="button" variant="outline" onClick={() => setMode(null)}>Cancel</Button><Button variant={mode === "forget" ? "destructive" : "default"} disabled={mutation.isPending}>{mode === "forget" ? "Forget memory" : "Save correction"}</Button></DialogFooter>{mutation.error && <p role="alert">{mutation.error.message}</p>}</form></DialogContent></Dialog></>;
+  const [mode, setMode] = useState<"correct" | "forget" | null>(null);
+  const [text, setText] = useState(item.correction || item.text);
+  const mutation = useMutation({
+    mutationFn: () =>
+      api(
+        `/memory/${item.id}`,
+        mode === "forget" ? { forgotten: true } : { correction: text },
+      ),
+    onSuccess: async () => {
+      await refresh("memory", "journal");
+      setMode(null);
+    },
+  });
+  if (item.forgotten)
+    return (
+      <Status
+        evidence={{
+          state: "empty",
+          detail:
+            "Memory forgotten. A content-free tombstone remains; the source conversation has not been erased.",
+        }}
+      />
+    );
+  return (
+    <>
+      <DetailFields
+        fields={[
+          {
+            label: "Confidence",
+            value: item.correction ? "Owner correction" : item.confidence,
+          },
+          { label: "Age", value: item.age },
+          { label: "Provenance", value: item.provenance },
+        ]}
+      />
+      <blockquote className="memory-quote">“{item.quote}”</blockquote>
+      <SourceLink to={item.source.replace("#intent", "#week-user")}>
+        Read the source
+      </SourceLink>
+      {item.correction && <p>Earlier belief, now superseded: {item.text}</p>}
+      <p className="fine-print">
+        Source statement → evidence →{" "}
+        {item.id === "study" ? "tentative analysis" : "quoted owner statement"}{" "}
+        → memory.
+      </p>
+      <div className="detail-actions">
+        <Button variant="outline" onClick={() => setMode("correct")}>
+          Correct
+        </Button>
+        <Button variant="ghost" onClick={() => setMode("forget")}>
+          Forget
+        </Button>
+      </div>
+      <Dialog open={!!mode} onOpenChange={(open) => !open && setMode(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {mode === "forget"
+                ? "Forget this fixture memory?"
+                : "What should Conker understand instead?"}
+            </DialogTitle>
+            <DialogDescription>
+              {mode === "forget"
+                ? "The text disappears and a tombstone remains. The source conversation is a separate record."
+                : "Your correction supersedes this belief. Earlier evidence remains readable."}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate();
+            }}
+          >
+            {mode === "correct" && (
+              <Field>
+                <FieldLabel htmlFor="correction">Your correction</FieldLabel>
+                <textarea
+                  id="correction"
+                  rows={4}
+                  required
+                  maxLength={16000}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+              </Field>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMode(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={mode === "forget" ? "destructive" : "default"}
+                disabled={mutation.isPending}
+              >
+                {mode === "forget" ? "Forget memory" : "Save correction"}
+              </Button>
+            </DialogFooter>
+            {mutation.error && <p role="alert">{mutation.error.message}</p>}
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
-export function MemoryPage() { return <Collection<MemoryRecord> resource="memory" title="What Conker thinks it knows." description="Your words, the evidence behind them, and room to be wrong." notice={<div className="memory-notice"><Status evidence={{ state: "degraded", detail: "Meaning search is unavailable. This preview searches exact words in either language; it does not translate." }} /></div>} label={item => item.forgotten ? "Memory forgotten in this preview" : item.correction || item.text} summary={item => item.forgotten ? <Status evidence={{ state: "empty", detail: "Content-free tombstone" }} /> : <><Badge variant="secondary">{item.category}</Badge><span>{item.confidence} confidence · {item.age}</span><small>{item.provenance}</small></>}>{item => <MemoryDetail item={item} />}</Collection>; }
+export function MemoryPage() {
+  return (
+    <Collection<MemoryRecord>
+      resource="memory"
+      title="What Conker thinks it knows."
+      description="Your words, the evidence behind them, and room to be wrong."
+      notice={
+        <div className="memory-notice">
+          <Status
+            evidence={{
+              state: "degraded",
+              detail:
+                "Meaning search is unavailable. This preview searches exact words in either language; it does not translate.",
+            }}
+          />
+        </div>
+      }
+      label={(item) =>
+        item.forgotten
+          ? "Memory forgotten in this preview"
+          : item.correction || item.text
+      }
+      summary={(item) =>
+        item.forgotten ? (
+          <Status
+            evidence={{ state: "empty", detail: "Content-free tombstone" }}
+          />
+        ) : (
+          <>
+            <Badge variant="secondary">{item.category}</Badge>
+            <span>
+              {item.confidence} confidence · {item.age}
+            </span>
+            <small>{item.provenance}</small>
+          </>
+        )
+      }
+    >
+      {(item) => <MemoryDetail item={item} />}
+    </Collection>
+  );
+}
 function JobDetail({ job }: { job: JobRecord }) {
-  const mutation = useMutation({ mutationFn: (input: { paused?: boolean; run?: boolean }) => api(`/jobs/${job.id}`, input), onSuccess: () => refresh("jobs", "journal") });
-  return <><p className="body-copy">{job.description}</p><Status evidence={{ state: job.paused ? "blocked" : "planned", detail: job.paused ? "Paused. No next run scheduled in this fixture." : job.schedule }} /><DetailFields fields={[{ label: "Last run", value: job.runs ? "Just now · fixture replay" : job.last }, { label: "Next run", value: job.paused ? "Paused" : job.next }, { label: "What it produced", value: job.produced }, { label: "Watermark", value: job.watermark }, { label: "Duration", value: job.duration }, { label: "Cost", value: job.cost }]} /><SourceLink to={job.source}>Open result</SourceLink><div className="detail-actions"><Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate({ paused: !job.paused })}>{job.paused ? <Play /> : <Pause />}{job.paused ? "Resume schedule" : "Pause"}</Button><Button variant="ghost" disabled={job.paused || mutation.isPending} onClick={() => mutation.mutate({ run: true })}><Play />Run now</Button></div>{job.runs > 0 && <p role="status">Replayed {job.runs} fixture run. No background process ran.</p>}{mutation.error && <p role="alert">{mutation.error.message}</p>}</>;
+  const mutation = useMutation({
+    mutationFn: (input: { paused?: boolean; run?: boolean }) =>
+      api(`/jobs/${job.id}`, input),
+    onSuccess: () => refresh("jobs", "journal"),
+  });
+  return (
+    <>
+      <p className="body-copy">{job.description}</p>
+      <Status
+        evidence={{
+          state: job.paused ? "blocked" : "planned",
+          detail: job.paused
+            ? "Paused. No next run scheduled in this fixture."
+            : job.schedule,
+        }}
+      />
+      <DetailFields
+        fields={[
+          {
+            label: "Last run",
+            value: job.runs ? "Just now · fixture replay" : job.last,
+          },
+          { label: "Next run", value: job.paused ? "Paused" : job.next },
+          { label: "What it produced", value: job.produced },
+          { label: "Watermark", value: job.watermark },
+          { label: "Duration", value: job.duration },
+          { label: "Cost", value: job.cost },
+        ]}
+      />
+      <SourceLink to={job.source}>Open result</SourceLink>
+      <div className="detail-actions">
+        <Button
+          variant="outline"
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate({ paused: !job.paused })}
+        >
+          {job.paused ? <Play /> : <Pause />}
+          {job.paused ? "Resume schedule" : "Pause"}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={job.paused || mutation.isPending}
+          onClick={() => mutation.mutate({ run: true })}
+        >
+          <Play />
+          Run now
+        </Button>
+      </div>
+      {job.runs > 0 && (
+        <p role="status">
+          Replayed {job.runs} fixture run. No background process ran.
+        </p>
+      )}
+      {mutation.error && <p role="alert">{mutation.error.message}</p>}
+    </>
+  );
 }
-export function JobsPage() { return <Collection<JobRecord> resource="jobs" title="The things that tick along." description="Scheduled work, not another list to tend. Times are Asia/Jerusalem." label={job => job.name} summary={job => <><span>{job.schedule}</span><Status evidence={{ state: job.paused ? "blocked" : "planned", detail: job.paused ? "Paused" : `Next: ${job.next}` }} /><small>{job.produced}</small></>}>{job => <JobDetail job={job} />}</Collection>; }
+export function JobsPage() {
+  return (
+    <Collection<JobRecord>
+      resource="jobs"
+      title="The things that tick along."
+      description="Scheduled work, not another list to tend. Times are Asia/Jerusalem."
+      label={(job) => job.name}
+      summary={(job) => (
+        <>
+          <span>{job.schedule}</span>
+          <Status
+            evidence={{
+              state: job.paused ? "blocked" : "planned",
+              detail: job.paused ? "Paused" : `Next: ${job.next}`,
+            }}
+          />
+          <small>{job.produced}</small>
+        </>
+      )}
+    >
+      {(job) => <JobDetail job={job} />}
+    </Collection>
+  );
+}

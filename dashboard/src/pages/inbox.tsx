@@ -1,8 +1,24 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { Mail, FileMinus, Lightbulb, ArrowRight, ArrowLeft, ShieldCheck, Clock3 } from "lucide-react";
+import {
+  Mail,
+  FileMinus,
+  Lightbulb,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  Clock3,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { Badge, Button, Input, Status, Tabs, TabsList, TabsTrigger } from "../ui";
+import {
+  Badge,
+  Button,
+  Input,
+  Status,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "../ui";
 import { approvalTitle, toolTemplates } from "../domain/approval-description";
 import type { Approval, ProposalRecord } from "../domain/model";
 import { useInbox } from "../data/inbox";
@@ -12,37 +28,345 @@ import { ActionRecord } from "../components/action-record";
 import { PageHeading, EmptyState, SourceLink } from "../components/common";
 import { QueryState, DetailFields } from "../components/object-inspector";
 
-function ApprovalCard({ item, expanded }: { item: Approval; expanded: boolean }) {
-  const [open, setOpen] = useState(expanded); const [reason, setReason] = useState(""); const [scenario, setScenario] = useState("normal");
-  const definition = toolTemplates[item.tool]; const actionable = item.decision === "pending";
-  const mutation = useMutation({ mutationFn: (decision: "approved" | "denied") => api(`/approvals/${item.id}/decision`, { decision, revision: item.revision, reason, scenario }), onSettled: async () => { await refresh("approvals", "actions", "journal"); } });
+function ApprovalCard({
+  item,
+  expanded,
+}: {
+  item: Approval;
+  expanded: boolean;
+}) {
+  const [open, setOpen] = useState(expanded);
+  const [reason, setReason] = useState("");
+  const [scenario, setScenario] = useState("normal");
+  const definition = toolTemplates[item.tool];
+  const actionable = item.decision === "pending";
+  const mutation = useMutation({
+    mutationFn: (decision: "approved" | "denied") =>
+      api(`/approvals/${item.id}/decision`, {
+        decision,
+        revision: item.revision,
+        reason,
+        scenario,
+      }),
+    onSettled: async () => {
+      await refresh("approvals", "actions", "journal");
+    },
+  });
   const Icon = item.tool === "email.send" ? Mail : FileMinus;
-  return <article className="approval-ticket" id={item.id}>
-    <header className="approval-glance"><span className="service-icon"><Icon aria-hidden="true" /></span><div><div className="card-kicker">{definition.service}<span>·</span>{item.agent}<Badge variant="outline">{definition.effect}</Badge></div><h2>{approvalTitle(item)}</h2></div><Button variant="ghost" size="sm" aria-expanded={open} aria-label={`${open ? "Hide" : "Review"} ${definition.service} request`} onClick={() => setOpen(!open)}>{open ? "−" : "Review"}</Button></header>
-    {open ? <div className="ticket-detail"><div className="intent-comparison"><div><span className="eyebrow">You asked</span><p>“{item.asked}”</p><SourceLink to={item.source.replace("#intent", "#week-user")}>Original conversation</SourceLink></div><div><span className="eyebrow">It wants to</span><p>{approvalTitle(item)}</p><small>{item.tool} · version 2</small></div></div>
-      <dl className="argument-list">{Object.entries(item.args).map(([key, value]) => <div key={key}><dt>{(definition.fields as Record<string, string>)[key] ?? key}</dt><dd>{String(value)}</dd></div>)}</dl>
-      <div className="approval-reason"><ShieldCheck aria-hidden="true" /><div><strong>{item.reversible}</strong><p>{item.reason}</p></div></div>
-      {item.id === "cleanup" && <Status evidence={{ state: "blocked", detail: "Intent mismatch: summarising notes does not require deleting them." }} />}
-      {!actionable && <ActionRecord id={item.actionId} compact />}
-      <details className="full-detail"><summary>Full detail & binding</summary><div className="detail-body stack"><DetailFields fields={[{ label: "Tool / version", value: `${item.tool} / 2` }, { label: "Standing grant", value: item.grant }, { label: "Budget remaining", value: item.budget }, { label: "Decide by", value: `${item.decideBy} · starts when requested` }, { label: "Spend window", value: `${item.spendSeconds} seconds after approval · not from creation` }, { label: "Binding digest", value: <span className="mono break-anywhere">sha256:{item.digest}</span> }, { label: "Request revision", value: item.revision }]} /><pre aria-label="Exact arguments">{JSON.stringify(item.args, null, 2)}</pre><p className="fine-print">Registered template + exact structured arguments. The requesting agent does not write this description.</p></div></details>
-      {actionable && <details className="denial-note"><summary>Add a reason if you deny</summary><Input aria-label="Denial reason" value={reason} onChange={e => setReason(e.target.value)} placeholder="Optional. Your judgement, in your words." /></details>}
-      <div className="approval-footer"><div className="decision-buttons"><Button variant="outline" disabled={!actionable || mutation.isPending} onClick={() => mutation.mutate("denied")}>Deny</Button><Button disabled={!actionable || mutation.isPending} onClick={() => mutation.mutate("approved")}>{mutation.isPending ? "Submitting decision…" : "Approve once"}<ArrowRight /></Button></div><Link className="policy-link" to={`/agents/${item.agent.toLowerCase()}?review=grants`}>Raise this agent’s autonomy instead →</Link><p className="fine-print"><Clock3 />Decide by {item.decideBy} · Spend window {item.spendSeconds / 60} min once approved</p>{item.denialReason && <p className="fine-print">Your reason: {item.denialReason}</p>}</div>
-      {mutation.isPending && <Status evidence={{ state: "unknown", detail: "Decision pending. No approval or completion is assumed." }} />}
-      {mutation.error && <Status evidence={{ state: "blocked", detail: mutation.error.message }} />}
-      {actionable && <details className="fixture-scenario"><summary>Preview a different outcome</summary><label>Decision scenario<select aria-label="Decision scenario" value={scenario} onChange={e => setScenario(e.target.value)}><option value="normal">Delayed receipt</option><option value="unknown">Connection lost after dispatch</option><option value="expired">Authority expires before acceptance</option><option value="revision">Request revision changes</option></select></label></details>}
-    </div> : <p className="fine-print glance-footer">Decide by {item.decideBy}</p>}
-  </article>;
+  return (
+    <article className="approval-ticket" id={item.id}>
+      <header className="approval-glance">
+        <span className="service-icon">
+          <Icon aria-hidden="true" />
+        </span>
+        <div>
+          <div className="card-kicker">
+            {definition.service}
+            <span>·</span>
+            {item.agent}
+            <Badge variant="outline">{definition.effect}</Badge>
+          </div>
+          <h2>{approvalTitle(item)}</h2>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={open}
+          aria-label={`${open ? "Hide" : "Review"} ${definition.service} request`}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "−" : "Review"}
+        </Button>
+      </header>
+      {open ? (
+        <div className="ticket-detail">
+          <div className="intent-comparison">
+            <div>
+              <span className="eyebrow">You asked</span>
+              <p>“{item.asked}”</p>
+              <SourceLink to={item.source.replace("#intent", "#week-user")}>
+                Original conversation
+              </SourceLink>
+            </div>
+            <div>
+              <span className="eyebrow">It wants to</span>
+              <p>{approvalTitle(item)}</p>
+              <small>{item.tool} · version 2</small>
+            </div>
+          </div>
+          <dl className="argument-list">
+            {Object.entries(item.args).map(([key, value]) => (
+              <div key={key}>
+                <dt>
+                  {(definition.fields as Record<string, string>)[key] ?? key}
+                </dt>
+                <dd>{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="approval-reason">
+            <ShieldCheck aria-hidden="true" />
+            <div>
+              <strong>{item.reversible}</strong>
+              <p>{item.reason}</p>
+            </div>
+          </div>
+          {item.id === "cleanup" && (
+            <Status
+              evidence={{
+                state: "blocked",
+                detail:
+                  "Intent mismatch: summarising notes does not require deleting them.",
+              }}
+            />
+          )}
+          {!actionable && <ActionRecord id={item.actionId} compact />}
+          <details className="full-detail">
+            <summary>Full detail & binding</summary>
+            <div className="detail-body stack">
+              <DetailFields
+                fields={[
+                  { label: "Tool / version", value: `${item.tool} / 2` },
+                  { label: "Standing grant", value: item.grant },
+                  { label: "Budget remaining", value: item.budget },
+                  {
+                    label: "Decide by",
+                    value: `${item.decideBy} · starts when requested`,
+                  },
+                  {
+                    label: "Spend window",
+                    value: `${item.spendSeconds} seconds after approval · not from creation`,
+                  },
+                  {
+                    label: "Binding digest",
+                    value: (
+                      <span className="mono break-anywhere">
+                        sha256:{item.digest}
+                      </span>
+                    ),
+                  },
+                  { label: "Request revision", value: item.revision },
+                ]}
+              />
+              <pre aria-label="Exact arguments">
+                {JSON.stringify(item.args, null, 2)}
+              </pre>
+              <p className="fine-print">
+                Registered template + exact structured arguments. The requesting
+                agent does not write this description.
+              </p>
+            </div>
+          </details>
+          {actionable && (
+            <details className="denial-note">
+              <summary>Add a reason if you deny</summary>
+              <Input
+                aria-label="Denial reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Optional. Your judgement, in your words."
+              />
+            </details>
+          )}
+          <div className="approval-footer">
+            <div className="decision-buttons">
+              <Button
+                variant="outline"
+                disabled={!actionable || mutation.isPending}
+                onClick={() => mutation.mutate("denied")}
+              >
+                Deny
+              </Button>
+              <Button
+                disabled={!actionable || mutation.isPending}
+                onClick={() => mutation.mutate("approved")}
+              >
+                {mutation.isPending ? "Submitting decision…" : "Approve once"}
+                <ArrowRight />
+              </Button>
+            </div>
+            <Link
+              className="policy-link"
+              to={`/agents/${item.agent.toLowerCase()}?review=grants`}
+            >
+              Raise this agent’s autonomy instead →
+            </Link>
+            <p className="fine-print">
+              <Clock3 />
+              Decide by {item.decideBy} · Spend window {item.spendSeconds / 60}{" "}
+              min once approved
+            </p>
+            {item.denialReason && (
+              <p className="fine-print">Your reason: {item.denialReason}</p>
+            )}
+          </div>
+          {mutation.isPending && (
+            <Status
+              evidence={{
+                state: "unknown",
+                detail:
+                  "Decision pending. No approval or completion is assumed.",
+              }}
+            />
+          )}
+          {mutation.error && (
+            <Status
+              evidence={{ state: "blocked", detail: mutation.error.message }}
+            />
+          )}
+          {actionable && (
+            <details className="fixture-scenario">
+              <summary>Preview a different outcome</summary>
+              <label>
+                Decision scenario
+                <select
+                  aria-label="Decision scenario"
+                  value={scenario}
+                  onChange={(e) => setScenario(e.target.value)}
+                >
+                  <option value="normal">Delayed receipt</option>
+                  <option value="unknown">
+                    Connection lost after dispatch
+                  </option>
+                  <option value="expired">
+                    Authority expires before acceptance
+                  </option>
+                  <option value="revision">Request revision changes</option>
+                </select>
+              </label>
+            </details>
+          )}
+        </div>
+      ) : (
+        <p className="fine-print glance-footer">Decide by {item.decideBy}</p>
+      )}
+    </article>
+  );
 }
 function ProposalCard({ item }: { item: ProposalRecord }) {
-  const mutation = useMutation({ mutationFn: (decision: "accepted" | "declined") => api(`/proposals/${item.id}`, { decision }), onSuccess: () => refresh("proposals", "journal") });
-  return <article className="approval-ticket proposal-ticket"><header className="approval-glance"><span className="service-icon"><Lightbulb /></span><div><p className="card-kicker">A suggestion · Conker</p><h2>{item.title}</h2></div><Badge variant="secondary">Proposal</Badge></header><div className="ticket-detail stack"><p>{item.noticed}</p><SourceLink to={item.source}>{item.evidence}</SourceLink><div><span className="eyebrow">If you accept</span><p>{item.effect}</p></div>{item.decision && <Status evidence={{ state: "planned", detail: `Proposal ${item.decision}. No real calendar changes.` }} />}<div className="proposal-actions"><Button variant="outline" disabled={!!item.decision || mutation.isPending} onClick={() => mutation.mutate("declined")}>Decline</Button><Button disabled={!!item.decision || mutation.isPending} onClick={() => mutation.mutate("accepted")}>Prepare the blocks</Button><Button variant="ghost" asChild><Link to="/chat/week">Ask about it</Link></Button></div>{mutation.error && <Status evidence={{ state: "degraded", detail: mutation.error.message }} />}</div></article>;
+  const mutation = useMutation({
+    mutationFn: (decision: "accepted" | "declined") =>
+      api(`/proposals/${item.id}`, { decision }),
+    onSuccess: () => refresh("proposals", "journal"),
+  });
+  return (
+    <article className="approval-ticket proposal-ticket">
+      <header className="approval-glance">
+        <span className="service-icon">
+          <Lightbulb />
+        </span>
+        <div>
+          <p className="card-kicker">A suggestion · Conker</p>
+          <h2>{item.title}</h2>
+        </div>
+        <Badge variant="secondary">Proposal</Badge>
+      </header>
+      <div className="ticket-detail stack">
+        <p>{item.noticed}</p>
+        <SourceLink to={item.source}>{item.evidence}</SourceLink>
+        <div>
+          <span className="eyebrow">If you accept</span>
+          <p>{item.effect}</p>
+        </div>
+        {item.decision && (
+          <Status
+            evidence={{
+              state: "planned",
+              detail: `Proposal ${item.decision}. No real calendar changes.`,
+            }}
+          />
+        )}
+        <div className="proposal-actions">
+          <Button
+            variant="outline"
+            disabled={!!item.decision || mutation.isPending}
+            onClick={() => mutation.mutate("declined")}
+          >
+            Decline
+          </Button>
+          <Button
+            disabled={!!item.decision || mutation.isPending}
+            onClick={() => mutation.mutate("accepted")}
+          >
+            Prepare the blocks
+          </Button>
+          <Button variant="ghost" asChild>
+            <Link to="/chat/week">Ask about it</Link>
+          </Button>
+        </div>
+        {mutation.error && (
+          <Status
+            evidence={{ state: "degraded", detail: mutation.error.message }}
+          />
+        )}
+      </div>
+    </article>
+  );
 }
 export function InboxPage() {
-  const { id } = useParams(); const inbox = useInbox(); const [tab, setTab] = useState("pending");
-  const visible = id ? inbox.records.filter(item => item.id === id) : tab === "pending" ? inbox.pending : inbox.records.filter(item => !inbox.pending.includes(item));
-  return <div className="page inbox-page"><PageHeading eyebrow="The daily loop" title={inbox.pending.length ? "A few things for your judgement." : "Nothing waiting on you."} description="The intent, the effect, and your say. Nothing more than it needs to be."><span className="quiet-count">{inbox.pending.length} decisions</span></PageHeading>
-    {id ? <Button asChild variant="ghost" className="back-link"><Link to="/inbox"><ArrowLeft />All decisions</Link></Button> : <Tabs value={tab} onValueChange={setTab} className="page-tabs"><TabsList><TabsTrigger value="pending">Needs you</TabsTrigger><TabsTrigger value="history">Decision history</TabsTrigger></TabsList></Tabs>}
-    {inbox.isPending || inbox.error ? <QueryState loading={inbox.isPending} error={inbox.error} /> : <div className="inbox-list">{visible.map((item, index) => item.kind === "approval" ? <ApprovalCard key={item.id} item={item} expanded={!!id || index === 0} /> : <ProposalCard key={item.id} item={item} />)}{!visible.length && <EmptyState title="A quiet inbox is a good inbox.">No hidden queue to catch up on. Your decisions remain in the history.</EmptyState>}</div>}
-    <p className="page-footnote">One decision, one exact action. A change to standing grants is a separate choice.</p>
-  </div>;
+  const { id } = useParams();
+  const inbox = useInbox();
+  const [tab, setTab] = useState("pending");
+  const visible = id
+    ? inbox.records.filter((item) => item.id === id)
+    : tab === "pending"
+      ? inbox.pending
+      : inbox.records.filter((item) => !inbox.pending.includes(item));
+  return (
+    <div className="page inbox-page">
+      <PageHeading
+        eyebrow="The daily loop"
+        title={
+          inbox.pending.length
+            ? "A few things for your judgement."
+            : "Nothing waiting on you."
+        }
+        description="The intent, the effect, and your say. Nothing more than it needs to be."
+      >
+        <span className="quiet-count">{inbox.pending.length} decisions</span>
+      </PageHeading>
+      {id ? (
+        <Button asChild variant="ghost" className="back-link">
+          <Link to="/inbox">
+            <ArrowLeft />
+            All decisions
+          </Link>
+        </Button>
+      ) : (
+        <Tabs value={tab} onValueChange={setTab} className="page-tabs">
+          <TabsList>
+            <TabsTrigger value="pending">Needs you</TabsTrigger>
+            <TabsTrigger value="history">Decision history</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+      {inbox.isPending || inbox.error ? (
+        <QueryState loading={inbox.isPending} error={inbox.error} />
+      ) : (
+        <div className="inbox-list">
+          {visible.map((item, index) =>
+            item.kind === "approval" ? (
+              <ApprovalCard
+                key={item.id}
+                item={item}
+                expanded={!!id || index === 0}
+              />
+            ) : (
+              <ProposalCard key={item.id} item={item} />
+            ),
+          )}
+          {!visible.length && (
+            <EmptyState title="A quiet inbox is a good inbox.">
+              No hidden queue to catch up on. Your decisions remain in the
+              history.
+            </EmptyState>
+          )}
+        </div>
+      )}
+      <p className="page-footnote">
+        One decision, one exact action. A change to standing grants is a
+        separate choice.
+      </p>
+    </div>
+  );
 }

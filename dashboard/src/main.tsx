@@ -15,12 +15,57 @@ import "./app/reshape.css";
 
 const registry = createRegistry(features);
 function AppRoutes() {
-  return useRoutes([{ element: <Shell />, children: [...registry.routes.filter(route => !route.outsideShell).map(route => ({ path: route.path, element: <route.Component /> })), { path: "*", element: <NotFound /> }] }, ...registry.routes.filter(route => route.outsideShell).map(route => ({ path: route.path, element: <route.Component /> }))]);
+  return useRoutes([
+    {
+      element: <Shell />,
+      children: [
+        ...registry.routes
+          .filter((route) => !route.outsideShell)
+          .map((route) => ({ path: route.path, element: <route.Component /> })),
+        { path: "*", element: <NotFound /> },
+      ],
+    },
+    ...registry.routes
+      .filter((route) => route.outsideShell)
+      .map((route) => ({ path: route.path, element: <route.Component /> })),
+  ]);
 }
 const root = createRoot(document.getElementById("root")!);
-startMocks().then(stopMocks => {
-  root.render(<QueryClientProvider client={queryClient}><RegistryContext value={registry}><ThemeProvider initialTheme="dark"><TooltipProvider><PreviewProvider><BrowserRouter><AppRoutes /></BrowserRouter></PreviewProvider></TooltipProvider></ThemeProvider></RegistryContext></QueryClientProvider>);
-  if (import.meta.hot) import.meta.hot.dispose(() => { runs.dispose(); stopMocks(); root.unmount(); });
-}).catch(error => {
-  root.render(<ThemeProvider><div className="setup-layout"><h1>The fixture connection could not start.</h1><p>{String(error)}</p><p>Open this preview on localhost with service workers enabled, then reload. No real backend was used.</p></div></ThemeProvider>);
-});
+startMocks()
+  .then((stopMocks) => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <RegistryContext value={registry}>
+          <ThemeProvider initialTheme="dark">
+            <TooltipProvider>
+              <PreviewProvider>
+                <BrowserRouter>
+                  <AppRoutes />
+                </BrowserRouter>
+              </PreviewProvider>
+            </TooltipProvider>
+          </ThemeProvider>
+        </RegistryContext>
+      </QueryClientProvider>,
+    );
+    if (import.meta.hot)
+      import.meta.hot.dispose(() => {
+        runs.dispose();
+        stopMocks();
+        root.unmount();
+      });
+  })
+  .catch((error) => {
+    root.render(
+      <ThemeProvider>
+        <div className="setup-layout">
+          <h1>The fixture connection could not start.</h1>
+          <p>{String(error)}</p>
+          <p>
+            Open this preview on localhost with service workers enabled, then
+            reload. No real backend was used.
+          </p>
+        </div>
+      </ThemeProvider>,
+    );
+  });

@@ -21,7 +21,13 @@ async function inspect(directory) {
     else if (/\.(tsx?|css)$/.test(entry.name)) {
       const source = await readFile(path, "utf8");
       for (const [label, pattern] of rules) {
-        if (pattern.test(source) && !(label === "network client" && relative(root, path).replaceAll("\\", "/") === "data/client.ts"))
+        if (
+          pattern.test(source) &&
+          !(
+            label === "network client" &&
+            relative(root, path).replaceAll("\\", "/") === "data/client.ts"
+          )
+        )
           failures.push(`${relative(root, path)}: ${label}`);
       }
     }

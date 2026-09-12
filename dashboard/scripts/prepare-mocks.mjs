@@ -7,7 +7,9 @@ try {
   await mkdir(directory, { recursive: true });
   await copyFile(worker, new URL("mockServiceWorker.js", directory));
 } catch (error) {
-  console.error("MSW is required for this fixture-only app. Run npm install in dashboard, then retry.");
+  console.error(
+    "MSW is required for this fixture-only app. Run npm install in dashboard, then retry.",
+  );
   console.error(error.message);
   process.exitCode = 1;
 }

@@ -1,21 +1,160 @@
 import type { StatusEvidence } from "../ui";
-import type { Approval as ApprovalDescription, Proposal } from "./approval-description";
+import type {
+  Approval as ApprovalDescription,
+  Proposal,
+} from "./approval-description";
 
-export type Companion = { id: string; agentId: string; contactId: string; characterId: string };
-export type Agent = { id: string; name: string; role: string; characterId?: string };
-export type Contact = { id: string; target: { kind: "companion" | "agent" | "group"; id: string }; name: string; subtitle: string; initials: string; sessionIds: string[] };
-export type Group = { id: string; name: string; revision: number; agentIds: string[] };
-export type ConversationPolicy = { id: "local-retained"; inference: "local"; transcript: "retained"; memoryRead: boolean; memoryWrite: boolean };
-export type Session = { id: string; contactId: string; title: string; updatedAt: string; participantIds: string[]; parentId?: string; parentMessageId?: string; summary?: string; policy: ConversationPolicy };
-export type Message = { id: string; sessionId: string; author: string; role: "user" | "assistant"; text: string; createdAt: string; runId?: string; streamCursor?: number; replyTo?: string; actionIds?: string[]; emotion?: string; citationIds?: string[]; deleted?: boolean; delivery: "sending" | "accepted" | "unknown" };
-export type Run = { id: string; sessionId: string; submissionId: string; messageId: string; status: "accepted" | "streaming" | "completed" | "interrupted" | "stopped" | "acted_no_reply"; cursor: number; model: string; costUsd: number | null; participantSnapshot: { agentIds: string[]; groupRevision?: number }; policy: ConversationPolicy; delegations: { id: string; task: string; outcome: string }[] };
-export type Action = { id: string; sessionId: string; tool: string; args: Record<string, unknown>; status: "awaiting_approval" | "in_progress" | "completed" | "outcome_unknown" | "denied" | "expired"; approvalId?: string; receipt?: string; replyMissing?: boolean };
-export type Approval = Omit<ApprovalDescription, "decision"> & { decideBy: string; actionId: string; revision: number; decision: "pending" | "approved" | "denied" | "expired"; denialReason?: string };
-export type InboxItem = { id: string; kind: "approval" | "proposal"; resourceId: string };
+export type Companion = {
+  id: string;
+  agentId: string;
+  contactId: string;
+  characterId: string;
+};
+export type Agent = {
+  id: string;
+  name: string;
+  role: string;
+  characterId?: string;
+};
+export type Contact = {
+  id: string;
+  target: { kind: "companion" | "agent" | "group"; id: string };
+  name: string;
+  subtitle: string;
+  initials: string;
+  sessionIds: string[];
+};
+export type Group = {
+  id: string;
+  name: string;
+  revision: number;
+  agentIds: string[];
+};
+export type ConversationPolicy = {
+  id: "local-retained";
+  inference: "local";
+  transcript: "retained";
+  memoryRead: boolean;
+  memoryWrite: boolean;
+};
+export type Session = {
+  id: string;
+  contactId: string;
+  title: string;
+  updatedAt: string;
+  participantIds: string[];
+  parentId?: string;
+  parentMessageId?: string;
+  summary?: string;
+  policy: ConversationPolicy;
+};
+export type Message = {
+  id: string;
+  sessionId: string;
+  author: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+  runId?: string;
+  streamCursor?: number;
+  replyTo?: string;
+  actionIds?: string[];
+  emotion?: string;
+  citationIds?: string[];
+  deleted?: boolean;
+  delivery: "sending" | "accepted" | "unknown";
+};
+export type Run = {
+  id: string;
+  sessionId: string;
+  submissionId: string;
+  messageId: string;
+  status:
+    | "accepted"
+    | "streaming"
+    | "completed"
+    | "interrupted"
+    | "stopped"
+    | "acted_no_reply";
+  cursor: number;
+  model: string;
+  costUsd: number | null;
+  participantSnapshot: { agentIds: string[]; groupRevision?: number };
+  policy: ConversationPolicy;
+  delegations: { id: string; task: string; outcome: string }[];
+};
+export type Action = {
+  id: string;
+  sessionId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  status:
+    | "awaiting_approval"
+    | "in_progress"
+    | "completed"
+    | "outcome_unknown"
+    | "denied"
+    | "expired";
+  approvalId?: string;
+  receipt?: string;
+  replyMissing?: boolean;
+};
+export type Approval = Omit<ApprovalDescription, "decision"> & {
+  decideBy: string;
+  actionId: string;
+  revision: number;
+  decision: "pending" | "approved" | "denied" | "expired";
+  denialReason?: string;
+};
+export type InboxItem = {
+  id: string;
+  kind: "approval" | "proposal";
+  resourceId: string;
+};
 export type ProposalRecord = Proposal & { decision?: "accepted" | "declined" };
-export type JournalEvent = { id: string; actor: string; date: string; time: string; kind: string; summary: string; detail: string; to: string; actionId?: string; evidence: StatusEvidence };
-export type Citation = { id: string; sessionId: string; messageId: string; excerpt?: string; deleted: boolean };
-export type CharacterProfile = { id: string; name: string; speakingStyle: string; personality: string; renderer: "static" | "live-2d" | "live-3d"; assets: { id: string; name: string; kind: "portrait" | "model-2d" | "model-3d"; url?: string }[]; expressions: Record<string, string | null> };
-export type Capability = { id: string; supported: boolean; authorised: boolean; reason?: string };
-export type StreamEvent = { id: number; runId: string; type: "delta" | "complete" | "interrupted"; text?: string };
+export type JournalEvent = {
+  id: string;
+  actor: string;
+  date: string;
+  time: string;
+  kind: string;
+  summary: string;
+  detail: string;
+  to: string;
+  actionId?: string;
+  evidence: StatusEvidence;
+};
+export type Citation = {
+  id: string;
+  sessionId: string;
+  messageId: string;
+  excerpt?: string;
+  deleted: boolean;
+};
+export type CharacterProfile = {
+  id: string;
+  name: string;
+  speakingStyle: string;
+  personality: string;
+  renderer: "static" | "live-2d" | "live-3d";
+  assets: {
+    id: string;
+    name: string;
+    kind: "portrait" | "model-2d" | "model-3d";
+    url?: string;
+  }[];
+  expressions: Record<string, string | null>;
+};
+export type Capability = {
+  id: string;
+  supported: boolean;
+  authorised: boolean;
+  reason?: string;
+};
+export type StreamEvent = {
+  id: number;
+  runId: string;
+  type: "delta" | "complete" | "interrupted";
+  text?: string;
+};
 export type Scenario = "normal" | "interrupted" | "duplicate" | "lost-ack";
