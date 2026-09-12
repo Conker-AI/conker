@@ -22,6 +22,7 @@ export type Thread = {
   reply: string
   mood: string
   time: string
+  sources?: { id: string; text: string; time: string }[]
   tool?: { name: string; summary: string; record: Record<string, unknown> }
 }
 export type AuthState = { status: "unconfigured" | "preview" | "authenticated"; ownerName: string }
@@ -31,6 +32,8 @@ export type Snapshot = {
   agents: Agent[]; sessions: Session[]; tickets: Ticket[]; jobs: Job[]
   entries: JournalEntry[]; memories: Memory[]; services: Service[]; tools: Tool[]
   vitals: { name: string; value: string; unit: string; used: number; detail: string }[]
+  system: { status: string; detail: string; sampleAge: string; sampledAt: string; recoverySummary: string; recoveryDetail: string }
+  memorySearch: { degraded: boolean; detail: string }
   plan: { day: string; date: string; title: string; detail: string }[]
   planningIntent: string
   profile: Character

@@ -66,10 +66,10 @@ export function Conversation({ session }: { session: Session }) {
           </article>}
         </div>
       </div>}
-      {planning && <details open={["#sent-user", "#expired-user"].includes(hash) || undefined} className="text-xs text-muted-foreground"><summary className="cursor-pointer">Earlier source messages</summary><div className="mt-3 space-y-3"><p id="sent-user">You: “Reply to Mum about Sunday.” · Yesterday</p><p id="expired-user">You: “Check where my exam is.” · Yesterday</p></div></details>}
+      {thread?.sources && <details open={["#sent-user", "#expired-user"].includes(hash) || undefined} className="text-xs text-muted-foreground"><summary className="cursor-pointer">Earlier source messages</summary><div className="mt-3 space-y-3"><p id="sent-user">You: “Reply to Mum about Sunday.” · Yesterday</p><p id="expired-user">You: “Check where my exam is.” · Yesterday</p></div></details>}
       {messages.map(message => <div key={message.id} className="flex flex-col gap-3"><UserMessage time={new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} dateTime={message.createdAt}>{message.text}</UserMessage><p className="ml-auto flex items-center gap-2 text-xs text-muted-foreground"><Info className="size-3.5 shrink-0" />Saved in this preview. No model or tools are connected.</p></div>)}
     </div>
-    <form className="sticky bottom-3 z-10 flex flex-col gap-2 rounded-xl border bg-background p-3" onSubmit={event => { event.preventDefault(); void submit() }}>
+    <form className="flex flex-col gap-2 rounded-xl border bg-background p-3" onSubmit={event => { event.preventDefault(); void submit() }}>
       <Label htmlFor="message-composer" className="sr-only">Message {name}</Label>
       <Textarea ref={composer} id="message-composer" placeholder={`Message ${name}…`} value={draft} maxLength={4000} onChange={event => setDraft(session.id, event.target.value)} onKeyDown={event => {
         if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() }

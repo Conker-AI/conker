@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 export default function NotFoundPage() {
   return (
     <BaseLayout title="Page not found">
-      <div className="px-4 lg:px-6">
-        <Card className="max-w-xl shadow-none">
+      <div className="w-full">
+        <Card className="shadow-none">
           <CardHeader>
             <FileQuestion className="mb-2 size-6 text-muted-foreground" />
             <CardTitle>This path isn’t in Conker</CardTitle>

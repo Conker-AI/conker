@@ -47,6 +47,11 @@ export function LayoutTab() {
           {sidebarVariants.map((variant) => (
             <div
               key={variant.value}
+              aria-label={variant.name}
+              aria-pressed={sidebarConfig.variant === variant.value}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.variant === variant.value
                   ? "border-primary bg-primary/10"
@@ -100,6 +105,11 @@ export function LayoutTab() {
           {sidebarCollapsibleOptions.map((option) => (
             <div
               key={option.value}
+              aria-label={option.name}
+              aria-pressed={sidebarConfig.collapsible === option.value}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.collapsible === option.value
                   ? "border-primary bg-primary/10"
@@ -167,6 +177,11 @@ export function LayoutTab() {
           {sidebarSideOptions.map((side) => (
             <div
               key={side.value}
+              aria-label={side.name}
+              aria-pressed={sidebarConfig.side === side.value}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.side === side.value
                   ? "border-primary bg-primary/10"

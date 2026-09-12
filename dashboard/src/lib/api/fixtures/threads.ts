@@ -6,6 +6,7 @@ export const threads: Record<string, Thread> = {
     messages: [{ id: "intent", text: planningIntent, time: "16:41" }],
     reply: "You’ve got room. I’d keep tomorrow for the exam, and leave training days light. Wednesday can stay yours.",
     mood: "Encouraging", time: "16:42",
+    sources: [{ id: "sent-user", text: "Reply to Mum about Sunday.", time: "Yesterday" }, { id: "expired-user", text: "Check where my exam is.", time: "Yesterday" }],
     tool: { name: "calendar.read", summary: "Read 3 events · nothing changed", record: { arguments: { calendar: "Personal", from: "2026-09-13", to: "2026-09-18" }, action_id: "act_fixture_calendar_031", duration: "180 ms", outcome: "Read 3 events. Nothing changed." } },
   },
   server: {

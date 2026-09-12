@@ -18,6 +18,7 @@ import { columns } from "./columns"
 
 const icons = [Database, Cpu, HardDrive]
 export default function SystemPage() {
+  const system = useConker(data => data.system)
   const vitals = useConker(data => data.vitals)
   const services = useConker(data => data.services)
   return (
@@ -30,9 +31,7 @@ export default function SystemPage() {
           <TriangleAlert />
           <AlertTitle>Degraded · meaning search is paused</AlertTitle>
           <AlertDescription>
-            MemoryGate cannot reach the vector index. Source records remain
-            available. These are fixture health samples, not a connection to
-            your host.{" "}
+            {system.detail}{" "}
             <Link className="underline underline-offset-4" to="/memory">
               Browse source memories
             </Link>
@@ -51,7 +50,7 @@ export default function SystemPage() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {vitals.map((vital, index) => {
-              const Icon = icons[index]
+              const Icon = icons[index] || Server
               return (
                 <Card key={vital.name} className="gap-4 py-4 shadow-none">
                   <CardHeader className="px-4">
@@ -80,8 +79,7 @@ export default function SystemPage() {
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Stale host sample · SystemGate · 12 Sep 2026, 16:36. Current host
-            load is unknown.
+            {system.sampledAt}
           </p>
         </section>
         <section
@@ -102,9 +100,7 @@ export default function SystemPage() {
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 px-4">
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Postgres, Pi database, ToolGate vault and recovery material are
-              included. This snapshot’s restore drill has not run. A snapshot
-              existing does not prove recoverability.
+              {system.recoveryDetail}
             </p>
             <Button variant="outline" size="sm" asChild>
               <Link to="/jobs">View jobs</Link>

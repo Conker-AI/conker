@@ -1,6 +1,5 @@
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { Button } from "@/components/ui/button"
-"use client"
 
 import * as React from "react"
 import {

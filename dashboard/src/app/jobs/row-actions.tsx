@@ -11,11 +11,12 @@ import { useConkerStore } from "@/lib/api/store"
 import type { Job } from "@/lib/api/models"
 
 export function JobActions({ job }: { job: Job }) {
-  const { toggle, run } = useConkerStore()
+  const { toggle, run, pending } = useConkerStore()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          disabled={pending}
           variant="ghost"
           size="icon"
           aria-label={`Actions for ${job.name}`}

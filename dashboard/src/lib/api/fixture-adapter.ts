@@ -3,8 +3,8 @@ import { sessions, plan, planningIntent } from "./fixtures/chat"
 import { tickets } from "./fixtures/inbox"
 import { jobs } from "./fixtures/jobs"
 import { entries } from "./fixtures/journal"
-import { memories } from "./fixtures/memory"
-import { services, vitals } from "./fixtures/system"
+import { memories, memorySearch } from "./fixtures/memory"
+import { services, vitals, system } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
 import { threads } from "./fixtures/threads"
 import { connectionConfig } from "./config"
@@ -13,7 +13,7 @@ import type { ConkerClient, Snapshot, AuthResult } from "./client"
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
-    agents, sessions, plan, planningIntent, tickets, jobs, entries, memories, services, vitals, tools,
+    agents, sessions, plan, planningIntent, tickets, jobs, entries, memories, memorySearch, services, vitals, system, tools,
     profile: {
       name: "Conker", speakingPreset: "warm", speakingStyle: "Warm, direct, and concise. A little dry humour when it fits.",
       personality: "Curious and steady. Help me make room for school, judo, and building things. Ask before making assumptions. Be honest when you don’t know.",

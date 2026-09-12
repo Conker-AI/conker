@@ -6,6 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { columns } from "./columns"
 
 export default function MemoryPage() {
+  const memorySearch = useConker(data => data.memorySearch)
   const memories = useConker(data => data.memories)
   return (
     <BaseLayout
@@ -13,7 +14,7 @@ export default function MemoryPage() {
       description="What Conker thinks it knows. Evidence first; confidence is not certainty."
     >
       <div className="flex flex-col gap-4 ">
-        <Alert variant="warning">
+        {memorySearch.degraded && <Alert variant="warning">
           <TriangleAlert />
           <AlertTitle>Degraded search</AlertTitle>
           <AlertDescription>
@@ -21,7 +22,7 @@ export default function MemoryPage() {
             records are safe; meaning search is paused. Search below matches the
             displayed text only, in its original language.
           </AlertDescription>
-        </Alert>
+        </Alert>}
         <DataTable
           columns={columns}
           data={memories}

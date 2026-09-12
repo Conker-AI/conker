@@ -1,5 +1,4 @@
 import { useCustomizerPreferences } from "./preferences"
-"use client"
 
 import { Palette, Dices, Upload, ExternalLink, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -89,7 +88,7 @@ export function ThemeTab({
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="grid gap-6 p-4 lg:grid-cols-2 [&>[data-slot=separator]]:hidden">
 
 
       {/* Shadcn UI Theme Presets */}
@@ -109,7 +108,7 @@ export function ThemeTab({
           setImportedTheme(null) // Clear imported theme
           applyTheme(value, isDarkMode)
         }}>
-          <SelectTrigger className="w-full cursor-pointer">
+          <SelectTrigger aria-label="Theme preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Shadcn Theme" />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -166,7 +165,7 @@ export function ThemeTab({
             applyTweakcnTheme(selectedPreset, isDarkMode)
           }
         }}>
-          <SelectTrigger className="w-full cursor-pointer">
+          <SelectTrigger aria-label="Tweakcn preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Tweakcn Theme" />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -210,11 +209,16 @@ export function ThemeTab({
           {radiusOptions.map((option) => (
             <div
               key={option.value}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative cursor-pointer rounded-md p-3 border transition-colors ${
                 selectedRadius === option.value
                   ? "border-primary"
                   : "border-border hover:border-border/60"
               }`}
+              aria-label={`Radius ${option.name}`}
+              aria-pressed={selectedRadius === option.value}
               onClick={() => handleRadiusSelect(option.value)}
             >
               <div className="text-center">

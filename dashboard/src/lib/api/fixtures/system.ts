@@ -1,4 +1,12 @@
 import type { Service } from "../models"
+export const system = {
+  status: "Degraded · meaning search is paused",
+  detail: "MemoryGate cannot reach the vector index. Source records remain available. These are fixture health samples, not a connection to your host.",
+  sampleAge: "Stale · 7 min old",
+  sampledAt: "Stale host sample · SystemGate · 12 Sep 2026, 16:36. Current host load is unknown.",
+  recoverySummary: "Today, 03:00 · 4.2 GB · manifest checked",
+  recoveryDetail: "Postgres, Pi database, ToolGate vault and recovery material are included. This snapshot’s restore drill has not run. A snapshot existing does not prove recoverability.",
+}
 export const vitals = [
   {
     name: "Memory",

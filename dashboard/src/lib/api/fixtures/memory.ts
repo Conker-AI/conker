@@ -1,4 +1,5 @@
 import type { Memory } from "../models"
+export const memorySearch = { degraded: true, detail: "MemoryGate’s vector index is unavailable in this fixture. Source records are safe; meaning search is paused. Search below matches the displayed text only, in its original language." }
 export const memories: Memory[] = [
   {
     id: "judo",

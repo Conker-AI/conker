@@ -42,6 +42,7 @@ export default function ApprovalDetailPage() {
   const ticket = useConker((state) =>
     state.tickets.find((item) => item.id === id)
   )
+  const pending = useConkerStore(state => state.pending)
   const decide = useConkerStore((state) => state.decide)
   const Icon =
     ticket?.effect === "Deletion"
@@ -190,6 +191,7 @@ export default function ApprovalDetailPage() {
               {ticket.status === "Needs you" && (
                 <div className="flex gap-2">
                   <Button
+                    disabled={pending}
                     variant="outline"
                     onClick={() =>
                       decide(
@@ -201,6 +203,7 @@ export default function ApprovalDetailPage() {
                     {ticket.effect === "Proposal" ? "Dismiss" : "Deny"}
                   </Button>
                   <Button
+                    disabled={pending}
                     onClick={() =>
                       decide(
                         ticket.id,

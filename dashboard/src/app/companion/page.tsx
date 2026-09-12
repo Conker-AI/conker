@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
-import { CompanionPortrait, faces, portraitTones, emotions } from "@/components/companion-portrait"
+import { CompanionPortrait } from "@/components/companion-portrait"
+import { faces, portraitTones, emotions } from "@/lib/character-options"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -60,8 +61,8 @@ export default function CharacterStudioPage() {
         </section>
         <section className="space-y-4 rounded-lg border p-4" aria-labelledby="appearance-heading">
           <h2 id="appearance-heading" className="font-medium">Appearance</h2>
-          <fieldset><legend className="mb-2 text-sm">Face</legend><div className="grid grid-cols-3 gap-2">{faces.map(face => <Button key={face.value} type="button" variant="outline" aria-pressed={!profile.portrait && profile.face === face.value} className={cn("h-auto flex-col gap-2 py-3", !profile.portrait && profile.face === face.value && "border-primary bg-primary/5")} onClick={() => update({ face: face.value, portrait: "" })}><CompanionPortrait face={face.value} tone={profile.tone} className="size-14" />{face.label}</Button>)}</div></fieldset>
-          <fieldset><legend className="mb-2 text-sm">Portrait color</legend><div className="flex flex-wrap gap-2">{portraitTones.map(tone => <Button key={tone.value} type="button" variant="outline" aria-pressed={profile.tone === tone.value} className={cn(profile.tone === tone.value && "border-primary bg-primary/5")} onClick={() => update({ tone: tone.value })}><CompanionPortrait tone={tone.value} className="size-6" />{tone.label}</Button>)}</div></fieldset>
+          <fieldset><legend className="mb-2 text-sm">Face</legend><div className="grid grid-cols-3 gap-2">{faces.map(face => <Button key={face.value} aria-label={face.label} type="button" variant="outline" aria-pressed={!profile.portrait && profile.face === face.value} className={cn("h-auto flex-col gap-2 py-3", !profile.portrait && profile.face === face.value && "border-primary bg-primary/5")} onClick={() => update({ face: face.value, portrait: "", emotions: Object.fromEntries(Object.entries(profile.emotions).map(([key, value]) => [key, value === "portrait" ? "default" : value])) as Character["emotions"] })}><CompanionPortrait face={face.value} tone={profile.tone} className="size-14" />{face.label}</Button>)}</div></fieldset>
+          <fieldset><legend className="mb-2 text-sm">Portrait color</legend><div className="flex flex-wrap gap-2">{portraitTones.map(tone => <Button key={tone.value} aria-label={tone.label} type="button" variant="outline" aria-pressed={profile.tone === tone.value} className={cn(profile.tone === tone.value && "border-primary bg-primary/5")} onClick={() => update({ tone: tone.value })}><CompanionPortrait tone={tone.value} className="size-6" />{tone.label}</Button>)}</div></fieldset>
           <div className="space-y-2"><Label htmlFor="portrait-upload">Or upload a portrait</Label><Input id="portrait-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { void importPortrait(event.target.files?.[0]); event.target.value = "" }} /><p className="text-xs text-muted-foreground">PNG, JPEG, or WebP · up to 2 MB · stays in this preview until reload.</p>{profile.portrait && <Button type="button" variant="outline" size="sm" onClick={() => update({ portrait: "", emotions: Object.fromEntries(Object.entries(profile.emotions).map(([key, value]) => [key, value === "portrait" ? "default" : value])) as Character["emotions"] })}>Remove uploaded portrait</Button>}</div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         </section>
@@ -73,7 +74,7 @@ export default function CharacterStudioPage() {
             <Select value={profile.emotions[expression]} onValueChange={value => update({ emotions: { ...profile.emotions, [expression]: value as Character["emotions"][Emotion] } })}><SelectTrigger id={`emotion-${expression}`} className="w-40 sm:w-48"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default portrait</SelectItem>{faces.map(face => <SelectItem key={face.value} value={face.value}>{face.label} face</SelectItem>)}<SelectItem value="portrait" disabled={!profile.portrait}>Uploaded portrait</SelectItem></SelectContent></Select>
           </div>)}</div>
         </section>
-        <div className="flex flex-wrap items-center gap-3"><Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button><Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button><span role="status" className="text-xs text-muted-foreground">{saved ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to Home and the sidebar"}</span></div>
+        <div className="flex flex-wrap items-center gap-3"><Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button><Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button><span role="status" className="text-xs text-muted-foreground">{saved && !dirty ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to Home and the sidebar"}</span></div>
       </div>
       <aside className="space-y-4 rounded-lg border p-4 lg:sticky lg:top-6">
         <div className="flex items-center justify-between"><h2 className="text-sm font-medium">Portrait preview</h2><Badge variant="outline">Static</Badge></div>

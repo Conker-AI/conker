@@ -1,5 +1,4 @@
 import { useConkerStore } from "@/lib/api/store"
-"use client"
 
 import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -22,7 +21,7 @@ export function BaseLayout({ children, title, description }: BaseLayoutProps) {
   const { config } = useSidebarConfig()
 
   const content = (
-    <SidebarInset>
+    <SidebarInset key="content">
       <SiteHeader />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
@@ -49,6 +48,7 @@ export function BaseLayout({ children, title, description }: BaseLayoutProps) {
 
   const sidebar = (
     <AppSidebar
+      key="sidebar"
       variant={config.variant}
       collapsible={config.collapsible}
       side={config.side}
