@@ -24,9 +24,9 @@ test("Chats is a full-width list and search retains the Sessions or Agents mode"
   await expect(list.locator(".session-item")).toHaveCount(2);
   await page.getByRole("tab", { name: "Agents", exact: true }).click();
   await expect(list.locator(".session-item")).toHaveCount(2); // Workshop and Study room (Conker + Workshop).
-  await expect(list.locator(".session-item")).not.toContainText([
-    "Reading notes",
-    "The backup",
+  await expect(list.locator(".session-item > strong")).toHaveText([
+    "Workshop",
+    "Study room",
   ]);
   await page.getByLabel("Search contacts and conversations").fill("");
   await expect(list.locator(".session-item")).toHaveCount(3);
@@ -41,6 +41,13 @@ test("Chats is a full-width list and search retains the Sessions or Agents mode"
   await expect(
     page.getByRole("textbox", { name: "Message", exact: true }),
   ).toBeVisible();
+  await expect(page.locator(".conversation-identity")).toContainText(
+    "Workshop",
+  );
+  await expect(page.locator(".conversation-identity")).toContainText(
+    "A fresh conversation",
+  );
+  await expect(page.locator(".messenger-message")).toHaveCount(0);
 });
 
 test("Home and the title face share the remembered Companion conversation", async ({

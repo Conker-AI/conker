@@ -6,7 +6,11 @@ test("dangling portrait mappings resolve an available neutral asset", async ({
   await page.goto("/chat/week");
   await expect(page.locator("#week-user")).toBeVisible();
   await page.evaluate(async () => {
-    const path = "/src/mocks/database.ts";
+    const path = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/mocks/database.ts",
+      )!.name;
     const { db } = await import(path);
     db.character.companion.assets = [
       {
@@ -17,7 +21,11 @@ test("dangling portrait mappings resolve an available neutral asset", async ({
       },
     ];
     db.character.companion.expressions = { neutral: "available", warm: "gone" };
-    const queries = "/src/data/queries.ts";
+    const queries = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/data/queries.ts",
+      )!.name;
     await (await import(queries)).refresh("character");
   });
   await page
@@ -79,14 +87,22 @@ test("Inbox missing records and empty filters do not imply an empty queue", asyn
     page.getByText("Nothing waiting on you.", { exact: false }),
   ).toHaveCount(0);
   await page.evaluate(async () => {
-    const path = "/src/mocks/database.ts";
+    const path = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/mocks/database.ts",
+      )!.name;
     const { db } = await import(path);
     db.inbox = Object.fromEntries(
       Object.entries(db.inbox).filter(([, item]: [string, any]) =>
         ["coach", "revision", "cleanup"].includes(item.id),
       ),
     );
-    const queries = "/src/data/queries.ts";
+    const queries = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/data/queries.ts",
+      )!.name;
     await (await import(queries)).refresh("inbox");
   });
   await page.getByRole("link", { name: "All decisions" }).click();
@@ -96,10 +112,18 @@ test("Inbox missing records and empty filters do not imply an empty queue", asyn
   ).toBeVisible();
   await expect(page.getByText("3 decisions", { exact: true })).toBeVisible();
   await page.evaluate(async () => {
-    const path = "/src/mocks/database.ts";
+    const path = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/mocks/database.ts",
+      )!.name;
     const { db } = await import(path);
     db.inbox = {};
-    const queries = "/src/data/queries.ts";
+    const queries = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/data/queries.ts",
+      )!.name;
     await (await import(queries)).refresh("inbox");
   });
   await expect(
@@ -117,14 +141,22 @@ test("approval warnings follow evidence and original conversation reaches its so
     "Summarise the reading notes",
   );
   await page.evaluate(async () => {
-    const path = "/src/mocks/database.ts";
+    const path = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/mocks/database.ts",
+      )!.name;
     const { db } = await import(path);
     db.approvals.coach.intentEvidence = db.approvals.cleanup.intentEvidence;
     db.approvals.cleanup.intentEvidence = {
       matches: true,
       detail: "No mismatch",
     };
-    const queries = "/src/data/queries.ts";
+    const queries = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/data/queries.ts",
+      )!.name;
     await (await import(queries)).refresh("approvals");
   });
   await page.locator('.desktop-sidebar a[href="/inbox"]').click();
@@ -147,10 +179,18 @@ test("unknown tools stay readable and undated receipts have unknown age", async 
     "Receipt age unknown",
   );
   await page.evaluate(async () => {
-    const path = "/src/mocks/database.ts";
+    const path = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/mocks/database.ts",
+      )!.name;
     const { db } = await import(path);
     db.approvals.coach.tool = "future.tool";
-    const queries = "/src/data/queries.ts";
+    const queries = performance
+      .getEntriesByType("resource")
+      .find(
+        (entry) => new URL(entry.name).pathname === "/src/data/queries.ts",
+      )!.name;
     await (await import(queries)).refresh("approvals");
   });
   await page.locator('.desktop-sidebar a[href="/inbox"]').click();
@@ -194,6 +234,13 @@ test("Studio clears Saved after edits and repairs removed expression assets", as
     .getByRole("button", { name: "Remove" })
     .click();
   await expect(happy).toHaveValue("");
+  const save = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/character/companion"),
+  );
+  await page.getByRole("button", { name: "Save character" }).click();
+  expect((await save).postDataJSON().expressions.warm).toBeNull();
   await expect(page.locator(".portrait-preview img")).toBeVisible();
   await expect(page.locator(".portrait-preview [role=img]")).toHaveAttribute(
     "aria-label",
