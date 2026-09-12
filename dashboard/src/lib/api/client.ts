@@ -17,6 +17,13 @@ export type Character = {
   emotions: Record<Emotion, "default" | Face | "portrait">
 }
 export type LocalMessage = { id: string; text: string; createdAt: string }
+export type Thread = {
+  messages: { id: string; text: string; time: string; language?: string }[]
+  reply: string
+  mood: string
+  time: string
+  tool?: { name: string; summary: string; record: Record<string, unknown> }
+}
 export type AuthState = { status: "unconfigured" | "preview" | "authenticated"; ownerName: string }
 export type SetupInput = { ownerName: string; password: string; connections: Connections }
 export type AuthResult = { wired: false; message: string } | { wired: true; session: AuthState }
@@ -28,6 +35,7 @@ export type Snapshot = {
   planningIntent: string
   profile: Character
   messages: Record<string, LocalMessage[]>
+  threads: Record<string, Thread>
   replyRequests: string[]
   auth: AuthState
   connections: Connections

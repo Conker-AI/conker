@@ -1,3 +1,5 @@
+import { CompanionPortrait } from "@/components/companion-portrait"
+import { Button } from "@/components/ui/button"
 "use client"
 
 import * as React from "react"
@@ -67,13 +69,14 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const profile = useConker(data => data.profile)
   const owner = useConker(data => data.auth.ownerName)
   const pendingCount = useConker((state) => state.tickets.filter((ticket) => ticket.status === "Needs you").length)
   return (
     <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex items-center gap-1">
             <SidebarMenuButton size="lg" asChild>
               <Link to="/">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -87,6 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
+            <Button asChild variant="ghost" size="icon" className="shrink-0 group-data-[collapsible=icon]:hidden"><Link to="/" aria-label={`Talk to ${profile.name}`} title={profile.mood}><CompanionPortrait profile={profile} className="size-8" /></Link></Button>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

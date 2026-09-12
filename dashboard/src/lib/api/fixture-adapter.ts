@@ -6,6 +6,7 @@ import { entries } from "./fixtures/journal"
 import { memories } from "./fixtures/memory"
 import { services, vitals } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
+import { threads } from "./fixtures/threads"
 import { connectionConfig } from "./config"
 import type { ConkerClient, Snapshot, AuthResult } from "./client"
 
@@ -19,7 +20,7 @@ export function createFixtureClient(): ConkerClient {
       renderer: "static", portrait: "", face: "sprout", tone: "green", mood: "Thoughtful · ready to listen",
       emotions: { neutral: "default", happy: "round", thinking: "sprout", concerned: "default", celebrating: "cat" },
     },
-    messages: {}, replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
+    threads, messages: {}, replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
     connections: connectionConfig.read(),
     terminal: { prompt: "alexey@conker", context: [["Repository", "companion"], ["Branch", "feat/dashboard"], ["Working tree", "Unknown · no filesystem probe"], ["Last commit", "Dashboard shell scaffold · fixture"]] },
   })

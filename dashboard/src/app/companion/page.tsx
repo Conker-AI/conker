@@ -1,313 +1,88 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Shield, Image, Check } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
-import { CompanionPortrait } from "@/components/companion-portrait"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { CompanionPortrait, faces, portraitTones, emotions } from "@/components/companion-portrait"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { useConker, useConkerStore } from "@/lib/api/store"
+import type { Character, Emotion } from "@/lib/api/client"
+import { cn } from "@/lib/utils"
+
+const styles = [
+  { value: "warm", label: "Warm", description: "Friendly, steady, a little dry humour.", text: "Warm, direct, and concise. A little dry humour when it fits." },
+  { value: "direct", label: "Direct", description: "Short answers. Lead with the next step.", text: "Be brief and practical. Lead with the answer, then the next step." },
+  { value: "curious", label: "Curious", description: "Explore ideas and ask useful questions.", text: "Think things through with me. Ask thoughtful questions and explore alternatives." },
+  { value: "custom", label: "Custom", description: "Describe a voice in your own words.", text: "" },
+] as const
 
 export default function CharacterStudioPage() {
   const savedProfile = useConker(data => data.profile)
-  const save = useConkerStore(state => state.save)
+  const { save, pending } = useConkerStore()
   const [profile, setProfile] = useState(savedProfile)
-  const [saved, setSaved] = useState(false)
+  const [emotion, setEmotion] = useState<Emotion>("neutral")
   const [error, setError] = useState("")
-  const update = (patch: Partial<typeof profile>) => {
-    setProfile((value) => ({ ...value, ...patch }))
-    setSaved(false)
-  }
+  const [saved, setSaved] = useState(false)
+  const update = (patch: Partial<Character>) => { setProfile(old => ({ ...old, ...patch })); setSaved(false) }
+  const dirty = JSON.stringify(profile) !== JSON.stringify(savedProfile)
   async function importPortrait(file?: File) {
     if (!file) return
     setError("")
-    if (
-      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
-      file.size > 2 * 1024 * 1024
-    ) {
-      setError("Choose a PNG, JPEG, or WebP image under 2 MB.")
-      return
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024) {
+      setError("Choose a PNG, JPEG, or WebP under 2 MB."); return
     }
     try {
       const portrait = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = reject
-        reader.readAsDataURL(file)
+        const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file)
       })
+      const image = new Image(); image.src = portrait; await image.decode()
       update({ portrait })
-    } catch {
-      setError("This image could not be read. Try another local image.")
-    }
+    } catch { setError("This file could not be displayed. Choose another image.") }
   }
-  return (
-    <BaseLayout
-      title="Character Studio"
-      description="A familiar face. A way of speaking. Still entirely your say."
-    >
-      <div className="flex flex-col gap-4 ">
-        <Button variant="ghost" size="sm" asChild className="self-start">
-          <Link to="/">
-            <ArrowLeft />
-            Back to your companion
-          </Link>
-        </Button>
-        <div className="grid max-w-6xl items-start gap-5 lg:grid-cols-[1.3fr_1fr]">
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              if (profile.name.trim()) {
-                void save({ ...profile, name: profile.name.trim() }).then(setSaved)
-              }
-            }}
-          >
-            <Card className="gap-4 py-5 shadow-none">
-              <CardHeader className="px-5">
-                <CardTitle className="text-base">
-                  Your companion, in your words
-                </CardTitle>
-                <CardDescription>
-                  Changes stay in this preview until reload.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-5">
-                <Tabs defaultValue="character" className="gap-5">
-                  <TabsList className="border">
-                    <TabsTrigger value="character">Character</TabsTrigger>
-                    <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="character">
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="character-name">Name</FieldLabel>
-                        <Input
-                          id="character-name"
-                          required
-                          maxLength={60}
-                          value={profile.name}
-                          onChange={(event) =>
-                            update({ name: event.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor="speaking-style">
-                          Speaking style
-                        </FieldLabel>
-                        <Textarea
-                          id="speaking-style"
-                          rows={3}
-                          maxLength={1000}
-                          value={profile.speakingStyle}
-                          onChange={(event) =>
-                            update({ speakingStyle: event.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor="personality">
-                          Personality
-                        </FieldLabel>
-                        <Textarea
-                          id="personality"
-                          rows={5}
-                          maxLength={4000}
-                          value={profile.personality}
-                          onChange={(event) =>
-                            update({ personality: event.target.value })
-                          }
-                        />
-                        <FieldDescription>
-                          A lens for conversation. These words never grant
-                          permission.
-                        </FieldDescription>
-                      </Field>
-                    </FieldGroup>
-                  </TabsContent>
-                  <TabsContent value="appearance">
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="portrait-file">
-                          Static portrait
-                        </FieldLabel>
-                        <Input
-                          id="portrait-file"
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={(event) => {
-                            void importPortrait(event.target.files?.[0])
-                            event.target.value = ""
-                          }}
-                        />
-                        <FieldDescription>
-                          PNG, JPEG, or WebP · up to 2 MB · local preview only.
-                        </FieldDescription>
-                        {profile.portrait && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="self-start"
-                            onClick={() => update({ portrait: "" })}
-                          >
-                            Use default portrait
-                          </Button>
-                        )}
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor="renderer">Renderer</FieldLabel>
-                        <Select
-                          value={profile.renderer}
-                          onValueChange={(renderer) => update({ renderer: renderer as typeof profile.renderer })}
-                        >
-                          <SelectTrigger id="renderer" className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="static">
-                                Static portrait
-                              </SelectItem>
-                              <SelectItem value="live-2d">
-                                Live 2D · planned
-                              </SelectItem>
-                              <SelectItem value="live-3d">
-                                Live 3D · planned
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <FieldDescription>
-                          Deferred renderers use the static portrait. No
-                          animation engine is connected.
-                        </FieldDescription>
-                      </Field>
-                      <Alert>
-                        <Image />
-                        <AlertTitle>Avatar rendering is planned</AlertTitle>
-                        <AlertDescription>
-                          Expressions are presentation, not a reading of your
-                          feelings. The static portrait remains available.
-                        </AlertDescription>
-                      </Alert>
-                    </FieldGroup>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-              <CardFooter className="flex flex-wrap gap-3 px-5">
-                <Button type="submit" disabled={!profile.name.trim()}>
-                  Save character
-                </Button>
-                {saved && (
-                  <span
-                    role="status"
-                    className="flex items-center gap-1 text-xs text-muted-foreground"
-                  >
-                    <Check className="size-3.5" />
-                    Saved in this preview
-                  </span>
-                )}
-                {error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
-              </CardFooter>
-            </Card>
-          </form>
-          <Card className="gap-5 py-5 shadow-none">
-            <CardHeader className="px-5">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Live preview</CardTitle>
-                <Badge variant="outline">Planned</Badge>
-              </div>
-              <CardDescription>
-                Static portrait · deferred avatar renderer
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 px-5">
-              {profile.portrait ? (
-                <img
-                  src={profile.portrait}
-                  alt={`${profile.name || "Companion"} portrait preview`}
-                  className="size-44 rounded-xl border object-cover"
-                  onError={() => {
-                    update({ portrait: "" })
-                    setError(
-                      "The image could not be displayed. Showing the default portrait."
-                    )
-                  }}
-                />
-              ) : (
-                <CompanionPortrait
-                  name={profile.name}
-                  className="size-44 rounded-3xl"
-                />
-              )}
-              <div className="text-center">
-                <h2 className="text-xl font-semibold">
-                  {profile.name || "Your companion"}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  “We can start small. What’s on your mind?”
-                </p>
-              </div>
-              <dl className="flex w-full flex-col gap-3 border-t pt-4 text-sm">
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Speaking style
-                  </dt>
-                  <dd className="mt-1 whitespace-pre-wrap break-words">
-                    {profile.speakingStyle || "No speaking style set."}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Personality</dt>
-                  <dd className="mt-1 whitespace-pre-wrap break-words">
-                    {profile.personality || "No personality notes set."}
-                  </dd>
-                </div>
-              </dl>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Profile and rendering are separate. The sample line is fixed;
-                editing the profile does not generate a model reply.
-              </p>
-            </CardContent>
-            <CardFooter className="gap-2 border-t px-5 pt-4">
-              <Shield className="size-4 shrink-0 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">
-                These words never grant permission. Tools, grants, and budgets
-                stay under your control.
-              </p>
-            </CardFooter>
-          </Card>
-        </div>
+  return <BaseLayout title="Character Studio" description="Edit your companion’s voice, portrait, and expressions.">
+    <form onSubmit={async event => { event.preventDefault(); setSaved(await save(profile)) }} className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+      <div className="min-w-0 space-y-5">
+        <section className="space-y-4 rounded-lg border p-4" aria-labelledby="character-heading">
+          <h2 id="character-heading" className="font-medium">Identity & voice</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2"><Label htmlFor="character-name">Name</Label><Input id="character-name" required maxLength={60} value={profile.name} onChange={event => update({ name: event.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor="character-mood">Status / mood line</Label><Input id="character-mood" maxLength={100} value={profile.mood} onChange={event => update({ mood: event.target.value })} /></div>
+          </div>
+          <fieldset className="space-y-2"><legend className="mb-2 text-sm font-medium">Speaking style</legend><div className="grid gap-2 sm:grid-cols-2">{styles.map(style => <label key={style.value} className={cn("flex cursor-pointer items-start gap-3 rounded-lg border p-3", profile.speakingPreset === style.value && "border-primary bg-primary/5")}>
+            <input type="radio" name="speaking-style" value={style.value} checked={profile.speakingPreset === style.value} onChange={() => update({ speakingPreset: style.value, speakingStyle: style.value === "custom" ? profile.speakingStyle : style.text })} className="mt-1 accent-primary" />
+            <span><span className="block text-sm font-medium">{style.label}</span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{style.description}</span></span>
+          </label>)}</div></fieldset>
+          <div className="space-y-2"><Label htmlFor="speaking-notes">Style instructions</Label><Textarea id="speaking-notes" value={profile.speakingStyle} maxLength={1000} onChange={event => update({ speakingStyle: event.target.value, speakingPreset: "custom" })} /><p className="text-xs text-muted-foreground">Start with a preset and adjust it. Editing the text selects Custom.</p></div>
+          <div className="space-y-2"><Label htmlFor="personality">Personality</Label><Textarea id="personality" className="min-h-24" value={profile.personality} maxLength={2000} onChange={event => update({ personality: event.target.value })} /></div>
+        </section>
+        <section className="space-y-4 rounded-lg border p-4" aria-labelledby="appearance-heading">
+          <h2 id="appearance-heading" className="font-medium">Appearance</h2>
+          <fieldset><legend className="mb-2 text-sm">Face</legend><div className="grid grid-cols-3 gap-2">{faces.map(face => <Button key={face.value} type="button" variant="outline" aria-pressed={!profile.portrait && profile.face === face.value} className={cn("h-auto flex-col gap-2 py-3", !profile.portrait && profile.face === face.value && "border-primary bg-primary/5")} onClick={() => update({ face: face.value, portrait: "" })}><CompanionPortrait face={face.value} tone={profile.tone} className="size-14" />{face.label}</Button>)}</div></fieldset>
+          <fieldset><legend className="mb-2 text-sm">Portrait color</legend><div className="flex flex-wrap gap-2">{portraitTones.map(tone => <Button key={tone.value} type="button" variant="outline" aria-pressed={profile.tone === tone.value} className={cn(profile.tone === tone.value && "border-primary bg-primary/5")} onClick={() => update({ tone: tone.value })}><CompanionPortrait tone={tone.value} className="size-6" />{tone.label}</Button>)}</div></fieldset>
+          <div className="space-y-2"><Label htmlFor="portrait-upload">Or upload a portrait</Label><Input id="portrait-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { void importPortrait(event.target.files?.[0]); event.target.value = "" }} /><p className="text-xs text-muted-foreground">PNG, JPEG, or WebP · up to 2 MB · stays in this preview until reload.</p>{profile.portrait && <Button type="button" variant="outline" size="sm" onClick={() => update({ portrait: "", emotions: Object.fromEntries(Object.entries(profile.emotions).map(([key, value]) => [key, value === "portrait" ? "default" : value])) as Character["emotions"] })}>Remove uploaded portrait</Button>}</div>
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        </section>
+        <section className="space-y-4 rounded-lg border p-4" aria-labelledby="emotions-heading">
+          <div><h2 id="emotions-heading" className="font-medium">2D emotion pack</h2><p className="mt-1 text-xs text-muted-foreground">Assign a face or uploaded portrait to each expression. Default uses your main portrait.</p></div>
+          <div className="divide-y">{emotions.map(expression => <div key={expression} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+            <CompanionPortrait profile={profile} emotion={expression} />
+            <Label htmlFor={`emotion-${expression}`} className="flex-1 capitalize">{expression}</Label>
+            <Select value={profile.emotions[expression]} onValueChange={value => update({ emotions: { ...profile.emotions, [expression]: value as Character["emotions"][Emotion] } })}><SelectTrigger id={`emotion-${expression}`} className="w-40 sm:w-48"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default portrait</SelectItem>{faces.map(face => <SelectItem key={face.value} value={face.value}>{face.label} face</SelectItem>)}<SelectItem value="portrait" disabled={!profile.portrait}>Uploaded portrait</SelectItem></SelectContent></Select>
+          </div>)}</div>
+        </section>
+        <div className="flex flex-wrap items-center gap-3"><Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button><Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button><span role="status" className="text-xs text-muted-foreground">{saved ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to Home and the sidebar"}</span></div>
       </div>
-    </BaseLayout>
-  )
+      <aside className="space-y-4 rounded-lg border p-4 lg:sticky lg:top-6">
+        <div className="flex items-center justify-between"><h2 className="text-sm font-medium">Portrait preview</h2><Badge variant="outline">Static</Badge></div>
+        <div className="flex items-center gap-4"><CompanionPortrait profile={profile} emotion={emotion} className="size-24" /><div className="min-w-0"><p className="break-words text-lg font-semibold">{profile.name || "Your companion"}</p><p className="mt-1 break-words text-xs text-muted-foreground">{profile.mood}</p></div></div>
+        <div className="space-y-2"><Label htmlFor="preview-emotion">Preview expression</Label><Select value={emotion} onValueChange={value => setEmotion(value as Emotion)}><SelectTrigger id="preview-emotion" className="w-full capitalize"><SelectValue /></SelectTrigger><SelectContent>{emotions.map(value => <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-2 border-t pt-4"><h3 className="text-sm font-medium">Voice instructions</h3><p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{profile.speakingStyle || "No style instructions yet."}</p><p className="text-xs text-muted-foreground">Expressions and voice are presentation settings. No model is connected.</p></div>
+        <div className="space-y-2 border-t pt-4"><div className="flex items-center justify-between"><h3 className="text-sm font-medium">Live 3D</h3><Badge variant="outline">Planned</Badge></div><p className="text-xs leading-relaxed text-muted-foreground">The static portrait and expression mappings work now. Live animation needs a renderer.</p></div>
+        <Button variant="outline" size="sm" asChild><Link to="/">Open Home</Link></Button>
+      </aside>
+    </form>
+  </BaseLayout>
 }

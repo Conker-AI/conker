@@ -13,37 +13,18 @@ import {
 } from "@/components/ui/collapsible"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
-export function ToolActivity({ reminder = false }: { reminder?: boolean }) {
-  const tool = reminder ? "reminder.create" : "calendar.read"
-  const record = reminder
-    ? {
-        arguments: { title: "Check server backup", at: "Sunday 17:00" },
-        action_id: "act_fixture_reminder_009",
-        outcome: "completed",
-        turn_status: "acted_no_reply",
-      }
-    : {
-        arguments: {
-          calendar: "Personal",
-          from: "2026-09-13",
-          to: "2026-09-18",
-        },
-        action_id: "act_fixture_calendar_031",
-        duration: "180 ms",
-        outcome: "Read 3 events. Nothing changed.",
-      }
+export function ToolActivity({ activity }: { activity: NonNullable<import("@/lib/api/client").Thread["tool"]> }) {
+  const { name: tool, record, summary } = activity
   return (
     <Card className="gap-2 py-3 shadow-none">
       <CardHeader className="gap-2 px-4">
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
           <Wrench className="size-4 text-muted-foreground" />
           <span className="font-mono font-normal">{tool}</span>
-          <StatusBadge tone="live">Live</StatusBadge>
+          <StatusBadge>Fixture receipt</StatusBadge>
         </CardTitle>
         <CardDescription className="text-xs">
-          {reminder
-            ? "Fixture receipt · Action completed · Reminder saved"
-            : "Fixture receipt · Checked 1s ago · Read 3 events"}
+          {summary}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4">

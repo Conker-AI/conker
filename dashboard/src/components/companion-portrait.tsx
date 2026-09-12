@@ -1,56 +1,30 @@
 import { cn } from "@/lib/utils"
-export function CompanionPortrait({
-  className,
-  name = "Conker",
-  portrait,
-}: {
-  className?: string
-  name?: string
-  portrait?: string
+import type { Character, Emotion, Face, PortraitTone } from "@/lib/api/client"
+
+export const faces: { value: Face; label: string }[] = [{ value: "sprout", label: "Sprout" }, { value: "round", label: "Round" }, { value: "cat", label: "Cat" }]
+export const portraitTones: { value: PortraitTone; label: string }[] = [{ value: "green", label: "Fern" }, { value: "soft", label: "Sage" }, { value: "graphite", label: "Graphite" }]
+export const emotions: Emotion[] = ["neutral", "happy", "thinking", "concerned", "celebrating"]
+
+export function CompanionPortrait({ className, name = "Conker", portrait, face = "sprout", tone = "green", emotion = "neutral", profile }: {
+  className?: string; name?: string; portrait?: string; face?: Face; tone?: PortraitTone; emotion?: Emotion; profile?: Character
 }) {
-  return (
-    <div
-      role="img"
-      aria-label={`${name} static portrait`}
-      className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary",
-        className
-      )}
-    >
-      {portrait ? (
-        <img
-          src={portrait}
-          alt=""
-          className="size-full rounded-[inherit] object-cover"
-        />
-      ) : (
-        <svg viewBox="0 0 100 100" className="size-4/5" aria-hidden="true">
-          <path
-            d="M50 28c-1-13 9-19 19-16-1 11-8 16-19 16Z"
-            fill="currentColor"
-            opacity=".45"
-          />
-          <path
-            d="M49 28c0-10-8-14-16-11 1 9 7 13 16 11Z"
-            fill="currentColor"
-            opacity=".25"
-          />
-          <path
-            d="M21 49c0-25 58-25 58 0v19c0 22-58 22-58 0Z"
-            fill="currentColor"
-            opacity=".09"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M37 54v7m26-7v7m-19 9q6 5 12 0"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </svg>
-      )}
-    </div>
-  )
+  if (profile) {
+    name = profile.name; tone = profile.tone; face = profile.face; portrait = profile.portrait
+    const mapping = profile.emotions[emotion]
+    if (mapping && mapping !== "default" && mapping !== "portrait") { face = mapping; portrait = "" }
+  }
+  return <div role="img" aria-label={`${name} ${emotion} portrait`} className={cn(
+    "flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border",
+    tone === "green" ? "border-primary/30 bg-primary/15 text-primary" : tone === "soft" ? "border-primary/20 bg-primary/5 text-primary/70" : "border-border bg-muted text-foreground",
+    className,
+  )}>
+    {portrait ? <img src={portrait} alt="" className="size-full object-cover" /> : <svg viewBox="0 0 100 100" className="size-full" aria-hidden="true">
+      {face === "sprout" && <><path d="M49 30C43 13 62 6 74 13C69 28 59 30 49 30Z" fill="currentColor" opacity=".7" /><path d="M49 30C49 18 36 13 27 19C30 30 41 33 49 30Z" fill="currentColor" opacity=".4" /></>}
+      {face === "cat" && <path d="M23 47L19 17L42 33M58 33L81 17L77 47" fill="currentColor" opacity=".5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />}
+      <path d={face === "round" ? "M17 53a33 33 0 1 0 66 0a33 33 0 1 0-66 0" : "M19 51C19 25 81 25 81 51V66C81 91 19 91 19 66Z"} fill="currentColor" opacity=".2" stroke="currentColor" strokeWidth="2" />
+      <path d={emotion === "happy" || emotion === "celebrating" ? "M31 54q5-8 10 0m18 0q5-8 10 0" : "M36 51v7m28-7v7"} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <path d={emotion === "concerned" ? "M43 72q7-7 14 0" : emotion === "thinking" ? "M46 71h10" : "M42 69q8 9 16 0"} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="29" cy="65" rx="5" ry="3" fill="currentColor" opacity=".22" /><ellipse cx="71" cy="65" rx="5" ry="3" fill="currentColor" opacity=".22" />
+    </svg>}
+  </div>
 }
