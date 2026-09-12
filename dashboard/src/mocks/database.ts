@@ -50,7 +50,7 @@ const session = (
   title,
   participantIds,
   policy,
-  updatedAt: "2026-09-12T16:42:00",
+  updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
   ...extra,
 });
 const message = (

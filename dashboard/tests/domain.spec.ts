@@ -85,3 +85,20 @@ test("unrecognised outcomes and unknown charges never become success or zero", (
     adaptRecord("approvals", { id: "a", decision: "approved" }, "a"),
   ).toThrow("revision");
 });
+
+test("string false capability flags cannot enable commands", () => {
+  for (const flag of ["supported", "authorised"]) {
+    const record = adaptRecord("capabilities", {
+      id: "test",
+      supported: true,
+      authorised: true,
+      [flag]: "false",
+    });
+    expect(
+      capabilityReason(
+        [record as import("../src/domain/model").Capability],
+        "test",
+      ),
+    ).toBeTruthy();
+  }
+});

@@ -184,6 +184,157 @@ const mutants = [
     title: "Reply and emotion contribute",
   },
 ];
+mutants.push(
+  {
+    name: "Chats opens a detail",
+    file: "src/features/messenger/page.tsx",
+    change: replace(
+      "export function Messenger() {",
+      'export function Messenger() { if (window.location.pathname === "/chat") return <Conversation id="week" />;',
+    ),
+    test: "navigation.spec.ts",
+    title: "Chats is a full-width list",
+  },
+  {
+    name: "search drops Agents mode",
+    file: "src/features/messenger/page.tsx",
+    change: replace('mode === "sessions"', 'mode === "sessions" || !!search'),
+    test: "navigation.spec.ts",
+    title: "Chats is a full-width list",
+  },
+  {
+    name: "title face opens Studio",
+    file: "src/components/shell.tsx",
+    change: replace(
+      /to="\/"(\s+aria-label="Companion home")/,
+      'to="/companion"$1',
+    ),
+    test: "navigation.spec.ts",
+    title: "Home and the title face",
+  },
+  {
+    name: "Home forgets chosen conversation",
+    file: "src/features/messenger/page.tsx",
+    change: replace(
+      'contactSession("home", query.data.sessionIds[0])',
+      "query.data.sessionIds[0]",
+    ),
+    test: "navigation.spec.ts",
+    title: "Home and the title face",
+  },
+  {
+    name: "navigation collapse inert",
+    file: "src/components/shell.tsx",
+    change: replace("setNavHidden(!navHidden)", "setNavHidden(false)"),
+    test: "navigation.spec.ts",
+    title: "chrome toggles independently",
+  },
+  {
+    name: "contact collapse inert",
+    file: "src/features/messenger/page.tsx",
+    change: replace(
+      "setContactsHidden(!contactsHidden)",
+      "setContactsHidden(false)",
+    ),
+    test: "navigation.spec.ts",
+    title: "chrome toggles independently",
+  },
+  {
+    name: "chrome preferences not persisted",
+    file: "src/platform/chrome-preferences.ts",
+    change: replace(
+      "localStorage.setItem(key, JSON.stringify(preferences));",
+      "",
+    ),
+    test: "navigation.spec.ts",
+    title: "chrome toggles independently",
+  },
+  {
+    name: "Inbox preopens detail",
+    file: "src/pages/inbox.tsx",
+    change: replace("!id ? (", "false ? ("),
+    test: "navigation.spec.ts",
+    title: "Inbox rows lead",
+  },
+  {
+    name: "management opens first detail",
+    file: "src/features/management/pages.tsx",
+    change: replace(
+      "const { id } = useParams();",
+      'const { id = "conker" } = useParams();',
+    ),
+    test: "navigation.spec.ts",
+    title: "every management collection",
+  },
+  {
+    name: "accepted activity leaves stale recency",
+    file: "src/mocks/handlers.ts",
+    change: replace("session.updatedAt = new Date().toISOString();", ""),
+    test: "navigation.spec.ts",
+    title: "accepted activity reorders",
+  },
+  {
+    name: "session cache not refreshed",
+    file: "src/data/runs.ts",
+    change: replace('refresh("journal", "sessions")', 'refresh("journal")'),
+    test: "navigation.spec.ts",
+    title: "accepted activity reorders",
+  },
+  {
+    name: "string false enabled",
+    file: "src/platform/capabilities.ts",
+    change: replace("capability.supported !== true", "!capability.supported"),
+    test: "domain.spec.ts",
+    title: "string false capability",
+  },
+  {
+    name: "warnings depend on fixture ID",
+    file: "src/pages/inbox.tsx",
+    change: replace(
+      "item.intentEvidence?.matches === false",
+      'item.id === "cleanup"',
+    ),
+    test: "correctness.spec.ts",
+    title: "approval warnings follow evidence",
+  },
+  {
+    name: "Saved survives edits",
+    file: "src/features/character-studio/page.tsx",
+    change: replace("savedProfile === JSON.stringify(profile)", "true"),
+    test: "correctness.spec.ts",
+    title: "Studio clears Saved",
+  },
+  {
+    name: "removed asset keeps dangling mapping",
+    file: "src/features/character-studio/page.tsx",
+    change: replace("mapped === asset.id ? null : mapped", "mapped"),
+    test: "correctness.spec.ts",
+    title: "Studio clears Saved",
+  },
+);
+mutants.push(
+  {
+    name: "loading Inbox reports zero decisions",
+    file: "src/pages/inbox.tsx",
+    change: replace("!loading && !unavailable &&", "true &&"),
+    test: "correctness.spec.ts",
+    title: "Inbox distinguishes loading",
+  },
+  {
+    name: "neutral fallback omitted",
+    file: "src/features/character-studio/portrait.tsx",
+    change: replace('[expression, "neutral"]', "[expression]"),
+    test: "correctness.spec.ts",
+    title: "dangling portrait mappings",
+  },
+  {
+    name: "inspector scroll restoration omitted",
+    file: "src/features/messenger/page.tsx",
+    change: replace(', params.get("inspect")]', "]"),
+    test: "messenger.spec.ts",
+    title: "policy inspector restores",
+  },
+);
 console.log("Checking the unmodified baseline first…");
 const baseline = run();
 if (

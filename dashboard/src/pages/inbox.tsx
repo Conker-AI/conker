@@ -101,7 +101,7 @@ function ApprovalCard({
           </div>
           <div className="grant-delta" aria-label="Authority requested">
             <span>Current: {item.grant}</span>
-            <span>?</span>
+            <span>→</span>
             <strong>Once: {approvalTitle(item)}</strong>
           </div>
           {definition.effect === "Unknown" && (
@@ -349,8 +349,8 @@ function InboxRow({ item }: { item: Approval | ProposalRecord }) {
         </strong>
         <p className="fine-print">
           {item.kind === "approval"
-            ? `Decide by ${item.decideBy} ? Spend window ${item.spendSeconds / 60} min once approved`
-            : "No decision deadline ? No execution window (proposal)"}
+            ? `Decide by ${item.decideBy} · Spend window ${item.spendSeconds / 60} min once approved`
+            : "No decision deadline · No execution window (proposal)"}
         </p>
       </div>
     </Link>
@@ -375,7 +375,7 @@ export function InboxPage() {
           unavailable
             ? "Inbox unavailable"
             : loading
-              ? "Checking your inbox?"
+              ? "Checking your inbox…"
               : "Inbox"
         }
         description="The intent, the effect, and your say. Nothing more than it needs to be."

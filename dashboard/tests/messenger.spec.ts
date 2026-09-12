@@ -19,6 +19,7 @@ test("contact switching preserves each draft and scroll position", async ({
     element.dispatchEvent(new Event("scroll"));
   });
   const scroll = await scroller.evaluate((element) => element.scrollTop);
+  expect(scroll).toBeGreaterThan(0);
   await page.getByRole("link", { name: "Back to chats" }).click();
   await workshop(page).click();
   await page
@@ -37,6 +38,40 @@ test("contact switching preserves each draft and scroll position", async ({
   await expect(
     page.getByRole("textbox", { name: "Message", exact: true }),
   ).toHaveValue("Check the WAL first");
+});
+
+test("policy inspector restores nonzero scroll during a running conversation", async ({
+  page,
+}) => {
+  await page.goto("/chat/week");
+  await page
+    .getByRole("textbox", { name: "Message", exact: true })
+    .fill("Keep running while I inspect policy");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.locator('[data-run-state="streaming"]')).toBeVisible();
+  const scroller = page.getByTestId("conversation-scroll");
+  await scroller.evaluate((element) => {
+    element.scrollTop = 180;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  const scroll = await scroller.evaluate((element) => element.scrollTop);
+  expect(scroll).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Composer tools" }).click();
+  await page
+    .getByRole("button", { name: "Inspect conversation policy", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Effective conversation policy" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Back to conversation", exact: true })
+    .click();
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollTop))
+    .toBe(scroll);
+  await expect(
+    page.locator(".role-assistant .message-body").last(),
+  ).toContainText("no model was called");
 });
 test("a running session keeps its stream while another contact is open", async ({
   page,

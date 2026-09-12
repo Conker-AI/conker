@@ -860,3 +860,14 @@
     max-height: 30%;
   }
 }
+
+/* Allow the shell and form controls to shrink on narrow screens. */
+.topbar-left,
+.studio-grid > form {
+  min-width: 0;
+}
+.topbar-left .crumb {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

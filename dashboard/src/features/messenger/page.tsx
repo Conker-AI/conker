@@ -99,7 +99,7 @@ function ContactList({ compact = false }: { compact?: boolean }) {
           .map((session) => ({
             id: session.id,
             title: session.title,
-            subtitle: `${query.data?.find((c) => c.id === session.contactId)?.name ?? "Conversation"}${session.id === latestHome?.id ? " ? pinned" : ""}`,
+            subtitle: `${query.data?.find((c) => c.id === session.contactId)?.name ?? "Conversation"}${session.id === latestHome?.id ? " · pinned" : ""}`,
             to: `/chat/${session.id}`,
             home: session.id === latestHome?.id,
           }))
@@ -113,7 +113,7 @@ function ContactList({ compact = false }: { compact?: boolean }) {
                 : contact.name,
             subtitle:
               contact.id === "home"
-                ? "Your companion ? pinned"
+                ? "Your companion · pinned"
                 : contact.subtitle,
             to: `/chat/${contactSession(contact.id, contact.sessionIds[0])}`,
             home: contact.id === "home",
@@ -142,7 +142,7 @@ function ContactList({ compact = false }: { compact?: boolean }) {
         <Search />
         <Input
           aria-label="Search contacts and conversations"
-          placeholder="Search?"
+          placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
