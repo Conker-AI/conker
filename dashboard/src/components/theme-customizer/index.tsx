@@ -24,7 +24,7 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
   const { applyImportedTheme, isDarkMode, resetTheme, applyRadius, setBrandColorsValues, applyTheme, applyTweakcnTheme } = useThemeManager()
   const { config: sidebarConfig, updateConfig: updateSidebarConfig } = useSidebarConfig()
 
-  const [activeTab, setActiveTab] = React.useState("theme")
+  const { activeTab, setActiveTab } = useCustomizerPreferences()
   const { selectedTheme, setSelectedTheme, selectedTweakcnTheme, setSelectedTweakcnTheme, selectedRadius, setSelectedRadius, importedTheme, setImportedTheme } = useCustomizerPreferences()
   const [importModalOpen, setImportModalOpen] = React.useState(false)
 

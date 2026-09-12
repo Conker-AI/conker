@@ -7,12 +7,13 @@ import { CommandSearch, SearchTrigger } from "@/components/command-search"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Palette } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useCustomizerPreferences } from "@/components/theme-customizer/preferences"
 
 const ThemeCustomizer = React.lazy(() => import("@/components/theme-customizer").then((module) => ({ default: module.ThemeCustomizer })))
 
 export function SiteHeader() {
   const [searchOpen, setSearchOpen] = React.useState(false)
-  const [customizerOpen, setCustomizerOpen] = React.useState(false)
+  const { open: customizerOpen, setOpen: setCustomizerOpen } = useCustomizerPreferences()
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {

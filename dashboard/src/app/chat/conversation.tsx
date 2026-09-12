@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { ArrowUp, ArrowUpRight, Info, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -34,6 +34,7 @@ function UserMessage({
   )
 }
 export function Conversation({ session }: { session: Session }) {
+  const { hash } = useLocation()
   const { messages, drafts, setDraft, send } = useConversations()
   const name = useCharacter((state) => state.profile.name)
   const portrait = useCharacter((state) => state.profile.portrait)
@@ -210,7 +211,10 @@ export function Conversation({ session }: { session: Session }) {
           )}
         </div>
         {planning && (
-          <details className="text-xs text-muted-foreground">
+          <details
+            open={["#sent-user", "#expired-user"].includes(hash) || undefined}
+            className="text-xs text-muted-foreground"
+          >
             <summary className="cursor-pointer">
               Earlier source messages
             </summary>
