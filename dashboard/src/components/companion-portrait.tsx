@@ -10,9 +10,9 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
     if (mapping && mapping !== "default" && mapping !== "portrait") { face = mapping; portrait = "" }
   }
 
-  // Keep the artwork inset by one eighth on every side at every avatar size.
-  // Contain the complete photo so ears, edges, and non-square uploads stay visible.
   if (portrait) {
+    const isConkerArtwork = /(?:^|\/)conker\.png(?:[?#].*)?$/.test(portrait)
+
     return (
       <div
         role="img"
@@ -22,11 +22,20 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
           className,
         )}
       >
-        <img
-          src={portrait}
-          alt=""
-          className="size-3/4 object-contain"
-        />
+        {/* Proportional inset keeps the photo clear of the outline at every size. */}
+        <div className="size-[84%] overflow-hidden rounded-[inherit]">
+          <img
+            src={portrait}
+            alt=""
+            draggable={false}
+            className={cn(
+              "size-full object-cover object-[50%_35%]",
+              // The supplied artwork needs a close crop, anchored high to retain its ears.
+              // Uploaded portraits retain their own composition inside the same frame.
+              isConkerArtwork && "origin-[50%_35%] scale-[1.4]",
+            )}
+          />
+        </div>
       </div>
     )
   }
