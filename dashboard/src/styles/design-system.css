@@ -1,0 +1,10 @@
+/* Conker application density. Color and radius remain owned by the theme. */
+:root {
+  --control-height: 2.5rem;
+  --control-height-sm: 2rem;
+  --control-height-lg: 2.75rem;
+  --collection-search-height: 3rem;
+  --collection-row-height: 4rem;
+  --collection-portrait-size: 2rem;
+  --page-section-gap: 1.5rem;
+}

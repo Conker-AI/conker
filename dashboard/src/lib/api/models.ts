@@ -18,7 +18,7 @@ export type Session = {
   updated: string
   minutesAgo: number
   pinned: boolean
-  mode: "plan" | "receipt" | "quiet" | "reading" | "project"
+  mode: "companion" | "plan" | "receipt" | "quiet" | "reading" | "project"
 }
 
 export type TicketStatus =

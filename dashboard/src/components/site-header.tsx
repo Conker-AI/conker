@@ -1,46 +1,40 @@
 "use client"
 
 import * as React from "react"
-import { PageContainer } from "@/components/layouts/page-container"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
-import { ModeToggle } from "@/components/mode-toggle"
-
+import { AppbarActions, AppbarBreadcrumbs, AppbarSections } from "@/components/appbar-navigation"
+import { useSidebarConfig } from "@/hooks/use-sidebar-config"
+import { usePageNavigation } from "@/hooks/use-page-navigation"
 
 export function SiteHeader() {
+  const { config } = useSidebarConfig()
+  const navigation = usePageNavigation()
   const [searchOpen, setSearchOpen] = React.useState(false)
 
   React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setSearchOpen((open) => !open)
+    const down = (event: KeyboardEvent) => {
+      if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        setSearchOpen(open => !open)
       }
     }
-
     document.addEventListener("keydown", down)
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  return (
-    <>
-      <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-        <PageContainer className="flex items-center gap-1 py-3 lg:gap-2">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mx-2 data-[orientation=vertical]:h-4"
-          />
-          <div className="flex-1 max-w-sm">
-            <SearchTrigger onClick={() => setSearchOpen(true)} />
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <ModeToggle />
-          </div>
-        </PageContainer>
-      </header>
-      <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
-    </>
-  )
+  return <>
+    <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background">
+      <div className="flex h-(--header-height) w-full min-w-0 items-center gap-1 px-2 sm:gap-2">
+        <SidebarTrigger className={config.collapsible === "none" ? "size-(--control-height) shrink-0 md:hidden" : "size-(--control-height) shrink-0"} />
+        <Separator orientation="vertical" className={`mx-1 shrink-0 data-[orientation=vertical]:h-4 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
+        <AppbarBreadcrumbs crumbs={navigation.crumbs} />
+        <AppbarActions actions={navigation.actions} />
+        <SearchTrigger onClick={() => setSearchOpen(true)} />
+      </div>
+      <AppbarSections sections={navigation.sections} activeSection={navigation.activeSection} />
+    </header>
+    <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
+  </>
 }

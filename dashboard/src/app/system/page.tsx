@@ -26,7 +26,7 @@ export default function SystemPage() {
       title="System"
       description="A clear picture of the machine. Configuration is not a health check."
     >
-      <div className="flex flex-col gap-6 ">
+      <div className="flex min-w-0 flex-col gap-6">
         <Alert variant="warning">
           <TriangleAlert />
           <AlertTitle>Degraded · meaning search is paused</AlertTitle>
@@ -37,29 +37,29 @@ export default function SystemPage() {
             </Link>
           </AlertDescription>
         </Alert>
-        <section className="flex flex-col gap-3" aria-labelledby="box-heading">
+        <section className="flex min-w-0 flex-col gap-4" aria-labelledby="box-heading">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2
               id="box-heading"
-              className="flex items-center gap-2 font-medium"
+              className="flex items-center gap-2 text-base font-medium"
             >
               <Server className="size-4 text-muted-foreground" />
               The box
             </h2>
             <StatusBadge>Stale · 7 min old</StatusBadge>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             {vitals.map((vital, index) => {
               const Icon = icons[index] || Server
               return (
-                <Card key={vital.name} className="gap-4 py-4 shadow-none">
-                  <CardHeader className="px-4">
-                    <CardTitle className="flex items-center justify-between text-sm">
+                <Card key={vital.name}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
                       {vital.name}
                       <Icon className="size-4 text-muted-foreground" />
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex flex-col gap-3 px-4">
+                  <CardContent className="flex flex-col gap-3">
                     <p className="text-2xl font-semibold tabular-nums">
                       {vital.value}{" "}
                       <span className="text-sm font-normal text-muted-foreground">
@@ -83,23 +83,23 @@ export default function SystemPage() {
           </p>
         </section>
         <section
-          className="flex flex-col gap-3"
+          className="flex min-w-0 flex-col gap-4"
           aria-labelledby="services-heading"
         >
-          <h2 id="services-heading" className="font-medium">
+          <h2 id="services-heading" className="text-base font-medium">
             Services
           </h2>
           <DataTable columns={columns} data={services} paginate={false} />
         </section>
-        <Card className="gap-3 py-4 shadow-none">
-          <CardHeader className="px-4">
-            <CardTitle className="text-sm">Recovery snapshot</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recovery snapshot</CardTitle>
             <CardDescription>
               Today, 03:00 · 4.2 GB · manifest checked
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 px-4">
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               {system.recoveryDetail}
             </p>
             <Button variant="outline" size="sm" asChild>

@@ -1,3 +1,4 @@
+import { appNavigation } from "@/config/navigation"
 import { lazy } from "react"
 const SetupPage = lazy(() => import("@/app/setup/page"))
 const LoginPage = lazy(() => import("@/app/login/page"))
@@ -14,7 +15,8 @@ const ToolsPage = lazy(() => import("@/app/tools/page"))
 const JobsPage = lazy(() => import("@/app/jobs/page"))
 const SystemPage = lazy(() => import("@/app/system/page"))
 const TerminalPage = lazy(() => import("@/app/terminal/page"))
-const CharacterStudioPage = lazy(() => import("@/app/companion/page"))
+const CompanionPage = lazy(() => import("@/app/companion/page"))
+const CharacterStudioPage = lazy(() => import("@/app/settings/companion/page"))
 const NotFound = lazy(() => import("@/app/errors/not-found/page"))
 
 export interface RouteConfig {
@@ -23,21 +25,22 @@ export interface RouteConfig {
   children?: RouteConfig[]
 }
 export const routes: RouteConfig[] = [
-  { path: "/setup", element: <SetupPage /> },
-  { path: "/login", element: <LoginPage /> },
-  { path: "/settings", element: <SettingsPage /> },
-  { path: "/", element: <HomePage /> },
-  { path: "/chat", element: <ChatsPage /> },
-  { path: "/chat/:id", element: <ChatDetailPage /> },
-  { path: "/inbox", element: <InboxPage /> },
-  { path: "/inbox/:id", element: <ApprovalDetailPage /> },
-  { path: "/memory", element: <MemoryPage /> },
-  { path: "/journal", element: <JournalPage /> },
-  { path: "/agents", element: <AgentsPage /> },
-  { path: "/tools", element: <ToolsPage /> },
-  { path: "/jobs", element: <JobsPage /> },
-  { path: "/system", element: <SystemPage /> },
-  { path: "/terminal", element: <TerminalPage /> },
-  { path: "/companion", element: <CharacterStudioPage /> },
-  { path: "*", element: <NotFound /> },
+  { path: appNavigation.setup.path, element: <SetupPage /> },
+  { path: appNavigation.login.path, element: <LoginPage /> },
+  { path: appNavigation.settings.path, element: <SettingsPage /> },
+  { path: appNavigation.home.path, element: <HomePage /> },
+  { path: appNavigation.chats.path, element: <ChatsPage /> },
+  { path: appNavigation.conversation.path, element: <ChatDetailPage /> },
+  { path: appNavigation.inbox.path, element: <InboxPage /> },
+  { path: appNavigation.request.path, element: <ApprovalDetailPage /> },
+  { path: appNavigation.memory.path, element: <MemoryPage /> },
+  { path: appNavigation.journal.path, element: <JournalPage /> },
+  { path: appNavigation.agents.path, element: <AgentsPage /> },
+  { path: appNavigation.tools.path, element: <ToolsPage /> },
+  { path: appNavigation.jobs.path, element: <JobsPage /> },
+  { path: appNavigation.system.path, element: <SystemPage /> },
+  { path: appNavigation.terminal.path, element: <TerminalPage /> },
+  { path: appNavigation.companion.path, element: <CompanionPage /> },
+  { path: appNavigation.companionSettings.path, element: <CharacterStudioPage /> },
+  { path: appNavigation.notFound.path, element: <NotFound /> },
 ]

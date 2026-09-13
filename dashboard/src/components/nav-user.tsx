@@ -81,9 +81,9 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/companion">
+                <Link to="/settings/companion">
                   <CircleUser />
-                  Character Studio
+                  Companion settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">

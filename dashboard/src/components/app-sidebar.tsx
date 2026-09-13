@@ -1,5 +1,6 @@
+import { appNavigation } from "@/config/navigation"
 import { CompanionPortrait } from "@/components/companion-portrait"
-import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 
 import * as React from "react"
 import {
@@ -40,47 +41,44 @@ const data = {
     {
       label: "Daily loop",
       items: [
-        { title: "Home", url: "/", icon: Home },
-        { title: "Chats", url: "/chat", icon: MessageCircle },
-        { title: "Inbox", url: "/inbox", icon: Inbox },
+        { title: "Home", url: appNavigation.home.path, icon: Home },
+        { title: "Chats", url: appNavigation.chats.path, icon: MessageCircle },
+        { title: "Inbox", url: appNavigation.inbox.path, icon: Inbox },
       ],
     },
     {
       label: "Reference",
       items: [
-        { title: "Memory", url: "/memory", icon: BookOpen },
-        { title: "Journal", url: "/journal", icon: History },
+        { title: "Memory", url: appNavigation.memory.path, icon: BookOpen },
+        { title: "Journal", url: appNavigation.journal.path, icon: History },
       ],
     },
     {
       label: "Control",
       items: [
-        { title: "Agents", url: "/agents", icon: Bot },
-        { title: "Tools", url: "/tools", icon: Wrench },
-        { title: "Jobs", url: "/jobs", icon: Briefcase },
-        { title: "System", url: "/system", icon: Server },
-        { title: "Terminal", url: "/terminal", icon: Terminal },
-        { title: "Settings", url: "/settings", icon: Settings },
+        { title: "Agents", url: appNavigation.agents.path, icon: Bot },
+        { title: "Tools", url: appNavigation.tools.path, icon: Wrench },
+        { title: "Jobs", url: appNavigation.jobs.path, icon: Briefcase },
+        { title: "System", url: appNavigation.system.path, icon: Server },
+        { title: "Terminal", url: appNavigation.terminal.path, icon: Terminal },
+        { title: "Settings", url: appNavigation.settings.path, icon: Settings },
       ],
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const profile = useConker(data => data.profile)
   const owner = useConker(data => data.auth.ownerName)
   const pendingCount = useConker((state) => state.tickets.filter((ticket) => ticket.status === "Needs you").length)
   return (
     <Sidebar {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-2">
         <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-1">
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
-                <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg border border-primary/30 bg-primary/10">
-                  <img src="/conker.png" alt="" className="size-full object-cover" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+          <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col">
+            <SidebarMenuButton size="lg" asChild tooltip="Open companion" className="min-w-0 flex-1 gap-3 group-data-[collapsible=icon]:flex-none">
+              <Link to="/companion" aria-label="Conker companion screen">
+                <CompanionPortrait portrait="/conker.png" name="Conker" className="size-8 rounded-lg" />
+                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">Conker</span>
                   <span className="truncate text-xs text-muted-foreground">
                     Your companion
@@ -88,7 +86,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <Button asChild variant="ghost" size="icon" className="shrink-0 group-data-[collapsible=icon]:hidden"><Link to="/" aria-label={`Talk to ${profile.name}`} title={profile.mood}><CompanionPortrait profile={profile} className="size-8" /></Link></Button>
+            <ModeToggle />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

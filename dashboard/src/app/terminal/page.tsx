@@ -18,7 +18,7 @@ export default function TerminalPage() {
       title="Terminal"
       description="Your server, when you need to work directly."
     >
-      <div className="flex flex-col gap-4 ">
+      <div className="flex min-w-0 flex-col gap-6">
         <Alert>
           <Shield />
           <AlertTitle>A separate owner-authenticated shell</AlertTitle>
@@ -27,15 +27,15 @@ export default function TerminalPage() {
             connection and accepts no commands.
           </AlertDescription>
         </Alert>
-        <Card className="terminal-surface gap-0 overflow-hidden bg-background text-foreground py-0 shadow-none">
-          <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
+        <Card className="terminal-surface overflow-hidden">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b">
+            <CardTitle className="flex min-w-0 items-center gap-2">
               <Terminal className="size-4" />
-              {terminal.prompt}
+              <span className="break-all">{terminal.prompt}</span>
             </CardTitle>
             <StatusBadge>Offline</StatusBadge>
           </CardHeader>
-          <CardContent className="min-h-64 p-5 font-mono text-xs leading-7 sm:text-sm">
+          <CardContent className="min-h-64 break-words font-mono text-xs leading-7 sm:text-sm">
             <p className="text-muted-foreground">Conker · owner shell</p>
             <p className="text-muted-foreground">
               No authenticated terminal session.
@@ -50,9 +50,9 @@ export default function TerminalPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="gap-4 py-4 shadow-none">
-          <CardHeader className="px-4">
-            <CardTitle className="flex items-center gap-2 text-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex min-w-0 items-center gap-2">
               <FolderGit2 className="size-4" />
               Project context
             </CardTitle>
@@ -60,12 +60,12 @@ export default function TerminalPage() {
               Fixture snapshot · not a live repository inspection
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 px-4">
+          <CardContent className="flex flex-col gap-4">
             <dl className="grid gap-4 sm:grid-cols-2">
               {terminal.context.map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-xs text-muted-foreground">{label}</dt>
-                  <dd className="mt-1 font-mono text-sm">{value}</dd>
+                  <dd className="mt-1 break-words font-mono text-sm leading-6">{value}</dd>
                 </div>
               ))}
             </dl>

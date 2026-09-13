@@ -1,7 +1,9 @@
 # Conker design language
 
+> Implementation authority (2026-09-13): [dashboard/DESIGN.md](../dashboard/DESIGN.md) and the shared code in `dashboard/src/components/design-system` now define exact component, spacing, type and palette contracts. The owner's accepted Chats collection is the reference for Chats, Inbox and other collections. Earlier Framer-source-of-truth language and approximate dimensions below are historical direction; current shared components and the owner's latest instructions take precedence. Standard validation enforces the design contract and rendered review checks visual results.
+
 The owner's design direction, captured so any agent (Astra included) builds to the same standard.
-This governs both the Framer mockup and the eventual shadcn/React build.
+This records the product direction behind the implemented shadcn/React dashboard. Exact implementation rules live in dashboard/DESIGN.md.
 
 ## The one-line brief
 
@@ -55,7 +57,7 @@ on top.** The reference the owner pointed to is **[libraries.dev](https://librar
 - The **shadcn MCP** is wired to Astra (`codex mcp add shadcn -- npx shadcn@latest mcp`): use it to
   browse/pull real shadcn components and match their standards when building the React app.
 - Build in **New York style**. Semantic `background`/`foreground` token pairs; the outline everywhere.
-- The Framer project is the visual source of truth for look; the code implements it with shadcn.
+- The accepted live dashboard and shared components are the implementation source of truth. Framer files are design references and must follow the same documented component contracts.
 
 ## Screen intents (quick reference)
 

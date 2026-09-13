@@ -1,6 +1,5 @@
 import { Link, useParams } from "react-router-dom"
 import {
-  ArrowLeft,
   Clock3,
   Mail,
   Files,
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useConker, useConkerStore } from "@/lib/api/store"
@@ -55,13 +55,7 @@ export default function ApprovalDetailPage() {
       title={ticket?.effect === "Proposal" ? "Proposal" : "Approval detail"}
       description="Review the exact request before making a decision."
     >
-      <div className="flex flex-col gap-4 ">
-        <Button variant="ghost" size="sm" asChild className="self-start">
-          <Link to="/inbox">
-            <ArrowLeft />
-            Back to Inbox
-          </Link>
-        </Button>
+      <div className="flex min-w-0 flex-col gap-6">
         {!ticket ? (
           <Alert>
             <ShieldAlert />
@@ -72,32 +66,30 @@ export default function ApprovalDetailPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <Card className="gap-5 py-5 shadow-none">
-            <CardHeader className="gap-3 px-5">
+          <Card>
+            <CardHeader>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <Icon className="mr-1 size-5 text-muted-foreground" />
                 <span>
                   {ticket.service} · {ticket.agent}
                 </span>
                 <Badge variant="outline">{ticket.effect}</Badge>
-                <Badge variant="outline" className="ml-auto">
-                  {ticket.status}
-                </Badge>
+                <span className="ml-auto"><StatusBadge tone={ticket.status === "Needs you" ? "warning" : "neutral"}>{ticket.status}</StatusBadge></span>
               </div>
-              <CardTitle className="text-xl leading-snug">
+              <CardTitle>
                 {ticket.request}
               </CardTitle>
               <CardDescription>
                 Fixture request · 12 September 2026 · no connected executor
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-5 px-5">
-              <div className="grid gap-5 md:grid-cols-2">
+            <CardContent className="flex flex-col gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <section className="flex flex-col gap-2">
-                  <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <h2 className="text-base font-medium">
                     You asked
                   </h2>
-                  <blockquote className="text-sm leading-relaxed">
+                  <blockquote className="text-sm leading-6">
                     “{ticket.asked}”
                   </blockquote>
                   <Link
@@ -107,11 +99,11 @@ export default function ApprovalDetailPage() {
                     View source conversation
                   </Link>
                 </section>
-                <section className="flex flex-col gap-2 md:border-l md:pl-5">
-                  <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <section className="flex flex-col gap-2 md:border-l md:pl-4">
+                  <h2 className="text-base font-medium">
                     It wants to
                   </h2>
-                  <p className="text-sm leading-relaxed">{ticket.wants}</p>
+                  <p className="text-sm leading-6">{ticket.wants}</p>
                   <p className="font-mono text-xs text-muted-foreground">
                     {ticket.tool} · version {ticket.version}
                   </p>
@@ -127,7 +119,7 @@ export default function ApprovalDetailPage() {
                     <dt className="text-sm text-muted-foreground">
                       {arg.label}
                     </dt>
-                    <dd className="break-words text-sm leading-relaxed">
+                    <dd className="break-words text-sm leading-6">
                       {arg.value}
                     </dd>
                   </div>
@@ -182,14 +174,14 @@ export default function ApprovalDetailPage() {
                 {ticket.record}
               </p>
             </CardContent>
-            <CardFooter className="flex flex-wrap justify-between gap-3 border-t px-5 pt-5">
+            <CardFooter className="flex flex-wrap justify-between gap-3 border-t">
               <p className="max-w-sm text-xs text-muted-foreground">
                 {ticket.effect === "Proposal"
                   ? "A suggestion is not permission to act."
                   : "One request. These arguments only. No standing permission."}
               </p>
               {ticket.status === "Needs you" && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     disabled={pending}
                     variant="outline"

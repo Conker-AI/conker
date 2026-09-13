@@ -13,7 +13,21 @@ import type { ConkerClient, Snapshot, AuthResult } from "./client"
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
-    agents, sessions, plan, planningIntent, tickets, jobs, entries, memories, memorySearch, services, vitals, system, tools,
+    companionSessionId: "companion",
+    dailyBriefing: {
+      date: "2026-09-12",
+      timezone: "Asia/Jerusalem",
+      mode: "sample",
+      summary: "Your maths exam is on Monday. Two short study blocks are proposed for Sunday, and judo is Tuesday and Thursday at 18:30. The study plan is still a proposal; your calendar has not changed.",
+      news: { status: "unavailable", updatedAt: null, items: [] },
+    },
+    agents,
+    sessions: [{
+      id: "companion", title: "Your companion", agent: "Conker",
+      subtitle: "Your daily briefing and a place to get things done",
+      updated: "Ready when you are", minutesAgo: 0, pinned: false, mode: "companion",
+    }, ...sessions],
+    plan, planningIntent, tickets, jobs, entries, memories, memorySearch, services, vitals, system, tools,
     profile: {
       name: "Conker", speakingPreset: "warm", speakingStyle: "Warm, direct, and concise. A little dry humour when it fits.",
       personality: "Curious and steady. Help me make room for school, judo, and building things. Ask before making assumptions. Be honest when you don’t know.",

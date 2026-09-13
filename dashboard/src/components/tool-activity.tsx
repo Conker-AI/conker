@@ -1,55 +1,19 @@
 import { ChevronDown, Wrench } from "lucide-react"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
-import { Button } from "@/components/ui/button"
-import { StatusBadge } from "@/components/status-badge"
-export function ToolActivity({ activity }: { activity: NonNullable<import("@/lib/api/client").Thread["tool"]> }) {
-  const { name: tool, record, summary } = activity
+import type { Thread } from "@/lib/api/client"
+
+export function ToolActivity({ activity }: { activity: NonNullable<Thread["tool"]> }) {
   return (
-    <Card className="gap-2 py-3 shadow-none">
-      <CardHeader className="gap-2 px-4">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-          <Wrench className="size-4 text-muted-foreground" />
-          <span className="font-mono font-normal">{tool}</span>
-          <StatusBadge>Fixture receipt</StatusBadge>
-        </CardTitle>
-        <CardDescription className="text-xs">
-          {summary}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-4">
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group -ml-2 h-7 text-xs"
-            >
-              Arguments & record
-              <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <pre className="mt-2 overflow-x-auto rounded-md border bg-background p-3 font-mono text-xs leading-relaxed">
-              {JSON.stringify(record, null, 2)}
-            </pre>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Recorded fixture evidence. “Live” describes this sample; no
-              service is connected.
-            </p>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
+    <details className="group min-w-0 text-muted-foreground">
+      <summary className="flex min-h-10 w-fit max-w-full cursor-pointer list-none items-center gap-2 rounded-md py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <Wrench className="size-3.5 shrink-0" />
+        <span className="min-w-0 leading-5">{activity.summary}</span>
+        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+      </summary>
+      <div className="mt-2 space-y-3 rounded-xl border p-4">
+        <p className="text-xs"><span className="font-mono text-foreground">{activity.name}</span> · Recorded preview activity</p>
+        <pre className="max-h-64 overflow-auto text-xs leading-6" tabIndex={0} aria-label="Tool arguments and receipt">{JSON.stringify(activity.record, null, 2)}</pre>
+        <p className="text-xs leading-5">Recorded fixture evidence. No service is connected.</p>
+      </div>
+    </details>
   )
 }

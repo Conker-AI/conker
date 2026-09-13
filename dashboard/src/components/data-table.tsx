@@ -15,7 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Search, X } from "lucide-react"
+import { X } from "lucide-react"
 
 import {
   Table,
@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
+import { CollectionSearch, CollectionEmpty } from "@/components/design-system"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { DataTableViewOptions } from "@/app/tasks/components/data-table-view-options"
@@ -88,21 +88,15 @@ export function DataTable<TData, TValue>({
   const isFiltered = table.getState().columnFilters.length > 0
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
+    <div className="min-w-0 space-y-7">
+      {searchColumn && <CollectionSearch
+        label={searchPlaceholder.replace(/[…]+$/, "")}
+        placeholder={searchPlaceholder}
+        value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
+        onChange={event => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
+      />}
+      <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        {searchColumn && (
-          <div className="relative w-full max-w-xs">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              aria-label={searchPlaceholder}
-              placeholder={searchPlaceholder}
-              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
-              onChange={(e) => table.getColumn(searchColumn)?.setFilterValue(e.target.value)}
-              className="h-9 pl-9"
-            />
-          </div>
-        )}
         {filters.map(
           (f) =>
             table.getColumn(f.column) && (
@@ -118,7 +112,7 @@ export function DataTable<TData, TValue>({
           <Button
             variant="ghost"
             onClick={() => table.resetColumnFilters()}
-            className="h-9 px-2 lg:px-3"
+            size="sm"
           >
             Reset
             <X className="ml-2 size-4" />
@@ -130,14 +124,14 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {/* Table — looser spacing than a raw data grid */}
-      <div className="rounded-lg border">
+      {/* Structured data shares collection density and retains table semantics. */}
+      <div className="min-w-0 rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan} className="h-11 px-4">
+                  <TableHead key={header.id} colSpan={header.colSpan} className="h-(--control-height) px-4">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -160,10 +154,10 @@ export function DataTable<TData, TValue>({
                       onRowClick(row.original)
                     }
                   } : undefined}
-                  className={cn(onRowClick && "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring")}
+                  className={cn("h-(--collection-row-height)", onRowClick && "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring")}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3.5">
+                    <TableCell key={cell.id} className="px-4 py-2.5">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -171,8 +165,8 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={columns.length} className="p-0">
+                  <CollectionEmpty title="No results found" description="Try a different search or clear your filters." onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
                 </TableCell>
               </TableRow>
             )}
@@ -181,6 +175,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {paginate && data.length > 10 && <DataTablePagination table={table} />}
+      </div>
     </div>
   )
 }

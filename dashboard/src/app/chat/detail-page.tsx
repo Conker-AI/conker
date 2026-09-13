@@ -1,36 +1,20 @@
 import { useConker } from "@/lib/api/store"
-import { Link, useParams } from "react-router-dom"
-import { ArrowLeft, MessageCircle } from "lucide-react"
+import { Navigate, useParams } from "react-router-dom"
+import { MessageCircle } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import { Conversation } from "./conversation"
+
 export default function ChatDetailPage() {
   const sessions = useConker(data => data.sessions)
+  const companionSessionId = useConker(data => data.companionSessionId)
   const { id } = useParams()
-  const session = sessions.find((item) => item.id === id)
+  const session = sessions.find(item => item.id === id)
+  if (session?.id === companionSessionId) return <Navigate to="/companion" replace />
+  if (session) return <BaseLayout variant="conversation"><Conversation key={session.id} session={session} /></BaseLayout>
   return (
-    <BaseLayout title={session?.title || "Conversation not found"}>
-      <div className="flex flex-col gap-4 ">
-        <Button variant="ghost" size="sm" asChild className="self-start">
-          <Link to="/chat">
-            <ArrowLeft />
-            All chats
-          </Link>
-        </Button>
-        {session ? (
-          <Conversation key={session.id} session={session} />
-        ) : (
-          <Alert>
-            <MessageCircle />
-            <AlertTitle>No matching conversation</AlertTitle>
-            <AlertDescription>
-              This session is not in the fixture. Open All chats to choose an
-              available conversation.
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
+    <BaseLayout title="Conversation not found">
+      <Alert><MessageCircle /><AlertTitle>No matching conversation</AlertTitle><AlertDescription>This session is not in the preview. Use Chats in the appbar to choose an available conversation.</AlertDescription></Alert>
     </BaseLayout>
   )
 }

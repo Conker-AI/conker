@@ -28,7 +28,29 @@ export type Thread = {
 export type AuthState = { status: "unconfigured" | "preview" | "authenticated"; ownerName: string }
 export type SetupInput = { ownerName: string; password: string; connections: Connections }
 export type AuthResult = { wired: false; message: string } | { wired: true; session: AuthState }
+export type DailyHeadline = {
+  id: string
+  title: string
+  summary: string
+  publisher: string
+  url: string
+  publishedAt: string
+  topic: string
+}
+export type DailyBriefing = {
+  date: string
+  timezone: string
+  mode: "sample" | "live"
+  summary: string
+  news: {
+    status: "unavailable" | "ready"
+    updatedAt: string | null
+    items: DailyHeadline[]
+  }
+}
 export type Snapshot = {
+  companionSessionId: string
+  dailyBriefing: DailyBriefing
   agents: Agent[]; sessions: Session[]; tickets: Ticket[]; jobs: Job[]
   entries: JournalEntry[]; memories: Memory[]; services: Service[]; tools: Tool[]
   vitals: { name: string; value: string; unit: string; used: number; detail: string }[]

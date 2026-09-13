@@ -1,8 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { Bot } from "lucide-react"
+import { AgentIdentityPortrait } from "@/components/design-system"
 
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { StatusBadge } from "@/components/status-badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import type { Agent } from "@/lib/api/models"
 
@@ -12,19 +11,9 @@ export const columns: ColumnDef<Agent>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Agent" />,
     cell: ({ row }) => {
       const a = row.original
-      const companion = a.kind === "companion"
       return (
         <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex size-9 items-center justify-center rounded-md border",
-              companion
-                ? "bg-primary/15 text-primary border-primary/25"
-                : "bg-muted text-muted-foreground border-transparent"
-            )}
-          >
-            <Bot className="size-4" />
-          </div>
+          <AgentIdentityPortrait name={a.name} />
           <div className="flex flex-col">
             <span className="font-medium">{a.name}</span>
             <span className="text-muted-foreground text-xs">{a.role}</span>
@@ -64,15 +53,7 @@ export const columns: ColumnDef<Agent>[] = [
     cell: ({ row }) => {
       const active = row.original.status === "active"
       return (
-        <Badge variant="outline" className="gap-1.5 font-normal">
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              active ? "bg-primary" : "bg-muted-foreground"
-            )}
-          />
-          {active ? "Active" : "Idle"}
-        </Badge>
+<StatusBadge tone={active ? "live" : "neutral"}>{active ? "Active" : "Idle"}</StatusBadge>
       )
     },
   },

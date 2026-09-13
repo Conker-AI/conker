@@ -1,5 +1,6 @@
 "use client"
 
+import { appNavigation } from "@/config/navigation"
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { Command as CommandPrimitive } from "cmdk"
@@ -124,22 +125,23 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   const searchItems: SearchItem[] = [
     // Daily loop
-    { title: "Home", url: "/", group: "Daily loop", icon: Home },
-    { title: "Chats", url: "/chat", group: "Daily loop", icon: MessageCircle },
-    { title: "Character Studio", url: "/companion", group: "Daily loop", icon: Bot },
-    { title: "Inbox", url: "/inbox", group: "Daily loop", icon: Inbox },
+    { title: "Home", url: appNavigation.home.path, group: "Daily loop", icon: Home },
+    { title: "Chats", url: appNavigation.chats.path, group: "Daily loop", icon: MessageCircle },
+    { title: "Companion", url: appNavigation.companion.path, group: "Daily loop", icon: Bot },
+    { title: "Companion settings", url: appNavigation.companionSettings.path, group: "Control", icon: Settings },
+    { title: "Inbox", url: appNavigation.inbox.path, group: "Daily loop", icon: Inbox },
 
     // Reference
-    { title: "Memory", url: "/memory", group: "Reference", icon: BookOpen },
-    { title: "Journal", url: "/journal", group: "Reference", icon: History },
+    { title: "Memory", url: appNavigation.memory.path, group: "Reference", icon: BookOpen },
+    { title: "Journal", url: appNavigation.journal.path, group: "Reference", icon: History },
 
     // Control
-    { title: "Agents", url: "/agents", group: "Control", icon: Bot },
-    { title: "Tools", url: "/tools", group: "Control", icon: Wrench },
-    { title: "Jobs", url: "/jobs", group: "Control", icon: Briefcase },
-    { title: "System", url: "/system", group: "Control", icon: Server },
-    { title: "Terminal", url: "/terminal", group: "Control", icon: Terminal },
-    { title: "Settings", url: "/settings", group: "Control", icon: Settings },
+    { title: "Agents", url: appNavigation.agents.path, group: "Control", icon: Bot },
+    { title: "Tools", url: appNavigation.tools.path, group: "Control", icon: Wrench },
+    { title: "Jobs", url: appNavigation.jobs.path, group: "Control", icon: Briefcase },
+    { title: "System", url: appNavigation.system.path, group: "Control", icon: Server },
+    { title: "Terminal", url: appNavigation.terminal.path, group: "Control", icon: Terminal },
+    { title: "Settings", url: appNavigation.settings.path, group: "Control", icon: Settings },
   ]
 
   const groupedItems = searchItems.reduce((acc, item) => {
@@ -201,17 +203,10 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 }
 
 export function SearchTrigger({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3 py-1 relative w-full justify-start text-muted-foreground sm:pr-12 md:w-36 lg:w-56"
-    >
-      <Search className="mr-2 h-3.5 w-3.5" />
-      <span className="hidden lg:inline-flex">Search...</span>
-      <span className="inline-flex lg:hidden">Search...</span>
-      <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-        <span className="text-xs">⌘</span>K
-      </kbd>
-    </button>
-  )
+  return <button type="button" onClick={onClick} aria-label="Search pages" title="Search pages (Ctrl or Command + K)"
+    className="inline-flex size-(--control-height) shrink-0 items-center justify-center gap-2 rounded-lg text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-44 sm:justify-start sm:border sm:border-input sm:px-3">
+    <Search className="size-4 shrink-0" aria-hidden="true" />
+    <span className="hidden sm:inline">Search pages</span>
+    <kbd className="ml-auto hidden items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px] sm:inline-flex" aria-hidden="true">⌘ K</kbd>
+  </button>
 }

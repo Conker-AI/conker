@@ -13,9 +13,11 @@ import { radiusOptions, baseColors } from '@/config/theme-customizer-constants'
 import { ColorPicker } from '@/components/color-picker'
 import type { ImportedTheme } from '@/types/theme-customizer'
 import React from 'react'
+import { cn } from "@/lib/utils"
 import "./circular-transition.css"
 
 interface ThemeTabProps {
+  className?: string
   selectedTheme: string
   setSelectedTheme: (theme: string) => void
   selectedTweakcnTheme: string
@@ -27,6 +29,7 @@ interface ThemeTabProps {
 }
 
 export function ThemeTab({
+  className,
   selectedTheme,
   setSelectedTheme,
   selectedTweakcnTheme,
@@ -88,7 +91,7 @@ export function ThemeTab({
   }
 
   return (
-    <div className="grid gap-6 p-4 lg:grid-cols-2 [&>[data-slot=separator]]:hidden">
+    <div className={cn("grid gap-6 p-4 lg:grid-cols-2 [&>[data-slot=separator]]:hidden", className)}>
 
 
       {/* Shadcn UI Theme Presets */}
