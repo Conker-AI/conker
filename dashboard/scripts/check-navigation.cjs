@@ -95,7 +95,7 @@ async function main() {
   check('Related navigation uses the saved companion name and keeps agent-specific controls scoped', () => {
     const renamed = { ...data, profile: { ...data.profile, name: 'Hazel' } }
     assert.equal(getPageNavigation('/', '', renamed).actions[0].label, 'Talk to Hazel')
-    assert.equal(getPageNavigation('/companion', '', data).actions[0].to, '/settings/companion')
+    assert.equal(getPageNavigation('/companion', '', data).actions.length, 0) // Conversation menu owns editing.
     assert.equal(getPageNavigation('/chat/reading', '', data).actions.length, 0)
     assert.equal(getPageNavigation('/settings/companion', '', data).actions[0].to, '/companion')
   })

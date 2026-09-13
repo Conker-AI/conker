@@ -16,7 +16,7 @@ export function getDailyOverview(snapshot: Snapshot) {
     recentActivity: snapshot.entries.slice(0, 4),
     jobs: snapshot.jobs,
     recentSessions: snapshot.sessions
-      .filter(session => session.id !== snapshot.companionSessionId)
+      .filter(session => session.id !== snapshot.companionSessionId && !session.archived)
       .sort((a, b) => a.minutesAgo - b.minutesAgo)
       .slice(0, 3),
   }

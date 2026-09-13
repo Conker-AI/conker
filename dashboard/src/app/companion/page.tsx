@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { ArrowRight, CalendarDays, ChevronDown, Inbox, ListTodo, Newspaper, Search } from "lucide-react"
+import { ArrowRight, CalendarDays, Inbox, ListTodo, Newspaper, Search } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Conversation } from "@/app/chat/conversation"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -54,10 +54,6 @@ function Briefing({ preparePrompt }: { preparePrompt: (text: string) => void }) 
         <Button variant="outline" onClick={() => preparePrompt("I have something to get done. Help me clarify the outcome and work out the next steps.")}><ListTodo />Get something done</Button>
       </div>
     </section>
-    <details className="group rounded-xl border p-4 xl:hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">Events, decisions & news<ChevronDown className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" /></summary>
-      <div className="mt-5"><DailyContext /></div>
-    </details>
   </div>
 }
 
@@ -83,9 +79,6 @@ export default function CompanionPage() {
   if (!companionSession) return <BaseLayout title="Companion" description="Your main AI workspace."><CollectionEmpty title="Your companion conversation is unavailable" description="Open Chats to find an existing conversation, or reload the dashboard." /><Button asChild variant="outline" className="self-start"><Link to="/chat">Open chats</Link></Button></BaseLayout>
 
   return <BaseLayout variant="conversation">
-    <div className="flex min-h-0 min-w-0 flex-1">
-      <Conversation key={companionSession.id} session={companionSession} companionWorkspace intro={Briefing} />
-      <aside aria-label="Daily context" className="hidden w-80 shrink-0 overflow-y-auto overscroll-contain border-l px-5 py-6 xl:block 2xl:w-88"><DailyContext /></aside>
-    </div>
+    <Conversation key={companionSession.id} session={companionSession} companionWorkspace intro={Briefing} reference={<DailyContext />} />
   </BaseLayout>
 }

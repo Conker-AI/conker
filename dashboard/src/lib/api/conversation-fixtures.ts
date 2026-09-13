@@ -29,10 +29,11 @@ export function createConversations(sessions: Session[], threads: Record<string,
       id: message.id, role: "user", text: message.text,
       createdAt: sampleTimestamp(message.time), status: "complete",
     } satisfies ConversationMessage))
+    const original = conversation.messages[0]
     conversation.messages.push({
       id: `${session.id}-assistant`, role: "assistant", text: thread.reply,
       createdAt: sampleTimestamp(thread.time), status: "complete", scenario: true,
-      source: { id: "intent", label: "Original request", href: `/chat/${session.id}#message-intent` },
+      source: original ? { id: original.id, label: "Original request", href: `/chat/${session.id}#${encodeURIComponent(original.id)}` } : undefined,
     })
     conversation.usage.inputTokens = conversation.messages.filter(message => message.role === "user").reduce((sum, message) => sum + Math.ceil(message.text.length / 4), 0)
     conversation.usage.outputTokens = Math.ceil(thread.reply.length / 4)

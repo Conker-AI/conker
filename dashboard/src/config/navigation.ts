@@ -29,7 +29,7 @@ export type AppRoute = keyof typeof appNavigation
 export type PageSection = { value: string; label: string; count?: "pending" }
 
 export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
-  chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }],
+  chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
   settings: [
     { value: "appearance", label: "Appearance" },
@@ -89,7 +89,7 @@ export function getPageNavigation(pathname: string, search: string, data: Snapsh
   if (key === "home" || key === "companionSettings") {
     actions.push({ to: appNavigation.companion.path, label: `Talk to ${name}`, icon: "message" })
   }
-  if (key === "companion" || key === "settings" || (key === "conversation" && data.agents.some(agent => agent.name === session?.agent && agent.kind === "companion"))) {
+  if (key === "settings") {
     actions.push({ to: appNavigation.companionSettings.path, label: "Companion settings", icon: "settings" })
   }
   return {

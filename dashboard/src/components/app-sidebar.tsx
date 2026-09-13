@@ -1,6 +1,5 @@
 import { appNavigation } from "@/config/navigation"
 import { CompanionPortrait } from "@/components/companion-portrait"
-import { ModeToggle } from "@/components/mode-toggle"
 
 import * as React from "react"
 import {
@@ -86,7 +85,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               </Link>
             </SidebarMenuButton>
-            <ModeToggle />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

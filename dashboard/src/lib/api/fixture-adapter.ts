@@ -190,7 +190,7 @@ export function createFixtureClient(): ConkerClient {
       const path = id === state.companionSessionId ? "/companion" : `/chat/${id}`
       next.messages = structuredClone(conversation.messages.slice(0, index + 1)).map(message => ({
         ...message, scenario: false,
-        ...(!message.redacted ? { source: { id: message.id, label: `From ${session.title}`, href: `${path}#message-${message.id}` } } : {}),
+        ...(!message.redacted ? { source: { id: message.id, label: `From ${session.title}`, href: `${path}#${encodeURIComponent(message.id)}` } } : {}),
       }))
       state.sessions.unshift(fork)
       state.conversations[forkId] = next

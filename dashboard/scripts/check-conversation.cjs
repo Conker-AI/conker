@@ -52,6 +52,11 @@ async function main() {
       assert.equal(conversation.usage.mode, 'sample')
       assert.equal(conversation.memory.writeEnabled, false)
       assert.deepEqual(conversation.grants, [])
+      for (const message of conversation.messages) {
+        if (!message.source?.href) continue
+        const target = decodeURIComponent(new URL(message.source.href, 'http://localhost').hash.slice(1))
+        assert.ok(conversation.messages.some(item => item.id === target), `Source must resolve to a real message in ${session.id}`)
+      }
     }
     assert.equal(state.conversations.judo.parentSessionId, 'week')
     assert.deepEqual(state.conversations.companion.messages, [])

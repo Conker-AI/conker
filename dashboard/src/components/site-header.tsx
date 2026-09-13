@@ -1,6 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { useParams } from "react-router-dom"
+import { useConker } from "@/lib/api/store"
+import { ConversationAppbar } from "@/components/conversation-appbar"
+import { ModeToggle } from "@/components/mode-toggle"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
@@ -11,6 +15,8 @@ import { usePageNavigation } from "@/hooks/use-page-navigation"
 export function SiteHeader() {
   const { config } = useSidebarConfig()
   const navigation = usePageNavigation()
+  const { id } = useParams()
+  const session = useConker(data => data.sessions.find(item => item.id === (navigation.key === "companion" ? data.companionSessionId : navigation.key === "conversation" ? id : undefined)))
   const [searchOpen, setSearchOpen] = React.useState(false)
 
   React.useEffect(() => {
@@ -27,11 +33,11 @@ export function SiteHeader() {
   return <>
     <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background">
       <div className="flex h-(--header-height) w-full min-w-0 items-center gap-1 px-2 sm:gap-2">
-        <SidebarTrigger className={config.collapsible === "none" ? "size-(--control-height) shrink-0 md:hidden" : "size-(--control-height) shrink-0"} />
+        <SidebarTrigger className={`${session ? "size-8" : "size-(--control-height)"} shrink-0 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
         <Separator orientation="vertical" className={`mx-1 shrink-0 data-[orientation=vertical]:h-4 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
-        <AppbarBreadcrumbs crumbs={navigation.crumbs} />
-        <AppbarActions actions={navigation.actions} />
-        <SearchTrigger onClick={() => setSearchOpen(true)} />
+        {session ? <ConversationAppbar session={session} /> : <><AppbarBreadcrumbs crumbs={navigation.crumbs} /><AppbarActions actions={navigation.actions} /></>}
+        <SearchTrigger compact={!!session} onClick={() => setSearchOpen(true)} />
+        <ModeToggle variant="ghost" className={session ? "size-8 shrink-0" : "shrink-0"} />
       </div>
       <AppbarSections sections={navigation.sections} activeSection={navigation.activeSection} />
     </header>

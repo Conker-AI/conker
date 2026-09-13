@@ -44,17 +44,20 @@ function ChatListPanel({ agentView = false, query, onQueryChange, count, childre
 }
 
 export default function ChatsPage() {
-  const sessions = useConker(data => data.sessions)
+  const allSessions = useConker(data => data.sessions)
+  const sessions = allSessions.filter(session => !session.archived)
   const agents = useConker(data => data.agents)
   const profile = useConker(data => data.profile)
   const [query, setQuery] = useState("")
   const [agentQuery, setAgentQuery] = useState("")
+  const [archiveQuery, setArchiveQuery] = useState("")
   const orderedSessions = [...sessions].sort((a, b) => a.minutesAgo - b.minutesAgo)
   const matches = (session: Session, search: string) => {
     const agent = agents.find(item => item.name === session.agent)
     const name = agent?.kind === "companion" ? profile.name : session.agent
     return `${session.title} ${session.subtitle} ${session.agent} ${name}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
   }
+  const archived = allSessions.filter(session => session.archived && matches(session, archiveQuery))
   const filtered = orderedSessions.filter(session => matches(session, query))
   const pinned = filtered.filter(session => session.pinned)
   const recent = filtered.filter(session => !session.pinned)
@@ -79,5 +82,6 @@ export default function ChatsPage() {
           <ConversationGroup title="Latest sessions" sessions={latestAgentSessions} agentFirst />
         </ChatListPanel>
       </RouteSection>
+      <RouteSection value="archived"><ChatListPanel query={archiveQuery} onQueryChange={setArchiveQuery} count={archived.length}><ConversationGroup title="Archived conversations" sessions={archived} /></ChatListPanel></RouteSection>
   </BaseLayout>
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { cn } from "@/lib/utils"
 import { Moon, Sun } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,10 +10,11 @@ import { useCircularTransition } from "@/hooks/use-circular-transition"
 import "./theme-customizer/circular-transition.css"
 
 interface ModeToggleProps {
+  className?: string
   variant?: "outline" | "ghost" | "default"
 }
 
-export function ModeToggle({ variant = "outline" }: ModeToggleProps) {
+export function ModeToggle({ variant = "outline", className }: ModeToggleProps) {
   const { theme } = useTheme()
   const { toggleTheme } = useCircularTransition()
 
@@ -48,7 +50,7 @@ export function ModeToggle({ variant = "outline" }: ModeToggleProps) {
       variant={variant}
       size="icon"
       onClick={handleToggle}
-      className="cursor-pointer mode-toggle-button relative overflow-hidden"
+      className={cn("cursor-pointer mode-toggle-button relative overflow-hidden", className)}
     >
       {/* Show the icon for the mode you can switch TO */}
       {isDarkMode ? (
