@@ -61,11 +61,11 @@ For working collection examples, read `src/app/chat/page.tsx` and `src/app/inbox
 
 Dimensions describe roles. A small inline action can use the compact variant, while collection search always uses its larger shared pattern. Avoid overriding equivalent roles with page-owned `h-*`, `px-*`, font, radius or palette classes. If a new role is needed, add an explicit shared variant and document it here.
 
-Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. The theme control sits at the right edge of the appbar beside command search. Conversation appbar controls use the compact 32px control role.
+Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. The theme control sits beside the Conker label in the sidebar brand row, including the mobile drawer; in icon-collapse mode it stacks below the brand. Conversation appbar controls use the compact 32px control role.
 
 Use minimum row height instead of a fixed clipping box. Long content, translated text, browser zoom and responsive wrapping must remain usable. Keep title/preview truncation deliberate and retain accessible names. Collection navigation should use actual links, not divs that only respond to mouse clicks.
 
-Photo avatars use the shared neutral outlined frame and an inset rounded inner clip. Use `object-cover`; the supplied Conker PNG is zoomed about 1.4× with a high focal origin to crop its surrounding background. Other uploads use the same frame without an assumed source-specific zoom. No green tint behind photo portraits. Larger portraits in Character Studio represent artwork preview, not collection density.
+Photo avatars use the shared neutral outlined frame. The complete image uses `size-3/4 object-contain`, leaving one eighth of the inner frame on each side. Preserve the full artwork and its aspect ratio without zoom transforms or an inner crop. No green tint behind photo portraits. Apply this proportional padding across brand, appbar, thread, collections, and studio; larger studio previews do not change collection density.
 
 ## Palette and theming
 
@@ -108,7 +108,7 @@ Home (`/`) is the read-first daily overview: priorities, upcoming agenda, decisi
 
 Companion (`/companion`) is the main-agent workspace: a dedicated stable conversation, daily briefing, action starters, and contextual events/news. It uses the shared `Conversation` shell and composer. Existing chats remain at `/chat/:id`. Never choose the main companion by session array position.
 
-Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. The appbar owns the theme switcher.
+Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. The sidebar brand row owns the theme switcher.
 
 `BaseLayout` accepts an optional `actions` slot for standard page-header actions. DailyNews owns feed content; its parent owns the section heading. It renders publisher/date/source metadata for ready feeds and a truthful unavailable state otherwise.
 
@@ -141,7 +141,7 @@ All conversation mutations and simulated replies go through ConkerClient. Normal
 
 ## The four conversation homes
 
-Conversation-wide actions live only in the appbar title menu: rename, conversation-default model/route, pin, archive/restore, delete/clear, view forks, and edit companion. Incognito mode and the rail toggle remain visible. There is no separate conversation header. Search and theme stay on the right; all sidebar destinations retain independent roots.
+Conversation-wide actions live only in the appbar title menu: rename, conversation-default model/route, pin, archive/restore, delete/clear, view forks, and edit companion. Incognito mode and the rail toggle remain visible. There is no separate conversation header. Search stays on the right of the appbar; the theme switcher stays beside the sidebar brand. All sidebar destinations retain independent roots.
 
 Message actions live only in that message's hover/focus/touch-accessible menu: Reply, Fork, Copy, Share link, Retry with model, Pin, Edit, Redact, Explain, Open source. Fork copies the conversation only through that message. Edits are visibly marked; redaction keeps an empty tombstone and does not alter independent forks. Sharing copies a local preview link and does not publish content.
 

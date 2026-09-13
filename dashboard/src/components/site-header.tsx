@@ -4,7 +4,6 @@ import * as React from "react"
 import { useParams } from "react-router-dom"
 import { useConker } from "@/lib/api/store"
 import { ConversationAppbar } from "@/components/conversation-appbar"
-import { ModeToggle } from "@/components/mode-toggle"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
@@ -37,7 +36,6 @@ export function SiteHeader() {
         <Separator orientation="vertical" className={`mx-1 shrink-0 data-[orientation=vertical]:h-4 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
         {session ? <ConversationAppbar session={session} /> : <><AppbarBreadcrumbs crumbs={navigation.crumbs} /><AppbarActions actions={navigation.actions} /></>}
         <SearchTrigger compact={!!session} onClick={() => setSearchOpen(true)} />
-        <ModeToggle variant="ghost" className={session ? "size-8 shrink-0" : "shrink-0"} />
       </div>
       <AppbarSections sections={navigation.sections} activeSection={navigation.activeSection} />
     </header>
