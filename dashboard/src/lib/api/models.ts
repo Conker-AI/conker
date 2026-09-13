@@ -18,6 +18,7 @@ export type Session = {
   updated: string
   minutesAgo: number
   pinned: boolean
+  archived?: boolean
   mode: "companion" | "plan" | "receipt" | "quiet" | "reading" | "project"
 }
 

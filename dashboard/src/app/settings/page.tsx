@@ -1,3 +1,4 @@
+import { ModelsProviders } from "./models-providers"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -30,7 +31,8 @@ export default function SettingsPage() {
   const currentConnections = useConker(data => data.connections)
   const owner = useConker(data => data.auth.ownerName)
   const [connections, setConnections] = useState(currentConnections)
-  const { saveConnections, pending } = useConkerStore()
+  const modelsConfiguration = useConker(data => data.modelsConfiguration)
+  const { saveConnections, saveModelsConfiguration, pending } = useConkerStore()
   const [saved, setSaved] = useState(false)
 
   return <BaseLayout title="Settings" description="Appearance, layout, and your dashboard connections.">
@@ -60,6 +62,7 @@ export default function SettingsPage() {
           <CardContent><LayoutTab className="p-0" /></CardContent>
         </Card>
       </RouteSection>
+      <RouteSection value="models"><ModelsProviders configuration={modelsConfiguration} pending={pending} onSave={saveModelsConfiguration} /></RouteSection>
       <RouteSection value="connections">
         <Card>
           <CardHeader><CardTitle><h2>Connections</h2></CardTitle></CardHeader>

@@ -34,6 +34,7 @@ export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
   settings: [
     { value: "appearance", label: "Appearance" },
     { value: "layout", label: "Layout" },
+    { value: "models", label: "Models / Providers" },
     { value: "connections", label: "Connections" },
     { value: "account", label: "Account" },
   ],

@@ -1,3 +1,4 @@
+import type { ModelsConfiguration } from "./model-catalogue"
 import { create } from "zustand"
 import { conkerClient } from "./index"
 import type { Snapshot, Character } from "./client"
@@ -15,6 +16,7 @@ type State = {
   run: (id: string) => Promise<boolean>
   setDraft: (id: string, text: string) => void
   send: (id: string) => Promise<boolean>
+  saveModelsConfiguration: (value: ModelsConfiguration) => Promise<boolean>
   saveConnections: (value: Connections) => Promise<boolean>
 }
 export const useConkerStore = create<State>((set, get) => ({
@@ -48,6 +50,7 @@ export const useConkerStore = create<State>((set, get) => ({
     if (saved && get().drafts[id] === text) get().setDraft(id, "")
     return saved
   },
+  saveModelsConfiguration: value => get().mutate(() => conkerClient.saveModelsConfiguration(value)),
   saveConnections: value => get().mutate(() => conkerClient.saveConnections(value)),
 }))
 

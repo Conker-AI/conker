@@ -12,7 +12,8 @@
     "design:check": "node scripts/check-design-system.mjs",
     "design:check:test": "node scripts/check-design-system.mjs --self-test",
     "check:daily-overview": "node scripts/check-daily-overview.cjs",
-    "check:navigation": "node scripts/check-navigation.cjs"
+    "check:navigation": "node scripts/check-navigation.cjs",
+    "check:conversation": "node scripts/check-conversation.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

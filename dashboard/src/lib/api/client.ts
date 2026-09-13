@@ -1,5 +1,7 @@
 import type { Agent, Session, Ticket, TicketStatus, Job, JournalEntry, Memory, Service, Tool } from "./models"
 import type { Connections } from "./config"
+import type { ConversationMessage, ConversationState, ConversationUpdate, MessageUpdate, ReplyOptions } from "./conversation-types"
+import type { ModelsConfiguration } from "./model-catalogue"
 
 export type Face = "sprout" | "round" | "cat"
 export type PortraitTone = "green" | "soft" | "graphite"
@@ -60,6 +62,8 @@ export type Snapshot = {
   planningIntent: string
   profile: Character
   messages: Record<string, LocalMessage[]>
+  conversations: Record<string, ConversationState>
+  modelsConfiguration: ModelsConfiguration
   threads: Record<string, Thread>
   replyRequests: string[]
   auth: AuthState
@@ -72,7 +76,14 @@ export interface ConkerClient {
   readonly mode: "fixture" | "http"
   load(): Promise<Snapshot>
   saveCharacter(profile: Character): Promise<Character>
-  sendMessage(sessionId: string, text: string): Promise<LocalMessage>
+  sendMessage(sessionId: string, text: string, options?: { replyTo?: string }): Promise<LocalMessage>
+  updateConversation(sessionId: string, update: ConversationUpdate): Promise<Session>
+  deleteConversation(sessionId: string): Promise<void>
+  updateMessage(sessionId: string, messageId: string, update: MessageUpdate): Promise<ConversationMessage>
+  forkConversation(sessionId: string, messageId: string): Promise<Session>
+  /** Fixture transport only simulates text. Retry never repeats tools or actions. */
+  streamReply(sessionId: string, options: ReplyOptions, onChunk: (chunk: string) => void): Promise<ConversationMessage>
+  saveModelsConfiguration(value: ModelsConfiguration): Promise<ModelsConfiguration>
   requestReply(sessionId: string): Promise<void>
   decideTicket(id: string, status: TicketStatus): Promise<Ticket>
   updateJob(id: string, action: "toggle" | "run"): Promise<Job>
