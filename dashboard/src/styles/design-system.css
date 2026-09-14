@@ -8,3 +8,10 @@
   --collection-portrait-size: 2rem;
   --page-section-gap: 1.5rem;
 }
+
+/* Conversation surfaces need stronger separation without replacing theme colors. */
+.conversation-contrast {
+  --muted-foreground: color-mix(in oklab, var(--foreground) 78%, var(--background));
+  --border: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  --input: color-mix(in oklab, var(--foreground) 35%, var(--background));
+}

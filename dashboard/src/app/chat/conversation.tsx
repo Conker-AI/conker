@@ -82,7 +82,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   }, [hash, locationKey, data.threads, session.id, openRail])
   const preparePrompt = (text: string) => { const next = draft.trim() ? `${draft}\n\n${text}` : text; if (next.length > 4000) notify(session.id, "Your draft is full. Shorten it before adding another request."); else { setDraft(session.id, next); composer.current?.focus() } }
 
-  return <div className="flex min-h-0 min-w-0 flex-1">
+  return <div className="conversation-contrast flex min-h-0 min-w-0 flex-1">
     <section aria-label={`Chat with ${name}`} className="flex min-h-0 min-w-0 flex-1 flex-col">
       <h1 className="sr-only">{session.title}</h1>
       <div ref={scroller} role="region" aria-label="Conversation thread" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-6 lg:px-8">

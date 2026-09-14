@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Archive, ChevronDown, ChevronRight, GitFork, Pencil, Pin, PanelRight, Settings, Trash2, VenetianMask } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, GitFork, Pencil, Pin, PanelRight, Settings, Trash2 } from "lucide-react"
+import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,9 +14,8 @@ import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import type { Session } from "@/lib/api/models"
-import { cn } from "@/lib/utils"
 
-export function ConversationAppbar({ session }: { session: Session }) {
+export function ConversationAppbar({ session, search }: { session: Session; search: ReactNode }) {
   const data = useConker(data => data)
   const conversation = data.conversations[session.id]
   const pending = useConkerStore(state => state.pending)
@@ -57,11 +57,8 @@ export function ConversationAppbar({ session }: { session: Session }) {
         </DropdownMenuContent>
       </DropdownMenu>
     </nav>
-    <Button variant="outline" size="icon" className={cn("size-8 shrink-0 sm:w-auto sm:gap-1.5 sm:px-2", conversation.incognito && "border-primary/50 text-primary")}
-      aria-label={`Incognito ${conversation.incognito ? "on" : "off"}`} aria-pressed={conversation.incognito} title={`Incognito ${conversation.incognito ? "on" : "off"} · preview mode`}
-      disabled={busy} onClick={() => void update({ incognito: !conversation.incognito })}>
-      <VenetianMask className="size-4" /><span className="hidden text-xs sm:inline">Incognito{conversation.incognito ? " on" : ""}</span>
-    </Button>
+    {search}
+    <ConversationIncognito privacy={conversation.privacy} busy={busy} onChange={privacy => { void update({ privacy }) }} />
     <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={rail?.open ? "Hide conversation details" : "Show conversation details"} aria-expanded={!!rail?.open} aria-controls="conversation-reference" title="Conversation details" onClick={() => rail?.open ? closeRail(session.id) : openRail(session.id)}><PanelRight /></Button>
     <Dialog open={dialog !== null} onOpenChange={open => { if (!open) setDialog(null) }}>
       <DialogContent>

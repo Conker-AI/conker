@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Link } from "react-router-dom"
-import { ArrowDown, ArrowUp, Check, ChevronDown, Headphones, Keyboard, Languages, LoaderCircle, Mic, Paperclip, SlidersHorizontal, Square, X } from "lucide-react"
+import { ArrowDown, ArrowUp, AudioLines, Check, ChevronDown, Keyboard, Languages, LoaderCircle, Mic, Paperclip, SlidersHorizontal, Square, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -89,7 +89,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   return <div data-home="composer" className="shrink-0 bg-background px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
     {session.archived && <p className="mb-2 text-xs text-muted-foreground">Archived. Restore this conversation from its appbar menu to continue.</p>}
     {showLatest && <div className="mb-2 flex justify-center"><Button type="button" variant="outline" size="sm" onClick={onLatest}><ArrowDown />Latest message</Button></div>}
-    <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border bg-muted/20 p-2 focus-within:border-ring", voice.active && "border-primary/40")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
+    <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border border-input bg-muted/70 p-2 focus-within:border-ring", voice.active && "border-primary/70")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
       {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted/40 px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
       <div hidden={voice.active}>
         <Label htmlFor="message-composer" className="sr-only">Message {name}</Label>
@@ -107,11 +107,11 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
         <VoiceWaveform levels={voice.levels} listening={voice.phase === "listening"} />
       </div>}
       {voice.active ? <div className="mt-2 flex min-w-0 items-center gap-1 border-t border-border/60 pt-2">
-        <Button type="button" variant="ghost" size="sm" onClick={voice.cancel}><X />Cancel</Button>
+        <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel voice typing" onClick={voice.cancel}><X /></Button></TooltipTrigger><TooltipContent>Cancel voice typing</TooltipContent></Tooltip>
         <span className="min-w-0 truncate px-1 text-xs text-muted-foreground" dir="auto">{languageName}</span>
-        <Button ref={useTextRef} type="button" variant="secondary" size="sm" className="ml-auto" aria-label="Use transcript and switch to typing" disabled={voice.phase === "finishing"} onClick={voice.stop}>{voice.phase === "finishing" ? <LoaderCircle className="motion-safe:animate-spin" /> : <Keyboard />}Use text</Button>
+        <Tooltip><TooltipTrigger asChild><Button ref={useTextRef} type="button" size="icon" className={cn(iconControl, "ml-auto")} aria-label="Use transcript and switch to typing" disabled={voice.phase === "finishing"} onClick={voice.stop}>{voice.phase === "finishing" ? <LoaderCircle className="motion-safe:animate-spin" /> : <Keyboard />}</Button></TooltipTrigger><TooltipContent>Use text</TooltipContent></Tooltip>
       </div> : <div className="flex min-w-0 items-center gap-1">
-        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" disabled={session.archived} aria-label="Composer tools" className="gap-1.5"><SlidersHorizontal /><span className="hidden sm:inline">Tools</span><ChevronDown className="size-3" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="w-60">
+        <DropdownMenu><Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" disabled={session.archived} aria-label="Composer tools" className={iconControl}><SlidersHorizontal /></Button></DropdownMenuTrigger></TooltipTrigger><TooltipContent>Tools</TooltipContent></Tooltip><DropdownMenuContent align="start" side="top" className="conversation-contrast w-60">
           <DropdownMenuLabel>For this message</DropdownMenuLabel>
           <DropdownMenuItem disabled><Paperclip />Attach<span className="ml-auto text-xs">Not connected</span></DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -125,12 +125,12 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
         </DropdownMenuContent></DropdownMenu>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">Voice typing</TooltipContent></Tooltip>
-          <Popover open={talkOpen} onOpenChange={setTalkOpen}><PopoverTrigger asChild><Button type="button" variant="ghost" size="sm" aria-label="Talk with companion" disabled={session.archived} className="gap-1.5 px-2 text-muted-foreground"><Headphones /><span className="hidden lg:inline">Talk</span></Button></PopoverTrigger><PopoverContent side="top" align="end" className="w-72 space-y-3"><p className="text-sm font-medium">Talk with {name}</p><p className="text-sm leading-6 text-muted-foreground">Live voice conversations aren’t connected yet. You can already dictate a message, edit it, and send when you’re ready.</p><Button type="button" variant="outline" size="sm" disabled={!!stream} onClick={startVoice}><Mic />Use voice typing</Button></PopoverContent></Popover>
-          {stream ? <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" onClick={() => stop(session.id)}><Square /></Button> : <Button type="submit" size="icon" className={iconControl} disabled={!draft.trim() || overLimit || pending || session.archived || !model} aria-label="Send message"><ArrowUp /></Button>}
+          {stream ? <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button> : draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label="Send message" title="Send message"><ArrowUp /></Button> :
+            <Popover open={talkOpen} onOpenChange={setTalkOpen}><Tooltip><TooltipTrigger asChild><PopoverTrigger asChild><Button type="button" size="icon" aria-label="Start voice call" disabled={session.archived || pending} className={iconControl}><AudioLines /></Button></PopoverTrigger></TooltipTrigger><TooltipContent>Voice call</TooltipContent></Tooltip><PopoverContent side="top" align="end" className="conversation-contrast w-72 space-y-3"><p className="text-sm font-medium">Voice call with {name}</p><p className="text-sm leading-6 text-muted-foreground">Live voice conversations aren’t connected yet. You can dictate a message and review it before sending.</p><Button type="button" variant="outline" size="sm" onClick={startVoice}><Mic />Use voice typing</Button></PopoverContent></Popover>}
         </div>
       </div>}
     </form>
-    <div className="mt-2 flex min-w-0 items-center justify-between gap-3 px-1 text-[11px] text-muted-foreground">
+    <div className="mt-2 flex min-w-0 items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
       <p className="min-w-0 truncate" title={voice.active ? "Your browser’s speech service may process audio online. Conker does not save recordings." : `${model?.name || "No model selected"} · ${provider?.name || "No provider"} · AI replies are a fixture preview.`}>{voice.active ? "Browser transcription · Review before sending" : `${provider?.name || "No provider"} · Cost not metered · Preview`}</p>
       {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : "Enter to send · Shift + Enter for a new line"}</span>}
     </div>

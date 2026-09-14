@@ -30,12 +30,11 @@ export function SiteHeader() {
   }, [])
 
   return <>
-    <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background">
+    <header data-slot="appbar" className={`${session ? "conversation-contrast " : ""}sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background`}>
       <div className="flex h-(--header-height) w-full min-w-0 items-center gap-1 px-2 sm:gap-2">
         <SidebarTrigger className={`${session ? "size-8" : "size-(--control-height)"} shrink-0 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
         <Separator orientation="vertical" className={`mx-1 shrink-0 data-[orientation=vertical]:h-4 ${config.collapsible === "none" ? "md:hidden" : ""}`} />
-        {session ? <ConversationAppbar session={session} /> : <><AppbarBreadcrumbs crumbs={navigation.crumbs} /><AppbarActions actions={navigation.actions} /></>}
-        <SearchTrigger compact={!!session} onClick={() => setSearchOpen(true)} />
+        {session ? <ConversationAppbar session={session} search={<SearchTrigger compact onClick={() => setSearchOpen(true)} />} /> : <><AppbarBreadcrumbs crumbs={navigation.crumbs} /><AppbarActions actions={navigation.actions} /><SearchTrigger onClick={() => setSearchOpen(true)} /></>}
       </div>
       <AppbarSections sections={navigation.sections} activeSection={navigation.activeSection} />
     </header>
