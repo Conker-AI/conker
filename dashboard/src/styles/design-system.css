@@ -7,6 +7,66 @@
   --collection-row-height: 4rem;
   --collection-portrait-size: 2rem;
   --page-section-gap: 1.5rem;
+  --scrollbar-size: 0.625rem;
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));
+  --scrollbar-thumb-active: var(--primary);
+}
+
+/* Keep native scrolling and Radix scroll areas visually consistent. */
+@layer base {
+  @media (forced-colors: none) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+
+    /* Chromium/WebKit need auto here to allow the rounded pseudo-element skin. */
+    @supports selector(::-webkit-scrollbar) {
+      * {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+      }
+
+      *::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+      }
+
+      *::-webkit-scrollbar-track,
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        min-height: 32px;
+        min-width: 32px;
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background-color: var(--scrollbar-thumb);
+        background-clip: padding-box;
+      }
+
+      *::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-thumb-hover);
+      }
+
+      *::-webkit-scrollbar-thumb:active {
+        background-color: var(--scrollbar-thumb-active);
+      }
+
+      *::-webkit-scrollbar-button {
+        display: none;
+      }
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  [data-slot="scroll-area-thumb"] {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
 }
 
 /* Conversation surfaces need stronger separation without replacing theme colors. */

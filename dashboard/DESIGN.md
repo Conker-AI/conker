@@ -67,6 +67,8 @@ Use minimum row height instead of a fixed clipping box. Long content, translated
 
 Photo avatars use the shared neutral outlined frame. The complete image uses `size-3/4 object-contain`, leaving one eighth of the inner frame on each side. Preserve the full artwork and its aspect ratio without zoom transforms or an inner crop. No green tint behind photo portraits. Apply this proportional padding across brand, appbar, thread, collections, and studio; larger studio previews do not change collection density.
 
+Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `src/styles/design-system.css`. Native scroll containers and the Radix `ScrollArea` use a rounded thumb inset by 2px, a transparent track, brighter hover, and the primary accent while dragging. Firefox uses its native thin scrollbar with the same resting colors. Preserve native wheel, keyboard, and touch scrolling; forced-colors mode retains system colors. Do not hide overflowing content's scrollbar or add route-specific scrollbar skins.
+
 ## Palette and theming
 
 Use semantic utilities: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary`, `text-warning`, `text-destructive` and their established foreground pairs. Quiet fills and thin borders define surfaces. Use accent/status color for meaning.
