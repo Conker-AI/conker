@@ -1,5 +1,5 @@
 import type { Thread } from "./client"
-import type { Session } from "./models"
+import type { Agent, Session } from "./models"
 import type { ConversationMessage, ConversationState } from "./conversation-types"
 
 function sampleTimestamp(time: string) {
@@ -8,10 +8,11 @@ function sampleTimestamp(time: string) {
   return `2026-09-${day}T${clock}:00+03:00`
 }
 
-export function createConversationState(): ConversationState {
+export function createConversationState(agentId = "conker"): ConversationState {
   return {
     messages: [], incognito: false, modelId: null,
     privacy: { memoryDisabled: false, harnessDisabled: false },
+    initialAgentId: agentId, handoffs: [],
     usage: { inputTokens: 0, outputTokens: 0, costUsd: null, mode: "sample" },
     memory: { scope: "conversation", sources: [], writeEnabled: false },
     grants: [],
@@ -20,9 +21,11 @@ export function createConversationState(): ConversationState {
   }
 }
 
-export function createConversations(sessions: Session[], threads: Record<string, Thread>) {
+export function createConversations(sessions: Session[], threads: Record<string, Thread>, agents: Agent[]) {
   return Object.fromEntries(sessions.map(session => {
-    const conversation = createConversationState()
+    const agent = agents.find(agent => agent.id === session.agentId || agent.name === session.agent)
+    session.agentId = agent?.id
+    const conversation = createConversationState(agent?.id)
     const thread = threads[session.id]
     if (!thread) return [session.id, conversation]
 
@@ -33,6 +36,7 @@ export function createConversations(sessions: Session[], threads: Record<string,
     const original = conversation.messages[0]
     conversation.messages.push({
       id: `${session.id}-assistant`, role: "assistant", text: thread.reply,
+      agentId: agent?.id, agentName: agent?.name || session.agent,
       createdAt: sampleTimestamp(thread.time), status: "complete", scenario: true,
       source: original ? { id: original.id, label: "Original request", href: `/chat/${session.id}#${encodeURIComponent(original.id)}` } : undefined,
     })

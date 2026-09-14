@@ -14,6 +14,9 @@ export type Session = {
   id: string
   title: string
   agent: string
+  agentId?: string
+  /** Empty conversations stay out of history until their first message. */
+  isDraft?: boolean
   subtitle: string
   updated: string
   minutesAgo: number

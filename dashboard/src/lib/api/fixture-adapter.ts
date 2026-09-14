@@ -55,7 +55,7 @@ export function createFixtureClient(): ConkerClient {
     connections: connectionConfig.read(),
     terminal: { prompt: "alexey@conker", context: [["Repository", "companion"], ["Branch", "feat/dashboard"], ["Working tree", "Unknown · no filesystem probe"], ["Last commit", "Dashboard shell scaffold · fixture"]] },
   })
-  state.conversations = createConversations(state.sessions, state.threads)
+  state.conversations = createConversations(state.sessions, state.threads, state.agents)
   const streaming = new Set<string>()
   const findConversation = (id: string) => {
     const session = state.sessions.find(item => item.id === id)
@@ -66,6 +66,12 @@ export function createFixtureClient(): ConkerClient {
   const idle = (id: string) => {
     if (streaming.has(id)) throw new Error("Stop the current reply before changing this conversation.")
   }
+  const findAgent = (id: string) => {
+    const agent = state.agents.find(agent => agent.id === id)
+    if (!agent) throw new Error("Choose an available agent.")
+    return agent
+  }
+  const agentName = (id: string) => { const agent = findAgent(id); return agent.kind === "companion" ? state.profile.name : agent.name }
   const availableModel = (id: string | null) => {
     if (!id || !getAvailableModels(state.modelsConfiguration).some(model => model.id === id)) {
       throw new Error("Choose an enabled model from Settings.")
@@ -76,6 +82,7 @@ export function createFixtureClient(): ConkerClient {
     const { session } = findConversation(id)
     session.updated = "Just now"
     session.minutesAgo = 0
+    state.sessions = [session, ...state.sessions.filter(item => item.id !== id)]
   }
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
@@ -87,6 +94,37 @@ export function createFixtureClient(): ConkerClient {
       state.profile = structuredClone({ ...profile, name: profile.name.trim() })
       return structuredClone(state.profile)
     },
+    async createConversation(agentId) {
+      const agent = findAgent(agentId)
+      const existing = state.sessions.find(session => session.isDraft && session.agentId === agent.id && !session.archived)
+      if (existing) return structuredClone(existing)
+      const session = {
+        id: crypto.randomUUID(), title: "New chat", agent: agent.name, agentId: agent.id,
+        subtitle: "No messages yet", updated: "Just now", minutesAgo: 0,
+        pinned: false, isDraft: true, mode: "project" as const,
+      }
+      state.sessions.unshift(session)
+      state.conversations[session.id] = createConversationState(agent.id)
+      return structuredClone(session)
+    },
+    async handoffConversation(id, agentId) {
+      const { session, conversation } = findConversation(id)
+      idle(id)
+      const agent = findAgent(agentId)
+      if (id === state.companionSessionId) throw new Error("Your companion keeps its identity. Start a separate chat with this agent.")
+      if (session.archived) throw new Error("Restore this conversation before changing its agent.")
+      if (session.agentId === agent.id) return structuredClone(session)
+      const previous = findAgent(session.agentId || conversation.initialAgentId)
+      const last = conversation.messages.at(-1)
+      if (last) conversation.handoffs.push({ id: crypto.randomUUID(), afterMessageId: last.id, fromAgentId: previous.id, toAgentId: agent.id, fromName: agentName(previous.id), toName: agentName(agent.id), createdAt: new Date().toISOString() })
+      else conversation.initialAgentId = agent.id
+      session.agent = agent.name
+      session.agentId = agent.id
+      conversation.grants = []
+      conversation.autonomy = { level: "ask", detail: "Ask before actions. This agent has no live execution grants in the preview." }
+      touch(id)
+      return structuredClone(session)
+    },
     async sendMessage(id, text, options) {
       const { session, conversation } = findConversation(id)
       idle(id)
@@ -96,6 +134,11 @@ export function createFixtureClient(): ConkerClient {
         throw new Error("The message you are replying to is no longer available.")
       }
       const message = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString() }
+      if (session.isDraft) {
+        session.isDraft = false
+        if (session.title === "New chat") session.title = message.text.replace(/\s+/g, " ").slice(0, 64)
+      }
+      session.subtitle = message.text.replace(/\s+/g, " ").slice(0, 120)
       state.messages[id] = [...(state.messages[id] || []), message]
       conversation.messages.push({ ...message, role: "user", status: "complete", ...(options?.replyTo ? { replyTo: options.replyTo } : {}) })
       conversation.usage.inputTokens += Math.ceil(message.text.length / 4)
@@ -139,7 +182,7 @@ export function createFixtureClient(): ConkerClient {
       delete state.threads[id]
       state.replyRequests = state.replyRequests.filter(item => item !== id)
       if (id === state.companionSessionId) {
-        state.conversations[id] = createConversationState()
+        state.conversations[id] = createConversationState(state.sessions.find(session => session.id === id)?.agentId)
         const { session } = findConversation(id)
         session.archived = false
         touch(id)
@@ -204,6 +247,14 @@ export function createFixtureClient(): ConkerClient {
         ...message, scenario: false,
         ...(!message.redacted ? { source: { id: message.id, label: `From ${session.title}`, href: `${path}#${encodeURIComponent(message.id)}` } } : {}),
       }))
+      // A handoff after the selected message is outside a fork ending at that message.
+      const included = new Set(next.messages.slice(0, -1).map(message => message.id))
+      next.handoffs = structuredClone(conversation.handoffs.filter(event => included.has(event.afterMessageId)))
+      next.initialAgentId = conversation.initialAgentId
+      const lead = findAgent(next.handoffs.at(-1)?.toAgentId || next.initialAgentId)
+      fork.agentId = lead.id
+      fork.agent = lead.name
+      fork.isDraft = false
       state.sessions.unshift(fork)
       state.conversations[forkId] = next
       state.messages[forkId] = next.messages.filter(message => message.role === "user").map(({ id, text, createdAt }) => ({ id, text, createdAt }))
@@ -220,6 +271,7 @@ export function createFixtureClient(): ConkerClient {
       if (!conversation.messages.some(message => message.role === "user" && !message.redacted)) throw new Error("Send a message before asking for a reply.")
       const reply: ConversationMessage = {
         id: crypto.randomUUID(), role: "assistant", text: "", createdAt: new Date().toISOString(),
+        agentId: session.agentId, agentName: agentName(session.agentId || conversation.initialAgentId),
         modelId, status: "complete", ...(options.retryMessageId ? { retryOf: options.retryMessageId } : {}),
       }
       streaming.add(id)

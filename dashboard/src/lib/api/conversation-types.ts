@@ -1,6 +1,8 @@
 export type ConversationMessage = {
   id: string
   role: "user" | "assistant"
+  agentId?: string
+  agentName?: string
   text: string
   createdAt: string
   source?: { id: string; label: string; href?: string }
@@ -16,12 +18,15 @@ export type ConversationMessage = {
 }
 
 export type ConversationPrivacy = { memoryDisabled: boolean; harnessDisabled: boolean }
+export type ConversationHandoff = { id: string; afterMessageId: string; fromAgentId: string; toAgentId: string; fromName: string; toName: string; createdAt: string }
 
 export type ConversationState = {
   messages: ConversationMessage[]
   /** Derived: true when either privacy exclusion is enabled. */
   incognito: boolean
   privacy: ConversationPrivacy
+  initialAgentId: string
+  handoffs: ConversationHandoff[]
   /** null follows the default route in Settings. */
   modelId: string | null
   parentSessionId?: string

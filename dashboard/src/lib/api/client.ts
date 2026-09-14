@@ -78,6 +78,8 @@ export interface ConkerClient {
   readonly voiceInput: VoiceInputClient
   load(): Promise<Snapshot>
   saveCharacter(profile: Character): Promise<Character>
+  createConversation(agentId: string): Promise<Session>
+  handoffConversation(sessionId: string, agentId: string): Promise<Session>
   sendMessage(sessionId: string, text: string, options?: { replyTo?: string }): Promise<LocalMessage>
   updateConversation(sessionId: string, update: ConversationUpdate): Promise<Session>
   deleteConversation(sessionId: string): Promise<void>
