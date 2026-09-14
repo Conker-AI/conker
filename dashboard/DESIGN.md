@@ -110,6 +110,12 @@ Home (`/`) is the read-first daily overview: priorities, upcoming agenda, decisi
 
 Companion (`/companion`) is the main-agent workspace: a dedicated stable conversation, daily briefing, action starters, and contextual events/news. It uses the shared `Conversation` shell and composer. Existing chats remain at `/chat/:id`. Never choose the main companion by session array position.
 
+Companion has its own appbar identity, with no Chats ancestor. Its check-in stays in the thread after the first exchange and folds into an expandable summary. Recent conversations and pending decisions use the shared collection rows and real fixture destinations. Action starters prepare editable prompts; they never send automatically. The main companion cannot be handed to another agent, archived, or mixed into regular chat history.
+
+`/chat/new` opens a separate topic with Conker by default; `?agent=<id>` preselects an existing agent. New chat is available from conversation and collection appbars, Agents rows, and command search. The client reuses an empty draft for the selected agent, preserving unsent words on route navigation. The first message names the conversation and adds it to history. Empty drafts stay out of Chats and daily recent activity. Conversations and drafts are memory-only in this preview and reset on a full reload.
+
+The ordinary chat's appbar avatar opens the agent picker. Before the first message it selects the agent; afterward it becomes an explicit handoff. Handoffs appear at their message boundary, retain previous authors, preserve Incognito preferences and the separate model selection, and clear execution grants. A fork restores the agent at its selected message boundary rather than inheriting a later handoff. The canonical Companion identity remains fixed; separate chats can still use the companion agent.
+
 Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. The sidebar brand row owns the theme switcher.
 
 `BaseLayout` accepts an optional `actions` slot for standard page-header actions. DailyNews owns feed content; its parent owns the section heading. It renders publisher/date/source metadata for ready feeds and a truthful unavailable state otherwise.
@@ -143,7 +149,7 @@ All conversation mutations and simulated replies go through ConkerClient. Normal
 
 ## The four conversation homes
 
-Conversation-wide actions live only in the appbar title menu: rename, conversation-default model/route, pin, archive/restore, delete/clear, view forks, and edit companion. The right-side order is search, Incognito, then the rail toggle. Incognito uses the standard hat-and-glasses icon, with no visible text label; its tooltip and accessible name expose the current mode. There is no separate conversation header. The theme switcher stays beside the sidebar brand. All sidebar destinations retain independent roots.
+Conversation-wide actions live in the appbar: the avatar owns agent selection/handoff, and the title menu owns rename, conversation-default model/route, pin, archive/restore, delete/clear, view forks, and edit companion. The permanent Companion omits rename, pin, and archive. The right-side order is New chat, search, Incognito, then the rail toggle. Incognito uses the standard hat-and-glasses icon, with no visible text label; its tooltip and accessible name expose the current mode. There is no separate conversation header. The theme switcher stays beside the sidebar brand. All sidebar destinations retain independent roots.
 
 Incognito opens a dialog with two independent switches, **No memory** and **No harness**. All four combinations are supported and stored per conversation through ConkerClient; forks copy them independently. Only the memory switch changes the declared memory scope. The aggregate `incognito` flag means at least one exclusion is enabled, and the legacy boolean update remains a shortcut for both. The rail reports both settings separately. These preview preferences do not imply server enforcement, deletion of existing transcripts, or private browser speech processing.
 

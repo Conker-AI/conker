@@ -5,6 +5,7 @@ const LoginPage = lazy(() => import("@/app/login/page"))
 const SettingsPage = lazy(() => import("@/app/settings/page"))
 const HomePage = lazy(() => import("@/app/home/page"))
 const ChatsPage = lazy(() => import("@/app/chat/page"))
+const NewChatPage = lazy(() => import("@/app/chat/new-page"))
 const ChatDetailPage = lazy(() => import("@/app/chat/detail-page"))
 const InboxPage = lazy(() => import("@/app/inbox/page"))
 const ApprovalDetailPage = lazy(() => import("@/app/inbox/detail-page"))
@@ -30,6 +31,7 @@ export const routes: RouteConfig[] = [
   { path: appNavigation.settings.path, element: <SettingsPage /> },
   { path: appNavigation.home.path, element: <HomePage /> },
   { path: appNavigation.chats.path, element: <ChatsPage /> },
+  { path: appNavigation.newChat.path, element: <NewChatPage /> },
   { path: appNavigation.conversation.path, element: <ChatDetailPage /> },
   { path: appNavigation.inbox.path, element: <InboxPage /> },
   { path: appNavigation.request.path, element: <ApprovalDetailPage /> },

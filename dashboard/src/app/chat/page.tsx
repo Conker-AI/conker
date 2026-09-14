@@ -45,7 +45,9 @@ function ChatListPanel({ agentView = false, query, onQueryChange, count, childre
 
 export default function ChatsPage() {
   const allSessions = useConker(data => data.sessions)
-  const sessions = allSessions.filter(session => !session.archived)
+  const companionId = useConker(data => data.companionSessionId)
+  const savedSessions = allSessions.filter(session => session.id !== companionId && !session.isDraft)
+  const sessions = savedSessions.filter(session => !session.archived)
   const agents = useConker(data => data.agents)
   const profile = useConker(data => data.profile)
   const [query, setQuery] = useState("")
@@ -57,7 +59,7 @@ export default function ChatsPage() {
     const name = agent?.kind === "companion" ? profile.name : session.agent
     return `${session.title} ${session.subtitle} ${session.agent} ${name}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
   }
-  const archived = allSessions.filter(session => session.archived && matches(session, archiveQuery))
+  const archived = savedSessions.filter(session => session.archived && matches(session, archiveQuery))
   const filtered = orderedSessions.filter(session => matches(session, query))
   const pinned = filtered.filter(session => session.pinned)
   const recent = filtered.filter(session => !session.pinned)
@@ -67,8 +69,9 @@ export default function ChatsPage() {
     if (!latestByAgent.has(session.agent)) latestByAgent.set(session.agent, session)
   }
   const latestAgentSessions = [...latestByAgent.values()].filter(session => matches(session, agentQuery))
+  const unusedAgents = agents.filter(agent => !latestByAgent.has(agent.name) && `${agent.name} ${agent.role}`.toLocaleLowerCase().includes(agentQuery.trim().toLocaleLowerCase()))
 
-  return <BaseLayout title="Chats" description="Pick up where you left off.">
+  return <BaseLayout title="Chats" description="A space for each topic. Start fresh or pick up where you left off.">
       <RouteSection value="sessions">
         <ChatListPanel query={query} onQueryChange={setQuery} count={filtered.length}>
           <div className="space-y-4">
@@ -78,8 +81,9 @@ export default function ChatsPage() {
         </ChatListPanel>
       </RouteSection>
       <RouteSection value="agents">
-        <ChatListPanel agentView query={agentQuery} onQueryChange={setAgentQuery} count={latestAgentSessions.length}>
+        <ChatListPanel agentView query={agentQuery} onQueryChange={setAgentQuery} count={latestAgentSessions.length + unusedAgents.length}>
           <ConversationGroup title="Latest sessions" sessions={latestAgentSessions} agentFirst />
+          {unusedAgents.length > 0 && <CollectionSection title="Start a conversation">{unusedAgents.map(agent => <CollectionRow key={agent.id} to={`/chat/new?agent=${encodeURIComponent(agent.id)}`} title={agent.kind === "companion" ? profile.name : agent.name} description={agent.role} leading={<AgentIdentityPortrait name={agent.name} />} trailing="New chat" />)}</CollectionSection>}
         </ChatListPanel>
       </RouteSection>
       <RouteSection value="archived"><ChatListPanel query={archiveQuery} onQueryChange={setArchiveQuery} count={archived.length}><ConversationGroup title="Archived conversations" sessions={archived} /></ChatListPanel></RouteSection>

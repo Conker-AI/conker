@@ -8,7 +8,7 @@ export default function AgentsPage() {
   return (
     <BaseLayout
       title="Agents"
-      description="Persistent identities. Readable contracts. Temporary workers stay inside their runs."
+      description="Choose who you want to work with. Each agent can have its own conversations."
     >
       <div className="">
         <DataTable

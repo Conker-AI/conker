@@ -1,4 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
+import { Link } from "react-router-dom"
+import { SquarePen } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { AgentIdentityPortrait } from "@/components/design-system"
 
 import { StatusBadge } from "@/components/status-badge"
@@ -6,6 +9,7 @@ import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-
 import type { Agent } from "@/lib/api/models"
 
 export const columns: ColumnDef<Agent>[] = [
+  { id: "chat", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon" className="size-8"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`} title={`New chat with ${row.original.name}`}><SquarePen /></Link></Button> },
   {
     accessorKey: "name",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Agent" />,

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Archive, ChevronDown, ChevronRight, GitFork, Pencil, Pin, PanelRight, Settings, Trash2 } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, GitFork, Pencil, Pin, PanelRight, Settings, SquarePen, Trash2 } from "lucide-react"
+import { ConversationAgent } from "@/components/conversation-agent"
 import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { Button } from "@/components/ui/button"
@@ -27,28 +28,25 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
   const [title, setTitle] = useState(session.title)
   const [modelId, setModelId] = useState(conversation?.modelId || "default")
   const navigate = useNavigate()
-  const companion = data.agents.find(agent => agent.name === session.agent)?.kind === "companion"
   const busy = pending || !!streaming
   const update = (patch: Parameters<typeof conkerClient.updateConversation>[1]) => mutate(() => conkerClient.updateConversation(session.id, patch))
   const main = session.id === data.companionSessionId
   if (!conversation) return null
 
   return <>
-    <nav aria-label="Conversation path" data-home="conversation" className="flex min-w-0 flex-1 items-center gap-1.5">
-      <Link to="/chat" aria-label="Chats" title="All conversations" className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-ring"><CompanionPortrait profile={companion ? data.profile : undefined} name={session.agent} tone="graphite" className="size-7 rounded-lg" /></Link>
-      <Link to="/chat" className="hidden min-h-8 shrink-0 items-center px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring sm:inline-flex">Chats</Link>
-      <ChevronRight className="hidden size-3 shrink-0 text-muted-foreground sm:block" aria-hidden="true" />
+    <nav aria-label={main ? "Companion path" : "Conversation path"} data-home="conversation" className="flex min-w-0 flex-1 items-center gap-1.5">
+      {main ? <CompanionPortrait profile={data.profile} name={data.profile.name} className="size-7 rounded-lg" /> : <ConversationAgent session={session} />}
+      {!main && <><Link to="/chat" className="hidden min-h-8 shrink-0 items-center px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring sm:inline-flex">Chats</Link><ChevronRight className="hidden size-3 shrink-0 text-muted-foreground sm:block" aria-hidden="true" /></>}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 min-w-0 shrink justify-start gap-1 px-1.5 has-[>svg]:px-1.5" aria-label={`Conversation menu: ${session.title}`} title={session.title}>
-            <span className="min-w-0 truncate text-sm font-medium">{session.title}</span><ChevronDown className="size-3 shrink-0" />
+            <span className="min-w-0 truncate text-sm font-medium">{main ? data.profile.name : session.title}</span><ChevronDown className="size-3 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuItem disabled={busy} onSelect={() => { setTitle(session.title); setDialog("rename") }}><Pencil />Rename</DropdownMenuItem>
+          {!main && <DropdownMenuItem disabled={busy} onSelect={() => { setTitle(session.title); setDialog("rename") }}><Pencil />Rename</DropdownMenuItem>}
           <DropdownMenuItem disabled={busy} onSelect={() => { setModelId(conversation.modelId || "default"); setDialog("route") }}><Settings />Model / route</DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onSelect={() => void update({ pinned: !session.pinned })}><Pin />{session.pinned ? "Unpin conversation" : "Pin conversation"}</DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onSelect={() => void update({ archived: !session.archived })}><Archive />{session.archived ? "Restore conversation" : "Archive conversation"}</DropdownMenuItem>
+          {!main && <><DropdownMenuItem disabled={busy} onSelect={() => void update({ pinned: !session.pinned })}><Pin />{session.pinned ? "Unpin conversation" : "Pin conversation"}</DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void update({ archived: !session.archived })}><Archive />{session.archived ? "Restore conversation" : "Archive conversation"}</DropdownMenuItem></>}
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => openRail(session.id, "forks")}><GitFork />View forks</DropdownMenuItem>
           <DropdownMenuItem asChild><Link to="/settings/companion"><Settings />Edit companion</Link></DropdownMenuItem>
@@ -57,6 +55,7 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
         </DropdownMenuContent>
       </DropdownMenu>
     </nav>
+    <Button variant="ghost" size="icon" className="size-8 shrink-0" asChild><Link to="/chat/new" aria-label="New chat" title="New chat"><SquarePen /></Link></Button>
     {search}
     <ConversationIncognito privacy={conversation.privacy} busy={busy} onChange={privacy => { void update({ privacy }) }} />
     <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={rail?.open ? "Hide conversation details" : "Show conversation details"} aria-expanded={!!rail?.open} aria-controls="conversation-reference" title="Conversation details" onClick={() => rail?.open ? closeRail(session.id) : openRail(session.id)}><PanelRight /></Button>

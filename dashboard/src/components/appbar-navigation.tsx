@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { Link } from "react-router-dom"
-import { MessageCircle, SlidersHorizontal } from "lucide-react"
+import { MessageCircle, SlidersHorizontal, SquarePen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import type { getPageNavigation } from "@/config/navigation"
@@ -34,7 +34,7 @@ export function AppbarActions({ actions }: Pick<Navigation, "actions">) {
   return <nav aria-label="Related pages" className="flex shrink-0 items-center gap-1">
     {actions.map(action => <Button key={action.to} variant="ghost" size="icon" asChild>
       <Link to={action.to} aria-label={action.label} title={action.label}>
-        {action.icon === "message" ? <MessageCircle aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
+        {action.icon === "message" ? <MessageCircle aria-hidden="true" /> : action.icon === "new-chat" ? <SquarePen aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
       </Link>
     </Button>)}
   </nav>

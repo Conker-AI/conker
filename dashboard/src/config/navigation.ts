@@ -8,6 +8,7 @@ export const appNavigation = {
   home: { path: "/", title: "Home" },
   companion: { path: "/companion", title: "Companion" },
   chats: { path: "/chat", title: "Chats" },
+  newChat: { path: "/chat/new", title: "New chat", parent: "chats" },
   conversation: { path: "/chat/:id", title: "Conversation", parent: "chats" },
   inbox: { path: "/inbox", title: "Inbox" },
   request: { path: "/inbox/:id", title: "Request", parent: "inbox" },
@@ -65,7 +66,7 @@ export function pageSectionHref(key: AppRoute, search: string, value: string) {
   return `${appNavigation[key].path}${query ? `?${query}` : ""}`
 }
 
-export type AppbarAction = { to: string; label: string; icon: "message" | "settings" }
+export type AppbarAction = { to: string; label: string; icon: "message" | "settings" | "new-chat" }
 export type RouteCrumb = { title: string; to: string }
 
 export function getPageNavigation(pathname: string, search: string, data: Snapshot) {
@@ -86,6 +87,7 @@ export function getPageNavigation(pathname: string, search: string, data: Snapsh
     parent = ancestor.parent as AppRoute | undefined
   }
   const actions: AppbarAction[] = []
+  if (key === "chats" || key === "agents") actions.push({ to: appNavigation.newChat.path, label: "New chat", icon: "new-chat" })
   if (key === "home" || key === "companionSettings") {
     actions.push({ to: appNavigation.companion.path, label: `Talk to ${name}`, icon: "message" })
   }

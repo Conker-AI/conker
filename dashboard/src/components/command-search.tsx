@@ -124,6 +124,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const commandRef = React.useRef<HTMLDivElement>(null)
 
   const searchItems: SearchItem[] = [
+    { title: "New chat", url: appNavigation.newChat.path, group: "Actions", icon: MessageCircle },
     // Daily loop
     { title: "Home", url: appNavigation.home.path, group: "Daily loop", icon: Home },
     { title: "Chats", url: appNavigation.chats.path, group: "Daily loop", icon: MessageCircle },
