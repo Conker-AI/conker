@@ -150,6 +150,36 @@ async function main() {
     assert.equal(state.conversations.week.memory.writeEnabled, false)
   })
 
+  await check('Memory and harness exclusions are independent, scoped, and inherited by forks', async () => {
+    const client = createFixtureClient()
+    const originalMemory = (await client.load()).conversations.week.memory
+    await client.updateConversation('week', { privacy: { harnessDisabled: true } })
+    let state = await client.load()
+    assert.deepEqual(state.conversations.week.privacy, { memoryDisabled: false, harnessDisabled: true })
+    assert.deepEqual(state.conversations.week.memory, originalMemory)
+    assert.equal(state.conversations.week.incognito, true)
+    assert.equal(state.conversations.companion.incognito, false)
+    const fork = await client.forkConversation('week', 'intent')
+    state = await client.load()
+    assert.deepEqual(state.conversations[fork.id].privacy, state.conversations.week.privacy)
+    assert.equal(state.conversations[fork.id].memory.scope, 'conversation')
+    await client.updateConversation('week', { privacy: { memoryDisabled: true } })
+    state = await client.load()
+    assert.deepEqual(state.conversations.week.privacy, { memoryDisabled: true, harnessDisabled: true })
+    assert.equal(state.conversations.week.memory.scope, 'none')
+    assert.equal(state.conversations[fork.id].privacy.memoryDisabled, false)
+    await client.updateConversation('week', { privacy: { harnessDisabled: false } })
+    state = await client.load()
+    assert.deepEqual(state.conversations.week.privacy, { memoryDisabled: true, harnessDisabled: false })
+    assert.equal(state.conversations.week.memory.scope, 'none')
+    await client.updateConversation('week', { privacy: { memoryDisabled: false } })
+    state = await client.load()
+    assert.equal(state.conversations.week.incognito, false)
+    assert.equal(state.conversations.week.memory.scope, 'conversation')
+    await assert.rejects(client.updateConversation('week', { privacy: { memoryDisabled: 'yes' } }), /valid conversation privacy/)
+    await assert.rejects(client.updateConversation('week', { privacy: { unknown: true } }), /valid conversation privacy/)
+  })
+
   await check('Archive and restore work for regular and canonical conversations', async () => {
     const client = createFixtureClient()
     for (const id of ['week', 'companion']) {

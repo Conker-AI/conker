@@ -110,16 +110,25 @@ export function createFixtureClient(): ConkerClient {
       for (const key of ["pinned", "archived", "incognito"] as const) {
         if (update[key] !== undefined && typeof update[key] !== "boolean") throw new Error("Use a valid conversation setting.")
       }
+      if (update.privacy !== undefined && (!update.privacy || typeof update.privacy !== "object" || Object.entries(update.privacy).some(([key, value]) => !["memoryDisabled", "harnessDisabled"].includes(key) || typeof value !== "boolean"))) {
+        throw new Error("Use valid conversation privacy settings.")
+      }
       if (update.modelId !== undefined && update.modelId !== null) availableModel(update.modelId)
       if (update.archived) idle(id)
       if (update.title !== undefined) session.title = update.title.trim()
       if (update.pinned !== undefined) session.pinned = update.pinned
       if (update.archived !== undefined) session.archived = update.archived
       if (update.modelId !== undefined) conversation.modelId = update.modelId
-      if (update.incognito !== undefined) {
-        conversation.incognito = update.incognito
-        conversation.memory.scope = update.incognito ? "none" : "conversation"
-        conversation.memory.sources = []
+      if (update.incognito !== undefined || update.privacy !== undefined) {
+        const previousMemory = conversation.privacy.memoryDisabled
+        // Preserve the legacy shortcut while allowing each exclusion independently.
+        if (update.incognito !== undefined) conversation.privacy = { memoryDisabled: update.incognito, harnessDisabled: update.incognito }
+        Object.assign(conversation.privacy, update.privacy)
+        conversation.incognito = conversation.privacy.memoryDisabled || conversation.privacy.harnessDisabled
+        if (previousMemory !== conversation.privacy.memoryDisabled) {
+          conversation.memory.scope = conversation.privacy.memoryDisabled ? "none" : "conversation"
+          conversation.memory.sources = []
+        }
       }
       return structuredClone(session)
     },
@@ -186,8 +195,9 @@ export function createFixtureClient(): ConkerClient {
       next.parentSessionId = id
       next.forkMessageId = messageId
       next.incognito = conversation.incognito
+      next.privacy = structuredClone(conversation.privacy)
       next.modelId = conversation.modelId
-      next.memory.scope = conversation.incognito ? "none" : "conversation"
+      next.memory.scope = conversation.privacy.memoryDisabled ? "none" : "conversation"
       next.files = structuredClone(conversation.files)
       const path = id === state.companionSessionId ? "/companion" : `/chat/${id}`
       next.messages = structuredClone(conversation.messages.slice(0, index + 1)).map(message => ({

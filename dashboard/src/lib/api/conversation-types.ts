@@ -15,9 +15,13 @@ export type ConversationMessage = {
   retryOf?: string
 }
 
+export type ConversationPrivacy = { memoryDisabled: boolean; harnessDisabled: boolean }
+
 export type ConversationState = {
   messages: ConversationMessage[]
+  /** Derived: true when either privacy exclusion is enabled. */
   incognito: boolean
+  privacy: ConversationPrivacy
   /** null follows the default route in Settings. */
   modelId: string | null
   parentSessionId?: string
@@ -38,6 +42,7 @@ export type ConversationUpdate = {
   pinned?: boolean
   archived?: boolean
   incognito?: boolean
+  privacy?: Partial<ConversationPrivacy>
   modelId?: string | null
 }
 

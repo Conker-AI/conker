@@ -11,6 +11,7 @@ function sampleTimestamp(time: string) {
 export function createConversationState(): ConversationState {
   return {
     messages: [], incognito: false, modelId: null,
+    privacy: { memoryDisabled: false, harnessDisabled: false },
     usage: { inputTokens: 0, outputTokens: 0, costUsd: null, mode: "sample" },
     memory: { scope: "conversation", sources: [], writeEnabled: false },
     grants: [],
