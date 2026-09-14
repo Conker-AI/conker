@@ -2,6 +2,7 @@ import type { Agent, Session, Ticket, TicketStatus, Job, JournalEntry, Memory, S
 import type { Connections } from "./config"
 import type { ConversationMessage, ConversationState, ConversationUpdate, MessageUpdate, ReplyOptions } from "./conversation-types"
 import type { ModelsConfiguration } from "./model-catalogue"
+import type { VoiceInputClient } from "../voice/types"
 
 export type Face = "sprout" | "round" | "cat"
 export type PortraitTone = "green" | "soft" | "graphite"
@@ -74,6 +75,7 @@ export type Snapshot = {
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
 export interface ConkerClient {
   readonly mode: "fixture" | "http"
+  readonly voiceInput: VoiceInputClient
   load(): Promise<Snapshot>
   saveCharacter(profile: Character): Promise<Character>
   sendMessage(sessionId: string, text: string, options?: { replyTo?: string }): Promise<LocalMessage>

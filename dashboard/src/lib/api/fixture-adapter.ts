@@ -12,6 +12,7 @@ import type { ConkerClient, Snapshot, AuthResult } from "./client"
 import { createConversations, createConversationState } from "./conversation-fixtures"
 import { createModelsConfiguration, getAvailableModels, validateModelsConfiguration } from "./model-catalogue"
 import type { ConversationMessage } from "./conversation-types"
+import { unavailableVoiceInput } from "../voice/types"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -79,6 +80,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
     async saveCharacter(profile) {
       if (!profile.name.trim()) throw new Error("Give your companion a name.")
