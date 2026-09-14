@@ -32,9 +32,10 @@ export function useCircularTransition(): CircularTransitionHook {
         callback()
       })
 
-      transition.finished.finally(() => {
-        isTransitioningRef.current = false
-      })
+      const finish = () => { isTransitioningRef.current = false }
+      // Navigation or resizing can interrupt a reveal. Release the lock on either
+      // outcome without leaving an unhandled rejection from the animation.
+      void transition.finished.then(finish, finish)
     } else {
       // Fallback for browsers without View Transitions API
       callback()
