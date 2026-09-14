@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react"
+import { useEffect, useRef, type RefObject } from "react"
 import { Link } from "react-router-dom"
-import { ArrowDown, ArrowUp, AudioLines, Check, ChevronDown, Keyboard, Languages, LoaderCircle, Mic, Paperclip, SlidersHorizontal, Square, X } from "lucide-react"
+import { ArrowDown, ArrowUp, AudioLines, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, SlidersHorizontal, Square, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useVoiceTyping } from "@/hooks/use-voice-typing"
 import { useConker, useConkerStore } from "@/lib/api/store"
@@ -16,12 +15,6 @@ import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import { cn } from "@/lib/utils"
 import "./conversation-composer.css"
 
-const languages = [
-  { id: "en-US", label: "English" }, { id: "he-IL", label: "עברית" },
-  { id: "ru-RU", label: "Русский" }, { id: "ar-SA", label: "العربية" },
-  { id: "es-ES", label: "Español" }, { id: "fr-FR", label: "Français" },
-  { id: "de-DE", label: "Deutsch" }, { id: "zh-CN", label: "中文" },
-]
 const iconControl = "size-(--control-height-sm) shrink-0"
 
 function VoiceWaveform({ levels, listening }: { levels: number[]; listening: boolean }) {
@@ -54,8 +47,6 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const nextModel = useConversationWorkspace(state => state.nextModels[session.id])
   const replyId = useConversationWorkspace(state => state.replies[session.id])
   const notice = useConversationWorkspace(state => state.notices[session.id])
-  const [language, setLanguage] = useState(() => languages.find(item => item.id.split("-")[0] === navigator.language.split("-")[0])?.id || "en-US")
-  const [talkOpen, setTalkOpen] = useState(false)
   const voice = useVoiceTyping(session.id, inputRef)
   const transcriptRef = useRef<HTMLDivElement>(null)
   const useTextRef = useRef<HTMLButtonElement>(null)
@@ -67,12 +58,19 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const provider = data.modelsConfiguration.providers.find(item => item.id === model?.providerId)
   const reply = conversation?.messages.find(message => message.id === replyId)
   const overLimit = draft.length > MESSAGE_LIMIT
-  const languageName = languages.find(item => item.id === language)?.label
   const voiceStatus = voice.phase === "requesting" ? "Opening microphone…" : voice.phase === "finishing" ? "Finishing transcription…" : "Listening"
 
   useEffect(() => {
     const element = inputRef.current
-    if (element && !voice.active) { element.style.height = "auto"; element.style.height = `${Math.min(element.scrollHeight, 160)}px` }
+    if (!element || voice.active) return
+    const resize = () => { element.style.height = "auto"; element.style.height = `${Math.min(element.scrollHeight, 160)}px` }
+    let width = element.clientWidth
+    resize()
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth !== width) { width = element.clientWidth; resize() }
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [draft, voice.active, inputRef])
   useEffect(() => {
     if (voice.active && !previousActive.current) useTextRef.current?.focus()
@@ -84,7 +82,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   }, [voice.transcript])
 
   const sendDraft = () => { if (!session.archived && !voice.active && !overLimit) void send(session.id) }
-  const startVoice = () => { setTalkOpen(false); void voice.start(language) }
+  const startVoice = () => { void voice.start(navigator.language || "en-US") }
 
   return <div data-home="composer" className="shrink-0 bg-background px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
     {session.archived && <p className="mb-2 text-xs text-muted-foreground">Archived. Restore this conversation from its appbar menu to continue.</p>}
@@ -108,14 +106,11 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
       </div>}
       {voice.active ? <div className="mt-2 flex min-w-0 items-center gap-1 border-t border-border/60 pt-2">
         <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel voice typing" onClick={voice.cancel}><X /></Button></TooltipTrigger><TooltipContent>Cancel voice typing</TooltipContent></Tooltip>
-        <span className="min-w-0 truncate px-1 text-xs text-muted-foreground" dir="auto">{languageName}</span>
         <Tooltip><TooltipTrigger asChild><Button ref={useTextRef} type="button" size="icon" className={cn(iconControl, "ml-auto")} aria-label="Use transcript and switch to typing" disabled={voice.phase === "finishing"} onClick={voice.stop}>{voice.phase === "finishing" ? <LoaderCircle className="motion-safe:animate-spin" /> : <Keyboard />}</Button></TooltipTrigger><TooltipContent>Use text</TooltipContent></Tooltip>
       </div> : <div className="flex min-w-0 items-center gap-1">
         <DropdownMenu><Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" disabled={session.archived} aria-label="Composer tools" className={iconControl}><SlidersHorizontal /></Button></DropdownMenuTrigger></TooltipTrigger><TooltipContent>Tools</TooltipContent></Tooltip><DropdownMenuContent align="start" side="top" className="conversation-contrast w-60">
           <DropdownMenuLabel>For this message</DropdownMenuLabel>
           <DropdownMenuItem disabled><Paperclip />Attach<span className="ml-auto text-xs">Not connected</span></DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuSub><DropdownMenuSubTrigger><Languages />Dictation language</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuRadioGroup value={language} onValueChange={setLanguage}>{languages.map(item => <DropdownMenuRadioItem key={item.id} value={item.id}>{item.label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuSubContent></DropdownMenuSub>
           <DropdownMenuSeparator /><p className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">Voice typing uses your browser’s speech service, which may process audio online. Conker does not save the recording.</p>
         </DropdownMenuContent></DropdownMenu>
         <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${model?.name || "No model"}, ${provider?.name || "No provider"}`} disabled={session.archived || !!stream}><span className="min-w-0 truncate">{model?.name || "Choose model"}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
@@ -126,7 +121,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">Voice typing</TooltipContent></Tooltip>
           {stream ? <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button> : draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label="Send message" title="Send message"><ArrowUp /></Button> :
-            <Popover open={talkOpen} onOpenChange={setTalkOpen}><Tooltip><TooltipTrigger asChild><PopoverTrigger asChild><Button type="button" size="icon" aria-label="Start voice call" disabled={session.archived || pending} className={iconControl}><AudioLines /></Button></PopoverTrigger></TooltipTrigger><TooltipContent>Voice call</TooltipContent></Tooltip><PopoverContent side="top" align="end" className="conversation-contrast w-72 space-y-3"><p className="text-sm font-medium">Voice call with {name}</p><p className="text-sm leading-6 text-muted-foreground">Live voice conversations aren’t connected yet. You can dictate a message and review it before sending.</p><Button type="button" variant="outline" size="sm" onClick={startVoice}><Mic />Use voice typing</Button></PopoverContent></Popover>}
+            <Tooltip><TooltipTrigger asChild><Button type="button" size="icon" aria-label="Start voice input" disabled={session.archived || pending} className={iconControl} onClick={startVoice}><AudioLines /></Button></TooltipTrigger><TooltipContent>Start listening</TooltipContent></Tooltip>}
         </div>
       </div>}
     </form>

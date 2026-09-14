@@ -204,13 +204,18 @@ export function createFixtureClient(): ConkerClient {
       for (const key of ["pinned", "redacted"] as const) {
         if (update[key] !== undefined && typeof update[key] !== "boolean") throw new Error("Use a valid message setting.")
       }
-      if (update.text !== undefined) { message.text = update.text.trim(); message.edited = true; message.scenario = false }
+      if (update.rating !== undefined && (message.role !== "assistant" || !["up", "down", null].includes(update.rating))) {
+        throw new Error("Choose a valid response rating.")
+      }
+      if (update.rating !== undefined) message.rating = update.rating
+      if (update.text !== undefined) { message.text = update.text.trim(); message.edited = true; message.scenario = false; delete message.rating }
       if (update.pinned !== undefined) message.pinned = update.pinned
       if (update.redacted) {
         message.text = ""
         message.redacted = true
         message.pinned = false
         message.scenario = false
+        delete message.rating
         delete message.source
       }
       // Legacy consumers must not reveal text after an edit or redaction.

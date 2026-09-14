@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom"
 import { Fragment, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
-import { ArrowRight, ArrowUpRight, CalendarDays, LoaderCircle, Pin, TriangleAlert } from "lucide-react"
+import { ArrowRight, ArrowUpRight, CalendarDays, LoaderCircle, TriangleAlert } from "lucide-react"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ToolActivity } from "@/components/tool-activity"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
@@ -93,13 +93,13 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
             const author = data.agents.find(agent => agent.id === message.agentId)
             const authorName = message.agentName || name
             const authorPortrait = { ...portraitProps, name: authorName, profile: author ? author.kind === "companion" ? data.profile : undefined : portraitProps.profile }
-            return <Fragment key={message.id}><article id={message.id} data-message-id={message.id} data-role={message.role} aria-label={message.role === "user" ? "Your message" : `${authorName} response`} className={`group/message relative min-w-0 scroll-mt-4 ${message.role === "user" ? "ml-auto max-w-[92%] sm:max-w-[85%]" : "w-full"}`}>
+            return <Fragment key={message.id}><article id={message.id} data-message-id={message.id} data-role={message.role} aria-label={message.role === "user" ? "Your message" : `${authorName} response`} className={`relative min-w-0 scroll-mt-4 ${message.role === "user" ? "ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]" : "w-full"}`}>
             {message.role === "assistant" && <div className="mb-2 flex items-center gap-2"><CompanionPortrait {...authorPortrait} className="size-6 rounded-md" /><span className="text-sm font-medium">{authorName}</span>{message.status === "stopped" && <Badge variant="outline">Stopped</Badge>}</div>}
             {message.replyTo && <p className="mb-1 truncate text-xs text-muted-foreground">Replying to: {messages.find(item => item.id === message.replyTo)?.redacted ? "Redacted message" : messages.find(item => item.id === message.replyTo)?.text || "Earlier message"}</p>}
             <div className={message.role === "user" ? "rounded-xl border bg-muted/40 px-4 py-3" : "space-y-3"}>
               {message.redacted ? <p className="text-sm italic text-muted-foreground">Message redacted</p> : <>{message.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{message.text}</p>}{message.scenario && !message.edited && <Scenario session={session} messageId={message.id} />}</>}
             </div>
-            <div className={`mt-1 flex min-h-8 items-center gap-2 text-[11px] text-muted-foreground ${message.role === "user" ? "justify-end" : ""}`}><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>{message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}<MessageActions session={session} message={message} /></div>
+            <MessageActions session={session} message={message} />
           </article>{conversation.handoffs.filter(event => event.afterMessageId === message.id).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
           })}
           {stream && <div aria-label="Streaming preview response" className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CompanionPortrait {...portraitProps} className="size-6 rounded-md" /><LoaderCircle className="size-3.5 motion-safe:animate-spin" /><span role="status">{stream.phase === "thinking" ? "Thinking" : "Responding"} · simulated</span></div>{stream.text && <p className="whitespace-pre-wrap text-[15px] leading-7">{stream.text}</p>}</div>}

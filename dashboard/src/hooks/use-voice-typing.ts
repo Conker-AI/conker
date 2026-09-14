@@ -3,6 +3,7 @@ import { conkerClient } from "@/lib/api"
 import { useConkerStore } from "@/lib/api/store"
 import { insertTranscript, MESSAGE_LIMIT, type DraftAnchor } from "@/lib/voice/draft"
 import type { VoiceInputSession, VoiceTranscript } from "@/lib/voice/types"
+import { readAloud } from "@/lib/voice/read-aloud"
 
 type Phase = "idle" | "requesting" | "listening" | "finishing"
 type Recording = {
@@ -70,6 +71,7 @@ export function useVoiceTyping(sessionId: string, input: RefObject<HTMLTextAreaE
     if (!available.supported) { setError(available.reason || "Voice typing is unavailable."); return }
     const text = useConkerStore.getState().drafts[sessionId] || ""
     if (text.length >= MESSAGE_LIMIT) { setError("Your draft is full. Shorten it before adding more speech."); return }
+    readAloud.stop()
     const run: Recording = {
       controller: new AbortController(),
       anchor: { text, start: input.current?.selectionStart ?? text.length, end: input.current?.selectionEnd ?? text.length },

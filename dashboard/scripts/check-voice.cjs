@@ -125,7 +125,47 @@ async function main() {
     assert.match(run.events.errors[0], /connection/); assert.ok(tracks.every(track => track.stopped))
     assert.equal(run.events.transcripts.at(-1).final, 'Keep this draft'); assert.equal(run.events.ended, 1)
   })
+  await check('Read aloud chunks long responses, cancels previous playback, and ignores late callbacks', () => {
+    const { readAloud } = load('src/lib/voice/read-aloud.ts')
+    const spoken = [], errors = []
+    let cancellations = 0, notifications = 0
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text } }
+    global.window = { SpeechSynthesisUtterance, speechSynthesis: { speak: utterance => spoken.push(utterance), cancel: () => cancellations++ } }
+    const unsubscribe = readAloud.subscribe(() => notifications++)
+    const original = 'Read this sentence with care. '.repeat(40).trim()
+    readAloud.start('first', original, error => errors.push(error))
+    assert.equal(readAloud.getSnapshot(), 'first')
+    for (let index = 0; index < spoken.length; index++) spoken[index].onend()
+    assert.ok(spoken.length > 1)
+    assert.equal(spoken.map(utterance => utterance.text).join(' '), original)
+    assert.equal(readAloud.getSnapshot(), null)
+    readAloud.start('first', 'Old playback', error => errors.push(error))
+    const old = spoken.at(-1)
+    readAloud.start('second', 'New playback', error => errors.push(error))
+    old.onend(); old.onerror({ error: 'interrupted' })
+    assert.equal(readAloud.getSnapshot(), 'second')
+    readAloud.stop('first'); assert.equal(readAloud.getSnapshot(), 'second')
+    readAloud.stop('second'); assert.equal(readAloud.getSnapshot(), null)
+    assert.equal(cancellations, 2); assert.deepEqual(errors, [])
+    assert.ok(notifications > 0); unsubscribe()
+  })
+  await check('Read aloud reports unavailable engines and recovers from playback failures', () => {
+    const { readAloud } = load('src/lib/voice/read-aloud.ts')
+    const errors = []
+    global.window = {}
+    readAloud.start('first', 'Text', error => errors.push(error))
+    assert.match(errors.pop(), /unavailable/)
+    let utterance
+    window.SpeechSynthesisUtterance = global.SpeechSynthesisUtterance
+    window.speechSynthesis = { speak: value => { utterance = value }, cancel() {} }
+    readAloud.start('first', 'Text', error => errors.push(error))
+    utterance.onerror({ error: 'audio-busy' })
+    assert.match(errors.pop(), /couldn’t read/); assert.equal(readAloud.getSnapshot(), null)
+    window.speechSynthesis.speak = () => { throw new Error('Unavailable') }
+    readAloud.start('first', 'Text', error => errors.push(error))
+    assert.match(errors.pop(), /couldn’t start/); assert.equal(readAloud.getSnapshot(), null)
+  })
   console.log(checks.map(name => `PASS ${name}`).join('\n'))
-  console.log(`${checks.length} voice typing checks passed.`)
+  console.log(`${checks.length} voice checks passed.`)
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -7,6 +7,7 @@ export type ConversationMessage = {
   createdAt: string
   source?: { id: string; label: string; href?: string }
   pinned?: boolean
+  rating?: "up" | "down" | null
   edited?: boolean
   redacted?: boolean
   /** Existing scenario cards belong to this one assistant message. */
@@ -51,5 +52,5 @@ export type ConversationUpdate = {
   modelId?: string | null
 }
 
-export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean }
+export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean; rating?: "up" | "down" | null }
 export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal }

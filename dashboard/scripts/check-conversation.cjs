@@ -383,6 +383,26 @@ async function main() {
     })
   } finally { globalThis.setTimeout = nativeTimeout }
 
+  await check('Response ratings persist, toggle, stay independent in forks, and clear when content changes', async () => {
+    const client = createFixtureClient()
+    const id = 'week-assistant'
+    await client.updateMessage('week', id, { rating: 'up' })
+    assert.equal((await client.load()).conversations.week.messages.find(message => message.id === id).rating, 'up')
+    const fork = await client.forkConversation('week', id)
+    await client.updateMessage('week', id, { rating: 'down' })
+    assert.equal((await client.load()).conversations[fork.id].messages.at(-1).rating, 'up')
+    await client.updateMessage('week', id, { rating: null })
+    assert.equal((await client.load()).conversations.week.messages.find(message => message.id === id).rating, null)
+    await assert.rejects(client.updateMessage('week', 'intent', { rating: 'up' }), /rating/)
+    await assert.rejects(client.updateMessage('week', id, { rating: 'invalid' }), /rating/)
+    await client.updateMessage('week', id, { rating: 'up' })
+    await client.updateMessage('week', id, { text: 'Revised response.' })
+    assert.equal((await client.load()).conversations.week.messages.find(message => message.id === id).rating, undefined)
+    await client.updateMessage('week', id, { rating: 'down' })
+    await client.updateMessage('week', id, { redacted: true })
+    assert.equal((await client.load()).conversations.week.messages.find(message => message.id === id).rating, undefined)
+  })
+
   process.stdout.write(`${JSON.stringify({ status: 'passed', checks }, null, 2)}\n`)
 }
 
