@@ -1,0 +1,27 @@
+.conversation-composer {
+  transition: border-color 180ms ease-out;
+}
+
+.voice-typing-panel {
+  animation: voice-typing-enter 180ms ease-out;
+}
+
+.voice-transcript {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.voice-waveform rect {
+  /* SVG geometry only: these transitions do not resize or reflow the composer. */
+  transition: height 90ms linear, y 90ms linear;
+}
+
+@keyframes voice-typing-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversation-composer, .voice-waveform rect { transition: none; }
+  .voice-typing-panel { animation: none; }
+}

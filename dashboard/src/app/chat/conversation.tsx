@@ -1,14 +1,11 @@
 import { Link, useLocation } from "react-router-dom"
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
-import { ArrowDown, ArrowUp, ArrowUpRight, CalendarDays, ChevronDown, LoaderCircle, Mic, Paperclip, Pin, SlidersHorizontal, Square, TriangleAlert, X } from "lucide-react"
+import { ArrowUpRight, CalendarDays, LoaderCircle, Pin, TriangleAlert } from "lucide-react"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ToolActivity } from "@/components/tool-activity"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
@@ -16,6 +13,7 @@ import type { Session } from "@/lib/api/models"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import { MessageActions } from "./message-actions"
 import { ConversationRail } from "./conversation-rail"
+import { ConversationComposer } from "./conversation-composer"
 
 function Scenario({ session, messageId }: { session: Session; messageId: string }) {
   const data = useConker(data => data)
@@ -46,12 +44,9 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const { hash, key: locationKey } = useLocation()
   const data = useConker(data => data)
   const conversation = data.conversations[session.id]
-  const { drafts, setDraft, pending } = useConkerStore()
-  const { send, stop, setNextModel, setReply, openRail, notify } = useConversationWorkspace()
+  const { drafts, setDraft } = useConkerStore()
+  const { openRail, notify } = useConversationWorkspace()
   const stream = useConversationWorkspace(state => state.streams[session.id])
-  const nextModel = useConversationWorkspace(state => state.nextModels[session.id])
-  const replyId = useConversationWorkspace(state => state.replies[session.id])
-  const notice = useConversationWorkspace(state => state.notices[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(true)
@@ -61,14 +56,9 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const companion = data.agents.find(agent => agent.name === session.agent)?.kind === "companion"
   const name = companion ? data.profile.name : session.agent
   const draft = drafts[session.id] || ""
-  const models = getAvailableModels(data.modelsConfiguration)
-  const modelId = stream?.modelId || nextModel || conversation?.modelId || data.modelsConfiguration.defaultModelId
-  const model = models.find(item => item.id === modelId)
-  const reply = messages.find(message => message.id === replyId)
   const portraitProps = { profile: companion ? data.profile : undefined, name, face: "round" as const, tone: "graphite" as const }
 
   const scrollToLatest = () => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "instant" }); nearBottom.current = true }
-  useEffect(() => { const element = composer.current; if (element) { element.style.height = "auto"; element.style.height = `${Math.min(element.scrollHeight, 160)}px` } }, [draft])
   useEffect(() => {
     const element = scroller.current
     if (!element) return
@@ -110,22 +100,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
           {stream && <div aria-label="Streaming preview response" className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CompanionPortrait {...portraitProps} className="size-6 rounded-md" /><LoaderCircle className="size-3.5 motion-safe:animate-spin" /><span role="status">{stream.phase === "thinking" ? "Thinking" : "Responding"} · simulated</span></div>{stream.text && <p className="whitespace-pre-wrap text-[15px] leading-7">{stream.text}</p>}</div>}
         </div>
       </div>
-      <div data-home="composer" className="shrink-0 bg-background px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
-        {session.archived && <p className="mb-2 text-xs text-muted-foreground">Archived. Restore this conversation from its appbar menu to continue.</p>}
-        <form className="rounded-xl border bg-muted/20 p-2 focus-within:border-ring" onSubmit={event => { event.preventDefault(); if (!session.archived) void send(session.id) }}>
-          {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted/40 px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
-          <Label htmlFor="message-composer" className="sr-only">Message {name}</Label>
-          <Textarea ref={composer} id="message-composer" rows={1} placeholder={companionWorkspace ? `Ask ${name} anything…` : `Message ${name}…`} value={draft} maxLength={4000} disabled={session.archived} onChange={event => setDraft(session.id, event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!session.archived) void send(session.id) } }} className="max-h-40 min-h-11 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-2 py-2 text-base leading-7 shadow-none focus-visible:ring-0 dark:bg-transparent" />
-          <div className="flex min-w-0 items-center gap-2">
-            <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" disabled={session.archived} className="gap-1.5"><SlidersHorizontal className="size-3.5" />Tools<ChevronDown className="size-3" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="w-56"><DropdownMenuLabel>For the next turn</DropdownMenuLabel><DropdownMenuSub><DropdownMenuSubTrigger disabled={!!stream}><SlidersHorizontal />Model</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-w-72"><DropdownMenuItem onSelect={() => setNextModel(session.id, "")}>Conversation default</DropdownMenuItem>{models.map(item => <DropdownMenuItem key={item.id} onSelect={() => setNextModel(session.id, item.id)}>{item.name}<span className="ml-auto text-xs text-muted-foreground">{item.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub><DropdownMenuSeparator /><DropdownMenuItem disabled><Paperclip />Attach · not connected</DropdownMenuItem><DropdownMenuItem disabled><Mic />Voice · not connected</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-            <span className="min-w-0 max-w-44 truncate rounded-md border px-2 py-1 text-[11px] text-muted-foreground" title={`${nextModel ? "Next turn" : "Conversation default"}: ${model?.name || "No model"}`}>{model?.name || "Choose model"}</span>
-            {showLatest && <Button type="button" variant="ghost" size="icon" className="ml-auto size-8 shrink-0" aria-label="Jump to latest message" onClick={scrollToLatest}><ArrowDown /></Button>}
-            {stream ? <Button type="button" variant="outline" size="icon" className="ml-auto size-9 shrink-0" aria-label="Stop response" onClick={() => stop(session.id)}><Square className="size-4" /></Button> : <Button type="submit" size="icon" className="ml-auto size-9 shrink-0" disabled={!draft.trim() || pending || session.archived || !model} aria-label="Send message"><ArrowUp /></Button>}
-          </div>
-        </form>
-        <p className="mt-2 truncate text-center text-[11px] text-muted-foreground" title="Enter sends · Shift + Enter adds a line. Messages and settings reset on reload.">{model?.name || "No model selected"} · Cost not metered · Fixture preview</p>
-        {notice && <p role="status" className="mt-1 text-center text-xs leading-5 text-muted-foreground">{notice}</p>}
-      </div>
+      <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} showLatest={showLatest} onLatest={scrollToLatest} />
     </section>
     <ConversationRail session={session}>{reference}</ConversationRail>
   </div>
