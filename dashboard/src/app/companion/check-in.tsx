@@ -5,12 +5,14 @@ import { AgentIdentityPortrait, CollectionRow, CollectionSection } from "@/compo
 import { Button } from "@/components/ui/button"
 import { useConker } from "@/lib/api/store"
 import { getDailyOverview } from "@/lib/daily-overview"
+import { useConversationWorkspace } from "@/lib/conversation-workspace"
 
 export function CompanionCheckIn({ preparePrompt, hasMessages }: {
   preparePrompt: (text: string) => void
   hasMessages: boolean
 }) {
   const data = useConker(data => data)
+  const openRail = useConversationWorkspace(state => state.openRail)
   const { briefing, pendingTickets, recentSessions, planSource } = getDailyOverview(data)
   const date = new Date(`${briefing.date}T12:00:00Z`).toLocaleDateString("en", { month: "short", day: "numeric", timeZone: briefing.timezone })
 
@@ -41,8 +43,9 @@ export function CompanionCheckIn({ preparePrompt, hasMessages }: {
           </CollectionSection>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <Button variant="outline" size="sm" onClick={() => openRail(data.companionSessionId, "daily")}>Daily context<ArrowRight /></Button>
           {pendingTickets.length > 2 && <Link to="/inbox" className="underline underline-offset-4">See all {pendingTickets.length} requests</Link>}
-          <span>{briefing.news.status === "unavailable" ? "Personal news isn’t connected yet." : `${briefing.news.items.length} headlines available in conversation details.`}</span>
+          <span>{briefing.news.status === "unavailable" ? "Personal news isn’t connected yet." : `${briefing.news.items.length} headlines in Daily context.`}</span>
         </div>
       </div>
     </details>

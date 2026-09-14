@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Archive, ChevronDown, ChevronRight, GitFork, Pencil, Pin, PanelRight, Settings, SquarePen, Trash2 } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, GitFork, Info, Newspaper, Pencil, Pin, Settings, SquarePen, Trash2 } from "lucide-react"
 import { ConversationAgent } from "@/components/conversation-agent"
 import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -21,9 +21,9 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
   const conversation = data.conversations[session.id]
   const pending = useConkerStore(state => state.pending)
   const mutate = useConkerStore(state => state.mutate)
-  const rail = useConversationWorkspace(state => state.rails[session.id])
   const streaming = useConversationWorkspace(state => state.streams[session.id])
-  const { openRail, closeRail } = useConversationWorkspace()
+  const openRail = useConversationWorkspace(state => state.openRail)
+  const focusReference = useRef(false)
   const [dialog, setDialog] = useState<"rename" | "route" | "delete" | null>(null)
   const [title, setTitle] = useState(session.title)
   const [modelId, setModelId] = useState(conversation?.modelId || "default")
@@ -43,12 +43,14 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
             <span className="min-w-0 truncate text-sm font-medium">{main ? data.profile.name : session.title}</span><ChevronDown className="size-3 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuContent align="start" className="w-56" onCloseAutoFocus={event => { if (focusReference.current) { event.preventDefault(); focusReference.current = false } }}>
           {!main && <DropdownMenuItem disabled={busy} onSelect={() => { setTitle(session.title); setDialog("rename") }}><Pencil />Rename</DropdownMenuItem>}
           <DropdownMenuItem disabled={busy} onSelect={() => { setModelId(conversation.modelId || "default"); setDialog("route") }}><Settings />Model / route</DropdownMenuItem>
           {!main && <><DropdownMenuItem disabled={busy} onSelect={() => void update({ pinned: !session.pinned })}><Pin />{session.pinned ? "Unpin conversation" : "Pin conversation"}</DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void update({ archived: !session.archived })}><Archive />{session.archived ? "Restore conversation" : "Archive conversation"}</DropdownMenuItem></>}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => openRail(session.id, "forks")}><GitFork />View forks</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "overview") }}><Info />Conversation info</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "forks") }}><GitFork />Sessions & forks</DropdownMenuItem>
+          {main && <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "daily") }}><Newspaper />Daily context</DropdownMenuItem>}
           <DropdownMenuItem asChild><Link to="/settings/companion"><Settings />Edit companion</Link></DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled={busy} variant="destructive" onSelect={() => setDialog("delete")}><Trash2 />{main ? "Clear conversation" : "Delete conversation"}</DropdownMenuItem>
@@ -57,8 +59,7 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
     </nav>
     <Button variant="ghost" size="icon" className="size-8 shrink-0" asChild><Link to="/chat/new" aria-label="New chat" title="New chat"><SquarePen /></Link></Button>
     {search}
-    <ConversationIncognito privacy={conversation.privacy} busy={busy} onChange={privacy => { void update({ privacy }) }} />
-    <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={rail?.open ? "Hide conversation details" : "Show conversation details"} aria-expanded={!!rail?.open} aria-controls="conversation-reference" title="Conversation details" onClick={() => rail?.open ? closeRail(session.id) : openRail(session.id)}><PanelRight /></Button>
+    <ConversationIncognito privacy={conversation.privacy} busy={busy} onChange={privacy => { void update({ privacy }) }} onInspect={() => openRail(session.id, "privacy")} />
     <Dialog open={dialog !== null} onOpenChange={open => { if (!open) setDialog(null) }}>
       <DialogContent>
         <DialogHeader><DialogTitle>{dialog === "rename" ? "Rename conversation" : dialog === "route" ? "Conversation model / route" : main ? "Clear this conversation?" : "Delete this conversation?"}</DialogTitle>

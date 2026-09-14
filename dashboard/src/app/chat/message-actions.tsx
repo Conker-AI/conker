@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useNavigate } from "react-router-dom"
-import { Check, Copy, CornerUpLeft, FileSearch, GitFork, Lightbulb, MoreHorizontal, Pencil, Pin, RotateCcw, Share2, Square, ThumbsDown, ThumbsUp, Trash2, Volume2 } from "lucide-react"
+import { Check, Copy, CornerUpLeft, FileSearch, GitFork, Info, MoreHorizontal, Pencil, Pin, RotateCcw, Share2, Square, ThumbsDown, ThumbsUp, Trash2, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -35,6 +35,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const speech = useReadAloud(`${session.id}:${message.id}`, message.redacted ? "" : message.text)
   const focusComposer = useRef(false)
+  const focusReference = useRef(false)
   const navigate = useNavigate()
   const busy = pending || !!streaming || !!session.archived
   const assistant = message.role === "assistant"
@@ -72,6 +73,7 @@ export function MessageActions({ session, message }: { session: Session; message
       <DropdownMenuTrigger asChild><ActionButton label="More message actions"><MoreHorizontal /></ActionButton></DropdownMenuTrigger>
       <DropdownMenuContent align={assistant ? "start" : "end"} className="conversation-contrast w-56" onCloseAutoFocus={event => {
         if (focusComposer.current) { event.preventDefault(); focusComposer.current = false; document.getElementById("message-composer")?.focus() }
+        if (focusReference.current) { event.preventDefault(); focusReference.current = false }
       }}>
         {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={() => { setReply(session.id, message.id); focusComposer.current = true }}><CornerUpLeft />Reply</DropdownMenuItem>}
         <DropdownMenuItem disabled={busy || message.redacted} onSelect={async () => {
@@ -86,8 +88,8 @@ export function MessageActions({ session, message }: { session: Session; message
         {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={edit}><Pencil />Edit message</DropdownMenuItem>}
         <DropdownMenuItem disabled={busy || message.redacted} variant="destructive" onSelect={() => setDialog("redact")}><Trash2 />Delete / redact</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => openRail(session.id, "explain", message.id)}><Lightbulb />Explain</DropdownMenuItem>
-        <DropdownMenuItem disabled={message.redacted} onSelect={() => openRail(session.id, "source", message.id)}><FileSearch />Open source</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "explain", message.id) }}><Info />Message info</DropdownMenuItem>
+        <DropdownMenuItem disabled={message.redacted} onSelect={() => { focusReference.current = true; openRail(session.id, "source", message.id) }}><FileSearch />Open source</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     </div>

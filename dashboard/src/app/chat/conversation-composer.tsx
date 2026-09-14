@@ -42,7 +42,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const draft = useConkerStore(state => state.drafts[session.id] || "")
   const setDraft = useConkerStore(state => state.setDraft)
   const pending = useConkerStore(state => state.pending)
-  const { send, stop, setNextModel, setReply } = useConversationWorkspace()
+  const { send, stop, setNextModel, setReply, openRail } = useConversationWorkspace()
   const stream = useConversationWorkspace(state => state.streams[session.id])
   const nextModel = useConversationWorkspace(state => state.nextModels[session.id])
   const replyId = useConversationWorkspace(state => state.replies[session.id])
@@ -126,7 +126,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
       </div>}
     </form>
     <div className="mt-2 flex min-w-0 items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
-      <p className="min-w-0 truncate" title={voice.active ? "Your browser’s speech service may process audio online. Conker does not save recordings." : `${model?.name || "No model selected"} · ${provider?.name || "No provider"} · AI replies are a fixture preview.`}>{voice.active ? "Browser transcription · Review before sending" : `${provider?.name || "No provider"} · Cost not metered · Preview`}</p>
+      {voice.active ? <p className="min-w-0 truncate" title="Your browser’s speech service may process audio online. Conker does not save recordings.">Browser transcription · Review before sending</p> : <button type="button" className="min-h-8 min-w-0 truncate rounded-md text-left underline decoration-border underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" aria-label="View conversation usage and cost" onClick={() => openRail(session.id, "usage")} title="Conversation usage and cost">{provider?.name || "No provider"} · Cost not metered · Preview</button>}
       {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : "Enter to send · Shift + Enter for a new line"}</span>}
     </div>
     {voice.error && <div role="alert" className="mt-2 flex items-start gap-2 px-1"><p className="flex-1 text-xs leading-5 text-muted-foreground">{voice.error}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Dismiss voice typing notice" onClick={voice.clearError}><X /></Button></div>}

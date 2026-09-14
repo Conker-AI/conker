@@ -6,7 +6,7 @@ import { Conversation } from "@/app/chat/conversation"
 import { CompanionCheckIn } from "./check-in"
 import { DailyNews } from "@/components/daily-news"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { ReferenceSection } from "@/components/reference-section"
 import { CollectionEmpty } from "@/components/design-system"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { getDailyOverview } from "@/lib/daily-overview"
@@ -14,20 +14,18 @@ import { getDailyOverview } from "@/lib/daily-overview"
 function DailyContext() {
   const data = useConker(data => data)
   const { briefing, agenda, pendingTickets } = getDailyOverview(data)
-  return <div className="space-y-6">
-    <section aria-label="Upcoming events" className="space-y-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold"><CalendarDays className="size-4 text-muted-foreground" />Coming up</h2>
+  return <div className="space-y-5">
+    <ReferenceSection title="Coming up" icon={<CalendarDays />}>
       <ul className="divide-y divide-border/60">{agenda.map(item => <li key={item.day} className="flex gap-3 py-3 first:pt-0">
         <span className="w-12 shrink-0 text-xs leading-5 text-muted-foreground">{item.day}{item.date && <span className="block text-lg font-medium text-foreground">{item.date}</span>}</span>
         <div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p></div>
       </li>)}</ul>
       <p className="text-xs leading-5 text-muted-foreground">{briefing.mode === "sample" ? "From the sample plan. Suggested blocks are not booked events." : "From your latest briefing."}</p>
-    </section>
-    <section className="space-y-3 border-t pt-5" aria-label="Requests needing your decision">
-      <div className="flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-semibold"><Inbox className="size-4 text-muted-foreground" />Your decisions</h2><Badge variant="outline">{pendingTickets.length}</Badge></div>
+    </ReferenceSection>
+    <ReferenceSection title={`Your decisions · ${pendingTickets.length}`} icon={<Inbox />}>
       {pendingTickets.length ? <ul className="space-y-1">{pendingTickets.slice(0, 3).map(ticket => <li key={ticket.id}><Link to={`/inbox/${ticket.id}`} className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"><span className="min-w-0">{ticket.request}</span><ArrowRight className="size-4 shrink-0 text-muted-foreground" /></Link></li>)}</ul> : <p className="text-sm text-muted-foreground">Nothing waiting on you.</p>}
-    </section>
-    <section className="space-y-4 border-t pt-5" aria-label="News and breakthroughs"><h2 className="flex items-center gap-2 text-sm font-semibold"><Newspaper className="size-4 text-muted-foreground" />News & breakthroughs</h2><DailyNews news={briefing.news} compact /></section>
+    </ReferenceSection>
+    <ReferenceSection title="News & breakthroughs" icon={<Newspaper />}><DailyNews news={briefing.news} compact /></ReferenceSection>
   </div>
 }
 

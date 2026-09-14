@@ -3,7 +3,7 @@ import { conkerClient } from "@/lib/api"
 import { useConkerStore } from "@/lib/api/store"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 
-export type RailView = "overview" | "forks" | "source" | "explain"
+export type RailView = "overview" | "forks" | "source" | "explain" | "usage" | "privacy" | "daily"
 type Rail = { open: boolean; view: RailView; messageId?: string }
 type Stream = { text: string; modelId: string; phase: "thinking" | "streaming" }
 type Workspace = {
