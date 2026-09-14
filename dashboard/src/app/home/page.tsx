@@ -64,7 +64,7 @@ export default function HomePage() {
             <p className="mt-3 text-xs leading-5 text-muted-foreground">{sample ? "Sample plan and activity" : "Local schedule"} · {briefing.timezone}</p>
           </CardContent>
           <CardContent className="border-t pt-4">
-            <CollectionSection title="Coming up">
+            <CollectionSection title="Coming up" contained>
               {agenda.map((item, index) => (
                 <CollectionRow
                   key={`${item.day}-${index}`}

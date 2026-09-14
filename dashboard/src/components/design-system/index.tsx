@@ -41,7 +41,7 @@ export function PageTabsContent({ className, ...props }: ComponentProps<typeof T
 export function CollectionSearch({ label, ...props }: Omit<ComponentProps<typeof Input>, "className" | "type" | "aria-label"> & { label: string }) {
   return <div data-slot="collection-search" className="relative w-full min-w-0">
     <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-    <Input {...props} type="search" aria-label={label} autoComplete="off" className="h-(--collection-search-height) rounded-xl bg-muted/20 pr-4 pl-11 shadow-none" />
+    <Input {...props} type="search" aria-label={label} autoComplete="off" className="h-(--collection-search-height) rounded-xl bg-surface-raised pr-4 pl-11 shadow-xs" />
   </div>
 }
 
@@ -57,7 +57,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
   const id = useId()
   return <li>
     <Link data-slot="collection-row" to={to} aria-labelledby={id} aria-describedby={`${id}-preview${trailing ? ` ${id}-meta` : ""}`}
-      className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
+      className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
       {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
         <h3 id={id} className="truncate text-sm leading-5 font-medium" title={title}>{title}</h3>
@@ -68,11 +68,11 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
   </li>
 }
 
-export function CollectionSection({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+export function CollectionSection({ title, icon, children, contained = false }: { title: string; icon?: ReactNode; children: ReactNode; contained?: boolean }) {
   const id = useId()
   return <section aria-labelledby={id} data-slot="collection-section">
-    <h2 id={id} className="mb-1 flex items-center gap-2 px-3 text-xs font-medium text-muted-foreground sm:px-4">{icon}{title}</h2>
-    <ul className="divide-y divide-border/50">{children}</ul>
+    <h2 id={id} className="mb-2 flex items-center gap-2 px-3 text-xs font-medium text-muted-foreground sm:px-4">{icon}{title}</h2>
+    <ul className={cn("divide-y divide-border/50", !contained && "rounded-xl border bg-card text-card-foreground shadow-xs")}>{children}</ul>
   </section>
 }
 

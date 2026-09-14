@@ -3,7 +3,7 @@ import type { Thread } from "@/lib/api/client"
 
 export function ToolActivity({ activity }: { activity: NonNullable<Thread["tool"]> }) {
   return (
-    <details className="group min-w-0 rounded-lg border px-3 text-muted-foreground">
+    <details className="group min-w-0 rounded-lg border bg-surface-inset px-3 text-muted-foreground">
       <summary className="flex min-h-10 w-fit max-w-full cursor-pointer list-none items-center gap-2 rounded-md py-1 text-xs focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
         <Wrench className="size-3.5 shrink-0" />
         <span className="min-w-0 leading-5">{activity.summary}</span>

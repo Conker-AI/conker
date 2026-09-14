@@ -1,5 +1,10 @@
-/* Conker application density. Color and radius remain owned by the theme. */
+/* Conker density and surface roles, derived from the owner's active theme. */
 :root {
+  --surface-canvas: color-mix(in oklab, var(--background) 97%, var(--foreground));
+  --surface-panel: var(--card);
+  --surface-raised: var(--popover);
+  --surface-chrome: color-mix(in oklab, var(--card) 60%, var(--background));
+  --surface-inset: color-mix(in oklab, var(--muted) 70%, var(--background));
   --control-height: 2.5rem;
   --control-height-sm: 2rem;
   --control-height-lg: 2.75rem;
@@ -11,6 +16,13 @@
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));
   --scrollbar-thumb-active: var(--primary);
+}
+
+.dark {
+  --surface-canvas: var(--background);
+  --surface-panel: color-mix(in oklab, var(--card) 94%, var(--card-foreground));
+  --surface-raised: color-mix(in oklab, var(--popover) 88%, var(--popover-foreground));
+  --surface-inset: color-mix(in oklab, var(--background) 60%, var(--muted));
 }
 
 /* Keep native scrolling and Radix scroll areas visually consistent. */
@@ -72,6 +84,6 @@
 /* Conversation surfaces need stronger separation without replacing theme colors. */
 .conversation-contrast {
   --muted-foreground: color-mix(in oklab, var(--foreground) 78%, var(--background));
-  --border: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  --border: color-mix(in oklab, var(--foreground) 18%, var(--background));
   --input: color-mix(in oklab, var(--foreground) 35%, var(--background));
 }

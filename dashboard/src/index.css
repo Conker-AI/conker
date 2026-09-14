@@ -10,11 +10,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
+  --color-background: var(--surface-canvas);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
+  --color-card: var(--surface-panel);
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-popover: var(--surface-raised);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-chrome: var(--surface-chrome);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -59,7 +62,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.53 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -160,9 +163,12 @@ html {
 
 /* A terminal keeps its own readable neutral tokens in every theme. */
 .terminal-surface {
-  --background: #0a0a0a;
+  --surface-panel: #202224;
+  --surface-inset: #08090a;
+  --surface-raised: #2c2e30;
+  --card-foreground: #fafafa;
   --foreground: #fafafa;
-  --muted-foreground: #a1a1a1;
+  --muted-foreground: #adafb3;
   --border: rgba(255, 255, 255, 0.14);
 }
 @keyframes terminal-blink { 50% { opacity: 0; } }

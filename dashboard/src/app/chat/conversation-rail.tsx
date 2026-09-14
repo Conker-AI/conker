@@ -62,9 +62,9 @@ export function ConversationRail({ session, children }: { session: Session; chil
   const rail = useConversationWorkspace(state => state.rails[session.id])
   const close = useConversationWorkspace(state => state.closeRail)
   const wide = useWideRail()
-  if (wide) return rail?.open ? <aside id="conversation-reference" data-home="reference" aria-label="Conversation details" className="w-80 shrink-0 overflow-y-auto border-l">
-    <div className="sticky top-0 z-10 mb-4 flex h-14 items-center justify-between border-b bg-background px-4"><h2 className="text-sm font-semibold">Conversation details</h2><Button variant="ghost" size="icon" className="size-8" onClick={() => close(session.id)} aria-label="Close conversation details"><X /></Button></div>
+  if (wide) return rail?.open ? <aside id="conversation-reference" data-home="reference" aria-label="Conversation details" className="w-80 shrink-0 overflow-y-auto border-l bg-surface-chrome">
+    <div className="sticky top-0 z-10 mb-4 flex h-14 items-center justify-between border-b bg-surface-chrome px-4"><h2 className="text-sm font-semibold">Conversation details</h2><Button variant="ghost" size="icon" className="size-8" onClick={() => close(session.id)} aria-label="Close conversation details"><X /></Button></div>
     <RailContent session={session}>{children}</RailContent>
   </aside> : null
-  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" className="w-full gap-0 overflow-y-auto sm:max-w-sm"><SheetHeader className="mb-4 border-b pr-12"><SheetTitle className="text-sm">Conversation details</SheetTitle><SheetDescription className="text-xs">Reference for this conversation · fixture preview</SheetDescription></SheetHeader><RailContent session={session}>{children}</RailContent></SheetContent></Sheet>
+  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" className="w-full gap-0 overflow-y-auto bg-surface-chrome sm:max-w-sm"><SheetHeader className="mb-4 border-b pr-12"><SheetTitle className="text-sm">Conversation details</SheetTitle><SheetDescription className="text-xs">Reference for this conversation · fixture preview</SheetDescription></SheetHeader><RailContent session={session}>{children}</RailContent></SheetContent></Sheet>
 }

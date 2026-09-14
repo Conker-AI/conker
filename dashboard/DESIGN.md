@@ -73,7 +73,19 @@ Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `sr
 
 Use semantic utilities: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary`, `text-warning`, `text-destructive` and their established foreground pairs. Quiet fills and thin borders define surfaces. Use accent/status color for meaning.
 
-Conversation surfaces use the shared `conversation-contrast` variant in `src/styles/design-system.css`. It derives secondary text (78% foreground), outlines (24%), and input outlines (35%) from the active theme's foreground/background. The composer uses a stronger muted surface and 12px secondary text. Apply this role to conversation appbars, threads, and portaled controls rather than inventing separate palettes. Theme colors and custom radius remain editable.
+Surface depth is shared, not route-specific. `src/styles/design-system.css` derives these roles from the active theme; `src/index.css` maps the existing background/card/popover utilities to them:
+
+| Role | Utility | Purpose |
+| --- | --- | --- |
+| Canvas | `bg-background` | Near-black workspace in dark mode; gently toned ground beneath white panels in light mode |
+| Panel | `bg-card` | Cards, collection groups, user messages, plans and review requests; visibly lifted graphite in dark mode |
+| Raised | `bg-surface-raised`, `bg-popover` | Composer, search, outline actions and floating menus; the strongest neutral fill |
+| Chrome | `bg-surface-chrome` | Appbar and reference rail; supporting navigation recedes from content |
+| Inset | `bg-surface-inset` | Fields, table headings and recorded tool details; quiet wells within the workspace |
+
+Retain 1px outlines, compact spacing and subtle `shadow-xs` on panel primitives. Use fills to distinguish roles instead of increasing every border's contrast or adding colored boxes. Collection groups own one filled container, not individual cards per row; use `CollectionSection contained` when an existing card already supplies that container (Home's agenda). Green still indicates action/selection; warning and destructive colors retain their meanings. Derived surfaces follow presets, imported colors and the owner's customizer without overwriting source theme variables.
+
+Conversation surfaces use the shared `conversation-contrast` variant in `src/styles/design-system.css`. It derives secondary text (78% foreground), outlines (18%), and input outlines (35%) from the active theme's foreground/background. The raised composer and 12px secondary text stay legible without making every tool detail equally prominent. Apply this role to conversation appbars, threads, and portaled controls rather than inventing separate palettes. Theme colors and custom radius remain editable.
 
 Do not add independent gray/green/red palettes or literal colors to route classes. The theme editor owns preset colors, imported theme colors and radius. Shared design-system CSS must inherit those variables so switching theme applies across routes. Do not put an `!important` app-wide palette over ThemeRuntime or reset the owner's customizer settings.
 
@@ -89,7 +101,7 @@ Exceptions have a concrete UI role and narrow ownership. They do not permit an u
 - `src/lib/character-options.ts`: swatches represent artwork colors. Character Studio can use larger portrait previews while keeping shared fields and surfaces.
 - `src/config/theme-data.ts`, `src/config/theme-customizer-constants.ts`, `src/utils/tweakcn-theme-presets.ts`, `src/utils/shadcn-ui-theme-presets.ts`: theme definition/swatch files may contain actual color values. They must not become a place to hide route styling.
 - The customizer's nested controls can compose primitive tabs inside their own editor. Page-level navigation uses the shared appbar and URL-addressed `RouteSection` content. `PageTabs` remains available for local, non-routing tab interactions.
-- The terminal's neutral surface variables in `src/index.css` preserve terminal readability. They do not establish a separate general application palette.
+- The terminal's neutral surface variables in `src/index.css` preserve a black command area, graphite chrome and readable text in both themes. Its inset command area has an 8px frame; supporting connection information follows the terminal. These variables do not establish a separate general application palette.
 
 Dormant template demo routes are outside the guard until imported by the active route graph. Do not broaden exceptions just to make a new finding disappear; choose the shared component or document and narrowly implement a real new role.
 

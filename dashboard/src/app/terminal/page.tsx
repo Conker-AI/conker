@@ -19,23 +19,15 @@ export default function TerminalPage() {
       description="Your server, when you need to work directly."
     >
       <div className="flex min-w-0 flex-col gap-6">
-        <Alert>
-          <Shield />
-          <AlertTitle>A separate owner-authenticated shell</AlertTitle>
-          <AlertDescription>
-            SystemGate stays read-only. This terminal preview has no shell
-            connection and accepts no commands.
-          </AlertDescription>
-        </Alert>
-        <Card className="terminal-surface overflow-hidden">
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b">
-            <CardTitle className="flex min-w-0 items-center gap-2">
-              <Terminal className="size-4" />
+        <Card className="terminal-surface gap-0 overflow-hidden py-0">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 py-3">
+            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
+              <Terminal className="size-4 text-muted-foreground" />
               <span className="break-all">{terminal.prompt}</span>
             </CardTitle>
             <StatusBadge>Offline</StatusBadge>
           </CardHeader>
-          <CardContent className="min-h-64 break-words font-mono text-xs leading-7 sm:text-sm">
+          <CardContent className="mx-2 mb-2 min-h-64 rounded-lg border bg-surface-inset p-4 font-mono text-xs leading-7 break-words sm:text-sm">
             <p className="text-muted-foreground">Conker · owner shell</p>
             <p className="text-muted-foreground">
               No authenticated terminal session.
@@ -50,6 +42,14 @@ export default function TerminalPage() {
             </p>
           </CardContent>
         </Card>
+        <Alert className="bg-surface-chrome">
+          <Shield />
+          <AlertTitle>A separate owner-authenticated shell</AlertTitle>
+          <AlertDescription>
+            SystemGate stays read-only. This terminal preview has no shell
+            connection and accepts no commands.
+          </AlertDescription>
+        </Alert>
         <Card>
           <CardHeader>
             <CardTitle className="flex min-w-0 items-center gap-2">

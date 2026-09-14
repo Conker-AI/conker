@@ -125,9 +125,9 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Structured data shares collection density and retains table semantics. */}
-      <div className="min-w-0 rounded-lg border">
+      <div className="min-w-0 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-xs">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-surface-inset">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (

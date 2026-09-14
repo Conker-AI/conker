@@ -8,18 +8,18 @@ This records the product direction behind the implemented shadcn/React dashboard
 ## The one-line brief
 
 **A serious, professional tool that reads like shadcn "New York": near-black, tight, defined by thin
-outlines — clean and never wasteful — with room for a few genuinely beautiful, animated AI moments
+outlines and distinct tonal surfaces — clean and never wasteful — with room for a few genuinely beautiful, animated AI moments
 on top.** The reference the owner pointed to is **[libraries.dev](https://libraries.dev/#components)**
 (dark, outlined, with animated AI components) and **shadcn/ui New York** style.
 
 ## Principles
 
-1. **Outlines are the backbone.** The thin border is what makes it feel professional. Define
-   surfaces with a **1px outline** — `border: white @ ~10% alpha` on a near-black ground — not with
-   heavy fills or drop shadows. Cards, list containers, inputs, segmented controls, badges: all
-   outlined. This is the shadcn New York look (1px, no offset, less rounding, less padding), the
-   OpenAI/Vercel register. Outlines also let you drop in beautiful things (animated borders, thinking
-   orbs) without losing the serious-tool feel.
+1. **Depth makes hierarchy readable.** Keep **1px outlines** on a near-black ground, with
+   distinct graphite panels, brighter active work surfaces, and quieter inset details. The owner's
+   September 14 refinement replaces outline-only separation with shared tonal depth and subtle
+   shadows. Light mode uses a softly toned canvas beneath white panels. Cards, collections, fields
+   and menus inherit the documented surface roles in dashboard/DESIGN.md; avoid independent page
+   palettes, heavy shadows or decorative colored boxes. Preserve the compact shadcn New York feel.
 2. **Never wasteful.** Every screen earns its space. No boxes-in-boxes, no giant empty margins, no
    spacing for its own sake. If a screen feels roomy without a reason, it's wrong.
 3. **Productive vs beautiful — decide per screen.** Some screens exist to *do a job fast*; some exist
