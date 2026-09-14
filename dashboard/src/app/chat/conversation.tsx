@@ -22,7 +22,6 @@ function Scenario({ session, messageId }: { session: Session; messageId: string 
   const mutate = useConkerStore(state => state.mutate)
   const streaming = useConversationWorkspace(state => state.streams[session.id])
   const retry = useConversationWorkspace(state => state.retry)
-  const openRail = useConversationWorkspace(state => state.openRail)
   const thread = data.threads[session.id]
   const planning = session.mode === "plan"
   const ticket = data.tickets.find(item => item.id === (planning ? "coach" : session.mode === "reading" ? "cleanup" : ""))
@@ -37,7 +36,6 @@ function Scenario({ session, messageId }: { session: Session; messageId: string 
     }}>{replyRequested ? "Reply requested" : "Ask only for the reply"}</Button></div></Alert>}
     {planning && <section aria-label="Suggested plan" className="rounded-lg border bg-card p-4"><h2 className="mb-2 flex items-center gap-2 text-sm font-medium"><CalendarDays className="size-4 text-muted-foreground" />Your week</h2><div className="divide-y divide-border/60">{data.plan.map(line => <div key={line.day} className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-3 py-3"><div><p className="text-xs text-muted-foreground">{line.day}</p>{line.date && <p className="text-lg font-medium tabular-nums">{line.date}</p>}</div><div><p className="text-sm font-medium">{line.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{line.detail}</p></div></div>)}</div><p className="mt-2 text-xs text-muted-foreground">A suggested plan. Your calendar hasn’t changed.</p></section>}
     {ticket && <ApprovalRequest ticket={ticket} />}
-    {!!thread.sources?.length && <div aria-label="Citations" className="flex flex-wrap gap-2">{thread.sources.map((source, index) => <Button key={source.id} variant="outline" size="sm" className="h-7 px-2 text-xs" title={source.text} onClick={() => openRail(session.id, "source", source.id)}>[{index + 1}] Saved request</Button>)}</div>}
   </div>
 }
 
