@@ -1,6 +1,7 @@
-import { Link, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import { Fragment, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
-import { ArrowRight, ArrowUpRight, CalendarDays, LoaderCircle, TriangleAlert } from "lucide-react"
+import { ArrowRight, CalendarDays, LoaderCircle, TriangleAlert } from "lucide-react"
+import { ApprovalRequest } from "@/components/approval-request"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ToolActivity } from "@/components/tool-activity"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
@@ -35,7 +36,7 @@ function Scenario({ session, messageId }: { session: Session; messageId: string 
       if (replyModelId && await retry(session.id, messageId, replyModelId)) await mutate(() => conkerClient.requestReply(session.id))
     }}>{replyRequested ? "Reply requested" : "Ask only for the reply"}</Button></div></Alert>}
     {planning && <section aria-label="Suggested plan" className="rounded-lg border p-4"><h2 className="mb-2 flex items-center gap-2 text-sm font-medium"><CalendarDays className="size-4 text-muted-foreground" />Your week</h2><div className="divide-y divide-border/60">{data.plan.map(line => <div key={line.day} className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-3 py-3"><div><p className="text-xs text-muted-foreground">{line.day}</p>{line.date && <p className="text-lg font-medium tabular-nums">{line.date}</p>}</div><div><p className="text-sm font-medium">{line.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{line.detail}</p></div></div>)}</div><p className="mt-2 text-xs text-muted-foreground">A suggested plan. Your calendar hasn’t changed.</p></section>}
-    {ticket && <Alert variant={ticket.status === "Needs you" ? "warning" : "default"}><TriangleAlert /><AlertTitle>{ticket.status === "Needs you" ? "Waiting for your decision" : "Request reviewed"}</AlertTitle><AlertDescription>{ticket.request} · {ticket.status}. No external action is performed by this preview.</AlertDescription><div className="col-start-2 mt-3"><Button variant="outline" size="sm" asChild><Link to={`/inbox/${ticket.id}`}>Review in Inbox<ArrowUpRight /></Link></Button></div></Alert>}
+    {ticket && <ApprovalRequest ticket={ticket} />}
     {!!thread.sources?.length && <div aria-label="Citations" className="flex flex-wrap gap-2">{thread.sources.map((source, index) => <Button key={source.id} variant="outline" size="sm" className="h-7 px-2 text-xs" title={source.text} onClick={() => openRail(session.id, "source", source.id)}>[{index + 1}] Saved request</Button>)}</div>}
   </div>
 }

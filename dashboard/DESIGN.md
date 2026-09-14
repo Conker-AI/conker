@@ -167,6 +167,8 @@ The reference rail is collapsed by default. It owns model/usage detail, grants/a
 
 The thread retains recorded tool status/arguments, plan/summary cards, blocked requests linking to Inbox, acted-no-reply cards with reply-only recovery, and citations. User messages align right; companion messages align left; the thread and composer use the shared page gutters. No provider credentials enter thread or rail metadata.
 
+Inline approval requests use `ApprovalRequest`: a compact, neutral outlined link with the requested action, service icon, approval status, and Review request / View decision affordance. It uses the existing muted surface and theme border, not a warning-colored Alert. The full row opens its exact Inbox request; making a decision remains in Inbox with the full arguments and risk information. Titles wrap, the action moves below on narrow screens, and reviewed requests show their actual outcome. Reserve warning alerts for conditions that need warning treatment, not routine approval navigation.
+
 ## Voice typing
 
 `ConversationComposer` is shared by Companion and agent conversations. Keep dictation inside this same docked surface: microphone → listening → **Use text** → editable draft. While listening, live text sits above a microphone-level waveform, with a quiet status/timer and Cancel / Use text controls below. Confirmed words use foreground text; interim words use muted text. The waveform displays actual audio levels, arriving in the center and moving outward, with semantic accent color and reduced-motion support. Do not add a recording modal or a second conversation toolbar.
