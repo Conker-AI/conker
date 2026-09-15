@@ -32,6 +32,10 @@ const paletteNames = "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime
 const colorUtility = "(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|outline|fill|stroke|decoration|shadow|from|via|to|divide|accent|caret|placeholder)"
 const paletteClass = new RegExp(`(?:^|:)!?${colorUtility}-(?:(?:${paletteNames})-(?:50|[1-9]00|950)|white|black)(?:/[^\\s]+)?$`)
 const literalColorClass = new RegExp(`(?:^|:)!?${colorUtility}-\\[(?:#|rgba?\\(|hsla?\\(|oklch\\(|oklab\\()[^\\]]+\\](?:/[^\\s]+)?$`)
+// Neutral roles have one tone. Opacity belongs to named state tokens, not consumers.
+const neutralAlphaClass = /(?:^|:)!?(?:bg-(?:background|card|popover|muted|secondary|accent|surface-[\w-]+)|text-(?:foreground|muted-foreground)|(?:border|divide)-border)\/[^\s]+$/
+const tintAlphaClass = /(?:^|:)!?(?:bg-(?:primary|success|warning)|border-(?:success|warning))\/[^\s]+$/
+const obsoleteToneClass = /(?:^|:)(?:conversation-contrast|bg-surface-raised)$/
 
 function sourceFile(file, source) {
   return ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
@@ -73,7 +77,6 @@ function reachableFiles(read, exists, entry = "src/config/routes.tsx") {
 }
 
 function inspect(file, tree) {
-  if (isFoundation(file)) return []
   const findings = []
   const inputs = new Set(["input", "Input"])
   const report = (node, rule, message) => {
@@ -95,7 +98,7 @@ function inspect(file, tree) {
     }
   }
   const visit = node => {
-    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+    if (!isFoundation(file) && (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))) {
       const tag = node.tagName.getText(tree)
       if (tag === "h1" && !headingExceptions.has(file) && !isDesignSystem(file)) {
         report(node, "page-heading", "Use BaseLayout title/description or PageHeader for a standard page heading.")
@@ -115,7 +118,11 @@ function inspect(file, tree) {
     }
     if (!paletteExceptions.has(file) && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
       || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node))) {
-      const colors = node.text.split(/\s+/).filter(token => paletteClass.test(token) || literalColorClass.test(token))
+      const tokens = node.text.split(/\s+/)
+      const tones = tokens.filter(token => neutralAlphaClass.test(token) || obsoleteToneClass.test(token)
+        || file !== "src/components/companion-portrait.tsx" && tintAlphaClass.test(token))
+      if (tones.length) report(node, "semantic-tone", `Replace ${[...new Set(tones)].join(", ")} with a named surface, interaction or text role. See DESIGN.md.`)
+      const colors = isFoundation(file) ? [] : tokens.filter(token => paletteClass.test(token) || literalColorClass.test(token))
       if (colors.length) report(node, "semantic-color", `Replace ${[...new Set(colors)].join(", ")} with semantic theme colors (primary, muted, warning, destructive, etc.).`)
     }
     ts.forEachChild(node, visit)
@@ -134,7 +141,19 @@ function selfTest() {
   test("DataTable searchPlaceholder bypass is rejected", () => assert.equal(check('const Toolbar = () => <Input placeholder={searchPlaceholder} />', "src/components/data-table.tsx")[0]?.rule, "collection-search"))
   test("native search and conditional labels are rejected", () => assert.equal(check('const Page = () => <input aria-label={active ? "Search requests" : "Search history"} />')[0]?.rule, "collection-search"))
   test("palette and literal-color classes are rejected", () => assert.equal(check('const Page = () => <div className="dark:text-red-400 hover:bg-[#123456]" />')[0]?.rule, "semantic-color"))
-  test("shared patterns and semantic colors pass", () => assert.deepEqual(check('import { PageHeader, CollectionSearch } from "@/components/design-system"; const Page = () => <div className="bg-muted/20 text-foreground"><PageHeader title="Inbox" /><CollectionSearch value={query} /></div>'), []))
+  test("shared patterns and semantic colors pass", () => assert.deepEqual(check('import { PageHeader, CollectionSearch } from "@/components/design-system"; const Page = () => <div className="bg-surface-inset text-foreground"><PageHeader title="Inbox" /><CollectionSearch value={query} /></div>'), []))
+  test("ad hoc neutral tones are rejected in routes and foundations", () => {
+    for (const file of ["src/app/chat/page.tsx", "src/components/ui/button.tsx"]) {
+      for (const token of ["bg-muted/40", "dark:hover:bg-accent/50", "text-foreground/70", "divide-border/50", "border-border/60", "bg-primary/5", "bg-warning/10", "conversation-contrast", "hover:bg-surface-raised"]) {
+        assert.equal(check(`const tone = "${token}"`, file)[0]?.rule, "semantic-tone")
+      }
+    }
+  })
+  test("named states pass; portrait artwork exception stays narrow", () => {
+    assert.deepEqual(check('const tone = "bg-selection hover:bg-primary-hover bg-success-subtle border-success-border text-success bg-popover"'), [])
+    assert.deepEqual(check('const tone = "bg-primary/15"', "src/components/companion-portrait.tsx"), [])
+    assert.equal(check('const tone = "bg-muted/40"', "src/components/companion-portrait.tsx")[0]?.rule, "semantic-tone")
+  })
   test("ordinary fields and arbitrary dimensions remain allowed", () => assert.deepEqual(check('const Page = () => <Input placeholder="Agent name" className="text-[15px] w-[12rem]" />'), []))
   test("conversation/auth/error headings are intentional", () => {
     for (const file of headingExceptions.keys()) assert.deepEqual(check('const Page = () => <h1>Title</h1>', file), [])
