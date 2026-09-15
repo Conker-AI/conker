@@ -16,7 +16,7 @@ function DailyContext() {
   const { briefing, agenda, pendingTickets } = getDailyOverview(data)
   return <div className="space-y-5">
     <ReferenceSection title="Coming up" icon={<CalendarDays />}>
-      <ul className="divide-y divide-border/60">{agenda.map(item => <li key={item.day} className="flex gap-3 py-3 first:pt-0">
+      <ul className="divide-y divide-border">{agenda.map(item => <li key={item.day} className="flex gap-3 py-3 first:pt-0">
         <span className="w-12 shrink-0 text-xs leading-5 text-muted-foreground">{item.day}{item.date && <span className="block text-lg font-medium text-foreground">{item.date}</span>}</span>
         <div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p></div>
       </li>)}</ul>

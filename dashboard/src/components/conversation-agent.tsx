@@ -24,7 +24,7 @@ export function ConversationAgent({ session }: { session: Session }) {
 
   return <Dialog open={open} onOpenChange={value => { setOpen(value); if (value) { setSelected(current?.id || ""); setError("") } }}>
     <DialogTrigger asChild><Button variant="ghost" size="icon" className="size-8 shrink-0 p-0" aria-label={`Choose agent: ${displayName}`} title={`Chatting with ${displayName} · Choose agent`}><AgentIdentityPortrait name={session.agent} /></Button></DialogTrigger>
-    <DialogContent className="conversation-contrast sm:max-w-md">
+    <DialogContent className="sm:max-w-md">
       <DialogHeader><DialogTitle>{hasMessages ? "Hand off this chat" : "Who would you like to talk to?"}</DialogTitle><DialogDescription>{hasMessages ? "The next agent receives this chat’s history. Earlier replies keep their original author, and your Incognito settings stay in place." : "Choose an agent for this topic. You can hand the conversation over later."}</DialogDescription></DialogHeader>
       <RadioGroup value={selected} onValueChange={setSelected} disabled={busy} aria-label="Conversation agent" className="gap-2">
         {data.agents.map(agent => <Label key={agent.id} htmlFor={`agent-${agent.id}`} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">

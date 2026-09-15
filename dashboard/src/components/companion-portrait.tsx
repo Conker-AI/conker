@@ -18,7 +18,7 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
         role="img"
         aria-label={`${name} ${emotion} portrait`}
         className={cn(
-          "border-border bg-muted/40 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border",
+          "border-border bg-surface-inset flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border",
           className,
         )}
       >

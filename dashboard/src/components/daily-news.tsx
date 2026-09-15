@@ -13,7 +13,7 @@ export function DailyNews({ news, compact = false }: { news: DailyBriefing["news
   </div>
   if (!news.items.length) return <p className="text-sm leading-6 text-muted-foreground">No stories in this briefing. Check back when the next update arrives.</p>
   return <div className="space-y-3">
-    <ul className="divide-y divide-border/60">
+    <ul className="divide-y divide-border">
       {news.items.slice(0, compact ? 3 : 5).map(item => {
         let url: URL
         try { url = new URL(item.url) } catch { return null }

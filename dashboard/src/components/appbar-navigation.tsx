@@ -51,7 +51,7 @@ export function AppbarSections({ sections, activeSection }: Pick<Navigation, "se
       {sections.map(section => <Link key={section.value} to={section.to}
         ref={activeSection === section.value ? activeLink : undefined}
         aria-current={activeSection === section.value ? "page" : undefined}
-        className={cn("inline-flex h-(--control-height) shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", activeSection === section.value ? "bg-muted text-foreground" : "text-muted-foreground")}>
+        className={cn("inline-flex h-(--control-height) shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", activeSection === section.value ? "bg-selection text-primary" : "text-muted-foreground")}>
         {section.label}{section.badge !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{section.badge}</span>}
       </Link>)}
     </div>

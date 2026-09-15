@@ -32,25 +32,11 @@ on top.** The reference the owner pointed to is **[libraries.dev](https://librar
    - **Combined**: the conversation (productive thread + a beautiful companion presence).
 4. **Calm, not busy.** Restraint. One accent, used sparingly. Quiet by default.
 
-## Tokens (dark, shadcn-derived)
+## Color and component authority
 
-| Token | Value | Use |
-|---|---|---|
-| Ground | `#0A0A0A` | app background (shadcn `oklch(0.145 0 0)`) |
-| Sidebar | `#0C0C0C` | sidebar surface, separated by an outline not a fill jump |
-| Surface | `#171717` | filled inputs, active nav, bubbles, segmented track |
-| Elevated | `#212121` | active segment, badges |
-| **Border** | **`rgba(255,255,255,0.10)`** | **the outline — the defining element** |
-| Foreground | `#FAFAFA` | primary text/icons |
-| Muted | `#A1A1A1` | secondary text (shadcn `muted-foreground oklch(0.708)`) |
-| Faint | `#6E6E6E` | tertiary text, meta, placeholders |
-| Accent | `#7DD8A0` | the one accent (calm green) — active nav, Live pill, send button only |
-| Accent surface | `#14231A` | green-tinted chip background |
-| Amber / Amber surface | `#E6B15E` / `#241E12` | degraded status |
+The September 15 consistency pass replaces the earlier approximate hex palette and faint-text tier with [role-based color rules](color-system.md). Use [dashboard/DESIGN.md](../dashboard/DESIGN.md) for exact token, typography, density, radius and component contracts. The palette and all derived surfaces follow the existing theme customizer.
 
-**Radius:** ~10px cards/inputs, ~8px segments, ~6px small pills (New York = less rounding).
-**Type:** Inter (placeholder; a more characterful face is welcome later). Tabular numbers for data.
-**Spacing:** tight. Nav rows ~9px vertical, list rows ~11px, card padding 14–18px.
+Near-black canvas, graphite panels, inset details and neutral floating surfaces provide depth. Green indicates action/selection; semantic success remains independent of the editable brand accent. Warning and destructive colors convey their actual states. Main and secondary text use one shared pair of roles across routes. Do not choose different opacity values for equivalent components.
 
 ## What "get shadcn" means for the build
 

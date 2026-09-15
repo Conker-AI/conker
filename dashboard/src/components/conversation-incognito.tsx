@@ -26,7 +26,7 @@ export function ConversationIncognito({ privacy, busy, onChange, onInspect }: {
         {active && <span aria-hidden="true" className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />}
       </Button>
     </DialogTrigger></TooltipTrigger><TooltipContent>Incognito · {mode}</TooltipContent></Tooltip>
-    <DialogContent className="conversation-contrast sm:max-w-sm" onCloseAutoFocus={event => {
+    <DialogContent className="sm:max-w-sm" onCloseAutoFocus={event => {
       if (inspect.current) { event.preventDefault(); inspect.current = false; onInspect() }
     }}>
       <DialogHeader className="text-left">

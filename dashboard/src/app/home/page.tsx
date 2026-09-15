@@ -93,7 +93,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               {pendingTickets.length ? (
-                <ul className="divide-y divide-border/50">
+                <ul className="divide-y divide-border">
                   {pendingTickets.slice(0, 3).map(ticket => (
                     <CollectionRow
                       key={ticket.id}
@@ -131,7 +131,7 @@ export default function HomePage() {
             <h2 id="home-activity-title" className="text-base leading-6 font-medium">Recent activity</h2>
             <Button variant="ghost" size="sm" asChild><Link to="/journal">View journal<ArrowUpRight aria-hidden="true" /></Link></Button>
           </div>
-          <ul className="divide-y divide-border/50">
+          <ul className="divide-y divide-border">
             {recentActivity.map(entry => (
               <CollectionRow
                 key={entry.id}

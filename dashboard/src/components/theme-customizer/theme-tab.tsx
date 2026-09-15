@@ -121,19 +121,19 @@ export function ThemeTab({
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.primary }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.secondary }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.accent }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.muted }}
                       />
                     </div>
@@ -178,19 +178,19 @@ export function ThemeTab({
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.primary }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.secondary }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.accent }}
                       />
                       <div
-                        className="w-3 h-3 rounded-full border border-border/20"
+                        className="w-3 h-3 rounded-full border border-border"
                         style={{ backgroundColor: theme.preset.styles.light.muted }}
                       />
                     </div>
@@ -218,7 +218,7 @@ export function ThemeTab({
               className={`relative cursor-pointer rounded-md p-3 border transition-colors ${
                 selectedRadius === option.value
                   ? "border-primary"
-                  : "border-border hover:border-border/60"
+                  : "border-border hover:border-input"
               }`}
               aria-label={`Radius ${option.name}`}
               aria-pressed={selectedRadius === option.value}
@@ -277,10 +277,10 @@ export function ThemeTab({
       {/* Accent & token colors Section */}
       <Accordion type="single" collapsible className="w-full border-b rounded-lg">
         <AccordionItem value="brand-colors" className="border border-border rounded-lg overflow-hidden">
-          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-surface-hover transition-colors">
             <Label className="text-sm font-medium cursor-pointer">Accent & token colors</Label>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t border-border bg-muted/20">
+          <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t border-border bg-surface-inset">
             {baseColors.map((color) => (
               <div key={color.cssVar} className="flex items-center justify-between">
                 <ColorPicker

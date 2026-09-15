@@ -55,8 +55,8 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.variant === variant.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-border/60"
+                  ? "border-primary bg-selection"
+                  : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarVariantSelect(variant.value as "sidebar" | "floating" | "inset")}
             >
@@ -68,7 +68,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                   <div 
                     className={`w-3 flex-shrink-0 bg-muted flex flex-col gap-0.5 p-1 ${
                       variant.value === "floating" ? "border-r m-1 rounded" :
-                      variant.value === "inset" ? "m-1 ms-0 rounded bg-muted/80" :
+                      variant.value === "inset" ? "m-1 ms-0 rounded bg-surface-inset" :
                       "border-r"
                     }`}
                   >
@@ -79,7 +79,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                     <div className="h-0.5 w-3/4 bg-foreground/30 rounded"></div>
                   </div>
                   {/* Main content area - larger and more prominent */}
-                  <div className={`flex-1 ${ variant.value === "inset" ? "bg-background ms-0" : "bg-background/50" } m-1 rounded-sm border-dashed border border-muted-foreground/20`}>
+                  <div className={`flex-1 ${ variant.value === "inset" ? "bg-background ms-0" : "bg-background" } m-1 rounded-sm border-dashed border border-muted-foreground/20`}>
                   </div>
                 </div>
               </div>
@@ -113,8 +113,8 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.collapsible === option.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-border/60"
+                  ? "border-primary bg-selection"
+                  : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarCollapsibleSelect(option.value as "offcanvas" | "icon" | "none")}
             >
@@ -125,7 +125,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                   {/* Sidebar representation based on collapsible mode */}
                   {option.value === "offcanvas" ? (
                     // Off-canvas: Show collapsed state with hamburger menu
-                    <div className="flex-1 bg-background/50 m-1 rounded-sm border-dashed border border-muted-foreground/20 flex items-center justify-start pl-2">
+                    <div className="flex-1 bg-background m-1 rounded-sm border-dashed border border-muted-foreground/20 flex items-center justify-start pl-2">
                       <div className="flex flex-col gap-0.5">
                         <div className="w-3 h-0.5 bg-foreground/60 rounded"></div>
                         <div className="w-3 h-0.5 bg-foreground/60 rounded"></div>
@@ -140,7 +140,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                         <div className="w-2 h-2 bg-foreground/40 rounded-sm"></div>
                         <div className="w-2 h-2 bg-foreground/30 rounded-sm"></div>
                       </div>
-                      <div className="flex-1 bg-background/50 m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
+                      <div className="flex-1 bg-background m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
                     </>
                   ) : (
                     // None: Always show full sidebar - more proportional
@@ -151,7 +151,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                         <div className="h-0.5 w-2/3 bg-foreground/40 rounded"></div>
                         <div className="h-0.5 w-3/4 bg-foreground/30 rounded"></div>
                       </div>
-                      <div className="flex-1 bg-background/50 m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
+                      <div className="flex-1 bg-background m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
                     </>
                   )}
                 </div>
@@ -185,8 +185,8 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.side === side.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-border/60"
+                  ? "border-primary bg-selection"
+                  : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarSideSelect(side.value as "left" | "right")}
             >
@@ -203,12 +203,12 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                         <div className="h-0.5 w-2/3 bg-foreground/40 rounded"></div>
                         <div className="h-0.5 w-3/4 bg-foreground/30 rounded"></div>
                       </div>
-                      <div className="flex-1 bg-background/50 m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
+                      <div className="flex-1 bg-background m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
                     </>
                   ) : (
                     // Right sidebar layout - more proportional
                     <>
-                      <div className="flex-1 bg-background/50 m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
+                      <div className="flex-1 bg-background m-1 rounded-sm border-dashed border border-muted-foreground/20"></div>
                       <div className="w-6 flex-shrink-0 bg-muted flex flex-col gap-0.5 p-1 border-l">
                         <div className="h-0.5 w-full bg-foreground/60 rounded"></div>
                         <div className="h-0.5 w-3/4 bg-foreground/50 rounded"></div>

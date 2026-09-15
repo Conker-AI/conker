@@ -31,7 +31,7 @@ export const columns: ColumnDef<Tool>[] = [
         variant="outline"
         className={cn(
           row.original.sensitivity === "Act outward" &&
-            "border-warning/30 bg-warning/10 text-warning"
+            "border-warning-border bg-warning-subtle text-warning"
         )}
       >
         {row.original.sensitivity}

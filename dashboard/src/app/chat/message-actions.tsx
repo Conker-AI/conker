@@ -71,7 +71,7 @@ export function MessageActions({ session, message }: { session: Session; message
       <ActionButton label={copied === "link" ? "Link copied" : "Share message"} disabled={message.redacted} onClick={() => void copy(`${location.origin}${session.id === mainId ? "/companion" : `/chat/${session.id}`}#${encodeURIComponent(message.id)}`, "link")}>{copied === "link" ? <Check /> : <Share2 />}</ActionButton>
     <DropdownMenu>
       <DropdownMenuTrigger asChild><ActionButton label="More message actions"><MoreHorizontal /></ActionButton></DropdownMenuTrigger>
-      <DropdownMenuContent align={assistant ? "start" : "end"} className="conversation-contrast w-56" onCloseAutoFocus={event => {
+      <DropdownMenuContent align={assistant ? "start" : "end"} className="w-56" onCloseAutoFocus={event => {
         if (focusComposer.current) { event.preventDefault(); focusComposer.current = false; document.getElementById("message-composer")?.focus() }
         if (focusReference.current) { event.preventDefault(); focusReference.current = false }
       }}>
@@ -82,7 +82,7 @@ export function MessageActions({ session, message }: { session: Session; message
             if (fork) navigate(`/chat/${fork.id}`)
           }
         }}><GitFork />Fork from here</DropdownMenuItem>
-        {assistant ? <DropdownMenuSub><DropdownMenuSubTrigger disabled={busy || message.redacted || !models.length}><RotateCcw />Retry with model</DropdownMenuSubTrigger><DropdownMenuSubContent className="conversation-contrast max-h-80 max-w-72 overflow-y-auto">{models.map(model => <DropdownMenuItem key={model.id} onSelect={() => void retry(session.id, message.id, model.id)}>{model.name}<span className="ml-auto text-xs text-muted-foreground">{model.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub> : <DropdownMenuItem disabled={message.redacted || !message.text || !speech.supported} onSelect={speak}><Volume2 />{speech.active ? "Stop reading" : "Read aloud"}</DropdownMenuItem>}
+        {assistant ? <DropdownMenuSub><DropdownMenuSubTrigger disabled={busy || message.redacted || !models.length}><RotateCcw />Retry with model</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 max-w-72 overflow-y-auto">{models.map(model => <DropdownMenuItem key={model.id} onSelect={() => void retry(session.id, message.id, model.id)}>{model.name}<span className="ml-auto text-xs text-muted-foreground">{model.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub> : <DropdownMenuItem disabled={message.redacted || !message.text || !speech.supported} onSelect={speak}><Volume2 />{speech.active ? "Stop reading" : "Read aloud"}</DropdownMenuItem>}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={busy || message.redacted} onSelect={() => void update({ pinned: !message.pinned })}><Pin />{message.pinned ? "Unpin message" : "Pin message"}</DropdownMenuItem>
         {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={edit}><Pencil />Edit message</DropdownMenuItem>}
@@ -97,7 +97,7 @@ export function MessageActions({ session, message }: { session: Session; message
       <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()}>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
       {message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}
     </div>
-    <Dialog open={dialog !== null} onOpenChange={open => { if (!open) setDialog(null) }}><DialogContent className="conversation-contrast">
+    <Dialog open={dialog !== null} onOpenChange={open => { if (!open) setDialog(null) }}><DialogContent className="">
       <DialogHeader><DialogTitle>{dialog === "edit" ? "Edit message" : "Redact this message?"}</DialogTitle><DialogDescription>{dialog === "edit" ? "Edits are marked in this preview. They do not regenerate the conversation or repeat tools." : "The text and its source are removed from this conversation. A redacted marker remains. Existing forks are separate copies."}</DialogDescription></DialogHeader>
       {dialog === "edit" ? <form className="space-y-4" onSubmit={async event => { event.preventDefault(); if (await update({ text })) setDialog(null) }}><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /><DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>Save message</Button></DialogFooter></form>
         : <DialogFooter><Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button><Button variant="destructive" disabled={busy} onClick={async () => { if (await update({ redacted: true })) setDialog(null) }}>Redact message</Button></DialogFooter>}

@@ -72,23 +72,27 @@ Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `sr
 
 ## Palette and theming
 
-Use semantic utilities: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary`, `text-warning`, `text-destructive` and their established foreground pairs. Quiet fills and thin borders define surfaces. Use accent/status color for meaning.
+**Choose by role, never by a convenient shade or opacity.** The researched rationale, complete state table and change procedure live in [color-system.md](../docs/color-system.md). These rules apply equally to chat, collections, settings and shared primitives.
 
-Surface depth is shared, not route-specific. `src/styles/design-system.css` derives these roles from the active theme; `src/index.css` maps the existing background/card/popover utilities to them:
-
-| Role | Utility | Purpose |
+| Role | Utility / pair | Use |
 | --- | --- | --- |
-| Canvas | `bg-background` | Near-black workspace in dark mode; gently toned ground beneath white panels in light mode |
-| Panel | `bg-card` | Cards, collection groups, user messages, plans and review requests; visibly lifted graphite in dark mode |
-| Raised | `bg-surface-raised`, `bg-popover` | Composer, search, outline actions and floating menus; the strongest neutral fill |
-| Chrome | `bg-surface-chrome` | Appbar and reference rail; supporting navigation recedes from content |
-| Inset | `bg-surface-inset` | Fields, table headings and recorded tool details; quiet wells within the workspace |
+| Canvas | `bg-background text-foreground` | Workspace and transcript ground |
+| Panel | `bg-card text-card-foreground` | Cards, collections, user messages, plans, approval requests and composer |
+| Chrome | `bg-surface-chrome text-sidebar-foreground` | Appbar and reference rail; shares the sidebar's source colors |
+| Inset | `bg-surface-inset` | Fields, search, recorded tool details, table/reference headings and neutral photo frames |
+| Overlay | `bg-popover text-popover-foreground` | Floating menus, tooltips, dialogs and default sheets |
+| Neutral interaction | `bg-surface-hover text-accent-foreground` | Hover and menu keyboard highlight; independent of elevation |
+| Selection | `bg-selection` with primary text/border | Current item, checked choice or selected row; sidebar uses its paired `sidebar-selection` role |
 
-Retain 1px outlines, compact spacing and subtle `shadow-xs` on panel primitives. Use fills to distinguish roles instead of increasing every border's contrast or adding colored boxes. Collection groups own one filled container, not individual cards per row; use `CollectionSection contained` when an existing card already supplies that container (Home's agenda). Green still indicates action/selection; warning and destructive colors retain their meanings. Derived surfaces follow presets, imported colors and the owner's customizer without overwriting source theme variables.
+Source theme values remain in `src/index.css`; shared derived recipes live in `src/styles/design-system.css`. Dark mode uses brighter neutral surfaces as elevation increases. Light mode uses a toned canvas, white panels and pale inset details. Retain 1px outlines, compact spacing and subtle panel shadows. Collection groups own one filled container; use `CollectionSection contained` inside an existing card.
 
-Conversation surfaces use the shared `conversation-contrast` variant in `src/styles/design-system.css`. It derives secondary text (78% foreground), outlines (18%), and input outlines (35%) from the active theme's foreground/background. The raised composer and 12px secondary text stay legible without making every tool detail equally prominent. Apply this role to conversation appbars, threads, and portaled controls rather than inventing separate palettes. Theme colors and custom radius remain editable.
+Use the appropriate foreground pair for body text and `text-muted-foreground` for all secondary text and placeholders. No route-specific text or border palette, no fainter metadata tier. Normal text must reach 4.5:1 in the default themes. `border-border` is the passive outline/divider; `border-input` is the stronger field boundary. Essential control boundaries and focus indicators must reach 3:1 against adjacent colors. Focus uses the solid ring token. User-imported palettes still require contrast review.
 
-Do not add independent gray/green/red palettes or literal colors to route classes. The theme editor owns preset colors, imported theme colors and radius. Shared design-system CSS must inherit those variables so switching theme applies across routes. Do not put an `!important` app-wide palette over ThemeRuntime or reset the owner's customizer settings.
+Green is the default action/selection accent, not an informational container fill. Ordinary outline buttons use `secondary`, ghost buttons start transparent, and both use the neutral hover role. Primary/destructive hovers use their named tokens. Live/healthy status uses `success`, which stays green when the brand preset changes. Warnings use `warning`; destructive actions use `destructive` with its foreground pair. Status tints and outlines are named `success-subtle` / `success-border` and `warning-subtle` / `warning-border`. Keep labels and non-color state cues.
+
+The build guard rejects ad hoc neutral opacity (including shared primitives), arbitrary primary/status tints, and the removed `conversation-contrast` and `bg-surface-raised` classes. The photo/artwork, theme-swatch and terminal exceptions below remain narrowly owned. Changing a role means changing the shared recipe and all matching consumers together.
+
+Preserve ThemeRuntime and editable theme/radius settings. Do not add local palettes, `!important` overrides, or resets that overwrite the owner's customization.
 
 ## Intentional exceptions
 
