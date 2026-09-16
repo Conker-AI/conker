@@ -1,6 +1,7 @@
 import { useConkerStore } from "@/lib/api/store"
 
 import * as React from "react"
+import { useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { PageHeader } from "@/components/design-system"
@@ -24,14 +25,21 @@ export function BaseLayout({ children, title, description, actions, variant = "p
   const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
   const conversation = variant === "conversation"
+  const { pathname, search } = useLocation()
+  const pageScroll = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    pageScroll.current?.scrollTo(0, 0)
+  }, [pathname, search])
 
   const content = (
-    <SidebarInset key="content" className={conversation ? "min-h-0 overflow-clip" : undefined}>
+    <SidebarInset key="content" className="min-h-0 overflow-clip">
       <SiteHeader />
       {conversation ? <div className="flex min-h-0 flex-1 flex-col">
         {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive">{error}</p>}
         {children}
-      </div> : <div className="flex flex-1 flex-col">
+      </div> : <div ref={pageScroll} data-slot="page-scroll" role="region" aria-label={`${title ?? "Page"} content`} tabIndex={0}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <PageContainer className="flex flex-col gap-(--page-section-gap) py-6 pb-8 sm:pt-10">
             {title && <PageHeader title={title} description={description} actions={actions} />}
@@ -61,7 +69,7 @@ export function BaseLayout({ children, title, description, actions, variant = "p
           "--header-height": "calc(var(--spacing) * 14)",
         } as React.CSSProperties
       }
-      className={cn(config.side === "right" && "flex-row-reverse", conversation && "h-dvh min-h-0 overflow-clip")}
+      className={cn("h-dvh min-h-0 overflow-clip", config.side === "right" && "flex-row-reverse")}
     >
       {sidebar}
       {content}
