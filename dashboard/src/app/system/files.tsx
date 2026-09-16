@@ -1,12 +1,11 @@
 import { useState } from "react"
 import { FolderTree } from "lucide-react"
-import { BaseLayout } from "@/components/layouts/base-layout"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useConker } from "@/lib/api/store"
 import { DirectoryTree } from "./directory-tree"
 
-export default function FilesPage() {
+export function SystemFiles() {
   const files = useConker(data => data.files)
   const [expanded, setExpanded] = useState(() => new Set([
     files.root.path,
@@ -16,8 +15,7 @@ export default function FilesPage() {
   const [selected, setSelected] = useState(files.root.path)
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle")
 
-  return <BaseLayout title="Files" description="Browse your project’s directory tree and copy paths." variant="workspace">
-    <Card className="min-h-0 flex-1 gap-0 overflow-hidden py-0">
+  return <Card className="min-h-0 flex-1 gap-0 overflow-hidden py-0">
       <CardHeader className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-b py-4">
         <div className="min-w-0">
           <CardTitle className="flex items-center gap-2 text-sm"><FolderTree className="size-4 text-muted-foreground" />Directory tree</CardTitle>
@@ -43,5 +41,4 @@ export default function FilesPage() {
         }}
       />
     </Card>
-  </BaseLayout>
 }

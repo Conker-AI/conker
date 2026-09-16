@@ -1,6 +1,6 @@
 "use client"
 
-import { appNavigation } from "@/config/navigation"
+import { appNavigation, pageSectionHref } from "@/config/navigation"
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { Command as CommandPrimitive } from "cmdk"
@@ -142,8 +142,8 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     { title: "Tools", url: appNavigation.tools.path, group: "Control", icon: Wrench },
     { title: "Jobs", url: appNavigation.jobs.path, group: "Control", icon: Briefcase },
     { title: "System", url: appNavigation.system.path, group: "Control", icon: Server },
-    { title: "Terminal", url: appNavigation.terminal.path, group: "Control", icon: Terminal },
-    { title: "Files", url: appNavigation.files.path, group: "Control", icon: FolderTree },
+    { title: "Terminal", url: pageSectionHref("system", "", "terminal"), group: "System", icon: Terminal },
+    { title: "Files", url: pageSectionHref("system", "", "files"), group: "System", icon: FolderTree },
     { title: "Settings", url: appNavigation.settings.path, group: "Control", icon: Settings },
   ]
 

@@ -20,9 +20,9 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 /** URL-addressed page content. Navigation is rendered once in SiteHeader. */
-export function RouteSection({ value, children }: { value: string; children: ReactNode }) {
+export function RouteSection({ value, children, variant = "page" }: { value: string; children: ReactNode; variant?: "page" | "workspace" }) {
   const active = usePageSection()
-  return active === value ? <div data-slot="route-section" className="min-w-0">{children}</div> : null
+  return active === value ? <div data-slot="route-section" className={cn("min-w-0", variant === "workspace" && "flex min-h-0 flex-1 flex-col")}>{children}</div> : null
 }
 
 export function PageTabs({ className, ...props }: ComponentProps<typeof Tabs>) {

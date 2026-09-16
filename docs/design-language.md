@@ -54,8 +54,7 @@ Conker keeps its content, features, compact composition, custom appbar/sidebar c
 - **Home** — combined. A compact, visually composed workspace overview with linked resource counts, pending requests, agent status, recent activity and conversations, service status, and restrained motion.
 - **Companion / conversation** — combined. Productive thread + beautiful companion presence and AI states.
 - **Character Studio** — beautiful-leaning. The companion should feel alive (static now, animated later).
-- **Terminal** — productive. A viewport-filling black console in graphite chrome, with fullscreen. Keep the offline state honest; project details stay behind the info control.
-- **Files** — productive. A separate directory-tree screen with folder expansion, path selection and copying. Use the shared card palette and keep sample data labeled; do not combine it with Terminal.
+- **System** — productive. One sidebar destination with the shared appbar tabs: Overview for machine stats and services, Terminal for the viewport-filling black console and fullscreen, and Files for the directory tree and path copying. Keep Terminal and Files in separate tab bodies, with the offline and sample-data labels intact. Terminal uses graphite chrome; Files uses the shared card palette.
 
 Home summarizes Conker's internal screens using the shared page shell, cards, collection rows and complete padded portraits. New chat and Open companion provide the primary next steps; Connections and System expose service details. One subtle arrival animation gives the overview a quiet entrance and respects reduced motion. Existing theme, density and inset-frame contracts continue to apply.
 

@@ -49,7 +49,7 @@ async function main() {
     }
   })
   check('Sidebar destinations are independent roots while Home remains the entry point', () => {
-    const roots = ['home', 'companion', 'chats', 'inbox', 'memory', 'journal', 'agents', 'tools', 'jobs', 'system', 'terminal', 'files', 'settings']
+    const roots = ['home', 'companion', 'chats', 'inbox', 'memory', 'journal', 'agents', 'tools', 'jobs', 'system', 'settings']
     for (const key of roots) {
       const route = appNavigation[key]
       assert.equal(route.parent, undefined, `${key} must be a top-level destination`)

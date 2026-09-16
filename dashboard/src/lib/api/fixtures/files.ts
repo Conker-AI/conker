@@ -17,8 +17,7 @@ export const files: FilesSnapshot = {
           directory("dashboard/src", [
             directory("dashboard/src/app", [
               directory("dashboard/src/app/home", [file("dashboard/src/app/home/page.tsx")]),
-              directory("dashboard/src/app/terminal", [file("dashboard/src/app/terminal/page.tsx")]),
-              directory("dashboard/src/app/files", [file("dashboard/src/app/files/page.tsx")]),
+              directory("dashboard/src/app/system", [file("dashboard/src/app/system/page.tsx"), file("dashboard/src/app/system/terminal.tsx"), file("dashboard/src/app/system/files.tsx")]),
             ]),
             directory("dashboard/src/components", [file("dashboard/src/components/site-header.tsx"), file("dashboard/src/components/app-sidebar.tsx")]),
             directory("dashboard/src/lib", [directory("dashboard/src/lib/api", [file("dashboard/src/lib/api/client.ts")])]),

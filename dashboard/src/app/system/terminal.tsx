@@ -1,13 +1,12 @@
 import { useRef, useState } from "react"
 import { Info, Maximize2, Minimize2, Terminal } from "lucide-react"
 import { useConker } from "@/lib/api/store"
-import { BaseLayout } from "@/components/layouts/base-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export default function TerminalPage() {
+export function SystemTerminal() {
   const terminal = useConker(data => data.terminal)
   const [fullscreen, setFullscreen] = useState(false)
   const fullscreenButton = useRef<HTMLButtonElement>(null)
@@ -64,11 +63,6 @@ export default function TerminalPage() {
   </div>
 
   return (
-    <BaseLayout
-      title="Terminal"
-      description="Your server, when you need to work directly."
-      variant="workspace"
-    >
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         {!fullscreen && workbench}
         <DialogContent showCloseButton={false}
@@ -82,6 +76,5 @@ export default function TerminalPage() {
           {fullscreen && workbench}
         </DialogContent>
       </Dialog>
-    </BaseLayout>
   )
 }

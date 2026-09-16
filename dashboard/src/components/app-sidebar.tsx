@@ -14,8 +14,6 @@ import {
   Briefcase,
   Settings,
   Server,
-  Terminal,
-  FolderTree,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useConker } from "@/lib/api/store"
@@ -61,8 +59,6 @@ const data = {
         { title: "Tools", url: appNavigation.tools.path, icon: Wrench },
         { title: "Jobs", url: appNavigation.jobs.path, icon: Briefcase },
         { title: "System", url: appNavigation.system.path, icon: Server },
-        { title: "Terminal", url: appNavigation.terminal.path, icon: Terminal },
-        { title: "Files", url: appNavigation.files.path, icon: FolderTree },
         { title: "Settings", url: appNavigation.settings.path, icon: Settings },
       ],
     },

@@ -18,8 +18,6 @@ export const appNavigation = {
   tools: { path: "/tools", title: "Tools" },
   jobs: { path: "/jobs", title: "Jobs" },
   system: { path: "/system", title: "System" },
-  terminal: { path: "/terminal", title: "Terminal" },
-  files: { path: "/files", title: "Files" },
   settings: { path: "/settings", title: "Settings" },
   companionSettings: { path: "/settings/companion", title: "Companion settings", parent: "settings" },
   setup: { path: "/setup", title: "Setup" },
@@ -33,6 +31,7 @@ export type PageSection = { value: string; label: string; count?: "pending" }
 export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
+  system: [{ value: "overview", label: "Overview" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],
   settings: [
     { value: "appearance", label: "Appearance" },
     { value: "layout", label: "Layout" },
