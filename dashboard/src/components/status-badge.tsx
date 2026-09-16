@@ -12,8 +12,8 @@ export function StatusBadge({
     <Badge
       variant="outline"
       className={cn("gap-1.5 font-normal", {
-        "border-success-border bg-success-subtle text-success": tone === "live",
-        "border-warning-border bg-warning-subtle text-warning": tone === "warning",
+        "border-success/30 bg-success/10 text-success": tone === "live",
+        "border-warning/30 bg-warning/10 text-warning": tone === "warning",
       })}
     >
       <span

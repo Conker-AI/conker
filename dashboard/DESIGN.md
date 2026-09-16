@@ -72,27 +72,17 @@ Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `sr
 
 ## Palette and theming
 
-**Choose by role, never by a convenient shade or opacity.** The researched rationale, complete state table and change procedure live in [color-system.md](../docs/color-system.md). These rules apply equally to chat, collections, settings and shared primitives.
+**The owner's selected shadcnstore template is the shared styling authority.** Read [template-reference.md](../docs/template-reference.md) for the pinned source, component/feature map and narrow Conker adaptations. [color-system.md](../docs/color-system.md) defines the color usage contract. The September 16 instruction supersedes the previous mixed-surface system.
 
-| Role | Utility / pair | Use |
-| --- | --- | --- |
-| Canvas | `bg-background text-foreground` | Workspace and transcript ground |
-| Panel | `bg-card text-card-foreground` | Cards, collections, user messages, plans, approval requests and composer |
-| Chrome | `bg-surface-chrome text-sidebar-foreground` | Appbar and reference rail; shares the sidebar's source colors |
-| Inset | `bg-surface-inset` | Fields, search, recorded tool details, table/reference headings and neutral photo frames |
-| Overlay | `bg-popover text-popover-foreground` | Floating menus, tooltips, dialogs and default sheets |
-| Neutral interaction | `bg-surface-hover text-accent-foreground` | Hover and menu keyboard highlight; independent of elevation |
-| Selection | `bg-selection` with primary text/border | Current item, checked choice or selected row; sidebar uses its paired `sidebar-selection` role |
+Use the template's semantic pairs directly: background/foreground, card/card-foreground, popover/popover-foreground, primary/primary-foreground, secondary/secondary-foreground, muted/muted-foreground, accent/accent-foreground, and sidebar-specific pairs. Border, input, ring and chart tokens retain their standard meanings. A custom card value must render as that exact color, without an added foreground mix.
 
-Source theme values remain in `src/index.css`; shared derived recipes live in `src/styles/design-system.css`. Dark mode uses brighter neutral surfaces as elevation increases. Light mode uses a toned canvas, white panels and pale inset details. Retain 1px outlines, compact spacing and subtle panel shadows. Collection groups own one filled container; use `CollectionSection contained` inside an existing card.
+Keep standard button, field, menu, tab, tooltip, dialog and selection treatments from the template. Their approved opacity recipes belong to the owning primitive, recorded in `scripts/template-foundation.json`. Do not ban legitimate upstream recipes or recreate them differently in each route. Application code consumes shared components and ordinary semantic utilities; a new visual role requires a documented owner.
 
-Use the appropriate foreground pair for body text and `text-muted-foreground` for all secondary text and placeholders. No route-specific text or border palette, no fainter metadata tier. Normal text must reach 4.5:1 in the default themes. `border-border` is the passive outline/divider; `border-input` is the stronger field boundary. Essential control boundaries and focus indicators must reach 3:1 against adjacent colors. Focus uses the solid ring token. User-imported palettes still require contrast review.
+Conker keeps its green default accent, compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
 
-Green is the default action/selection accent, not an informational container fill. Ordinary outline buttons use `secondary`, ghost buttons start transparent, and both use the neutral hover role. Primary/destructive hovers use their named tokens. Live/healthy status uses `success`, which stays green when the brand preset changes. Warnings use `warning`; destructive actions use `destructive` with its foreground pair. Status tints and outlines are named `success-subtle` / `success-border` and `warning-subtle` / `warning-border`. Keep labels and non-color state cues.
+Collections own one card container. The composer, plans and requests use card roles. Tool details and reference headings use muted. Appbar, dialogs and the reference rail use background; sidebar navigation keeps sidebar roles. Shared field styling comes from Input/Select/Textarea, including collection searches.
 
-The build guard rejects ad hoc neutral opacity (including shared primitives), arbitrary primary/status tints, and the removed `conversation-contrast` and `bg-surface-raised` classes. The photo/artwork, theme-swatch and terminal exceptions below remain narrowly owned. Changing a role means changing the shared recipe and all matching consumers together.
-
-Preserve ThemeRuntime and editable theme/radius settings. Do not add local palettes, `!important` overrides, or resets that overwrite the owner's customization.
+The guard checks direct color mappings and upstream recipe ownership in addition to shared heading, search and navigation rules. Rendered review remains required: preset/import correctness, contrast, focus and component behavior cannot be inferred solely from token names.
 
 ## Intentional exceptions
 

@@ -29,7 +29,7 @@ function DetailList({ items }: { items: [string, ReactNode][] }) {
   return <dl className="divide-y divide-border">{items.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 py-2 first:pt-0 last:pb-0"><dt className="shrink-0 text-xs text-muted-foreground">{label}</dt><dd className="min-w-0 text-right text-xs font-medium tabular-nums">{value}</dd></div>)}</dl>
 }
 
-const referenceLink = "flex min-h-10 items-center justify-between gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-ring"
+const referenceLink = "flex min-h-10 items-center justify-between gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
 const note = "text-xs leading-5 text-muted-foreground"
 const excerpt = "max-h-60 overflow-auto whitespace-pre-wrap text-sm leading-6 [overflow-wrap:anywhere]"
 
@@ -115,7 +115,7 @@ function RailContent({ session, children }: { session: Session; children?: React
       return <>
         <ReferenceSection title="Conversation tree" icon={<GitFork />}>
           {conversation.parentSessionId && (parent ? <Link className={referenceLink} to={sessionLink(parent.id)} onClick={close}><span><span className={`block ${note}`}>Parent conversation</span>{parent.title}</span><ArrowUpRight className="size-4 shrink-0" /></Link> : <p className={note}>The parent conversation was deleted.</p>)}
-          <div className="rounded-md bg-surface-inset px-3 py-2"><p className="text-xs font-medium text-primary">Current conversation</p><p className="mt-1 font-medium">{session.title}</p></div>
+          <div className="rounded-md bg-muted px-3 py-2"><p className="text-xs font-medium text-primary">Current conversation</p><p className="mt-1 font-medium">{session.title}</p></div>
           {forks.length ? <ul className="ml-3 border-l pl-2">{forks.map(fork => <li key={fork.id}><Link className={referenceLink} to={sessionLink(fork.id)} onClick={close}>{fork.title}<ArrowUpRight className="size-4 shrink-0" /></Link></li>)}</ul> : <p className={note}>No forks yet. Use a message’s ⋯ menu to fork from that point.</p>}
         </ReferenceSection>
         <ReferenceSection title={`Other chats with ${session.agent}`} icon={<MessageSquare />}>
@@ -181,7 +181,7 @@ export function ConversationRail({ session, children }: { session: Session; chil
   }, [wide, rail?.open, close, session.id, restoreFocus])
 
   const body = <div ref={content} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4"><RailContent session={session}>{children}</RailContent></div>
-  if (wide) return rail?.open ? <aside id="conversation-reference" data-home="reference" data-view={rail.view} aria-label={title} className="flex w-88 shrink-0 flex-col overflow-hidden border-l bg-surface-chrome text-sidebar-foreground">
+  if (wide) return rail?.open ? <aside id="conversation-reference" data-home="reference" data-view={rail.view} aria-label={title} className="flex w-88 shrink-0 flex-col overflow-hidden border-l bg-background text-foreground">
     <div className="flex shrink-0 items-start gap-3 border-b bg-card p-4">
       <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <div className="min-w-0 flex-1"><h2 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{title}</h2><p className={`mt-1 truncate ${note}`} title={context}>{context}</p>{selected && <p className={`mt-2 line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</div>
@@ -189,5 +189,5 @@ export function ConversationRail({ session, children }: { session: Session; chil
     </div>
     {body}
   </aside> : null
-  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" data-view={rail?.view} onCloseAutoFocus={event => { event.preventDefault(); restoreFocus() }} className="w-full gap-0 overflow-hidden bg-surface-chrome text-sidebar-foreground sm:max-w-sm"><SheetHeader className="shrink-0 border-b bg-card pr-12"><SheetTitle className="flex items-center gap-2 text-sm"><Icon className="size-4 text-muted-foreground" />{title}</SheetTitle><SheetDescription className="truncate text-xs" title={context}>{context}</SheetDescription>{selected && <p className={`line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</SheetHeader>{body}</SheetContent></Sheet>
+  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" data-view={rail?.view} onCloseAutoFocus={event => { event.preventDefault(); restoreFocus() }} className="w-full gap-0 overflow-hidden bg-background text-foreground sm:max-w-sm"><SheetHeader className="shrink-0 border-b bg-card pr-12"><SheetTitle className="flex items-center gap-2 text-sm"><Icon className="size-4 text-muted-foreground" />{title}</SheetTitle><SheetDescription className="truncate text-xs" title={context}>{context}</SheetDescription>{selected && <p className={`line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</SheetHeader>{body}</SheetContent></Sheet>
 }

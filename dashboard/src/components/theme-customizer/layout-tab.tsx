@@ -55,7 +55,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.variant === variant.value
-                  ? "border-primary bg-selection"
+                  ? "border-primary bg-accent"
                   : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarVariantSelect(variant.value as "sidebar" | "floating" | "inset")}
@@ -68,7 +68,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
                   <div 
                     className={`w-3 flex-shrink-0 bg-muted flex flex-col gap-0.5 p-1 ${
                       variant.value === "floating" ? "border-r m-1 rounded" :
-                      variant.value === "inset" ? "m-1 ms-0 rounded bg-surface-inset" :
+                      variant.value === "inset" ? "m-1 ms-0 rounded bg-muted" :
                       "border-r"
                     }`}
                   >
@@ -113,7 +113,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.collapsible === option.value
-                  ? "border-primary bg-selection"
+                  ? "border-primary bg-accent"
                   : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarCollapsibleSelect(option.value as "offcanvas" | "icon" | "none")}
@@ -185,7 +185,7 @@ export function LayoutTab({ className }: { className?: string } = {}) {
               onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.currentTarget.click() } }}
               className={`relative p-4 border rounded-md cursor-pointer transition-colors ${
                 sidebarConfig.side === side.value
-                  ? "border-primary bg-selection"
+                  ? "border-primary bg-accent"
                   : "border-border hover:border-input"
               }`}
               onClick={() => handleSidebarSideSelect(side.value as "left" | "right")}

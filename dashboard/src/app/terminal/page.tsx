@@ -27,7 +27,7 @@ export default function TerminalPage() {
             </CardTitle>
             <StatusBadge>Offline</StatusBadge>
           </CardHeader>
-          <CardContent className="mx-2 mb-2 min-h-64 rounded-lg border bg-surface-inset p-4 font-mono text-xs leading-7 break-words sm:text-sm">
+          <CardContent className="mx-2 mb-2 min-h-64 rounded-lg border bg-muted p-4 font-mono text-xs leading-7 break-words sm:text-sm">
             <p className="text-muted-foreground">Conker · owner shell</p>
             <p className="text-muted-foreground">
               No authenticated terminal session.
@@ -42,7 +42,7 @@ export default function TerminalPage() {
             </p>
           </CardContent>
         </Card>
-        <Alert className="bg-surface-chrome">
+        <Alert className="bg-background">
           <Shield />
           <AlertTitle>A separate owner-authenticated shell</AlertTitle>
           <AlertDescription>

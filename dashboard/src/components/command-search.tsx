@@ -205,7 +205,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
 export function SearchTrigger({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
   return <button type="button" onClick={onClick} aria-label="Search pages" title="Search pages (Ctrl or Command + K)"
-    className={cn("inline-flex size-(--control-height) shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-44 sm:justify-start sm:border sm:border-input sm:px-3", compact && "size-8 sm:w-8 sm:justify-center sm:px-0 lg:w-44 lg:justify-start lg:px-2")}>
+    className={cn("inline-flex size-(--control-height) shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-44 sm:justify-start sm:border sm:border-input sm:px-3", compact && "size-8 sm:w-8 sm:justify-center sm:px-0 lg:w-44 lg:justify-start lg:px-2")}>
     <Search className="size-4 shrink-0" aria-hidden="true" />
     <span className={compact ? "hidden lg:inline" : "hidden sm:inline"}>Search pages</span>
     <kbd className={cn("ml-auto hidden shrink-0 items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px]", compact ? "lg:inline-flex" : "sm:inline-flex")} aria-hidden="true">⌘ K</kbd>

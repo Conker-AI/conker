@@ -34,9 +34,9 @@ on top.** The reference the owner pointed to is **[libraries.dev](https://librar
 
 ## Color and component authority
 
-The September 15 consistency pass replaces the earlier approximate hex palette and faint-text tier with [role-based color rules](color-system.md). Use [dashboard/DESIGN.md](../dashboard/DESIGN.md) for exact token, typography, density, radius and component contracts. The palette and all derived surfaces follow the existing theme customizer.
+The owner explicitly selected the shadcnstore dashboard template on September 16 as the authority for shared styling. [template-reference.md](template-reference.md) records the pinned source, feature map and permitted Conker adaptations. Use its direct semantic color variables and real component treatments. The previous custom surface-mixing layer is retired.
 
-Near-black canvas, graphite panels, inset details and neutral floating surfaces provide depth. Green indicates action/selection; semantic success remains independent of the editable brand accent. Warning and destructive colors convey their actual states. Main and secondary text use one shared pair of roles across routes. Do not choose different opacity values for equivalent components.
+Conker keeps its content, features, compact composition, custom appbar/sidebar controls, green default accent and complete photo portraits. Presets/imports retain their exact palette values. [dashboard/DESIGN.md](../dashboard/DESIGN.md) governs density and composition; [color-system.md](color-system.md) governs color use.
 
 ## What "get shadcn" means for the build
 

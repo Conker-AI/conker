@@ -277,10 +277,10 @@ export function ThemeTab({
       {/* Accent & token colors Section */}
       <Accordion type="single" collapsible className="w-full border-b rounded-lg">
         <AccordionItem value="brand-colors" className="border border-border rounded-lg overflow-hidden">
-          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-surface-hover transition-colors">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-accent transition-colors">
             <Label className="text-sm font-medium cursor-pointer">Accent & token colors</Label>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t border-border bg-surface-inset">
+          <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t border-border bg-muted">
             {baseColors.map((color) => (
               <div key={color.cssVar} className="flex items-center justify-between">
                 <ColorPicker

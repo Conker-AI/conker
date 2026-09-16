@@ -1,20 +1,5 @@
-/* Conker density and surface roles, derived from the owner's active theme. */
+/* Conker density and native scrolling. Colors come directly from template theme tokens. */
 :root {
-  --surface-canvas: color-mix(in oklab, var(--background) 97%, var(--foreground));
-  --surface-panel: var(--card);
-  --surface-raised: var(--popover);
-  --surface-chrome: var(--sidebar);
-  --surface-inset: color-mix(in oklab, var(--muted) 70%, var(--background));
-  /* Interaction states are independent of elevation. Keep their recipes here. */
-  --surface-hover: var(--accent);
-  --selection: color-mix(in oklab, var(--primary) 10%, var(--surface-panel));
-  --sidebar-selection: color-mix(in oklab, var(--primary) 10%, var(--sidebar));
-  --primary-hover: color-mix(in oklab, var(--primary) 90%, var(--foreground));
-  --destructive-hover: color-mix(in oklab, var(--destructive) 90%, var(--foreground));
-  --success-subtle: color-mix(in oklab, var(--success) 10%, var(--surface-panel));
-  --success-border: color-mix(in oklab, var(--success) 30%, var(--surface-panel));
-  --warning-subtle: color-mix(in oklab, var(--warning) 10%, var(--surface-panel));
-  --warning-border: color-mix(in oklab, var(--warning) 30%, var(--surface-panel));
   --control-height: 2.5rem;
   --control-height-sm: 2rem;
   --control-height-lg: 2.75rem;
@@ -28,13 +13,6 @@
   --scrollbar-thumb-active: var(--primary);
 }
 
-.dark {
-  --surface-canvas: var(--background);
-  --surface-panel: color-mix(in oklab, var(--card) 94%, var(--card-foreground));
-  --surface-raised: color-mix(in oklab, var(--popover) 88%, var(--popover-foreground));
-  --surface-inset: color-mix(in oklab, var(--background) 60%, var(--muted));
-  --surface-hover: color-mix(in oklab, var(--accent) 92%, var(--accent-foreground));
-}
 
 /* Keep native scrolling and Radix scroll areas visually consistent. */
 @layer base {

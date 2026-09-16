@@ -29,7 +29,7 @@ export function PageTabs({ className, ...props }: ComponentProps<typeof Tabs>) {
   return <Tabs className={cn("min-w-0 gap-(--page-section-gap)", className)} {...props} />
 }
 export function PageTabsList({ className, mobileColumns, ...props }: ComponentProps<typeof TabsList> & { mobileColumns?: 2 }) {
-  return <TabsList className={cn("h-auto min-h-(--collection-search-height) max-w-full flex-wrap justify-start border bg-surface-inset p-[3px]", mobileColumns === 2 && "grid grid-cols-2 sm:inline-flex", className)} {...props} />
+  return <TabsList className={cn("h-auto min-h-(--collection-search-height) max-w-full flex-wrap justify-start border bg-muted p-[3px]", mobileColumns === 2 && "grid grid-cols-2 sm:inline-flex", className)} {...props} />
 }
 export function PageTabsTrigger({ className, ...props }: ComponentProps<typeof TabsTrigger>) {
   return <TabsTrigger className={cn("h-(--control-height) px-4", className)} {...props} />
@@ -57,7 +57,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
   const id = useId()
   return <li>
     <Link data-slot="collection-row" to={to} aria-labelledby={id} aria-describedby={`${id}-preview${trailing ? ` ${id}-meta` : ""}`}
-      className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
+      className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
       {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
         <h3 id={id} className="truncate text-sm leading-5 font-medium" title={title}>{title}</h3>
