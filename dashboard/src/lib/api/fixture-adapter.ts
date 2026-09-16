@@ -7,6 +7,7 @@ import { memories, memorySearch } from "./fixtures/memory"
 import { services, vitals, system } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
 import { threads } from "./fixtures/threads"
+import { terminal } from "./fixtures/terminal"
 import { connectionConfig } from "./config"
 import type { ConkerClient, Snapshot, AuthResult } from "./client"
 import { createConversations, createConversationState } from "./conversation-fixtures"
@@ -53,7 +54,7 @@ export function createFixtureClient(): ConkerClient {
     threads, messages: {}, conversations: {}, modelsConfiguration: createModelsConfiguration(),
     replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
     connections: connectionConfig.read(),
-    terminal: { prompt: "alexey@conker", context: [["Repository", "companion"], ["Branch", "feat/dashboard"], ["Working tree", "Unknown · no filesystem probe"], ["Last commit", "Dashboard shell scaffold · fixture"]] },
+    terminal,
   })
   state.conversations = createConversations(state.sessions, state.threads, state.agents)
   const streaming = new Set<string>()

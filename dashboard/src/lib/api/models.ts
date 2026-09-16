@@ -102,3 +102,17 @@ export type Tool = {
   scope: string
   recentUse: string
 }
+
+export type DirectoryEntry = {
+  name: string
+  path: string
+} & (
+  | { kind: "directory"; children: DirectoryEntry[] }
+  | { kind: "file" }
+)
+
+export type TerminalSnapshot = {
+  prompt: string
+  context: [string, string][]
+  directory: { source: "sample" | "live"; root: DirectoryEntry }
+}
