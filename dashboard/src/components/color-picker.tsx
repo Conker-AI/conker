@@ -12,39 +12,37 @@ interface ColorPickerProps {
   onChange: (cssVar: string, value: string) => void
 }
 
-export function ColorPicker({ label, cssVar, value, onChange }: ColorPickerProps) {
-  const [localValue, setLocalValue] = React.useState(value)
+function subscribeToTheme(onChange: () => void) {
+  const observer = new MutationObserver(onChange)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] })
+  return () => observer.disconnect()
+}
 
-  React.useEffect(() => {
-    setLocalValue(value)
-  }, [value])
+function readThemeColor(cssVar: string) {
+  // Resolve CSS variable references before converting OKLCH/HSL/RGB to native hex.
+  const color = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = 1
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context || !CSS.supports('color', color)) return '#000000'
+  context.fillStyle = color
+  context.fillRect(0, 0, 1, 1)
+  const [red, green, blue] = context.getImageData(0, 0, 1, 1).data
+  return '#' + [red, green, blue].map(channel => channel.toString(16).padStart(2, '0')).join('')
+}
+
+export function ColorPicker({ label, cssVar, value, onChange }: ColorPickerProps) {
+  const displayColor = React.useSyncExternalStore(subscribeToTheme, () => readThemeColor(cssVar), () => '#000000')
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value
-    setLocalValue(newColor)
     onChange(cssVar, newColor)
   }
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
-    setLocalValue(newValue)
     onChange(cssVar, newValue)
   }
-
-  // Get current computed color for display
-  const displayColor = React.useMemo(() => {
-    if (localValue && localValue.startsWith('#')) {
-      return localValue
-    }
-
-    // Try to get computed value from CSS
-    const computed = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()
-    if (computed && computed.startsWith('#')) {
-      return computed
-    }
-
-    return '#000000'
-  }, [localValue, cssVar])
 
   return (
     <div className="space-y-2">
@@ -70,8 +68,9 @@ export function ColorPicker({ label, cssVar, value, onChange }: ColorPickerProps
         </div>
         <Input
           type="text"
+          aria-label={`${label} color value`}
           placeholder={`${cssVar} value`}
-          value={localValue}
+          value={value}
           onChange={handleTextChange}
           className="h-8 text-xs flex-1"
         />
