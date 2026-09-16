@@ -18,13 +18,14 @@ interface BaseLayoutProps {
   title?: string
   description?: string
   actions?: React.ReactNode
-  variant?: "page" | "conversation"
+  variant?: "page" | "conversation" | "workspace"
 }
 
 export function BaseLayout({ children, title, description, actions, variant = "page" }: BaseLayoutProps) {
   const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
   const conversation = variant === "conversation"
+  const workspace = variant === "workspace"
   const { pathname, search } = useLocation()
   const pageScroll = React.useRef<HTMLDivElement>(null)
 
@@ -39,9 +40,9 @@ export function BaseLayout({ children, title, description, actions, variant = "p
         {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive">{error}</p>}
         {children}
       </div> : <div ref={pageScroll} data-slot="page-scroll" role="region" aria-label={`${title ?? "Page"} content`} tabIndex={0}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <PageContainer className="flex flex-col gap-(--page-section-gap) py-6 pb-8 sm:pt-10">
+        className={cn("flex min-h-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", workspace ? "overflow-hidden" : "overflow-y-auto")}>
+        <div className={cn("@container/main flex flex-1 flex-col gap-2", workspace && "min-h-0")}>
+          <PageContainer className={cn("flex flex-col gap-(--page-section-gap) py-6 pb-8 sm:pt-10", workspace && "min-h-0 flex-1")}>
             {title && <PageHeader title={title} description={description} actions={actions} />}
             {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
             {children}
