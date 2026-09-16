@@ -1,155 +1,141 @@
 import { Link } from "react-router-dom"
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight, Bot, Brain, CheckCheck, MessageSquare, Plug, SquarePen, Workflow, Wrench } from "lucide-react"
+import { conkerClient } from "@/lib/api"
 import { useConker } from "@/lib/api/store"
-import { getDailyOverview } from "@/lib/daily-overview"
+import { getWorkspaceOverview } from "@/lib/workspace-overview"
 import { BaseLayout } from "@/components/layouts/base-layout"
-import { DailyNews } from "@/components/daily-news"
-import {
-  AgentIdentityPortrait,
-  CollectionRow,
-  CollectionSection,
-} from "@/components/design-system"
+import { AgentIdentityPortrait, CollectionRow } from "@/components/design-system"
+import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import "./home.css"
 
-const planningPrompt = "Help me plan the coming days. Review my upcoming schedule and suggest one useful next step."
-
-function shortDay(day: string) {
-  return day.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase())
-}
-
-/** Relative fixture labels must stay anchored to the day they describe. */
-function activityTime(value: string, sourceDate: Date, sample: boolean) {
+/** Keep relative fixture timestamps anchored to their recorded date. */
+function activityTime(value: string, sourceDate: string, sample: boolean) {
   if (!sample) return value
-  const yesterday = new Date(sourceDate)
+  const date = new Date(`${sourceDate}T12:00:00Z`)
+  if (Number.isNaN(date.getTime())) return value
+  const yesterday = new Date(date)
   yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-  const format = (date: Date) => date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
-  return value.replace(/^Today\b/i, format(sourceDate)).replace(/^Yesterday\b/i, format(yesterday))
+  const format = (day: Date) => day.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
+  return value.replace(/^Today\b/i, format(date)).replace(/^Yesterday\b/i, format(yesterday))
 }
 
 export default function HomePage() {
   const data = useConker(snapshot => snapshot)
-  const overview = getDailyOverview(data)
-  const { briefing, pendingTickets, agenda, recentActivity, recentSessions, planSource } = overview
+  const { pendingTickets, recentActivity, recentSessions, enabledJobs, pausedJobs } = getWorkspaceOverview(data)
   const companionName = data.profile.name || "Conker"
-  const sample = briefing.mode === "sample"
-  const sourceDate = new Date(`${briefing.date}T12:00:00Z`)
-  const weekday = sourceDate.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })
-  const calendarDate = sourceDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  const preview = conkerClient.mode === "fixture"
+  const resources = [
+    { to: "/agents", label: "Agents", value: data.agents.length, detail: "In your workspace", icon: Bot },
+    { to: "/tools", label: "Tools", value: data.tools.length, detail: "In the catalogue", icon: Wrench },
+    { to: "/memory", label: "Memories", value: data.memories.length, detail: "Source records", icon: Brain },
+    { to: "/jobs", label: "Jobs enabled", value: enabledJobs, detail: `${pausedJobs} paused`, icon: Workflow },
+  ]
 
-  return (
-    <BaseLayout title="Home" description="Your plans, decisions, and what has changed. All in one place.">
+  return <BaseLayout title="Home" description="Your agents, their work, and what needs your attention." actions={<>
+    <Button variant="outline" asChild><Link to="/chat/new"><SquarePen aria-hidden="true" />New chat</Link></Button>
+    <Button asChild><Link to="/companion"><MessageSquare aria-hidden="true" />Open companion</Link></Button>
+  </>}>
+    <div className="home-overview flex min-w-0 flex-col gap-(--page-section-gap)">
+      <section aria-label="Workspace overview" className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+          <span className="text-sm font-medium">Your workspace</span>
+          {preview && <Badge variant="outline">Preview data</Badge>}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4">
+          {resources.map(({ to, label, value, detail, icon: Icon }) => <Link key={to} to={to}
+            className="group flex min-w-0 items-center gap-3 border-b p-4 transition-colors odd:border-r hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring [&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:not-last:border-r">
+            <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>
+            <span className="text-xl font-semibold tabular-nums">{value}</span>
+          </Link>)}
+        </div>
+      </section>
 
-      <div className="grid min-w-0 items-start gap-(--page-section-gap) xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-        <Card className="min-w-0">
-          <CardHeader>
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-3xl leading-tight font-medium tracking-tight sm:text-5xl">{weekday}</h2>
-                <p className="mt-2 text-lg text-muted-foreground"><time dateTime={briefing.date}>{calendarDate}</time></p>
-              </div>
-              <Badge variant="outline">{sample ? "Sample day" : "Daily overview"}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground">{briefing.summary}</p>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">{sample ? "Sample plan and activity" : "Local schedule"} · {briefing.timezone}</p>
-          </CardContent>
-          <CardContent className="border-t pt-4">
-            <CollectionSection title="Coming up" contained>
-              {agenda.map((item, index) => (
-                <CollectionRow
-                  key={`${item.day}-${index}`}
-                  to={planSource}
-                  title={item.title}
-                  description={<span className="min-w-0 truncate">{item.detail}</span>}
-                  descriptionTitle={item.detail}
-                  leading={<span className="flex w-16 flex-col gap-0.5 text-center"><span className="text-xs text-muted-foreground">{shortDay(item.day)}</span>{item.date && <span className="text-xl leading-6 font-medium tabular-nums">{item.date}</span>}</span>}
-                />
-              ))}
-            </CollectionSection>
-            {!agenda.length && <p className="px-3 py-4 text-sm leading-6 text-muted-foreground">No plan yet. Start with what matters to you and build it with {companionName}.</p>}
-            <p className="mt-3 px-3 text-xs leading-5 text-muted-foreground sm:px-4">A suggested plan. Open the conversation to review the details.</p>
-          </CardContent>
-          <CardFooter className="flex-wrap gap-2 border-t">
-            <Button variant="outline" asChild><Link to="/companion" state={{ prompt: planningPrompt }}><span className="max-w-44 truncate">Plan with {companionName}</span></Link></Button>
-            {agenda.length > 0 && <Button variant="ghost" asChild><Link to={planSource}>Open plan<ArrowUpRight aria-hidden="true" /></Link></Button>}
-          </CardFooter>
-        </Card>
+      <div className="grid min-w-0 items-start gap-(--page-section-gap) xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-(--page-section-gap)">
+          <Card>
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1.5"><CardTitle><h2>Needs your attention</h2></CardTitle>
+                <CardDescription>{pendingTickets.length ? `${pendingTickets.length} ${pendingTickets.length === 1 ? "request is" : "requests are"} waiting for your decision.` : "No requests waiting for your decision."}</CardDescription></div>
+              <Button size="sm" variant="ghost" asChild><Link to="/inbox">Inbox<ArrowUpRight aria-hidden="true" /></Link></Button>
+            </CardHeader>
+            <CardContent>
+              {pendingTickets.length ? <ul className="divide-y divide-border">{pendingTickets.slice(0, 3).map(ticket => <CollectionRow key={ticket.id}
+                to={`/inbox/${ticket.id}`} title={ticket.request} leading={<AgentIdentityPortrait name={ticket.agent} />}
+                description={<><span className="max-w-24 shrink-0 truncate">{ticket.agent}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{ticket.service}</span></>}
+                trailing={<Badge variant="outline">{ticket.effect === "Proposal" ? "Review" : "Approval"}</Badge>} />)}</ul>
+                : <div className="flex items-start gap-3 py-5"><CheckCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" /><p className="text-sm leading-6 text-muted-foreground">You’re all caught up. Decisions from your agents will appear here.</p></div>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-wrap items-center justify-between gap-2 sm:flex-row">
+              <CardTitle><h2>Recent activity</h2></CardTitle>
+              <Button size="sm" variant="ghost" asChild><Link to="/journal">Journal<ArrowUpRight aria-hidden="true" /></Link></Button>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border">{recentActivity.map(entry => {
+                const [date, ...time] = activityTime(entry.time, data.dailyBriefing.date, preview).split(" · ")
+                return <CollectionRow key={entry.id} to={entry.source} title={entry.event}
+                  description={<span className="min-w-0 truncate">{entry.actor} · {entry.detail}</span>}
+                  descriptionTitle={`${entry.actor} · ${entry.detail}`}
+                  trailing={<><span>{date}</span><span>{time.join(" · ")}</span></>} />
+              })}</ul>
+              {!recentActivity.length && <p className="py-5 text-sm leading-6 text-muted-foreground">Your agents’ actions and results will appear here.</p>}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="min-w-0 space-y-(--page-section-gap)">
           <Card>
-            <CardHeader>
-              <CardTitle><h2>Needs you</h2></CardTitle>
-              <CardDescription>{pendingTickets.length ? `${pendingTickets.length} ${pendingTickets.length === 1 ? "request is" : "requests are"} waiting for your decision.` : "You’re all caught up."}</CardDescription>
+            <CardHeader className="flex flex-wrap items-center justify-between gap-2 sm:flex-row">
+              <CardTitle><h2>Your agents</h2></CardTitle>
+              <Button size="sm" variant="ghost" asChild><Link to="/agents">All agents<ArrowUpRight aria-hidden="true" /></Link></Button>
             </CardHeader>
             <CardContent>
-              {pendingTickets.length ? (
-                <ul className="divide-y divide-border">
-                  {pendingTickets.slice(0, 3).map(ticket => (
-                    <CollectionRow
-                      key={ticket.id}
-                      to={`/inbox/${ticket.id}`}
-                      title={ticket.request}
-                      leading={<AgentIdentityPortrait name={ticket.agent} />}
-                      description={<><span className="max-w-24 shrink-0 truncate">{ticket.agent}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{ticket.effect === "Proposal" ? "A suggestion to review" : ticket.effect === "Deletion" ? "Files stay until you decide" : "Nothing sent yet"}</span></>}
-                    />
-                  ))}
-                </ul>
-              ) : <p className="text-sm leading-6 text-muted-foreground">When {companionName} needs a decision, you’ll find it here.</p>}
+              <ul className="divide-y divide-border">{data.agents.slice(0, 3).map(agent => <CollectionRow key={agent.id}
+                to={agent.kind === "companion" ? "/companion" : `/chat/new?agent=${encodeURIComponent(agent.id)}`}
+                title={agent.kind === "companion" ? companionName : agent.name} leading={<AgentIdentityPortrait name={agent.name} />}
+                description={<span className="min-w-0 truncate">{agent.role}</span>} descriptionTitle={agent.role}
+                trailing={<StatusBadge tone={agent.status === "active" ? "live" : "neutral"}>{agent.status === "active" ? "Active" : "Idle"}</StatusBadge>} />)}</ul>
+              {!data.agents.length && <p className="py-5 text-sm leading-6 text-muted-foreground">No agents in this workspace yet.</p>}
             </CardContent>
-            <CardFooter className="border-t"><Button variant="ghost" asChild><Link to="/inbox">{pendingTickets.length > 3 ? `Review all ${pendingTickets.length} requests` : "Open Inbox"}<ArrowUpRight aria-hidden="true" /></Link></Button></CardFooter>
           </Card>
 
-          <CollectionSection title="Pick up where you left off">
-            {recentSessions.slice(0, 2).map(session => (
-              <CollectionRow
-                key={session.id}
-                to={`/chat/${session.id}`}
-                title={session.title}
-                leading={<AgentIdentityPortrait name={session.agent} />}
-                description={<span className="min-w-0 truncate">{session.subtitle}</span>}
-                descriptionTitle={session.subtitle}
-              />
-            ))}
-            {!recentSessions.length && <li className="px-3 py-4 text-sm leading-6 text-muted-foreground sm:px-4">Your other conversations will appear here.</li>}
-          </CollectionSection>
+          <Card>
+            <CardHeader className="flex flex-wrap items-center justify-between gap-2 sm:flex-row">
+              <CardTitle><h2>Continue a conversation</h2></CardTitle>
+              <Button size="sm" variant="ghost" asChild><Link to="/chat">Chats<ArrowUpRight aria-hidden="true" /></Link></Button>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border">{recentSessions.map(session => <CollectionRow key={session.id}
+                to={`/chat/${session.id}`} title={session.title} leading={<AgentIdentityPortrait name={session.agent} />}
+                description={<span className="min-w-0 truncate">{session.agent} · {session.subtitle}</span>}
+                descriptionTitle={session.subtitle} />)}</ul>
+              {!recentSessions.length && <p className="py-5 text-sm leading-6 text-muted-foreground">Start a chat to give your next idea its own space.</p>}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <div className="grid min-w-0 items-start gap-(--page-section-gap) xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-        <section aria-labelledby="home-activity-title" className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 id="home-activity-title" className="text-base leading-6 font-medium">Recent activity</h2>
-            <Button variant="ghost" size="sm" asChild><Link to="/journal">View journal<ArrowUpRight aria-hidden="true" /></Link></Button>
-          </div>
-          <ul className="divide-y divide-border">
-            {recentActivity.map(entry => (
-              <CollectionRow
-                key={entry.id}
-                to={entry.source}
-                title={entry.event}
-                description={<span className="min-w-0 truncate">{entry.detail}</span>}
-                descriptionTitle={entry.detail}
-                trailing={<><span>{activityTime(entry.time, sourceDate, sample).split(" · ")[0]}</span><span>{activityTime(entry.time, sourceDate, sample).split(" · ").slice(1).join(" · ")}</span></>}
-              />
-            ))}
-          </ul>
-          {!recentActivity.length && <p className="py-4 text-sm leading-6 text-muted-foreground">Activity will appear as you work with {companionName}.</p>}
-        </section>
-        <section aria-labelledby="home-news-title" className="min-w-0">
-          <h2 id="home-news-title" className="mb-3 text-base leading-6 font-medium">News &amp; breakthroughs</h2>
-          <DailyNews news={briefing.news} />
-        </section>
-      </div>
-    </BaseLayout>
-  )
+      <Card>
+        <CardHeader className="flex flex-wrap items-start justify-between gap-3 sm:flex-row">
+          <div className="min-w-0 space-y-1.5"><CardTitle><h2>System status</h2></CardTitle><CardDescription>{preview ? "Sample service checks. Live connections are not active." : "Latest recorded service checks."}</CardDescription></div>
+          <div className="flex flex-wrap gap-1"><Button size="sm" variant="ghost" asChild><Link to="/settings?tab=connections"><Plug aria-hidden="true" />Connections</Link></Button><Button size="sm" variant="ghost" asChild><Link to="/system">System<ArrowUpRight aria-hidden="true" /></Link></Button></div>
+        </CardHeader>
+        <CardContent>
+          <ul className="grid divide-y divide-border lg:grid-cols-3 lg:divide-x lg:divide-y-0">{data.services.map(service => <li key={service.name} className="min-w-0">
+            <Link to="/system" className="flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
+              <div className="min-w-0"><p className="text-sm font-medium">{service.name}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{service.purpose}</p></div>
+              <StatusBadge tone={service.status === "Degraded" ? "warning" : "neutral"}>{service.status === "Live" ? "Responding" : service.status}</StatusBadge>
+            </Link>
+          </li>)}</ul>
+          {!data.services.length && <p className="py-3 text-sm leading-6 text-muted-foreground">No service checks recorded yet.</p>}
+        </CardContent>
+      </Card>
+    </div>
+  </BaseLayout>
 }
