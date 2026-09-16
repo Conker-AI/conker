@@ -14,6 +14,7 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { columns } from "./columns"
+import { RecordItem } from "@/components/design-system"
 
 const icons = [Database, Cpu, HardDrive]
 export function SystemOverview() {
@@ -84,7 +85,10 @@ export function SystemOverview() {
           <h2 id="services-heading" className="text-base font-medium">
             Services
           </h2>
-          <DataTable columns={columns} data={services} paginate={false} />
+          <DataTable columns={columns} data={services} paginate={false} itemLabel="services"
+            toolbarAction={<Button asChild size="sm" variant="outline"><Link to="/settings?tab=connections">Connections</Link></Button>}
+            renderItem={service => <RecordItem title={service.name} description={service.purpose}
+              meta={<><StatusBadge tone={service.status === "Live" ? "live" : "warning"}>{service.status}</StatusBadge><span>Version {service.version}</span><span className="basis-full leading-5">{service.evidence}</span></>} />} />
         </section>
         <Card>
           <CardHeader>

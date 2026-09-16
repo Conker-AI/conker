@@ -144,7 +144,7 @@ export function DataTable<TData, TValue>({
       {/* Structured data shares collection density and retains table semantics. */}
       {renderItem && <div className="min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs xl:hidden">
         {table.getRowModel().rows.length ? <ul className="divide-y">{table.getRowModel().rows.map(row => <li key={row.id}>{renderItem(row.original)}</li>)}</ul>
-          : <CollectionEmpty title="No results found" description="Try a different search or clear your filters." onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />}
+          : <CollectionEmpty title="No results found" description="Try a different search or clear your filters." clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />}
       </div>}
       <div className={cn("min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs", renderItem && "hidden xl:block")}>
         <Table>
@@ -190,7 +190,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="p-0">
-                  <CollectionEmpty title="No results found" description="Try a different search or clear your filters." onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
+                  <CollectionEmpty title="No results found" description="Try a different search or clear your filters." clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
                 </TableCell>
               </TableRow>
             )}

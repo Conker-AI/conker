@@ -1,7 +1,7 @@
 import { useConker } from "@/lib/api/store"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Wrench } from "lucide-react"
 import { DetailPanel, OverlayBody, FormActions, RecordItem } from "@/components/design-system"
@@ -15,6 +15,7 @@ export default function ToolsPage() {
   const tools = useConker(data => data.tools)
   const tickets = useConker(data => data.tickets)
   const [selected, setSelected] = useState<Tool | null>(null)
+  const columns = useMemo(() => toolColumns(setSelected), [])
   return (
     <BaseLayout
       title="Tools"
@@ -22,7 +23,7 @@ export default function ToolsPage() {
     >
       <div className="flex flex-col gap-4 ">
         <DataTable
-          columns={toolColumns(setSelected)}
+          columns={columns}
           data={tools}
           itemLabel="tools"
           renderItem={tool => <RecordItem title={tool.name} description={tool.purpose} leading={<Wrench className="size-4 text-muted-foreground" />} onOpen={() => setSelected(tool)} meta={<><Badge variant="outline">{tool.sensitivity}</Badge><span>{tool.scope}</span><span>{tool.recentUse}</span></>} />}

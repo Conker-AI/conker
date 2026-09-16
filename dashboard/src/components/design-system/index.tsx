@@ -79,14 +79,12 @@ export function CollectionSection({ title, icon, children, contained = false }: 
 }
 
 /** Compact record for responsive tables. One container owns the divided list. */
-export function RecordItem({ title, description, leading, meta, actions, onOpen }: {
-  title: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen: () => void
+export function RecordItem({ title, lang, description, leading, meta, actions, onOpen }: {
+  title: string; lang?: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen?: () => void
 }) {
+  const summary = <>{leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}<span className="min-w-0 flex-1"><span lang={lang} className="block text-sm font-medium break-words">{title}</span>{description && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>}</span></>
   return <div data-pattern="record-item" className="min-w-0 space-y-3 p-4">
-    <button type="button" onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">
-      {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
-      <span className="min-w-0 flex-1"><span className="block text-sm font-medium break-words">{title}</span>{description && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>}</span>
-    </button>
+    {onOpen ? <button type="button" onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">{summary}</button> : <div className="flex min-w-0 items-start gap-3">{summary}</div>}
     {meta && <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">{meta}</div>}
     {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
   </div>

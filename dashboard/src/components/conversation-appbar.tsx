@@ -69,13 +69,13 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
         description={dialog === "route" ? "Choose the default for this conversation. Tools can override it for the next turn." : "Give this conversation a name you can find later."}
         onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>
         {dialog === "rename" && <form className="flex min-h-0 flex-col" onSubmit={async event => { event.preventDefault(); if (await update({ title })) setDialog(null) }}>
-          <OverlayBody><Label htmlFor="conversation-title">Title</Label><Input id="conversation-title" value={title} onChange={event => setTitle(event.target.value)} maxLength={120} required /></OverlayBody>
+          <OverlayBody><div className="space-y-2"><Label htmlFor="conversation-title">Title</Label><Input id="conversation-title" value={title} onChange={event => setTitle(event.target.value)} maxLength={120} required /></div></OverlayBody>
           <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !title.trim()}>Save name</Button></FormActions>
         </form>}
         {dialog === "route" && <><OverlayBody>
-          <Label htmlFor="conversation-route">Default model</Label>
+          <div className="space-y-2"><Label htmlFor="conversation-route">Default model</Label>
           <Select value={modelId} onValueChange={setModelId}><SelectTrigger id="conversation-route" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Use workspace default</SelectItem>{getAvailableModels(data.modelsConfiguration).map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {data.modelsConfiguration.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent></Select>
-          <Link to="/settings?tab=models" className="text-sm underline underline-offset-4">Manage Models / Providers</Link>
+          </div><Link to="/settings?tab=models" className="text-sm underline underline-offset-4">Manage Models / Providers</Link>
         </OverlayBody><FormActions inset><Button variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy} onClick={async () => { if (await update({ modelId: modelId === "default" ? null : modelId })) setDialog(null) }}>Save route</Button></FormActions></>}
         {error && <p role="alert" className="px-5 pb-4 text-sm text-destructive">{error}</p>}
       </TaskDialogContent>

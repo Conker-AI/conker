@@ -1,6 +1,6 @@
 import { useConker } from "@/lib/api/store"
 import { Link, useSearchParams } from "react-router-dom"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import {
@@ -24,6 +24,7 @@ export default function JournalPage() {
   const [params, setParams] = useSearchParams()
   const actor = params.get("actor") || "all"
   const [selected, setSelected] = useState<JournalEntry | null>(null)
+  const columns = useMemo(() => journalColumns(setSelected), [])
   return (
     <BaseLayout
       title="Journal"
@@ -31,7 +32,7 @@ export default function JournalPage() {
     >
       <div className="flex flex-col gap-4 ">
         <DataTable
-          columns={journalColumns(setSelected)}
+          columns={columns}
           data={entries.filter(entry => actor === "all" || entry.actor === actor)}
           searchColumn="detail"
           searchPlaceholder="Search event details…"

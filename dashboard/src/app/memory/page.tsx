@@ -3,7 +3,7 @@ import { TriangleAlert } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { DataTable } from "@/components/data-table"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { DetailPanel, OverlayBody, FormActions, RecordItem } from "@/components/design-system"
 import { ReferenceSection } from "@/components/reference-section"
@@ -17,6 +17,7 @@ export default function MemoryPage() {
   const location = useLocation()
   const [selectedId, setSelectedId] = useState(location.hash.slice(1))
   const selected = memories.find(memory => memory.id === selectedId)
+  const columns = useMemo(() => memoryColumns(memory => setSelectedId(memory.id)), [])
   return (
     <BaseLayout
       title="Memory"
@@ -33,10 +34,10 @@ export default function MemoryPage() {
           </AlertDescription>
         </Alert>}
         <DataTable
-          columns={memoryColumns(memory => setSelectedId(memory.id))}
+          columns={columns}
           data={memories}
           itemLabel="memories"
-          renderItem={memory => <RecordItem title={memory.text} description={memory.provenance} onOpen={() => setSelectedId(memory.id)} meta={<><Badge variant="outline">{memory.category}</Badge><span>{memory.confidence} confidence</span><span>{memory.age}</span></>} />}
+          renderItem={memory => <RecordItem title={memory.text} lang={memory.language} description={memory.provenance} onOpen={() => setSelectedId(memory.id)} meta={<><Badge variant="outline">{memory.category}</Badge><span>{memory.confidence} confidence</span><span>{memory.age}</span></>} />}
           searchColumn="text"
           searchPlaceholder="Search memory text…"
           filters={[

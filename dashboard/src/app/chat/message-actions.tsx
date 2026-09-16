@@ -27,6 +27,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const mainId = useConker(data => data.companionSessionId)
   const conversationModelId = useConker(data => data.conversations[session.id].modelId)
   const pending = useConkerStore(state => state.pending)
+  const error = useConkerStore(state => state.error)
   const streaming = useConversationWorkspace(state => state.streams[session.id])
   const { setReply, openRail, retry, notify } = useConversationWorkspace()
   const mutate = useConkerStore(state => state.mutate)
@@ -104,14 +105,14 @@ export function MessageActions({ session, message }: { session: Session; message
       <TaskDialogContent title="Edit message" description="Edits are marked in this preview. They do not regenerate the conversation or repeat tools."
         onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>
         <form className="flex min-h-0 flex-col" onSubmit={async event => { event.preventDefault(); if (await update({ text })) setDialog(null) }}>
-          <OverlayBody><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></OverlayBody>
+          <OverlayBody><div className="space-y-2"><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>
           <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>Save message</Button></FormActions>
         </form>
       </TaskDialogContent>
     </Dialog>
     <ConfirmationDialog open={dialog === "redact"} onOpenChange={open => { if (!open) setDialog(null) }} title="Redact this message?"
       description="The text and its source are removed from this conversation. A redacted marker remains. Existing forks are separate copies."
-      actionLabel="Redact message" pending={busy} onCloseAutoFocus={restoreFocus} onConfirm={async () => { if (await update({ redacted: true })) setDialog(null) }}>
+      actionLabel="Redact message" pending={busy} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => { if (await update({ redacted: true })) setDialog(null) }}>
       <p className="line-clamp-3 text-sm text-muted-foreground">{message.text}</p>
     </ConfirmationDialog>
   </div>

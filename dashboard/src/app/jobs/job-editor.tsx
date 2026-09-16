@@ -25,7 +25,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
   const error = (key: keyof JobInput) => errors[key] && <p id={`${id}-${key}-error`} className="text-xs text-destructive">{errors[key]}</p>
   const describedBy = (key: keyof JobInput) => errors[key] ? `${id}-${key}-error` : undefined
 
-  return <form noValidate className="flex min-h-0 flex-1 flex-col" onSubmit={async event => {
+  return <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={async event => {
     event.preventDefault()
     const next = jobInputErrors(value)
     setErrors(next)
@@ -36,7 +36,8 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
     }
     await onSave(value)
   }}>
-    <fieldset disabled={pending} className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto p-5">
+    <div data-slot="job-form-scroll" className="min-h-0 flex-1 overflow-y-auto p-5">
+    <fieldset disabled={pending} className="min-w-0 space-y-5">
       <div className="space-y-2">
         <Label htmlFor={`${id}-name`}>Name</Label>
         <Input id={`${id}-name`} value={value.name} onChange={event => set("name", event.target.value)} maxLength={80} placeholder="e.g. Morning briefing" autoFocus aria-invalid={!!errors.name} aria-describedby={describedBy("name")} />
@@ -76,8 +77,6 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
             <Label htmlFor={`${id}-time`}>Time</Label>
             <Input id={`${id}-time`} type="time" className="dark:[color-scheme:dark]" value={value.timing.time} onChange={event => set("timing", { ...value.timing, time: event.target.value })} aria-invalid={!!errors.timing} aria-describedby={describedBy("timing")} />
           </div>}
-        </div>
-        {error("timing")}
         <div className="space-y-2">
           <Label htmlFor={`${id}-timeZone`}>Time zone</Label>
           <Select value={value.timeZone} onValueChange={zone => set("timeZone", zone)} disabled={pending}>
@@ -86,6 +85,8 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
           </Select>
           {error("timeZone")}
         </div>
+        </div>
+        {error("timing")}
         {!jobInputErrors(value).timing && <p className="text-xs text-muted-foreground">{describeJobTiming(value.timing)} · {value.timeZone}</p>}
       </div>
       <div className="flex items-center justify-between gap-4 border-t pt-5">
@@ -93,6 +94,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
         <Switch id={`${id}-enabled`} checked={value.enabled} onCheckedChange={enabled => set("enabled", enabled)} disabled={pending} />
       </div>
     </fieldset>
+    </div>
     <FormActions inset description="Preview only · resets on reload · no scheduler connected.">
       <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : job ? "Save changes" : "Create job"}</Button>
     </FormActions>
