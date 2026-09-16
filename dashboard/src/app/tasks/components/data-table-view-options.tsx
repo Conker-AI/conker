@@ -26,7 +26,7 @@ export function DataTableViewOptions<TData>({
         <Button
           variant="outline"
           size="sm"
-          className="ml-auto hidden lg:flex cursor-pointer mr-2"
+          className="ml-auto hidden lg:flex cursor-pointer"
         >
           <Settings2 />
           View

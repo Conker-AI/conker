@@ -43,6 +43,30 @@ For working collection examples, read `src/app/chat/page.tsx` and `src/app/inbox
 
 `DataTable` uses `CollectionSearch` too. It retains columns, sorting, filters, selection and pagination where structured comparison needs them. Do not replace a useful data table with a collection merely to make every screen identical.
 
+## Interaction placement (owner-approved, September 16)
+
+Choose the surface from the user's task, then reuse the same pattern wherever that task occurs. This is a frontend contract; it does not imply a connected executor or permission to add backend behavior.
+
+| User intent | Surface / shared pattern | Examples |
+| --- | --- | --- |
+| Create an item or change several related fields | Centered `TaskDialogContent` inside the shared `Dialog`; `size="wide"` for a job form | New/edit job, conversation model, message edit, theme import |
+| Configure multiple sections with previews or long-lived navigation | Dedicated page with `BaseLayout` | Settings, Character Studio, first-run setup |
+| Inspect a record while preserving list position | `DetailPanel` with `OverlayBody` and `ReferenceSection` topics | Agent conversations, tool scope, memory evidence, journal source, job history |
+| Make a small immediate preference change | Labeled inline control, with state feedback | Theme, layout, Incognito toggles |
+| Review a consequential request with evidence | Dedicated detail page, decision actions beside the request | Inbox approval/proposal; do not add a second generic confirmation |
+| Delete/redact an item | `ConfirmationDialog`, naming the target and consequence; Cancel receives initial focus | Job deletion, conversation deletion/clear, message redaction |
+| Submit a draft | `FormActions`: feedback at the left, secondary action before primary at the right | Save/discard in Settings and Studio, Cancel/Create in dialogs |
+
+Import application patterns from `@/components/design-system`. `TaskDialogContent` and `DetailPanel` own header spacing, close-control clearance, viewport bounds, scroll-body composition and corner clipping. Compose their children with `OverlayBody` and `FormActions`; a specialized form such as `JobEditor` may own its scrollable fieldset. Use a 16px minimum outer dialog gutter, a viewport-bounded height, 20px internal insets, and 32px close controls inset 12px from the corner. Dialogs keep theme-derived corners; edge-attached sheets are deliberately flush. Terminal fullscreen is the explicit edge-to-edge exception.
+
+Creation and substantial editing never share a generic details drawer. Completing creation returns to the collection with visible feedback; editing from an inspector returns to that inspector. Preserve validation, prevent accidental outside-click dismissal of draft forms, disable submission while pending, and restore useful keyboard focus when closing or moving between surfaces. Keep existing drafts, Incognito behavior and conversation feature ownership intact.
+
+Common actions remain visible: Run/Pause for jobs, New chat for agents, source links for evidence. Use named buttons; reserve icon-only controls for familiar actions with accessible labels/tooltips. Secondary actions belong in a menu. Avoid duplicate page-navigation strips: the sidebar chooses roots, the appbar owns route sections and context, and the page header may own creation actions.
+
+Agents, Tools, Memory, Journal and Jobs share `DataTable`. Supply `renderItem` using `RecordItem` below 1280px; desktop keeps the table for comparison. One table instance owns search, filters, sorting and pagination across both representations. Mobile sorting remains available. Row titles open details using real buttons; visible actions remain separate. Tables use wrapping content and a single clipped card container. Collections retain the accepted Chats/Inbox patterns. Empty states explain the next action; filtered empties offer a clear action, and creation empties link to the working creation flow.
+
+Do not relocate a correctly placed feature just to touch every screen. Home remains an overview; Companion remains the proactive conversation; Chats preserves message/appbar/composer/reference ownership; System keeps Overview, Terminal and Files as separate sections.
+
 ## Density and layout contract
 
 | Role / token | Default contract |
@@ -124,9 +148,9 @@ Update the shared component and its contract first; migrate consumers together. 
 
 ## Jobs
 
-Jobs owns direct management at `/jobs`: New job, editable instructions/agent/schedule/time zone, visible Run now and Pause/Resume, and a compact menu for details/history, editing, duplication and deletion. The details/editor sheet uses shared fields and a fixed action footer; deletion requires a named confirmation. Copies start paused with no inherited run history. Running a paused job does not enable its schedule.
+Jobs owns direct management at `/jobs`: New job, editable instructions/agent/schedule/time zone, visible Run now and Pause/Resume, and a compact menu for details/history, editing, duplication and deletion. New/edit forms use a wide centered task dialog with a scrollable fieldset and fixed action footer. Details/history use `DetailPanel`; deletion uses `ConfirmationDialog`. Copies start paused with no inherited run history. Running a paused job does not enable its schedule.
 
-Use the shared searchable/sortable `DataTable` for desktop comparison. At widths below 1280px, render stacked rows inside one shared card so actions stay visible without horizontal scrolling. Search and status/last-failure filters belong to the page and survive these responsive changes. Reuse the same `JobActions` in the table, stacked rows and detail sheet. Keep long titles wrapped, instructions readable, keyboard focus restored, and form errors beside their fields.
+Use the shared searchable/sortable `DataTable` for desktop comparison and its `renderItem`/`RecordItem` presentation below 1280px. Search and status/last-failure filters belong to the page and survive these responsive changes; sorting stays in the shared table instance. Reuse the same `JobActions` in the table, stacked rows and detail sheet. Keep long titles wrapped, instructions readable, keyboard focus restored, and form errors beside their fields.
 
 All job mutations go through the existing `ConkerClient` fixture adapter. Daily, weekly and hourly-interval schedules are configuration previews; new/edited jobs show “Awaiting scheduler.” Run now records an explicit simulated receipt and never invokes agents, tools or server commands. The in-memory data resets on reload. Keep the Preview label, sample-receipt provenance and form limitation copy. Validate via `npm run check:jobs` plus affected lint, build and rendered desktop/mobile checks.
 

@@ -171,7 +171,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 shadow-2xl border border-border max-w-[640px]">
+      <DialogContent className="overflow-hidden p-0 sm:max-w-xl">
         <DialogTitle className="sr-only">Command Search</DialogTitle>
         <DialogDescription className="sr-only">Navigate to a Conker screen.</DialogDescription>
         <Command

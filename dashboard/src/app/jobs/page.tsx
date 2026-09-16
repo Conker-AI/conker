@@ -1,21 +1,20 @@
 import { useRef, useState } from "react"
 import { Briefcase, Plus } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
-import { CollectionEmpty, CollectionSearch } from "@/components/design-system"
+import { CollectionEmpty, CollectionSearch, TaskDialogContent, DetailPanel, ConfirmationDialog } from "@/components/design-system"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Dialog } from "@/components/ui/dialog"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import type { JobInput } from "@/lib/api/models"
 import { JobsTable } from "./job-table"
-import { JobActions, type JobControls } from "./row-actions"
+import { type JobControls } from "./row-actions"
 import { JobEditor } from "./job-editor"
 import { JobDetails } from "./job-details"
 
-type Panel = { mode: "create" | "view" | "edit" | "delete"; id?: string }
+type Panel = { mode: "create" | "view" | "edit" | "delete"; id?: string; returnToDetails?: boolean }
 
 export default function JobsPage() {
   const jobs = useConker(data => data.jobs)
@@ -32,7 +31,16 @@ export default function JobsPage() {
   const agentName = (id: string) => agents.find(agent => agent.id === id)?.name ?? "Unknown agent"
   const openPanel = (next: Panel) => {
     if (!panel) returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    setPanel(next)
+    setPanel({ ...next, returnToDetails: panel?.mode === "view" })
+  }
+  const closeForm = () => setPanel(panel?.returnToDetails ? { mode: "view", id: panel.id } : null)
+  const restoreFocus = (event: Event) => {
+    event.preventDefault()
+    requestAnimationFrame(() => {
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      const target = returnFocus.current
+      ;(target?.isConnected ? target : newButton.current)?.focus()
+    })
   }
   const clearFilters = () => { setQuery(""); setFilter("all") }
   const filtered = jobs.filter(job => {
@@ -71,12 +79,11 @@ export default function JobsPage() {
     })
     if (ok) {
       if (creating) clearFilters()
-      setPanel({ mode: "view", id })
+      setPanel(panel?.returnToDetails ? { mode: "view", id } : null)
       setFeedback(creating ? "Job created in this preview." : "Job changes saved in this preview.")
     }
   }
   const filters = <>
-    <span className="mr-auto text-xs text-muted-foreground" role="status">{filtered.length} of {jobs.length} jobs</span>
     {(query || filter !== "all") && <Button size="sm" variant="ghost" onClick={clearFilters}>Clear filters</Button>}
     <Select value={filter} onValueChange={setFilter}>
       <SelectTrigger size="sm" aria-label="Filter jobs" className="w-36"><SelectValue /></SelectTrigger>
@@ -90,34 +97,24 @@ export default function JobsPage() {
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline" className="font-normal">Preview</Badge><span>Changes reset on reload. Runs are simulated.</span></div>
       <CollectionSearch label="Search jobs" placeholder="Search jobs, instructions, or agents…" value={query} onChange={event => setQuery(event.target.value)} />
       {!filtered.length ? <><div className="flex flex-wrap items-center gap-2">{filters}</div><CollectionEmpty icon={<Briefcase />} title={jobs.length ? "No jobs match" : "No jobs yet"} description={jobs.length ? "Try a different search or clear your filters." : "Create a job and choose what your agent should do and when."} onClear={jobs.length ? clearFilters : undefined} />{!jobs.length && <Button className="self-center" onClick={() => openPanel({ mode: "create" })}><Plus />Create your first job</Button>}</>
-        : <><div className="space-y-4 xl:hidden">
-          <div className="flex flex-wrap items-center gap-2">{filters}</div>
-          <Card className="gap-0 overflow-hidden py-0"><div className="divide-y">{filtered.map(job => <div key={job.id} className="space-y-3 p-4">
-            <div className="flex items-start justify-between gap-3"><button className="min-w-0 rounded-sm text-left text-sm font-medium break-words hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => controls.open(job)}>{job.name}</button><Badge variant="outline" className="shrink-0 font-normal">{job.status}</Badge></div>
-            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">{job.purpose}</p>
-            <p className="text-xs text-muted-foreground">{agentName(job.agentId)} · {job.schedule} · {job.timeZone}</p>
-            <p className={job.history[0]?.status === "Failed" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>{job.history[0]?.status === "Failed" ? "Last run failed · " : ""}{job.lastRun}</p>
-            <JobActions job={job} controls={controls} />
-          </div>)}</div></Card>
-        </div><div className="hidden xl:block"><JobsTable controls={controls} agentName={agentName} data={filtered} toolbarAction={filters} /></div></>}
+        : <JobsTable controls={controls} agentName={agentName} data={filtered} toolbarAction={filters} />}
       <p role="status" className="min-h-4 text-xs text-muted-foreground">{feedback || "Open a job for instructions and run history. Schedule times use each job’s time zone."}</p>
     </div>
-    <Sheet open={!!panel} onOpenChange={open => { if (!open && !pending) setPanel(null) }}>
-      <SheetContent className="w-full gap-0 sm:max-w-xl" onInteractOutside={event => { if (panel?.mode === "create" || panel?.mode === "edit" || pending) event.preventDefault() }}
-        onCloseAutoFocus={event => { event.preventDefault(); const target = returnFocus.current; requestAnimationFrame(() => (target?.isConnected ? target : newButton.current)?.focus()) }}>
-        <SheetHeader className="shrink-0 border-b p-5 pr-12">
-          <SheetTitle className="break-words">{panel?.mode === "create" ? "New job" : panel?.mode === "edit" ? "Edit job" : panel?.mode === "delete" ? "Delete job?" : selected?.name ?? "Job details"}</SheetTitle>
-          <SheetDescription>{panel?.mode === "create" || panel?.mode === "edit" ? "Choose the task, agent, and schedule." : "Frontend preview · no server actions"}</SheetDescription>
-        </SheetHeader>
+    <DetailPanel open={panel?.mode === "view"} onOpenChange={open => { if (!open) setPanel(null) }} busy={pending}
+      title={selected?.name ?? "Job details"} description="Configuration and run history · frontend preview" onCloseAutoFocus={restoreFocus}>
+      {selected && <JobDetails job={selected} agentName={agentName(selected.agentId)} controls={controls} />}
+    </DetailPanel>
+    <Dialog open={panel?.mode === "create" || panel?.mode === "edit"} onOpenChange={open => { if (!open && !pending) closeForm() }}>
+      <TaskDialogContent size="wide" title={panel?.mode === "edit" ? "Edit job" : "New job"} description="Choose the task, agent, and schedule." showCloseButton={!pending}
+        onInteractOutside={event => event.preventDefault()} onCloseAutoFocus={restoreFocus}>
         {error && <p role="alert" className="px-5 pt-4 text-sm text-destructive">{error}</p>}
-        {panel?.mode === "create" || panel?.mode === "edit" && selected ? <JobEditor key={`${panel.mode}-${panel.id ?? "new"}`} job={panel.mode === "edit" ? selected : undefined} agents={agents} pending={pending} onSave={save} onCancel={() => setPanel(panel.mode === "edit" ? { mode: "view", id: panel.id } : null)} />
-          : panel?.mode === "delete" && selected ? <div className="space-y-5 p-5">
-            <p className="text-sm leading-6">Remove <strong className="break-words">{selected.name}</strong> and its run history from this preview? It will return when you reload the app.</p>
-            <div className="flex justify-end gap-2"><Button variant="outline" disabled={pending} onClick={() => setPanel({ mode: "view", id: selected.id })}>Cancel</Button><Button variant="destructive" disabled={pending} onClick={async () => {
-              if (await mutate(() => conkerClient.deleteJob(selected.id))) { setPanel(null); setFeedback("Job removed from this preview.") }
-            }}>{pending ? "Deleting…" : "Delete job"}</Button></div>
-          </div> : selected && <JobDetails job={selected} agentName={agentName(selected.agentId)} controls={controls} />}
-      </SheetContent>
-    </Sheet>
+        {(panel?.mode === "create" || panel?.mode === "edit" && selected) && <JobEditor key={`${panel.mode}-${panel.id ?? "new"}`} job={panel.mode === "edit" ? selected : undefined} agents={agents} pending={pending} onSave={save} onCancel={closeForm} />}
+      </TaskDialogContent>
+    </Dialog>
+    <ConfirmationDialog open={panel?.mode === "delete"} onOpenChange={open => { if (!open) closeForm() }} title="Delete job?"
+      description="Remove this job and its run history from the preview. It will return when you reload the app."
+      actionLabel="Delete job" pending={pending} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => {
+        if (selected && await mutate(() => conkerClient.deleteJob(selected.id))) { setPanel(null); setFeedback("Job removed from this preview.") }
+      }}><p className="text-sm font-medium break-words">{selected?.name}</p></ConfirmationDialog>
   </BaseLayout>
 }

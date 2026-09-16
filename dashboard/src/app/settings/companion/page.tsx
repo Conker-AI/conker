@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { BaseLayout } from "@/components/layouts/base-layout"
+import { FormActions } from "@/components/design-system"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { faces, portraitTones, emotions } from "@/lib/character-options"
 import { Button } from "@/components/ui/button"
@@ -80,7 +81,10 @@ export default function CharacterStudioPage() {
           </div>)}</div>
           </CardContent>
         </Card>
-        <div className="flex flex-wrap items-center gap-3"><Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button><Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button><span role="status" className="text-xs text-muted-foreground">{saved && !dirty ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to Home and the sidebar"}</span></div>
+        <FormActions description={<span role="status">{saved && !dirty ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to your companion and sidebar"}</span>}>
+          <Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button>
+          <Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button>
+        </FormActions>
       </div>
       <aside className="min-w-0 lg:sticky lg:top-6" aria-labelledby="portrait-preview-heading">
         <Card>

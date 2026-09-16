@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { MessageCircle, Pin } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 import { useConker } from "@/lib/api/store"
 import type { Session } from "@/lib/api/models"
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -28,8 +30,8 @@ function ConversationGroup({ title, sessions, pinned = false, agentFirst = false
   </CollectionSection>
 }
 
-function ChatListPanel({ agentView = false, query, onQueryChange, count, children }: {
-  agentView?: boolean; query: string; onQueryChange: (query: string) => void; count: number; children: ReactNode
+function ChatListPanel({ agentView = false, archived = false, query, onQueryChange, count, children }: {
+  agentView?: boolean; archived?: boolean; query: string; onQueryChange: (query: string) => void; count: number; children: ReactNode
 }) {
   const searching = Boolean(query.trim())
   return <CollectionPanel query={query} onQueryChange={onQueryChange} count={count}
@@ -37,8 +39,9 @@ function ChatListPanel({ agentView = false, query, onQueryChange, count, childre
     placeholder={agentView ? "Search agents or sessions" : "Search your conversations"}
     unit={agentView ? "agent sessions" : count === 1 ? "conversation" : "conversations"}
     icon={<MessageCircle />}
-    emptyTitle={searching ? agentView ? "No agent sessions found" : "No conversations found" : agentView ? "Your agent sessions will appear here" : "Your conversations will appear here"}
-    emptyDescription={searching ? "Try a different title, topic, or agent name." : agentView ? "Agents appear here after their first conversation." : "Return here to revisit a conversation with your companion or agents."}>
+    emptyTitle={searching ? agentView ? "No agent sessions found" : "No conversations found" : archived ? "No archived conversations" : agentView ? "Your agent sessions will appear here" : "Your conversations will appear here"}
+    emptyDescription={searching ? "Try a different title, topic, or agent name." : archived ? "Archive a conversation from its menu to keep it here." : agentView ? "Agents appear here after their first conversation." : "Start a conversation with your companion or choose another agent."}
+    emptyAction={!archived && <Button asChild><Link to={agentView ? "/agents" : "/chat/new"}>{agentView ? "Choose an agent" : "New chat"}</Link></Button>}>
     {children}
   </CollectionPanel>
 }
@@ -86,6 +89,6 @@ export default function ChatsPage() {
           {unusedAgents.length > 0 && <CollectionSection title="Start a conversation">{unusedAgents.map(agent => <CollectionRow key={agent.id} to={`/chat/new?agent=${encodeURIComponent(agent.id)}`} title={agent.kind === "companion" ? profile.name : agent.name} description={agent.role} leading={<AgentIdentityPortrait name={agent.name} />} trailing="New chat" />)}</CollectionSection>}
         </ChatListPanel>
       </RouteSection>
-      <RouteSection value="archived"><ChatListPanel query={archiveQuery} onQueryChange={setArchiveQuery} count={archived.length}><ConversationGroup title="Archived conversations" sessions={archived} /></ChatListPanel></RouteSection>
+      <RouteSection value="archived"><ChatListPanel archived query={archiveQuery} onQueryChange={setArchiveQuery} count={archived.length}><ConversationGroup title="Archived conversations" sessions={archived} /></ChatListPanel></RouteSection>
   </BaseLayout>
 }

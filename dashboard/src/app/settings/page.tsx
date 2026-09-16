@@ -5,7 +5,7 @@ import { BaseLayout } from "@/components/layouts/base-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import {
-  RouteSection,
+  RouteSection, FormActions,
 } from "@/components/design-system"
 import { ThemeTab } from "@/components/theme-customizer/theme-tab"
 import { LayoutTab } from "@/components/theme-customizer/layout-tab"
@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const modelsConfiguration = useConker(data => data.modelsConfiguration)
   const { saveConnections, saveModelsConfiguration, pending } = useConkerStore()
   const [saved, setSaved] = useState(false)
+  const connectionsDirty = JSON.stringify(connections) !== JSON.stringify(currentConnections)
 
   return <BaseLayout title="Settings" description="Appearance, layout, and your dashboard connections.">
       <RouteSection value="appearance">
@@ -72,10 +73,10 @@ export default function SettingsPage() {
               setSaved(await saveConnections(connections))
             }}>
               <ConnectionsFields value={connections} onChange={value => { setConnections(value); setSaved(false) }} />
-              <div className="flex flex-wrap items-center gap-3">
-                <Button disabled={pending}>Save connection draft</Button>
-                {saved && <p role="status" className="text-sm leading-6 text-muted-foreground">Saved for this preview. Connection not tested.</p>}
-              </div>
+              <FormActions description={<span role="status">{saved ? "Saved for this preview. Connection not tested." : connectionsDirty ? "Unsaved changes" : "Connection draft is up to date"}</span>}>
+                <Button type="button" variant="outline" disabled={pending || !connectionsDirty} onClick={() => { setConnections(currentConnections); setSaved(false) }}>Discard changes</Button>
+                <Button disabled={pending || !connectionsDirty}>{pending ? "Saving…" : "Save connection draft"}</Button>
+              </FormActions>
             </form>
           </CardContent>
         </Card>

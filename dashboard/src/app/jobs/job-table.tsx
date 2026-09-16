@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import type { ReactNode } from "react"
 import { DataTable } from "@/components/data-table"
+import { RecordItem } from "@/components/design-system"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import { JobActions, type JobControls } from "./row-actions"
@@ -26,5 +27,8 @@ function jobColumns(controls: JobControls, agentName: (id: string) => string): C
 }
 
 export function JobsTable({ controls, agentName, data, toolbarAction }: { controls: JobControls; agentName: (id: string) => string; data: Job[]; toolbarAction: ReactNode }) {
-  return <DataTable columns={jobColumns(controls, agentName)} data={data} toolbarAction={toolbarAction} />
+  return <DataTable columns={jobColumns(controls, agentName)} data={data} toolbarAction={toolbarAction} itemLabel="jobs" renderItem={job => <RecordItem
+    title={job.name} description={job.purpose} onOpen={() => controls.open(job)}
+    meta={<><Badge variant="outline">{job.status}</Badge><span>{agentName(job.agentId)}</span><span>{job.schedule} · {job.timeZone}</span><span className={job.history[0]?.status === "Failed" ? "text-destructive" : undefined}>{job.history[0]?.status === "Failed" ? "Last run failed · " : ""}{job.lastRun}</span></>}
+    actions={<JobActions job={job} controls={controls} />} />} />
 }

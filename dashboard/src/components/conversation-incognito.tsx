@@ -1,7 +1,8 @@
 import { useRef, useState } from "react"
 import { ArrowRight, HatGlasses } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogTrigger } from "@/components/ui/dialog"
+import { TaskDialogContent, OverlayBody, FormActions } from "@/components/design-system"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -26,13 +27,10 @@ export function ConversationIncognito({ privacy, busy, onChange, onInspect }: {
         {active && <span aria-hidden="true" className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />}
       </Button>
     </DialogTrigger></TooltipTrigger><TooltipContent>Incognito · {mode}</TooltipContent></Tooltip>
-    <DialogContent className="sm:max-w-sm" onCloseAutoFocus={event => {
+    <TaskDialogContent title={<span className="flex items-center gap-2"><HatGlasses className="size-5" />Incognito</span>} description="Choose what to exclude from this conversation." onCloseAutoFocus={event => {
       if (inspect.current) { event.preventDefault(); inspect.current = false; onInspect() }
     }}>
-      <DialogHeader className="text-left">
-        <DialogTitle className="flex items-center gap-2"><HatGlasses className="size-5" />Incognito</DialogTitle>
-        <DialogDescription>Choose what to exclude from this conversation.</DialogDescription>
-      </DialogHeader>
+      <OverlayBody>
       <div className="divide-y rounded-lg border px-4">
         <div className="flex items-center justify-between gap-4 py-4">
           <div className="space-y-1"><Label htmlFor="incognito-memory">No memory</Label><p id="incognito-memory-description" className="text-xs leading-5 text-muted-foreground">Skip memory reads and writes.</p></div>
@@ -45,7 +43,7 @@ export function ConversationIncognito({ privacy, busy, onChange, onInspect }: {
       </div>
       <p role="status" className="text-sm font-medium">{active ? mode : "Standard conversation"}</p>
       <p className="text-xs leading-5 text-muted-foreground">Saved for this conversation in the preview. Server privacy controls are not connected.</p>
-      <Button variant="outline" className="justify-between" onClick={() => { inspect.current = true; setOpen(false) }}>View memory & permissions<ArrowRight /></Button>
-    </DialogContent>
+      </OverlayBody><FormActions inset><Button variant="outline" onClick={() => { inspect.current = true; setOpen(false) }}>View memory & permissions<ArrowRight /></Button></FormActions>
+    </TaskDialogContent>
   </Dialog>
 }

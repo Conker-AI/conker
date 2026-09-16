@@ -9,6 +9,8 @@ import { CompanionPortrait } from "@/components/companion-portrait"
 import { useConker } from "@/lib/api/store"
 import { cn } from "@/lib/utils"
 
+export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, ConfirmationDialog } from "./overlays"
+
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
@@ -76,22 +78,36 @@ export function CollectionSection({ title, icon, children, contained = false }: 
   </section>
 }
 
-export function CollectionEmpty({ title, description, icon, onClear }: { title: string; description: string; icon?: ReactNode; onClear?: () => void }) {
+/** Compact record for responsive tables. One container owns the divided list. */
+export function RecordItem({ title, description, leading, meta, actions, onOpen }: {
+  title: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen: () => void
+}) {
+  return <div data-pattern="record-item" className="min-w-0 space-y-3 p-4">
+    <button type="button" onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">
+      {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
+      <span className="min-w-0 flex-1"><span className="block text-sm font-medium break-words">{title}</span>{description && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>}</span>
+    </button>
+    {meta && <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">{meta}</div>}
+    {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+  </div>
+}
+
+export function CollectionEmpty({ title, description, icon, onClear, clearLabel = "Clear search", action }: { title: string; description: string; icon?: ReactNode; onClear?: () => void; clearLabel?: string; action?: ReactNode }) {
   return <div data-slot="collection-empty" className="flex flex-col items-center px-4 py-16 text-center">
     <span className="mb-4 text-muted-foreground [&>svg]:size-7" aria-hidden="true">{icon ?? <SearchX />}</span>
     <h2 className="text-base font-medium">{title}</h2>
     <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
-    {onClear && <Button variant="outline" size="lg" className="mt-5" onClick={onClear}>Clear search</Button>}
+    {onClear ? <Button variant="outline" className="mt-5" onClick={onClear}>{clearLabel}</Button> : action && <div className="mt-5">{action}</div>}
   </div>
 }
 
-export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, icon, children }: {
+export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, icon, children }: {
   query: string; onQueryChange: (value: string) => void; label: string; placeholder: string; count: number; unit: string;
-  emptyTitle: string; emptyDescription: string; icon?: ReactNode; children: ReactNode
+  emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; children: ReactNode
 }) {
   return <div className="min-w-0 space-y-7">
     <CollectionSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />
     <p className="sr-only" role="status">{count} {unit} found.</p>
-    {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
+    {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
   </div>
 }

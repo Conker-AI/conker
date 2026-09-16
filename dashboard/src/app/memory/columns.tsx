@@ -4,20 +4,20 @@ import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import type { Memory } from "@/lib/api/models"
 
-export const columns: ColumnDef<Memory>[] = [
+export const memoryColumns = (open: (memory: Memory) => void): ColumnDef<Memory>[] => [
   {
     accessorKey: "text",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Memory" />
     ),
     cell: ({ row }) => (
-      <p
+      <button type="button" onClick={() => open(row.original)}
         id={row.original.id}
         lang={row.original.language}
-        className="min-w-64 max-w-md text-sm leading-relaxed"
+        className="min-w-64 max-w-md rounded-sm text-left text-sm leading-relaxed hover:underline focus-visible:outline-2 focus-visible:outline-ring"
       >
         {row.original.text}
-      </p>
+      </button>
     ),
   },
   {

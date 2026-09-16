@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useReadAloud } from "@/hooks/use-read-aloud"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog } from "@/components/ui/dialog"
+import { TaskDialogContent, OverlayBody, FormActions, ConfirmationDialog } from "@/components/design-system"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { ConversationMessage } from "@/lib/api/conversation-types"
 import type { Session } from "@/lib/api/models"
@@ -36,6 +37,8 @@ export function MessageActions({ session, message }: { session: Session; message
   const speech = useReadAloud(`${session.id}:${message.id}`, message.redacted ? "" : message.text)
   const focusComposer = useRef(false)
   const focusReference = useRef(false)
+  const actionGroup = useRef<HTMLDivElement>(null)
+  const restoreFocus = (event: Event) => { event.preventDefault(); actionGroup.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus() }
   const navigate = useNavigate()
   const busy = pending || !!streaming || !!session.archived
   const assistant = message.role === "assistant"
@@ -56,7 +59,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const edit = () => { setText(message.text); setDialog("edit") }
   const reply = () => { setReply(session.id, message.id); document.getElementById("message-composer")?.focus() }
 
-  return <div data-home="message" role="group" aria-label={assistant ? "Response actions" : "Message actions"} className={cn("mt-2 flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5", !assistant && "justify-end")}>
+  return <div ref={actionGroup} data-home="message" role="group" aria-label={assistant ? "Response actions" : "Message actions"} className={cn("mt-2 flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5", !assistant && "justify-end")}>
     <div className="flex shrink-0 items-center gap-0.5">
       <ActionButton label={copied === "text" ? "Copied" : "Copy message"} disabled={message.redacted || !message.text} onClick={() => void copy(message.text, "text")}>{copied === "text" ? <Check /> : <Copy />}</ActionButton>
       {assistant ? <>
@@ -97,10 +100,19 @@ export function MessageActions({ session, message }: { session: Session; message
       <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()}>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
       {message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}
     </div>
-    <Dialog open={dialog !== null} onOpenChange={open => { if (!open) setDialog(null) }}><DialogContent className="">
-      <DialogHeader><DialogTitle>{dialog === "edit" ? "Edit message" : "Redact this message?"}</DialogTitle><DialogDescription>{dialog === "edit" ? "Edits are marked in this preview. They do not regenerate the conversation or repeat tools." : "The text and its source are removed from this conversation. A redacted marker remains. Existing forks are separate copies."}</DialogDescription></DialogHeader>
-      {dialog === "edit" ? <form className="space-y-4" onSubmit={async event => { event.preventDefault(); if (await update({ text })) setDialog(null) }}><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /><DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>Save message</Button></DialogFooter></form>
-        : <DialogFooter><Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button><Button variant="destructive" disabled={busy} onClick={async () => { if (await update({ redacted: true })) setDialog(null) }}>Redact message</Button></DialogFooter>}
-    </DialogContent></Dialog>
+    <Dialog open={dialog === "edit"} onOpenChange={open => { if (!open && !pending) setDialog(null) }}>
+      <TaskDialogContent title="Edit message" description="Edits are marked in this preview. They do not regenerate the conversation or repeat tools."
+        onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>
+        <form className="flex min-h-0 flex-col" onSubmit={async event => { event.preventDefault(); if (await update({ text })) setDialog(null) }}>
+          <OverlayBody><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></OverlayBody>
+          <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>Save message</Button></FormActions>
+        </form>
+      </TaskDialogContent>
+    </Dialog>
+    <ConfirmationDialog open={dialog === "redact"} onOpenChange={open => { if (!open) setDialog(null) }} title="Redact this message?"
+      description="The text and its source are removed from this conversation. A redacted marker remains. Existing forks are separate copies."
+      actionLabel="Redact message" pending={busy} onCloseAutoFocus={restoreFocus} onConfirm={async () => { if (await update({ redacted: true })) setDialog(null) }}>
+      <p className="line-clamp-3 text-sm text-muted-foreground">{message.text}</p>
+    </ConfirmationDialog>
   </div>
 }

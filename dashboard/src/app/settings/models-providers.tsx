@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { CollectionEmpty } from "@/components/design-system"
+import { CollectionEmpty, FormActions } from "@/components/design-system"
 import {
   getAvailableModels,
   validateModelsConfiguration,
@@ -141,18 +141,16 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
             </div>
           </section>
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-          <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save model draft"}</Button>
+        {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
+        <FormActions description={<span role="status">{saved ? "Saved for this preview. Chat model picks now use this catalogue." : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
           <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => {
             setDraft(structuredClone(configuration))
             setError(null)
             setSaved(false)
             setShowKeys(false)
           }}>Discard changes</Button>
-          {dirty && !saved && <span className="text-sm text-muted-foreground">Unsaved changes</span>}
-          {saved && <p role="status" className="text-sm leading-6 text-muted-foreground">Saved for this preview. Chat model picks now use this catalogue.</p>}
-          {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
-        </div>
+          <Button type="submit" disabled={pending || !dirty}>{pending ? "Saving…" : "Save model draft"}</Button>
+        </FormActions>
       </form>
     </CardContent>
   </Card>

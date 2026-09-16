@@ -8,8 +8,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import type { Agent } from "@/lib/api/models"
 
-export const columns: ColumnDef<Agent>[] = [
-  { id: "chat", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon" className="size-8"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`} title={`New chat with ${row.original.name}`}><SquarePen /></Link></Button> },
+export const agentColumns = (open: (agent: Agent) => void): ColumnDef<Agent>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Agent" />,
@@ -19,7 +18,7 @@ export const columns: ColumnDef<Agent>[] = [
         <div className="flex items-center gap-3">
           <AgentIdentityPortrait name={a.name} />
           <div className="flex flex-col">
-            <span className="font-medium">{a.name}</span>
+            <button type="button" onClick={() => open(a)} className="w-fit rounded-sm text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-ring">{a.name}</button>
             <span className="text-muted-foreground text-xs">{a.role}</span>
           </div>
         </div>
@@ -61,4 +60,5 @@ export const columns: ColumnDef<Agent>[] = [
       )
     },
   },
+  { id: "chat", header: "", enableHiding: false, cell: ({ row }) => <Button asChild variant="outline" size="sm"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`}><SquarePen />New chat</Link></Button> },
 ]

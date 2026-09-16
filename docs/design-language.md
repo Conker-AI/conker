@@ -47,6 +47,8 @@ Conker keeps its content, features, compact composition, custom appbar/sidebar c
 
 ## Screen intents (quick reference)
 
+Interaction placement follows the owner-approved September 16 contract in [dashboard/DESIGN.md](../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16). Focused creation and multi-field edits use centered task dialogs; contextual evidence and history use a right panel; complex configuration stays on dedicated pages. Confirmations name their target and consequences. Save/discard ordering, feedback, responsive record lists, and overlay geometry are shared components, not route-specific decisions. Preserve Conker's current visual identity while making equivalent actions behave consistently.
+
 - **Session list / Chats** — productive. Dense outlined list, find-fast.
 - **Inbox list** — productive. Outlined rows, effect badges, glance meta.
 - **Inbox detail (approval)** — combined. Serious, structured; the delta and provenance are the point.

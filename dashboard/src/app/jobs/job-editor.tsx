@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { FormActions } from "@/components/design-system"
 
 export function JobEditor({ job, agents, pending, onSave, onCancel }: {
   job?: Job; agents: Agent[]; pending: boolean; onSave: (input: JobInput) => Promise<void>; onCancel: () => void
@@ -35,7 +36,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
     }
     await onSave(value)
   }}>
-    <fieldset disabled={pending} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+    <fieldset disabled={pending} className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto p-5">
       <div className="space-y-2">
         <Label htmlFor={`${id}-name`}>Name</Label>
         <Input id={`${id}-name`} value={value.name} onChange={event => set("name", event.target.value)} maxLength={80} placeholder="e.g. Morning briefing" autoFocus aria-invalid={!!errors.name} aria-describedby={describedBy("name")} />
@@ -92,9 +93,8 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
         <Switch id={`${id}-enabled`} checked={value.enabled} onCheckedChange={enabled => set("enabled", enabled)} disabled={pending} />
       </div>
     </fieldset>
-    <div className="shrink-0 space-y-3 border-t p-5">
-      <p className="text-xs text-muted-foreground">Preview only. Changes reset on reload; no scheduler is connected.</p>
-      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel} disabled={pending}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : job ? "Save changes" : "Create job"}</Button></div>
-    </div>
+    <FormActions inset description="Preview only · resets on reload · no scheduler connected.">
+      <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : job ? "Save changes" : "Create job"}</Button>
+    </FormActions>
   </form>
 }

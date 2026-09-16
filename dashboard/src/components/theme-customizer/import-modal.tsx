@@ -2,7 +2,9 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog } from '@/components/ui/dialog'
+import { TaskDialogContent, OverlayBody, FormActions } from '@/components/design-system'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { ImportedTheme } from '@/types/theme-customizer'
 
@@ -14,11 +16,12 @@ interface ImportModalProps {
 
 export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) {
   const [importText, setImportText] = React.useState("")
+  const [error, setError] = React.useState("")
 
   const processImport = () => {
     try {
       if (!importText.trim()) {
-        console.error("No CSS content provided")
+        setError("Paste the theme CSS before importing.")
         return
       }
 
@@ -51,31 +54,33 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
         }
       }
       
+      if (!Object.keys(lightTheme).length && !Object.keys(darkTheme).length) {
+        setError("No theme variables found. Include a :root or .dark block with CSS variables.")
+        return
+      }
       // Store the imported theme
       const importedThemeData = { light: lightTheme, dark: darkTheme }
       onImport(importedThemeData)
       
       onOpenChange(false)
       setImportText("")
-    } catch (error) {
-      console.error("Error importing theme:", error)
+      setError("")
+    } catch {
+      setError("The CSS could not be imported. Check the theme blocks and try again.")
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
-      <DialogContent className="max-w-4xl w-[90vw]">
-        <DialogHeader>
-          <DialogTitle>Import Custom CSS</DialogTitle>
-          <DialogDescription>
-            Paste your CSS theme below. Include both <code>:root</code> (light mode) and <code>.dark</code> (dark mode) sections with CSS variables like <code>--primary</code>, <code>--background</code>, etc. The theme will automatically switch between light and dark modes.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
+      <TaskDialogContent size="wide" title="Import theme" description="Paste :root (light) and .dark theme blocks with CSS variables. The theme follows your selected appearance mode." onInteractOutside={event => event.preventDefault()}>
+        <OverlayBody>
           <div className="space-y-2">
+            <Label htmlFor="theme-css">Theme CSS</Label>
             <Textarea
               id="theme-css"
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm max-h-[400px] min-h-[300px] font-mono text-sm text-foreground overflow-y-auto resize-none"
+              className="min-h-48 font-mono text-sm"
+              aria-invalid={!!error}
+              aria-describedby={error ? "theme-import-error" : undefined}
               placeholder={`:root {
   --background: 0 0% 100%;
   --foreground: oklch(0.52 0.13 144.17);
@@ -89,19 +94,20 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
   /* And more */
 }`}
               value={importText}
-              onChange={(e) => setImportText(e.target.value)}
+              onChange={(e) => { setImportText(e.target.value); setError("") }}
             />
           </div>
-          <div className="flex gap-2 justify-end">
+          {error && <p id="theme-import-error" role="alert" className="text-sm text-destructive">{error}</p>}
+        </OverlayBody>
+          <FormActions inset>
             <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">
               Cancel
             </Button>
             <Button onClick={processImport} disabled={!importText.trim()} className="cursor-pointer">
               Import Theme
             </Button>
-          </div>
-        </div>
-      </DialogContent>
+          </FormActions>
+      </TaskDialogContent>
     </Dialog>
   )
 }

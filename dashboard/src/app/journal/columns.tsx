@@ -1,9 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import type { JournalEntry } from "@/lib/api/models"
 
-export const columns: ColumnDef<JournalEntry>[] = [
+export const journalColumns = (open: (entry: JournalEntry) => void): ColumnDef<JournalEntry>[] => [
   {
     accessorKey: "time",
     header: "Time",
@@ -22,12 +21,11 @@ export const columns: ColumnDef<JournalEntry>[] = [
     accessorKey: "event",
     header: "Event",
     cell: ({ row }) => (
-      <Link
-        className="whitespace-nowrap font-medium hover:underline"
-        to={row.original.source}
+      <button type="button" onClick={() => open(row.original)}
+        className="rounded-sm text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-ring"
       >
         {row.original.event}
-      </Link>
+      </button>
     ),
   },
   {

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { CollectionSearch, CollectionEmpty } from "@/components/design-system"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { DataTableViewOptions } from "@/app/tasks/components/data-table-view-options"
 import { DataTableFacetedFilter } from "@/app/tasks/components/data-table-faceted-filter"
@@ -51,6 +52,9 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   /** hide the pager when a list is short and always fits */
   paginate?: boolean
+  /** Same filtered/sorted rows rendered as a compact list below desktop width. */
+  renderItem?: (item: TData) => React.ReactNode
+  itemLabel?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -62,6 +66,8 @@ export function DataTable<TData, TValue>({
   toolbarAction,
   onRowClick,
   paginate = true,
+  renderItem,
+  itemLabel = "records",
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -118,14 +124,29 @@ export function DataTable<TData, TValue>({
             <X className="ml-2 size-4" />
           </Button>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <span role="status" className="mr-auto text-xs text-muted-foreground">{table.getFilteredRowModel().rows.length} {itemLabel}</span>
+        <div className="flex flex-wrap items-center gap-2">
           {toolbarAction}
-          <DataTableViewOptions table={table} />
+          {renderItem && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} onValueChange={value => {
+            if (value === "default") setSorting([])
+            else { const [id, direction] = value.split(":"); setSorting([{ id, desc: direction === "desc" }]) }
+          }}><SelectTrigger size="sm" aria-label="Sort records"><SelectValue /></SelectTrigger><SelectContent>
+            <SelectItem value="default">Default order</SelectItem>
+            {table.getAllColumns().filter(column => column.getCanSort()).flatMap(column => [
+              <SelectItem key={`${column.id}:asc`} value={`${column.id}:asc`}>{column.id.replace(/([A-Z])/g, " $1")} · ascending</SelectItem>,
+              <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>{column.id.replace(/([A-Z])/g, " $1")} · descending</SelectItem>,
+            ])}
+          </SelectContent></Select></div>}
+          <div className={renderItem ? "hidden xl:block" : undefined}><DataTableViewOptions table={table} /></div>
         </div>
       </div>
 
       {/* Structured data shares collection density and retains table semantics. */}
-      <div className="min-w-0 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-xs">
+      {renderItem && <div className="min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs xl:hidden">
+        {table.getRowModel().rows.length ? <ul className="divide-y">{table.getRowModel().rows.map(row => <li key={row.id}>{renderItem(row.original)}</li>)}</ul>
+          : <CollectionEmpty title="No results found" description="Try a different search or clear your filters." onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />}
+      </div>}
+      <div className={cn("min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs", renderItem && "hidden xl:block")}>
         <Table>
           <TableHeader className="bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -146,7 +167,10 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  onClick={onRowClick ? event => {
+                    if ((event.target as HTMLElement).closest("a,button,input,[role=button]")) return
+                    onRowClick(row.original)
+                  } : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   onKeyDown={onRowClick ? (event) => {
                     if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
@@ -157,7 +181,7 @@ export function DataTable<TData, TValue>({
                   className={cn("h-(--collection-row-height)", onRowClick && "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring")}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-2.5">
+                    <TableCell key={cell.id} className="px-4 py-2.5 whitespace-normal">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

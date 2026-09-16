@@ -5,7 +5,7 @@ import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-
 import { cn } from "@/lib/utils"
 import type { Tool } from "@/lib/api/models"
 
-export const columns: ColumnDef<Tool>[] = [
+export const toolColumns = (open: (tool: Tool) => void): ColumnDef<Tool>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -15,7 +15,7 @@ export const columns: ColumnDef<Tool>[] = [
       <div className="flex min-w-64 items-center gap-3">
         <Wrench className="size-4 shrink-0 text-muted-foreground" />
         <div>
-          <p className="font-mono text-sm">{row.original.name}</p>
+          <button type="button" onClick={() => open(row.original)} className="rounded-sm font-mono text-sm hover:underline focus-visible:outline-2 focus-visible:outline-ring">{row.original.name}</button>
           <p className="mt-1 text-xs text-muted-foreground">
             {row.original.purpose}
           </p>
