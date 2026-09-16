@@ -117,7 +117,15 @@ Update the shared component and its contract first; migrate consumers together. 
 
 ## Home and Companion
 
-Home (`/`) is the read-first daily overview: priorities, upcoming agenda, decisions, recent activity, and sourced news status. It has no chat composer. Its content comes from `getDailyOverview`, with sample date and provenance visible.
+Home (`/`) is the workspace overview for Conker's internal screens. Linked counts open Agents, Tools, Memory and Jobs; the remaining sections show pending requests, agent status, recent Journal activity, recent conversations and System status. The page-header actions are New chat and Open companion, and System status links to Connections and System.
+
+Compose Home with `BaseLayout`, shared cards, `CollectionRow`, `AgentIdentityPortrait`, buttons and status badges. The resource strip has two columns on narrow screens and four on large screens. At extra-large widths, requests and activity occupy the wider left column, with agents and conversations on the right; smaller screens stack these sections. System status spans the page. Preserve shared section gaps, density, theme/radius behavior, the inset frame and complete padded portraits.
+
+Tasks and calendars belong to the separate productivity app, which may later connect through MCP/ToolGate. Home has no daily briefing, agenda, news feed, planning starters or chat composer. Journal summaries may include recorded calendar-tool activity as audit data; they must not become a personal calendar interface.
+
+Home reads the `ConkerClient` snapshot and derives its summaries through `getWorkspaceOverview` in `src/lib/workspace-overview.ts`. Show up to three pending requests and agents, four recent Journal entries, and three recent conversations; conversations exclude the permanent Companion, archived sessions and empty drafts. Enabled jobs count scheduled jobs, with paused jobs reported separately. Preserve the Preview data label and explicit sample-service status; fixture activity dates remain anchored to their recorded date. `getDailyOverview` remains available for Companion's day context.
+
+Home has one quiet overview arrival: 420ms with a 6px upward settle and a small opacity change, enabled only when reduced motion is not requested. Keep it an entrance treatment rather than an imitation of live agent activity. No new palette, density or motion tokens are introduced.
 
 Companion (`/companion`) is the main-agent workspace: a dedicated stable conversation, daily briefing, action starters, and contextual events/news. It uses the shared `Conversation` shell and composer. Existing chats remain at `/chat/:id`. Never choose the main companion by session array position.
 
@@ -131,7 +139,7 @@ Character customization lives at `/settings/companion`, separate from conversati
 
 `BaseLayout` accepts an optional `actions` slot for standard page-header actions. DailyNews owns feed content; its parent owns the section heading. It renders publisher/date/source metadata for ready feeds and a truthful unavailable state otherwise.
 
-Home planning links carry `{ prompt }` in React Router state to Companion. Append it to an existing draft, never overwrite the user's words or send automatically. The 4,000-character composer limit remains enforced.
+When Companion receives `{ prompt }` in React Router state, append it to an existing draft, never overwrite the user's words or send automatically. Home's New chat and Open companion actions navigate directly without planning prompts. The 4,000-character composer limit remains enforced.
 
 The current transport is a sample preview. No AI replies, news headlines, weather, or external actions may be implied to be live until corresponding providers are connected. Keep the briefing date explicit; render plans as proposals rather than booked calendar events.
 

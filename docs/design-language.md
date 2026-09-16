@@ -51,9 +51,14 @@ Conker keeps its content, features, compact composition, custom appbar/sidebar c
 - **Inbox list** — productive. Outlined rows, effect badges, glance meta.
 - **Inbox detail (approval)** — combined. Serious, structured; the delta and provenance are the point.
 - **System / Agents / Tools / Memory / Journal / Jobs** — productive. Outlined cards, tight.
-- **Home / conversation** — combined. Productive thread + beautiful companion presence and AI states.
+- **Home** — combined. A compact, visually composed workspace overview with linked resource counts, pending requests, agent status, recent activity and conversations, service status, and restrained motion.
+- **Companion / conversation** — combined. Productive thread + beautiful companion presence and AI states.
 - **Character Studio** — beautiful-leaning. The companion should feel alive (static now, animated later).
 - **Terminal** — productive. Outlined shell, honest offline state.
+
+Home summarizes Conker's internal screens using the shared page shell, cards, collection rows and complete padded portraits. New chat and Open companion provide the primary next steps; Connections and System expose service details. One subtle arrival animation gives the overview a quiet entrance and respects reduced motion. Existing theme, density and inset-frame contracts continue to apply.
+
+The separate productivity app owns tasks and calendars and may later connect to Conker through MCP/ToolGate. Home does not duplicate a daily briefing, agenda, news feed or planning starters. Recorded calendar-tool actions can appear in Journal summaries as audit history. Companion keeps its dedicated conversation, voice behavior, daily context and sourced-news status; the Home restructuring does not remove these capabilities.
 
 ## Reference
 
