@@ -15,6 +15,7 @@ import { createConversations, createConversationState } from "./conversation-fix
 import { createModelsConfiguration, getAvailableModels, validateModelsConfiguration } from "./model-catalogue"
 import type { ConversationMessage } from "./conversation-types"
 import { unavailableVoiceInput } from "../voice/types"
+import { describeJobTiming, normalizeJobInput } from "./job-configuration"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -60,6 +61,13 @@ export function createFixtureClient(): ConkerClient {
   })
   state.conversations = createConversations(state.sessions, state.threads, state.agents)
   const streaming = new Set<string>()
+  const runningJobs = new Set<string>()
+  const findJob = (id: string) => {
+    const job = state.jobs.find(item => item.id === id)
+    if (!job) throw new Error("Job not found. Refresh the list and try again.")
+    if (runningJobs.has(id)) throw new Error("Wait for this preview run to finish.")
+    return job
+  }
   const findConversation = (id: string) => {
     const session = state.sessions.find(item => item.id === id)
     const conversation = session && state.conversations[id]
@@ -331,11 +339,42 @@ export function createFixtureClient(): ConkerClient {
       return structuredClone(ticket)
     },
     async updateJob(id, action) {
-      const job = state.jobs.find(item => item.id === id)
-      if (!job) throw new Error("Job not found.")
+      const job = findJob(id)
       if (action === "toggle") job.status = job.status === "Paused" ? "Scheduled" : "Paused"
-      else { job.runs++; job.lastRun = `Just now · simulated receipt #${job.runs}` }
+      else {
+        runningJobs.add(id)
+        try {
+          await pause(450)
+          job.runs++
+          job.lastRun = `Just now · simulated receipt #${job.runs}`
+          job.history.unshift({ id: crypto.randomUUID(), startedAt: new Date().toISOString(), status: "Completed", source: "preview", summary: "Preview run completed. No agent, tool or server command was executed." })
+        } finally { runningJobs.delete(id) }
+      }
       return structuredClone(job)
+    },
+    async createJob(input) {
+      const { enabled, ...config } = normalizeJobInput(input)
+      findAgent(config.agentId)
+      const job = { ...config, id: crypto.randomUUID(), purpose: config.instructions.split("\n")[0].slice(0, 160), schedule: describeJobTiming(config.timing), status: enabled ? "Scheduled" as const : "Paused" as const, lastRun: "Never run", nextRun: "Awaiting scheduler", runs: 0, history: [] }
+      state.jobs.unshift(job)
+      return structuredClone(job)
+    },
+    async saveJob(id, input) {
+      const job = findJob(id)
+      const { enabled, ...config } = normalizeJobInput(input)
+      findAgent(config.agentId)
+      Object.assign(job, config, { purpose: config.instructions.split("\n")[0].slice(0, 160), schedule: describeJobTiming(config.timing), status: enabled ? "Scheduled" : "Paused", nextRun: "Awaiting scheduler" })
+      return structuredClone(job)
+    },
+    async duplicateJob(id) {
+      const original = findJob(id)
+      const job = { ...structuredClone(original), id: crypto.randomUUID(), name: `${original.name.slice(0, 73)} (copy)`, status: "Paused" as const, lastRun: "Never run", nextRun: "Awaiting scheduler", runs: 0, history: [] }
+      state.jobs.unshift(job)
+      return structuredClone(job)
+    },
+    async deleteJob(id) {
+      findJob(id)
+      state.jobs = state.jobs.filter(job => job.id !== id)
     },
     async saveConnections(value) {
       connectionConfig.write(value)

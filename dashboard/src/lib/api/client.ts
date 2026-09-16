@@ -1,4 +1,4 @@
-import type { Agent, Session, Ticket, TicketStatus, Job, JournalEntry, Memory, Service, Tool, TerminalSnapshot, FilesSnapshot } from "./models"
+import type { Agent, Session, Ticket, TicketStatus, Job, JobInput, JournalEntry, Memory, Service, Tool, TerminalSnapshot, FilesSnapshot } from "./models"
 import type { Connections } from "./config"
 import type { ConversationMessage, ConversationState, ConversationUpdate, MessageUpdate, ReplyOptions } from "./conversation-types"
 import type { ModelsConfiguration } from "./model-catalogue"
@@ -92,6 +92,10 @@ export interface ConkerClient {
   requestReply(sessionId: string): Promise<void>
   decideTicket(id: string, status: TicketStatus): Promise<Ticket>
   updateJob(id: string, action: "toggle" | "run"): Promise<Job>
+  createJob(input: JobInput): Promise<Job>
+  saveJob(id: string, input: JobInput): Promise<Job>
+  duplicateJob(id: string): Promise<Job>
+  deleteJob(id: string): Promise<void>
   saveConnections(value: Connections): Promise<Connections>
   setup(input: SetupInput): Promise<AuthResult>
   login(password: string): Promise<AuthResult>

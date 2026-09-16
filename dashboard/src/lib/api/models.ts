@@ -55,7 +55,11 @@ export type Ticket = {
 }
 
 
-export type Job = {
+export type JobTiming = { kind: "daily" | "weekly" | "interval"; time: string; day: number; hours: number }
+export type JobInput = { name: string; instructions: string; agentId: string; timing: JobTiming; timeZone: string; enabled: boolean }
+export type JobRun = { id: string; startedAt: string; status: "Completed" | "Failed"; source: "sample" | "preview"; summary: string }
+
+export type Job = Omit<JobInput, "enabled"> & {
   id: string
   name: string
   purpose: string
@@ -64,6 +68,7 @@ export type Job = {
   nextRun: string
   status: "Scheduled" | "Paused"
   runs: number
+  history: JobRun[]
 }
 
 export type JournalEntry = {
