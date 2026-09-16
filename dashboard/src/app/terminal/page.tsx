@@ -1,53 +1,16 @@
-import { useId, useRef, useState } from "react"
-import { FolderTree, Info, Maximize2, Minimize2, Terminal } from "lucide-react"
+import { useRef, useState } from "react"
+import { Info, Maximize2, Minimize2, Terminal } from "lucide-react"
 import { useConker } from "@/lib/api/store"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { DirectoryTree } from "./directory-tree"
 
 export default function TerminalPage() {
   const terminal = useConker(data => data.terminal)
-  const isMobile = useIsMobile()
   const [fullscreen, setFullscreen] = useState(false)
-  const [filesOpen, setFilesOpen] = useState(true)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [expanded, setExpanded] = useState(() => new Set([
-    terminal.directory.root.path,
-    `${terminal.directory.root.path}/dashboard`,
-    `${terminal.directory.root.path}/dashboard/src`,
-  ]))
-  const [selected, setSelected] = useState(terminal.directory.root.path)
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle")
   const fullscreenButton = useRef<HTMLButtonElement>(null)
-  const explorerId = useId()
-  const sourceLabel = terminal.directory.source === "sample" ? "Sample directory tree" : "Directory tree"
-
-  const directoryTree = <DirectoryTree
-    root={terminal.directory.root}
-    expanded={expanded}
-    selected={selected}
-    copyStatus={copyStatus}
-    onToggle={path => setExpanded(current => {
-      const next = new Set(current)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })}
-    onSelect={path => { setSelected(path); setCopyStatus("idle") }}
-    onCopy={async () => {
-      try {
-        await navigator.clipboard.writeText(selected)
-        setCopyStatus("copied")
-      } catch {
-        setCopyStatus("error")
-      }
-    }}
-  />
 
   const workbench = <div data-slot="terminal-workbench" className="terminal-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card text-card-foreground">
     <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
@@ -57,21 +20,6 @@ export default function TerminalPage() {
         <span className="hidden sm:inline-flex"><StatusBadge>Offline</StatusBadge></span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {isMobile ? <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" title="Open directory tree"><FolderTree />Files</Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="terminal-surface w-80 max-w-[calc(100vw-2rem)] gap-0 bg-card text-card-foreground">
-            <SheetHeader className="shrink-0 border-b pr-10">
-              <SheetTitle>Files</SheetTitle>
-              <SheetDescription>{sourceLabel}</SheetDescription>
-            </SheetHeader>
-            {directoryTree}
-          </SheetContent>
-        </Sheet> : <Button variant="ghost" size="sm" aria-expanded={filesOpen} aria-controls={explorerId}
-          onClick={() => setFilesOpen(open => !open)} title={filesOpen ? "Hide directory tree" : "Show directory tree"}>
-          <FolderTree />Files
-        </Button>}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="size-8" aria-label="Project context" title="Project context"><Info /></Button>
@@ -96,13 +44,6 @@ export default function TerminalPage() {
       </div>
     </div>
     <div className="flex min-h-0 flex-1">
-      {!isMobile && filesOpen && <aside id={explorerId} aria-label="Files" className="flex w-64 shrink-0 flex-col border-t border-r">
-        <div className="shrink-0 border-b px-3 py-3">
-          <p className="text-sm font-medium">Files</p>
-          <p className="mt-1 text-xs text-muted-foreground">{sourceLabel}</p>
-        </div>
-        {directoryTree}
-      </aside>}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2 pb-2">
         <div data-slot="terminal-output" role="region" aria-label="Terminal output" tabIndex={0}
           className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted p-4 font-mono text-xs leading-7 break-words focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:text-sm">
@@ -137,7 +78,7 @@ export default function TerminalPage() {
             requestAnimationFrame(() => fullscreenButton.current?.focus())
           }}>
           <DialogTitle className="sr-only">Terminal fullscreen</DialogTitle>
-          <DialogDescription className="sr-only">Terminal output and directory explorer. Press Escape to return to the dashboard.</DialogDescription>
+          <DialogDescription className="sr-only">Terminal output. Press Escape to return to the dashboard.</DialogDescription>
           {fullscreen && workbench}
         </DialogContent>
       </Dialog>

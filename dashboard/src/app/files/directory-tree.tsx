@@ -22,7 +22,7 @@ export function DirectoryTree({ root, expanded, selected, onToggle, onSelect, on
       <button type="button" title={node.path} aria-label={node.name}
         aria-expanded={folder ? open : undefined} aria-current={!folder && selected === node.path ? "true" : undefined}
         onClick={() => { onSelect(node.path); if (folder) onToggle(node.path) }}
-        className={cn("flex min-h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs hover:bg-popover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", selected === node.path && "bg-popover text-foreground")}>
+        className={cn("flex min-h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", selected === node.path && "bg-accent text-accent-foreground")}>
         {folder ? open ? <ChevronDown className="size-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="size-3 shrink-0 text-muted-foreground" /> : <span className="size-3 shrink-0" />}
         <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate">{node.name}</span>
       </button>

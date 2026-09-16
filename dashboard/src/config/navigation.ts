@@ -19,6 +19,7 @@ export const appNavigation = {
   jobs: { path: "/jobs", title: "Jobs" },
   system: { path: "/system", title: "System" },
   terminal: { path: "/terminal", title: "Terminal" },
+  files: { path: "/files", title: "Files" },
   settings: { path: "/settings", title: "Settings" },
   companionSettings: { path: "/settings/companion", title: "Companion settings", parent: "settings" },
   setup: { path: "/setup", title: "Setup" },

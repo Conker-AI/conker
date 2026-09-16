@@ -114,5 +114,6 @@ export type DirectoryEntry = {
 export type TerminalSnapshot = {
   prompt: string
   context: [string, string][]
-  directory: { source: "sample" | "live"; root: DirectoryEntry }
 }
+
+export type FilesSnapshot = { source: "sample" | "live"; root: DirectoryEntry }

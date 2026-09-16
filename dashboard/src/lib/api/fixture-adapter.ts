@@ -8,6 +8,7 @@ import { services, vitals, system } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
 import { threads } from "./fixtures/threads"
 import { terminal } from "./fixtures/terminal"
+import { files } from "./fixtures/files"
 import { connectionConfig } from "./config"
 import type { ConkerClient, Snapshot, AuthResult } from "./client"
 import { createConversations, createConversationState } from "./conversation-fixtures"
@@ -55,6 +56,7 @@ export function createFixtureClient(): ConkerClient {
     replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
     connections: connectionConfig.read(),
     terminal,
+    files,
   })
   state.conversations = createConversations(state.sessions, state.threads, state.agents)
   const streaming = new Set<string>()

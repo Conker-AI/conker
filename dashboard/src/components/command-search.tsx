@@ -17,6 +17,7 @@ import {
   Settings,
   Server,
   Terminal,
+  FolderTree,
   type LucideIcon,
 } from "lucide-react"
 
@@ -142,6 +143,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     { title: "Jobs", url: appNavigation.jobs.path, group: "Control", icon: Briefcase },
     { title: "System", url: appNavigation.system.path, group: "Control", icon: Server },
     { title: "Terminal", url: appNavigation.terminal.path, group: "Control", icon: Terminal },
+    { title: "Files", url: appNavigation.files.path, group: "Control", icon: FolderTree },
     { title: "Settings", url: appNavigation.settings.path, group: "Control", icon: Settings },
   ]
 

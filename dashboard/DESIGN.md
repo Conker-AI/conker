@@ -67,7 +67,7 @@ Page section links remain in one scrollable appbar row on narrow screens; the cu
 
 `BaseLayout` owns a viewport-height frame for every sidebar variant. The appbar stays outside the standard page's keyboard-accessible scroll region; route/section changes reset that region to the top. Inset clips its children to the theme-derived radius and retains its 8px outer frame while content scrolls, on either sidebar side and in expanded/collapsed states. On mobile the frame is edge-to-edge and the sidebar opens as a sheet. Conversations keep their existing transcript and reference-panel scroll regions.
 
-The opt-in `workspace` variant retains the shared heading and gutters, lets its child fill the remaining height, and delegates scrolling to the tool's own regions. Terminal uses this variant; regular pages retain page scrolling and conversations retain their separate layout.
+The opt-in `workspace` variant retains the shared heading and gutters, lets its child fill the remaining height, and delegates scrolling to the tool's own regions. Terminal and Files use this variant as separate screens; regular pages retain page scrolling and conversations retain their separate layout.
 
 Use minimum row height instead of a fixed clipping box. Long content, translated text, browser zoom and responsive wrapping must remain usable. Keep title/preview truncation deliberate and retain accessible names. Collection navigation should use actual links, not divs that only respond to mouse clicks.
 
@@ -101,9 +101,11 @@ Exceptions have a concrete UI role and narrow ownership. They do not permit an u
 - `src/lib/character-options.ts`: swatches represent artwork colors. Character Studio can use larger portrait previews while keeping shared fields and surfaces.
 - `src/config/theme-data.ts`, `src/config/theme-customizer-constants.ts`, `src/utils/tweakcn-theme-presets.ts`, `src/utils/shadcn-ui-theme-presets.ts`: theme definition/swatch files may contain actual color values. They must not become a place to hide route styling.
 - The customizer's nested controls can compose primitive tabs inside their own editor. Page-level navigation uses the shared appbar and URL-addressed `RouteSection` content. `PageTabs` remains available for local, non-routing tab interactions.
-- The terminal's neutral surface variables in `src/index.css` preserve a black command area, graphite chrome and readable text in both themes. Its inset command area has an 8px frame. Files toggles an adjacent directory explorer on desktop and a sheet on mobile; the info control opens project/connection context. Fullscreen uses a viewport-filling shared Dialog with Escape and focus restoration. Folder expansion and selection survive these view changes. These variables do not establish a separate general application palette.
+- The terminal's neutral surface variables in `src/index.css` preserve a black command area, graphite chrome and readable text in both themes. Its inset command area has an 8px frame and fills the available width; the info control opens project/connection context. Fullscreen uses a viewport-filling shared Dialog with Escape and focus restoration. These variables do not establish a separate general application palette.
 
-Terminal remains a frontend preview: its context and sample directory tree come from `ConkerClient`'s `TerminalSnapshot`, not filesystem access. Directory disclosure, path selection and copying work locally; no file editor or shell command transport is implied. Keep the sample label and offline state visible until those connections exist.
+Terminal (`/terminal`) and Files (`/files`) are independent sidebar roots and command-search destinations. Do not embed the directory tree in Terminal or its fullscreen view. Files owns the expandable tree, selected path and copy action, using normal card/accent theme roles on desktop and mobile.
+
+Both remain frontend previews with separate `ConkerClient` snapshots: `TerminalSnapshot` supplies shell context and `FilesSnapshot` supplies the sample directory tree. Directory disclosure, path selection and copying work locally; no file editor, filesystem access or shell command transport is implied. Keep the Files sample label and Terminal offline state visible until those connections exist.
 
 Dormant template demo routes are outside the guard until imported by the active route graph. Do not broaden exceptions just to make a new finding disappear; choose the shared component or document and narrowly implement a real new role.
 

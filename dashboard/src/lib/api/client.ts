@@ -1,4 +1,4 @@
-import type { Agent, Session, Ticket, TicketStatus, Job, JournalEntry, Memory, Service, Tool, TerminalSnapshot } from "./models"
+import type { Agent, Session, Ticket, TicketStatus, Job, JournalEntry, Memory, Service, Tool, TerminalSnapshot, FilesSnapshot } from "./models"
 import type { Connections } from "./config"
 import type { ConversationMessage, ConversationState, ConversationUpdate, MessageUpdate, ReplyOptions } from "./conversation-types"
 import type { ModelsConfiguration } from "./model-catalogue"
@@ -70,6 +70,7 @@ export type Snapshot = {
   auth: AuthState
   connections: Connections
   terminal: TerminalSnapshot
+  files: FilesSnapshot
 }
 
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */

@@ -16,6 +16,7 @@ const ToolsPage = lazy(() => import("@/app/tools/page"))
 const JobsPage = lazy(() => import("@/app/jobs/page"))
 const SystemPage = lazy(() => import("@/app/system/page"))
 const TerminalPage = lazy(() => import("@/app/terminal/page"))
+const FilesPage = lazy(() => import("@/app/files/page"))
 const CompanionPage = lazy(() => import("@/app/companion/page"))
 const CharacterStudioPage = lazy(() => import("@/app/settings/companion/page"))
 const NotFound = lazy(() => import("@/app/errors/not-found/page"))
@@ -42,6 +43,7 @@ export const routes: RouteConfig[] = [
   { path: appNavigation.jobs.path, element: <JobsPage /> },
   { path: appNavigation.system.path, element: <SystemPage /> },
   { path: appNavigation.terminal.path, element: <TerminalPage /> },
+  { path: appNavigation.files.path, element: <FilesPage /> },
   { path: appNavigation.companion.path, element: <CompanionPage /> },
   { path: appNavigation.companionSettings.path, element: <CharacterStudioPage /> },
   { path: appNavigation.notFound.path, element: <NotFound /> },
