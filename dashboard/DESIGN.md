@@ -122,6 +122,14 @@ Static checks cover recognizable source patterns, not every possible runtime-gen
 Update the shared component and its contract first; migrate consumers together. A new page should compose these patterns from the start. Shared implementation, automated checks and rendered review are the mechanism for keeping screens consistent.
 
 
+## Jobs
+
+Jobs owns direct management at `/jobs`: New job, editable instructions/agent/schedule/time zone, visible Run now and Pause/Resume, and a compact menu for details/history, editing, duplication and deletion. The details/editor sheet uses shared fields and a fixed action footer; deletion requires a named confirmation. Copies start paused with no inherited run history. Running a paused job does not enable its schedule.
+
+Use the shared searchable/sortable `DataTable` for desktop comparison. At widths below 1280px, render stacked rows inside one shared card so actions stay visible without horizontal scrolling. Search and status/last-failure filters belong to the page and survive these responsive changes. Reuse the same `JobActions` in the table, stacked rows and detail sheet. Keep long titles wrapped, instructions readable, keyboard focus restored, and form errors beside their fields.
+
+All job mutations go through the existing `ConkerClient` fixture adapter. Daily, weekly and hourly-interval schedules are configuration previews; new/edited jobs show “Awaiting scheduler.” Run now records an explicit simulated receipt and never invokes agents, tools or server commands. The in-memory data resets on reload. Keep the Preview label, sample-receipt provenance and form limitation copy. Validate via `npm run check:jobs` plus affected lint, build and rendered desktop/mobile checks.
+
 ## Home and Companion
 
 Home (`/`) is the workspace overview for Conker's internal screens. Linked counts open Agents, Tools, Memory and Jobs; the remaining sections show pending requests, agent status, recent Journal activity, recent conversations and System status. The page-header actions are New chat and Open companion, and System status links to Connections and System.
