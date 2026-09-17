@@ -205,7 +205,8 @@ if (args.includes("--self-test")) {
   selfTest()
 } else {
   const actualPath = file => overlay && fs.existsSync(path.join(overlay, file)) ? path.join(overlay, file) : path.join(root, file)
-  const reachable = reachableFiles(file => fs.readFileSync(actualPath(file), "utf8"), file => fs.existsSync(actualPath(file)) && fs.statSync(actualPath(file)).isFile())
+  // Include global surfaces (such as the persistent call host), not just routes.
+  const reachable = reachableFiles(file => fs.readFileSync(actualPath(file), "utf8"), file => fs.existsSync(actualPath(file)) && fs.statSync(actualPath(file)).isFile(), "src/App.tsx")
   const findings = [...reachable].flatMap(([file, tree]) => inspect(slash(file), tree))
   findings.push(...inspectTheme(fs.readFileSync(actualPath("src/index.css"), "utf8")))
   for (const finding of findings) console.error(`${finding.file}:${finding.line}:${finding.column} [${finding.rule}] ${finding.message}`)

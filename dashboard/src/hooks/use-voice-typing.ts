@@ -4,6 +4,7 @@ import { useConkerStore } from "@/lib/api/store"
 import { insertTranscript, MESSAGE_LIMIT, type DraftAnchor } from "@/lib/voice/draft"
 import type { VoiceInputSession, VoiceTranscript } from "@/lib/voice/types"
 import { readAloud } from "@/lib/voice/read-aloud"
+import { useCallWorkspace } from "@/lib/call-workspace"
 
 type Phase = "idle" | "requesting" | "listening" | "finishing"
 type Recording = {
@@ -66,6 +67,11 @@ export function useVoiceTyping(sessionId: string, input: RefObject<HTMLTextAreaE
 
   const start = async (language: string) => {
     if (recording.current) return
+    const callState = useCallWorkspace.getState()
+    if (callState.starting || (callState.call && !callState.call.endedAt)) {
+      setError("End the call before starting voice typing. You can type inside the call.")
+      return
+    }
     setError("")
     const available = conkerClient.voiceInput.availability()
     if (!available.supported) { setError(available.reason || "Voice typing is unavailable."); return }
@@ -134,6 +140,14 @@ export function useVoiceTyping(sessionId: string, input: RefObject<HTMLTextAreaE
     document.addEventListener("visibilitychange", onVisibility)
     return () => { document.removeEventListener("visibilitychange", onVisibility); finishRef.current() }
   }, [])
+  useEffect(() => useCallWorkspace.subscribe(state => {
+    // An appbar call can begin while dictation is active. Keep received words,
+    // cancel capture/late permission, and leave focus in the new call surface.
+    if ((state.starting || (state.call && !state.call.endedAt)) && recording.current) {
+      finishRef.current()
+      setPhase("idle")
+    }
+  }), [])
 
   return { phase, active: phase !== "idle", transcript, levels, seconds, error, start, stop, cancel, clearError: () => setError("") }
 }

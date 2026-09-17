@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react"
 import { Link } from "react-router-dom"
-import { ArrowDown, ArrowUp, AudioLines, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, SlidersHorizontal, Square, X } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +12,7 @@ import { getAvailableModels } from "@/lib/api/model-catalogue"
 import type { Session } from "@/lib/api/models"
 import { MESSAGE_LIMIT } from "@/lib/voice/draft"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
+import { useCallWorkspace } from "@/lib/call-workspace"
 import { cn } from "@/lib/utils"
 import "./conversation-composer.css"
 
@@ -48,6 +49,10 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const replyId = useConversationWorkspace(state => state.replies[session.id])
   const notice = useConversationWorkspace(state => state.notices[session.id])
   const voice = useVoiceTyping(session.id, inputRef)
+  const call = useCallWorkspace(state => state.call)
+  const startCall = useCallWorkspace(state => state.start)
+  const callStarting = useCallWorkspace(state => state.starting)
+  const callError = useCallWorkspace(state => state.error)
   const transcriptRef = useRef<HTMLDivElement>(null)
   const useTextRef = useRef<HTMLButtonElement>(null)
   const previousActive = useRef(false)
@@ -119,9 +124,9 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
           <DropdownMenuSeparator /><DropdownMenuItem asChild><Link to="/settings?tab=models">Manage models / providers</Link></DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">Voice typing</TooltipContent></Tooltip>
+          <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream || (!!call && !call.endedAt)} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">{call && !call.endedAt ? "End the call to use voice typing" : "Voice typing"}</TooltipContent></Tooltip>
           {stream ? <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button> : draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label="Send message" title="Send message"><ArrowUp /></Button> :
-            <Tooltip><TooltipTrigger asChild><Button type="button" size="icon" aria-label="Start voice input" disabled={session.archived || pending} className={iconControl} onClick={startVoice}><AudioLines /></Button></TooltipTrigger><TooltipContent>Start listening</TooltipContent></Tooltip>}
+            <Tooltip><TooltipTrigger asChild><Button type="button" size="icon" aria-label={call && !call.endedAt ? "Return to call" : "Start call"} disabled={session.archived || pending || callStarting} className={iconControl} onClick={() => void startCall(session.id)}><Phone /></Button></TooltipTrigger><TooltipContent>{call && !call.endedAt ? `Return to call with ${call.name}` : "Start call"}</TooltipContent></Tooltip>}
         </div>
       </div>}
     </form>
@@ -131,5 +136,6 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
     </div>
     {voice.error && <div role="alert" className="mt-2 flex items-start gap-2 px-1"><p className="flex-1 text-xs leading-5 text-muted-foreground">{voice.error}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Dismiss voice typing notice" onClick={voice.clearError}><X /></Button></div>}
     {notice && <p role="status" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{notice}</p>}
+    {callError && !call && <p role="alert" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{callError}</p>}
   </div>
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Archive, ChevronDown, ChevronRight, GitFork, Info, Newspaper, Pencil, Pin, Settings, SquarePen, Trash2 } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, GitFork, Info, Newspaper, Pencil, Phone, Pin, Settings, SquarePen, Trash2 } from "lucide-react"
 import { ConversationAgent } from "@/components/conversation-agent"
 import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -15,6 +15,7 @@ import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
+import { useCallWorkspace } from "@/lib/call-workspace"
 import type { Session } from "@/lib/api/models"
 
 export function ConversationAppbar({ session, search }: { session: Session; search: ReactNode }) {
@@ -32,6 +33,8 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
   const [modelId, setModelId] = useState(conversation?.modelId || "default")
   const navigate = useNavigate()
   const busy = pending || !!streaming
+  const startCall = useCallWorkspace(state => state.start)
+  const activeCall = useCallWorkspace(state => state.call)
   const update = (patch: Parameters<typeof conkerClient.updateConversation>[1]) => mutate(() => conkerClient.updateConversation(session.id, patch))
   const main = session.id === data.companionSessionId
   const restoreFocus = (event: Event) => { event.preventDefault(); menuTrigger.current?.focus() }
@@ -48,6 +51,7 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56" onCloseAutoFocus={event => { if (focusReference.current) { event.preventDefault(); focusReference.current = false } }}>
+          <DropdownMenuItem disabled={busy || session.archived} onSelect={() => { focusReference.current = true; void startCall(session.id) }}><Phone />{activeCall && !activeCall.endedAt ? "Return to call" : "Start call"}</DropdownMenuItem>
           {!main && <DropdownMenuItem disabled={busy} onSelect={() => { setTitle(session.title); setDialog("rename") }}><Pencil />Rename</DropdownMenuItem>}
           <DropdownMenuLabel>Response mode · preview</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={conversation.presentationMode || "focus"} onValueChange={presentationMode => void update({ presentationMode: presentationMode as "focus" | "character" })}>

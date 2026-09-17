@@ -1,0 +1,56 @@
+.call-window {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  translate: none;
+  border-radius: 0;
+}
+.call-window.call-ended {
+  inset: 50% auto auto 50%;
+  width: calc(100% - 2rem);
+  max-width: 30rem;
+  height: auto;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  translate: -50% -50%;
+  border-radius: var(--radius);
+}
+.call-participants { grid-template-columns: minmax(0, 1fr) minmax(10rem, 22%); }
+.call-panel { width: 23rem; }
+.call-portrait { width: clamp(7rem, 16vw, 15rem); height: clamp(7rem, 16vw, 15rem); }
+.call-caption { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.call-mini { animation: call-arrive 160ms ease-out; }
+@keyframes call-arrive { from { transform: translateY(8px); } to { transform: translateY(0); } }
+@media (max-width: 1100px) {
+  .call-participants { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .call-self { display: grid; grid-template-columns: 1fr 6rem; }
+  .call-self > :first-child { grid-column: 1; }
+  .call-self-image { grid-column: 2; grid-row: 1 / 3; min-height: 5rem; }
+  .call-self-image > div { gap: 0; padding: 0.5rem; }
+  .call-self-image > div > div { width: 2rem; height: 2rem; font-size: 0.75rem; }
+  .call-self-image p { display: none; }
+  .call-self > :last-child { grid-column: 1; padding-top: 0.75rem; }
+  .call-portrait { width: 7rem; height: 7rem; }
+}
+@media (max-width: 700px) {
+  .call-body { flex-direction: column; overflow-y: auto; }
+  .call-main { flex: none; }
+  .call-participants { grid-template-rows: auto auto; }
+  .call-presence { min-height: 12rem; gap: 0.75rem; }
+  .call-panel { width: 100%; min-height: 22rem; flex: 1 0 22rem; border-left: 0; border-top: 1px solid var(--border); }
+  .call-portrait { width: 5rem; height: 5rem; }
+  .call-transcript { max-height: 22rem; }
+  .call-dock { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  .call-caption { -webkit-line-clamp: 2; }
+  .call-body:has(.call-panel) { overflow: hidden; }
+  .call-body:has(.call-panel) .call-participants { display: none; }
+  .call-body:has(.call-panel) .call-main { padding-bottom: 0.75rem; }
+  .call-body:has(.call-panel) .call-panel { min-height: 0; flex: 1; }
+  .call-body:has(.call-panel) .call-transcript { max-height: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-mini, .call-window { animation: none; transition: none; }
+}
