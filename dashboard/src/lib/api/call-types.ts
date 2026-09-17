@@ -11,10 +11,12 @@ export type CallSession = {
   id: string; conversationId: string; agentId: string; name: string
   startedAt: number; endedAt?: number; mode: CharacterMode; modelId: string | null
   channels: CallChannels; phase: "ready" | "thinking" | "responding" | "ended"
+  paused: boolean
   privacy: { memory: boolean; harness: boolean }; events: CallEvent[]
 }
 export type CallUpdate = {
   channels?: Partial<CallChannels>; mode?: CharacterMode
+  paused?: boolean
   privacy?: Partial<CallSession["privacy"]>; modelId?: string
 }
 /** Replace the fixture transport here when realtime services are available. */

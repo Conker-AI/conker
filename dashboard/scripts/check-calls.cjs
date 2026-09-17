@@ -47,6 +47,22 @@ async function main() {
   assert.deepEqual(phases, ['thinking', 'responding'])
   assert.equal(answered.events.filter(event => event.kind === 'assistant').length, 1)
   assert.match(answered.events.at(-1).text, /sample response/)
+  await client.calls.update(first.id, { paused: true })
+  await assert.rejects(client.calls.send(first.id, 'Wait until resumed.', new AbortController().signal, () => {}), /Resume/)
+  await client.calls.update(first.id, { paused: false })
+  const pausedPhases = []
+  const held = client.calls.send(first.id, 'Pause during this response.', new AbortController().signal, value => {
+    pausedPhases.push(value.phase)
+    if (value.phase === 'thinking') void client.calls.update(first.id, { paused: true })
+  })
+  await new Promise(resolve => setTimeout(resolve, 850))
+  assert.deepEqual(pausedPhases, ['thinking'], 'pause holds response generation instead of completing in the background')
+  const resumed = await client.calls.update(first.id, { paused: false })
+  assert.equal(resumed.channels.microphone, true, 'pause preserves channel preferences')
+  const heldResult = await held
+  assert.deepEqual(pausedPhases, ['thinking', 'responding'])
+  assert.equal(heldResult.paused, false)
+  assert.ok(heldResult.events.some(event => event.text === 'Call paused'))
   const late = new AbortController()
   const sending = client.calls.send(first.id, 'End during a response.', late.signal, () => {})
   late.abort()

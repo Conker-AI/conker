@@ -14,7 +14,15 @@ export function createCallFixture(snapshot: () => Snapshot): CallClient {
   }
   const wait = (ms: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     const stop = () => { clearTimeout(timer); signal.removeEventListener("abort", stop); reject(new DOMException("Stopped", "AbortError")) }
-    const timer = setTimeout(() => { signal.removeEventListener("abort", stop); resolve() }, ms)
+    let remaining = ms, last = Date.now()
+    const tick = () => {
+      const now = Date.now()
+      if (!call?.paused) remaining -= now - last
+      last = now
+      if (remaining <= 0) { signal.removeEventListener("abort", stop); resolve() }
+      else timer = setTimeout(tick, 50)
+    }
+    let timer = setTimeout(tick, 50)
     signal.addEventListener("abort", stop, { once: true })
     if (signal.aborted) stop()
   })
@@ -31,7 +39,7 @@ export function createCallFixture(snapshot: () => Snapshot): CallClient {
         modelId: conversation?.modelId || data.modelsConfiguration.defaultModelId,
         channels: { microphone: false, camera: false, keyboard: true, voice: true, avatar: false, captions: true },
         privacy: { memory: conversation?.privacy?.memoryDisabled ?? false, harness: conversation?.privacy?.harnessDisabled ?? false },
-        phase: "ready", events: [],
+        phase: "ready", paused: false, events: [],
       }
       event("event", "Call preview started · English")
       return copy()
@@ -43,10 +51,15 @@ export function createCallFixture(snapshot: () => Snapshot): CallClient {
       if (patch.mode && patch.mode !== value.mode) { value.mode = patch.mode; event("event", `${patch.mode === "focus" ? "Focus" : "Character"} mode`) }
       if (patch.privacy) value.privacy = { ...value.privacy, ...patch.privacy }
       if (patch.modelId) value.modelId = patch.modelId
+      if (patch.paused !== undefined && patch.paused !== value.paused) {
+        value.paused = patch.paused
+        event("event", patch.paused ? "Call paused" : "Call resumed")
+      }
       return copy()
     },
     async send(id, text, signal, onChange) {
       const value = active(id)
+      if (value.paused) throw new Error("Resume the call before sending a message.")
       if (value.phase !== "ready") throw new Error("Wait for this response or stop it first.")
       if (!text.trim() || text.length > 4000) throw new Error("Enter a message of up to 4,000 characters.")
       event("user", text.trim()); value.phase = "thinking"; onChange(copy())

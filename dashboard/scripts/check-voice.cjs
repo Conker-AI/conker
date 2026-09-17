@@ -173,6 +173,47 @@ async function main() {
     assert.equal(cancellations, 2); assert.deepEqual(errors, [])
     assert.ok(notifications > 0); unsubscribe()
   })
+  await check('Word timings preserve original offsets, pause holds position, and resume continues across chunks', () => {
+    const { readAloud } = load('src/lib/voice/read-aloud.ts')
+    const spoken = []; let pauses = 0, resumes = 0
+    global.SpeechSynthesisUtterance = class { constructor(text) { this.text = text } }
+    global.window = { SpeechSynthesisUtterance, speechSynthesis: { speak: utterance => spoken.push(utterance), cancel() {}, pause() { pauses++ }, resume() { resumes++ } } }
+    const text = '  Hello   world. ' + 'A careful answer with more words. '.repeat(12)
+    readAloud.start('timed', text, assert.fail)
+    const first = spoken[0]
+    assert.equal(readAloud.getProgressSnapshot().timing, 'pending', 'no invented word timestamps')
+    first.onboundary({ name: 'word', charIndex: 8 })
+    assert.equal(readAloud.getProgressSnapshot().wordStart, 10)
+    assert.equal(text.slice(readAloud.getProgressSnapshot().wordStart, readAloud.getProgressSnapshot().wordEnd), 'world.')
+    readAloud.pause('timed')
+    first.onboundary({ name: 'word', charIndex: 15 })
+    assert.equal(readAloud.getProgressSnapshot().wordStart, 10, 'late boundaries do not advance paused captions')
+    assert.equal(readAloud.getProgressSnapshot().status, 'paused')
+    readAloud.resume('timed')
+    assert.equal(pauses, 1); assert.equal(resumes, 1)
+    first.onend()
+    const second = spoken[1]
+    second.onboundary({ name: 'word', charIndex: 0 })
+    const offset = readAloud.getProgressSnapshot().wordStart
+    assert.ok(offset > 190); assert.ok(text.slice(offset).startsWith(second.text))
+    readAloud.pause('timed'); second.onend()
+    assert.equal(spoken.length, 2, 'an ending chunk cannot queue more speech while paused')
+    readAloud.resume('timed'); assert.equal(spoken.length, 3)
+    readAloud.stop('timed')
+    const stopped = readAloud.getProgressSnapshot()
+    second.onboundary({ name: 'word', charIndex: 5 })
+    assert.equal(readAloud.getProgressSnapshot(), stopped, 'stopped playback ignores stale timing events')
+  })
+  await check('Call speech prefers a local English voice and clears a leftover engine pause', () => {
+    const { readAloud } = load('src/lib/voice/read-aloud.ts')
+    const voice = { name: 'Local English', lang: 'en-US', localService: true, default: false }
+    let spoken, resumed = 0
+    global.window = { SpeechSynthesisUtterance, speechSynthesis: { paused: true, getVoices: () => [{ name: 'Remote English', lang: 'en-US', localService: false, default: true }, voice], speak(value) { spoken = value }, cancel() {}, resume() { resumed++; this.paused = false } } }
+    readAloud.prepare()
+    readAloud.start('call', 'Hello there.', assert.fail, { language: 'en-US', preferLocalVoice: true })
+    assert.equal(spoken.voice, voice); assert.equal(spoken.lang, 'en-US'); assert.equal(resumed, 1)
+    readAloud.stop('call')
+  })
   await check('Read aloud reports unavailable engines and recovers from playback failures', () => {
     const { readAloud } = load('src/lib/voice/read-aloud.ts')
     const errors = []

@@ -19,15 +19,30 @@
   border-radius: var(--radius);
 }
 .call-participants { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.call-portrait { width: clamp(7rem, 16vw, 15rem); height: clamp(7rem, 16vw, 15rem); }
+.call-portrait { width: clamp(6rem, 12vw, 10rem); height: clamp(6rem, 12vw, 10rem); }
+.call-speaking-stage { gap: 1.5rem; }
+.call-dock { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
 .call-captions { max-height: calc(100% - 1.5rem); overflow-y: auto; }
 .call-caption-lines { display: flex; flex-direction: column; justify-content: flex-end; max-height: 3.5rem; overflow: hidden; }
+.call-caption-lines > .call-speech-text { flex-shrink: 0; }
+.call-word { display: inline-block; transition: color 160ms ease-out; }
+.call-word-current { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.3em; animation: call-word-focus 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.call-word-arriving { animation: call-word-arrive 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .call-mini { animation: call-arrive 160ms ease-out; }
 .call-audio { min-width: 5rem; }
-.call-audio span { transition: height 100ms ease-out; }
+.call-audio span { flex-shrink: 0; transition: height 100ms ease-out; }
+.call-audio-stage { width: clamp(10rem, 26vw, 22rem); max-width: 100%; height: 4rem; gap: 3px; }
+.call-audio-stage span { width: 3px; }
 .call-audio-speaking span { animation: call-speaking 700ms ease-in-out infinite alternate; }
 @keyframes call-arrive { from { transform: translateY(8px); } to { transform: translateY(0); } }
-@keyframes call-speaking { from { height: 4px; } to { height: 18px; } }
+@keyframes call-speaking { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
+@keyframes call-word-focus { from { transform: translateY(1px); } to { transform: translateY(0); } }
+@keyframes call-word-arrive { from { opacity: 0.5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 1100px) {
+  .call-dock { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
+  .call-session-controls { grid-column: 1 / -1; grid-row: 2; }
+  .call-user-controls { grid-column: 2; grid-row: 1; }
+}
 @media (max-width: 700px) {
   .call-header { gap: 0.5rem; padding: 0.5rem 0.75rem; }
   .call-model { width: 8rem; }
@@ -37,8 +52,15 @@
   .call-participant-footer > .call-audio span:nth-child(n+17) { display: none; }
   .call-camera { min-height: 7rem; }
   .call-portrait { width: 5rem; height: 5rem; }
+  .call-speaking-stage { gap: 0.75rem; padding: 1rem; }
+  .call-audio-stage { height: 2.5rem; width: 15rem; }
+  .call-audio-stage span:nth-child(n+41) { display: none; }
   .call-captions { inset: auto 0.5rem 0.5rem; padding: 0.5rem; max-height: calc(100% - 1rem); }
-  .call-dock { gap: 0.5rem; padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  .call-dock { gap: 0.5rem; padding: 0.5rem; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+  .call-dock [role="group"] { gap: 2px; }
+  .call-dock [role="group"] button { width: var(--control-height-sm); height: var(--control-height-sm); }
+  .call-control-name { width: 100%; padding: 0 0.25rem 0.25rem; }
+  .call-user-controls > .call-control-name { text-align: right; }
 }
 @media (max-width: 420px) {
   .call-header > div:first-of-type { min-width: 3.5rem; }
@@ -47,6 +69,6 @@
   .call-participant-footer > .call-audio span:nth-child(n+9) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .call-mini, .call-window, .call-audio span { animation: none; transition: none; }
-  .call-audio-speaking span { height: 10px; }
+  .call-mini, .call-window, .call-audio span, .call-word { animation: none; transition: none; }
+  .call-audio-speaking span { transform: scaleY(0.5); }
 }

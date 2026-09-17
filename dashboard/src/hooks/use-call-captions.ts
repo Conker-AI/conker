@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { conkerClient } from "@/lib/api"
 import type { VoiceInputSession } from "@/lib/voice/types"
 
@@ -9,13 +9,14 @@ export function useCallCaptions(stream: MediaStream | null, device: string, ende
   const [error, setError] = useState("")
   const [listening, setListening] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const retained = useRef("")
   useEffect(() => {
     if (!enabled || !stream || ended || speaking) return
     const support = conkerClient.voiceInput.availability()
     const controller = new AbortController()
     let session: VoiceInputSession | undefined
     let restart: ReturnType<typeof setTimeout> | undefined
-    let failed = false, history = "", current = ""
+    let failed = false, history = retained.current, current = ""
     const start = async () => {
       if (controller.signal.aborted) return
       setError("")
@@ -31,7 +32,8 @@ export function useCallCaptions(stream: MediaStream | null, device: string, ende
           onTranscript: value => {
             if (controller.signal.aborted) return
             current = [value.final, value.interim].filter(Boolean).join(" ")
-            setText([history, current].filter(Boolean).join(" ").slice(-4000))
+            retained.current = [history, current].filter(Boolean).join(" ").slice(-4000)
+            setText(retained.current)
           },
           onError: (message, code) => {
             // Silence ends browser recognition sessions; a call keeps listening.

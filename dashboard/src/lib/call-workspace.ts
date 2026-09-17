@@ -34,7 +34,7 @@ export const useCallWorkspace = create<CallWorkspace>((set, get) => ({
   },
   send: async () => {
     const call = get().call, text = get().draft
-    if (!call || call.endedAt || call.phase !== "ready" || !text.trim() || text.length > 4000 || response) return
+    if (!call || call.endedAt || call.paused || call.phase !== "ready" || !text.trim() || text.length > 4000 || response) return
     const run = new AbortController(); response = run
     set({ error: "" })
     try {

@@ -3,7 +3,7 @@ import { useCallWorkspace } from "@/lib/call-workspace"
 import { readAloud } from "@/lib/voice/read-aloud"
 
 type Kind = "microphone" | "camera"
-export function useCallMedia(callId?: string, ended = false) {
+export function useCallMedia(callId?: string, ended = false, paused = false) {
   const streams = useRef<Partial<Record<Kind, MediaStream>>>({})
   const generations = useRef({ microphone: 0, camera: 0 })
   const [camera, setCamera] = useState<MediaStream | null>(null)
@@ -18,6 +18,9 @@ export function useCallMedia(callId?: string, ended = false) {
     streams.current[kind]?.getTracks().forEach(track => { track.onended = null; track.stop() })
     delete streams.current[kind]
   }, [])
+  useEffect(() => {
+    Object.values(streams.current).forEach(stream => stream?.getTracks().forEach(track => { track.enabled = !paused }))
+  }, [paused, microphone, camera])
   useEffect(() => {
     if (!callId || ended) return
     const clearChannels = () => {
@@ -35,7 +38,7 @@ export function useCallMedia(callId?: string, ended = false) {
     return () => { unload(); window.removeEventListener("pagehide", unload); window.removeEventListener("beforeunload", warn) }
   }, [callId, ended, release])
   useEffect(() => {
-    if (!microphone || ended) return
+    if (!microphone || ended || paused) return
     let audio: AudioContext | undefined, timer: ReturnType<typeof setInterval> | undefined
     try {
       audio = new AudioContext()
@@ -50,9 +53,9 @@ export function useCallMedia(callId?: string, ended = false) {
       }, 100)
     } catch { /* Capture still works if the optional local meter is unsupported. */ }
     return () => { clearInterval(timer); void audio?.close().catch(() => {}) }
-  }, [microphone, ended])
+  }, [microphone, ended, paused])
   const toggle = async (kind: Kind, device?: string) => {
-    if (!callId || ended || requesting) return
+    if (!callId || ended || paused || requesting) return
     const wasOn = !!streams.current[kind]
     release(kind)
     if (kind === "camera") setCamera(null); else setMicrophone(null)
@@ -70,6 +73,7 @@ export function useCallMedia(callId?: string, ended = false) {
         : { audio: { ...constraints, echoCancellation: true, noiseSuppression: true }, video: false })
       const current = useCallWorkspace.getState().call
       if (generations.current[kind] !== generation || current?.id !== callId || current.endedAt) { stream.getTracks().forEach(track => track.stop()); return }
+      stream.getTracks().forEach(track => { track.enabled = !current.paused })
       streams.current[kind] = stream
       if (kind === "camera") setCamera(stream); else setMicrophone(stream)
       stream.getTracks().forEach(track => { track.onended = () => {
@@ -90,6 +94,6 @@ export function useCallMedia(callId?: string, ended = false) {
     setSelected(value => ({ ...value, [kind]: id }))
     if (streams.current[kind]) void toggle(kind, id)
   }
-  return { camera: camera?.active ? camera : null, microphone: microphone?.active ? microphone : null, level: microphone?.active ? level : 0, requesting, error, devices, selected, choose, toggle, clearError: () => setError("") }
+  return { camera: camera?.active ? camera : null, microphone: microphone?.active && !paused ? microphone : null, level: microphone?.active && !paused ? level : 0, requesting, error, devices, selected, choose, toggle, clearError: () => setError("") }
 }
 export type CallMedia = ReturnType<typeof useCallMedia>
