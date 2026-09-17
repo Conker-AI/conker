@@ -10,7 +10,7 @@ OWN-WORLD: Extend Conker's existing shadcn New York interface, direct semantic s
 
 STORY: Start from the composer's phone action or conversation title menu, choose how each participant communicates, type without a microphone, change Focus/Character, return to work, expand again, and hang up explicitly.
 
-FIRST VIEWPORT: Equal 50/50 participant sides: Conker's conversation by default, and the user's full camera frame with optional live captions at its bottom and typing below. Appearance is optional. Participant labels and audio controls sit at the bottom; the main dock owns mic/camera/keyboard and hang-up. The header owns Call, model/provider choice, privacy, settings, fullscreen and minimize. Centered settings hold Focus/Character and device/session details. Mobile stacks equal participant rows in a scrollable region.
+FIRST VIEWPORT: Equal 50/50 participant sides: Conker's conversation by default, and the user's full camera frame with optional live captions at its bottom and typing below. Play opens Conker's portrait, waveform and timed full-reply text. The bottom toolbar aligns Conker controls/settings left and user controls/settings right, with pause/resume and hang-up centered. The header owns Call, model/provider choice, privacy, fullscreen and minimize. Separate centered settings hold companion delivery/session details or user devices/language. Mobile stacks equal participant rows in a scrollable region and keeps both control groups above the central actions.
 
 FORM: Operate; ordinary extension of the owner-approved visual world. No new visual-world selection or generated raster is needed. The signature interaction is expanded-stage to persistent mini-call; animation respects reduced motion.
 
@@ -36,6 +36,18 @@ The user's CC control opts into real browser recognition through `ConkerClient.v
 `src/lib/api/call-types.ts` defines the replacement call-transport boundary; `call-fixture.ts` supplies sample events through `ConkerClient.calls`. `use-call-media.ts` owns local capture and cleanup, and `use-call-captions.ts` owns browser recognition. Conker does not record media or send caption text as messages. Call events and drafts are memory-only; the summary offers copying before dismissal, not saved call history.
 
 ## Review and validation
+
+### Pause and timed speech refinement (September 18)
+
+- Added session pause through the existing fixture transport. It holds a response in progress, browser playback and its current word, disables owned microphone/camera tracks and cancels recognition. Resume restores selected channels. The text draft remains editable but sending is blocked while paused. The mini call supports pause/resume too.
+- `readAloud` publishes immutable progress from real word-boundary events and preserves original character offsets across its utterance chunks. Calls prepare voices early and prefer local English; existing chat read-aloud keeps its prior default voice choice. Voices without word events receive no simulated word clock. End/Stop and late callbacks are guarded.
+- `CallSpeechText` displays the full AI reply with future/spoken/current word states and applies the same typography plus brief word arrivals to live input captions. Input history survives pause, mute and playback. The waveform sits directly beneath the padded portrait; the long-text region scrolls independently so the image remains visible on small screens. Output bars indicate playback, not sampled audio amplitude.
+- Verified actual word events in connected Chrome, the current word holding during pause and advancing after resume, completed text, stopped waveform, held generation, draft preservation, mini/expand, separate settings and keyboard-accessible text. Reviewed desktop dark/light and 375/320px layouts; no horizontal page overflow or console warnings/errors observed. Input recognition was confirmed on hardware in the previous refinement; this pass did not capture a new spoken input sample.
+- Build/design guard (166 sources), affected-file ESLint, call checks and all 14 voice checks pass. Tests cover pause during generation, blocked paused sends, chunk offsets, late boundaries, pause/resume and local voice preference. The layout detector returned no findings. This is frontend call QA, not a full application audit.
+
+Current screenshots: [timed desktop](.impeccable/review/timed-speech-desktop.png), [timed mobile](.impeccable/review/timed-speech-mobile.png), [light paused speech](.impeccable/review/timed-speech-light.png). These use fixture content with camera/microphone off. The owner's waveform reference informed code-drawn bars; the referenced image is not shipped. No new raster asset was added.
+
+### Previous balanced-layout validation
 
 Independent review of the refinement returned **SHIP** at the source-review boundary; final small-viewport validation is complete. The existing lifecycle fixes remain part of the contract: starting from the appbar cancels hidden dictation without losing words or stealing focus, mini respects appearance, and summary dismissal restores useful shell focus. This is call-focused QA, not a final dashboard audit.
 
