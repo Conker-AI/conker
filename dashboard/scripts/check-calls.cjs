@@ -30,7 +30,7 @@ async function main() {
   const changed = await client.calls.update(first.id, { channels: { microphone: true, voice: false, captions: false }, privacy: { harness: true }, mode: 'focus' })
   assert.equal(changed.channels.keyboard, true)
   assert.equal(changed.channels.camera, false)
-  assert.equal(changed.channels.avatar, true)
+  assert.equal(changed.channels.avatar, false, 'conversation is the default companion view')
   assert.equal(changed.channels.voice, false)
   assert.equal(changed.privacy.memory, true)
   assert.equal((await client.load()).conversations.companion.privacy.harnessDisabled, false, 'call privacy does not silently mutate chat')

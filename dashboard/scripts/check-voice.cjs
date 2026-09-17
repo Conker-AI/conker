@@ -98,6 +98,30 @@ async function main() {
     assert.equal(run.events.transcripts.at(-1).final, 'Create a website.')
     assert.equal(run.events.ended, 1); session.cancel(); assert.equal(run.events.ended, 1)
   })
+  await check('Call captions borrow capture without opening or stopping the call microphone', async () => {
+    setup(); const run = options()
+    const borrowedTrack = { stopped: false, stop() { this.stopped = true } }
+    const stream = { getTracks: () => [borrowedTrack] }
+    const session = await browserVoiceInput.start({ ...run.value, inputStream: stream })
+    assert.equal(tracks.length, 0, 'Caption startup must reuse the existing capture for its meter')
+    recognizer.result([['Hello from a call', false]])
+    assert.equal(run.events.transcripts.at(-1).interim, 'Hello from a call')
+    run.controller.abort()
+    assert.equal(recognizer.aborted, true)
+    assert.equal(borrowedTrack.stopped, false, 'Caption cancellation must not turn off the call microphone')
+    recognizer.result([['Late words', true]])
+    assert.equal(run.events.transcripts.length, 1)
+    session.cancel(); assert.equal(run.events.ended, 1)
+  })
+  await check('Speech errors retain their code so calls can resume after silence', async () => {
+    setup(); const run = options(); const errors = []
+    await browserVoiceInput.start({ ...run.value, onError: (message, code) => errors.push({ message, code }) })
+    recognizer.onerror({ error: 'no-speech' })
+    assert.equal(errors[0].code, 'no-speech')
+    assert.match(errors[0].message, /No speech/)
+    assert.equal(run.events.ended, 1)
+    assert.ok(tracks.every(track => track.stopped))
+  })
   await check('Cancel ignores late recognition events and ends exactly once', async () => {
     setup(); const run = options(); const session = await browserVoiceInput.start(run.value)
     session.cancel(); recognizer.result([['late words', true]]); session.cancel()

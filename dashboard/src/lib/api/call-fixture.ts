@@ -29,7 +29,7 @@ export function createCallFixture(snapshot: () => Snapshot): CallClient {
         id: crypto.randomUUID(), conversationId, agentId: agent?.id || "companion", name: agent?.kind === "companion" || conversationId === data.companionSessionId ? data.profile.name : session.agent,
         startedAt: Date.now(), mode: conversation?.presentationMode || data.profile.studio?.modes.default || "character",
         modelId: conversation?.modelId || data.modelsConfiguration.defaultModelId,
-        channels: { microphone: false, camera: false, keyboard: true, voice: true, avatar: true, captions: true },
+        channels: { microphone: false, camera: false, keyboard: true, voice: true, avatar: false, captions: true },
         privacy: { memory: conversation?.privacy?.memoryDisabled ?? false, harness: conversation?.privacy?.harnessDisabled ?? false },
         phase: "ready", events: [],
       }

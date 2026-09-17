@@ -71,7 +71,7 @@ export const browserVoiceInput: VoiceInputClient = {
     const releaseAudio = () => {
       clearInterval(sampleTimer)
       source?.disconnect()
-      media?.getTracks().forEach(track => track.stop())
+      if (!options.inputStream) media?.getTracks().forEach(track => track.stop())
       if (audio && audio.state !== "closed") void audio.close().catch(() => {})
     }
     const end = (abort = false) => {
@@ -89,7 +89,7 @@ export const browserVoiceInput: VoiceInputClient = {
     signal.addEventListener("abort", cancel, { once: true })
 
     try {
-      media = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false })
+      media = options.inputStream ?? await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false })
       if (ended || signal.aborted) {
         releaseAudio()
         throw new DOMException("Cancelled", "AbortError")
@@ -127,7 +127,7 @@ export const browserVoiceInput: VoiceInputClient = {
       }
       recognition.onerror = event => {
         if (ended) return
-        if (event.error !== "aborted") options.onError(errorMessages[event.error] || "Voice typing stopped unexpectedly. Your captured words are kept. Try again.")
+        if (event.error !== "aborted") options.onError(errorMessages[event.error] || "Voice typing stopped unexpectedly. Your captured words are kept. Try again.", event.error)
         end(true)
       }
       recognition.onend = () => end()

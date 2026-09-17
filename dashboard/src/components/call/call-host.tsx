@@ -1,23 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+﻿import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { Link } from "react-router-dom"
-import { AudioLines, Captions, CaptionsOff, Check, ChevronDown, Copy, Expand, Focus, Image, ImageOff, Keyboard, Maximize2, MessageSquare, Mic, MicOff, Minus, MoreHorizontal, Phone, PhoneOff, Settings2, Sparkles, Square, Video, VideoOff, Volume2, VolumeX, X } from "lucide-react"
+import { Captions, CaptionsOff, Check, Copy, Expand, Image, Keyboard, Maximize2, MessageSquare, Mic, MicOff, Minus, MoreHorizontal, Phone, PhoneOff, Play, Settings2, Square, Video, VideoOff, Volume2, VolumeX, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { TaskDialogContent } from "@/components/design-system"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CharacterMedia } from "@/components/character-studio/media"
 import { characterDraft } from "@/lib/api/character"
 import { useConker } from "@/lib/api/store"
+import { getAvailableModels } from "@/lib/api/model-catalogue"
 import { useCallWorkspace } from "@/lib/call-workspace"
 import { useCallMedia } from "@/hooks/use-call-media"
+import { useCallCaptions } from "@/hooks/use-call-captions"
+import { readAloud } from "@/lib/voice/read-aloud"
 import type { CallSession } from "@/lib/api/call-types"
 import { cn } from "@/lib/utils"
 import { CallControl } from "./call-controls"
+import { CallAudio } from "./call-audio"
 import { callDuration } from "@/lib/call-time"
-import { CallTranscript } from "./call-transcript"
+import { CallComposer, CallTranscript } from "./call-transcript"
 import { CallDetails } from "./call-details"
 import "./call.css"
 
@@ -30,33 +36,42 @@ function CameraPreview({ stream }: { stream: MediaStream }) {
     void element.play().catch(() => {})
     return () => { element.srcObject = null }
   }, [stream])
-  return <video ref={ref} muted playsInline autoPlay aria-label="Your local camera preview" className="absolute inset-0 size-full object-cover" />
+  return <video ref={ref} muted playsInline autoPlay aria-label="Your full camera frame" className="absolute inset-0 size-full object-contain" />
 }
 
 function CallExperience({ call }: { call: CallSession }) {
-  const { view, panel, setPanel, minimize, expand, dismiss, configure, end, interrupt, error, start } = useCallWorkspace()
+  const { view, minimize, expand, dismiss, configure, end, interrupt, error, start } = useCallWorkspace()
   const data = useConker(value => value)
   const profile = useMemo(() => characterDraft(data.profile), [data.profile])
+  const models = getAvailableModels(data.modelsConfiguration)
   const isCompanion = call.conversationId === data.companionSessionId || data.agents.find(agent => agent.id === call.agentId)?.kind === "companion"
   const media = useCallMedia(call.id, !!call.endedAt)
+  const playbackKey = `call:${call.id}`
+  const currentPlayback = useSyncExternalStore(readAloud.subscribe, readAloud.getSnapshot)
+  const speaking = currentPlayback === playbackKey
+  const captions = useCallCaptions(media.microphone, media.selected.microphone, !!call.endedAt, !!currentPlayback)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [now, setNow] = useState(Date.now)
   const [copied, setCopied] = useState(false)
   const [corner, setCorner] = useState("top-right")
   const [invoker] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const miniRef = useRef<HTMLButtonElement>(null)
   const expandRef = useRef<HTMLButtonElement>(null)
-  const stageRef = useRef<HTMLDivElement>(null)
   const [fullScreen, setFullScreen] = useState(false)
   const [screenError, setScreenError] = useState("")
   const duration = callDuration(call.startedAt, call.endedAt || now)
   const busy = call.phase === "thinking" || call.phase === "responding"
-  const activity = busy ? "thinking" : media.microphone ? "listening" : "idle"
-  const latest = call.channels.captions ? call.events.filter(event => event.kind === "assistant").at(-1) : undefined
+  const activity = speaking ? "speaking" : busy ? "thinking" : media.microphone ? "listening" : "idle"
+  const latest = call.events.filter(event => event.kind === "assistant").at(-1)
+  const sentCount = call.events.filter(event => event.kind === "user").length
   const close = () => {
+    setSettingsOpen(false)
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     if (call.endedAt) dismiss(); else minimize()
   }
   const hangUp = () => {
+    readAloud.stop(playbackKey)
+    setSettingsOpen(false)
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     void end()
   }
@@ -70,6 +85,10 @@ function CallExperience({ call }: { call: CallSession }) {
     document.addEventListener("fullscreenchange", change)
     return () => document.removeEventListener("fullscreenchange", change)
   }, [])
+  useEffect(() => {
+    if (!call.channels.voice || call.endedAt) readAloud.stop(playbackKey)
+    return () => readAloud.stop(playbackKey)
+  }, [playbackKey, call.channels.voice, call.endedAt])
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen()
@@ -80,16 +99,11 @@ function CallExperience({ call }: { call: CallSession }) {
     try {
       await navigator.clipboard.writeText(call.events.map(event => `[${callDuration(call.startedAt, event.at)}] ${event.kind === "user" ? "You" : event.kind === "assistant" ? `${call.name} (sample)` : "Session"}: ${event.text}`).join("\n\n"))
       setCopied(true)
-    } catch { setScreenError("Clipboard unavailable. The transcript remains in the call details.") }
+    } catch { setScreenError("Clipboard unavailable. Copy the messages from the conversation before ending your next call.") }
   }
-  const togglePanel = (next: "transcript" | "details") => setPanel(panel === next ? null : next)
-  const toggleKeyboard = () => {
-    if (panel !== "transcript") {
-      void configure({ channels: { keyboard: true } })
-      setPanel("transcript")
-    } else {
-      void configure({ channels: { keyboard: !call.channels.keyboard } })
-    }
+  const playReply = () => {
+    if (speaking) readAloud.stop(playbackKey)
+    else if (latest) readAloud.start(playbackKey, latest.text, setScreenError)
   }
   const restoreAfterCall = () => {
     const current = useCallWorkspace.getState().call
@@ -105,89 +119,91 @@ function CallExperience({ call }: { call: CallSession }) {
     }
   }
   const participant = (small = false) => !call.channels.avatar
-    ? <div role="img" aria-label={`${call.name}, avatar hidden`} className={cn("flex shrink-0 items-center justify-center rounded-xl border border-border bg-muted", small ? "size-12" : "call-portrait")}><AudioLines className="size-5 text-muted-foreground" /></div>
+    ? <div role="img" aria-label={`${call.name}, conversation view`} className={cn("flex shrink-0 items-center justify-center rounded-xl border border-border bg-muted", small ? "size-12" : "call-portrait")}><MessageSquare className="size-5 text-muted-foreground" /></div>
     : isCompanion
-    ? <CharacterMedia profile={profile} activity={activity} motion={call.mode === "character" && profile.studio.modes.character.motion} className={small ? "size-12" : "call-portrait"} />
-    : <CompanionPortrait name={call.name} tone="graphite" className={small ? "size-12" : "call-portrait"} />
+      ? <CharacterMedia profile={profile} activity={activity} motion={call.mode === "character" && profile.studio.modes.character.motion} className={small ? "size-12" : "call-portrait"} />
+      : <CompanionPortrait name={call.name} tone="graphite" className={small ? "size-12" : "call-portrait"} />
 
   return <TooltipProvider>
     {view === "mini" && !call.endedAt && createPortal(<section aria-label={`Minimized call with ${call.name}`} className={cn("call-mini fixed z-40 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-lg", corner === "top-right" ? "right-4 top-20" : corner === "bottom-left" ? "left-4 bottom-4" : "right-4 bottom-4")}>
       <div className="flex items-center gap-2 p-3">{participant(true)}<div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{call.name}</p><p className="text-xs text-muted-foreground">Preview · <span className="tabular-nums">{duration}</span></p></div><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Move mini call"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem onSelect={() => setCorner("top-right")}>Top right</DropdownMenuItem><DropdownMenuItem onSelect={() => setCorner("bottom-right")}>Bottom right</DropdownMenuItem><DropdownMenuItem onSelect={() => setCorner("bottom-left")}>Bottom left</DropdownMenuItem></DropdownMenuContent></DropdownMenu><Button ref={miniRef} size="icon" variant="ghost" aria-label="Expand call" onClick={expand}><Maximize2 /></Button></div>
-      {busy && <p role="status" className="px-3 pb-3 text-xs text-muted-foreground">Preparing a sample response…</p>}
-      <div className="flex items-center gap-2 border-t border-border bg-muted p-3">
-        <CallControl label={call.channels.microphone ? "Mute microphone" : "Enable microphone preview"} icon={call.channels.microphone ? Mic : MicOff} active={call.channels.microphone} disabled={!!media.requesting} onClick={() => void media.toggle("microphone")} />
-        <CallControl label={call.channels.camera ? "Turn camera off" : "Enable camera preview"} icon={call.channels.camera ? Video : VideoOff} active={call.channels.camera} disabled={!!media.requesting} onClick={() => void media.toggle("camera")} />
-        <CallControl label={call.channels.voice ? "Turn companion voice off" : "Turn companion voice on"} icon={call.channels.voice ? Volume2 : VolumeX} active={call.channels.voice} onClick={() => void configure({ channels: { voice: !call.channels.voice } })} />
-        <Button variant="destructive" size="icon" className="ml-auto" aria-label="End call" onClick={hangUp}><PhoneOff /></Button>
+      <div className="flex items-center justify-between gap-2 border-t border-border bg-muted p-3">
+        <CallControl label={call.channels.microphone ? "Mute microphone" : "Unmute microphone"} icon={call.channels.microphone ? Mic : MicOff} active={call.channels.microphone} disabled={!!media.requesting} onClick={() => void media.toggle("microphone")} />
+        <CallControl label={call.channels.camera ? "Turn camera off" : "Turn camera on"} icon={call.channels.camera ? Video : VideoOff} active={call.channels.camera} disabled={!!media.requesting} onClick={() => void media.toggle("camera")} />
+        <CallAudio active={call.channels.microphone} level={media.level} speaking={speaking} label={speaking ? "Companion speaking with browser voice" : "Your microphone activity"} />
+        <Button variant="destructive" size="icon" aria-label="End call" onClick={hangUp}><PhoneOff /></Button>
       </div>
+      {captions.enabled && captions.text && <p className="line-clamp-2 border-t border-border px-3 py-2 text-xs leading-5">{captions.text}</p>}
       {media.error && <p role="alert" className="border-t border-border p-3 text-xs leading-5">{media.error}</p>}
-      {(call.channels.microphone || call.channels.camera) && <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">{call.channels.microphone ? "Mic on" : "Mic off"} · {call.channels.camera ? "Camera on" : "Camera off"} · Local preview</p>}
+      {(call.channels.microphone || call.channels.camera) && <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">{call.channels.microphone ? "Mic on" : "Mic off"} · {call.channels.camera ? "Camera on" : "Camera off"}{captions.enabled ? " · Browser captions" : " · Local preview"}</p>}
     </section>, document.body)}
 
     <Dialog open={view === "expanded"} onOpenChange={open => { if (!open) close() }}>
-      <DialogContent ref={stageRef} showCloseButton={false} className={cn("call-window flex flex-col gap-0 overflow-hidden p-0", call.endedAt && "call-ended")}
+      <DialogContent showCloseButton={false} className={cn("call-window flex flex-col gap-0 overflow-hidden p-0", call.endedAt && "call-ended")}
         onInteractOutside={event => event.preventDefault()}
         onOpenAutoFocus={event => { event.preventDefault(); expandRef.current?.focus() }}
         onCloseAutoFocus={event => { event.preventDefault(); requestAnimationFrame(() => { if (!call.endedAt) miniRef.current?.focus(); else restoreAfterCall() }) }}>
-        <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:px-6">
-          <Phone className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1"><DialogTitle className="truncate text-base leading-6">{call.endedAt ? "Call ended" : `Call with ${call.name}`}</DialogTitle><DialogDescription className="text-xs">{call.endedAt ? "Preview session" : "Call preview"} · <span className="tabular-nums">{duration}</span><span className="hidden sm:inline"> · English</span></DialogDescription></div>
-          {!call.endedAt && <ConversationIncognito scope="call" privacy={{ memoryDisabled: call.privacy.memory, harnessDisabled: call.privacy.harness }} busy={false} onChange={patch => void configure({ privacy: { ...(patch.memoryDisabled === undefined ? {} : { memory: patch.memoryDisabled }), ...(patch.harnessDisabled === undefined ? {} : { harness: patch.harnessDisabled }) } })} onInspect={() => setPanel("details")} />}
-          {!call.endedAt && <><CallControl label={fullScreen ? "Exit fullscreen" : "Fullscreen call"} icon={Expand} onClick={() => void fullscreen()} /><Button ref={expandRef} variant="ghost" size="icon" aria-label="Minimize call" title="Minimize call · keeps the session open" onClick={close}><Minus /></Button></>}
+        <header className="call-header flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+          <Phone className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
+          <div className="min-w-0 flex-1"><DialogTitle className="text-sm leading-5">{call.endedAt ? "Call ended" : "Call"}</DialogTitle><DialogDescription className="text-xs">{call.endedAt ? "Preview session" : "Preview"} · <span className="tabular-nums">{duration}</span></DialogDescription></div>
+          {!call.endedAt && <>
+            <Select value={call.modelId || ""} onValueChange={modelId => void configure({ modelId })} disabled={busy}><SelectTrigger aria-label="Call model" size="sm" className="call-model w-44"><SelectValue placeholder="Model">{models.find(model => model.id === call.modelId)?.name}</SelectValue></SelectTrigger><SelectContent>{models.map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {data.modelsConfiguration.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent></Select>
+            <ConversationIncognito scope="call" privacy={{ memoryDisabled: call.privacy.memory, harnessDisabled: call.privacy.harness }} busy={false} onChange={patch => void configure({ privacy: { ...(patch.memoryDisabled === undefined ? {} : { memory: patch.memoryDisabled }), ...(patch.harnessDisabled === undefined ? {} : { harness: patch.harnessDisabled }) } })} onInspect={() => setSettingsOpen(true)} />
+            <CallControl label="Call settings" icon={Settings2} onClick={() => setSettingsOpen(true)} />
+            <span className="hidden sm:contents"><CallControl label={fullScreen ? "Exit fullscreen" : "Fullscreen call"} icon={Expand} onClick={() => void fullscreen()} /></span>
+            <Button ref={expandRef} variant="ghost" size="icon" aria-label="Minimize call" onClick={close}><Minus /></Button>
+          </>}
           {call.endedAt && <Button ref={expandRef} variant="ghost" size="icon" aria-label="Close call summary" onClick={close}><X /></Button>}
         </header>
 
         {call.endedAt ? <div className="space-y-6 p-6">
-          <div className="flex items-center gap-4">{participant(true)}<div><p className="font-medium">Until next time, {data.auth.ownerName || "you"}.</p><p className="mt-1 text-sm text-muted-foreground">{duration} with {call.name} · {call.events.filter(event => event.kind === "user").length} messages sent</p></div></div>
+          <div className="flex items-center gap-4">{participant(true)}<div><p className="font-medium">Until next time, {data.auth.ownerName || "you"}.</p><p className="mt-1 text-sm text-muted-foreground">{duration} with {call.name} · {sentCount} {sentCount === 1 ? "message" : "messages"} sent</p></div></div>
           <p className="text-sm leading-6 text-muted-foreground">Your microphone and camera are off. This sample transcript is available until you dismiss the preview.</p>
           <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void copyTranscript()}>{copied ? <Check /> : <Copy />}{copied ? "Copied" : "Copy transcript"}</Button><Button onClick={() => void start(call.conversationId)}><Phone />Call again</Button></div>
           <Button variant="ghost" asChild><Link to={call.conversationId === data.companionSessionId ? "/companion" : `/chat/${call.conversationId}`} onClick={close}>Return to conversation</Link></Button>
           {screenError && <p role="alert" className="text-xs text-muted-foreground">{screenError}</p>}
         </div> : <>
-          <div className="call-body flex min-h-0 flex-1">
-            <div className="call-main flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-5">
-              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" aria-label={`Call mode: ${call.mode === "focus" ? "Focus" : "Character"}`}>{call.mode === "focus" ? <Focus /> : <Sparkles />}{call.mode === "focus" ? "Focus" : "Character"}<ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent align="start"><DropdownMenuItem onSelect={() => void configure({ mode: "focus" })}><Focus /><div><p>Focus</p><p className="text-xs text-muted-foreground">Direct answers, natural delivery</p></div>{call.mode === "focus" && <Check className="ml-auto" />}</DropdownMenuItem><DropdownMenuItem onSelect={() => void configure({ mode: "character" })}><Sparkles /><div><p>Character</p><p className="text-xs text-muted-foreground">Personality and contextual expression</p></div>{call.mode === "character" && <Check className="ml-auto" />}</DropdownMenuItem><DropdownMenuSeparator /><p className="max-w-64 px-2 py-1.5 text-xs leading-5 text-muted-foreground">Same mind. Same voice. Different delivery.</p></DropdownMenuContent></DropdownMenu>
-                <div className="flex items-center gap-1"><CallControl label="Show call transcript" icon={MessageSquare} active={panel === "transcript"} onClick={() => togglePanel("transcript")} /><CallControl label="Show call details" icon={Settings2} active={panel === "details"} onClick={() => togglePanel("details")} /></div>
+          <div className="call-participants grid min-h-0 flex-1 gap-3 p-3">
+            <section aria-label={`${call.name}'s side`} className="call-tile flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+              {call.channels.avatar ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6">{participant()}<p className="text-sm text-muted-foreground">{busy ? "Thinking…" : speaking ? "Speaking · browser voice" : "Here with you"}</p>{call.channels.captions && latest && <p className="max-w-xl text-center text-sm leading-6">{latest.text}</p>}</div> : <CallTranscript call={call} />}
+              <div className="call-participant-footer flex shrink-0 flex-wrap items-center gap-2 border-t border-border px-3 py-2">
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{call.name}</p><p className="text-xs text-muted-foreground">{speaking ? "Speaking · browser voice" : busy ? "Thinking" : "Ready"}</p></div>
+                <CallAudio speaking={speaking} label={speaking ? "Companion speaking with browser voice" : "Companion audio idle"} />
+                <CallControl label={speaking ? "Stop reading reply" : "Read latest reply with browser voice"} icon={speaking ? Square : Play} disabled={!latest || !call.channels.voice || !readAloud.supported()} onClick={playReply} />
+                <CallControl label={call.channels.voice ? "Mute companion voice" : "Unmute companion voice"} icon={call.channels.voice ? Volume2 : VolumeX} active={call.channels.voice} onClick={() => void configure({ channels: { voice: !call.channels.voice } })} />
+                <CallControl label={call.channels.avatar ? "Show conversation" : "Show companion appearance"} icon={call.channels.avatar ? MessageSquare : Image} active={call.channels.avatar} onClick={() => void configure({ channels: { avatar: !call.channels.avatar } })} />
+                <CallControl label={call.channels.captions ? "Hide companion text" : "Show companion text"} icon={call.channels.captions ? Captions : CaptionsOff} active={call.channels.captions} onClick={() => void configure({ channels: { captions: !call.channels.captions } })} />
               </div>
+            </section>
 
-              <div className="call-participants grid min-h-0 flex-1 gap-3">
-                <section aria-label={`${call.name}'s channels`} className="call-agent flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-                  <div className="flex items-center justify-between gap-2 px-4 pt-4"><span className="truncate text-sm font-medium">{call.name}</span><span className="text-xs text-muted-foreground">{call.mode === "focus" ? "Focused" : "Character"}</span></div>
-                  <div className="call-presence flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-4 text-center">
-                    {call.channels.avatar ? participant() : <div className="flex size-24 items-center justify-center rounded-full bg-muted"><AudioLines className="size-8 text-muted-foreground" /></div>}
-                    <div className="space-y-2"><p role="status" className="text-lg font-medium">{busy ? "Thinking through a sample…" : "Here with you"}</p><p className="text-sm text-muted-foreground">{busy ? "You can interrupt at any time" : "Type a thought, or try your local devices"}</p></div>
-                    {latest && <p dir="auto" className="call-caption max-w-lg text-sm leading-6 text-muted-foreground">{latest.text}</p>}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-3">
-                    <div className="flex gap-2"><CallControl label={call.channels.voice ? "Turn companion voice off" : "Turn companion voice on"} icon={call.channels.voice ? Volume2 : VolumeX} active={call.channels.voice} onClick={() => void configure({ channels: { voice: !call.channels.voice } })} /><CallControl label={call.channels.avatar ? "Hide companion avatar" : "Show companion avatar"} icon={call.channels.avatar ? Image : ImageOff} active={call.channels.avatar} onClick={() => void configure({ channels: { avatar: !call.channels.avatar } })} /><CallControl label={call.channels.captions ? "Turn companion text off" : "Turn companion text on"} icon={call.channels.captions ? Captions : CaptionsOff} active={call.channels.captions} onClick={() => void configure({ channels: { captions: !call.channels.captions } })} /></div>
-                    <span className="text-xs text-muted-foreground">{call.channels.voice ? "Voice not connected" : "Voice off"}</span>
-                  </div>
-                </section>
-
-                <section aria-label="Your channels" className="call-self flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted">
-                  <div className="flex items-center justify-between px-4 pt-4"><span className="text-sm font-medium">You</span><span className="text-xs text-muted-foreground">Local preview</span></div>
-                  <div className="call-self-image relative m-3 flex min-h-24 flex-1 items-center justify-center overflow-hidden rounded-lg bg-background">
-                    {media.camera && call.channels.camera ? <CameraPreview stream={media.camera} /> : <div className="flex flex-col items-center gap-3 p-4"><div className="flex size-16 items-center justify-center rounded-full bg-secondary text-lg font-medium text-secondary-foreground">{(data.auth.ownerName || "You").slice(0, 2).toUpperCase()}</div><p className="text-xs text-muted-foreground">Camera off</p></div>}
-                  </div>
-                  <div className="space-y-3 px-4 pb-4"><div className="flex items-center gap-2"><Mic className="size-3.5 shrink-0 text-muted-foreground" /><div role="meter" aria-label="Local microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(media.level * 100)} className="h-1 flex-1 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-primary" style={{ width: `${media.level * 100}%` }} /></div></div><p role="status" className="text-xs leading-5 text-muted-foreground">{media.requesting ? `Opening ${media.requesting}…` : call.channels.microphone ? "Mic preview on · not transcribing" : "Microphone off. Typing works anytime."}</p></div>
-                </section>
+            <section aria-label="Your side" className="call-tile flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+              <div className="call-camera relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted">
+                {media.camera && call.channels.camera ? <CameraPreview stream={media.camera} /> : <div className="flex flex-col items-center gap-3 p-4 text-center"><div className="flex size-16 items-center justify-center rounded-full bg-background text-lg font-medium">{(data.auth.ownerName || "You").slice(0, 2).toUpperCase()}</div><p className="text-sm text-muted-foreground">Camera off</p></div>}
+                {captions.enabled && <div aria-label="Your live captions" className="call-captions absolute inset-x-3 bottom-3 rounded-lg bg-background px-4 py-3 text-center shadow-sm">
+                  {captions.text ? <div className="call-caption-lines"><p aria-live="off" dir="auto" className="shrink-0 break-words text-base font-medium leading-7">{captions.text.split(/\s+/).slice(-40).join(" ")}</p></div> : <p className="text-sm leading-6">{call.channels.microphone ? "Listening for your words…" : "Turn on your microphone for live captions"}</p>}
+                  {captions.text && (!call.channels.microphone || currentPlayback) && <p className="mt-1 text-xs text-muted-foreground">{currentPlayback ? "Captions paused during playback" : "Microphone muted"}</p>}
+                  {captions.error && call.channels.microphone && !speaking && <div role="alert" className="mt-2 flex items-start gap-2 text-xs"><p className="flex-1">{captions.error}</p><Button variant="outline" size="sm" onClick={captions.retry}>Retry</Button></div>}
+                  {!captions.text && <p className="mt-1 text-xs leading-4 text-muted-foreground">Browser speech service · may process audio online</p>}
+                </div>}
               </div>
-              {(media.error || error || screenError) && <div role="alert" className="flex shrink-0 items-start gap-2 rounded-lg border border-border bg-muted p-3 text-xs leading-5"><p className="flex-1">{media.error || error || screenError}</p>{media.error && <Button variant="ghost" size="icon" aria-label="Dismiss device notice" onClick={media.clearError}><X /></Button>}</div>}
-            </div>
-            {panel && <aside aria-label={panel === "transcript" ? "Call conversation" : "Call details"} className="call-panel flex min-h-0 shrink-0 flex-col border-l border-border bg-background"><div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3"><h2 className="text-sm font-medium">{panel === "transcript" ? "Conversation" : "Call details"}</h2><Button variant="ghost" size="icon" aria-label="Close call panel" onClick={() => setPanel(null)}><X /></Button></div>{panel === "transcript" ? <CallTranscript call={call} /> : <CallDetails call={call} media={media} />}</aside>}
+              <div className="call-participant-footer flex shrink-0 items-center gap-3 border-t border-border px-3 py-2">
+                <div className="min-w-0 flex-1"><p className="text-sm font-medium">You</p><p className="text-xs text-muted-foreground">{media.requesting ? `Opening ${media.requesting}…` : call.channels.microphone ? "Microphone on" : "Microphone off"}</p></div>
+                <CallAudio level={media.level} active={call.channels.microphone} label={call.channels.microphone ? "Your microphone activity" : "Microphone muted"} />
+                <CallControl label={captions.enabled ? "Turn live captions off" : "Turn live captions on"} icon={captions.enabled ? Captions : CaptionsOff} active={captions.enabled} onClick={() => captions.setEnabled(!captions.enabled)} />
+              </div>
+              <CallComposer call={call} />
+            </section>
           </div>
-
-          <footer className="call-dock flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-6">
-            <p className="hidden max-w-64 text-xs leading-5 text-muted-foreground lg:block">Device previews stay local.<br />AI voice and perception are not connected.</p>
-            <div className="flex items-center gap-2">
-              <CallControl label={call.channels.microphone ? "Mute microphone" : "Enable microphone preview"} icon={call.channels.microphone ? Mic : MicOff} active={call.channels.microphone} disabled={!!media.requesting} onClick={() => void media.toggle("microphone")} />
-              <CallControl label={call.channels.camera ? "Turn camera off" : "Enable camera preview"} icon={call.channels.camera ? Video : VideoOff} active={call.channels.camera} disabled={!!media.requesting} onClick={() => void media.toggle("camera")} />
-              <CallControl label={panel !== "transcript" ? "Open call keyboard" : call.channels.keyboard ? "Turn keyboard off" : "Turn keyboard on"} icon={Keyboard} active={call.channels.keyboard && panel === "transcript"} onClick={toggleKeyboard} />
-              {busy && <CallControl label="Interrupt response" icon={Square} onClick={interrupt} />}
-            </div>
+          {(media.error || error || screenError) && <div role="alert" className="mx-3 mb-3 flex shrink-0 items-start gap-2 rounded-lg border border-border bg-muted p-3 text-xs leading-5"><p className="flex-1">{media.error || error || screenError}</p><Button variant="ghost" size="icon" aria-label="Dismiss call notice" onClick={() => { media.clearError(); setScreenError("") }}><X /></Button></div>}
+          <footer className="call-dock flex shrink-0 flex-wrap items-center justify-center gap-3 border-t border-border px-4 py-3">
+            <CallControl label={call.channels.microphone ? "Mute microphone" : "Unmute microphone"} icon={call.channels.microphone ? Mic : MicOff} active={call.channels.microphone} disabled={!!media.requesting} onClick={() => void media.toggle("microphone")} />
+            <CallControl label={call.channels.camera ? "Turn camera off" : "Turn camera on"} icon={call.channels.camera ? Video : VideoOff} active={call.channels.camera} disabled={!!media.requesting} onClick={() => void media.toggle("camera")} />
+            <CallControl label={call.channels.keyboard ? "Hide keyboard" : "Show keyboard"} icon={Keyboard} active={call.channels.keyboard} onClick={() => void configure({ channels: { keyboard: !call.channels.keyboard } })} />
+            {busy && <CallControl label="Interrupt response" icon={Square} onClick={interrupt} />}
+            <span className="mx-1 h-6 w-px bg-border" />
             <Button variant="destructive" onClick={hangUp}><PhoneOff /><span>End call</span></Button>
           </footer>
+          <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}><TaskDialogContent title="Call settings" description="Devices, delivery and session details." onCloseAutoFocus={event => { event.preventDefault(); requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-label="Call settings"]')?.focus()) }}><CallDetails call={call} media={media} onNavigate={() => setSettingsOpen(false)} /></TaskDialogContent></Dialog>
         </>}
       </DialogContent>
     </Dialog>

@@ -20,7 +20,15 @@ export function useCallMedia(callId?: string, ended = false) {
   }, [])
   useEffect(() => {
     if (!callId || ended) return
-    const unload = () => { release("microphone"); release("camera") }
+    const clearChannels = () => {
+      const workspace = useCallWorkspace.getState()
+      if (workspace.call?.id === callId && !workspace.call.endedAt && (workspace.call.channels.microphone || workspace.call.channels.camera)) {
+        void workspace.configure({ channels: { microphone: false, camera: false } })
+      }
+    }
+    // A remount/refresh must not leave the session claiming devices are still open.
+    clearChannels()
+    const unload = () => { release("microphone"); release("camera"); clearChannels() }
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = "" }
     window.addEventListener("pagehide", unload)
     window.addEventListener("beforeunload", warn)
@@ -82,6 +90,6 @@ export function useCallMedia(callId?: string, ended = false) {
     setSelected(value => ({ ...value, [kind]: id }))
     if (streams.current[kind]) void toggle(kind, id)
   }
-  return { camera, microphone, level: microphone ? level : 0, requesting, error, devices, selected, choose, toggle, clearError: () => setError("") }
+  return { camera: camera?.active ? camera : null, microphone: microphone?.active ? microphone : null, level: microphone?.active ? level : 0, requesting, error, devices, selected, choose, toggle, clearError: () => setError("") }
 }
 export type CallMedia = ReturnType<typeof useCallMedia>

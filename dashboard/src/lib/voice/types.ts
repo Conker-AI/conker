@@ -1,12 +1,14 @@
 export type VoiceTranscript = { final: string; interim: string }
 
 export type VoiceInputOptions = {
+  /** Borrow an existing capture for metering; recognition still uses the browser's default microphone. Never stopped by this client. */
+  inputStream?: MediaStream
   language: string
   signal: AbortSignal
   onStart: () => void
   onTranscript: (value: VoiceTranscript) => void
   onLevel: (value: number) => void
-  onError: (message: string) => void
+  onError: (message: string, code?: string) => void
   onEnd: () => void
 }
 
