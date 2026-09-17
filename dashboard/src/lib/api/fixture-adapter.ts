@@ -17,6 +17,8 @@ import type { ConversationMessage } from "./conversation-types"
 import { unavailableVoiceInput } from "../voice/types"
 import { describeJobTiming, normalizeJobInput } from "./job-configuration"
 
+import { createCharacterStudio } from "./character-defaults"
+
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
 function pause(ms: number, signal?: AbortSignal): Promise<void> {
@@ -48,7 +50,8 @@ export function createFixtureClient(): ConkerClient {
     }, ...sessions],
     plan, planningIntent, tickets, jobs, entries, memories, memorySearch, services, vitals, system, tools,
     profile: {
-      name: "Conker", speakingPreset: "warm", speakingStyle: "Warm, direct, and concise. A little dry humour when it fits.",
+      studio: createCharacterStudio(),
+      name: "Conker", speakingPreset: "custom", speakingStyle: "Warm, direct, and concise. A little dry humour when it fits.",
       personality: "Curious and steady. Help me make room for school, judo, and building things. Ask before making assumptions. Be honest when you don’t know.",
       renderer: "static", portrait: "/conker.png", face: "sprout", tone: "green", mood: "Thoughtful · ready to listen",
       emotions: { neutral: "default", happy: "portrait", thinking: "portrait", concerned: "default", celebrating: "portrait" },
@@ -60,6 +63,7 @@ export function createFixtureClient(): ConkerClient {
     files,
   })
   state.conversations = createConversations(state.sessions, state.threads, state.agents)
+  state.conversations[state.companionSessionId].presentationMode = state.profile.studio?.modes.default || "character"
   const streaming = new Set<string>()
   const runningJobs = new Set<string>()
   const findJob = (id: string) => {
@@ -101,10 +105,11 @@ export function createFixtureClient(): ConkerClient {
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
     async saveCharacter(profile) {
-      if (!profile.name.trim()) throw new Error("Give your companion a name.")
-      state.profile = structuredClone({ ...profile, name: profile.name.trim() })
+      const { validateCharacter } = await import("./character")
+      state.profile = structuredClone(validateCharacter(profile))
       return structuredClone(state.profile)
     },
+    async previewCharacter(profile, mode) { const { previewCharacter } = await import("./character"); return previewCharacter(profile, mode) },
     async createConversation(agentId) {
       const agent = findAgent(agentId)
       const existing = state.sessions.find(session => session.isDraft && session.agentId === agent.id && !session.archived)
@@ -116,6 +121,7 @@ export function createFixtureClient(): ConkerClient {
       }
       state.sessions.unshift(session)
       state.conversations[session.id] = createConversationState(agent.id)
+      state.conversations[session.id].presentationMode = agent.kind === "companion" ? state.profile.studio?.modes.default || "character" : "focus"
       return structuredClone(session)
     },
     async handoffConversation(id, agentId) {
@@ -167,12 +173,17 @@ export function createFixtureClient(): ConkerClient {
       if (update.privacy !== undefined && (!update.privacy || typeof update.privacy !== "object" || Object.entries(update.privacy).some(([key, value]) => !["memoryDisabled", "harnessDisabled"].includes(key) || typeof value !== "boolean"))) {
         throw new Error("Use valid conversation privacy settings.")
       }
+      if (update.presentationMode !== undefined) {
+        idle(id)
+        if (!["focus", "character"].includes(update.presentationMode)) throw new Error("Choose Focus or Character mode.")
+      }
       if (update.modelId !== undefined && update.modelId !== null) availableModel(update.modelId)
       if (update.archived) idle(id)
       if (update.title !== undefined) session.title = update.title.trim()
       if (update.pinned !== undefined) session.pinned = update.pinned
       if (update.archived !== undefined) session.archived = update.archived
       if (update.modelId !== undefined) conversation.modelId = update.modelId
+      if (update.presentationMode !== undefined) conversation.presentationMode = update.presentationMode
       if (update.incognito !== undefined || update.privacy !== undefined) {
         const previousMemory = conversation.privacy.memoryDisabled
         // Preserve the legacy shortcut while allowing each exclusion independently.
@@ -194,6 +205,7 @@ export function createFixtureClient(): ConkerClient {
       state.replyRequests = state.replyRequests.filter(item => item !== id)
       if (id === state.companionSessionId) {
         state.conversations[id] = createConversationState(state.sessions.find(session => session.id === id)?.agentId)
+        state.conversations[id].presentationMode = state.profile.studio?.modes.default || "character"
         const { session } = findConversation(id)
         session.archived = false
         touch(id)
@@ -251,6 +263,7 @@ export function createFixtureClient(): ConkerClient {
         mode: session.mode === "companion" ? "project" as const : session.mode,
       }
       const next = createConversationState()
+      next.presentationMode = conversation.presentationMode
       next.parentSessionId = id
       next.forkMessageId = messageId
       next.incognito = conversation.incognito
@@ -288,6 +301,7 @@ export function createFixtureClient(): ConkerClient {
       const reply: ConversationMessage = {
         id: crypto.randomUUID(), role: "assistant", text: "", createdAt: new Date().toISOString(),
         agentId: session.agentId, agentName: agentName(session.agentId || conversation.initialAgentId),
+        presentationMode: conversation.presentationMode || "focus",
         modelId, status: "complete", ...(options.retryMessageId ? { retryOf: options.retryMessageId } : {}),
       }
       streaming.add(id)
@@ -298,7 +312,9 @@ export function createFixtureClient(): ConkerClient {
       }
       try {
         await pause(450, options.signal)
-        const text = "Simulated reply: Your message is saved. A connected model will respond here. No tools have run."
+        const text = conversation.presentationMode === "character"
+          ? "Simulated reply: I have your message. Once connected, I will answer in your character’s style. No tools have run."
+          : "Simulated reply: Your message is saved. A connected model will respond here. No tools have run."
         for (const chunk of text.match(/.{1,6}/g) || []) {
           await pause(150, options.signal)
           reply.text += chunk

@@ -24,6 +24,7 @@ function load(relativePath) {
   const module = { exports: {} }
   cache.set(normalized, module)
   const resolve = request => {
+    if (request === 'zod') return require('zod')
     assert.ok(request.startsWith('.'), `Unexpected runtime dependency ${request}`)
     const imported = path.posix.normalize(path.posix.join(path.posix.dirname(normalized), request))
     return load(`${imported}.ts`)

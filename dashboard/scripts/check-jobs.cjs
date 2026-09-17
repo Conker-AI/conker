@@ -14,6 +14,7 @@ function load(relative) {
   const module = { exports: {} }
   cache.set(relative, module)
   const resolve = request => {
+    if (request === 'zod') return require('zod')
     assert.ok(request.startsWith('.'), `Unexpected dependency: ${request}`)
     return load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`)
   }

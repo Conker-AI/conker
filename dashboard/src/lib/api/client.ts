@@ -8,6 +8,7 @@ export type Face = "sprout" | "round" | "cat"
 export type PortraitTone = "green" | "soft" | "graphite"
 export type Emotion = "neutral" | "happy" | "thinking" | "concerned" | "celebrating"
 export type Character = {
+  studio?: import("./character").CharacterStudio
   name: string
   speakingPreset: "warm" | "direct" | "curious" | "custom"
   speakingStyle: string
@@ -79,6 +80,7 @@ export interface ConkerClient {
   readonly voiceInput: VoiceInputClient
   load(): Promise<Snapshot>
   saveCharacter(profile: Character): Promise<Character>
+  previewCharacter(profile: Character, mode: import("./character").CharacterMode): Promise<ReturnType<typeof import("./character").previewCharacter>>
   createConversation(agentId: string): Promise<Session>
   handoffConversation(sessionId: string, agentId: string): Promise<Session>
   sendMessage(sessionId: string, text: string, options?: { replyTo?: string }): Promise<LocalMessage>

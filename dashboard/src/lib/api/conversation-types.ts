@@ -13,6 +13,7 @@ export type ConversationMessage = {
   /** Existing scenario cards belong to this one assistant message. */
   scenario?: boolean
   modelId?: string
+  presentationMode?: import("./character").CharacterMode
   status?: "complete" | "stopped"
   replyTo?: string
   retryOf?: string
@@ -29,6 +30,7 @@ export type ConversationState = {
   initialAgentId: string
   handoffs: ConversationHandoff[]
   /** null follows the default route in Settings. */
+  presentationMode?: import("./character").CharacterMode
   modelId: string | null
   parentSessionId?: string
   forkMessageId?: string
@@ -44,6 +46,7 @@ export type ConversationState = {
 }
 
 export type ConversationUpdate = {
+  presentationMode?: import("./character").CharacterMode
   title?: string
   pinned?: boolean
   archived?: boolean
