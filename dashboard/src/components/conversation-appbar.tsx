@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog } from "@/components/ui/dialog"
 import { TaskDialogContent, OverlayBody, FormActions, ConfirmationDialog } from "@/components/design-system"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
@@ -49,6 +49,12 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56" onCloseAutoFocus={event => { if (focusReference.current) { event.preventDefault(); focusReference.current = false } }}>
           {!main && <DropdownMenuItem disabled={busy} onSelect={() => { setTitle(session.title); setDialog("rename") }}><Pencil />Rename</DropdownMenuItem>}
+          <DropdownMenuLabel>Response mode · preview</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={conversation.presentationMode || "focus"} onValueChange={presentationMode => void update({ presentationMode: presentationMode as "focus" | "character" })}>
+            <DropdownMenuRadioItem value="focus" disabled={busy}>Focus</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="character" disabled={busy}>Character</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuItem disabled={busy} onSelect={() => { setModelId(conversation.modelId || "default"); setDialog("route") }}><Settings />Model / route</DropdownMenuItem>
           {!main && <><DropdownMenuItem disabled={busy} onSelect={() => void update({ pinned: !session.pinned })}><Pin />{session.pinned ? "Unpin conversation" : "Pin conversation"}</DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void update({ archived: !session.archived })}><Archive />{session.archived ? "Restore conversation" : "Archive conversation"}</DropdownMenuItem></>}
           <DropdownMenuSeparator />

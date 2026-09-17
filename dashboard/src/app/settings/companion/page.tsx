@@ -1,102 +1,107 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Download, Plus, Trash2, Upload } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
-import { FormActions } from "@/components/design-system"
-import { CompanionPortrait } from "@/components/companion-portrait"
-import { faces, portraitTones, emotions } from "@/lib/character-options"
+import { FormActions, RouteSection, TaskDialogContent, OverlayBody } from "@/components/design-system"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Dialog } from "@/components/ui/dialog"
+import { StudioSection, StudioField } from "@/components/character-studio/fields"
+import { AppearanceEditor } from "@/components/character-studio/appearance-editor"
+import { VoiceEditor } from "@/components/character-studio/voice-editor"
+import { ModesEditor } from "@/components/character-studio/modes-editor"
+import { CharacterPreview } from "@/components/character-studio/preview"
 import { useConker, useConkerStore } from "@/lib/api/store"
-import type { Character, Emotion } from "@/lib/api/client"
-import { cn } from "@/lib/utils"
-
-const styles = [
-  { value: "warm", label: "Warm", description: "Friendly, steady, a little dry humour.", text: "Warm, direct, and concise. A little dry humour when it fits." },
-  { value: "direct", label: "Direct", description: "Short answers. Lead with the next step.", text: "Be brief and practical. Lead with the answer, then the next step." },
-  { value: "curious", label: "Curious", description: "Explore ideas and ask useful questions.", text: "Think things through with me. Ask thoughtful questions and explore alternatives." },
-  { value: "custom", label: "Custom", description: "Describe a voice in your own words.", text: "" },
-] as const
+import { useCharacterWorkspace } from "@/lib/character-workspace"
+import { validateImportedMedia } from "@/lib/character-media"
+import { characterDraft, exportCharacter, importCharacter, validateCharacter, sameCharacterValue, type CharacterDraft, type CharacterStudio } from "@/lib/api/character"
 
 export default function CharacterStudioPage() {
   const savedProfile = useConker(data => data.profile)
   const { save, pending } = useConkerStore()
-  const [profile, setProfile] = useState(savedProfile)
-  const [emotion, setEmotion] = useState<Emotion>("neutral")
+  const savedDraft = useMemo(() => characterDraft(savedProfile), [savedProfile])
+  const draft = useCharacterWorkspace(state => state.draft)
+  const profile = draft ?? savedDraft
+  const setProfile = (next: CharacterDraft | ((current: CharacterDraft) => CharacterDraft)) => useCharacterWorkspace.setState(state => ({ draft: typeof next === "function" ? next(state.draft ?? savedDraft) : next }))
   const [error, setError] = useState("")
-  const [saved, setSaved] = useState(false)
-  const update = (patch: Partial<Character>) => { setProfile(old => ({ ...old, ...patch })); setSaved(false) }
-  const dirty = JSON.stringify(profile) !== JSON.stringify(savedProfile)
-  async function importPortrait(file?: File) {
-    if (!file) return
-    setError("")
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024) {
-      setError("Choose a PNG, JPEG, or WebP under 2 MB."); return
-    }
-    try {
-      const portrait = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file)
-      })
-      const image = new Image(); image.src = portrait; await image.decode()
-      update({ portrait })
-    } catch { setError("This file could not be displayed. Choose another image.") }
+  const [notice, setNotice] = useState("")
+  const [importOpen, setImportOpen] = useState(false)
+  const [incoming, setIncoming] = useState<{ profile: CharacterDraft; note: string } | null>(null)
+  const [importError, setImportError] = useState("")
+  const [reading, setReading] = useState(false)
+  const uploading = useCharacterWorkspace(state => state.uploading)
+  const setUploading = (value: boolean) => useCharacterWorkspace.setState({ uploading: value })
+  const dirty = !!draft && !sameCharacterValue(profile, savedDraft)
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
+  const update = (next: CharacterDraft | ((current: CharacterDraft) => CharacterDraft)) => { setProfile(next); setNotice(""); setError("") }
+  const change = (patch: Partial<CharacterDraft>) => update({ ...profile, ...patch })
+  const studio = (patch: Partial<CharacterStudio>) => change({ studio: { ...profile.studio, ...patch } })
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setError("")
+    try { const valid = validateCharacter(profile); if (await save(valid)) { useCharacterWorkspace.setState({ draft: null }); setNotice("Character saved in this preview.") } }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your character.") }
   }
-  return <BaseLayout title="Companion settings" description="Edit your companion’s voice, portrait, and expressions.">
-    <form onSubmit={async event => { event.preventDefault(); setSaved(await save(profile)) }} className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
-      <div className="min-w-0 space-y-6">
-        <Card role="region" aria-labelledby="character-heading">
-          <CardHeader><CardTitle><h2 id="character-heading">Identity & voice</h2></CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label htmlFor="character-name">Name</Label><Input id="character-name" required maxLength={60} value={profile.name} onChange={event => update({ name: event.target.value })} /></div>
-            <div className="space-y-2"><Label htmlFor="character-mood">Status / mood line</Label><Input id="character-mood" maxLength={100} value={profile.mood} onChange={event => update({ mood: event.target.value })} /></div>
-          </div>
-          <fieldset className="space-y-2"><legend className="mb-2 text-sm font-medium">Speaking style</legend><div className="grid gap-2 sm:grid-cols-2">{styles.map(style => <label key={style.value} className={cn("flex cursor-pointer items-start gap-3 rounded-lg border p-3", profile.speakingPreset === style.value && "border-primary bg-accent")}>
-            <input type="radio" name="speaking-style" value={style.value} checked={profile.speakingPreset === style.value} onChange={() => update({ speakingPreset: style.value, speakingStyle: style.value === "custom" ? profile.speakingStyle : style.text })} className="mt-1 accent-primary" />
-            <span><span className="block text-sm font-medium">{style.label}</span><span className="mt-1 block text-sm leading-6 text-muted-foreground">{style.description}</span></span>
-          </label>)}</div></fieldset>
-          <div className="space-y-2"><Label htmlFor="speaking-notes">Style instructions</Label><Textarea id="speaking-notes" value={profile.speakingStyle} maxLength={1000} onChange={event => update({ speakingStyle: event.target.value, speakingPreset: "custom" })} /><p className="text-xs text-muted-foreground">Start with a preset and adjust it. Editing the text selects Custom.</p></div>
-          <div className="space-y-2"><Label htmlFor="personality">Personality</Label><Textarea id="personality" className="min-h-24" value={profile.personality} maxLength={2000} onChange={event => update({ personality: event.target.value })} /></div>
-          </CardContent>
-        </Card>
-        <Card role="region" aria-labelledby="appearance-heading">
-          <CardHeader><CardTitle><h2 id="appearance-heading">Appearance</h2></CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-          <fieldset><legend className="mb-2 text-sm">Face</legend><div className="grid grid-cols-3 gap-2">{faces.map(face => <Button key={face.value} aria-label={face.label} type="button" variant="outline" aria-pressed={!profile.portrait && profile.face === face.value} className={cn("h-auto flex-col gap-2 py-3", !profile.portrait && profile.face === face.value && "border-primary bg-accent")} onClick={() => update({ face: face.value, portrait: "", emotions: Object.fromEntries(Object.entries(profile.emotions).map(([key, value]) => [key, value === "portrait" ? "default" : value])) as Character["emotions"] })}><CompanionPortrait face={face.value} tone={profile.tone} className="size-14" />{face.label}</Button>)}</div></fieldset>
-          <fieldset><legend className="mb-2 text-sm">Portrait color</legend><div className="flex flex-wrap gap-2">{portraitTones.map(tone => <Button key={tone.value} aria-label={tone.label} type="button" variant="outline" aria-pressed={profile.tone === tone.value} className={cn(profile.tone === tone.value && "border-primary bg-accent")} onClick={() => update({ tone: tone.value })}><CompanionPortrait tone={tone.value} className="size-6" />{tone.label}</Button>)}</div></fieldset>
-          <div className="space-y-2"><Label htmlFor="portrait-upload">Or upload a portrait</Label><Input id="portrait-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { void importPortrait(event.target.files?.[0]); event.target.value = "" }} /><p className="text-xs text-muted-foreground">PNG, JPEG, or WebP · up to 2 MB · stays in this preview until reload.</p>{profile.portrait && <Button type="button" variant="outline" size="sm" onClick={() => update({ portrait: "", emotions: Object.fromEntries(Object.entries(profile.emotions).map(([key, value]) => [key, value === "portrait" ? "default" : value])) as Character["emotions"] })}>Remove uploaded portrait</Button>}</div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          </CardContent>
-        </Card>
-        <Card role="region" aria-labelledby="emotions-heading">
-          <CardHeader><CardTitle><h2 id="emotions-heading">2D emotion pack</h2></CardTitle><CardDescription>Assign a face or uploaded portrait to each expression. Default uses your main portrait.</CardDescription></CardHeader>
-          <CardContent>
-          <div className="divide-y">{emotions.map(expression => <div key={expression} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[auto_minmax(0,1fr)_12rem]">
-            <CompanionPortrait profile={profile} emotion={expression} />
-            <Label htmlFor={`emotion-${expression}`} className="flex-1 capitalize">{expression}</Label>
-            <Select value={profile.emotions[expression]} onValueChange={value => update({ emotions: { ...profile.emotions, [expression]: value as Character["emotions"][Emotion] } })}><SelectTrigger id={`emotion-${expression}`} className="col-span-2 w-full min-w-0 sm:col-span-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default portrait</SelectItem>{faces.map(face => <SelectItem key={face.value} value={face.value}>{face.label} face</SelectItem>)}<SelectItem value="portrait" disabled={!profile.portrait}>Uploaded portrait</SelectItem></SelectContent></Select>
-          </div>)}</div>
-          </CardContent>
-        </Card>
-        <FormActions description={<span role="status">{saved && !dirty ? "Saved in this preview" : dirty ? "Unsaved changes" : "Changes apply to your companion and sidebar"}</span>}>
-          <Button type="button" variant="outline" disabled={!dirty || pending} onClick={() => { setProfile(savedProfile); setSaved(false); setError("") }}>Discard changes</Button>
-          <Button disabled={!profile.name.trim() || !dirty || pending} type="submit">{pending ? "Saving…" : "Save character"}</Button>
-        </FormActions>
-      </div>
-      <aside className="min-w-0 lg:sticky lg:top-6" aria-labelledby="portrait-preview-heading">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between"><CardTitle><h2 id="portrait-preview-heading">Portrait preview</h2></CardTitle><Badge variant="outline">Static</Badge></CardHeader>
-          <CardContent className="space-y-4">
-        <div className="flex items-center gap-4"><CompanionPortrait profile={profile} emotion={emotion} className="size-24" /><div className="min-w-0"><p className="break-words text-lg font-semibold">{profile.name || "Your companion"}</p><p className="mt-1 break-words text-xs text-muted-foreground">{profile.mood}</p></div></div>
-        <div className="space-y-2"><Label htmlFor="preview-emotion">Preview expression</Label><Select value={emotion} onValueChange={value => setEmotion(value as Emotion)}><SelectTrigger id="preview-emotion" className="w-full capitalize"><SelectValue /></SelectTrigger><SelectContent>{emotions.map(value => <SelectItem key={value} value={value} className="capitalize">{value}</SelectItem>)}</SelectContent></Select></div>
-        <div className="space-y-2 border-t pt-4"><h3 className="text-base font-medium">Voice instructions</h3><p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{profile.speakingStyle || "No style instructions yet."}</p><p className="text-sm leading-6 text-muted-foreground">Expressions and voice are presentation settings. No model is connected.</p></div>
-        <div className="space-y-2 border-t pt-4"><div className="flex items-center justify-between"><h3 className="text-base font-medium">Live 3D</h3><Badge variant="outline">Planned</Badge></div><p className="text-sm leading-6 text-muted-foreground">The static portrait and expression mappings work now. Live animation needs a renderer.</p></div>
-          </CardContent>
-        </Card>
-      </aside>
-    </form>
+  function download() {
+    try {
+      const blob = new Blob([exportCharacter(profile)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a"); link.href = url; link.download = `${profile.name.replace(/[^a-z0-9_-]/gi, "-") || "character"}.conker.json`; link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setNotice("Exported your current draft, including embedded artwork and voice reference.")
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not export this character.") }
+  }
+  return <BaseLayout title="Character Studio" description="Shape who your companion is, how it looks, and how it speaks." actions={<><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]">
+      <form id="character-form" onSubmit={submit} className="min-w-0 space-y-6">
+        <fieldset disabled={pending || uploading} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
+          <RouteSection value="identity"><div className="space-y-6">
+            <StudioSection title="Identity" description="Introduce the character in your own words.">
+              <div className="grid gap-4 sm:grid-cols-2"><StudioField label="Name" multiline={false} maxLength={60} value={profile.name} onChange={name => change({ name })} /><StudioField label="Profile line" multiline={false} maxLength={100} value={profile.mood} onChange={mood => change({ mood })} placeholder="A short introduction" /></div>
+              <StudioField label="Personality" value={profile.personality} onChange={personality => change({ personality })} placeholder="Describe the temperament, contradictions, habits, and sense of humor that make this character distinctive." />
+              <StudioField label="Soul & values" value={profile.studio.soul} onChange={soul => studio({ soul })} placeholder="What matters to this character? What motivates it, and what principles guide it?" />
+            </StudioSection>
+            <StudioSection title="Background & relationship" description="Give the character context that makes its personality coherent.">
+              <StudioField label="Backstory" value={profile.studio.backstory} onChange={backstory => studio({ backstory })} placeholder="Origins, experiences, interests, and the world your character comes from." hint="Character lore is separate from memories of your real conversations." />
+              <StudioField label="Relationship with you" value={profile.studio.relationship} onChange={relationship => studio({ relationship })} placeholder="How should it address you, support you, disagree with you, and grow alongside you?" />
+            </StudioSection>
+            <StudioSection title="More about your character" description="Add interests, habits, motivations, or other details that matter to you.">
+              {profile.studio.details.map((detail, index) => <div key={detail.id} className="flex items-end gap-2"><div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2"><StudioField label={`Detail ${index + 1} label`} value={detail.label} multiline={false} maxLength={80} placeholder="Interests" onChange={label => studio({ details: profile.studio.details.map(item => item.id === detail.id ? { ...item, label } : item) })} /><StudioField label={`Detail ${index + 1} value`} value={detail.value} multiline={false} maxLength={500} onChange={value => studio({ details: profile.studio.details.map(item => item.id === detail.id ? { ...item, value } : item) })} /></div><Button type="button" variant="ghost" size="icon" aria-label={`Remove detail ${index + 1}`} onClick={() => studio({ details: profile.studio.details.filter(item => item.id !== detail.id) })}><Trash2 /></Button></div>)}
+              <Button type="button" variant="outline" disabled={profile.studio.details.length >= 20} onClick={() => studio({ details: [...profile.studio.details, { id: crypto.randomUUID(), label: "", value: "" }] })}><Plus />Add detail</Button>
+            </StudioSection>
+          </div></RouteSection>
+          <RouteSection value="speaking"><div className="space-y-6">
+            <StudioSection title="Speaking style" description="Write the way you want your character to communicate."><StudioField label="Speaking instructions" value={profile.speakingStyle} onChange={speakingStyle => change({ speakingStyle })} placeholder="Describe wording, humor, length, vocabulary, and how it handles uncertainty." hint="This controls the writing. Voice defines the sound." /></StudioSection>
+            <StudioSection title="Teach by example" description="Write two versions of the same answer and compare them in the preview.">
+              <StudioField label="Sample question" maxLength={1000} value={profile.studio.examples.prompt} onChange={prompt => studio({ examples: { ...profile.studio.examples, prompt } })} />
+              <StudioField label="Focus answer" value={profile.studio.examples.focus} onChange={focus => studio({ examples: { ...profile.studio.examples, focus } })} hint="Keep the useful answer and necessary context." />
+              <StudioField label="Character answer" value={profile.studio.examples.character} onChange={character => studio({ examples: { ...profile.studio.examples, character } })} hint="The same substance, expressed in your character's own style. These are editable examples, not generated responses." />
+            </StudioSection>
+          </div></RouteSection>
+          <RouteSection value="appearance"><AppearanceEditor profile={profile} update={update} onBusy={setUploading} /></RouteSection>
+          <RouteSection value="voice"><VoiceEditor value={profile.studio.voice} onBusy={setUploading} onChange={voice => update(current => ({ ...current, studio: { ...current.studio, voice: typeof voice === "function" ? voice(current.studio.voice) : voice } }))} /></RouteSection>
+          <RouteSection value="modes"><ModesEditor value={profile.studio.modes} onChange={modes => studio({ modes })} /></RouteSection>
+        </fieldset>
+      </form>
+      <CharacterPreview profile={profile} />
+    </div>
+    <div className="sticky bottom-0 z-10 bg-background py-3">
+      {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
+      <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : "Saved in memory · export to keep a copy")}</span>}>
+        <Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>
+        <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button>
+      </FormActions>
+    </div>
+    <Dialog open={importOpen} onOpenChange={open => { if (!reading) setImportOpen(open) }}><TaskDialogContent title="Import character" description="Bring in a Conker package or the text from a Character Card V2/V3 JSON." onPointerDownOutside={event => event.preventDefault()}>
+      <OverlayBody><div className="space-y-2"><Label htmlFor="character-import">Character JSON file</Label><Input id="character-import" type="file" accept="application/json,.json" disabled={reading} onChange={async event => {
+        const file = event.target.files?.[0]; event.target.value = ""; if (!file) return
+        setIncoming(null); setImportError(""); setReading(true)
+        try { if (file.size > 32 * 1024 * 1024) throw new Error("Choose a JSON file under 32 MB."); const next = importCharacter(await file.text(), profile); await validateImportedMedia(next.profile); setIncoming(next) } catch (cause) { setImportError(cause instanceof Error ? cause.message : "Could not read this character package.") } finally { setReading(false) }
+      }} /></div>{reading && <p role="status" className="text-sm text-muted-foreground">Reading character…</p>}{incoming && <div className="space-y-2"><p className="text-sm font-medium">{incoming.profile.name}</p><p className="text-sm leading-6 text-muted-foreground">{incoming.note}</p><p className="text-sm">Import replaces your current draft. Your saved character stays unchanged until you save.</p></div>}{importError && <p role="alert" className="text-sm text-destructive">{importError}</p>}</OverlayBody>
+      <FormActions inset><Button variant="outline" disabled={reading} onClick={() => setImportOpen(false)}>Cancel</Button><Button disabled={!incoming || reading} onClick={() => { if (incoming) { update(incoming.profile); setNotice(incoming.note); setImportOpen(false) } }}>Import into draft</Button></FormActions>
+    </TaskDialogContent></Dialog>
   </BaseLayout>
 }

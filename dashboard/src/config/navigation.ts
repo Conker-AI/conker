@@ -19,7 +19,7 @@ export const appNavigation = {
   jobs: { path: "/jobs", title: "Jobs" },
   system: { path: "/system", title: "System" },
   settings: { path: "/settings", title: "Settings" },
-  companionSettings: { path: "/settings/companion", title: "Companion settings", parent: "settings" },
+  companionSettings: { path: "/settings/companion", title: "Character Studio", parent: "settings" },
   setup: { path: "/setup", title: "Setup" },
   login: { path: "/login", title: "Login" },
   notFound: { path: "*", title: "Page not found" },
@@ -32,6 +32,7 @@ export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
   system: [{ value: "overview", label: "Overview" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],
+  companionSettings: [{ value: "identity", label: "Identity & soul" }, { value: "speaking", label: "Speaking style" }, { value: "appearance", label: "Appearance" }, { value: "voice", label: "Voice" }, { value: "modes", label: "Expression & modes" }],
   settings: [
     { value: "appearance", label: "Appearance" },
     { value: "layout", label: "Layout" },

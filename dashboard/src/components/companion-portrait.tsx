@@ -26,6 +26,7 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
           src={portrait}
           alt=""
           className="size-3/4 object-contain"
+          style={profile?.studio ? { width: `${100 - profile.studio.appearance.inset * 2}%`, height: `${100 - profile.studio.appearance.inset * 2}%` } : undefined}
         />
       </div>
     )
