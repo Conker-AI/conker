@@ -1,6 +1,6 @@
 # Call interface
 
-Scope: frontend call preview, English first; Russian and Hebrew later. No GPU is required for this interface. ConkerClient owns the sample session and events. Media capture is local preview only, requested by an explicit microphone/camera action. No AI speech, transcription, perception, or server execution is implied.
+Scope: frontend call preview with sample replies, optional real browser speech captions and manual browser read-aloud. English first; Russian and Hebrew later. No GPU is required for this interface. ConkerClient owns the sample session and events. Camera/microphone previews stay local; opted-in captions use a browser speech service that may process audio online. Character voice, live AI, perception and server execution are not connected.
 
 ## Direction contract
 
@@ -10,7 +10,7 @@ OWN-WORLD: Extend Conker's existing shadcn New York interface, direct semantic s
 
 STORY: Start from the composer's phone action or conversation title menu, choose how each participant communicates, type without a microphone, change Focus/Character, return to work, expand again, and hang up explicitly.
 
-FIRST VIEWPORT: A compact call header, a broad companion stage, a smaller local participant tile, an optional transcript column, and a dock with mic/camera/keyboard plus a separate hang-up action. Companion channels sit beside its identity. Secondary session/device/privacy details open inside the call. Mobile switches between the participant stage and transcript/details panel while keeping the controls reachable.
+FIRST VIEWPORT: Equal 50/50 participant sides: Conker's conversation by default, and the user's full camera frame with optional live captions at its bottom and typing below. Appearance is optional. Participant labels and audio controls sit at the bottom; the main dock owns mic/camera/keyboard and hang-up. The header owns Call, model/provider choice, privacy, settings, fullscreen and minimize. Centered settings hold Focus/Character and device/session details. Mobile stacks equal participant rows in a scrollable region.
 
 FORM: Operate; ordinary extension of the owner-approved visual world. No new visual-world selection or generated raster is needed. The signature interaction is expanded-stage to persistent mini-call; animation respects reduced motion.
 
@@ -24,35 +24,35 @@ The composer microphone remains browser dictation. Its separate phone action app
 
 | Area | Implemented behavior |
 | --- | --- |
-| User channels | Independent microphone, camera and keyboard controls. Devices start off and require an explicit action. Camera preview is muted; microphone uses a local level meter. Input selectors and permission/disconnection notices provide recovery. |
-| Companion channels | Independent voice preference, avatar visibility and text/captions. Voice is visibly unconnected. Avatar visibility also applies to mini and ended states. Hiding companion text retains the user's sent messages. |
-| Conversation | Typed turns, timestamped sample replies, thinking/responding states, interruption and a session timeline. Enter sends; Shift+Enter adds a line; the draft limit is 4,000 characters. |
-| Identity and delivery | Existing Studio portrait/activity media and Focus/Character mode selection. The enabled model catalogue supplies a call-level model preference. These settings do not connect a reasoning or voice service. |
+| User channels | Independent microphone, camera and keyboard controls. Devices start off and require an explicit action. Muted camera video preserves the full frame with `object-contain`; audio bars reflect measured microphone level. Selectors and permission/disconnection notices provide recovery. Cleanup/remount clears device flags; only active streams are exposed. |
+| Companion channels | Independent voice preference, appearance and text/captions. Conversation is the default (`avatar: false`); optional Studio appearance also applies to mini and ended states. Hiding companion text retains the user's sent messages. Play manually reads the latest sample reply with the browser's device voice, with Stop and mute; its audio bars indicate playback, not measured output amplitude. |
+| Conversation | Typed turns, timestamped sample replies, thinking/responding states, interruption and a session timeline. Enter sends; Shift+Enter adds a line; the draft limit is 4,000 characters. Live captions are separate from these sent messages. |
+| Identity and delivery | Existing Studio portrait/activity media; Focus/Character in centered `TaskDialogContent` settings. The header's enabled-model choices include provider names and set a call-level preference. Character voice and real reasoning remain unconnected. |
 | Privacy | Existing Incognito dialog with independent No memory and No harness exclusions, inherited from the conversation and adjustable for this call. Details report both; conversation preferences remain separate. |
-| Responsive behavior | Desktop stage with transcript/details alongside; mobile stage or panel with persistent dock. Mini call survives route navigation and preserves the call and chat drafts. |
+| Responsive behavior | Equal desktop columns; equal stacked mobile rows with a 20rem minimum and scrolling, preserving access to the dock. Mini call survives route navigation and preserves call/chat drafts, appearance and optional caption display. |
 
-`src/lib/api/call-types.ts` defines the replacement transport boundary, and `call-fixture.ts` supplies sample events through `ConkerClient.calls`. `use-call-media.ts` owns local capture and cleanup. None of this sends media to a service. Call events and drafts are memory-only; the summary offers copying before dismissal, not saved call history.
+The user's CC control opts into real browser recognition through `ConkerClient.voiceInput`, in English with the system-default microphone only. A 4,000-character internal buffer supplies the latest 40 words to a bottom-anchored two-line subtitle tail without a text scrollbar. Waiting captions and settings disclose possible online speech processing. Captions never send a turn or change a draft. Mute, caption-off and hang-up cancel recognition; normal/silence endings restart and other errors offer Retry. Any browser read-aloud pauses captions, including while minimized. The adapter borrows the call capture stream for level analysis without stopping its tracks.
+
+`src/lib/api/call-types.ts` defines the replacement call-transport boundary; `call-fixture.ts` supplies sample events through `ConkerClient.calls`. `use-call-media.ts` owns local capture and cleanup, and `use-call-captions.ts` owns browser recognition. Conker does not record media or send caption text as messages. Call events and drafts are memory-only; the summary offers copying before dismissal, not saved call history.
 
 ## Review and validation
 
-The independent call review on September 17 returned **SHIP** after resolving all three findings: appbar call start cancels hidden dictation without losing received words or stealing focus; mini view respects the hidden-avatar setting; summary dismissal restores the invoker or a visible enabled shell control.
+Independent review of the refinement returned **SHIP** at the source-review boundary; final small-viewport validation is complete. The existing lifecycle fixes remain part of the contract: starting from the appbar cancels hidden dictation without losing words or stealing focus, mini respects appearance, and summary dismissal restores useful shell focus. This is call-focused QA, not a final dashboard audit.
 
-Chrome review covered desktop at 1920 × 889 in dark and light themes, mobile at 390 × 844 in stage and transcript views, minimize/navigation/expand with drafts, channel/mode/privacy controls, typed sample turns, hang-up, summary and focus restoration. The final fresh-tab path from start through a typed sample reply, end and summary dismissal had no console warnings or errors and restored focus to Start call. Local devices were off at the end of review. This is call-focused QA, not a final audit of the whole dashboard.
+Current visual evidence: [balanced desktop light](.impeccable/review/balanced-desktop-light.png), [balanced desktop dark](.impeccable/review/balanced-desktop-dark.png), and [balanced mobile](.impeccable/review/balanced-mobile.png). Earlier `desktop`, `desktop-light`, `mobile`, `mobile-transcript`, `mini`, `mini-avatar-hidden` and `ended` captures in `.impeccable/review/` document the earlier call layout, not the balanced refinement. All are browser screenshots; no generated artwork was added. Final captures use sample messages with devices off; private camera footage and speech were not retained in these artifacts.
 
-Screenshots are browser captures of the implemented UI: [desktop](.impeccable/review/desktop.png), [desktop light](.impeccable/review/desktop-light.png), [mobile](.impeccable/review/mobile.png), [mobile transcript](.impeccable/review/mobile-transcript.png), [mini](.impeccable/review/mini.png), [mini with avatar hidden](.impeccable/review/mini-avatar-hidden.png), and [ended summary](.impeccable/review/ended.png). No generated artwork was added; character visuals reuse the existing Studio media.
+The updated `check:calls` defaults/lifecycle checks and all 12 `check:voice` checks pass, including borrowed-stream ownership and the silence error code. The final production build passed the design guard over 165 sources, TypeScript and Vite, and affected-file lint passed after the subtitle adjustment. Broader conversation/character/navigation checks have not been rerun for this refinement.
 
-Passing checks reported for this implementation: `check:calls` lifecycle checks, all 10 `check:voice` checks, `check:conversation`, `check:character`, `check:navigation`, and the design guard over 163 sources with 16 self-checks. The final production build (design guard, TypeScript and Vite) and affected-file ESLint passed after the last focus adjustment. The build retained two existing upstream Zod annotation warnings.
-
-Local camera video rendering and turning the camera off were observed during review; final screenshots exclude the local camera imagery. Physical microphone capture and permission races were not exercised. Browser fullscreen fell back gracefully under automation; native fullscreen behavior remains unverified. Automated lifecycle coverage does not establish that external speech services work.
+Hardware review and user confirmation verified real English captions and an active microphone meter. Desktop participant tiles measured an identical 748 × 725; camera video preserved its full 640 × 480 frame inside a 746 × 553 area using `object-contain`. Final 375 × 667 and 320 × 667 checks showed no horizontal page overflow, with the dock accessible and busy controls wrapping at 320px. Manual browser playback changed the speaking indicator and stopped correctly; minimizing/expanding and ending the call were checked. Browser console warnings/errors were empty. Native browser fullscreen remains unverified after graceful automation fallback. Recognition was hardware-tested before the final two-line subtitle styling; final captures verify its waiting state, not a fresh long-speech sample.
 
 ## Remaining work and limits
 
 | Area | Missing work |
 | --- | --- |
 | Frontend scope | Incoming/proactive call UI is not built. The floating mini call stays inside the dashboard tab; OS picture-in-picture and a separate call window/tab are not implemented. Saved call history and reconnect UI are not implemented. |
-| Real conversation services | Streaming speech recognition, frontier-model reasoning, TTS/character voice, emotion and camera perception are not wired. Typed responses and response phases are fixtures. Interrupt currently cancels that sample flow. |
-| Timeline and media | There is no recording or precise audio/video and word alignment. The current timeline records sent messages and mode events; service-backed perception and synchronized playback remain future work. |
+| Real conversation services | Browser speech captions and manual device-voice playback are connected at the frontend; English recognition was observed on hardware. The real-time speech-to-model turn pipeline, frontier-model reasoning, character TTS, emotion and camera perception are not wired. Typed responses and response phases are fixtures; Interrupt cancels that sample flow. |
+| Timeline and media | There is no recording or precise audio/video and word alignment. The timeline records sent messages and mode events, not live captions; service-backed perception and synchronized playback remain future work. |
 | Session and privacy backend | Persistence, reconnect, server-side memory/harness exclusion enforcement and usage/cost metering are not connected. Incognito is a preview preference, not a production privacy guarantee. |
 | Language and rendering | English is the launch target; Russian and Hebrew are planned. The interface needs no GPU; future media/model integration must account for weak GPUs. 3D character rendering is deferred. |
 
-The frontend is reviewable as a local call preview. Completing a live call requires both the missing service integrations and device/service validation; the SHIP verdict applies to the implemented frontend scope above.
+The frontend is a call preview with optional browser speech features. Completing a live AI call still requires the missing service integrations and device/service validation; the source-review verdict does not establish those capabilities.
