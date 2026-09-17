@@ -16,7 +16,8 @@
     "check:jobs": "node scripts/check-jobs.cjs",
     "check:navigation": "node scripts/check-navigation.cjs",
     "check:conversation": "node scripts/check-conversation.cjs",
-    "check:voice": "node scripts/check-voice.cjs"
+    "check:voice": "node scripts/check-voice.cjs",
+    "check:calls": "node scripts/check-calls.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

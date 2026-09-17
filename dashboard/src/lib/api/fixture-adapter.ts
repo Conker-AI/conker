@@ -18,6 +18,7 @@ import { unavailableVoiceInput } from "../voice/types"
 import { describeJobTiming, normalizeJobInput } from "./job-configuration"
 
 import { createCharacterStudio } from "./character-defaults"
+import { createCallFixture } from "./call-fixture"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -102,6 +103,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
     async saveCharacter(profile) {
