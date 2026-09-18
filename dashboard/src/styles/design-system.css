@@ -3,10 +3,11 @@
   --control-height: 2.5rem;
   --control-height-sm: 2rem;
   --control-height-lg: 2.75rem;
-  --collection-search-height: 3rem;
+  --collection-search-height: 2.5rem;
   --collection-row-height: 4rem;
   --collection-portrait-size: 2rem;
   --page-section-gap: 1.5rem;
+  --collection-section-gap: 1rem;
   --scrollbar-size: 0.625rem;
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));

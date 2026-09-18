@@ -18,14 +18,16 @@ interface BaseLayoutProps {
   title?: string
   description?: string
   actions?: React.ReactNode
-  variant?: "page" | "conversation" | "workspace"
+  status?: React.ReactNode
+  variant?: "page" | "collection" | "conversation" | "workspace"
 }
 
-export function BaseLayout({ children, title, description, actions, variant = "page" }: BaseLayoutProps) {
+export function BaseLayout({ children, title, description, actions, status, variant = "page" }: BaseLayoutProps) {
   const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
   const conversation = variant === "conversation"
   const workspace = variant === "workspace"
+  const collection = variant === "collection"
   const { pathname, search } = useLocation()
   const pageScroll = React.useRef<HTMLDivElement>(null)
 
@@ -42,8 +44,8 @@ export function BaseLayout({ children, title, description, actions, variant = "p
       </div> : <div ref={pageScroll} data-slot="page-scroll" role="region" aria-label={`${title ?? "Page"} content`} tabIndex={0}
         className={cn("flex min-h-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", workspace ? "overflow-hidden" : "overflow-y-auto")}>
         <div className={cn("@container/main flex flex-1 flex-col gap-2", workspace && "min-h-0")}>
-          <PageContainer className={cn("flex flex-col gap-(--page-section-gap) py-6 pb-8 sm:pt-10", workspace && "min-h-0 flex-1")}>
-            {title && <PageHeader title={title} description={description} actions={actions} />}
+          <PageContainer className={cn("flex flex-col gap-(--page-section-gap) py-6 pb-8", collection && "gap-(--collection-section-gap)", workspace && "min-h-0 flex-1")}>
+            {title && <PageHeader title={title} description={description} actions={actions} status={status} density={collection ? "compact" : "standard"} />}
             {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
             {children}
           </PageContainer>

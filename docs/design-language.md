@@ -20,8 +20,10 @@ on top.** The reference the owner pointed to is **[libraries.dev](https://librar
    shadows. Light mode uses a softly toned canvas beneath white panels. Cards, collections, fields
    and menus inherit the documented surface roles in dashboard/DESIGN.md; avoid independent page
    palettes, heavy shadows or decorative colored boxes. Preserve the compact shadcn New York feel.
-2. **Never wasteful.** Every screen earns its space. No boxes-in-boxes, no giant empty margins, no
-   spacing for its own sake. If a screen feels roomy without a reason, it's wrong.
+2. **Purposeful spacing.** Related controls sit close; different topics have room to separate.
+   Judge the complete screen, not just individual component padding. Preserve full-width gutters,
+   usable targets and readable rows; remove redundant framing and oversized heading/search stacks
+   before making useful content smaller. Shared controls can serve different screen compositions.
 3. **Productive vs beautiful — decide per screen.** Some screens exist to *do a job fast*; some exist
    to *feel good*; some are both. Design each to its purpose:
    - **Productive** (e.g. the **session list**): its only job is to *find the session you need*, so
@@ -58,7 +60,7 @@ Interaction placement follows the owner-approved September 16 contract in [dashb
 - **Character Studio** — beautiful-leaning. The companion should feel alive (static now, animated later).
 - **System** — productive. One sidebar destination with the shared appbar tabs: Overview for machine stats and services, Terminal for the viewport-filling black console and fullscreen, and Files for the directory tree and path copying. Keep Terminal and Files in separate tab bodies, with the offline and sample-data labels intact. Terminal uses graphite chrome; Files uses the shared card palette.
 
-Home summarizes Conker's internal screens using the shared page shell, cards, collection rows and complete padded portraits. New chat and Open companion provide the primary next steps; Connections and System expose service details. One subtle arrival animation gives the overview a quiet entrance and respects reduced motion. Existing theme, density and inset-frame contracts continue to apply.
+Home summarizes Conker's internal screens using the shared page shell, `OverviewSection`, collection rows and complete padded portraits. Pending decisions lead in a defined card surface; activity and supporting groups have quieter headings/dividers. Resource values are distinct from their labels. New chat and Open companion provide the primary next steps; Connections and System expose service details. One subtle arrival animation gives the overview a quiet entrance and respects reduced motion. Existing theme and inset-frame contracts continue to apply. Collection routes use the compact heading/search rhythm documented in DESIGN.md; settings, forms, conversations and tools retain layouts suited to their tasks.
 
 The separate productivity app owns tasks and calendars and may later connect to Conker through MCP/ToolGate. Home does not duplicate a daily briefing, agenda, news feed or planning starters. Recorded calendar-tool actions can appear in Journal summaries as audit history. Companion keeps its dedicated conversation, voice behavior, daily context and sourced-news status; the Home restructuring does not remove these capabilities.
 

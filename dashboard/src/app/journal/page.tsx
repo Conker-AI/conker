@@ -26,7 +26,7 @@ export default function JournalPage() {
   const [selected, setSelected] = useState<JournalEntry | null>(null)
   const columns = useMemo(() => journalColumns(setSelected), [])
   return (
-    <BaseLayout
+    <BaseLayout variant="collection"
       title="Journal"
       description="What happened, who did it, and the evidence left behind."
     >

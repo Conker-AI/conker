@@ -19,7 +19,7 @@ export default function AgentsPage() {
   const columns = useMemo(() => agentColumns(setSelected), [])
   const history = sessions.filter(session => selected && session.id !== companionId && (session.agentId === selected.id || session.agent === selected.name) && !session.isDraft && !session.archived).sort((a, b) => a.minutesAgo - b.minutesAgo)
   return (
-    <BaseLayout
+    <BaseLayout variant="collection"
       title="Agents"
       description="Choose who you want to work with. Each agent can have its own conversations."
     >

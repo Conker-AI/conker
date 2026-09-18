@@ -91,7 +91,7 @@ export default function JobsPage() {
     </Select>
   </>
 
-  return <BaseLayout title="Jobs" description="Create, schedule, and manage what your agents do for you."
+  return <BaseLayout variant="collection" title="Jobs" description="Create, schedule, and manage what your agents do for you."
     actions={<Button ref={newButton} onClick={() => openPanel({ mode: "create" })} disabled={pending}><Plus />New job</Button>}>
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline" className="font-normal">Preview</Badge><span>Changes reset on reload. Runs are simulated.</span></div>

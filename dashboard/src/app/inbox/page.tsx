@@ -35,7 +35,7 @@ export default function InboxPage() {
   const [historyQuery, setHistoryQuery] = useState("")
   const tickets = useConker(state => state.tickets)
   const pending = tickets.filter(ticket => ticket.status === "Needs you")
-  return <BaseLayout title="Inbox" description="Review requests and revisit your decisions.">
+  return <BaseLayout variant="collection" title="Inbox" description="Review requests and revisit your decisions.">
       <RouteSection value="pending"><RequestList tickets={pending} query={query} setQuery={setQuery} /></RouteSection>
       <RouteSection value="history"><RequestList tickets={tickets.filter(ticket => ticket.status !== "Needs you")} query={historyQuery} setQuery={setHistoryQuery} history /></RouteSection>
     <p className="text-xs text-muted-foreground">Preview decisions reset on reload.</p>

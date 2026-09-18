@@ -74,7 +74,7 @@ export default function ChatsPage() {
   const latestAgentSessions = [...latestByAgent.values()].filter(session => matches(session, agentQuery))
   const unusedAgents = agents.filter(agent => !latestByAgent.has(agent.name) && `${agent.name} ${agent.role}`.toLocaleLowerCase().includes(agentQuery.trim().toLocaleLowerCase()))
 
-  return <BaseLayout title="Chats" description="A space for each topic. Start fresh or pick up where you left off.">
+  return <BaseLayout variant="collection" title="Chats" description="A space for each topic. Start fresh or pick up where you left off.">
       <RouteSection value="sessions">
         <ChatListPanel query={query} onQueryChange={setQuery} count={filtered.length}>
           <div className="space-y-4">

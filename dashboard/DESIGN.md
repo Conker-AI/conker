@@ -9,6 +9,8 @@ The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-temp
 | Need | Use | Owner |
 | --- | --- | --- |
 | Standard route shell and heading | `BaseLayout` with `title` and `description` | `src/components/layouts/base-layout.tsx` |
+| Find-and-manage collection shell | `BaseLayout variant="collection"`; compact shared heading and section rhythm | Same layout module |
+| Prioritized overview groups | `OverviewSection`; `priority` for the leading decision surface | `src/components/design-system/index.tsx` |
 | Viewport-filling tool beneath a standard heading | `BaseLayout variant="workspace"`; tool owns its scroll regions | Same layout module |
 | Page heading outside that shell | `PageHeader` | `src/components/design-system/index.tsx` |
 | Route sections | `RouteSection`; navigation is rendered by `SiteHeader` | `src/config/navigation.ts`, `src/components/appbar-navigation.tsx` |
@@ -23,7 +25,7 @@ The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-temp
 | Dimensions and density | CSS tokens | `src/styles/design-system.css` |
 | Colors and radius | Semantic CSS variables and theme customizer | `src/index.css`, `ThemeRuntime`, existing theme manager |
 
-Import the shared application patterns from `@/components/design-system`. Their exported TypeScript props are the API. Route code supplies content, destinations and state; these components own matching dimensions, insets, typography, dividers and hover/focus treatment.
+Import the shared application patterns from `@/components/design-system`. Their exported TypeScript props are the API. Route code supplies content, destinations and state; these components own matching dimensions, insets, typography, dividers and hover/focus treatment. `BaseLayout` / `PageHeader` accept a `status` beside the title for page-wide context such as Home's Preview data label; keep that context visible before the content on narrow screens.
 
 ```tsx
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -76,18 +78,35 @@ Do not relocate a correctly placed feature just to touch every screen. Home rema
 | Default button / input / select: `--control-height` | 40px / `2.5rem` |
 | Compact control: `--control-height-sm` | 32px / `2rem` |
 | Large control: `--control-height-lg` | 44px / `2.75rem` |
-| Collection search: `--collection-search-height` | 48px / `3rem`, full available width |
+| Collection search: `--collection-search-height` | 40px / `2.5rem`, full available width |
 | Collection row: `--collection-row-height` | Minimum 64px / `4rem` |
 | Collection portrait: `--collection-portrait-size` | 32px / `2rem` |
 | Page sections: `--page-section-gap` | 24px / `1.5rem` |
+| Related collection controls/results: `--collection-section-gap` | 16px / `1rem` |
 | Appbar section navigation | 40px links in a horizontally scrollable row below the 56px appbar toolbar |
 | Standard page title | 30px type / 36px line height, semibold weight |
+| Collection page title | 24px type / 32px line height, semibold weight |
 | Page description | 14px type / 24px line height |
+| Collection description | 14px type / 20px line height; 4px after its title |
+| Page top inset | 24px; no extra desktop-only gap before the heading |
 | Page gutters | 16px mobile / 24px small screens / 32px large screens |
 | Width | Full available width; no centered route-wide maximum |
 | Corners | Derive from editable `--radius` |
 
-Dimensions describe roles. A small inline action can use the compact variant, while collection search always uses its larger shared pattern. Avoid overriding equivalent roles with page-owned `h-*`, `px-*`, font, radius or palette classes. If a new role is needed, add an explicit shared variant and document it here.
+Dimensions describe roles. A small inline action can use the compact variant; collection search uses one shared 40px pattern across lists and tables. Avoid overriding equivalent roles with page-owned `h-*`, `px-*`, font, radius or palette classes. If a new role is needed, add an explicit shared variant and document it here.
+
+### Priority, grouping and screen purpose
+
+Consistency means equivalent controls behave and look alike; it does not mean every screen repeats the same stack of cards. Define the first useful action or piece of information before choosing a composition. The selected theme owns color, type family, tracking, corners and elevation; the screen owns reading order and emphasis.
+
+- **Collections** (Chats, Inbox, Agents, Tools, Memory, Journal, Jobs): use `BaseLayout variant="collection"`. Keep heading/help, search and results close, with 16px between related regions. Keep the 64px minimum row and usable controls; reclaim overhead before shrinking content. At 1280×720, aim to begin an ordinary unfiltered list in the upper third to two-fifths of the viewport, allowing real content to wrap. Tabs stay in the appbar.
+- **Home**: pending decisions lead. `OverviewSection priority` gives that group the card surface and a 20px heading; supporting sections use 16px headings and their content/dividers without another enclosing card. Workspace values use 24px tabular numerals with quieter labels. Resource links remain secondary to actions. Desktop has an attention/activity column and a workspace/agents/conversations column; narrow screens preserve that reading order in one column. Preview labels remain visible.
+- **Forms and settings**: retain the standard heading, 24px between meaningful sections and existing task-specific editors. Bound long prose inside the full-width page when it aids reading; do not cap the whole route.
+- **Conversations and tools**: preserve their viewport-filling variants and existing control ownership. They do not need collection headings to be consistent.
+
+Use 4–8px within a label/detail group, 16px between related controls or list regions, and 24px between distinct sections. A container must communicate a boundary, state or priority. Do not enclose every heading or supporting group just to fill space. Borders define structure, muted foreground carries supporting detail, and primary color identifies actions/selection rather than decorating every heading. Keep the surface's foreground for essential information; use size and weight before adding colors.
+
+Review the complete vertical stack, not each component in isolation. Desktop and narrow screenshots must show the leading task, readable supporting content, intact corners and reachable actions. Shared token compliance is a baseline, not a substitute for this review.
 
 Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. The theme control sits beside the Conker label in the sidebar brand row, including the mobile drawer; in icon-collapse mode it stacks below the brand. Conversation appbar controls use the compact 32px control role.
 

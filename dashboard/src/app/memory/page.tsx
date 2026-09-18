@@ -19,7 +19,7 @@ export default function MemoryPage() {
   const selected = memories.find(memory => memory.id === selectedId)
   const columns = useMemo(() => memoryColumns(memory => setSelectedId(memory.id)), [])
   return (
-    <BaseLayout
+    <BaseLayout variant="collection"
       title="Memory"
       description="What Conker thinks it knows. Evidence first; confidence is not certainty."
     >

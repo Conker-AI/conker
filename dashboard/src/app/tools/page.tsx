@@ -17,7 +17,7 @@ export default function ToolsPage() {
   const [selected, setSelected] = useState<Tool | null>(null)
   const columns = useMemo(() => toolColumns(setSelected), [])
   return (
-    <BaseLayout
+    <BaseLayout variant="collection"
       title="Tools"
       description="What each tool can do, and who is scoped to it. Availability is not permission."
     >

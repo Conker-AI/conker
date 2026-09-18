@@ -24,7 +24,7 @@ Application demos and landing pages remain source references in the repository. 
 ## Explicit Conker adaptations
 
 - Green primary/foreground and focus colors are the default Conker theme choice. Presets and imports can replace them. Standard shadcn color roles remain direct variables.
-- Keep existing compact density, full-width gutters, 48px collection search, 64px minimum rows and small appbar controls. Shared primitive dimensions still use Conker's density tokens; do not enlarge every screen to match a demo page.
+- Keep compact density, full-width gutters, 40px collection search, 64px minimum rows and small appbar controls. Collections use the documented compact heading/16px rhythm; forms and overviews retain their own composition. Shared primitive dimensions still use Conker's density tokens; do not enlarge every screen to match a demo page.
 - Keep custom navigation, brand/theme-control placement, contextual conversation rail, drafts, voice, message actions, command search and ConkerClient fixtures.
 - Keep complete padded photo portraits, custom scrollbars and the terminal's deliberately black command area.
 - Keep the existing readable secondary-text value and the destructive button foreground pair. Warning and success are small semantic extensions, used with labels.

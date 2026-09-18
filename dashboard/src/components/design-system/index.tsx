@@ -11,11 +11,14 @@ import { cn } from "@/lib/utils"
 
 export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, ConfirmationDialog } from "./overlays"
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+export function PageHeader({ title, description, actions, status, density = "standard" }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact" }) {
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
-      <h1 className="break-words text-3xl leading-9 font-semibold tracking-tight">{title}</h1>
-      {description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className={cn("break-words font-semibold tracking-tight", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
+        {status}
+      </div>
+      {description && <p className={cn("max-w-prose text-sm text-muted-foreground", density === "compact" ? "mt-1 leading-5" : "mt-2 leading-6")}>{description}</p>}
     </div>
     {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
   </header>
@@ -25,6 +28,23 @@ export function PageHeader({ title, description, actions }: { title: string; des
 export function RouteSection({ value, children, variant = "page" }: { value: string; children: ReactNode; variant?: "page" | "workspace" }) {
   const active = usePageSection()
   return active === value ? <div data-slot="route-section" className={cn("min-w-0", variant === "workspace" && "flex min-h-0 flex-1 flex-col")}>{children}</div> : null
+}
+
+/** Overview composition: one leading decision surface, quieter supporting groups. */
+export function OverviewSection({ title, description, action, children, priority = false }: {
+  title: string; description?: ReactNode; action?: ReactNode; children: ReactNode; priority?: boolean
+}) {
+  const id = useId()
+  return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "rounded-xl border bg-card p-4 text-card-foreground shadow-sm")}>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <h2 id={id} className={cn("font-semibold", priority ? "text-xl leading-7" : "text-base leading-6")}>{title}</h2>
+        {description && <p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}
+      </div>
+      {action}
+    </div>
+    {children}
+  </section>
 }
 
 export function PageTabs({ className, ...props }: ComponentProps<typeof Tabs>) {
@@ -103,7 +123,7 @@ export function CollectionPanel({ query, onQueryChange, label, placeholder, coun
   query: string; onQueryChange: (value: string) => void; label: string; placeholder: string; count: number; unit: string;
   emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; children: ReactNode
 }) {
-  return <div className="min-w-0 space-y-7">
+  return <div className="min-w-0 space-y-(--collection-section-gap)">
     <CollectionSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />
     <p className="sr-only" role="status">{count} {unit} found.</p>
     {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
