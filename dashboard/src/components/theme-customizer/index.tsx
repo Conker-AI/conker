@@ -5,9 +5,7 @@ import { Layout, Palette, RotateCcw, Settings, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useThemeManager } from '@/hooks/use-theme-manager'
 import { useSidebarConfig } from '@/contexts/sidebar-context'
-import { tweakcnThemes } from '@/config/theme-data'
 import { ThemeTab } from './theme-tab'
 import { LayoutTab } from './layout-tab'
 import { ImportModal } from './import-modal'
@@ -21,30 +19,14 @@ interface ThemeCustomizerProps {
 }
 
 export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
-  const { applyImportedTheme, isDarkMode, resetTheme, applyRadius, setBrandColorsValues, applyTheme, applyTweakcnTheme } = useThemeManager()
   const { config: sidebarConfig, updateConfig: updateSidebarConfig } = useSidebarConfig()
 
   const { activeTab, setActiveTab } = useCustomizerPreferences()
-  const { selectedTheme, setSelectedTheme, selectedTweakcnTheme, setSelectedTweakcnTheme, selectedRadius, setSelectedRadius, importedTheme, setImportedTheme } = useCustomizerPreferences()
+  const { selectedTheme, setSelectedTheme, selectedTweakcnTheme, setSelectedTweakcnTheme, selectedRadius, setSelectedRadius, setImportedTheme, reset } = useCustomizerPreferences()
   const [importModalOpen, setImportModalOpen] = React.useState(false)
 
   const handleReset = () => {
-    // Complete reset to application defaults
-
-    // 1. Reset all state variables to initial values
-    setSelectedTheme("")  // Clear theme selection after reset
-    setSelectedTweakcnTheme("")
-    setSelectedRadius("0.625rem")
-    setImportedTheme(null) // Clear imported theme
-    setBrandColorsValues({}) // Clear brand colors state
-
-    // 2. Completely remove all custom CSS variables
-    resetTheme()
-
-    // 3. Reset the radius to default
-    applyRadius("0.625rem")
-
-    // 4. Reset sidebar to defaults
+    reset()
     updateSidebarConfig({ variant: "inset", collapsible: "offcanvas", side: "left" })
   }
 
@@ -54,27 +36,11 @@ export function ThemeCustomizer({ open, onOpenChange }: ThemeCustomizerProps) {
     setSelectedTheme("")
     setSelectedTweakcnTheme("")
 
-    // Apply the imported theme
-    applyImportedTheme(themeData, isDarkMode)
   }
 
   const handleImportClick = () => {
     setImportModalOpen(true)
   }
-
-  // Re-apply themes when theme mode changes
-  React.useEffect(() => {
-    if (importedTheme) {
-      applyImportedTheme(importedTheme, isDarkMode)
-    } else if (selectedTheme) {
-      applyTheme(selectedTheme, isDarkMode)
-    } else if (selectedTweakcnTheme) {
-      const selectedPreset = tweakcnThemes.find(t => t.value === selectedTweakcnTheme)?.preset
-      if (selectedPreset) {
-        applyTweakcnTheme(selectedPreset, isDarkMode)
-      }
-    }
-  }, [isDarkMode, importedTheme, selectedTheme, selectedTweakcnTheme, applyImportedTheme, applyTheme, applyTweakcnTheme])
 
   return (
     <>

@@ -15,6 +15,7 @@ import type { ImportedTheme } from '@/types/theme-customizer'
 import React from 'react'
 import { cn } from "@/lib/utils"
 import "./circular-transition.css"
+import { resolveThemeVariables } from "@/lib/theme-resolution"
 
 interface ThemeTabProps {
   className?: string
@@ -39,19 +40,14 @@ export function ThemeTab({
   setImportedTheme,
   onImportClick
 }: ThemeTabProps) {
-  const {
-    isDarkMode,
-    brandColorsValues,
-    setBrandColorsValues,
-    applyTheme,
-    applyTweakcnTheme,
-    applyRadius,
-    handleColorChange: applyColor
-  } = useThemeManager()
-
-  const { colors, setColors } = useCustomizerPreferences()
+  const { isDarkMode } = useThemeManager()
+  const { colors, setColors, importedTheme } = useCustomizerPreferences()
+  const activeTheme = importedTheme ?? (selectedTheme
+    ? colorThemes.find(item => item.value === selectedTheme)?.preset.styles
+    : tweakcnThemes.find(item => item.value === selectedTweakcnTheme)?.preset.styles)
+  const resolved = activeTheme ? resolveThemeVariables(activeTheme, isDarkMode) : {}
   const handleColorChange = (key: string, value: string) => {
-    if (CSS.supports("color", value)) { applyColor(key, value); setColors({ ...colors, [key]: value }) }
+    if (CSS.supports("color", value)) setColors({ ...colors, [key]: value })
   }
   const { toggleTheme } = useCircularTransition()
 
@@ -60,9 +56,7 @@ export function ThemeTab({
     const randomTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)]
     setSelectedTheme(randomTheme.value)
     setSelectedTweakcnTheme("") // Clear tweakcn selection
-    setBrandColorsValues({}) // Clear brand colors state
     setImportedTheme(null) // Clear imported theme
-    applyTheme(randomTheme.value, isDarkMode)
   }
 
   const handleRandomTweakcn = () => {
@@ -70,14 +64,11 @@ export function ThemeTab({
     const randomTheme = tweakcnThemes[Math.floor(Math.random() * tweakcnThemes.length)]
     setSelectedTweakcnTheme(randomTheme.value)
     setSelectedTheme("") // Clear shadcn selection
-    setBrandColorsValues({}) // Clear brand colors state
     setImportedTheme(null) // Clear imported theme
-    applyTweakcnTheme(randomTheme.preset, isDarkMode)
   }
 
   const handleRadiusSelect = (radius: string) => {
     setSelectedRadius(radius)
-    applyRadius(radius)
   }
 
   const handleLightMode = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -107,9 +98,7 @@ export function ThemeTab({
         <Select value={selectedTheme} onValueChange={(value) => {
           setSelectedTheme(value)
           setSelectedTweakcnTheme("") // Clear tweakcn selection
-          setBrandColorsValues({}) // Clear brand colors state
-          setImportedTheme(null) // Clear imported theme
-          applyTheme(value, isDarkMode)
+                setImportedTheme(null) // Clear imported theme
         }}>
           <SelectTrigger aria-label="Theme preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Shadcn Theme" />
@@ -161,12 +150,7 @@ export function ThemeTab({
         <Select value={selectedTweakcnTheme} onValueChange={(value) => {
           setSelectedTweakcnTheme(value)
           setSelectedTheme("") // Clear shadcn selection
-          setBrandColorsValues({}) // Clear brand colors state
-          setImportedTheme(null) // Clear imported theme
-          const selectedPreset = tweakcnThemes.find(t => t.value === value)?.preset
-          if (selectedPreset) {
-            applyTweakcnTheme(selectedPreset, isDarkMode)
-          }
+                setImportedTheme(null) // Clear imported theme
         }}>
           <SelectTrigger aria-label="Tweakcn preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Tweakcn Theme" />
@@ -207,7 +191,11 @@ export function ThemeTab({
 
       {/* Radius Selection */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Radius</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-sm font-medium">Corners</Label>
+          <Button variant={selectedRadius ? "outline" : "secondary"} size="sm" aria-pressed={!selectedRadius} onClick={() => setSelectedRadius("")}>Use theme radius</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">{selectedRadius ? "Your corner override applies across themes." : "Corners follow the selected theme."}</p>
         <div className="grid grid-cols-5 gap-2">
           {radiusOptions.map((option) => (
             <div
@@ -286,7 +274,7 @@ export function ThemeTab({
                 <ColorPicker
                   label={color.name}
                   cssVar={color.cssVar}
-                  value={colors[color.cssVar] || brandColorsValues[color.cssVar] || ""}
+                  value={colors[color.cssVar] || resolved[color.cssVar.slice(2)] || ""}
                   onChange={handleColorChange}
                 />
               </div>

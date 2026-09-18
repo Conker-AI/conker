@@ -4,8 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --tracking-normal: 0em;
+}
+
 @theme inline {
-  --font-sans: var(--font-inter);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -49,7 +60,6 @@
 :root {
   --success: oklch(0.48 0.13 158);
   --warning: oklch(0.48 0.12 75);
-  --font-inter: 'Inter', system-ui, sans-serif;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -128,7 +138,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: var(--font-inter);
+    letter-spacing: var(--tracking-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

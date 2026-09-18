@@ -17,6 +17,7 @@
     "check:navigation": "node scripts/check-navigation.cjs",
     "check:conversation": "node scripts/check-conversation.cjs",
     "check:voice": "node scripts/check-voice.cjs",
+    "check:theme": "node scripts/check-theme.cjs",
     "check:calls": "node scripts/check-calls.cjs"
   },
   "dependencies": {

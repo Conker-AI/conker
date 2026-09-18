@@ -5,7 +5,7 @@ import { useCustomizerPreferences } from "./preferences"
 
 /** Theme application stays mounted when the owner leaves Settings. */
 export function ThemeRuntime() {
-  const { isDarkMode, resetTheme, applyTheme, applyTweakcnTheme, applyImportedTheme } = useThemeManager()
+  const { isDarkMode, resetTheme, applyTheme, applyTweakcnTheme, applyImportedTheme, applyRadius, handleColorChange } = useThemeManager()
   const { selectedTheme, selectedTweakcnTheme, selectedRadius, importedTheme, colors } = useCustomizerPreferences()
   useEffect(() => {
     resetTheme()
@@ -15,8 +15,8 @@ export function ThemeRuntime() {
       const preset = tweakcnThemes.find(item => item.value === selectedTweakcnTheme)?.preset
       if (preset) applyTweakcnTheme(preset, isDarkMode)
     }
-    document.documentElement.style.setProperty("--radius", selectedRadius)
-    Object.entries(colors).forEach(([key, value]) => document.documentElement.style.setProperty(key, value))
-  }, [isDarkMode, selectedTheme, selectedTweakcnTheme, selectedRadius, importedTheme, colors, resetTheme, applyTheme, applyTweakcnTheme, applyImportedTheme])
+    if (selectedRadius) applyRadius(selectedRadius)
+    Object.entries(colors).forEach(([key, value]) => handleColorChange(key, value))
+  }, [isDarkMode, selectedTheme, selectedTweakcnTheme, selectedRadius, importedTheme, colors, resetTheme, applyTheme, applyTweakcnTheme, applyImportedTheme, applyRadius, handleColorChange])
   return null
 }

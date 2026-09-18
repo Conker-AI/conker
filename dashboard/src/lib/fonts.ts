@@ -1,12 +1,24 @@
-// Inter font configuration for Vite version
-// Using CSS imports since Vite doesn't have next/font optimization
+// Only known preset fonts are fetched. Unknown imported families keep their CSS fallback.
+const presetFontWeights: Record<string, string> = Object.fromEntries([
+  'Inter', 'Source Serif 4', 'JetBrains Mono', 'Plus Jakarta Sans', 'Lora', 'IBM Plex Mono',
+  'Open Sans', 'DM Sans', 'Poppins', 'Geist', 'Geist Mono', 'Oxanium', 'Montserrat',
+  'Source Code Pro', 'Merriweather', 'Quicksand', 'Roboto', 'Outfit', 'Libre Baskerville',
+  'Fira Code', 'Roboto Mono', 'Playfair Display',
+].map(name => [name, '400;500;600;700']))
+presetFontWeights['Architects Daughter'] = '400'
+presetFontWeights['Space Mono'] = '400;700'
+presetFontWeights['Ubuntu Mono'] = '400;700'
+presetFontWeights['Libre Baskerville'] = '400;700'
 
-export const interFontCSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-`;
-
-// CSS variable name to match Next.js version
-export const interFontVariable = '--font-inter';
-
-// Inter font family for direct CSS usage
-export const interFontFamily = 'Inter, system-ui, sans-serif';
+export function loadThemeFonts(styles: Record<string, string>) {
+  for (const key of ['font-sans', 'font-serif', 'font-mono']) {
+    const family = (styles[key] ?? (key === 'font-sans' ? 'Inter' : '')).split(',')[0].trim().replace(/^["']|["']$/g, '')
+    const weights = presetFontWeights[family]
+    if (!weights || [...document.querySelectorAll<HTMLLinkElement>('link[data-conker-font]')].some(link => link.dataset.conkerFont === family)) continue
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.dataset.conkerFont = family
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weights}&display=swap`
+    document.head.append(link)
+  }
+}
