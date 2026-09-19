@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react"
 import { Link } from "react-router-dom"
-import { ArrowDown, ArrowUp, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
+import { ArrowUp, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,13 +31,11 @@ function VoiceWaveform({ levels, listening }: { levels: number[]; listening: boo
   </svg>
 }
 
-export function ConversationComposer({ session, name, companionWorkspace, inputRef, showLatest, onLatest }: {
+export function ConversationComposer({ session, name, companionWorkspace, inputRef }: {
   session: Session
   name: string
   companionWorkspace: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
-  showLatest: boolean
-  onLatest: () => void
 }) {
   const data = useConker(value => value)
   const draft = useConkerStore(state => state.drafts[session.id] || "")
@@ -91,7 +89,6 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
 
   return <div data-home="composer" className="shrink-0 bg-background px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
     {session.archived && <p className="mb-2 text-xs text-muted-foreground">Archived. Restore this conversation from its appbar menu to continue.</p>}
-    {showLatest && <div className="mb-2 flex justify-center"><Button type="button" variant="outline" size="sm" onClick={onLatest}><ArrowDown />Latest message</Button></div>}
     <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border border-input bg-card text-card-foreground p-2 shadow-sm focus-within:border-ring", voice.active && "border-ring")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
       {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
       <div hidden={voice.active}>

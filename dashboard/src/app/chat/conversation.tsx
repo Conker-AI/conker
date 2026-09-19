@@ -1,12 +1,14 @@
 import { useLocation } from "react-router-dom"
-import { Fragment, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
-import { ArrowRight, CalendarDays, LoaderCircle, TriangleAlert } from "lucide-react"
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react"
+import { ArrowDown, ArrowRight, CalendarDays, TriangleAlert } from "lucide-react"
 import { ApprovalRequest } from "@/components/approval-request"
 import { CompanionPortrait } from "@/components/companion-portrait"
+import { ConversationActivity } from "@/components/conversation-activity"
 import { ToolActivity } from "@/components/tool-activity"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
@@ -48,26 +50,40 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const stream = useConversationWorkspace(state => state.streams[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
-  const nearBottom = useRef(true)
+  const nearBottom = useRef(!hash)
   const [showLatest, setShowLatest] = useState(false)
-  const messages = conversation?.messages || []
+  const messages = useMemo(() => conversation?.messages || [], [conversation?.messages])
   const previousCount = useRef(messages.length)
   const companion = data.agents.find(agent => agent.name === session.agent)?.kind === "companion"
   const name = companion ? data.profile.name : session.agent
   const draft = drafts[session.id] || ""
   const portraitProps = { profile: companion ? data.profile : undefined, name, face: "round" as const, tone: "graphite" as const }
+  const presentationMode = conversation?.presentationMode || "focus"
+  const activityText = stream?.phase === "thinking" ? "Thinking" : "Writing"
 
-  const scrollToLatest = () => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "instant" }); nearBottom.current = true }
+  const scrollToLatest = useCallback(() => {
+    nearBottom.current = true
+    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "instant" })
+    setShowLatest(false)
+  }, [])
   useEffect(() => {
     const element = scroller.current
     if (!element) return
     const update = () => { nearBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; setShowLatest(!nearBottom.current) }
     element.addEventListener("scroll", update, { passive: true })
-    const observer = new ResizeObserver(update); observer.observe(element); if (element.firstElementChild) observer.observe(element.firstElementChild)
+    const observer = new ResizeObserver(() => {
+      if (nearBottom.current) scrollToLatest()
+      else update()
+    })
+    observer.observe(element); if (element.firstElementChild) observer.observe(element.firstElementChild)
     return () => { element.removeEventListener("scroll", update); observer.disconnect() }
-  }, [])
-  useEffect(() => { if (messages.length > previousCount.current) scrollToLatest(); previousCount.current = messages.length }, [messages.length])
-  useEffect(() => { if (stream && nearBottom.current) scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "instant" }) }, [stream])
+  }, [scrollToLatest])
+  useLayoutEffect(() => {
+    const newUserMessage = messages.length > previousCount.current && messages.at(-1)?.role === "user"
+    // Finishing/retrying an assistant response must never pull someone away from older messages.
+    if (newUserMessage || nearBottom.current) scrollToLatest()
+    previousCount.current = messages.length
+  }, [messages, stream, scrollToLatest])
   useEffect(() => {
     if (!hash) return
     let id: string
@@ -84,6 +100,8 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   return <div className="flex min-h-0 min-w-0 flex-1">
     <section aria-label={`Chat with ${name}`} className="flex min-h-0 min-w-0 flex-1 flex-col">
       <h1 className="sr-only">{session.title}</h1>
+      <span className="sr-only" role="status">{stream ? `${name} is ${activityText.toLowerCase()}. Preview response.` : ""}</span>
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scroller} role="region" aria-label="Conversation thread" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-col gap-5 py-5">
           {Intro && <Intro preparePrompt={preparePrompt} hasMessages={messages.length > 0} />}
@@ -101,10 +119,14 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
             <MessageActions session={session} message={message} />
           </article>{conversation.handoffs.filter(event => event.afterMessageId === message.id).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
           })}
-          {stream && <div aria-label="Streaming preview response" className="space-y-2"><div className="flex items-center gap-2 text-sm text-muted-foreground"><CompanionPortrait {...portraitProps} className="size-6 rounded-md" /><LoaderCircle className="size-3.5 motion-safe:animate-spin" /><span role="status">{stream.phase === "thinking" ? "Thinking" : "Responding"} · simulated</span></div>{stream.text && <p className="whitespace-pre-wrap text-[15px] leading-7">{stream.text}</p>}</div>}
+          {stream && <div aria-label="Streaming preview response" className="space-y-3"><div className={showLatest ? "invisible" : undefined}><ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} motion={!showLatest} /></div>{stream.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{stream.text}</p>}</div>}
         </div>
       </div>
-      <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} showLatest={showLatest} onLatest={scrollToLatest} />
+      {showLatest && <div className="conversation-latest"><Tooltip><TooltipTrigger asChild><Button type="button" variant="outline" size="icon" className="size-12 rounded-full bg-popover p-0 text-popover-foreground shadow-sm dark:bg-popover dark:hover:bg-accent" aria-label={stream ? `${name} is ${activityText.toLowerCase()} · Go to latest response` : "Go to latest message"} onClick={() => { scrollToLatest(); scroller.current?.focus({ preventScroll: true }) }}>
+        {stream ? <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} compact /> : <ArrowDown className="size-4" />}
+      </Button></TooltipTrigger><TooltipContent side="bottom">{stream ? `${activityText} · Preview · Go to latest response` : "Go to latest message"}</TooltipContent></Tooltip></div>}
+      </div>
+      <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} />
     </section>
     <ConversationRail session={session}>{reference}</ConversationRail>
   </div>
