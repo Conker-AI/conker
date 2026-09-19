@@ -46,7 +46,7 @@ export function filterMemories(memories: Memory[], query: string, category: stri
   return memories.filter(memory => (category === "all" || memory.category === category) && terms.every(term => [memory.id, memory.title, memory.text, memory.provenance, memory.source, memory.category, ...(memory.tags || [])].join(" ").toLocaleLowerCase().includes(term)))
 }
 
-export function memoryNeighborhood(id: string, edges: MemoryEdge[], depth: number) {
+export function memoryNeighborhood(id: string, edges: Pick<MemoryEdge, "source" | "target">[], depth: number) {
   const ids = new Set([id])
   for (let i = 0; i < depth; i++) {
     const current = new Set(ids)
