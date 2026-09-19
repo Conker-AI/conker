@@ -4,19 +4,25 @@
 
 ## Research translated into features
 
-- [Obsidian Graph](https://obsidian.md/help/plugins/graph): hover highlights neighbors, click selects a record, pan/zoom, filtering, and a local graph with controllable depth. Adopt selection, one/two-hop focus, source visibility, and reset/fit controls. Avoid an unreadable graph of everything.
+- [Obsidian Graph](https://obsidian.md/help/plugins/graph): color groups distinguish collections, the text fade threshold controls label visibility, hover highlights connections, and local graph depth exposes successive neighbors. Conker adapts these ideas into category colors, zoom-dependent labels, immediate selection and one/two-hop focus. These are implementation choices, not claims of identical behavior or copied dimensions.
 - [Neo4j Bloom exploration](https://neo4j.com/blog/developer/scoobygraph-3/): inspect properties and selectively expand relationships. Adopt an evidence inspector with navigable linked records; distinguish relationship kinds.
 - [Qdrant Web UI](https://qdrant.tech/documentation/web-ui/): inspecting stored points and payloads is a separate task from visual exploration. Keep a sortable database view, raw JSON, copy, and filtered JSON export alongside the graph.
-- [Cognee visualization](https://docs.cognee.ai/api-reference/visualize/visualize-multi): dataset context matters when combining graphs. Keep source origin visible and use a source tree as an alternate projection.
-- [React Flow](https://reactflow.dev/learn): use its supported React canvas for pan, zoom, pointer dragging, keyboard-accessible nodes and fitting the viewport. Theme it with Conker's semantic tokens.
+- [Cognee visualization](https://docs.cognee.ai/api-reference/visualize/visualize-multi): dataset context matters when combining graphs. Keep source origin visible and distinguish the illustrative dataset from the editable sample snapshot.
+- [React Flow](https://reactflow.dev/learn): use its supported React canvas for pan, zoom, pointer dragging, keyboard-accessible nodes and fitting the viewport. Its [layouting guide](https://reactflow.dev/learn/layouting/layouting) separates rendering from layout algorithms and discusses hierarchy and force-layout options. Conker supplies deterministic positions in `memory-layout.ts`; it does not run a live force simulation.
 
 ## This pass
 
-One collection, shared text/category filters, three appbar-addressed views: Graph, Database, Source tree. Source nodes and topic nodes explain their links. Topic edges are metadata membership, never an invented semantic similarity score or evidence of agreement. Spatial distance has no semantic meaning.
+The owner-approved direction is a spacious, maximizable canvas with immediate inspection. `BaseLayout variant="canvas"` fills the available viewport below the appbar without a separate page heading. The appbar remains application navigation. A local toolbar selects Network, Hierarchy or Database through the `view` URL parameter; legacy `tab` links remain accepted, and `sources` maps to Hierarchy. The same URL-backed text/category filters apply across modes. A searchable point picker finds currently available memories, topics, folders and sources and focuses the selected point. Maximize temporarily fills the viewport; Restore returns to the application frame.
 
-Retain the existing four sample claims and their source URLs. Add sample titles/topics for exploration. New/edit/delete actions go through ConkerClient's fixture adapter. Mutations are tab-local and reset on reload. Editing retains the original text and source; it does not rewrite evidence or silently raise confidence. Manual notes have no fabricated external source. No embeddings, graph database, filesystem, or remote memory writes are claimed.
+The shared nonmodal `WorkspaceInspector` appears immediately on selection, docked at the right on desktop and at the bottom on mobile. The user can keep selecting graph points while inspecting evidence, linked records, topic connections or JSON. It replaces Memory's previous modal `DetailPanel` workflow; creation/editing still use `TaskDialogContent` and deletion still uses `ConfirmationDialog`. Database retains `DataTable` sorting, column selection and `RecordItem` on narrow screens.
 
-Graph controls: select, highlight neighbors, inspect, drag points, pan, zoom, fit/reset, source-node visibility, one/two-hop neighborhood. Database: sort, column selection, structured/mobile record rows, copy JSON and export current filtered records. Source tree: expand/collapse by origin and source path, inspect the same records.
+The graph uses small filled record points, outlined topics, source symbols and labeled category folders. Five existing chart tokens encode categories, with graph-local dark-theme lightness bounds. Labels reveal with zoom or selection/neighbor emphasis; folder labels remain visible. Thin curved edges distinguish dotted topic membership from solid parent/source links. Dragging, pan/zoom, fit/reset, source-point visibility and one/two-hop focus remain available. Reduced motion disables optional transitions.
+
+`dashboard/src/lib/memory-layout.ts` derives Library → category → record parent-child organization. Network positions are deterministic organic clusters with a bounded spacing-relaxation pass. Hierarchy uses category columns, with related topics and sources below the records. The expandable folder browser provides another way to inspect that category organization. This is UI hierarchy, not actual file storage. Topic membership is not semantic similarity or evidence that claims agree; spatial distance has no semantic meaning. Original source references are preserved independently. Dragging changes local presentation, not records or relationships.
+
+`dashboard/src/lib/memory-demo.ts` supplies 50 fictional read-only records in five categories, giving the canvas enough content to inspect a realistic-size example. This dataset is isolated from the user's memory store and labeled Illustrative demo throughout the relevant UI; its records explicitly say they are fictional. Never merge it into editable or production memory. The separate Sample records dataset retains the original four claims and their source URLs, and source-hash links select that dataset.
+
+Only Sample records supports new/edit/delete through `ConkerClient`'s fixture adapter. Mutations are tab-local and reset on reload. Editing retains original text and source; it does not rewrite evidence or silently raise confidence. Manual notes have no fabricated external source. JSON inspection/copy and filtered export describe the selected demo or preview dataset. No actual vector search, media processing, filesystem operation, graph-database connection or backend write is implemented here.
 
 ## Actual MemoryGate audit
 
@@ -38,8 +44,8 @@ Production mutation prerequisites: connected authenticated API, permissions/step
 
 ## Verification
 
-- Production build and design-system guard passed; the existing large conversation chunk warning remains.
-- Affected-file ESLint, memory contract tests, navigation checks and daily-overview checks passed.
-- Inspected desktop dark/light screenshots and mobile graph, source tree and editor screenshots. Verified node selection (including keyboard), dragging, neighbor focus, depth expansion, source visibility, shared filters, empty search recovery, create/edit/delete preview records, evidence preservation and reset on reload.
-- No browser console errors observed. Hot reload emitted a React Flow node-types warning during development; node types are declared at module scope.
-- JSON export uses the existing download helper. The browser automation download event timed out, so receipt of the exported file is not independently verified.
+- Build/design guard and affected-file ESLint pass. The existing large conversation chunk warning remains.
+- Memory CRUD/provenance, isolated demo/layout, navigation, and daily-overview checks pass. `npm run check:memory` runs both memory suites.
+- Actual desktop dark/light and 390×844 mobile captures reviewed. Search narrowing and point selection, docked inspection, Network/Hierarchy/Database switching, folder browsing, fit, and maximize/restore were exercised.
+- Independent review found two material issues: stale close-up zoom on layout change, and a selected point hidden beneath the mobile inspector. Both were fixed and visually retested in the same scenarios. Browser console error log was empty.
+- Final verdict covered those fixes. This is a frontend preview: demo read-only, sample writes temporary, no production MemoryGate adapter or media ingestion. Export uses the existing download helper; downloaded-file receipt remains unverified from the earlier pass.

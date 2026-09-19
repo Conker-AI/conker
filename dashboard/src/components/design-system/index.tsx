@@ -9,7 +9,7 @@ import { CompanionPortrait } from "@/components/companion-portrait"
 import { useConker } from "@/lib/api/store"
 import { cn } from "@/lib/utils"
 
-export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, ConfirmationDialog } from "./overlays"
+export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, WorkspaceInspector, ConfirmationDialog } from "./overlays"
 
 export function PageHeader({ title, description, actions, status, density = "standard" }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact" }) {
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">

@@ -19,13 +19,13 @@ interface BaseLayoutProps {
   description?: string
   actions?: React.ReactNode
   status?: React.ReactNode
-  variant?: "page" | "collection" | "conversation" | "workspace"
+  variant?: "page" | "collection" | "conversation" | "workspace" | "canvas"
 }
 
 export function BaseLayout({ children, title, description, actions, status, variant = "page" }: BaseLayoutProps) {
   const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
-  const conversation = variant === "conversation"
+  const conversation = variant === "conversation" || variant === "canvas"
   const workspace = variant === "workspace"
   const collection = variant === "collection"
   const { pathname, search } = useLocation()

@@ -15,7 +15,7 @@
     "check:character": "node scripts/check-character.cjs",
     "check:jobs": "node scripts/check-jobs.cjs",
     "check:navigation": "node scripts/check-navigation.cjs",
-    "check:memory": "node scripts/check-memory.cjs",
+    "check:memory": "node scripts/check-memory.cjs && node scripts/check-memory-layout.cjs",
     "check:conversation": "node scripts/check-conversation.cjs",
     "check:rich-answer": "node scripts/check-rich-answer.mjs",
     "check:chat-continuity": "node scripts/check-chat-continuity.cjs",

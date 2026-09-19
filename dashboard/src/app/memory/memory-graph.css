@@ -1,17 +1,46 @@
-.memory-graph-shell { --xy-background-color: var(--card); --xy-attribution-background-color: var(--muted); --xy-node-boxshadow-selected-default: none; }
-.memory-graph-canvas { position: relative; height: clamp(340px, 54dvh, 660px); }
-.memory-graph-shell .react-flow__attribution { color: var(--muted-foreground); font-size: 10px; }
-.memory-graph-shell .react-flow__node { border-radius: var(--radius); }
-.memory-graph-shell .react-flow__node:focus-visible { outline: 2px solid var(--ring); outline-offset: 5px; }
-.memory-point { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--foreground); transition: opacity 180ms ease; }
-.memory-point .react-flow__handle { opacity: 0; pointer-events: none; }
-.memory-point-symbol { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--border); background: var(--background); border-radius: 50%; box-shadow: 0 3px 12px color-mix(in srgb, var(--foreground) 8%, transparent); }
-.memory-point-core { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); }
-.memory-point-topic .memory-point-symbol { width: 28px; height: 28px; background: var(--muted); color: var(--muted-foreground); }
-.memory-point-source .memory-point-symbol { width: 34px; height: 34px; border-radius: calc(var(--radius) / 2); background: var(--muted); color: var(--muted-foreground); }
-.memory-point-label { font-size: 14px; line-height: 1.5; text-align: center; background: var(--card); padding: 2px 8px; border-radius: calc(var(--radius) / 2); max-width: 180px; overflow-wrap: anywhere; }
-.memory-point-memory .memory-point-label { font-weight: 600; }
-.memory-point.is-emphasized .memory-point-symbol { border-color: var(--primary); }
-.memory-graph-shell .selected .memory-point-symbol { outline: 2px solid var(--primary); outline-offset: 4px; }
-.memory-point.is-dimmed { opacity: .4; }
-@media (prefers-reduced-motion: reduce) { .memory-point { transition: none; } }
+/* Luminance-bounded chart colors keep graph points legible across imported themes. */
+.memory-workspace { --memory-category-1:oklch(from var(--chart-1) clamp(.3,l,.55) c h); --memory-category-2:oklch(from var(--chart-2) clamp(.3,l,.55) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.3,l,.55) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.3,l,.55) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.3,l,.55) c h); }
+.dark .memory-workspace { --memory-category-1:oklch(from var(--chart-1) clamp(.68,l,.9) c h); --memory-category-2:oklch(from var(--chart-2) clamp(.68,l,.9) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.68,l,.9) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.68,l,.9) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.68,l,.9) c h); }
+/* Memory is a canvas workspace. Chart colors encode category membership. */
+.memory-workspace { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; background:var(--background); color:var(--foreground); }
+.memory-workspace-expanded { position:fixed; inset:0; z-index:40; }
+.memory-workspace-toolbar { display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--border); background:var(--card); }
+.memory-toolbar-spacer { flex:1; }
+.memory-workspace-body { position:relative; display:flex; flex:1; min-height:0; overflow:hidden; }
+.memory-stage { flex:1; min-width:0; min-height:0; position:relative; }
+.memory-stage-table { overflow:auto; padding:16px; }
+.memory-workspace-status { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; padding:6px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--muted-foreground); }
+.memory-folder-browser { display:flex; flex-direction:column; width:216px; min-width:170px; flex-shrink:0; border-right:1px solid var(--border); background:var(--card); }
+.workspace-inspector { display:flex; flex-direction:column; width:320px; max-width:40%; min-height:0; flex-shrink:0; border-left:1px solid var(--border); background:var(--card); }
+.memory-graph-shell { position:relative; height:100%; width:100%; --xy-background-color:var(--background); --xy-attribution-background-color:var(--background); --xy-node-boxshadow-selected-default:none; }
+.memory-graph-shell .react-flow__attribution { font-size:9px; color:var(--muted-foreground); }
+.memory-graph-shell .react-flow__node:focus-visible { outline:2px solid var(--ring); outline-offset:6px; border-radius:var(--radius); }
+.memory-point { width:120px; height:36px; position:relative; display:flex; flex-direction:column; align-items:center; color:var(--foreground); transition:opacity 180ms ease; }
+.memory-point .react-flow__handle { opacity:0; pointer-events:none; top:14px; bottom:auto; }
+.memory-point-symbol { display:grid; place-items:center; width:14px; height:14px; margin-top:7px; border:1px solid var(--point-color); background:var(--point-color); border-radius:50%; box-shadow:0 0 14px color-mix(in srgb, var(--point-color) 30%, transparent); }
+.memory-point-topic .memory-point-symbol { width:8px; height:8px; margin-top:10px; background:var(--background); }
+.memory-point-source .memory-point-symbol { width:20px; height:20px; margin-top:4px; border-radius:4px; background:var(--card); color:var(--point-color); }
+.memory-point-folder .memory-point-symbol { width:36px; height:36px; margin-top:-4px; background:var(--card); color:var(--point-color); }
+.memory-point-label { position:absolute; top:32px; width:max-content; max-width:150px; text-align:center; font-size:12px; line-height:1.35; padding:3px 5px; color:var(--foreground); background:var(--background); border-radius:4px; opacity:0; pointer-events:none; transition:opacity 150ms ease; }
+.memory-point.is-detailed .memory-point-label { opacity:1; }
+.memory-point-folder .memory-point-label { font-size:15px; font-weight:600; }
+.memory-point.is-emphasized .memory-point-symbol { outline:1px solid var(--point-color); outline-offset:5px; }
+.memory-graph-shell .selected .memory-point-symbol { outline:2px solid var(--foreground); outline-offset:5px; }
+.memory-point.is-dimmed { opacity:.24; }
+.memory-canvas-caption { position:absolute; top:18px; left:20px; display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted-foreground); }
+.memory-canvas-controls { position:absolute; bottom:26px; left:16px; display:flex; flex-wrap:wrap; gap:8px; }
+.memory-zoom { position:absolute; right:16px; bottom:30px; font-size:11px; color:var(--muted-foreground); }
+@media (max-width:767px) {
+ .memory-workspace-toolbar { padding:8px; gap:6px; }
+ .memory-toolbar-spacer { display:none; }
+ .memory-workspace-toolbar [aria-label="Memory dataset"] { margin-left:auto; }
+ .memory-workspace-body:has(.workspace-inspector) { padding-bottom:42dvh; }
+ .workspace-inspector { position:absolute; bottom:0; left:0; right:0; width:100%; max-width:none; height:42dvh; border-left:0; border-top:1px solid var(--border); z-index:10; }
+ .memory-folder-browser { width:160px; min-width:160px; }
+ .memory-workspace-body:has(.workspace-inspector) .memory-folder-browser { display:none; }
+ .memory-zoom { display:none; }
+ .memory-canvas-caption { top:12px; left:12px; }
+ .memory-canvas-controls { left:8px; bottom:22px; }
+ .memory-workspace-status { padding:5px 8px; }
+}
+@media (prefers-reduced-motion:reduce) { .memory-point,.memory-point-label { transition:none; } }

@@ -29,7 +29,6 @@ export type AppRoute = keyof typeof appNavigation
 export type PageSection = { value: string; label: string; count?: "pending" }
 
 export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
-  memory: [{ value: "graph", label: "Graph" }, { value: "database", label: "Database" }, { value: "sources", label: "Source tree" }],
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
   system: [{ value: "overview", label: "Overview" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],

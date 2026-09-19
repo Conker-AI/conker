@@ -3,6 +3,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { X } from "lucide-react"
+
+/** Canvas inspection stays nonmodal so the user can select another point. */
+export function WorkspaceInspector({ title, description, onClose, children }: { title: ReactNode; description: ReactNode; onClose: () => void; children: ReactNode }) {
+  return <aside aria-label="Memory inspector" className="workspace-inspector">
+    <header className="flex shrink-0 items-start gap-3 border-b p-4"><div className="min-w-0 flex-1"><h2 className="break-words text-sm font-semibold">{title}</h2><p className="mt-1 text-xs text-muted-foreground">{description}</p></div><Button size="icon" variant="ghost" aria-label="Close inspector" onClick={onClose}><X /></Button></header>
+    {children}
+  </aside>
+}
 
 /** Remember the initiating control even when a menu opened the overlay. */
 function useOverlayFocus() {
