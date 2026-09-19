@@ -10,11 +10,11 @@ The floating Conker control has been reduced from 48px to a 32px visible circle,
 
 The practical direction is one compact activity summary that can expand into useful evidence. Character artwork provides expression; the activity state tells the truth about execution. A spinning ring alone cannot explain whether a run is reading, waiting for permission, executing, failing, or finished.
 
-This is a broad audit of 12 external chat products plus the supplied Codex example. It is **not a claim that every feature in every plan, region, mobile app, and experiment has been exercised**. Several sites require your authentication or browser verification. Those gaps are explicit below. Product labels and availability can change; model names seen in menus are not integration recommendations.
+This is a broad audit of 12 external chat products plus the supplied Codex example, with **160 selectable behaviors**. It is **not a claim that every feature in every plan, region, mobile app, and experiment has been exercised**. A follow-up in the user's visible Chrome completed test conversations in ten signed-in products; Gemini and Qwen have completed guest tests from the first pass. Remaining gaps are explicit below. Product labels and availability can change; model names seen in menus are not integration recommendations.
 
 ## Evidence and selection key
 
-- **Browser:** inspected with Chrome DevTools; menus and screenshots were examined. A visible menu does not prove its underlying service works.
+- **Browser:** directly inspected in Chrome. The first pass used the isolated DevTools browser; the signed-in follow-up used the extension connected to the user's visible Chrome. Menus, responses and selected screenshots were examined. A visible menu does not prove its underlying service works.
 - **Docs:** an official product/help page confirms the behavior; it was not necessarily exercised in our account.
 - **Screenshot:** your supplied Codex image confirms the visible presentation only.
 - **Proposal:** an idea for Conker, not a claim about another product.
@@ -29,21 +29,23 @@ Each item has an ID. Choose **Keep / Add / Later / Skip** by ID or group. Decisi
 
 | Product | Chrome result | Strongest evidence from this pass | Remaining gap |
 | --- | --- | --- | --- |
-| [ChatGPT](https://chatgpt.com/) | Browser-verification gate | Official Search, Deep Research, Voice, Temporary Chat and Canvas material | Authenticated conversation and current visual details |
-| [Claude](https://claude.ai/) | Browser-verification gate | Official thinking/effort, artifacts, research, voice and incognito material | Current menus, running state and artifact interactions |
+| [ChatGPT](https://chatgpt.com/) | Signed-in search response completed | Tool/effort menus, distinct dictation and Voice controls, table/code copy, citation pills, retry without search, Chat/Work branching, message timestamp | Long working timeline, live voice, paid modes and artifact execution |
+| [Claude](https://claude.ai/) | Signed-in search and small HTML artifact completed | Live action labels, grouped search/file actions, nested query disclosures, inline commentary, private artifact beside chat, response toolbar | Voice, artifact editing/history, long research and parallel agents |
 | [Gemini](https://gemini.google.com/app) | Completed a guest conversation | Composer, citations, source preview, Copy, Redo menu, response-details rail; screenshots inspected | Signed-in tools, uploads, Research/Canvas execution and microphone behavior |
-| [Grok](https://grok.com/) | Guest home and model menu; selection reached verification gate | Fast/Auto/Expert/Heavy choices visible | Actual response, search timeline, voice and post-response controls |
-| [DeepSeek](https://chat.deepseek.com/) | Login screen | Official historical DeepThink description | Entire current signed-in UI, especially the voice-typing experience you like |
-| [Z.ai](https://chat.z.ai/) | Guest composer and model menu; request reached slider CAPTCHA | Deep Think control, tool controls, waiting dots, Stop, disabled model selection during request | Completed response, citations, detailed activity and retry |
+| [Grok](https://grok.com/) | Signed-in search response completed | Working/Worked duration, expandable search/thinking phases, table/code actions, sources, response actions, distinct dictation/call entry points | Actual voice, advanced modes and long tool execution |
+| [DeepSeek](https://chat.deepseek.com/) | Signed-in DeepThink + Search response completed | Thought duration, found-versus-read page counts, source rail, citations, code Copy/Download, read aloud | User confirmed the desired voice typing is in its mobile app; that exact interaction remains untested |
+| [Z.ai](https://chat.z.ai/) | Signed-in response completed after initial guest CAPTCHA | Deep Think, waiting/Stop, model disabled during request, inline Thought Process disclosure, formatted answer and response controls | Search/citation execution, long agent runs, voice and retry behavior |
 | [Qwen](https://chat.qwen.ai/) | Guest prompt initially failed; Regenerate succeeded | Tool menu, removable Search chip, model/mode selection, inline failure, Thinking completed, activity rail, response versions, Read aloud, follow-ups; screenshots inspected | Actual uploads, paid tools, voice session and ongoing tool execution |
-| [Kimi](https://www.kimi.com/) | Home/tool entry points; prompt required login | Swarm/Deep Research/Slides/Docs/etc. visible; official Swarm execution documentation | Running agents, execution detail and deliverable interactions |
-| [Perplexity](https://www.perplexity.ai/) | Browser-verification gate | Official Pro Search and Advanced Deep Research documentation | Current source cards, research animations and report editor in browser |
-| [Le Chat](https://chat.mistral.ai/) | Browser-verification gate | Official Le Chat announcements and Mistral Work files/Canvas docs | Consumer UI fidelity; Work and consumer features are not assumed identical |
-| [Microsoft Copilot](https://copilot.microsoft.com/) | “Not available in your region” | Official conversation-mode documentation | Any live interaction; M365 and consumer Copilot must be audited separately |
-| [Meta AI](https://www.meta.ai/) | Sign-in dialog | Navigation and official voice/social interaction announcements | Chat, voice, generated-media interactions and current regional availability |
+| [Kimi](https://www.kimi.ai/) | Signed-in response completed | Thinking/completed states, effort and model menu, plugins/projects, queued-message composer hint, per-block copy | Actual queue behavior, Swarm execution and advanced deliverables |
+| [Perplexity](https://www.perplexity.ai/) | Signed-in search response completed | Research duration disclosure, source count, Answer/Links/Images, per-table Copy/CSV/Expand, Fork, contextual follow-ups | Full Deep Research/report editor, Computer execution and voice |
+| [Mistral / Vibe](https://chat.mistral.ai/) | Signed-in Chat response completed | Chat/Work/Code navigation, loading/Stop, table CSV/Markdown/export menu, Rewrite and read aloud | Work/Code execution, Canvas, voice; surfaces are not assumed interchangeable |
+| [Microsoft Copilot](https://copilot.microsoft.com/) | Signed-in response completed; earlier isolated-browser region block absent | Smart/Think deeper/Study/Search, See my thinking rail, collapsible code, table actions, Edit in a page entry point | Page editor execution, voice and long tasks; separate from M365 Copilot |
+| [Meta AI](https://www.meta.ai/) | Signed-in response completed | Stop, table copy, code copy/download, response toolbar, jump-to-bottom | Voice, media creation and social publishing |
 | Codex | Supplied screenshot | Working duration, commentary, tool groups, subagent events/messages, changed-file summary | No new claim about unseen Codex controls |
 
-Only neutral test prompts about `prefers-reduced-motion` were submitted. No private files, paid research job, publication, or microphone/camera recording was used for this audit. Qwen's completed answer appeared on its second attempt, with a visible `2/2` version control. Z.ai's CAPTCHA was not bypassed. No login credentials were requested or handled.
+Only neutral test prompts about `prefers-reduced-motion` were submitted, plus one tiny self-contained HTML artifact request in Claude. Claude's artifact is marked **Only you**; no public sharing was performed. No private files, paid research job, or microphone/camera recording was used. Qwen's guest answer succeeded on its second attempt, with a visible `2/2` version control. Z.ai's initial CAPTCHA was not bypassed; the later signed-in session completed normally. No login credentials were requested or handled. The original unsent ChatGPT draft was restored after the test.
+
+**Browser correction:** the original DevTools Chrome was headless, so the initial claim that those tabs were visible was incorrect. The follow-up used the real Chrome extension session, named **AI UI research**, with the requested AI tabs open for the user. Initial guest/authentication failures must not be interpreted as current signed-in product limitations.
 
 ### Notable browser findings
 
@@ -52,7 +54,11 @@ Only neutral test prompts about `prefers-reduced-motion` were submitted. No priv
 3. **Tool activation can stay compact.** Qwen's menu selection became a removable Web search chip in the composer. A chip conveys the next turn's enabled capability without leaving the entire tools menu open.
 4. **Failure states are part of the design.** Qwen preserved the prompt, attached a service error to the failed turn, and offered Regenerate. The later success retained version navigation. A generic toast would have lost that context.
 5. **Labels need evidence.** Gemini's generated source-link prose did not always name the same publisher as the attached grounding preview. In Conker, a source card should identify the actual evidence item, not simply repeat generated link text.
-6. **Anonymous access is an incomplete picture.** A disabled option in a guest menu may be account/plan gating, not an unsupported product capability. DeepSeek's exact voice waveform/transcript design is still unverified here.
+6. **Anonymous access is an incomplete picture.** Most initial authentication/region blocks disappeared in the user's actual Chrome. DeepSeek desktop has DeepThink, Search and Attach in the inspected composer; the user confirmed the desired voice experience belongs to mobile.
+7. **A completed run should leave something useful.** Grok changed a live duration into a completed, expandable group. Claude grouped searches and file actions while leaving short progress commentary in the thread. Kimi and Z.ai retained thinking disclosures. These are inspectable progress surfaces, not proof of complete internal reasoning.
+8. **Tiny block actions matter.** Multiple products give a table and a code block their own copy/export controls. Perplexity additionally exposes Expand table, Mistral offers CSV versus Markdown, and Copilot collapses code. These actions avoid copying an entire answer for one useful object.
+9. **Composer states carry useful feedback.** Kimi advertises queuing while working; ChatGPT distinguishes dictation from live Voice; Stop replaces send during generation. The queue hint was observed, not an actual queued-turn execution.
+10. **Artifacts justify a larger workspace.** Claude's small HTML result opened beside the conversation with a private artifact card, expand/close controls and comment/share entry points. Ordinary activity detail stayed compact in the thread. Artifact creation completed; editing, commenting, sharing and history restoration were not exercised.
 
 ## The selection catalogue
 
@@ -65,12 +71,12 @@ The placement column follows Conker's existing ownership rules. “Thread” inc
 | A01 | Immediate acknowledgement after Send | Browser: Z.ai waiting dots | Local | Thread; phase starts before text arrives |
 | A02 | Compact animated working mark | Browser: Z.ai; supplied orb references | Local | Thread and floating scroll control |
 | A03 | Meaningful current phase such as Thinking or Writing | Browser: Qwen; [Claude thinking][C1] | Local | Only these two phases currently |
-| A04 | Different states for Searching, Reading, Running code, Waiting | Screenshot; [research progress][P2] | Missing | Thread; must follow execution events |
-| A05 | Elapsed “Working for…” timer | Screenshot; [Claude thinking][C1] | Missing | Activity summary, frozen at completion |
-| A06 | Completed “Worked for…” group that can reopen | Screenshot; Browser: Qwen completed disclosure | Missing | Thread; preserve the run's history |
-| A07 | Provider-supplied reasoning summary disclosure | Browser: Qwen; [Claude thinking][C1] | Missing | Thread/rail; label as summary |
+| A04 | Different states for Searching, Reading, Running code, Waiting | Browser: Claude search/file phases, DeepSeek reading; Screenshot; [research progress][P2] | Missing | Thread; must follow execution events |
+| A05 | Elapsed “Working for…” timer | Browser: Grok; Screenshot; [Claude thinking][C1] | Missing | Activity summary, frozen at completion |
+| A06 | Completed “Worked for…” group that can reopen | Browser: Grok, Qwen; Screenshot | Missing | Thread; preserve the run's history |
+| A07 | Provider-supplied reasoning summary disclosure | Browser: Qwen, Kimi, Z.ai, Copilot; [Claude thinking][C1] | Missing | Thread/rail; label as summary |
 | A08 | Honest unavailable/incomplete summary state | [Claude thinking][C1] | Missing | Summary detail; do not invent missing text |
-| A09 | Short progress commentary interleaved with work | Screenshot | Missing | Activity group, separate from final answer |
+| A09 | Short progress commentary interleaved with work | Browser: Claude artifact turn; Screenshot | Missing | Activity group, separate from final answer |
 | A10 | Floating activity indicator while reading older messages | Conker browser/code; user reference | Local | 32px control at thread bottom-center, above composer |
 | A11 | Finished generation turns that control into a down arrow | Conker browser/code; user reference | Local | Jump to latest; never hijack manual scroll |
 | A12 | Inline activity only where the latest reply is visible | Conker code/browser | Local | Avoid two competing attention signals |
@@ -84,7 +90,7 @@ The placement column follows Conker's existing ownership rules. “Thread” inc
 | B01 | Compact tool-call summary row | Screenshot; Conker receipts | Preview | Thread; existing receipt is recorded fixture data |
 | B02 | Tool states: queued/running/succeeded/failed/cancelled | Proposal; [Kimi execution][K1] supports progress inspection | Missing | Activity group; state needs backend events |
 | B03 | Expand tool inputs and returned result | Screenshot; existing Conker receipt | Preview | Thread/rail; redact secrets in future real data |
-| B04 | Group repetitive calls into a quiet summary | Screenshot: “Used the browser…” | Missing | Thread; expand to individual events |
+| B04 | Group repetitive calls into a quiet summary | Browser: Claude search/file groups; Screenshot: “Used the browser…” | Missing | Thread; expand to individual events |
 | B05 | Visible active tool name and target | [Kimi execution][K1] | Missing | Activity summary; distinguish tool from model |
 | B06 | Per-step start/end time and duration | Proposal | Missing | Rail; useful for slow or stuck work |
 | B07 | Live terminal or execution-output preview | Screenshot context; Proposal for Conker | Missing in chat | Thread preview opening System/detail, not a second terminal product |
@@ -189,7 +195,7 @@ The placement column follows Conker's existing ownership rules. “Thread” inc
 
 | ID | Selectable behavior | Evidence | Conker now | Home / detail |
 | --- | --- | --- | --- | --- |
-| H01 | Open an artifact beside the conversation | [Claude artifacts][C2], [Canvas][O4] | Missing | Dedicated artifact workspace; ordinary metadata remains rail |
+| H01 | Open an artifact beside the conversation | Browser: Claude completed HTML artifact; [Claude artifacts][C2], [Canvas][O4] | Missing | Dedicated artifact workspace; ordinary metadata remains rail |
 | H02 | Preview/source switch | [Claude artifacts][C2] | Missing | Artifact toolbar |
 | H03 | Direct text editing and selection-based AI edits | [Canvas][O4], [Gemini Canvas][G2] | Missing | Artifact editor |
 | H04 | Version history with restore | [Claude artifacts][C2], [Mistral Canvas][M3] | Missing | Artifact history; independent from response variants |
@@ -219,7 +225,7 @@ The placement column follows Conker's existing ownership rules. “Thread” inc
 | I15 | Background voice session and return to transcript | [ChatGPT Voice][O3] | Preview | No durable cross-device live-call service |
 | I16 | Video/screenshare awareness as an optional call input | [ChatGPT Voice][O3], availability varies | Preview | User camera preview exists; perception pipeline/screenshare not established |
 
-**DeepSeek-specific gap:** the animated live transcript and typing/voice transition you described remain a desired reference, not something this audit could verify behind its login. I have not substituted another product's waveform and called it DeepSeek's.
+**DeepSeek-specific gap:** you confirmed the animated live transcript and typing/voice transition are in the **mobile app**. Its signed-in desktop composer was checked and did not expose a microphone control. Mobile recording, word animation, waveform, cancellation and return-to-draft timing remain unverified; another product's waveform is not a substitute for that evidence.
 
 ### J. Conversation context, privacy and continuity
 
@@ -267,6 +273,31 @@ These are Conker proposals based on your references, not features claimed across
 | L06 | Hover/focus expands the tiny indicator into a short status hint | Proposal | Missing | Floating control; click still jumps to latest |
 | L07 | Emotion/tone styling supplied explicitly by character runtime | Earlier user direction | Missing | Treat as authored performance; don't infer real human feelings from a spinner |
 | L08 | Fall back to a neutral portrait/orb when artwork is unavailable | Existing CharacterMedia/activity | Local | Missing art must not break the activity indicator |
+
+### M. Small refinements discovered in the signed-in follow-up
+
+These split useful details out of the broader rendering and activity families. The control was inspected unless an executed interaction is explicitly stated. None was added to Conker during this pass.
+
+| ID | Selectable behavior | Browser evidence | Conker now | Home / detail |
+| --- | --- | --- | --- | --- |
+| M01 | Copy one table independently from the response | ChatGPT, Kimi, Perplexity, Meta, Copilot | Missing in general answers | Table corner toolbar |
+| M02 | Download a table as CSV | Perplexity; Mistral menu | Missing | Table menu |
+| M03 | Expand a wide table into a larger view | Perplexity control observed, not executed | Missing | Table action opens focused view |
+| M04 | Choose Copy as Markdown versus CSV | Mistral table menu opened | Missing | Table menu; no permanent extra buttons |
+| M05 | Download an individual code block | DeepSeek, Meta controls | Missing in general answers | Code block toolbar |
+| M06 | Retry the response without searching the web | ChatGPT retry menu | Missing | Response retry submenu |
+| M07 | Branch into ordinary chat versus a work surface | ChatGPT branch submenu | Missing | Message fork destination; only relevant if distinct surfaces exist |
+| M08 | Exact message timestamp available in its menu | ChatGPT More menu | Local timestamp baseline; menu variant unimplemented | Message metadata; avoid redundant permanent text |
+| M09 | One searchable picker for tools, plugins, files and skills | ChatGPT composer picker | Missing | Composer Tools; retain clear result types |
+| M10 | Sketch as a prompt input | ChatGPT tool entry point | Missing | Composer attachment picker; execution untested |
+| M11 | Keyboard traversal between messages | Claude visible up/down navigation hint | Unverified | Thread keyboard behavior, with input focus protected |
+| M12 | Answer / Links / Images views for researched output | Perplexity result tabs | Missing | Research result workspace; ordinary chat stays simple |
+| M13 | Distinguish discovered sources from actually read sources | DeepSeek: found 31 pages, read 2 | Missing | Activity group; counts do not imply source quality |
+| M14 | Expand individual queries within a grouped search receipt | Claude nested query disclosures opened | Missing | Thread activity group; detailed evidence opens rail |
+| M15 | Collapse a long code block without losing the response | Copilot control | Missing | Code block header |
+| M16 | Move an answer into an editable page | Copilot Edit in a page entry point | Missing | Response action opens document workspace |
+
+Kimi's queue-while-working hint belongs to D14, rather than a duplicate item here. Chat/Work/Code navigation was also observed in Mistral; it is an information-architecture reference, not a reason to add three more Conker screens.
 
 ## Comparison to the second screenshot
 
@@ -317,22 +348,20 @@ Color remains semantic: ordinary work uses foreground/muted text; primary accent
 
 No approval for this batch is assumed. You can choose, for example: “Add A05–A07, B04 and E04; keep the current orb; later all of H.”
 
-## Verification still needed with your accounts
+## Remaining verification and boundaries
 
-Requests to complete Chrome verification for ChatGPT/Claude and sign in to DeepSeek were sent during this audit. No successful authentication was assumed.
+The signed-in follow-up completed comparable neutral prompts in ChatGPT, Claude, DeepSeek, Grok, Perplexity, Kimi, Mistral, Copilot, Meta AI and Z.ai. The first five completed a source-seeking prompt with bullets, a table and code; the other five completed a shorter formatting prompt. Claude additionally created a small private HTML artifact. Screenshots of selected finished views were reviewed, including Claude's artifact workspace, Grok's response, Copilot's thinking rail and Z.ai's inline Thought Process. A screenshot alone does not verify animation timing or the behavior of every control.
 
-For each unlocked product, use the same small test set so differences are meaningful:
+Still untested:
 
-1. Send a plain text prompt; inspect pending, streaming and completion states.
-2. Enable thinking; inspect live label, elapsed time, disclosure and completed summary.
-3. Search for a neutral topic; inspect tool steps, citations and source details.
-4. Ask for a code block, formula and table; inspect per-block controls and overflow.
-5. Scroll away during generation, stop a response, retry and inspect version navigation.
-6. Attach a non-sensitive test file; inspect upload, removal, preview and error states.
-7. Inspect dictation UI; with you present, test real speech, interim words, silence, Use text/Cancel, and text/voice transitions.
-8. Inspect artifact and agent modes only within the account's available allowance; no expensive autonomous run or publishing action is implied.
+1. **DeepSeek mobile voice typing:** microphone permission, recording waveform, interim/final word animation, cancellation and return-to-draft. This is the user's confirmed reference.
+2. **Long runs:** Kimi Swarm, full Deep Research, agent handoffs, background completion and actual queued-turn execution. Menu visibility and official documentation are the current evidence.
+3. **Live voice:** barge-in, silence handling, captions, camera, screenshare and OS picture-in-picture. No microphone/camera permission was granted in this audit.
+4. **Recovery across products:** mid-run stop, offline/reconnect, rate limits, navigation/reload persistence and scroll-away behavior. Qwen's observed error/retry is one verified case, not coverage of every app.
+5. **Uploads and editing:** real attachment previews/errors, artifact revisions, comments, export execution and document editing. Visible actions are recorded separately from completed actions.
+6. **Gemini/Qwen signed-in advanced modes:** completed guest tests establish their basic responses; account-only tools remain a separate check.
 
-Priority: **DeepSeek voice typing**, **ChatGPT working/search**, **Claude thinking/artifacts**, then **Grok voice/search**, **Kimi Swarm**, **Perplexity Research**, **Z.ai completed responses**. Mobile apps and OS picture-in-picture remain a separate audit; a desktop guest web session cannot verify them.
+No paid upgrade, public publishing, connected-computer execution or personal-file upload was requested. Test conversations remain in the respective products for inspection; existing conversations were not edited. Your preference for **Kimi's depth and clean outlines, with a more restrained Conker palette**, is recorded for a later visual-design pass. This pass concerns interaction and animation, and does not authorize that redesign.
 
 ## Conker code evidence
 
@@ -344,7 +373,7 @@ Audit followed the active route, not unused template demo components:
 - `dashboard/src/components/tool-activity.tsx`: recorded tool summary and expandable details; not a running event stream.
 - Composer, message-action, reference-rail and call modules were inspected for existing UI and fixture boundaries. Browser speech recognition/synthesis are local/browser integrations, not proof of frontier model, emotion, cloned-voice or perception services.
 
-Verification for the small arrow change: `npm run build`, targeted ESLint for `conversation.tsx`, and `git diff --check`. Chrome checked desktop and a narrow 500px viewport (the browser tool clamped the requested 390px width), light/dark appearance, compact active orb and jump-to-latest. The jump reached the bottom and returned focus to the conversation thread. No warning/error console messages were reported on the checked Conker page. Screenshots were reviewed inline; no saved screenshot path is claimed.
+Verification for the small arrow change: `npm run build`, targeted ESLint for `conversation.tsx`, and `git diff --check`. The initial pass checked light/dark, active orb and jump-to-latest. The subsequent bottom-center placement was checked at desktop 1100×800 and mobile 390×844. The jump reached the bottom and returned focus to the thread. No warning/error console messages were reported on the checked Conker page. Saved placement screenshots: `C:/Users/The1a/.codex/visualizations/conker-arrow-bottom-2026-09-19/desktop.png` and `mobile.png`. The signed-in research follow-up changes this document only; no new build is required for it.
 
 ## Primary source register
 
