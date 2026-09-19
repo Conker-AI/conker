@@ -70,3 +70,9 @@
     forced-color-adjust: none;
   }
 }
+
+/* Shared nonmodal canvas inspector: selected object detail. */
+.workspace-inspector { display:flex; flex-direction:column; width:320px; max-width:40%; min-height:0; flex-shrink:0; border-left:1px solid var(--border); background:var(--card); }
+@media (max-width:767px) {
+.workspace-inspector { position:absolute; bottom:0; left:0; right:0; width:100%; max-width:none; height:42dvh; border-left:0; border-top:1px solid var(--border); z-index:10; }
+}

@@ -11,7 +11,6 @@
 .memory-stage-table { overflow:auto; padding:16px; }
 .memory-workspace-status { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; padding:6px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--muted-foreground); }
 .memory-folder-browser { display:flex; flex-direction:column; width:216px; min-width:170px; flex-shrink:0; border-right:1px solid var(--border); background:var(--card); }
-.workspace-inspector { display:flex; flex-direction:column; width:320px; max-width:40%; min-height:0; flex-shrink:0; border-left:1px solid var(--border); background:var(--card); }
 .memory-graph-shell { position:relative; height:100%; width:100%; --xy-background-color:var(--background); --xy-attribution-background-color:var(--background); --xy-node-boxshadow-selected-default:none; }
 .memory-graph-shell .react-flow__attribution { font-size:9px; color:var(--muted-foreground); }
 .memory-graph-shell .react-flow__node:focus-visible { outline:2px solid var(--ring); outline-offset:6px; border-radius:var(--radius); }
@@ -35,7 +34,6 @@
  .memory-toolbar-spacer { display:none; }
  .memory-workspace-toolbar [aria-label="Memory dataset"] { margin-left:auto; }
  .memory-workspace-body:has(.workspace-inspector) { padding-bottom:42dvh; }
- .workspace-inspector { position:absolute; bottom:0; left:0; right:0; width:100%; max-width:none; height:42dvh; border-left:0; border-top:1px solid var(--border); z-index:10; }
  .memory-folder-browser { width:160px; min-width:160px; }
  .memory-workspace-body:has(.workspace-inspector) .memory-folder-browser { display:none; }
  .memory-zoom { display:none; }

@@ -70,8 +70,7 @@ Proposed organization, subject to a route inventory before implementation:
 | --- | --- |
 | Companion / Chats | Talk, create requests, call, inspect inline progress and results. |
 | Agents | Agents, Templates and Teams; configure specialists and inspect their work. |
-| Tools | Define, test and publish capabilities; inspect input schemas, effects and access. |
-| Flows | Library, visual editor, tests and versions. Runs link to the shared Activity inspector. |
+| Tools | One capability library, including connector and workflow implementations. Build / Source / Configure edit the same definition; tests, versions and receipts stay in this workspace. |
 | Jobs | Configure trigger bindings, schedules, concurrency and history. |
 | Activity | All running/queued/waiting/failed/completed work, including delegated agents. |
 | Memory | Records, sources, Markdown tree, relationships, similarity map and timeline. |
@@ -99,7 +98,7 @@ Keep edge meaning visible: data, control, delegation, capability access, source 
 
 ## 6. Workflow and tool constructors
 
-Workflow editor:
+Unified Tools workspace (decision updated September 20, 2026; the broader capabilities below remain a roadmap):
 
 - Node library for tools, transforms, conditions, Decision, branches/joins, loops, waits, agent/team work, approvals, subflows and results.
 - Inspector with inputs, output schema, mappings, effects, limits, retry/timeout behavior and test cases.
@@ -109,7 +108,7 @@ Workflow editor:
 - Draft versus published version, readable diffs, dependency impact and rollback to a prior definition.
 - “Expose as tool” publishes a stable input/output contract around the workflow.
 
-Tool editor:
+Tool configuration within the same workspace:
 
 - Name, purpose, schema, outputs, operation/effect metadata, executor or flow reference, credentials by reference, destination/resource bounds and test fixtures.
 - An effect preview before a real invocation; no fake dry-run promise for an executor lacking simulation support.
