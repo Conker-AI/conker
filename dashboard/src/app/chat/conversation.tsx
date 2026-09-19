@@ -124,7 +124,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
       </div>
       {showLatest && <div className="conversation-latest"><Tooltip><TooltipTrigger asChild><Button type="button" variant="outline" size="icon" className="relative size-8 rounded-full bg-popover p-0 text-muted-foreground hover:text-foreground dark:bg-popover dark:hover:bg-accent" aria-label={stream ? `${name} is ${activityText.toLowerCase()} · Go to latest response` : "Go to latest message"} onClick={() => { scrollToLatest(); scroller.current?.focus({ preventScroll: true }) }}>
         {stream ? <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} compact /> : <ArrowDown className="size-4" />}
-      </Button></TooltipTrigger><TooltipContent side="bottom">{stream ? `${activityText} · Preview · Go to latest response` : "Go to latest message"}</TooltipContent></Tooltip></div>}
+      </Button></TooltipTrigger><TooltipContent side="top">{stream ? `${activityText} · Preview · Go to latest response` : "Go to latest message"}</TooltipContent></Tooltip></div>}
       </div>
       <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} />
     </section>

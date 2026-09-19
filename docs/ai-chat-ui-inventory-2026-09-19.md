@@ -71,7 +71,7 @@ The placement column follows Conker's existing ownership rules. “Thread” inc
 | A07 | Provider-supplied reasoning summary disclosure | Browser: Qwen; [Claude thinking][C1] | Missing | Thread/rail; label as summary |
 | A08 | Honest unavailable/incomplete summary state | [Claude thinking][C1] | Missing | Summary detail; do not invent missing text |
 | A09 | Short progress commentary interleaved with work | Screenshot | Missing | Activity group, separate from final answer |
-| A10 | Floating activity indicator while reading older messages | Conker browser/code; user reference | Local | 32px control at thread top-center |
+| A10 | Floating activity indicator while reading older messages | Conker browser/code; user reference | Local | 32px control at thread bottom-center, above composer |
 | A11 | Finished generation turns that control into a down arrow | Conker browser/code; user reference | Local | Jump to latest; never hijack manual scroll |
 | A12 | Inline activity only where the latest reply is visible | Conker code/browser | Local | Avoid two competing attention signals |
 | A13 | Unread response count or “New reply” hint | Proposal | Missing | Floating control; optional, not a permanent badge |
