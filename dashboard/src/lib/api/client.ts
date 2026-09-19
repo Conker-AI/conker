@@ -77,6 +77,7 @@ export type Snapshot = {
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
 export interface ConkerClient {
   readonly mode: "fixture" | "http"
+  readonly toolWorkspace: import("../tool-workspace").ToolWorkspaceClient
   readonly calls: import("./call-types").CallClient
   readonly voiceInput: VoiceInputClient
   load(): Promise<Snapshot>

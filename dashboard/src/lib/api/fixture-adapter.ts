@@ -6,6 +6,7 @@ import { entries } from "./fixtures/journal"
 import { memories, memorySearch } from "./fixtures/memory"
 import { services, vitals, system } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
+import { createToolWorkspacePreview } from "./tool-workspace-preview"
 import { threads } from "./fixtures/threads"
 import { terminal } from "./fixtures/terminal"
 import { files } from "./fixtures/files"
@@ -108,6 +109,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    toolWorkspace: createToolWorkspacePreview(tools),
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
