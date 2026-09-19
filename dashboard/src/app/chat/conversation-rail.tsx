@@ -4,6 +4,8 @@ import { ArrowUpRight, Brain, ChartNoAxesColumn, File, FileSearch, GitFork, Info
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ReferenceSection } from "@/components/reference-section"
+import { RunStepDetail } from "@/components/conversation-run"
+import { safeAnswerUrl } from "@/lib/rich-answer"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { useConker } from "@/lib/api/store"
 import { useConversationWorkspace, type RailView } from "@/lib/conversation-workspace"
@@ -17,6 +19,7 @@ const views = {
   privacy: { title: "Memory & permissions", icon: Shield },
   forks: { title: "Sessions & forks", icon: GitFork },
   daily: { title: "Daily context", icon: Newspaper },
+  activity: { title: "Activity details", icon: Info },
 } satisfies Record<RailView, { title: string; icon: typeof Info }>
 
 function useWideRail() {
@@ -36,6 +39,7 @@ const excerpt = "max-h-60 overflow-auto whitespace-pre-wrap text-sm leading-6 [o
 function RailContent({ session, children }: { session: Session; children?: ReactNode }) {
   const data = useConker(data => data)
   const rail = useConversationWorkspace(state => state.rails[session.id])
+  const pendingRun = useConversationWorkspace(state => state.activities[session.id])
   const { closeRail, openRail } = useConversationWorkspace()
   const conversation = data.conversations[session.id]
   const selected = conversation.messages.find(message => message.id === rail?.messageId)
@@ -46,9 +50,23 @@ function RailContent({ session, children }: { session: Session; children?: React
   const close = () => closeRail(session.id)
 
   switch (rail?.view) {
+    case "activity": {
+      const run = pendingRun?.id === rail.runId ? pendingRun : conversation.messages.find(message => !message.redacted && message.activity?.id === rail.runId)?.activity
+      const step = run?.steps.find(item => item.id === rail.stepId)
+      return step ? <ReferenceSection title={step.label} icon={<Info />}><RunStepDetail step={step} run={run} /></ReferenceSection> : <p className={note}>This activity is no longer available.</p>
+    }
     case "source": {
+      const citations = selected?.redacted ? [] : selected?.citations || []
+      const citation = citations.find(item => item.id === rail.sourceId)
+      if (rail.sourceId) {
+        const href = safeAnswerUrl(citation?.href)
+        return <ReferenceSection title={citation?.label || "Unavailable source"} icon={<FileSearch />}>
+          {citation ? <><p className={note}>Source supplied with this response.</p>{citation.excerpt && <blockquote className={excerpt}>{citation.excerpt}</blockquote>}{href ? <a className={referenceLink} href={href} target="_blank" rel="noopener noreferrer">Open source<ArrowUpRight className="size-4" /></a> : <p className={note}>No usable source link was supplied.</p>}</> : <p className={note}>No source metadata is available for this citation.</p>}
+        </ReferenceSection>
+      }
       const original = selected?.source && conversation.messages.find(message => message.id === selected.source?.id)
       return <>
+        {citations.length > 0 && <ReferenceSection title="Cited sources" icon={<FileSearch />}><ul className="divide-y divide-border">{citations.map(item => <li key={item.id}><Button className="h-auto min-h-10 w-full justify-start whitespace-normal text-left" variant="ghost" onClick={() => openRail(session.id, "source", selected?.id, { sourceId: item.id })}>{item.label}</Button></li>)}</ul></ReferenceSection>}
         <ReferenceSection title={selected?.source?.label || "Message source"} icon={<FileSearch />}>
           {selected?.redacted ? <p className={note}>This message was redacted. Its source is no longer available.</p> : original ? <>
             <p className={note}>{original.role === "user" ? "Your request" : original.agentName || session.agent} · {new Date(original.createdAt).toLocaleString()}</p>
@@ -66,7 +84,7 @@ function RailContent({ session, children }: { session: Session; children?: React
           <DetailList items={[
             ["Author", selected.role === "user" ? "You" : selected.agentName || session.agent],
             ["Written", new Date(selected.createdAt).toLocaleString()],
-            ["State", selected.redacted ? "Redacted" : selected.edited ? "Edited" : selected.status === "stopped" ? "Stopped" : "Complete"],
+            ["State", selected.redacted ? "Redacted" : selected.edited ? "Edited" : selected.status === "stopped" ? "Stopped" : selected.status === "failed" ? "Failed" : "Complete"],
             ...(selected.role === "assistant" ? [["Model", messageModel?.name || "Not recorded"] as [string, ReactNode]] : []),
           ]} />
         </ReferenceSection>
@@ -169,7 +187,7 @@ export function ConversationRail({ session, children }: { session: Session; chil
     if (!rail?.open) return
     const frame = requestAnimationFrame(() => { content.current?.scrollTo(0, 0); if (wide) heading.current?.focus() })
     return () => cancelAnimationFrame(frame)
-  }, [rail?.open, rail?.view, rail?.messageId, wide])
+  }, [rail?.open, rail?.view, rail?.messageId, rail?.sourceId, rail?.stepId, wide])
 
   useEffect(() => {
     if (!wide || !rail?.open) return

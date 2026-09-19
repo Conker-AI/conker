@@ -1,13 +1,24 @@
 export type ActivityPhase = "thinking" | "searching" | "reading" | "tool" | "agent" | "waiting" | "streaming"
 export type ActivityStep = {
   id: string
-  kind: "phase" | "tool" | "agent" | "commentary" | "summary"
+  kind: "phase" | "tool" | "agent" | "commentary" | "summary" | "plan" | "receipt" | "handoff"
   label: string
   status: "running" | "complete" | "stopped" | "failed" | "waiting"
   startedAt?: string
   endedAt?: string
   detail?: string
   toolName?: string
+  sequence?: number
+  parentId?: string
+  agentId?: string
+  agentName?: string
+  handoffTo?: { id: string; name: string }
+  source?: { id: string; label: string; href?: string }
+  approvalId?: string
+  summaryAvailability?: "available" | "unavailable"
+  plan?: { id: string; label: string; status: "pending" | "running" | "complete" | "stopped" | "failed" }[]
+  receipt?: { id: string; label: string; href?: string; kind: "file" | "diff"; added?: number; removed?: number }
+  failure?: { message: string; recovery?: string }
   /** Public, sanitized evidence supplied by the transport; never raw credentials. */
   record?: Record<string, unknown>
 }
@@ -20,7 +31,10 @@ export type ConversationRun = {
   startedAt?: string
   endedAt?: string
   steps: ActivityStep[]
+  sequence?: number
 }
+
+export type ConversationCitation = { id: string; label: string; href?: string; excerpt?: string }
 
 export type ConversationMessage = {
   id: string
@@ -30,6 +44,7 @@ export type ConversationMessage = {
   text: string
   createdAt: string
   source?: { id: string; label: string; href?: string }
+  citations?: ConversationCitation[]
   pinned?: boolean
   rating?: "up" | "down" | null
   edited?: boolean
@@ -38,7 +53,10 @@ export type ConversationMessage = {
   scenario?: boolean
   modelId?: string
   presentationMode?: import("./character").CharacterMode
-  status?: "complete" | "stopped"
+  status?: "complete" | "stopped" | "failed"
+  responseFamilyId?: string
+  contextMessageId?: string
+  contextMessageIds?: string[]
   replyTo?: string
   retryOf?: string
   activity?: ConversationRun
@@ -81,4 +99,4 @@ export type ConversationUpdate = {
 }
 
 export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean; rating?: "up" | "down" | null }
-export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void }
+export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void; /** Explicit developer fixture selection; absent for ordinary turns. */ previewScenario?: string }

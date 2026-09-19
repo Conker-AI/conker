@@ -1,0 +1,35 @@
+.rich-answer { min-width: 0; max-width: 100%; font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
+.rich-answer > :first-child { margin-top: 0; }
+.rich-answer > :last-child { margin-bottom: 0; }
+.rich-answer p, .rich-answer ul, .rich-answer ol, .rich-answer blockquote { margin-block: .75rem; }
+.rich-answer h2, .rich-answer h3, .rich-answer h4, .rich-answer h5, .rich-answer h6 { margin-block: 1.25rem .5rem; font-weight: 600; line-height: 1.4; }
+.rich-answer h2 { font-size: 1.125rem; }
+.rich-answer h3 { font-size: 1rem; }
+.rich-answer ul { list-style: disc; padding-inline-start: 1.5rem; }
+.rich-answer ol { list-style: decimal; padding-inline-start: 1.5rem; }
+.rich-answer li + li { margin-top: .25rem; }
+.rich-answer li > p { margin-block: .25rem; }
+.rich-answer a { text-decoration: underline; text-underline-offset: 3px; }
+.rich-answer a:focus-visible, .rich-answer [tabindex]:focus-visible, .answer-citation:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.rich-answer blockquote { border-inline-start: 1px solid var(--border); padding-inline-start: 1rem; color: var(--muted-foreground); }
+.rich-answer hr { border-color: var(--border); margin-block: 1rem; }
+.rich-answer :not(pre) > code { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--muted); color: var(--foreground); padding: .1rem .3rem; font-size: .875em; }
+.answer-block { margin-block: 1rem; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); color: var(--card-foreground); }
+.answer-block-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .25rem .5rem; padding: .375rem .5rem .375rem .75rem; border-bottom: 1px solid var(--border); background: var(--muted); }
+.answer-block pre { margin: 0; max-height: 32rem; overflow: auto; padding: 1rem; font-size: .8125rem; line-height: 1.7; white-space: pre; overflow-wrap: normal; }
+.answer-block pre code { font-family: var(--font-mono); }
+.answer-block .hljs-keyword, .answer-block .hljs-selector-tag, .answer-block .hljs-title { color: var(--primary); font-weight: 600; }
+.answer-block .hljs-comment, .answer-block .hljs-quote { color: var(--muted-foreground); font-style: italic; }
+.answer-block .hljs-string, .answer-block .hljs-attr { color: var(--card-foreground); }
+.answer-block .hljs-number, .answer-block .hljs-literal { font-weight: 600; }
+.answer-table-scroll { max-width: 100%; overflow-x: auto; }
+.rich-answer table { width: 100%; border-collapse: collapse; font-size: .875rem; line-height: 1.6; }
+.rich-answer th, .rich-answer td { min-width: 7rem; max-width: 28rem; padding: .625rem .75rem; text-align: start; vertical-align: top; border-bottom: 1px solid var(--border); }
+.rich-answer th { font-weight: 600; background: var(--muted); }
+.rich-answer tbody tr:last-child td { border-bottom: 0; }
+.rich-answer .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: .25rem; }
+.rich-answer .katex-error { white-space: pre-wrap; font-family: var(--font-mono); }
+.answer-citation { display: inline; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .125rem .375rem; font-size: .75rem; line-height: 1.6; color: var(--muted-foreground); background: var(--muted); cursor: pointer; }
+.answer-citation:hover { color: var(--accent-foreground); background: var(--accent); }
+.rich-answer .contains-task-list { list-style: none; padding-inline-start: .25rem; }
+.rich-answer .task-list-item input { margin-inline-end: .5rem; }

@@ -1,10 +1,13 @@
-import { useLocation } from "react-router-dom"
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react"
 import { ArrowDown, ArrowRight, CalendarDays, TriangleAlert } from "lucide-react"
 import { ApprovalRequest } from "@/components/approval-request"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ConversationActivity } from "@/components/conversation-activity"
 import { ConversationRun } from "@/components/conversation-run"
+import { RichAnswer } from "@/components/rich-answer"
+import { ResponseVersions } from "@/components/response-versions"
+import { conversationRows, responseFamilyId } from "@/lib/conversation-continuity"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,10 +16,17 @@ import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 import type { Session } from "@/lib/api/models"
+import type { ConversationMessage } from "@/lib/api/conversation-types"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import { MessageActions } from "./message-actions"
 import { ConversationRail } from "./conversation-rail"
 import { ConversationComposer } from "./conversation-composer"
+
+// Completed rich blocks should not reparse on every token of the next response.
+const MessageAnswer = memo(function MessageAnswer({ message, sessionId }: { message: ConversationMessage; sessionId: string }) {
+  const openRail = useConversationWorkspace(state => state.openRail)
+  return <RichAnswer text={message.text} citations={message.citations} onOpenSource={sourceId => openRail(sessionId, "source", message.id, { sourceId })} />
+})
 
 function Scenario({ session, messageId }: { session: Session; messageId: string }) {
   const data = useConker(data => data)
@@ -42,17 +52,23 @@ function Scenario({ session, messageId }: { session: Session; messageId: string 
 
 export function Conversation({ session, companionWorkspace = false, intro: Intro, reference }: { session: Session; companionWorkspace?: boolean; intro?: ComponentType<{ preparePrompt: (text: string) => void; hasMessages: boolean }>; reference?: ReactNode }) {
   const { hash, key: locationKey } = useLocation()
+  const navigate = useNavigate()
   const data = useConker(data => data)
   const conversation = data.conversations[session.id]
   const { drafts, setDraft } = useConkerStore()
-  const { openRail, notify } = useConversationWorkspace()
+  const { openRail, notify, selectVersion } = useConversationWorkspace()
+  const selectedVersions = useConversationWorkspace(state => state.selectedVersions[session.id])
+  const pending = useConkerStore(state => state.pending)
+  const mutate = useConkerStore(state => state.mutate)
   const stream = useConversationWorkspace(state => state.streams[session.id])
   const activity = useConversationWorkspace(state => state.activities[session.id])
+  const activeQueued = useConversationWorkspace(state => state.activeQueued[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(!hash)
   const [showLatest, setShowLatest] = useState(false)
   const messages = useMemo(() => conversation?.messages || [], [conversation?.messages])
+  const rows = useMemo(() => conversationRows(messages, selectedVersions), [messages, selectedVersions])
   const previousCount = useRef(messages.length)
   const companion = data.agents.find(agent => agent.name === session.agent)?.kind === "companion"
   const name = companion ? data.profile.name : session.agent
@@ -81,22 +97,24 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
     return () => { element.removeEventListener("scroll", update); observer.disconnect() }
   }, [scrollToLatest])
   useLayoutEffect(() => {
-    const newUserMessage = messages.length > previousCount.current && messages.at(-1)?.role === "user"
+    const newUserMessage = !activeQueued && messages.length > previousCount.current && messages.at(-1)?.role === "user"
     // Finishing/retrying an assistant response must never pull someone away from older messages.
     if (newUserMessage || nearBottom.current) scrollToLatest()
     previousCount.current = messages.length
-  }, [messages, stream, scrollToLatest])
+  }, [messages, stream, activeQueued, scrollToLatest])
   useEffect(() => {
     if (!hash) return
     let id: string
     try { id = decodeURIComponent(hash.slice(1)) } catch { return }
+    const linkedMessage = messages.find(message => message.id === id || `message-${message.id}` === id)
+    if (linkedMessage?.role === "assistant") selectVersion(session.id, responseFamilyId(messages, linkedMessage), linkedMessage.id)
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(id) || (id.startsWith("message-") ? document.getElementById(id.slice(8)) : null)
       if (target && scroller.current?.contains(target)) target.scrollIntoView({ block: "center" })
       else if (data.threads[session.id]?.sources?.some(source => source.id === id)) openRail(session.id, "source", id)
     })
     return () => cancelAnimationFrame(frame)
-  }, [hash, locationKey, data.threads, session.id, openRail])
+  }, [hash, locationKey, data.threads, session.id, openRail, messages, selectVersion])
   const preparePrompt = (text: string) => { const next = draft.trim() ? `${draft}\n\n${text}` : text; if (next.length > 4000) notify(session.id, "Your draft is full. Shorten it before adding another request."); else { setDraft(session.id, next); composer.current?.focus() } }
 
   return <div className="flex min-h-0 min-w-0 flex-1">
@@ -108,23 +126,27 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
         <div className="flex min-w-0 flex-col gap-5 py-5">
           {Intro && <Intro preparePrompt={preparePrompt} hasMessages={messages.length > 0} />}
           {!messages.length && !Intro && <div className="space-y-3 py-8"><CompanionPortrait {...portraitProps} className="size-12" /><h2 className="text-xl font-semibold">Chat with {name}</h2><p className="text-sm leading-6 text-muted-foreground">A question, a rough idea, or something you want to make.<br />This is a separate conversation. Choose its agent from the avatar above.</p></div>}
-          {messages.map(message => {
+          {rows.map(({ message, versions, familyId, activeId, hasLaterTurns }) => {
             const author = data.agents.find(agent => agent.id === message.agentId)
             const authorName = message.agentName || name
             const authorPortrait = { ...portraitProps, name: authorName, profile: author ? author.kind === "companion" ? data.profile : undefined : portraitProps.profile }
-            return <Fragment key={message.id}><article id={message.id} data-message-id={message.id} data-role={message.role} aria-label={message.role === "user" ? "Your message" : `${authorName} response`} className={`relative min-w-0 scroll-mt-4 ${message.role === "user" ? "ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]" : "w-full"}`}>
+            return <Fragment key={familyId}><article id={message.id} data-message-id={message.id} data-role={message.role} aria-label={message.role === "user" ? "Your message" : `${authorName} response`} className={`relative min-w-0 scroll-mt-4 ${message.role === "user" ? "ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]" : "w-full"}`}>
             {message.role === "assistant" && <div className="mb-2 flex items-center gap-2"><CompanionPortrait {...authorPortrait} className="size-6 rounded-md" /><span className="text-sm font-medium">{authorName}</span>{message.status === "stopped" && <Badge variant="outline">Stopped</Badge>}</div>}
-            {!message.redacted && message.activity && <ConversationRun run={message.activity} profile={authorPortrait.profile} mode={message.presentationMode || presentationMode} />}
+            {!message.redacted && message.activity && <ConversationRun run={message.activity} profile={authorPortrait.profile} mode={message.presentationMode || presentationMode} onInspectStep={(runId, stepId) => openRail(session.id, "activity", message.id, { runId, stepId })} />}
             {message.replyTo && <p className="mb-1 truncate text-xs text-muted-foreground">Replying to: {messages.find(item => item.id === message.replyTo)?.redacted ? "Redacted message" : messages.find(item => item.id === message.replyTo)?.text || "Earlier message"}</p>}
             <div className={message.role === "user" ? "rounded-xl border bg-card px-4 py-3" : "space-y-3"}>
-              {message.redacted ? <p className="text-sm italic text-muted-foreground">Message redacted</p> : <>{message.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{message.text}</p>}{message.scenario && !message.edited && <Scenario session={session} messageId={message.id} />}</>}
+              {message.redacted ? <p className="text-sm italic text-muted-foreground">Message redacted</p> : <>{message.text && (message.role === "assistant" ? <MessageAnswer message={message} sessionId={session.id} /> : <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{message.text}</p>)}{message.scenario && !message.edited && <Scenario session={session} messageId={message.id} />}</>}
             </div>
+            {message.role === "assistant" && <ResponseVersions versions={versions} selectedId={message.id} activeId={activeId} hasLaterTurns={hasLaterTurns} disabled={pending || !!stream || session.archived} onSelect={id => selectVersion(session.id, familyId, id)} onFork={async id => {
+              let fork: Session | undefined
+              if (await mutate(async () => { fork = await conkerClient.forkConversation(session.id, id) }) && fork) navigate(`/chat/${fork.id}`)
+            }} />}
             <MessageActions session={session} message={message} />
-          </article>{conversation.handoffs.filter(event => event.afterMessageId === message.id).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
+          </article>{conversation.handoffs.filter(event => versions.some(version => version.id === event.afterMessageId)).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
           })}
           {(streamingVisible || pendingActivity) && <div aria-label={stream ? "Streaming preview response" : "Response activity"} className="space-y-3">
-            {pendingActivity ? <ConversationRun run={pendingActivity} profile={portraitProps.profile} mode={presentationMode} motion={!showLatest} /> : stream && <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} motion={!showLatest} />}
-            {streamingVisible && stream.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{stream.text}</p>}
+            {pendingActivity ? <ConversationRun run={pendingActivity} profile={portraitProps.profile} mode={presentationMode} motion={!showLatest} onInspectStep={(runId, stepId) => openRail(session.id, "activity", undefined, { runId, stepId })} /> : stream && <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} motion={!showLatest} />}
+            {streamingVisible && stream.text && <RichAnswer text={stream.text} />}
           </div>}
         </div>
       </div>

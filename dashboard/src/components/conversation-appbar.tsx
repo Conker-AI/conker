@@ -91,7 +91,7 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
       </TaskDialogContent>
     </Dialog>
     <ConfirmationDialog open={dialog === "delete"} onOpenChange={open => { if (!open) setDialog(null) }}
-      title={main ? "Clear this conversation?" : "Delete this conversation?"} description="This removes messages from this local preview. It cannot be undone. No external service is contacted."
+      title={main ? "Clear this conversation?" : "Delete this conversation?"} description="This removes messages, drafts and queued requests from this local preview. It cannot be undone. Existing forks are separate copies. No external service is contacted."
       actionLabel={main ? "Clear conversation" : "Delete conversation"} pending={busy} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => {
         if (await mutate(() => conkerClient.deleteConversation(session.id))) { setDialog(null); useConkerStore.getState().setDraft(session.id, ""); useConversationWorkspace.getState().reset(session.id); if (!main) navigate("/chat") }
       }}><p className="text-sm font-medium">{session.title}</p></ConfirmationDialog>

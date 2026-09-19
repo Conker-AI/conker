@@ -33,6 +33,15 @@
   transform-origin: center;
 }
 
+.conversation-activity[data-state="waiting"] .conversation-activity-ring,
+.conversation-activity[data-state="idle"] .conversation-activity-ring {
+  opacity: 0.55;
+}
+
+.conversation-activity[data-state="complete"] .conversation-activity-ring {
+  opacity: 0;
+}
+
 .conversation-activity-compact .conversation-activity-mark {
   width: 1.75rem;
   height: 1.75rem;

@@ -16,6 +16,8 @@ import { conkerClient } from "@/lib/api"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
+import { hasDownstreamMessages } from "@/lib/conversation-continuity"
+import { readableAnswer } from "@/lib/rich-answer"
 
 function ActionButton({ label, className, ...props }: ComponentProps<typeof Button> & { label: string }) {
   return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" {...props} aria-label={label} className={cn("size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground aria-pressed:text-primary", className)} /></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>
@@ -26,6 +28,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const models = getAvailableModels(configuration)
   const mainId = useConker(data => data.companionSessionId)
   const conversationModelId = useConker(data => data.conversations[session.id].modelId)
+  const messages = useConker(data => data.conversations[session.id].messages)
   const pending = useConkerStore(state => state.pending)
   const error = useConkerStore(state => state.error)
   const streaming = useConversationWorkspace(state => state.streams[session.id])
@@ -35,7 +38,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const [text, setText] = useState(message.text)
   const [copied, setCopied] = useState<"text" | "link" | null>(null)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const speech = useReadAloud(`${session.id}:${message.id}`, message.redacted ? "" : message.text)
+  const speech = useReadAloud(`${session.id}:${message.id}`, message.redacted ? "" : message.role === "assistant" ? readableAnswer(message.text) : message.text)
   const focusComposer = useRef(false)
   const focusReference = useRef(false)
   const actionGroup = useRef<HTMLDivElement>(null)
@@ -45,6 +48,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const assistant = message.role === "assistant"
   const retryModelId = models.find(model => model.id === message.modelId)?.id || conversationModelId || configuration.defaultModelId
   const canRetry = models.some(model => model.id === retryModelId)
+  const editNeedsFork = hasDownstreamMessages(messages, message.id)
   useEffect(() => () => { clearTimeout(copyTimer.current) }, [])
   const copy = async (value: string, kind: "text" | "link") => {
     try {
@@ -102,11 +106,22 @@ export function MessageActions({ session, message }: { session: Session; message
       {message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}
     </div>
     <Dialog open={dialog === "edit"} onOpenChange={open => { if (!open && !pending) setDialog(null) }}>
-      <TaskDialogContent title="Edit message" description="Edits are marked in this preview. They do not regenerate the conversation or repeat tools."
+      <TaskDialogContent title={editNeedsFork ? "Edit in a new fork" : "Edit message"} description={editNeedsFork ? "Later replies used the original words. Save this edit in a new conversation ending here; the existing conversation stays intact." : "Edits are marked in this preview. They do not regenerate the conversation or repeat tools."}
         onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>
-        <form className="flex min-h-0 flex-col" onSubmit={async event => { event.preventDefault(); if (await update({ text })) setDialog(null) }}>
+        <form className="flex min-h-0 flex-col" onSubmit={async event => {
+          event.preventDefault()
+          if (!editNeedsFork) { if (await update({ text })) setDialog(null); return }
+          let fork: Session | undefined
+          if (await mutate(async () => {
+            fork = await conkerClient.forkConversation(session.id, message.id)
+            await conkerClient.updateMessage(fork.id, message.id, { text })
+          })) {
+            setDialog(null)
+            if (fork) navigate(`/chat/${fork.id}`)
+          }
+        }}>
           <OverlayBody><div className="space-y-2"><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>
-          <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>Save message</Button></FormActions>
+          <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>{editNeedsFork ? "Save in new fork" : "Save message"}</Button></FormActions>
         </form>
       </TaskDialogContent>
     </Dialog>

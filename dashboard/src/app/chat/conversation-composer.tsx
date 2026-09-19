@@ -1,6 +1,8 @@
 import { useEffect, useRef, type RefObject } from "react"
-import { Link } from "react-router-dom"
-import { ArrowUp, Check, ChevronDown, Keyboard, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
+import { ArrowUp, Check, ChevronDown, Keyboard, ListPlus, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
+import { ConversationQueue } from "@/components/conversation-queue"
+import { ConversationPreviewControls } from "@/components/conversation-preview-controls"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,7 +43,12 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const draft = useConkerStore(state => state.drafts[session.id] || "")
   const setDraft = useConkerStore(state => state.setDraft)
   const pending = useConkerStore(state => state.pending)
-  const { send, stop, setNextModel, setReply, openRail } = useConversationWorkspace()
+  const { send, stop, setNextModel, setReply, openRail, pauseQueue, resumeQueue, removeQueued, editQueued, reviewQueued, setPreview } = useConversationWorkspace()
+  const queue = useConversationWorkspace(state => state.queues[session.id])
+  const activeQueued = useConversationWorkspace(state => state.activeQueued[session.id])
+  const preview = useConversationWorkspace(state => state.previews[session.id])
+  const { search } = useLocation()
+  const showFixtures = import.meta.env.DEV && new URLSearchParams(search).get("fixtures") === "1"
   const stream = useConversationWorkspace(state => state.streams[session.id])
   const nextModel = useConversationWorkspace(state => state.nextModels[session.id])
   const replyId = useConversationWorkspace(state => state.replies[session.id])
@@ -56,11 +63,12 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const previousActive = useRef(false)
   const conversation = data.conversations[session.id]
   const models = getAvailableModels(data.modelsConfiguration)
-  const modelId = stream?.modelId || nextModel || conversation?.modelId || data.modelsConfiguration.defaultModelId
+  const modelId = nextModel || conversation?.modelId || data.modelsConfiguration.defaultModelId
   const model = models.find(item => item.id === modelId)
   const provider = data.modelsConfiguration.providers.find(item => item.id === model?.providerId)
   const reply = conversation?.messages.find(message => message.id === replyId)
   const overLimit = draft.length > MESSAGE_LIMIT
+  const queueing = !!stream || !!queue?.entries.length
   const voiceStatus = voice.phase === "requesting" ? "Opening microphone…" : voice.phase === "finishing" ? "Finishing transcription…" : "Listening"
 
   useEffect(() => {
@@ -88,6 +96,8 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const startVoice = () => { void voice.start(navigator.language || "en-US") }
 
   return <div data-home="composer" className="shrink-0 bg-background px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
+    {showFixtures && <div className="mb-2"><ConversationPreviewControls value={preview || ""} onChange={value => setPreview(session.id, value)} disabled={session.archived} /></div>}
+    <ConversationQueue queue={queue} busy={pending} activeEntryId={activeQueued} onPause={() => pauseQueue(session.id)} onResume={() => void resumeQueue(session.id)} onRemove={id => removeQueued(session.id, id)} onEdit={(id, text) => editQueued(session.id, id, text)} onReview={id => reviewQueued(session.id, id)} />
     {session.archived && <p className="mb-2 text-xs text-muted-foreground">Archived. Restore this conversation from its appbar menu to continue.</p>}
     <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border border-input bg-card text-card-foreground p-2 shadow-sm focus-within:border-ring", voice.active && "border-ring")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
       {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
@@ -115,21 +125,22 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
           <DropdownMenuItem disabled><Paperclip />Attach<span className="ml-auto text-xs">Not connected</span></DropdownMenuItem>
           <DropdownMenuSeparator /><p className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">Voice typing uses your browser’s speech service, which may process audio online. Conker does not save the recording.</p>
         </DropdownMenuContent></DropdownMenu>
-        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${model?.name || "No model"}, ${provider?.name || "No provider"}`} disabled={session.archived || !!stream}><span className="min-w-0 truncate">{model?.name || "Choose model"}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
+        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${model?.name || "No model"}, ${provider?.name || "No provider"}`} disabled={session.archived}><span className="min-w-0 truncate">{model?.name || "Choose model"}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
           <DropdownMenuLabel>Model for your next message</DropdownMenuLabel><DropdownMenuItem onSelect={() => setNextModel(session.id, "")}>Conversation default{!nextModel && <Check className="ml-auto" />}</DropdownMenuItem><DropdownMenuSeparator />
           {data.modelsConfiguration.providers.filter(item => item.enabled).map(item => <div key={item.id}><DropdownMenuLabel className="text-xs text-muted-foreground">{item.name}</DropdownMenuLabel>{models.filter(value => value.providerId === item.id).map(value => <DropdownMenuItem key={value.id} onSelect={() => setNextModel(session.id, value.id)}>{value.name}{modelId === value.id && <Check className="ml-auto" />}</DropdownMenuItem>)}</div>)}
           <DropdownMenuSeparator /><DropdownMenuItem asChild><Link to="/settings?tab=models">Manage models / providers</Link></DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream || (!!call && !call.endedAt)} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">{call && !call.endedAt ? "End the call to use voice typing" : "Voice typing"}</TooltipContent></Tooltip>
-          {stream ? <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button> : draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label="Send message" title="Send message"><ArrowUp /></Button> :
+          {stream && <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button>}
+          {draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label={queueing ? "Queue message" : "Send message"} title={queueing ? "Queue message" : "Send message"}>{queueing ? <ListPlus /> : <ArrowUp />}</Button> : !stream &&
             <Tooltip><TooltipTrigger asChild><Button type="button" size="icon" aria-label={call && !call.endedAt ? "Return to call" : "Start call"} disabled={session.archived || pending || callStarting} className={iconControl} onClick={() => void startCall(session.id)}><Phone /></Button></TooltipTrigger><TooltipContent>{call && !call.endedAt ? `Return to call with ${call.name}` : "Start call"}</TooltipContent></Tooltip>}
         </div>
       </div>}
     </form>
     <div className="mt-2 flex min-w-0 items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
       {voice.active ? <p className="min-w-0 truncate" title="Your browser’s speech service may process audio online. Conker does not save recordings.">Browser transcription · Review before sending</p> : <button type="button" className="min-h-8 min-w-0 truncate rounded-md text-left underline decoration-border underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" aria-label="View conversation usage and cost" onClick={() => openRail(session.id, "usage")} title="Conversation usage and cost">{provider?.name || "No provider"} · Cost not metered · Preview</button>}
-      {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : "Enter to send · Shift + Enter for a new line"}</span>}
+      {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : `${queueing ? "Enter to queue" : "Enter to send"} · Shift + Enter for a new line`}</span>}
     </div>
     {voice.error && <div role="alert" className="mt-2 flex items-start gap-2 px-1"><p className="flex-1 text-xs leading-5 text-muted-foreground">{voice.error}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Dismiss voice typing notice" onClick={voice.clearError}><X /></Button></div>}
     {notice && <p role="status" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{notice}</p>}

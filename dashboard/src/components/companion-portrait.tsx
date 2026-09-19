@@ -1,9 +1,12 @@
 import { cn } from "@/lib/utils"
+import { useState } from "react"
 import type { Character, Emotion, Face, PortraitTone } from "@/lib/api/client"
 
-export function CompanionPortrait({ className, name = "Conker", portrait, face = "sprout", tone = "green", emotion = "neutral", profile }: {
+export function CompanionPortrait({ className, name: suppliedName = "Conker", portrait: suppliedPortrait, face: suppliedFace = "sprout", tone: suppliedTone = "green", emotion = "neutral", profile }: {
   className?: string; name?: string; portrait?: string; face?: Face; tone?: PortraitTone; emotion?: Emotion; profile?: Character
 }) {
+  const [failedSource, setFailedSource] = useState<string>()
+  let name = suppliedName, portrait = suppliedPortrait, face = suppliedFace, tone = suppliedTone
   if (profile) {
     name = profile.name; tone = profile.tone; face = profile.face; portrait = profile.portrait
     const mapping = profile.emotions[emotion]
@@ -12,7 +15,7 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
 
   // Keep the artwork inset by one eighth on every side at every avatar size.
   // Contain the complete photo so ears, edges, and non-square uploads stay visible.
-  if (portrait) {
+  if (portrait && portrait !== failedSource) {
     return (
       <div
         role="img"
@@ -24,6 +27,7 @@ export function CompanionPortrait({ className, name = "Conker", portrait, face =
       >
         <img
           src={portrait}
+          onError={() => setFailedSource(portrait)}
           alt=""
           className="size-3/4 object-contain"
           style={profile?.studio ? { width: `${100 - profile.studio.appearance.inset * 2}%`, height: `${100 - profile.studio.appearance.inset * 2}%` } : undefined}
