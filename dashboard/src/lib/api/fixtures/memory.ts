@@ -3,6 +3,8 @@ export const memorySearch = { degraded: true, detail: "MemoryGate’s vector ind
 export const memories: Memory[] = [
   {
     id: "judo",
+    title: "Evening judo",
+    tags: ["Judo", "Routine"],
     text: "Judo is on Tuesdays and Thursdays at 18:30.",
     category: "Training",
     confidence: "High",
@@ -12,6 +14,8 @@ export const memories: Memory[] = [
   },
   {
     id: "study",
+    title: "Short study blocks",
+    tags: ["School", "Routine"],
     text: "Short revision blocks leave more of the evening free.",
     category: "School",
     confidence: "Tentative",
@@ -21,6 +25,8 @@ export const memories: Memory[] = [
   },
   {
     id: "mornings",
+    title: "Morning training preference",
+    tags: ["Judo", "School"],
     text: "Я предпочитаю тренироваться перед школой.",
     category: "Preference",
     confidence: "Medium",
@@ -31,6 +37,8 @@ export const memories: Memory[] = [
   },
   {
     id: "server",
+    title: "Server constraints",
+    tags: ["Conker", "Infrastructure"],
     text: "Conker runs on your own 16 GB server, without a GPU.",
     category: "Projects",
     confidence: "High",

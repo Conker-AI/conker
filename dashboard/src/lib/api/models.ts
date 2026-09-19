@@ -82,6 +82,11 @@ export type JournalEntry = {
 
 export type Memory = {
   id: string
+  title?: string
+  tags?: string[]
+  origin?: "manual"
+  originalText?: string
+  updatedAt?: string
   text: string
   category: string
   confidence: string
@@ -90,6 +95,8 @@ export type Memory = {
   source: string
   language?: string
 }
+
+export type MemoryInput = { title: string; text: string; category: string; tags: string[] }
 
 export type Service = {
   name: string

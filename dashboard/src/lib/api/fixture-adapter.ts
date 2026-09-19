@@ -20,6 +20,7 @@ import { activeConversationMessages, contextBeforeMessage, hasDownstreamMessages
 import { activityScenarios, createActivityScenario, isActivityScenarioName } from "./activity-fixtures"
 import { mergeActivityRun } from "../conversation-activity"
 import { richAnswerFixture } from "./rich-answer-fixture"
+import { normalizeMemoryInput } from "../memory-explorer"
 
 import { createCharacterStudio } from "./character-defaults"
 import { createCallFixture } from "./call-fixture"
@@ -110,6 +111,25 @@ export function createFixtureClient(): ConkerClient {
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
+    async createMemory(input) {
+      const value = normalizeMemoryInput(input)
+      const id = `note-${crypto.randomUUID()}`
+      const memory = { ...value, id, origin: "manual" as const, confidence: "Unreviewed", age: "Just now", provenance: "Manually added in this preview", source: `/memory#${id}`, updatedAt: new Date().toISOString() }
+      state.memories.unshift(memory)
+      return structuredClone(memory)
+    },
+    async saveMemory(id, input) {
+      const value = normalizeMemoryInput(input)
+      const memory = state.memories.find(item => item.id === id)
+      if (!memory) throw new Error("Memory not found. Refresh and try again.")
+      memory.originalText ??= memory.text
+      Object.assign(memory, value, { updatedAt: new Date().toISOString(), age: "Just now" })
+      return structuredClone(memory)
+    },
+    async deleteMemory(id) {
+      if (!state.memories.some(item => item.id === id)) throw new Error("Memory not found.")
+      state.memories = state.memories.filter(item => item.id !== id)
+    },
     async saveCharacter(profile) {
       const { validateCharacter } = await import("./character")
       state.profile = structuredClone(validateCharacter(profile))

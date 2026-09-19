@@ -80,6 +80,9 @@ export interface ConkerClient {
   readonly calls: import("./call-types").CallClient
   readonly voiceInput: VoiceInputClient
   load(): Promise<Snapshot>
+  createMemory(input: import("./models").MemoryInput): Promise<Memory>
+  saveMemory(id: string, input: import("./models").MemoryInput): Promise<Memory>
+  deleteMemory(id: string): Promise<void>
   saveCharacter(profile: Character): Promise<Character>
   previewCharacter(profile: Character, mode: import("./character").CharacterMode): Promise<ReturnType<typeof import("./character").previewCharacter>>
   createConversation(agentId: string): Promise<Session>
