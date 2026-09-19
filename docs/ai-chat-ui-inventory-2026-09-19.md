@@ -4,6 +4,14 @@ Research date: September 19, 2026. Scope: desktop web conversation interactions,
 
 ## Read this first
 
+**Subsequent chat milestone (September 19):** rich Markdown/code/table/math/citation
+rendering, a five-entry editable queue, retry versions/explicit continuation forks,
+named execution-step previews and restrained character state mapping have now been
+implemented. See [the delivery ledger](chat-delivery-progress.md) for checks and
+limitations. Research-time "Missing" labels below remain historical observations;
+they are not the current implementation checklist. Real execution, durable history,
+new emotion assets and the deferred catalogue remain separate work.
+
 **Implementation follow-up:** the owner subsequently approved fixing the activity experience. `ConversationRun` now provides measured working/completed duration, expandable steps and tool evidence, and stopped/failed presentations through `ConkerClient` activity snapshots. Existing recorded tool receipts share this component. The frontend retains activity with replies and through route navigation, with edit/redaction cleanup; fixture data still resets on reload. This implements the presentation foundation for A04–A07 and B01–B04, not real tool/subagent execution. The catalogue below preserves the research-time baseline. Rich answer rendering, queues, new character assets and the remaining catalogue are not included in this activity pass.
 
 The floating Conker control has been reduced from 48px to a 32px visible circle, with a 16px arrow and a 44px pointer target. The active orb/portrait fits inside it. Light/dark screenshots, a narrow viewport, active generation, and jump-to-latest behavior were checked in Chrome. Build and targeted lint passed. No features from the catalogue below were implemented in this research pass.

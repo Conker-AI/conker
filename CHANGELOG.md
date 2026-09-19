@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat completion milestone:** shared Markdown/code/table/math/citation rendering,
+  editable paused queues with captured model/privacy, response versions and explicit
+  earlier-turn forks. Added inspectable tool/agent/plan/receipt fixtures, bounded
+  evidence and character activity fallbacks. All execution remains frontend Preview;
+  transcripts and queues remain memory-only. See `docs/chat-delivery-progress.md`.
+
 - **Product dashboard preview:** the active `dashboard/` app now includes Home,
   Companion and Chats, Inbox, character and call interfaces, Memory, Journal,
   Agents, Tools, Jobs, System and Settings. Data remains behind the fixture

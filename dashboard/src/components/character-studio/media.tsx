@@ -24,9 +24,14 @@ export function CharacterMedia({ profile, activity = "idle", expressionId, motio
   useEffect(() => {
     const element = video.current
     if (!element) return
-    if (canAnimate) void element.play().catch(() => { if (element.error && asset) setFailedSource(asset.src) })
+    let current = true
+    if (canAnimate) void element.play().catch(error => {
+      // Policy/playback failures do not always populate HTMLMediaElement.error.
+      // Cleanup pauses may reject with AbortError; never replace newer artwork.
+      if (current && video.current === element && asset && error?.name !== "AbortError") setFailedSource(asset.src)
+    })
     else element.pause()
-    return () => element.pause()
+    return () => { current = false; element.pause() }
   }, [asset, canAnimate])
   if (!asset || asset.src === failedSource || (asset.kind === "video" && !canAnimate)) return <CompanionPortrait profile={profile} className={className} />
   return <div role="img" aria-label={`${profile.name}, ${expression?.name || activity}`} className={cn("flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted", className)}>

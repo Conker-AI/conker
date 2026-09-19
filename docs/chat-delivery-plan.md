@@ -1,6 +1,6 @@
 # Conker chat delivery plan
 
-Written September 19, 2026. Status: **proposal ready for the owner's goal; implementation has not started.**
+Written September 19, 2026. Status: **frontend milestone delivered and checked**. See the [acceptance ledger](chat-delivery-progress.md) for commits, browser evidence, test coverage and verification limits. Real service integration and the explicitly deferred projects remain outside this milestone.
 
 This is the bounded delivery plan for the next conversation-UI milestone. It turns the [research catalogue](ai-chat-ui-inventory-2026-09-19.md) into ordered work, not a commitment to build all 160 items. The larger [visual control workspace proposal](workspace-control-plan.md) remains separate.
 

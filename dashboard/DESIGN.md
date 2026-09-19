@@ -258,6 +258,20 @@ The thread retains recorded tool status/arguments, plan/summary cards, blocked r
 
 Inline approval requests use `ApprovalRequest`: a compact, neutral outlined link with the requested action, service icon, approval status, and Review request / View decision affordance. It uses the existing muted surface and theme border, not a warning-colored Alert. The full row opens its exact Inbox request; making a decision remains in Inbox with the full arguments and risk information. Titles wrap, the action moves below on narrow screens, and reviewed requests show their actual outcome. Reserve warning alerts for conditions that need warning treatment, not routine approval navigation.
 
+## Rich answers, continuity and execution
+
+Use `RichAnswer` for both streaming and finished assistant text. Its Markdown, code, table, math and supplied-citation controls inherit semantic colors and shared dialogs/popovers. Keep code and wide tables locally scrollable; never widen the thread. Copy/export original content, neutralize CSV formulas, reject unsafe links, and leave raw HTML and remote images inert. Read-aloud consumes readable text. Source IDs come from client evidence, not invented links in prose.
+
+Queue controls belong immediately above the composer. Enter queues while a response runs; Stop remains separate. Each of up to five entries captures its text, reply target, agent, model, privacy and options. Changing the next-turn controls never silently changes a queued entry. Stop, failure, unresolved approval or revoked/changed context pauses dispatch. Resume is explicit; changed settings require review. Queues survive route navigation but remain memory-only. Deleting a conversation explicitly warns that its queue is removed.
+
+Retries are versions of one response, with compact Previous/Next controls beneath that response. Viewing an old version does not rewrite the active continuation. Continue in a fork makes that intent explicit; editing an earlier submitted message also creates a fork when later turns exist. Preserve each version's sources, model, partial text and public activity. Redaction clears its derived evidence and cached previews.
+
+`ConversationRun` is the sole activity disclosure: public steps, tools, named agents, handoffs, plans and supplied receipts. Inspector actions open the existing reference rail; approval actions open Inbox. Group repetitive steps and bound logs. Label simulated evidence Preview. Normal fixture replies must never invent executed work. Development scenarios are available only in development with `?fixtures=1` and never in the production composer. Text retry does not replay an action scenario.
+
+Activity artwork follows supplied state, with a Focus orb and Character media/fallback. Keep padded full artwork, quiet terminal states and motion suppression for reduced motion, hidden/offscreen content and disabled Studio motion. Failed or blocked media playback falls back to the portrait. Announce phase changes, not every token or timer tick. Automatic queue dispatch, streamed updates and completion preserve manual reading position; only explicit send/jump actions force the thread to the bottom.
+
+Checks: `check:rich-answer`, `check:chat-continuity`, `check:chat-workspace` and `check:activity`, alongside existing conversation/call/voice/theme checks. The scoped delivery evidence and limits live in [chat-delivery-progress.md](../docs/chat-delivery-progress.md).
+
 ## Voice typing
 
 `ConversationComposer` is shared by Companion and agent conversations. Keep dictation inside this same docked surface: microphone → listening → **Use text** → editable draft. While listening, live text sits above a microphone-level waveform, with a quiet status/timer and Cancel / Use text controls below. Confirmed words use foreground text; interim words use muted text. The waveform displays actual audio levels, arriving in the center and moving outward, with semantic accent color and reduced-motion support. Do not add a recording modal or a second conversation toolbar.
