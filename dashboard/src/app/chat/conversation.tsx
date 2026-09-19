@@ -4,7 +4,7 @@ import { ArrowDown, ArrowRight, CalendarDays, TriangleAlert } from "lucide-react
 import { ApprovalRequest } from "@/components/approval-request"
 import { CompanionPortrait } from "@/components/companion-portrait"
 import { ConversationActivity } from "@/components/conversation-activity"
-import { ToolActivity } from "@/components/tool-activity"
+import { ConversationRun } from "@/components/conversation-run"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,6 @@ function Scenario({ session, messageId }: { session: Session; messageId: string 
   const canRequestReply = !session.archived && getAvailableModels(data.modelsConfiguration).some(model => model.id === replyModelId)
   if (!thread) return null
   return <div className="space-y-4">
-    {thread.tool && <ToolActivity activity={thread.tool} />}
     {session.mode === "receipt" && <Alert variant="warning"><TriangleAlert /><AlertTitle>Action completed. Reply unavailable.</AlertTitle><AlertDescription>The reminder was recorded in the fixture, but the reply timed out. Requesting text again will not repeat the action.</AlertDescription><div className="col-start-2 mt-3"><Button variant="outline" size="sm" disabled={replyRequested || pending || !!streaming || !canRequestReply} onClick={async () => {
       if (replyModelId && await retry(session.id, messageId, replyModelId)) await mutate(() => conkerClient.requestReply(session.id))
     }}>{replyRequested ? "Reply requested" : "Ask only for the reply"}</Button></div></Alert>}
@@ -48,6 +47,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const { drafts, setDraft } = useConkerStore()
   const { openRail, notify } = useConversationWorkspace()
   const stream = useConversationWorkspace(state => state.streams[session.id])
+  const activity = useConversationWorkspace(state => state.activities[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(!hash)
@@ -59,7 +59,9 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const draft = drafts[session.id] || ""
   const portraitProps = { profile: companion ? data.profile : undefined, name, face: "round" as const, tone: "graphite" as const }
   const presentationMode = conversation?.presentationMode || "focus"
-  const activityText = stream?.phase === "thinking" ? "Thinking" : "Writing"
+  const activityText = activity?.label || (stream?.phase === "thinking" ? "Thinking" : "Writing")
+  const pendingActivity = activity && !messages.some(message => message.activity?.id === activity.id) ? activity : undefined
+  const streamingVisible = stream && (!activity || pendingActivity)
 
   const scrollToLatest = useCallback(() => {
     nearBottom.current = true
@@ -112,6 +114,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
             const authorPortrait = { ...portraitProps, name: authorName, profile: author ? author.kind === "companion" ? data.profile : undefined : portraitProps.profile }
             return <Fragment key={message.id}><article id={message.id} data-message-id={message.id} data-role={message.role} aria-label={message.role === "user" ? "Your message" : `${authorName} response`} className={`relative min-w-0 scroll-mt-4 ${message.role === "user" ? "ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]" : "w-full"}`}>
             {message.role === "assistant" && <div className="mb-2 flex items-center gap-2"><CompanionPortrait {...authorPortrait} className="size-6 rounded-md" /><span className="text-sm font-medium">{authorName}</span>{message.status === "stopped" && <Badge variant="outline">Stopped</Badge>}</div>}
+            {!message.redacted && message.activity && <ConversationRun run={message.activity} profile={authorPortrait.profile} mode={message.presentationMode || presentationMode} />}
             {message.replyTo && <p className="mb-1 truncate text-xs text-muted-foreground">Replying to: {messages.find(item => item.id === message.replyTo)?.redacted ? "Redacted message" : messages.find(item => item.id === message.replyTo)?.text || "Earlier message"}</p>}
             <div className={message.role === "user" ? "rounded-xl border bg-card px-4 py-3" : "space-y-3"}>
               {message.redacted ? <p className="text-sm italic text-muted-foreground">Message redacted</p> : <>{message.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{message.text}</p>}{message.scenario && !message.edited && <Scenario session={session} messageId={message.id} />}</>}
@@ -119,11 +122,14 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
             <MessageActions session={session} message={message} />
           </article>{conversation.handoffs.filter(event => event.afterMessageId === message.id).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
           })}
-          {stream && <div aria-label="Streaming preview response" className="space-y-3"><div className={showLatest ? "invisible" : undefined}><ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} motion={!showLatest} /></div>{stream.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{stream.text}</p>}</div>}
+          {(streamingVisible || pendingActivity) && <div aria-label={stream ? "Streaming preview response" : "Response activity"} className="space-y-3">
+            {pendingActivity ? <ConversationRun run={pendingActivity} profile={portraitProps.profile} mode={presentationMode} motion={!showLatest} /> : stream && <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} motion={!showLatest} />}
+            {streamingVisible && stream.text && <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{stream.text}</p>}
+          </div>}
         </div>
       </div>
       {showLatest && <div className="conversation-latest"><Tooltip><TooltipTrigger asChild><Button type="button" variant="outline" size="icon" className="relative size-8 rounded-full bg-popover p-0 text-muted-foreground hover:text-foreground dark:bg-popover dark:hover:bg-accent" aria-label={stream ? `${name} is ${activityText.toLowerCase()} · Go to latest response` : "Go to latest message"} onClick={() => { scrollToLatest(); scroller.current?.focus({ preventScroll: true }) }}>
-        {stream ? <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={stream.phase} compact /> : <ArrowDown className="size-4" />}
+        {stream ? <ConversationActivity profile={portraitProps.profile} mode={presentationMode} phase={activity?.phase || stream.phase} compact /> : <ArrowDown className="size-4" />}
       </Button></TooltipTrigger><TooltipContent side="top">{stream ? `${activityText} · Preview · Go to latest response` : "Go to latest message"}</TooltipContent></Tooltip></div>}
       </div>
       <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} />

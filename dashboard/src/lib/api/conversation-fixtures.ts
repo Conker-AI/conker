@@ -39,6 +39,11 @@ export function createConversations(sessions: Session[], threads: Record<string,
       agentId: agent?.id, agentName: agent?.name || session.agent,
       createdAt: sampleTimestamp(thread.time), status: "complete", scenario: true,
       source: original ? { id: original.id, label: "Original request", href: `/chat/${session.id}#${encodeURIComponent(original.id)}` } : undefined,
+      activity: thread.tool ? {
+        id: `${session.id}-recorded`, status: "complete", phase: "tool", label: thread.tool.summary, provenance: "recorded",
+        // These receipts have no recorded execution duration. Never manufacture one.
+        steps: [{ id: `${session.id}-tool`, kind: "tool", label: thread.tool.summary, status: "complete", toolName: thread.tool.name, record: structuredClone(thread.tool.record) }],
+      } : undefined,
     })
     conversation.usage.inputTokens = conversation.messages.filter(message => message.role === "user").reduce((sum, message) => sum + Math.ceil(message.text.length / 4), 0)
     conversation.usage.outputTokens = Math.ceil(thread.reply.length / 4)

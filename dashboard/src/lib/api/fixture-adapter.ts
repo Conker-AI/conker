@@ -13,7 +13,7 @@ import { connectionConfig } from "./config"
 import type { ConkerClient, Snapshot, AuthResult } from "./client"
 import { createConversations, createConversationState } from "./conversation-fixtures"
 import { createModelsConfiguration, getAvailableModels, validateModelsConfiguration } from "./model-catalogue"
-import type { ConversationMessage } from "./conversation-types"
+import type { ConversationMessage, ConversationRun } from "./conversation-types"
 import { unavailableVoiceInput } from "../voice/types"
 import { describeJobTiming, normalizeJobInput } from "./job-configuration"
 
@@ -233,7 +233,7 @@ export function createFixtureClient(): ConkerClient {
         throw new Error("Choose a valid response rating.")
       }
       if (update.rating !== undefined) message.rating = update.rating
-      if (update.text !== undefined) { message.text = update.text.trim(); message.edited = true; message.scenario = false; delete message.rating }
+      if (update.text !== undefined) { message.text = update.text.trim(); message.edited = true; message.scenario = false; delete message.rating; delete message.activity }
       if (update.pinned !== undefined) message.pinned = update.pinned
       if (update.redacted) {
         message.text = ""
@@ -242,6 +242,7 @@ export function createFixtureClient(): ConkerClient {
         message.scenario = false
         delete message.rating
         delete message.source
+        delete message.activity
       }
       // Legacy consumers must not reveal text after an edit or redaction.
       const local = state.messages[id]?.find(item => item.id === messageId)
@@ -306,6 +307,19 @@ export function createFixtureClient(): ConkerClient {
         presentationMode: conversation.presentationMode || "focus",
         modelId, status: "complete", ...(options.retryMessageId ? { retryOf: options.retryMessageId } : {}),
       }
+      const run: ConversationRun = {
+        id: crypto.randomUUID(), status: "running", phase: "thinking", label: "Preparing reply", provenance: "preview",
+        startedAt: new Date().toISOString(),
+        steps: [{ id: "prepare", kind: "phase", status: "running", label: "Preparing preview reply", startedAt: new Date().toISOString(), detail: "Using the selected model configuration. No model service is connected." }],
+      }
+      const publishActivity = () => { reply.activity = structuredClone(run); options.onActivity?.(structuredClone(run)) }
+      const finishActivity = (status: "complete" | "stopped" | "failed") => {
+        run.status = status
+        run.endedAt = new Date().toISOString()
+        run.label = status === "complete" ? "Reply complete" : status === "stopped" ? "Response stopped" : "Response failed"
+        run.steps = run.steps.map(step => step.status === "running" ? { ...step, status, endedAt: run.endedAt } : step)
+        publishActivity()
+      }
       streaming.add(id)
       const saveReply = () => {
         conversation.messages.push(reply)
@@ -313,7 +327,14 @@ export function createFixtureClient(): ConkerClient {
         touch(id)
       }
       try {
+        publishActivity()
         await pause(450, options.signal)
+        const writingAt = new Date().toISOString()
+        run.steps[0] = { ...run.steps[0], status: "complete", endedAt: writingAt }
+        run.steps.push({ id: "write", kind: "phase", status: "running", label: "Writing preview response", startedAt: writingAt, detail: "Simulated text stream. No tools or agents are being executed." })
+        run.phase = "streaming"
+        run.label = "Writing"
+        publishActivity()
         const text = conversation.presentationMode === "character"
           ? "Simulated reply: I have your message. Once connected, I will answer in your character’s style. No tools have run."
           : "Simulated reply: Your message is saved. A connected model will respond here. No tools have run."
@@ -323,9 +344,11 @@ export function createFixtureClient(): ConkerClient {
           onChunk(chunk)
           if (options.signal?.aborted) throw aborted()
         }
+        finishActivity("complete")
         saveReply()
         return structuredClone(reply)
       } catch (error) {
+        finishActivity(options.signal?.aborted ? "stopped" : "failed")
         if (reply.text) {
           reply.status = "stopped"
           saveReply()

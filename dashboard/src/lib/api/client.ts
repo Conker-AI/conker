@@ -89,7 +89,7 @@ export interface ConkerClient {
   deleteConversation(sessionId: string): Promise<void>
   updateMessage(sessionId: string, messageId: string, update: MessageUpdate): Promise<ConversationMessage>
   forkConversation(sessionId: string, messageId: string): Promise<Session>
-  /** Fixture transport only simulates text. Retry never repeats tools or actions. */
+  /** Text deltas and optional public activity snapshots. Fixture mode simulates text only; retry never repeats actions. */
   streamReply(sessionId: string, options: ReplyOptions, onChunk: (chunk: string) => void): Promise<ConversationMessage>
   saveModelsConfiguration(value: ModelsConfiguration): Promise<ModelsConfiguration>
   requestReply(sessionId: string): Promise<void>

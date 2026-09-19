@@ -1,3 +1,27 @@
+export type ActivityPhase = "thinking" | "searching" | "reading" | "tool" | "agent" | "waiting" | "streaming"
+export type ActivityStep = {
+  id: string
+  kind: "phase" | "tool" | "agent" | "commentary" | "summary"
+  label: string
+  status: "running" | "complete" | "stopped" | "failed" | "waiting"
+  startedAt?: string
+  endedAt?: string
+  detail?: string
+  toolName?: string
+  /** Public, sanitized evidence supplied by the transport; never raw credentials. */
+  record?: Record<string, unknown>
+}
+export type ConversationRun = {
+  id: string
+  status: "running" | "complete" | "stopped" | "failed"
+  phase: ActivityPhase
+  label: string
+  provenance: "preview" | "recorded" | "live"
+  startedAt?: string
+  endedAt?: string
+  steps: ActivityStep[]
+}
+
 export type ConversationMessage = {
   id: string
   role: "user" | "assistant"
@@ -17,6 +41,7 @@ export type ConversationMessage = {
   status?: "complete" | "stopped"
   replyTo?: string
   retryOf?: string
+  activity?: ConversationRun
 }
 
 export type ConversationPrivacy = { memoryDisabled: boolean; harnessDisabled: boolean }
@@ -56,4 +81,4 @@ export type ConversationUpdate = {
 }
 
 export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean; rating?: "up" | "down" | null }
-export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal }
+export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void }

@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { conkerClient } from "@/lib/api"
 import { useConkerStore } from "@/lib/api/store"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
+import type { ConversationRun } from "@/lib/api/conversation-types"
 
 export type RailView = "overview" | "forks" | "source" | "explain" | "usage" | "privacy" | "daily"
 type Rail = { open: boolean; view: RailView; messageId?: string }
@@ -12,6 +13,7 @@ type Workspace = {
   replies: Record<string, string | undefined>
   notices: Record<string, string>
   streams: Record<string, Stream | undefined>
+  activities: Record<string, ConversationRun | undefined>
   openRail: (id: string, view?: RailView, messageId?: string) => void
   closeRail: (id: string) => void
   setNextModel: (id: string, modelId: string) => void
@@ -39,7 +41,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     }
     const controller = new AbortController()
     controllers.set(id, controller)
-    set(state => ({ streams: { ...state.streams, [id]: { text: "", modelId, phase: "thinking" } }, notices: { ...state.notices, [id]: "" } }))
+    set(state => ({ streams: { ...state.streams, [id]: { text: "", modelId, phase: "thinking" } }, activities: { ...state.activities, [id]: undefined }, notices: { ...state.notices, [id]: "" } }))
     try {
       if (!retryMessageId) {
         const replyTo = data.conversations[id]?.messages.find(message => message.id === get().replies[id] && !message.redacted)?.id
@@ -51,7 +53,9 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
         if (useConkerStore.getState().drafts[id] === draft) store.setDraft(id, "")
         get().setReply(id)
       }
-      await conkerClient.streamReply(id, { modelId, retryMessageId, signal: controller.signal }, chunk => {
+      await conkerClient.streamReply(id, { modelId, retryMessageId, signal: controller.signal, onActivity: activity => {
+        set(state => ({ activities: { ...state.activities, [id]: activity } }))
+      } }, chunk => {
         set(state => ({ streams: { ...state.streams, [id]: { modelId, phase: "streaming", text: (state.streams[id]?.text || "") + chunk } } }))
       })
       return !controller.signal.aborted
@@ -64,20 +68,25 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
       await useConkerStore.getState().load()
       if (!retryMessageId && get().nextModels[id] === modelId) get().setNextModel(id, "")
       controllers.delete(id)
-      set(state => ({ streams: { ...state.streams, [id]: undefined } }))
+      set(state => {
+        const activity = state.activities[id]
+        const saved = useConkerStore.getState().data?.conversations[id]?.messages.some(message => message.activity?.id === activity?.id)
+        return { streams: { ...state.streams, [id]: undefined }, activities: { ...state.activities, [id]: saved ? undefined : activity } }
+      })
     }
   }
   return {
-    rails: {}, nextModels: {}, replies: {}, notices: {}, streams: {},
+    rails: {}, nextModels: {}, replies: {}, notices: {}, streams: {}, activities: {},
     openRail: (id, view = "overview", messageId) => set(state => ({ rails: { ...state.rails, [id]: { open: true, view, messageId } } })),
     closeRail: id => set(state => ({ rails: { ...state.rails, [id]: { ...state.rails[id], open: false, view: state.rails[id]?.view || "overview" } } })),
     setNextModel: (id, modelId) => set(state => ({ nextModels: { ...state.nextModels, [id]: modelId } })),
     setReply: (id, messageId) => set(state => ({ replies: { ...state.replies, [id]: messageId } })),
     notify: (id, message) => set(state => ({ notices: { ...state.notices, [id]: message } })),
     reset: id => set(state => {
-      const rails = { ...state.rails }, nextModels = { ...state.nextModels }, replies = { ...state.replies }, notices = { ...state.notices }
+      const rails = { ...state.rails }, nextModels = { ...state.nextModels }, replies = { ...state.replies }, notices = { ...state.notices }, activities = { ...state.activities }
       delete rails[id]; delete nextModels[id]; delete replies[id]; delete notices[id]
-      return { rails, nextModels, replies, notices }
+      delete activities[id]
+      return { rails, nextModels, replies, notices, activities }
     }),
     send: async id => { await run(id) },
     retry: (id, messageId, modelId) => run(id, messageId, modelId),

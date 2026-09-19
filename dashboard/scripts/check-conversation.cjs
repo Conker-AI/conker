@@ -310,13 +310,25 @@ async function main() {
       await client.sendMessage('companion', 'Please help with a task.')
       const before = await client.load()
       let text = ''
-      const reply = await client.streamReply('companion', {}, chunk => { text += chunk })
+      const activity = []
+      const reply = await client.streamReply('companion', { onActivity: run => activity.push(run) }, chunk => { text += chunk })
       const state = await client.load()
       assert.equal(reply.text, text)
       assert.match(reply.text, /^Simulated reply:/)
       assert.match(reply.text, /No tools have run/)
       assert.equal(reply.modelId, before.modelsConfiguration.defaultModelId)
       assert.equal(reply.status, 'complete')
+      assert.deepEqual(activity.map(run => run.status), ['running', 'running', 'complete'])
+      assert.deepEqual(activity.map(run => run.phase), ['thinking', 'streaming', 'streaming'])
+      assert.equal(activity[0].steps[0].status, 'running', 'Snapshots must not mutate after delivery')
+      assert.ok(reply.activity.steps.every(step => step.status === 'complete'))
+      assert.ok(Date.parse(reply.activity.endedAt) >= Date.parse(reply.activity.startedAt))
+      assert.deepEqual(state.conversations.companion.messages.at(-1).activity, reply.activity)
+      const fork = await client.forkConversation('companion', reply.id)
+      await client.updateMessage('companion', reply.id, { redacted: true })
+      const redactedState = await client.load()
+      assert.equal(redactedState.conversations.companion.messages.at(-1).activity, undefined)
+      assert.deepEqual(redactedState.conversations[fork.id].messages.at(-1).activity, reply.activity)
       assert.equal(state.conversations.companion.messages.at(-1).id, reply.id)
       assert.equal(state.conversations.companion.usage.costUsd, null)
       for (const key of ['tickets', 'jobs', 'entries', 'replyRequests']) assert.deepEqual(state[key], before[key])
@@ -343,8 +355,11 @@ async function main() {
       const controller = new AbortController()
       controller.abort()
       const before = (await client.load()).conversations.week.messages.length
-      await assert.rejects(client.streamReply('week', { signal: controller.signal }, () => {}), { name: 'AbortError' })
+      const events = []
+      await assert.rejects(client.streamReply('week', { signal: controller.signal, onActivity: run => events.push(run) }, () => {}), { name: 'AbortError' })
       assert.equal((await client.load()).conversations.week.messages.length, before)
+      assert.equal(events.at(-1).status, 'stopped')
+      assert.equal(events.at(-1).steps[0].status, 'stopped')
     })
 
     await check('Stop after a chunk preserves a partial stopped reply and releases the stream lock', async () => {
@@ -354,6 +369,8 @@ async function main() {
       const reply = await client.streamReply('week', { signal: controller.signal }, () => { chunks++; controller.abort() })
       assert.equal(chunks, 1)
       assert.equal(reply.status, 'stopped')
+      assert.equal(reply.activity.status, 'stopped')
+      assert.equal(reply.activity.steps.at(-1).status, 'stopped')
       assert.ok(reply.text.length > 0 && reply.text.length < 20)
       assert.equal((await client.load()).conversations.week.messages.at(-1).status, 'stopped')
       await client.sendMessage('week', 'A next turn can be sent.')

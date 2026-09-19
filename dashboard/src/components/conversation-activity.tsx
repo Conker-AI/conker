@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react"
 import { CharacterMedia } from "@/components/character-studio/media"
 import { createCharacterStudio, type CharacterMode } from "@/lib/api/character"
 import type { Character } from "@/lib/api/client"
+import type { ActivityPhase } from "@/lib/api/conversation-types"
 import "./conversation-activity.css"
 
-export type ConversationActivityPhase = "thinking" | "streaming"
+export type ConversationActivityPhase = ActivityPhase
 
 function activityLabel(phase: ConversationActivityPhase) {
-  return phase === "thinking" ? "Thinking" : "Writing"
+  return { thinking: "Thinking", streaming: "Writing", searching: "Searching", reading: "Reading", tool: "Running tool", agent: "Agent working", waiting: "Waiting for you" }[phase]
 }
 
 /** Presentation follows real stream phases; no invented tool work or inferred emotions. */
