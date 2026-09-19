@@ -27,9 +27,30 @@ async function main() {
   assert.equal(busy.status, 'completed')
   assert.match(busy.output.summary, /focus block/)
   assert.equal(busy.steps.find(s => s.nodeId === 'quiet-note').status, 'skipped')
+  const scrambled = structuredClone(brief.draft)
+  scrambled.nodes = [scrambled.nodes.find(n => n.id === 'result'), scrambled.nodes.find(n => n.id === 'quiet-note'), ...scrambled.nodes.filter(n => !['result', 'quiet-note'].includes(n.id))]
+  const orderedRun = executeToolPreview(scrambled, { busyAt: 2 })
+  assert.deepEqual(orderedRun.steps.map(s => s.nodeId), ['input', 'calendar', 'busy', 'busy-note', 'result', 'quiet-note'], 'Receipts follow attempted execution, then skipped definition order')
+  const failedOrder = structuredClone(scrambled)
+  failedOrder.nodes.find(n => n.id === 'busy').config = { operator: 'greater', left: 'invalid number', right: 2 }
+  assert.deepEqual(executeToolPreview(failedOrder, {}).steps.map(s => [s.nodeId, s.status]), [['input', 'completed'], ['calendar', 'completed'], ['busy', 'failed'], ['result', 'skipped'], ['quiet-note', 'skipped'], ['busy-note', 'skipped']], 'Failed attempted steps keep chronological position and unattempted nodes retain definition order')
   const quiet = await client.run(brief.id, { busyAt: 9 })
   assert.match(quiet.output.summary, /quieter/)
   assert.equal(quiet.steps.find(s => s.nodeId === 'busy-note').status, 'skipped')
+  const optional = structuredClone(brief.draft)
+  optional.inputs.push({ name: 'optional', type: 'object', required: false })
+  optional.nodes.find(n => n.id === 'busy').config = { operator: 'exists', left: '$input.optional' }
+  assert.match(executeToolPreview(optional, {}).output.summary, /quieter/, 'exists returns false for an absent optional input')
+  assert.match(executeToolPreview(optional, { optional: {} }).output.summary, /focus block/, 'exists returns true for a present object')
+  optional.nodes.find(n => n.id === 'busy').config.left = '$input.optional.nested.value'
+  assert.match(executeToolPreview(optional, { optional: {} }).output.summary, /quieter/, 'exists returns false for missing nested paths')
+  assert.match(executeToolPreview(optional, { optional: { nested: { value: false } } }).output.summary, /focus block/, 'false is a present value')
+  optional.nodes.find(n => n.id === 'busy').config = { operator: 'equals', left: '$input.optional.nested', right: null }
+  assert.match(executeToolPreview(optional, {}).error, /unavailable/, 'Other comparisons still fail on absent references')
+  optional.nodes.find(n => n.id === 'busy').config = { operator: 'exists', left: '$input.optional.__proto__' }
+  assert.match(executeToolPreview(optional, {}).error, /Invalid reference/, 'exists never permits prototype paths, even after a missing path')
+  optional.nodes.find(n => n.id === 'busy').config.left = '$unknown.optional'
+  assert.match(executeToolPreview(optional, {}).error, /Invalid reference/, 'exists never permits invalid reference roots')
   assert.equal((await client.run(brief.id, { busyAt: 'two' })).status, 'failed')
   assert.match((await client.run(brief.id, { unknown: true })).error, /Unknown input/)
   const published = await client.publish(brief.id)

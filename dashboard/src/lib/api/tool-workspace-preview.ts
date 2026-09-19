@@ -88,6 +88,7 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
   const startedAt = now(), start = performance.now()
   const run: ToolRun = { id: crypto.randomUUID(), toolId: d.id, version, startedAt, finishedAt: startedAt, status: "failed", input: {}, steps: d.nodes.map(n => ({ nodeId: n.id, label: n.label, type: n.type, status: "skipped" })), mode: "preview" }
   let current: ToolNode | undefined, entered = false
+  const attempted: string[] = []
   const execution = context ?? { steps: 0, loopItems: 0, frames: [] }
   try {
     const key = `${d.id}@${version}`
@@ -109,15 +110,19 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
       }
     }
     const budget = () => { execution.steps++; checkBudget() }
-    const resolve = (value: JsonValue): JsonValue => {
-      if (Array.isArray(value)) return value.map(resolve)
-      if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolve(v)]))
+    const resolve = (value: JsonValue, allowMissing = false): JsonValue => {
+      if (Array.isArray(value)) return value.map(item => resolve(item, allowMissing))
+      if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolve(v, allowMissing)]))
       if (typeof value !== "string" || !value.startsWith("$")) return value
       if (value.startsWith("$$")) return value.slice(1)
       const [root, ...parts] = value.slice(1).split(".")
+      if (!["input", "last", "steps"].includes(root) || parts.some(part => ["__proto__", "constructor", "prototype"].includes(part))) throw new Error(`Invalid reference ${value}.`)
       let result: unknown = root === "input" ? input : root === "last" ? last : root === "steps" ? outputs : undefined
       for (const part of parts) {
-        if (["__proto__", "constructor", "prototype"].includes(part) || result === null || typeof result !== "object" || !Object.hasOwn(result, part)) throw new Error(`Reference ${value} is unavailable on this branch.`)
+        if (result === null || typeof result !== "object" || !Object.hasOwn(result, part)) {
+          if (allowMissing) return null
+          throw new Error(`Reference ${value} is unavailable on this branch.`)
+        }
         result = (result as Record<string, unknown>)[part]
       }
       if (result === undefined) throw new Error(`Reference ${value} is unavailable.`)
@@ -125,6 +130,7 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
     }
     current = d.nodes.find(n => n.type === "input")
     while (current) {
+      attempted.push(current.id)
       budget()
       const c = current.config
       let output: JsonValue
@@ -153,7 +159,7 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
           break
         }
         case "condition": {
-          const left = resolve(c.left), right = c.right === undefined ? null : resolve(c.right)
+          const left = resolve(c.left, c.operator === "exists"), right = c.right === undefined ? null : resolve(c.right)
           if ((c.operator === "greater" || c.operator === "less") && (typeof left !== "number" || typeof right !== "number")) throw new Error("Ordered comparisons require numbers.")
           output = c.operator === "equals" ? JSON.stringify(left) === JSON.stringify(right) : c.operator === "greater" ? (left as number) > (right as number) : c.operator === "less" ? (left as number) < (right as number) : c.operator === "exists" ? left !== null : typeof left === "string" && typeof right === "string" ? left.includes(right) : Array.isArray(left) ? left.some(v => JSON.stringify(v) === JSON.stringify(right)) : false
           branch = output ? "true" : "false"
@@ -191,6 +197,8 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
   } finally {
     if (entered) execution.frames.pop()
   }
+  const attemptedSet = new Set(attempted)
+  run.steps = [...attempted.map(id => run.steps.find(step => step.nodeId === id)!), ...run.steps.filter(step => !attemptedSet.has(step.nodeId))]
   run.finishedAt = now()
   return run
 }
