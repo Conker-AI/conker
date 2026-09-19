@@ -33,6 +33,16 @@
   transform-origin: center;
 }
 
+.conversation-activity-compact .conversation-activity-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.conversation-activity-compact .conversation-activity-portrait {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .conversation-activity-dots {
   display: inline-block;
   width: 0.8em;
@@ -44,6 +54,14 @@
   left: 50%;
   z-index: 10;
   transform: translateX(-50%);
+}
+
+/* Keep a 44px pointer target around the quieter 32px visual control. */
+.conversation-latest button::after {
+  content: "";
+  position: absolute;
+  inset: -0.375rem;
+  border-radius: inherit;
 }
 
 @media (prefers-reduced-motion: no-preference) {
