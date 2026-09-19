@@ -35,3 +35,11 @@ Add a managed asset descriptor: stable ID, owner/scope, media kind, MIME type, o
 Later UX: authorized upload and processing status, playable audio/video with anchored transcript, page preview, memory revisions/conflicts, real typed relationships and relationship editing. Emotional/body-language annotations must remain uncertain observations with provenance and confidence, separately stored from the user's exact words.
 
 Production mutation prerequisites: connected authenticated API, permissions/step-up verification for protected changes, validation, audit trail, conflict handling, deletion/retention semantics and server-owned pagination. A frontend confirmation dialog is not authorization enforcement.
+
+## Verification
+
+- Production build and design-system guard passed; the existing large conversation chunk warning remains.
+- Affected-file ESLint, memory contract tests, navigation checks and daily-overview checks passed.
+- Inspected desktop dark/light screenshots and mobile graph, source tree and editor screenshots. Verified node selection (including keyboard), dragging, neighbor focus, depth expansion, source visibility, shared filters, empty search recovery, create/edit/delete preview records, evidence preservation and reset on reload.
+- No browser console errors observed. Hot reload emitted a React Flow node-types warning during development; node types are declared at module scope.
+- JSON export uses the existing download helper. The browser automation download event timed out, so receipt of the exported file is not independently verified.

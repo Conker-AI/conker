@@ -43,7 +43,7 @@ export function memoryGraph(memories: Memory[], includeSources = true) {
 
 export function filterMemories(memories: Memory[], query: string, category: string) {
   const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
-  return memories.filter(memory => (category === "all" || memory.category === category) && terms.every(term => [memory.id, memory.title, memory.text, memory.provenance, memory.category, ...(memory.tags || [])].join(" ").toLocaleLowerCase().includes(term)))
+  return memories.filter(memory => (category === "all" || memory.category === category) && terms.every(term => [memory.id, memory.title, memory.text, memory.provenance, memory.source, memory.category, ...(memory.tags || [])].join(" ").toLocaleLowerCase().includes(term)))
 }
 
 export function memoryNeighborhood(id: string, edges: MemoryEdge[], depth: number) {

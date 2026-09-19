@@ -323,3 +323,11 @@ Personality, soul, backstory, relationship and speaking style are user-authored 
 Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Keep the conversation menu's preview label and the Studio's authored-example label. Qwen voice design/cloning is not connected; reference playback is an uploaded recording, and existing browser read-aloud still uses a device voice. Show these limitations beside the relevant control. See [CHARACTER_STUDIO.md](CHARACTER_STUDIO.md) for data ownership, import formats and integration boundaries.
 
 This staging handoff records source behavior only. No new Character Studio screenshots, browser-console inspection or rendered interaction verification were available. The existing screenshot reference establishes the incumbent design only; it does not approve the new surface.
+
+## Memory explorer
+
+Memory is a collection with Graph, Database and Source tree sections owned by the shared appbar. All three use the same URL-backed text/category filters and ConkerClient records. The graph is a React Flow canvas with semantic theme colors, distinct memory/topic/source symbols, selectable/keyboard-focusable points, dragging, pan/zoom, fit/reset, an accessible point picker and one/two-hop focus. Topic membership uses dotted lines; source references use solid lines. Position never claims embedding similarity. Reduced motion disables optional transitions.
+
+Inspection uses DetailPanel/ReferenceSection. New/edit use TaskDialogContent and FormActions; delete uses ConfirmationDialog. JSON inspection, copy and filtered export expose actual snapshot records. The tree groups source origins and paths; it is not a physical filesystem. Database retains shared DataTable sorting, column controls and RecordItem mobile presentation.
+
+This version is fixture-only. Mutations go through ConkerClient, preserve original source/text for review, and reset on reload. New notes are unreviewed. No file upload, transcription, semantic search or production MemoryGate writes are implied. Research, existing backend capabilities and future media ownership are in docs/memory-workspace-research.md. Validate with check:memory, check:navigation, affected lint, build and desktop/narrow rendered interactions.

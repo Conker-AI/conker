@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
 import type { Memory } from "@/lib/api/models"
+import { memoryTitle } from "@/lib/memory-explorer"
 
 export const memoryColumns = (open: (memory: Memory) => void): ColumnDef<Memory>[] => [
   {
@@ -16,7 +17,8 @@ export const memoryColumns = (open: (memory: Memory) => void): ColumnDef<Memory>
         lang={row.original.language}
         className="min-w-64 max-w-md rounded-sm text-left text-sm leading-relaxed hover:underline focus-visible:outline-2 focus-visible:outline-ring"
       >
-        {row.original.text}
+        <span className="block font-medium">{memoryTitle(row.original)}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{row.original.text}</span>
       </button>
     ),
   },
@@ -45,6 +47,7 @@ export const memoryColumns = (open: (memory: Memory) => void): ColumnDef<Memory>
     accessorKey: "provenance",
     header: "Provenance",
     cell: ({ row }) => (
+      row.original.origin === "manual" ? <button type="button" onClick={() => open(row.original)} className="text-left text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">{row.original.provenance}</button> :
       <Link
         className="block min-w-52 max-w-xs text-xs leading-relaxed text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
         to={row.original.source}

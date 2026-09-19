@@ -1,0 +1,17 @@
+.memory-graph-shell { --xy-background-color: var(--card); --xy-attribution-background-color: var(--muted); --xy-node-boxshadow-selected-default: none; }
+.memory-graph-canvas { position: relative; height: clamp(340px, 54dvh, 660px); }
+.memory-graph-shell .react-flow__attribution { color: var(--muted-foreground); font-size: 10px; }
+.memory-graph-shell .react-flow__node { border-radius: var(--radius); }
+.memory-graph-shell .react-flow__node:focus-visible { outline: 2px solid var(--ring); outline-offset: 5px; }
+.memory-point { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--foreground); transition: opacity 180ms ease; }
+.memory-point .react-flow__handle { opacity: 0; pointer-events: none; }
+.memory-point-symbol { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--border); background: var(--background); border-radius: 50%; box-shadow: 0 3px 12px color-mix(in srgb, var(--foreground) 8%, transparent); }
+.memory-point-core { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); }
+.memory-point-topic .memory-point-symbol { width: 28px; height: 28px; background: var(--muted); color: var(--muted-foreground); }
+.memory-point-source .memory-point-symbol { width: 34px; height: 34px; border-radius: calc(var(--radius) / 2); background: var(--muted); color: var(--muted-foreground); }
+.memory-point-label { font-size: 14px; line-height: 1.5; text-align: center; background: var(--card); padding: 2px 8px; border-radius: calc(var(--radius) / 2); max-width: 180px; overflow-wrap: anywhere; }
+.memory-point-memory .memory-point-label { font-weight: 600; }
+.memory-point.is-emphasized .memory-point-symbol { border-color: var(--primary); }
+.memory-graph-shell .selected .memory-point-symbol { outline: 2px solid var(--primary); outline-offset: 4px; }
+.memory-point.is-dimmed { opacity: .4; }
+@media (prefers-reduced-motion: reduce) { .memory-point { transition: none; } }
