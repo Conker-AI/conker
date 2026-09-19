@@ -1,54 +1,122 @@
 # Conker dashboard
 
-Fixture-only Vite + React frontend on the existing shadcn New York shell.
+The active Vite + React + TypeScript frontend, built on the shadcn New York shell.
+This is an interactive preview using the existing `ConkerClient` fixture adapter.
+Backend containers are not required to explore it, and starting them does not
+connect the preview automatically.
+
+[Product overview and screenshots](../README.md) · [Design contract](DESIGN.md) ·
+[Current integration state](../docs/current-state.md) · [Contributing](../CONTRIBUTING.md)
+
+## Run locally
+
+Use Node.js 22.12+ or 24+ and npm. From this directory:
 
 ```sh
-npm install
+npm ci
 npm run dev -- --host localhost --port 5173 --strictPort
-npm run build
 ```
 
-In a restricted Windows environment where esbuild reports `Cannot read directory "../../..": Access is denied`, use `npm run dev:sandbox`. It keeps Vite's resolver and uses Node to read dependency files. This optional launcher serves the same source at **http://localhost:5173**, with HMR and an ignored cache. The standard launcher remains available. Both build and development use Vite's supported config runner to avoid bundling the config through esbuild.
+Open **http://localhost:5173**. The strict port prevents silently starting on 5174
+when another process already owns 5173.
 
-## Screens and fixtures
+For a restricted Windows environment where esbuild reports directory-access
+errors, `npm run dev:sandbox` provides an optional launcher on the same port,
+with HMR and an ignored cache. Standard development and builds use Vite's config
+runner. Do not change unrelated services or terminate an unknown port owner to
+start the frontend.
 
-| Route                  | Screen                                                         |
-| ---------------------- | -------------------------------------------------------------- |
-| `/`                    | Companion conversation; shares the weekly session              |
-| `/chat`, `/chat/:id`   | Sessions / Agents, five distinct conversation fixtures         |
-| `/inbox`, `/inbox/:id` | Requests, proposals, decisions, exact arguments and provenance |
-| `/tools`               | Scoped tool registry and sensitivity                           |
-| `/memory`              | Evidence, confidence, age, bilingual text search               |
-| `/journal`             | Activity with actor filter and source links                    |
-| `/jobs`                | Schedules, pause/resume, simulated run receipts                |
-| `/system`              | Stale host sample, service evidence, recovery snapshot         |
-| `/companion`           | Character form, static portrait import, live form preview      |
-| `/terminal`            | Honest offline shell and fixture project context               |
-| `/agents`              | Original exemplar retained                                     |
+## Screen map
 
-All list screens use `components/data-table.tsx`. Per-screen `data.ts`, `columns.tsx`, and `page.tsx` follow the Agents exemplar. Routes are lazy loaded; the loading indicator is separate from missing records and empty results.
+| Route | Screen |
+| --- | --- |
+| `/` | Home: attention, recent activity and workspace overview. |
+| `/companion` | The main companion conversation. |
+| `/chat` | Conversation collection with Sessions / Agents views. |
+| `/chat/new` | Start a topic conversation. |
+| `/chat/:id` | Conversation, message actions, composer, activity and detail rail. |
+| `/inbox`, `/inbox/:id` | Requests, proposals, decisions and source context. |
+| `/agents` | Agent collection and configuration. |
+| `/tools` | Capability registry and scope inspection. |
+| `/memory` | Sample evidence, provenance and search. |
+| `/journal` | Activity history and source links. |
+| `/jobs` | Local job configuration, controls and simulated receipts. |
+| `/system` | System overview. `?tab=terminal` and `?tab=files` select its other tabs. |
+| `/settings` | Preferences, connections (`?tab=connections`) and models (`?tab=models`). |
+| `/settings/companion` | Character Studio: identity, style, appearance, voice and modes. |
+| `/login`, `/setup` | Frontend authentication/setup previews. |
 
-Fixture time is **12 September 2026, 16:43, Asia/Jerusalem**. Relative times and approval deadlines refer to that snapshot. An approval is distinct from execution: Approve once records only a local decision; it never sends mail or deletes files. Proposals do not grant tool permission. The `sent` fixture has an existing delivery receipt; `expired` cannot be approved. The server conversation demonstrates a completed action without a model reply.
+The appbar carries page navigation and conversation-wide actions. The composer
+owns next-turn controls, message toolbars own message actions, and the right rail
+holds requested reference/detail views. The Companion brand opens `/companion`;
+Home is an entry screen, not the parent of every sidebar route.
 
-Zustand stores keep decisions, job controls, saved profiles, chat drafts, and added messages across navigation. Reload resets the fixture. The composer records user text and an explicit no-model receipt. No model or service requests are made. Portrait imports stay in memory and accept PNG/JPEG/WebP up to 2 MB; animated renderers remain labeled Planned. Terminal remains Offline by design.
+## Preview boundaries
 
-## Theme and layout
+`src/lib/api/index.ts` composes the fixture client with browser voice input.
+Keep feature data behind the `ConkerClient` contract when introducing real
+transport; do not scatter direct service calls through UI components.
 
-The header palette button opens the original tweakcn customizer. Theme import, presets, radius, sidebar variant, side, and collapse controls remain available. Customizer choices survive screen navigation; switching sidebar side also preserves the open panel. Green is the default, with semantic tokens throughout the new screens. Warning amber is a semantic `--warning` token in `index.css`. Typography falls back to the system sans stack without an external font request.
+- Conversation responses and activity are simulated and labeled as previews.
+  Model selection is catalogue/UI behavior; costs are not metered.
+- Most fixture edits survive navigation but reset on reload. Some appearance
+  preferences are persisted separately. Export character work you want to keep.
+- Inbox decisions never send messages, modify files or grant backend authority.
+- Terminal is offline. Files, host telemetry and execution receipts are samples.
+- Browser microphone, camera and speech features depend on permissions and browser
+  support. Speech recognition may process audio online; a local URL is not an
+  offline-audio guarantee.
+- Calls are not connected to a realtime AI/TTS service or durable call storage.
+  See [Call interface](CALL_INTERFACE.md) for the implemented UI and remaining work.
+- Character authoring and previews are documented in [Character Studio](CHARACTER_STUDIO.md).
+  Configuration is not proof that voice cloning, emotion inference or 3D rendering runs.
+
+See the [current-state audit](../docs/current-state.md) for service integration gaps.
+
+## Theme, layout and components
+
+Read [DESIGN.md](DESIGN.md) and the shared [design language](../docs/design-language.md)
+before changing the interface. Preserve semantic color pairs, shared primitives,
+theme fidelity, compact spacing and layouts appropriate to each screen. Strong
+visual priority does not require narrowing every page or giving every region a border.
+
+The shell supports theme and layout customization. Verify actual rendered states
+when changing geometry, contrast, portraits or responsive behavior; a successful
+TypeScript build does not establish visual correctness.
 
 ## Verification
 
-`npm run build` runs TypeScript and Vite. Existing Tasks and Recharts template type errors were repaired without removing the template's components. The ESLint React Hooks configuration now uses its flat-config export; new Conker screens pass scoped lint. Unused template screens have not been subjected to an unrelated lint rewrite.
-
-Browser smoke scripts use an existing `@playwright/test` installation with Chromium. They introduce no runtime dependency. Start the dev server, then run:
-
 ```sh
-node scripts/smoke.cjs
-node scripts/smoke-customizer.cjs
+npm run build
+npm run design:check:test
+npm run check:conversation
 ```
 
-If Playwright is installed elsewhere, set `CONKER_PLAYWRIGHT_MODULE` to that installation's `@playwright/test` directory. Screenshots and diagnostics go to ignored `test-results/`.
+`build` runs the design guard, TypeScript and the production Vite build. Use the
+feature checks relevant to a change:
 
-Coverage includes all 24 routes (including missing records), desktop/mobile sizing, keyboard row navigation, command search, approval/deny/proposal/history/empty states and badge counts, Russian search, actor deep links, job actions, character saving, composer behavior, theme selection, layout switching, light/dark mode, reset, planned renderers, portrait import, and browser errors/warnings.
+```sh
+npm run check:navigation
+npm run check:theme
+npm run check:daily-overview
+npm run check:character
+npm run check:jobs
+npm run check:voice
+npm run check:calls
+npm run lint
+```
 
-Home, Inbox and the reference screens are ready for refinement. The intentional limits are static character rendering, fixture-only jobs and conversations, stale fixture telemetry, and an offline terminal. Backend integration and avatar animation are future work.
+These commands are available checks, not a claim that every command passed in the
+latest documentation-only change. Report any existing lint failures separately
+from the files you touched. For visible changes, inspect desktop and narrow
+layouts, light/dark themes, keyboard interaction and browser console output.
+Keep temporary captures in ignored test output; curated documentation images live
+in [`../docs/images/`](../docs/images/).
+
+## Planned work
+
+- [Chat delivery plan](../docs/chat-delivery-plan.md): proposed bounded frontend milestone.
+- [Interaction catalogue](../docs/ai-chat-ui-inventory-2026-09-19.md): researched options, not a commitment to ship every pattern.
+- [Workspace proposal](../docs/workspace-control-plan.md): future flows, teams, memory exploration and owner controls.
+
+The template's license is retained in [third-party notices](THIRD_PARTY_LICENSES/shadcn-dashboard-template.txt).

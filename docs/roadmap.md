@@ -1,5 +1,9 @@
 # Roadmap
 
+This document preserves checkpoint ordering and historical plans. For the latest
+dated source audit and integration limits, read [current state](current-state.md).
+The proposed next frontend milestone is [chat delivery](chat-delivery-plan.md).
+
 **There are no product versions.** Conker ships as a sequence of checkpoints. Each is a working,
 usable increment that leaves Conker more *useful* than the last — not merely more built.
 

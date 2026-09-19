@@ -4,6 +4,10 @@ How Conker is shaped. **Why** each choice was made lives in [`adr/`](adr/); this
 the system that resulted. Vocabulary is defined in [`../CONTEXT.md`](../CONTEXT.md). Build order is
 in [`roadmap.md`](roadmap.md).
 
+**Reading this document:** this is the architectural design, including intended
+behavior. It is not a list of live capabilities. For the September 19, 2026 source
+audit, fixture boundaries and integration gaps, see [current state](current-state.md).
+
 ---
 
 ## 1. What Conker is
@@ -41,19 +45,23 @@ are not parts of Conker — they are among the things Conker will be asked to bu
 
 ## 2. Components
 
-Five services and one dashboard.
+Five independent service repositories, a separately isolated gateway packaged
+with Pi, and the Conker dashboard. The statuses below describe reviewed source,
+not deployed health.
 
 | Component | Owns | Status |
 |---|---|---|
-| **Pi** | Agent turns, sessions, jobs and cron, model routing, execution history. The only service the browser talks to. | Planned |
-| **MemoryGate** | Evidence → analysis → memory, with lineage. PostgreSQL as source of truth, vector index for semantic search. | Live, semantic retrieval degraded |
-| **ToolGate** | Every real-world action: tools, secrets, policy, execution, audit, approvals. | Live, MCP bridge defective |
-| **SystemGate** | Read-only machine truth: health, processes, ports, containers, packages, backups, logs. | Live |
-| **Embedding service** | Text → vectors. Sidecar, swappable model. | Planned |
-| **Dashboard** | The owner's surface. Nine screens. | Planned |
+| **Pi** | Agent turns, sessions, model routing and execution history. | Implemented source; composed memory configuration pending |
+| **Gateway** | HTTPS browser sessions and a separate owner approval credential. | Implemented source; dedicated ToolGate owner channel pending |
+| **MemoryGate** | Evidence → analysis → memory, with lineage. PostgreSQL as source of truth, vector index for semantic search. | Implemented source; retrieval depends on sidecar/model/index availability |
+| **ToolGate** | Tools, secrets, policy, execution, audit, approvals and bounded automation. | Implemented source; owner gateway contract pending |
+| **SystemGate** | Read-only machine truth: health, processes, ports, containers, packages, backups, logs. | Implemented source; deployment health not verified here |
+| **Embedding service** | Text → vectors. Sidecar, swappable model. | Implemented source; model availability required |
+| **Dashboard** | The owner's conversations, approvals, memory and control workspace. | Interactive frontend using fixtures; service transport pending |
 
-Status uses the eight-state vocabulary from `principles.md` §1. Nothing is `live` because it was
-designed. Verified detail: [`research/gate-surfaces.md`](research/gate-surfaces.md).
+Runtime status uses the eight-state vocabulary from `principles.md` §1. Nothing is
+`live` because it was designed. Earlier findings in
+[`research/gate-surfaces.md`](research/gate-surfaces.md) are dated research.
 
 ```
                     Owner's devices — thin
@@ -61,7 +69,11 @@ designed. Verified detail: [`research/gate-surfaces.md`](research/gate-surfaces.
                         ┌─────┴─────┐
                         │ Dashboard │
                         └─────┬─────┘
-                              │  every request, nothing else
+                              │  HTTPS; integration pending
+                    ┌─────────┴─────────┐
+                    │   Owner gateway   │── owner approvals → ToolGate
+                    └─────────┬─────────┘   (dedicated channel pending)
+                              │  worker requests
                     ┌─────────┴─────────┐
                     │   Pi — runtime    │
                     └─────────┬─────────┘
@@ -87,13 +99,17 @@ live with.
 
 ### The browser never touches a gate
 
-The dashboard talks only to Pi. This is what keeps `principles.md` §3's forbidden list — provider
-keys, admin keys, raw tool arguments, command lines, host paths, container sockets — off the client
-structurally rather than by discipline.
+The intended connected dashboard talks to the HTTPS gateway. The gateway sends
+worker requests to Pi and owner decisions through a separate ToolGate owner
+channel. Neither the worker nor the browser receives the owner's ToolGate
+credential. The current frontend uses fixtures. This separation keeps provider
+and service admin credentials and container sockets off the browser; the UI
+must not be trusted to enforce authorization.
 
-The "terminal" surface in the concept notes is a **view** of what SystemGate observed and ToolGate
-executed. A real interactive shell in an untrusted client would be a backdoor around the action
-boundary and is not built.
+The current Terminal tab is an offline frontend surface. Earlier concepts treated
+it as an observation view. A future owner-operated interactive terminal is proposed
+in the [workspace plan](workspace-control-plan.md); it requires an explicit
+authenticated execution boundary and does not turn SystemGate into a shell.
 
 ---
 

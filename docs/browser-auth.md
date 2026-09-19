@@ -1,8 +1,10 @@
 # Browser authentication (B4)
 
-Backend and deployment changes are on `feat/browser-auth`. **Release activation
-is gated:** the pinned Pi 0.3.0 image predates the gateway, and ToolGate's owner
-channel is still a separate dependency. The installer refuses a stale Pi image.
+This guide describes the B4 browser-authentication boundary. **September 19, 2026
+status:** `versions.env` now pins Pi 0.4.0, and the reviewed Pi source includes the
+gateway package. ToolGate's dedicated owner channel remains an integration
+dependency. This source review did not verify published images or a deployed
+approval round trip. See [current state](current-state.md).
 
 The browser connects to a separate HTTPS gateway. The Pi execution worker has
 neither the owner's ToolGate approval credential nor access to the gateway volume.
@@ -17,9 +19,10 @@ password protects browser access to conversations and owner decisions; only a
 salted password verifier is stored on this machine. Someone controlling the host
 can reset it. A reset cannot recover missing data, vault keys or forgotten content.
 
-No screens are part of B4. Backend requests and an executable mutation drill
-provide the review surface. ToolGate's separate owner endpoint is being handled
-in its repository by another instance; there will be no admin-key fallback.
+B4's backend review surface is backend requests and an executable mutation drill.
+The dashboard now has separate fixture screens; they are not connected to this
+gateway. ToolGate's separate owner endpoint belongs in its repository; there
+will be no admin-key fallback.
 
 ## Password and recovery, for the owner
 
@@ -65,9 +68,9 @@ remote HTTPS setup and a browser trust wizard are outside this backend patch.
 
 ## Rollout and review
 
-1. Review and publish the Pi branch as a versioned image; update `PI_VERSION` in
-   `versions.env` to that published version. The existing 0.3.0 pin is deliberately
-   unchanged; inventing an unpublished release tag would conceal a broken install.
+1. Verify that the Pi image pinned in `versions.env` includes the reviewed gateway
+   and worker entry points. The current pin is 0.4.0; a source checkout and a pin
+   alone do not prove the published artifact or deployment works.
 2. Re-run `./install.sh`. It preserves the runtime credential and writes its hash
    for Pi, starts the separate gateway, and reports password setup as degraded
    until the host setup command is completed. No admin key is placed in the browser.
@@ -82,7 +85,7 @@ remote HTTPS setup and a browser trust wizard are outside this backend patch.
 
 For a source review before publishing, build `../gates/pi` with a distinct local
 image tag and use a temporary Compose override for **both** gateway and Pi. Do not
-retag the old published 0.3.0 image or present this as testing the pinned release.
+retag a published image or present a local build as testing the pinned release.
 Deployment tests run the real `docker compose config` CLI without starting services.
 `python scripts/auth_mutation_drill.py` tests missing auth capture, revived sessions,
 owner credentials or auth storage leaking into Pi, and publishing the worker port.

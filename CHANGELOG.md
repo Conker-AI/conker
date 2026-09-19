@@ -6,10 +6,20 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Product dashboard preview:** the active `dashboard/` app now includes Home,
+  Companion and Chats, Inbox, character and call interfaces, Memory, Journal,
+  Agents, Tools, Jobs, System and Settings. Data remains behind the fixture
+  `ConkerClient`; backend integration is not implied by these screens.
+- **Conversation activity:** retained response activity, elapsed duration and
+  inspectable steps, with scroll-aware working/jump-to-latest feedback.
+- **Repository documentation:** product overview, local screenshots, current
+  route/setup guide, module map, contribution guide and source-audited integration
+  limits. Added a proposal for cross-repository planning without coupling modules.
+
 - **Design system foundation:** React/TypeScript/Vite package with Tailwind v4 OKLCH
   semantic pairs, registry-sourced Radix primitives, shared eight-state status with evidence
-  validation and aging, theme controls, fixtures and browser/mutation tests. No product
-  screens or backend calls. Cross-platform dependency-lock validation remains open.
+  validation and aging, theme controls, fixtures and browser/mutation tests. This
+  earlier package is separate from the active product dashboard above.
 
 - **Backup and held recovery (B1/B2):** replace live SQLite file copying and false-success
   backups with coordinated snapshots, required-store checks, vault-key verification, file hashes,
@@ -22,7 +32,8 @@ which module versions a release pins.
 - Add offline behavioral tests and a separate Linux/Docker recovery drill. Gate code and B7/B8
   are unchanged. See `docs/recovery.md` for the validation boundary and recovery procedure.
 
-The installer. One command takes a clean machine to a running Conker.
+Installer implementation (deployment readiness still requires the checks in
+[`docs/current-state.md`](docs/current-state.md)):
 
 - **`./install.sh`** — checks the machine, asks three questions in plain
   language, generates every secret, writes `.env` at `0600`, pulls pinned
@@ -37,8 +48,9 @@ The installer. One command takes a clean machine to a running Conker.
 - **Every image pinned**, ours by version tag and third-party by digest. Never
   `latest` — a moving tag is a supply chain attack that needs no attacker.
 - **Every port binds to `127.0.0.1`**, asserted in a test. There is no
-  public-internet path at all; `conker tailscale` builds a private network
-  between the owner's own devices instead of opening a door.
+  direct public inbound bind; outbound downloads, providers and tools are separate.
+  `conker tailscale` supports private connectivity, while remote gateway access
+  still needs the HTTPS setup described in `docs/browser-auth.md`.
 - **One Ollama, shared** by Pi and Embeddings. The gates' own compose files each
   ran their own, which stores every model twice for no benefit.
 

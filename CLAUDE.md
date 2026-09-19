@@ -5,11 +5,11 @@
 **Conker** — a self-hosted personal AI companion and control plane. `Conker` is both the
 product and the default name of the Companion itself; both are owner-changeable.
 
-**The foundation is three built, running services** — MemoryGate, ToolGate and SystemGate, all
-under `alexeybe1kin`. They are inherited as working assets but **not frozen**: where a real
-architectural problem is found, fixing or replacing a component is in scope. They are **private
-until the blocking security fixes land** — see the C1 tickets — and go public after that. A fourth,
-**Pi**, is being built in-house to run agent turns, sessions, jobs and model routing.
+**The foundation is independently maintained services** — Pi, MemoryGate,
+ToolGate, SystemGate and Embeddings, under `alexeybe1kin`. They have source
+implementations but **are not frozen**: where a real architectural problem is
+found, fixing or replacing a component is in scope. Verify deployment health and
+security readiness separately; this document does not authorize visibility changes.
 
 The **clean-slate rule applies to `agentgate`** — an abandoned earlier prototype under a
 different brand. Nothing from it is inherited or authoritative; it is reference only.
@@ -18,15 +18,15 @@ different brand. Nothing from it is inherited or authoritative; it is reference 
 fork it, run it, understand it, and be glad they did — clean, modular, documented, organised.
 No slop. This outranks speed.
 
-## Status: charted, ready to build
+## Implementation status
 
-**Charting is complete.** Eighteen decision tickets were resolved; the architecture is settled and
-the roadmap is written. The way is clear, and implementation of **C1** may begin — see
-[`docs/roadmap.md`](docs/roadmap.md) for what it contains and in what order.
-
-C1 starts with a hard prerequisite: **the gate repositories must publish versioned images to GHCR
-from CI.** They ship source only today, so `docker-compose` has nothing to pin and nothing is
-installable. That is the first line of work, before any Conker code.
+The original charting and C1 prerequisite notes are historical. Conker now includes
+deployment tooling, image pins, a separate design-system foundation and the active
+`dashboard/` frontend. The dashboard uses fixtures; source implementations in the
+service repositories do not prove end-to-end integration. Read
+[`docs/current-state.md`](docs/current-state.md) before choosing work, and verify
+the relevant code and tests. [`docs/roadmap.md`](docs/roadmap.md) preserves checkpoint
+order; it is not a live completion ledger.
 
 **Order of work: architecture and plan → roadmap → build.**
 
