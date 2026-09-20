@@ -73,10 +73,11 @@ export default function MemoryPage() {
   const setFilter = (name: string, value: string) => {
     setFocusRequest("")
     const next = new URLSearchParams(location.search)
+    if (location.hash) next.set("data", "sample")
     if (!value || value === "all") next.delete(name); else next.set(name, value)
     navigate({ pathname: "/memory", search: next.toString() }, { replace: true })
   }
-  const clear = () => { const next = new URLSearchParams(location.search); next.delete("q"); next.delete("category"); navigate({ pathname: "/memory", search: next.toString() }, { replace: true }) }
+  const clear = () => { const next = new URLSearchParams(location.search); if (location.hash) next.set("data", "sample"); next.delete("q"); next.delete("category"); navigate({ pathname: "/memory", search: next.toString() }, { replace: true }) }
   const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); toast.success("Record copied") } catch { toast.error("Could not copy. Select the record text to copy it manually.") } }
   return <BaseLayout variant="canvas">
     <div ref={workspaceRef} className={`memory-workspace${expanded ? " memory-workspace-expanded" : ""}`}>

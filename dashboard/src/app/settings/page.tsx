@@ -1,5 +1,5 @@
 import { ModelsProviders } from "./models-providers"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,10 @@ import { useSidebarConfig } from "@/hooks/use-sidebar-config"
 import { useSidebar } from "@/components/ui/sidebar"
 import { ConnectionsFields } from "@/components/connections-form"
 import { useConker, useConkerStore } from "@/lib/api/store"
+import type { Connections } from "@/lib/api/config"
+
+// Keep unfinished configuration in memory across routes; never persist keys to storage.
+let retainedConnections: Connections | null = null
 
 function ResetLayoutButton() {
   const { updateConfig } = useSidebarConfig()
@@ -30,11 +34,18 @@ export default function SettingsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const currentConnections = useConker(data => data.connections)
   const owner = useConker(data => data.auth.ownerName)
-  const [connections, setConnections] = useState(currentConnections)
+  const [connections, setConnections] = useState(() => retainedConnections || structuredClone(currentConnections))
   const modelsConfiguration = useConker(data => data.modelsConfiguration)
   const { saveConnections, saveModelsConfiguration, pending } = useConkerStore()
   const [saved, setSaved] = useState(false)
   const connectionsDirty = JSON.stringify(connections) !== JSON.stringify(currentConnections)
+
+  useEffect(() => { retainedConnections = connectionsDirty ? connections : null }, [connections, connectionsDirty])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (connectionsDirty) event.preventDefault() }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [connectionsDirty])
 
   return <BaseLayout title="Settings" description="Appearance, layout, and your dashboard connections.">
       <RouteSection value="appearance">
@@ -72,8 +83,8 @@ export default function SettingsPage() {
               event.preventDefault()
               setSaved(await saveConnections(connections))
             }}>
-              <ConnectionsFields value={connections} onChange={value => { setConnections(value); setSaved(false) }} />
-              <FormActions description={<span role="status">{saved ? "Saved for this preview. Connection not tested." : connectionsDirty ? "Unsaved changes" : "Connection draft is up to date"}</span>}>
+              <fieldset disabled={pending} className="min-w-0"><legend className="sr-only">Service connections</legend><ConnectionsFields value={connections} onChange={value => { setConnections(value); setSaved(false) }} /></fieldset>
+              <FormActions description={<span role="status">{saved ? "Saved for this preview. Connection not tested." : connectionsDirty ? "Unsaved changes · draft kept when navigating away" : "Connection draft is up to date"}</span>}>
                 <Button type="button" variant="outline" disabled={pending || !connectionsDirty} onClick={() => { setConnections(currentConnections); setSaved(false) }}>Discard changes</Button>
                 <Button disabled={pending || !connectionsDirty}>{pending ? "Saving…" : "Save connection draft"}</Button>
               </FormActions>

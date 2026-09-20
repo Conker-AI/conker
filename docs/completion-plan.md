@@ -15,7 +15,7 @@ The owner corrected the execution order. This section supersedes the broader lau
 5. Commit each verified batch and publish a frontend acceptance report distinguishing working fixture behavior from deferred runtime capabilities.
 6. Only after reporting the frontend milestone, proceed to missing backend capabilities, then wire and deploy as separately scoped work.
 
-The goal tool's existing objective cannot be edited through its exposed status-only update API. This checked-in scope is the authoritative correction; the broader ledger below is retained as history and later-phase backlog.
+The owner cleared the old goal and a new frontend-only goal is active. This checked-in scope matches that goal; the broader ledger below is retained as history and later-phase backlog.
 
 ## Outcome
 
