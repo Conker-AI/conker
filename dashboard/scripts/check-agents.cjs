@@ -85,6 +85,9 @@ async function main() {
   const runId = projectActivity({ ...taskData, tools: await client.toolWorkspace.list(), journalProvenance: 'sample' }).runs.find(run => run.source.runId === toolRun.id).id
   const linkedTask = await client.tasks.update(task.id, { outcome: task.outcome, criteria: task.criteria.map(item => item.text), sessionId: taskSession.id, agentId: taskAgent.id, runIds: [runId] }, task.revision)
   assert.deepEqual(linkedTask.runIds, [runId], 'Fixture adapter resolves current tool attempts before linking them')
+  await assert.rejects(client.toolWorkspace.remove('morning-brief'), /task history/)
+  for (let index = 0; index < 31; index++) await client.toolWorkspace.run('morning-brief', { busyAt: 2 })
+  assert.ok((await client.toolWorkspace.get('morning-brief')).runs.some(run => run.id === toolRun.id), 'Routine test retention preserves task-linked evidence')
   await client.tasks.cancel(task.id, 'Owner cancelled tracking', linkedTask.revision)
   await client.archiveAgent(taskAgent.id, true)
   await assert.rejects(client.deleteAgent(taskAgent.id), /Archive/)

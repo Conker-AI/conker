@@ -1,4 +1,5 @@
 import { History, Pencil } from "lucide-react"
+import { useEffect, useRef } from "react"
 import type { Job } from "@/lib/api/models"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -6,7 +7,12 @@ import { OverlayBody } from "@/components/design-system"
 import { ReferenceSection } from "@/components/reference-section"
 import { JobActions, type JobControls } from "./row-actions"
 
-export function JobDetails({ job, agentName, controls }: { job: Job; agentName: string; controls: JobControls }) {
+export function JobDetails({ job, agentName, controls, selectedRunId }: { job: Job; agentName: string; controls: JobControls; selectedRunId?: string }) {
+  const selectedRun = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => { selectedRun.current?.scrollIntoView({ block: "nearest" }); selectedRun.current?.focus({ preventScroll: true }) })
+    return () => cancelAnimationFrame(frame)
+  }, [job.id, selectedRunId])
   return <>
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-5 py-3">
       <Button size="sm" variant="outline" onClick={() => controls.edit(job)} disabled={controls.pending}><Pencil />Edit job</Button>
@@ -22,7 +28,8 @@ export function JobDetails({ job, agentName, controls }: { job: Job; agentName: 
       </ReferenceSection>
       <ReferenceSection title="Instructions"><p className="whitespace-pre-wrap break-words">{job.instructions}</p></ReferenceSection>
       <ReferenceSection title={`Run history · ${job.history.length}`} icon={<History />}>
-        {job.history.length ? <ol className="divide-y">{job.history.map(run => <li key={run.id} className="space-y-2 py-3 first:pt-0">
+        {selectedRunId && !job.history.some(run => run.id === selectedRunId) && <p role="status" className="text-sm text-muted-foreground">The linked run is no longer available. Other history is shown below.</p>}
+        {job.history.length ? <ol className="divide-y">{job.history.map(run => <li key={run.id} ref={run.id === selectedRunId ? selectedRun : undefined} tabIndex={-1} className="space-y-2 py-3 first:pt-0 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
           <div className="flex flex-wrap items-center justify-between gap-2"><span className={run.status === "Failed" ? "text-sm text-destructive" : "text-sm font-medium"}>{run.source === "preview" ? "Preview complete" : run.status}</span><Badge variant="outline" className="font-normal">{run.source === "preview" ? "Simulated" : "Sample receipt"}</Badge></div>
           <time dateTime={run.startedAt} className="block text-xs text-muted-foreground">{new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: job.timeZone }).format(new Date(run.startedAt))} · {job.timeZone}</time>
           <p className="text-sm leading-6 text-muted-foreground">{run.summary}</p>

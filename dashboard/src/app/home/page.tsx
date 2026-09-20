@@ -50,7 +50,7 @@ export default function HomePage() {
                 : <div className="flex items-start gap-3 py-5"><CheckCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" /><p className="text-sm leading-6 text-muted-foreground">You’re all caught up. Decisions from your agents will appear here.</p></div>}
           </OverviewSection>
 
-          <OverviewSection title="Recent activity" action={<Button size="sm" variant="ghost" asChild><Link to="/journal">Journal<ArrowUpRight aria-hidden="true" /></Link></Button>}>
+          <OverviewSection title="Recent activity" action={<Button size="sm" variant="ghost" asChild><Link to="/activity?tab=events">Activity<ArrowUpRight aria-hidden="true" /></Link></Button>}>
               <ul className="divide-y divide-border">{recentActivity.map(entry => {
                 const [date, ...time] = activityTime(entry.time, data.dailyBriefing.date, preview).split(" · ")
                 return <CollectionRow key={entry.id} to={entry.source} title={entry.event}

@@ -88,6 +88,8 @@ export type ActivityEventRecord = {
   receipt?: ActivityOutput
 }
 export type ActivityProjectionInput = {
+  /** Bundled recorded examples are samples, not live source evidence. */
+  fixture?: boolean
   sessions: Pick<Session, "id" | "title">[]
   conversations: Record<string, ConversationState>
   jobs: Job[]

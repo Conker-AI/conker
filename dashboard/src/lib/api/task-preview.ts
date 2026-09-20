@@ -110,6 +110,7 @@ export function createTaskPreviewClient(options: {
         const parent = state.tasks.find(item => item.id === task.parentTaskId)
         if (!parent || parent.archivedAt || terminal(parent)) throw new Error("Reopen the parent task first.")
       }
+      if (!terminal({ ...task, status }) && (!state.agents.some(agent => agent.id === task.agentId && !agent.archivedAt) || !state.sessions.some(session => session.id === task.sessionId && !session.archived))) throw new Error("Restore the linked conversation and assigned agent before resuming this task.")
       const from = task.status
       task.status = status
       task.statusNote = checked.data.note

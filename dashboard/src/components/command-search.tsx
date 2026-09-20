@@ -135,7 +135,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
     // Reference
     { title: "Memory", url: appNavigation.memory.path, group: "Reference", icon: BookOpen },
-    { title: "Journal", url: appNavigation.journal.path, group: "Reference", icon: History },
+    { title: "Activity", url: appNavigation.activity.path, group: "Control", icon: History },
+    { title: "Runs", url: pageSectionHref("activity", "", "runs"), group: "Activity", icon: History },
+    { title: "Events / Journal", url: pageSectionHref("activity", "", "events"), group: "Activity", icon: History },
 
     // Control
     { title: "Agents", url: appNavigation.agents.path, group: "Control", icon: Bot },

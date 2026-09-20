@@ -61,6 +61,12 @@ async function main() {
   await assert.rejects(client.transition(task.id, 'planned', { note: 'More work' }, current.revision), /Restore/)
   const historyLength = current.changes.length
   current = await client.archive(task.id, false, current.revision)
+  state().agents[0].archivedAt = at
+  await assert.rejects(client.transition(task.id, 'planned', { note: 'Resume archived agent' }, current.revision), /Restore the linked/)
+  delete state().agents[0].archivedAt
+  state().sessions[0].archived = true
+  await assert.rejects(client.transition(task.id, 'planned', { note: 'Resume archived session' }, current.revision), /Restore the linked/)
+  state().sessions[0].archived = false
   current = await client.transition(task.id, 'planned', { note: 'Review a revised report' }, current.revision)
   assert.equal(current.completedCriterionIds.length, 0)
   assert.ok(current.changes.length > historyLength)
@@ -110,6 +116,8 @@ async function main() {
   assert.equal(historical.occurredAt, null)
   assert.equal(historical.displayTime, 'Today · 16:43')
   const nested = projected.runs.find(run => run.source.runId === 'nested')
+  assert.equal(projected.runs.find(run => run.source.kind === 'conversation').source.href, '/chat/session#answer')
+  assert.equal(projected.runs.find(run => run.source.kind === 'job').source.href, '/jobs?job=job&run=same')
   assert.equal(projected.runs.find(run => run.id === nested.parentRunId).source.runId, 'same')
   assert.equal(projected.runs.find(run => run.source.kind === 'job').endedAt, null, 'A start timestamp is not a completion timestamp')
   const unknownTime = projectActivity({ ...sources, jobs: [{ ...sources.jobs[0], history: [{ ...sources.jobs[0].history[0], startedAt: '2026-09-20T10:00:00' }] }] })
@@ -119,6 +127,9 @@ async function main() {
   linked.outputs[0].value.report = 'Mutation'
   assert.equal(toolRun.output.report, 'preview')
   assert.deepEqual(projectActivity(sources), projectActivity(sources), 'Stable IDs and deterministic projection')
+  const recordedSource = structuredClone(sources)
+  for (const conversation of Object.values(recordedSource.conversations)) for (const message of conversation.messages) if (message.activity) message.activity.provenance = 'recorded'
+  assert.ok(projectActivity({ ...recordedSource, fixture: true }).runs.filter(run => run.source.kind === 'conversation').every(run => run.provenance === 'sample'), 'Recorded bundled examples remain labelled samples')
   assert.ok(projected.events.filter(event => event.kind === 'task_change').every(event => event.actor === 'Owner' && event.provenance === 'preview'))
   for (const href of ['javascript:alert(1)', '//other.test/path', '/\\other.test', '/path\u0000name', 'https://user:pass@example.com']) assert.equal(safeActivityHref(href), undefined)
   assert.equal(safeActivityHref('/chat/session'), '/chat/session')

@@ -203,7 +203,7 @@ export function executeToolPreview(d: ToolDefinition, suppliedInput: Record<stri
   return run
 }
 /** In-memory fixture transport. No credentials, browser persistence, live effects, or arbitrary code. */
-export function createToolWorkspacePreview(initialTools?: Tool[]): ToolWorkspaceClient {
+export function createToolWorkspacePreview(initialTools?: Tool[], options?: { retainRun: (run: ToolRun) => boolean }): ToolWorkspaceClient {
   const records = new Map(createToolWorkspaceFixtures(initialTools).map(r => [r.id, r]))
   const listeners = new Set<() => void>()
   const emit = () => listeners.forEach(listener => listener())
@@ -227,7 +227,7 @@ export function createToolWorkspacePreview(initialTools?: Tool[]): ToolWorkspace
     async create(name, kind = "workflow") { if (!name.trim()) throw new Error("Give the tool a name."); const d = parseToolDraft(JSON.stringify(createToolDefinition(`tool-${crypto.randomUUID().slice(0, 8)}`, name.trim(), kind))); const r = record(d); records.set(r.id, r); emit(); return clone(r) },
     async save(definition) { const d = parseToolDraft(JSON.stringify(definition)); const r = get(d.id); r.draft = clone(d); emit(); return clone(r) },
     async publish(id) { const r = get(id); const errors = validateToolDefinition(r.draft); if (errors.length) throw new Error(errors.map(e => e.message).join(" ")); validateDependencies(r.draft); const published = { version: r.published.length + 1, publishedAt: now(), definition: clone(r.draft) }; r.published.push(published); emit(); return clone(published) },
-    async run(id, input, version) { const r = get(id); const d = version === undefined ? r.draft : resolvePublished(id, version); if (!d) throw new Error("Published version does not exist."); const run = executeToolPreview(clone(d), input, version ?? "draft", resolvePublished); r.runs.unshift(run); r.runs.splice(30); emit(); return clone(run) },
+    async run(id, input, version) { const r = get(id); const d = version === undefined ? r.draft : resolvePublished(id, version); if (!d) throw new Error("Published version does not exist."); const run = executeToolPreview(clone(d), input, version ?? "draft", resolvePublished); r.runs.unshift(run); r.runs = r.runs.filter((receipt, index) => index < 30 || options?.retainRun(receipt)); emit(); return clone(run) },
     async remove(id) { get(id); if ([...records.values()].some(r => r.id !== id && [...r.published.map(p => p.definition), r.draft].some(d => d.nodes.some(n => n.type === "workflow_call" && n.config.toolId === id)))) throw new Error("This tool is referenced by another draft or published version. Remove draft references first; published dependencies must be retained."); records.delete(id); emit() },
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener) } },
   }

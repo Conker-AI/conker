@@ -11,7 +11,8 @@ const ChatDetailPage = lazy(() => import("@/app/chat/detail-page"))
 const InboxPage = lazy(() => import("@/app/inbox/page"))
 const ApprovalDetailPage = lazy(() => import("@/app/inbox/detail-page"))
 const MemoryPage = lazy(() => import("@/app/memory/page"))
-const JournalPage = lazy(() => import("@/app/journal/page"))
+const ActivityPage = lazy(() => import("@/app/activity/page"))
+const JournalRedirect = lazy(() => import("@/app/journal/redirect"))
 const AgentsPage = lazy(() => import("@/app/agents/page"))
 const EditAgentPage = lazy(() => import("@/app/agents/edit-page"))
 const ToolsPage = lazy(() => import("@/app/tools/page"))
@@ -37,7 +38,8 @@ export const routes: RouteConfig[] = [
   { path: appNavigation.inbox.path, element: <InboxPage /> },
   { path: appNavigation.request.path, element: <ApprovalDetailPage /> },
   { path: appNavigation.memory.path, element: <MemoryPage /> },
-  { path: appNavigation.journal.path, element: <JournalPage /> },
+  { path: appNavigation.journal.path, element: <JournalRedirect /> },
+  { path: appNavigation.activity.path, element: <ActivityPage /> },
   { path: appNavigation.agents.path, element: <AgentsPage /> },
   { path: "/agents/:id/edit", element: <EditAgentPage /> },
   { path: appNavigation.tools.path, element: <ToolsPage /> },

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Briefcase, Plus } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { CollectionEmpty, CollectionSearch, TaskDialogContent, DetailPanel, ConfirmationDialog } from "@/components/design-system"
@@ -22,7 +23,23 @@ export default function JobsPage() {
   const { mutate, pending, error } = useConkerStore()
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState("all")
-  const [panel, setPanel] = useState<Panel | null>(null)
+  const [params, setParams] = useSearchParams()
+  const [editor, setEditor] = useState<Panel | null>(null)
+  const requestedJob = params.get("job")
+  const linkedJob = jobs.find(job => job.id === requestedJob)
+  const panel: Panel | null = editor ?? (linkedJob ? { mode: "view", id: linkedJob.id } : null)
+  const setPanel = (next: Panel | null) => {
+    const search = new URLSearchParams(params)
+    if (next?.mode === "view" && next.id) {
+      if (search.get("job") !== next.id) search.delete("run")
+      search.set("job", next.id)
+      setEditor(null)
+    } else {
+      setEditor(next)
+      if (!next || next.mode === "create") { search.delete("job"); search.delete("run") }
+    }
+    setParams(search, { replace: true })
+  }
   const [feedback, setFeedback] = useState("")
   const [runningId, setRunningId] = useState("")
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -95,6 +112,7 @@ export default function JobsPage() {
     actions={<Button ref={newButton} onClick={() => openPanel({ mode: "create" })} disabled={pending}><Plus />New job</Button>}>
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline" className="font-normal">Preview</Badge><span>Changes reset on reload. Runs are simulated.</span></div>
+      {requestedJob && !linkedJob && <div role="status" className="flex flex-wrap items-center gap-3 rounded-md border p-3 text-sm"><p>This linked job is unavailable in the current preview.</p><Button size="sm" variant="outline" onClick={() => setPanel(null)}>Clear selection</Button></div>}
       <CollectionSearch label="Search jobs" placeholder="Search jobs, instructions, or agents…" value={query} onChange={event => setQuery(event.target.value)} />
       {!filtered.length ? <><div className="flex flex-wrap items-center gap-2">{filters}</div><CollectionEmpty icon={<Briefcase />} title={jobs.length ? "No jobs match" : "No jobs yet"} description={jobs.length ? "Try a different search or clear your filters." : "Create a job and choose what your agent should do and when."} onClear={jobs.length ? clearFilters : undefined} />{!jobs.length && <Button className="self-center" onClick={() => openPanel({ mode: "create" })}><Plus />Create your first job</Button>}</>
         : <JobsTable controls={controls} agentName={agentName} data={filtered} toolbarAction={filters} />}
@@ -102,7 +120,7 @@ export default function JobsPage() {
     </div>
     <DetailPanel open={panel?.mode === "view"} onOpenChange={open => { if (!open) setPanel(null) }} busy={pending}
       title={selected?.name ?? "Job details"} description="Configuration and run history · frontend preview" onCloseAutoFocus={restoreFocus}>
-      {selected && <JobDetails job={selected} agentName={agentName(selected.agentId)} controls={controls} />}
+      {selected && <JobDetails job={selected} agentName={agentName(selected.agentId)} controls={controls} selectedRunId={params.get("run") ?? undefined} />}
     </DetailPanel>
     <Dialog open={panel?.mode === "create" || panel?.mode === "edit"} onOpenChange={open => { if (!open && !pending) closeForm() }}>
       <TaskDialogContent size="wide" title={panel?.mode === "edit" ? "Edit job" : "New job"} description="Choose the task, agent, and schedule." showCloseButton={!pending}

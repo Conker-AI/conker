@@ -49,12 +49,12 @@ const data = {
       label: "Reference",
       items: [
         { title: "Memory", url: appNavigation.memory.path, icon: BookOpen },
-        { title: "Journal", url: appNavigation.journal.path, icon: History },
       ],
     },
     {
       label: "Control",
       items: [
+        { title: "Activity", url: appNavigation.activity.path, icon: History },
         { title: "Agents", url: appNavigation.agents.path, icon: Bot },
         { title: "Tools", url: appNavigation.tools.path, icon: Wrench },
         { title: "Jobs", url: appNavigation.jobs.path, icon: Briefcase },

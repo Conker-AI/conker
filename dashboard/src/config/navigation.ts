@@ -14,6 +14,7 @@ export const appNavigation = {
   request: { path: "/inbox/:id", title: "Request", parent: "inbox" },
   memory: { path: "/memory", title: "Memory" },
   journal: { path: "/journal", title: "Journal" },
+  activity: { path: "/activity", title: "Activity" },
   agents: { path: "/agents", title: "Agents" },
   editAgent: { path: "/agents/:id/edit", title: "Edit agent", parent: "agents" },
   tools: { path: "/tools", title: "Tools" },
@@ -30,6 +31,7 @@ export type AppRoute = keyof typeof appNavigation
 export type PageSection = { value: string; label: string; count?: "pending" }
 
 export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
+  activity: [{ value: "tasks", label: "Tasks" }, { value: "runs", label: "Runs" }, { value: "events", label: "Events" }],
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
   system: [{ value: "overview", label: "Overview" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],

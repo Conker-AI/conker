@@ -27,7 +27,7 @@ import { createCharacterStudio } from "./character-defaults"
 import { createCallFixture } from "./call-fixture"
 import { agentReferences, normalizeAgentInput } from "./agent-config"
 import { createTaskPreviewClient } from "./task-preview"
-import { projectActivity } from "./activity-projection"
+import { projectActivity, toolActivityRunIds } from "./activity-projection"
 import type { ActivityRunRecord } from "./task-types"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
@@ -78,14 +78,17 @@ export function createFixtureClient(): ConkerClient {
   state.conversations[state.companionSessionId].presentationMode = state.profile.studio?.modes.default || "character"
   const streaming = new Set<string>()
   const runningJobs = new Set<string>()
-  const toolWorkspace = createToolWorkspacePreview(tools)
+  const toolWorkspace = createToolWorkspacePreview(tools, { retainRun: run => {
+    const ids = new Set(toolActivityRunIds(run))
+    return state.tasks.some(task => task.runIds.some(id => ids.has(id)))
+  } })
   let taskRunSources: ActivityRunRecord[] = []
   const taskClient = createTaskPreviewClient({
     getSnapshot: () => ({ tasks: state.tasks, agents: state.agents, sessions: state.sessions, runs: taskRunSources }),
     setTasks: tasks => { state.tasks = tasks },
   })
   const refreshTaskRuns = async () => {
-    taskRunSources = projectActivity({ ...state, tools: await toolWorkspace.list(), journalProvenance: "sample" }).runs
+    taskRunSources = projectActivity({ ...state, tools: await toolWorkspace.list(), journalProvenance: "sample", fixture: true }).runs
   }
   const findJob = (id: string) => {
     const job = state.jobs.find(item => item.id === id)
@@ -133,7 +136,20 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
-    toolWorkspace,
+    toolWorkspace: {
+      ...toolWorkspace,
+      async remove(id) {
+        await refreshTaskRuns()
+        const runIds = new Set(taskRunSources.filter(run => run.source.kind === "tool" && run.source.toolId === id).map(run => run.id))
+        let previousSize = -1
+        while (previousSize !== runIds.size) {
+          previousSize = runIds.size
+          taskRunSources.filter(run => run.parentRunId && runIds.has(run.parentRunId)).forEach(run => runIds.add(run.id))
+        }
+        if (state.tasks.some(task => task.runIds.some(runId => runIds.has(runId)))) throw new Error("This tool has runs linked to task history. Keep it to preserve their evidence.")
+        return toolWorkspace.remove(id)
+      },
+    },
     tasks: {
       ...taskClient,
       async create(input) { await refreshTaskRuns(); return taskClient.create(input) },
@@ -296,6 +312,8 @@ export function createFixtureClient(): ConkerClient {
       findConversation(id)
       idle(id)
       if (state.tasks.some(task => task.sessionId === id)) throw new Error("This conversation is linked to task history. Archive it to preserve those references.")
+      const conversationRuns = projectActivity({ ...state, tools: [], journalProvenance: "sample" }).runs.filter(run => run.source.kind === "conversation" && run.source.sessionId === id)
+      if (state.tasks.some(task => task.runIds.some(runId => conversationRuns.some(run => run.id === runId)))) throw new Error("This conversation contains runs linked to task history. Archive it to preserve their evidence.")
       delete state.messages[id]
       delete state.threads[id]
       state.replyRequests = state.replyRequests.filter(item => item !== id)
@@ -562,6 +580,8 @@ export function createFixtureClient(): ConkerClient {
     },
     async deleteJob(id) {
       findJob(id)
+      const jobRuns = projectActivity({ ...state, tools: [], journalProvenance: "sample" }).runs.filter(run => run.source.kind === "job" && run.source.jobId === id)
+      if (state.tasks.some(task => task.runIds.some(runId => jobRuns.some(run => run.id === runId)))) throw new Error("This job has runs linked to task history. Pause it to preserve their evidence.")
       state.jobs = state.jobs.filter(job => job.id !== id)
     },
     async saveConnections(value) {

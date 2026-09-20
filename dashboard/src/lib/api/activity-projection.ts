@@ -3,6 +3,11 @@ import { activityReceiptHref } from "../conversation-activity"
 import type { ActivityEventRecord, ActivityOutput, ActivityProjectionInput, ActivityRunRecord, ActivityRunSource } from "./task-types"
 
 const key = (...parts: string[]) => parts.map(encodeURIComponent).join(":")
+/** Includes descendants so retaining a linked nested attempt also retains its root receipt. */
+export function toolActivityRunIds(run: ToolRun, parentRunId?: string): string[] {
+  const id = parentRunId ? key(parentRunId, "tool", run.toolId, run.id) : key("tool", run.toolId, run.id)
+  return [id, ...run.steps.flatMap(step => step.child ? toolActivityRunIds(step.child, id) : [])]
+}
 const absoluteTime = (value?: string): string | null => value && /^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(value) && Number.isFinite(Date.parse(value)) ? value : null
 /** Source links never acquire authority or become executable URLs. */
 export function safeActivityHref(value?: string): string | undefined {
@@ -26,8 +31,9 @@ export function projectActivity(input: ActivityProjectionInput): { runs: Activit
       const id = key("conversation", session.id, run.id)
       if (seenRuns.has(id)) continue
       seenRuns.add(id)
-      const source: ActivityRunSource = { kind: "conversation", sessionId: session.id, messageId: message.id, runId: run.id, href: `/chat/${encodeURIComponent(session.id)}` }
+      const source: ActivityRunSource = { kind: "conversation", sessionId: session.id, messageId: message.id, runId: run.id, href: `/chat/${encodeURIComponent(session.id)}#${encodeURIComponent(message.id)}` }
       const outputs: ActivityOutput[] = []
+      const provenance = input.fixture && run.provenance === "recorded" ? "sample" : run.provenance
       // Phase, plan, commentary and summary are presentation, not action evidence.
       const publicSteps = run.steps.filter(step => ["tool", "receipt", "handoff"].includes(step.kind))
       const stepIds = new Set(publicSteps.map(step => step.id))
@@ -37,19 +43,19 @@ export function projectActivity(input: ActivityProjectionInput): { runs: Activit
         addEvent({
           id: key(id, step.id), kind: step.kind as "tool" | "receipt" | "handoff", label: step.label,
           detail: step.detail ?? step.failure?.message ?? "", actor: step.agentName,
-          provenance: run.provenance, source, runId: id, status: step.status,
+          provenance, source, runId: id, status: step.status,
           occurredAt: absoluteTime(step.endedAt ?? step.startedAt), receipt,
           ...(step.parentId && stepIds.has(step.parentId) ? { parentEventId: key(id, step.parentId) } : {}),
         })
       }
-      runs.push({ id, label: run.label || session.title, status: run.status === "complete" ? "completed" : run.status, provenance: run.provenance, source, startedAt: absoluteTime(run.startedAt), endedAt: absoluteTime(run.endedAt), outputs })
+      runs.push({ id, label: run.label || session.title, status: run.status === "complete" ? "completed" : run.status, provenance, source, startedAt: absoluteTime(run.startedAt), endedAt: absoluteTime(run.endedAt), outputs })
     }
   }
   for (const job of input.jobs) for (const run of job.history) {
     const id = key("job", job.id, run.id)
     if (seenRuns.has(id)) continue
     seenRuns.add(id)
-    const source: ActivityRunSource = { kind: "job", jobId: job.id, runId: run.id, href: "/jobs" }
+    const source: ActivityRunSource = { kind: "job", jobId: job.id, runId: run.id, href: `/jobs?job=${encodeURIComponent(job.id)}&run=${encodeURIComponent(run.id)}` }
     runs.push({ id, label: job.name, status: run.status === "Completed" ? "completed" : "failed", provenance: run.source, source, startedAt: absoluteTime(run.startedAt), endedAt: null, outputs: [] })
     addEvent({ id: key(id, "receipt"), kind: "receipt", label: `${job.name}: ${run.status}`, detail: run.summary, provenance: run.source, source, runId: id, occurredAt: null, status: run.status })
   }

@@ -95,7 +95,11 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 | 2026-09-20 | Master plan | 9b051274 | Ordered packages, engineering defaults and launch acceptance recorded. |
 | 2026-09-20 | Backend integration audit | 6d920906 | Source-verified transport gaps and memory-policy contradiction; no deployment claim. |
 | 2026-09-20 | Tools readability and value selection | 6164f6f8 | Branch-safe searchable sources; readable selected step; desktop light/dark and mobile inspected; focused tests/build/lint. |
-| 2026-09-20 | Agent lifecycle preview | this increment | Create/edit, route-retained drafts, archive/restore, reference-protected deletion; model/tool/memory configuration; archived-agent selectors and call/job guards. Desktop light/dark, mobile editor and validation inspected. Agent/call/job/chat-continuity/navigation checks and build passed. |
+| 2026-09-20 | Agent lifecycle preview | 5725c75d | Create/edit, route-retained drafts, archive/restore, reference-protected deletion; model/tool/memory configuration; archived-agent selectors and call/job guards. Desktop light/dark, mobile editor and validation inspected. Agent/call/job/chat-continuity/navigation checks and build passed. |
+| 2026-09-20 | Route feedback isolation | 50a6e654 | Errors from one screen no longer follow navigation to an unrelated screen. |
+| 2026-09-20 | Task and Activity domain | b460f99d | Revision-safe task lifecycle, owner-reviewed completion, shared Activity projection and source references; focused tests. |
+| 2026-09-20 | Context policy foundation | e9f8dc98 | Separate instruction scopes, exact pins, explicit include/exclude/summary/retrieve policy, estimates and conflicts; no fabricated summarization. |
+| 2026-09-20 | Activity workspace | this increment | Create/edit/review task dialogs, route-retained drafts, searchable references, Tasks/Runs/Events, Journal redirect, precise job/message source links. Task/agent/tool/navigation/job tests, lint and build passed. Browser: creation through completion, invalid-completion guard, desktop light/dark, 390px mobile, preserved Journal actor filter and focused job receipt. |
 
 ## Questions and external dependencies
 
@@ -107,4 +111,4 @@ Required before deployment: exact server target, approved deployment path, worki
 
 ## Current next action
 
-Integrate the tested P2 task/activity domain into an Activity workspace and preserve Journal links. P3 specialist CRUD is now functional in preview; server persistence and live instruction/tool enforcement remain integration work. P1 Tools increment is verified; other shared surfaces remain on the ledger. Context-policy domain work proceeds independently. Agent drafts survive routes but all fixture state still resets on reload.
+P2 Activity is functional in preview with protected task evidence and precise source links. Finish P6 context UI/recovery verification, then integrate P4 Teams/Templates and P7 helper-model configuration. P3 specialist CRUD and P1 Tools readability are verified preview increments. Server persistence, real task execution and helper-model dispatch remain integration work; fixture changes still reset on reload.

@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Archive, ChevronDown, ChevronRight, GitFork, Info, Newspaper, Pencil, Phone, Pin, Settings, SquarePen, Trash2 } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, ClipboardList, GitFork, Info, Newspaper, Pencil, Phone, Pin, Settings, SquarePen, Trash2 } from "lucide-react"
 import { ConversationAgent } from "@/components/conversation-agent"
 import { ConversationIncognito } from "@/components/conversation-incognito"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -39,6 +39,8 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
   const main = session.id === data.companionSessionId
   const restoreFocus = (event: Event) => { event.preventDefault(); menuTrigger.current?.focus() }
   if (!conversation) return null
+  const agentId = session.agentId || conversation.initialAgentId
+  const agent = data.agents.find(item => item.id === agentId)
 
   return <>
     <nav aria-label={main ? "Companion path" : "Conversation path"} data-home="conversation" className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -63,9 +65,10 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
           {!main && <><DropdownMenuItem disabled={busy} onSelect={() => void update({ pinned: !session.pinned })}><Pin />{session.pinned ? "Unpin conversation" : "Pin conversation"}</DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void update({ archived: !session.archived })}><Archive />{session.archived ? "Restore conversation" : "Archive conversation"}</DropdownMenuItem></>}
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "overview") }}><Info />Conversation info</DropdownMenuItem>
+          <DropdownMenuItem disabled={session.archived || !!agent?.archivedAt} onSelect={() => navigate(`/activity?new=1&session=${encodeURIComponent(session.id)}&agent=${encodeURIComponent(agentId)}`)}><ClipboardList />Track a task</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "forks") }}><GitFork />Sessions & forks</DropdownMenuItem>
           {main && <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "daily") }}><Newspaper />Daily context</DropdownMenuItem>}
-          <DropdownMenuItem asChild><Link to="/settings/companion"><Settings />Edit companion</Link></DropdownMenuItem>
+          <DropdownMenuItem asChild><Link to={agent?.kind === "agent" ? `/agents/${encodeURIComponent(agentId)}/edit` : "/settings/companion"}><Settings />{agent?.kind === "agent" ? "Edit agent" : "Edit companion"}</Link></DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled={busy} variant="destructive" onSelect={() => setDialog("delete")}><Trash2 />{main ? "Clear conversation" : "Delete conversation"}</DropdownMenuItem>
         </DropdownMenuContent>
