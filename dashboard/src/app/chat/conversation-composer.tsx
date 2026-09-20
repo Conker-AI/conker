@@ -67,7 +67,10 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const models = getAvailableModels(data.modelsConfiguration)
   const modelId = nextModel || conversation?.modelId || data.modelsConfiguration.defaultModelId
   const model = models.find(item => item.id === modelId)
-  const provider = data.modelsConfiguration.providers.find(item => item.id === model?.providerId)
+  const selectedModel = data.modelsConfiguration.models.find(item => item.id === modelId)
+  const modelUnavailable = !!modelId && !model
+  const modelLabel = modelUnavailable ? `${selectedModel?.name || "Selected model"} · Unavailable` : model?.name || "Choose model"
+  const provider = data.modelsConfiguration.providers.find(item => item.id === selectedModel?.providerId)
   const reply = conversation?.messages.find(message => message.id === replyId)
   const overLimit = draft.length > MESSAGE_LIMIT
   const queueing = !!stream || !!queue?.entries.length
@@ -127,7 +130,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
           <DropdownMenuItem disabled><Paperclip />Attach<span className="ml-auto text-xs">Not connected</span></DropdownMenuItem>
           <DropdownMenuSeparator /><p className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">Voice typing uses your browser’s speech service, which may process audio online. Conker does not save the recording.</p>
         </DropdownMenuContent></DropdownMenu>
-        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${model?.name || "No model"}, ${provider?.name || "No provider"}`} disabled={session.archived}><span className="min-w-0 truncate">{model?.name || "Choose model"}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
+        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${modelLabel}, ${provider?.name || "No provider"}`} disabled={session.archived}><span className="min-w-0 truncate">{modelLabel}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
           <DropdownMenuLabel>Model for your next message</DropdownMenuLabel><DropdownMenuItem onSelect={() => setNextModel(session.id, "")}>Conversation default{!nextModel && <Check className="ml-auto" />}</DropdownMenuItem><DropdownMenuSeparator />
           {data.modelsConfiguration.providers.filter(item => item.enabled).map(item => <div key={item.id}><DropdownMenuLabel className="text-xs text-muted-foreground">{item.name}</DropdownMenuLabel>{models.filter(value => value.providerId === item.id).map(value => <DropdownMenuItem key={value.id} onSelect={() => setNextModel(session.id, value.id)}>{value.name}{modelId === value.id && <Check className="ml-auto" />}</DropdownMenuItem>)}</div>)}
           <DropdownMenuSeparator /><DropdownMenuItem asChild><Link to="/settings?tab=models">Manage models / providers</Link></DropdownMenuItem>
@@ -144,6 +147,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
       {voice.active ? <p className="min-w-0 truncate" title="Your browser’s speech service may process audio online. Conker does not save recordings.">Browser transcription · Review before sending</p> : <button type="button" className="min-h-8 min-w-0 truncate rounded-md text-left underline decoration-border underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" aria-label="View conversation usage and cost" onClick={() => openRail(session.id, "usage")} title="Conversation usage and cost">{provider?.name || "No provider"} · Cost not metered · Preview</button>}
       {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : `${queueing ? "Enter to queue" : "Enter to send"} · Shift + Enter for a new line`}</span>}
     </div>
+    {modelUnavailable && <p role="status" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">The selected model or provider is disabled or unavailable. Choose a model above or enable it in Settings.</p>}
     {voice.error && <div role="alert" className="mt-2 flex items-start gap-2 px-1"><p className="flex-1 text-xs leading-5 text-muted-foreground">{voice.error}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Dismiss voice typing notice" onClick={voice.clearError}><X /></Button></div>}
     {notice && <p role="status" className={noticeInRecovery ? "sr-only" : "mt-1 px-1 text-xs leading-5 text-muted-foreground"}>{notice}</p>}
     {callError && !call && <p role="alert" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{callError}</p>}

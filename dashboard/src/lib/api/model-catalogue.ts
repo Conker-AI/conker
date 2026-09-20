@@ -1,3 +1,5 @@
+import { modelRolesErrors, type ModelRolesConfiguration } from "./model-roles"
+
 /** Editable preview configuration. No provider is contacted by the fixture client. */
 export type ModelProvider = {
   id: "openrouter" | "anthropic" | "openai"
@@ -19,6 +21,7 @@ export type ModelsConfiguration = {
   providers: ModelProvider[]
   models: CatalogueModel[]
   defaultModelId: string | null
+  roleSettings?: ModelRolesConfiguration
 }
 
 /** A new, isolated draft for every client; names and routes are sample configuration. */
@@ -71,5 +74,6 @@ export function validateModelsConfiguration(configuration: ModelsConfiguration):
   const available = getAvailableModels(configuration)
   if (configuration.defaultModelId !== null && !getDefaultModel(configuration)) return "Choose an enabled model as the default route."
   if (available.length && configuration.defaultModelId === null) return "Choose a default route from the enabled models."
+  if (configuration.roleSettings) return modelRolesErrors(configuration.roleSettings, configuration)[0] || null
   return null
 }

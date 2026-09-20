@@ -101,7 +101,9 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 | 2026-09-20 | Context policy foundation | e9f8dc98 | Separate instruction scopes, exact pins, explicit include/exclude/summary/retrieve policy, estimates and conflicts; no fabricated summarization. |
 | 2026-09-20 | Activity workspace | 3581e803 | Create/edit/review task dialogs, route-retained drafts, searchable references, Tasks/Runs/Events, Journal redirect, precise job/message source links. Task/agent/tool/navigation/job tests, lint and build passed. Browser: creation through completion, invalid-completion guard, desktop light/dark, 390px mobile, preserved Journal actor filter and focused job receipt. |
 
-| 2026-09-20 | Conversation context controls | this increment | Session instructions, exact pins, per-message inclusion policies, budget conflicts and original response snapshots. Browser checked invalid reserve, exclusion preserving transcript, desktop/light and narrow/dark editor, nested Escape, overflow recovery without duplicate message or lost unsent draft. Context and 15 workspace checks pass. Retrieval/summarization/provider-token counts remain explicitly unwired. |
+| 2026-09-20 | Conversation context controls | a489ee7d | Session instructions, exact pins, per-message inclusion policies, budget conflicts and original response snapshots. Browser checked invalid reserve, exclusion preserving transcript, desktop/light and narrow/dark editor, nested Escape, overflow recovery without duplicate message or lost unsent draft. Context and 15 workspace checks pass. Retrieval/summarization/provider-token counts remain explicitly unwired. |
+
+| 2026-09-20 | Replaceable model role configuration | this increment | Four independent roles, owner eligibility, explicit fallback/timeout rules, manual locks and privacy-aware planning. Disabled explicit conversation models and original retry models are preserved. Browser verified invalid role validation, saved routing configuration, desktop light/dark and narrow layout; model-role tests, lint/type/build passed. Actual helper dispatch remains unwired. |
 
 ## Questions and external dependencies
 

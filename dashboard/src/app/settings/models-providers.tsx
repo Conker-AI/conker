@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { CollectionEmpty, FormActions } from "@/components/design-system"
+import { ModelRolesEditor } from "./model-roles-editor"
 import {
   getAvailableModels,
   validateModelsConfiguration,
@@ -21,13 +22,22 @@ type ModelsProvidersProps = {
   onSave: (configuration: ModelsConfiguration) => Promise<boolean>
 }
 
+// Retain an unfinished in-memory form across Settings navigation, like other editors.
+let retainedDraft: ModelsConfiguration | null = null
+
 export function ModelsProviders({ configuration, pending, onSave }: ModelsProvidersProps) {
-  const [draft, setDraft] = useState<ModelsConfiguration>(() => structuredClone(configuration))
+  const [draft, setDraft] = useState<ModelsConfiguration>(() => retainedDraft || structuredClone(configuration))
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const availableModels = getAvailableModels(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(configuration)
+  useEffect(() => { retainedDraft = dirty ? draft : null }, [dirty, draft])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
 
   function updateDraft(next: ModelsConfiguration) {
     const available = getAvailableModels(next)
@@ -141,8 +151,9 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
             </div>
           </section>
         </div>
+        <ModelRolesEditor configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
         {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
-        <FormActions description={<span role="status">{saved ? "Saved for this preview. Chat model picks now use this catalogue." : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
+        <FormActions description={<span role="status">{saved ? "Saved for this preview. Catalogue available to chat; helper roles remain unwired." : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
           <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => {
             setDraft(structuredClone(configuration))
             setError(null)

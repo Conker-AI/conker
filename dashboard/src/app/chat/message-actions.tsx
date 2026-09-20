@@ -46,7 +46,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const navigate = useNavigate()
   const busy = pending || !!streaming || !!session.archived
   const assistant = message.role === "assistant"
-  const retryModelId = models.find(model => model.id === message.modelId)?.id || conversationModelId || configuration.defaultModelId
+  const retryModelId = message.modelId || conversationModelId || configuration.defaultModelId
   const canRetry = models.some(model => model.id === retryModelId)
   const editNeedsFork = hasDownstreamMessages(messages, message.id)
   useEffect(() => () => { clearTimeout(copyTimer.current) }, [])

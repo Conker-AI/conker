@@ -551,10 +551,8 @@ export function createFixtureClient(): ConkerClient {
       const error = validateModelsConfiguration(value)
       if (error) throw new Error(error)
       state.modelsConfiguration = structuredClone(value)
-      const available = new Set(getAvailableModels(state.modelsConfiguration).map(model => model.id))
-      for (const conversation of Object.values(state.conversations)) {
-        if (conversation.modelId && !available.has(conversation.modelId)) conversation.modelId = null
-      }
+      // Preserve explicit conversation choices. A disabled route must block until
+      // the owner selects another model, never silently inherit the workspace default.
       return structuredClone(state.modelsConfiguration)
     },
     async requestReply(id) {
