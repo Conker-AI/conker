@@ -6,6 +6,7 @@ import type { ConversationRun } from "@/lib/api/conversation-types"
 import { captureQueuedTurn, validateQueuedTurn, MAX_QUEUED_TURNS, type QueuedTurn, type TurnQueue } from "@/lib/conversation-continuity"
 import { mergeActivityRun } from "@/lib/conversation-activity"
 import { useArtifactWorkspace } from "@/lib/artifact-workspace"
+import { pruneLocalAttachments } from "@/lib/conversation-attachments"
 
 export type RailView = "overview" | "forks" | "source" | "explain" | "usage" | "privacy" | "daily" | "activity"
 type Rail = { open: boolean; view: RailView; messageId?: string; sourceId?: string; runId?: string; stepId?: string }
@@ -64,7 +65,8 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     const data = store.data
     if (!data) return false
     const draft = entry?.text ?? store.drafts[id] ?? ""
-    if (!retryMessageId && !savedRequestId && !draft.trim()) return false
+    const attachments = entry ? entry.attachments || [] : store.attachmentDrafts[id] || []
+    if (!retryMessageId && !savedRequestId && !draft.trim() && !attachments.length) return false
     const modelId = entry?.modelId || retryModelId || get().nextModels[id] || data.conversations[id]?.modelId || data.modelsConfiguration.defaultModelId
     if (!modelId || !getAvailableModels(data.modelsConfiguration).some(model => model.id === modelId)) {
       get().notify(id, "Choose an enabled model in Tools, or configure a default in Settings.")
@@ -85,7 +87,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
       if (!retryMessageId && !savedRequestId && !entry?.sentMessageId) {
         const replyTo = entry ? entry.replyTo : data.conversations[id]?.messages.find(message => message.id === get().replies[id] && !message.redacted)?.id
         let savedMessageId: string | undefined
-        const saved = await store.mutate(async () => { savedMessageId = (await conkerClient.sendMessage(id, draft, { replyTo })).id })
+        const saved = await store.mutate(async () => { savedMessageId = (await conkerClient.sendMessage(id, draft, { replyTo, attachments })).id })
         if (!saved) {
           get().notify(id, useConkerStore.getState().error || "Your message could not be saved. Your draft is retained.")
           return false
@@ -95,6 +97,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
           requestId = savedMessageId
           set(state => ({ unanswered: { ...state.unanswered, [id]: undefined } }))
           if (useConkerStore.getState().drafts[id] === draft) store.setDraft(id, "")
+          store.setAttachments(id, (useConkerStore.getState().attachmentDrafts[id] || []).filter(item => !attachments.some(sent => sent.id === item.id)))
           get().setReply(id)
         }
       }
@@ -165,6 +168,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     selectVersion: (id, familyId, messageId) => set(state => ({ selectedVersions: { ...state.selectedVersions, [id]: { ...state.selectedVersions[id], [familyId]: messageId } } })),
     notify: (id, message) => set(state => ({ notices: { ...state.notices, [id]: message } })),
     reset: id => {
+      useConkerStore.getState().setAttachments(id, [])
       controllers.get(id)?.abort()
       set(state => {
         const rails = { ...state.rails }, nextModels = { ...state.nextModels }, replies = { ...state.replies }, notices = { ...state.notices }, activities = { ...state.activities }, queues = { ...state.queues }, selectedVersions = { ...state.selectedVersions }, previews = { ...state.previews }, unanswered = { ...state.unanswered }
@@ -201,16 +205,17 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
         if ((get().queues[id]?.entries.length || 0) >= MAX_QUEUED_TURNS) throw new Error(`The queue holds up to ${MAX_QUEUED_TURNS} messages. Your draft is retained.`)
         const modelId = get().nextModels[id] || data.conversations[id]?.modelId || data.modelsConfiguration.defaultModelId || ""
         const draft = useConkerStore.getState().drafts[id] || ""
-        const entry = { ...captureQueuedTurn(data, id, draft, modelId, get().replies[id]), previewScenario: get().previews[id] }
+        const entry = { ...captureQueuedTurn(data, id, draft, modelId, get().replies[id], useConkerStore.getState().attachmentDrafts[id]), previewScenario: get().previews[id] }
         queueUpdate(id, queue => ({ ...queue, entries: [...queue.entries, entry] }))
         useConkerStore.getState().setDraft(id, "")
+        useConkerStore.getState().setAttachments(id, [])
         get().setReply(id); get().setNextModel(id, ""); get().setPreview(id, ""); get().notify(id, "Message queued. It will use the model and privacy settings captured now.")
         if (!get().streams[id]) void drain(id)
       } catch (error) { get().notify(id, error instanceof Error ? error.message : "Could not queue the message.") }
     },
     editQueued: (id, entryId, text) => {
       const entry = get().queues[id]?.entries.find(item => item.id === entryId)
-      if (!entry || entry.sentMessageId || get().activeQueued[id] === entryId || !text.trim() || text.length > 4000) return false
+      if (!entry || entry.sentMessageId || get().activeQueued[id] === entryId || (!text.trim() && !entry.attachments?.length) || text.length > 4000) return false
       queueUpdate(id, queue => ({ ...queue, entries: queue.entries.map(item => item.id === entryId ? { ...item, text: text.trim() } : item) }))
       return true
     },
@@ -221,7 +226,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
       try {
         const modelId = get().nextModels[id] || data.conversations[id]?.modelId || data.modelsConfiguration.defaultModelId || ""
         const replyTo = data.conversations[id]?.messages.some(item => item.id === entry.replyTo && !item.redacted) ? entry.replyTo : undefined
-        const replacement = { ...captureQueuedTurn(data, id, entry.text, modelId, replyTo), id: entry.id, previewScenario: entry.previewScenario }
+        const replacement = { ...captureQueuedTurn(data, id, entry.text, modelId, replyTo, entry.attachments), id: entry.id, previewScenario: entry.previewScenario }
         queueUpdate(id, queue => ({ ...queue, entries: queue.entries.map(item => item.id === entryId ? replacement : item) }))
         return true
       } catch (error) { get().notify(id, error instanceof Error ? error.message : "Could not update the queued message."); return false }
@@ -239,6 +244,24 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     },
   }
 })
+
+// Only prune after client mutation + snapshot refresh has settled. A fork or queue
+// may share an attachment with its original message and must keep its preview.
+function pruneAttachmentPreviews() {
+  const state = useConkerStore.getState()
+  if (state.pending) return
+  const ids = new Set<string>()
+  for (const files of Object.values(state.attachmentDrafts)) for (const file of files) ids.add(file.id)
+  for (const conversation of Object.values(state.data?.conversations || {})) for (const message of conversation.messages) {
+    if (!message.redacted) for (const file of message.attachments || []) ids.add(file.id)
+  }
+  for (const queue of Object.values(useConversationWorkspace.getState().queues)) for (const entry of queue?.entries || []) {
+    if (!entry.sentMessageId) for (const file of entry.attachments || []) ids.add(file.id)
+  }
+  pruneLocalAttachments(ids)
+}
+useConkerStore.subscribe(pruneAttachmentPreviews)
+useConversationWorkspace.subscribe(pruneAttachmentPreviews)
 
 // Once authority changes, restoring it later never silently restarts a queue.
 useConkerStore.subscribe((state, previous) => {

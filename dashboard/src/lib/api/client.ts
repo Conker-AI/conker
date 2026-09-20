@@ -20,7 +20,7 @@ export type Character = {
   mood: string
   emotions: Record<Emotion, "default" | Face | "portrait">
 }
-export type LocalMessage = { id: string; text: string; createdAt: string }
+export type LocalMessage = { id: string; text: string; createdAt: string; attachments?: import("../conversation-attachments").ConversationAttachment[] }
 export type Thread = {
   messages: { id: string; text: string; time: string; language?: string }[]
   reply: string
@@ -101,7 +101,7 @@ export interface ConkerClient {
   previewCharacter(profile: Character, mode: import("./character").CharacterMode): Promise<ReturnType<typeof import("./character").previewCharacter>>
   createConversation(agentId: string): Promise<Session>
   handoffConversation(sessionId: string, agentId: string): Promise<Session>
-  sendMessage(sessionId: string, text: string, options?: { replyTo?: string }): Promise<LocalMessage>
+  sendMessage(sessionId: string, text: string, options?: { replyTo?: string; attachments?: import("../conversation-attachments").ConversationAttachment[] }): Promise<LocalMessage>
   updateConversation(sessionId: string, update: ConversationUpdate): Promise<Session>
   deleteConversation(sessionId: string): Promise<void>
   updateMessage(sessionId: string, messageId: string, update: MessageUpdate): Promise<ConversationMessage>

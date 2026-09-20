@@ -37,6 +37,7 @@ export type ConversationRun = {
 export type ConversationCitation = { id: string; label: string; href?: string; excerpt?: string }
 
 export type ConversationMessage = {
+  attachments?: import("../conversation-attachments").ConversationAttachment[]
   id: string
   role: "user" | "assistant"
   agentId?: string

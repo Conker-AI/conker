@@ -1,4 +1,6 @@
-import { useEffect, useRef, type RefObject } from "react"
+import { useEffect, useRef, useState, type RefObject } from "react"
+import { ConversationAttachments } from "@/components/conversation-attachments"
+import { prepareAttachments, discardLocalAttachment } from "@/lib/conversation-attachments"
 import { Link, useLocation } from "react-router-dom"
 import { ArrowUp, Check, ChevronDown, Keyboard, ListPlus, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
 import { ConversationQueue } from "@/components/conversation-queue"
@@ -42,6 +44,10 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const data = useConker(value => value)
   const draft = useConkerStore(state => state.drafts[session.id] || "")
   const setDraft = useConkerStore(state => state.setDraft)
+  const attachments = useConkerStore(state => state.attachmentDrafts[session.id])
+  const setAttachments = useConkerStore(state => state.setAttachments)
+  const attachmentInput = useRef<HTMLInputElement>(null)
+  const [attachmentError, setAttachmentError] = useState("")
   const pending = useConkerStore(state => state.pending)
   const { send, stop, setNextModel, setReply, openRail, pauseQueue, resumeQueue, removeQueued, editQueued, reviewQueued, setPreview } = useConversationWorkspace()
   const queue = useConversationWorkspace(state => state.queues[session.id])
@@ -107,6 +113,15 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
     <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border border-input bg-card text-card-foreground p-2 shadow-sm focus-within:border-ring", voice.active && "border-ring")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
       {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
       <div hidden={voice.active}>
+        <input ref={attachmentInput} type="file" multiple hidden aria-label="Choose local attachments" onChange={event => {
+          const files = Array.from(event.target.files || [])
+          event.target.value = ""
+          if (!files.length) return
+          try { setAttachments(session.id, prepareAttachments(files, useConkerStore.getState().attachmentDrafts[session.id] || [])); setAttachmentError("") }
+          catch (error) { setAttachmentError(error instanceof Error ? error.message : "Could not attach these files. No files were added.") }
+        }} />
+        <ConversationAttachments draft attachments={attachments} onRemove={!pending && !session.archived ? id => { setAttachments(session.id, (attachments || []).filter(file => file.id !== id)); discardLocalAttachment(id); setAttachmentError("") } : undefined} />
+        {attachmentError && <p role="alert" className="px-2 py-1 text-xs text-destructive">{attachmentError} Your existing attachments are unchanged.</p>}
         <Label htmlFor="message-composer" className="sr-only">Message {name}</Label>
         <Textarea ref={inputRef} id="message-composer" dir="auto" rows={1} placeholder={companionWorkspace ? `Ask ${name} anything, or use your voice…` : `Message ${name}, or use your voice…`} value={draft} maxLength={overLimit ? undefined : MESSAGE_LIMIT} disabled={session.archived} aria-invalid={overLimit || undefined} aria-describedby={overLimit ? "composer-limit" : undefined} onChange={event => setDraft(session.id, event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendDraft() } }} className="max-h-40 min-h-16 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-2 py-2 text-base leading-7 shadow-none focus-visible:ring-0 dark:bg-transparent" />
       </div>
@@ -127,7 +142,8 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
       </div> : <div className="flex min-w-0 items-center gap-1">
         <DropdownMenu><Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" disabled={session.archived} aria-label="Composer tools" className={iconControl}><SlidersHorizontal /></Button></DropdownMenuTrigger></TooltipTrigger><TooltipContent>Tools</TooltipContent></Tooltip><DropdownMenuContent align="start" side="top" className="w-60">
           <DropdownMenuLabel>For this message</DropdownMenuLabel>
-          <DropdownMenuItem disabled><Paperclip />Attach<span className="ml-auto text-xs">Not connected</span></DropdownMenuItem>
+          <DropdownMenuItem disabled={pending} onSelect={() => attachmentInput.current?.click()}><Paperclip />Attach files<span className="ml-auto text-xs">Local preview</span></DropdownMenuItem>
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">Up to 5 files, 10 MB each, 25 MB total. Files stay in this tab; no upload or content ingestion.</p>
           <DropdownMenuSeparator /><p className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">Voice typing uses your browser’s speech service, which may process audio online. Conker does not save the recording.</p>
         </DropdownMenuContent></DropdownMenu>
         <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${modelLabel}, ${provider?.name || "No provider"}`} disabled={session.archived}><span className="min-w-0 truncate">{modelLabel}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">
@@ -138,7 +154,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream || (!!call && !call.endedAt)} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">{call && !call.endedAt ? "End the call to use voice typing" : "Voice typing"}</TooltipContent></Tooltip>
           {stream && <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button>}
-          {draft.trim() ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label={queueing ? "Queue message" : "Send message"} title={queueing ? "Queue message" : "Send message"}>{queueing ? <ListPlus /> : <ArrowUp />}</Button> : !stream &&
+          {draft.trim() || attachments?.length ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label={queueing ? "Queue message" : "Send message"} title={queueing ? "Queue message" : "Send message"}>{queueing ? <ListPlus /> : <ArrowUp />}</Button> : !stream &&
             <Tooltip><TooltipTrigger asChild><Button type="button" size="icon" aria-label={call && !call.endedAt ? "Return to call" : "Start call"} disabled={session.archived || pending || callStarting} className={iconControl} onClick={() => void startCall(session.id)}><Phone /></Button></TooltipTrigger><TooltipContent>{call && !call.endedAt ? `Return to call with ${call.name}` : "Start call"}</TooltipContent></Tooltip>}
         </div>
       </div>}

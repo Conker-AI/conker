@@ -4,10 +4,13 @@ import { conkerClient } from "./index"
 import type { Snapshot, Character } from "./client"
 import type { TicketStatus } from "./models"
 import type { Connections } from "./config"
+import type { ConversationAttachment } from "../conversation-attachments"
 
 type State = {
   data: Snapshot | null; error: string; pending: boolean; notice: string
   drafts: Record<string, string>
+  attachmentDrafts: Record<string, ConversationAttachment[]>
+  setAttachments: (id: string, value: ConversationAttachment[]) => void
   load: () => Promise<void>
   mutate: (action: () => Promise<unknown>, notice?: string) => Promise<boolean>
   save: (profile: Character) => Promise<boolean>
@@ -20,7 +23,8 @@ type State = {
   saveConnections: (value: Connections) => Promise<boolean>
 }
 export const useConkerStore = create<State>((set, get) => ({
-  data: null, error: "", pending: false, notice: "", drafts: {},
+  data: null, error: "", pending: false, notice: "", drafts: {}, attachmentDrafts: {},
+  setAttachments: (id, value) => set(state => ({ attachmentDrafts: { ...state.attachmentDrafts, [id]: value } })),
   load: async () => {
     set({ error: "" })
     try { set({ data: await conkerClient.load() }) }
@@ -45,9 +49,11 @@ export const useConkerStore = create<State>((set, get) => ({
   setDraft: (id, text) => set(state => ({ drafts: { ...state.drafts, [id]: text } })),
   send: async id => {
     const text = get().drafts[id] || ""
-    if (!text.trim()) return false
-    const saved = await get().mutate(() => conkerClient.sendMessage(id, text))
+    const attachments = get().attachmentDrafts[id] || []
+    if (!text.trim() && !attachments.length) return false
+    const saved = await get().mutate(() => conkerClient.sendMessage(id, text, { attachments }))
     if (saved && get().drafts[id] === text) get().setDraft(id, "")
+    if (saved) get().setAttachments(id, (get().attachmentDrafts[id] || []).filter(item => !attachments.some(sent => sent.id === item.id)))
     return saved
   },
   saveModelsConfiguration: value => get().mutate(() => conkerClient.saveModelsConfiguration(value)),

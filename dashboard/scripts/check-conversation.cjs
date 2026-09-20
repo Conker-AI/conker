@@ -285,7 +285,7 @@ async function main() {
     assert.equal(state.replyRequests.includes('companion'), false)
   })
 
-  await check('Model overrides validate enabled catalogue and return to the default when disabled', async () => {
+  await check('Model overrides retain disabled choices and require explicit owner selection', async () => {
     const client = createFixtureClient()
     const config = (await client.load()).modelsConfiguration
     const enabled = getAvailableModels(config)
@@ -297,7 +297,10 @@ async function main() {
     config.defaultModelId = enabled[1].id
     await client.saveModelsConfiguration(config)
     const state = await client.load()
-    assert.equal(state.conversations.week.modelId, null)
+    assert.equal(state.conversations.week.modelId, enabled[0].id)
+    await assert.rejects(client.streamReply('week', {}, () => {}), /model|route|enabled|unavailable/i)
+    await client.updateConversation('week', { modelId: enabled[1].id })
+    assert.equal((await client.load()).conversations.week.modelId, enabled[1].id)
     assert.equal(state.modelsConfiguration.defaultModelId, enabled[1].id)
     config.defaultModelId = 'invented-model'
     await assert.rejects(client.saveModelsConfiguration(config))
@@ -422,6 +425,31 @@ async function main() {
     await client.updateMessage('week', id, { rating: 'down' })
     await client.updateMessage('week', id, { redacted: true })
     assert.equal((await client.load()).conversations.week.messages.find(message => message.id === id).rating, undefined)
+  })
+
+  await check('Local attachments validate atomically, survive forks, and redact from both message contracts', async () => {
+    const { prepareAttachments, validateAttachments } = load('src/lib/conversation-attachments.ts')
+    const client = createFixtureClient()
+    const file = { id: 'local-file', name: 'notes.txt', type: 'text/plain', size: 12, lastModified: 1 }
+    assert.throws(() => validateAttachments([{ ...file, size: 11 * 1024 * 1024 }]), /10 MB/)
+    assert.throws(() => validateAttachments(Array.from({ length: 6 }, (_, i) => ({ ...file, id: String(i) }))), /5 files/)
+    assert.throws(() => validateAttachments(Array.from({ length: 3 }, (_, i) => ({ ...file, id: String(i), size: 10 * 1024 * 1024 }))), /25 MB/)
+    const existing = [file]
+    assert.throws(() => prepareAttachments([{ name: 'large.txt', type: 'text/plain', size: 11 * 1024 * 1024, lastModified: 1 }], existing), /10 MB/)
+    assert.deepEqual(existing, [file], 'A rejected selection leaves prior draft metadata intact')
+    const saved = await client.sendMessage('week', '', { attachments: [file] })
+    file.name = 'changed externally'
+    assert.equal(saved.attachments[0].name, 'notes.txt')
+    saved.attachments[0].name = 'changed return'
+    const snapshot = await client.load()
+    assert.equal(snapshot.conversations.week.messages.at(-1).attachments[0].name, 'notes.txt')
+    const fork = await client.forkConversation('week', saved.id)
+    assert.equal((await client.load()).conversations[fork.id].messages.at(-1).attachments[0].name, 'notes.txt')
+    await client.updateMessage('week', saved.id, { redacted: true })
+    const redacted = await client.load()
+    assert.equal(redacted.conversations.week.messages.at(-1).attachments, undefined)
+    assert.equal(redacted.messages.week.find(item => item.id === saved.id).attachments, undefined)
+    assert.equal((await createFixtureClient().load()).conversations.week.messages.some(item => item.id === saved.id), false)
   })
 
   process.stdout.write(`${JSON.stringify({ status: 'passed', checks }, null, 2)}\n`)

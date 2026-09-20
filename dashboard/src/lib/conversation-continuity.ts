@@ -2,6 +2,7 @@ import type { ConversationMessage, ConversationPrivacy, ConversationState } from
 import type { Snapshot } from "./api/client"
 import { getAvailableModels } from "./api/model-catalogue"
 import type { ContextPolicy } from "./api/context-policy"
+import { validateAttachments, type ConversationAttachment } from "./conversation-attachments"
 
 export const MAX_QUEUED_TURNS = 5
 
@@ -10,6 +11,7 @@ export type QueuedTurn = {
   id: string
   sessionId: string
   text: string
+  attachments?: ConversationAttachment[]
   replyTo?: string
   agentId: string
   privacy: ConversationPrivacy
@@ -47,17 +49,19 @@ function contextFingerprint(data: Snapshot, sessionId: string) {
   return JSON.stringify({ policy: policy ? { ...policy, messagePolicies: Object.fromEntries(Object.entries(policy.messagePolicies).sort(([a], [b]) => a.localeCompare(b))) } : null, pins: conversation.messages.filter(message => message.pinned && !message.redacted).map(message => message.id).sort(), agentInstructions: data.agents.find(agent => agent.id === agentId)?.configuration?.instructions || "" })
 }
 
-export function captureQueuedTurn(data: Snapshot, sessionId: string, text: string, modelId: string, replyTo?: string): QueuedTurn {
+export function captureQueuedTurn(data: Snapshot, sessionId: string, text: string, modelId: string, replyTo?: string, files: ConversationAttachment[] = []): QueuedTurn {
+  const attachments = validateAttachments(files)
   const session = data.sessions.find(item => item.id === sessionId)
   const conversation = data.conversations[sessionId]
   const model = getAvailableModels(data.modelsConfiguration).find(item => item.id === modelId)
   if (!session || !conversation) throw new Error("This conversation is no longer available.")
   if (session.archived) throw new Error("Restore this conversation before queuing a message.")
   if (!model) throw new Error("Choose an enabled model before queuing a message.")
-  if (!text.trim() || text.length > 4000) throw new Error("Use 1–4,000 characters for a queued message.")
+  if ((!text.trim() && !attachments.length) || text.length > 4000) throw new Error("Add a message or attachment, with up to 4,000 characters.")
   if (replyTo && !conversation.messages.some(item => item.id === replyTo && !item.redacted)) throw new Error("The reply target is no longer available.")
   return {
     id: crypto.randomUUID(), sessionId, text: text.trim(), replyTo,
+    ...(attachments.length ? { attachments } : {}),
     agentId: session.agentId || conversation.initialAgentId,
     privacy: { ...conversation.privacy }, modelId, modelLabel: model.name,
     presentationMode: conversation.presentationMode || "focus",
@@ -86,7 +90,7 @@ export function validateQueuedTurn(entry: QueuedTurn, data: Snapshot): string | 
   if (entry.sentMessageId) {
     const saved = conversation.messages.find(item => item.id === entry.sentMessageId && !item.redacted)
     if (!saved) return "The saved queued message is no longer available. Remove this queue entry and retry its message explicitly."
-    if (saved.role !== "user" || saved.text !== entry.text || saved.replyTo !== entry.replyTo) return "The saved queued message changed. Remove this queue entry and retry the edited message explicitly."
+    if (saved.role !== "user" || saved.text !== entry.text || saved.replyTo !== entry.replyTo || JSON.stringify(saved.attachments || []) !== JSON.stringify(entry.attachments || [])) return "The saved queued message changed. Remove this queue entry and retry the edited message explicitly."
   }
   return null
 }

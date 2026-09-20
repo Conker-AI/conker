@@ -15,8 +15,8 @@ async function main() {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'conker-workspace-'))
   try {
     const output = path.join(temporary, 'workspace.cjs')
-    await build({ stdin: { contents: 'export {useConversationWorkspace} from "./src/lib/conversation-workspace"; export {useConkerStore} from "./src/lib/api/store"; export {conkerClient} from "./src/lib/api";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
-    const { useConversationWorkspace: workspace, useConkerStore: store, conkerClient: client } = require(output)
+    await build({ stdin: { contents: 'export {useConversationWorkspace} from "./src/lib/conversation-workspace"; export {useConkerStore} from "./src/lib/api/store"; export {conkerClient} from "./src/lib/api"; export {prepareAttachments, attachmentPreview} from "./src/lib/conversation-attachments";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
+    const { useConversationWorkspace: workspace, useConkerStore: store, conkerClient: client, prepareAttachments, attachmentPreview } = require(output)
     const originalSend = client.sendMessage
     const originalStream = client.streamReply
     const calls = []
@@ -268,6 +268,66 @@ async function main() {
       const count = store.getState().data.conversations[id].messages.length
       assert.equal(await w().retryUnanswered(id), false)
       assert.equal(store.getState().data.conversations[id].messages.length, count)
+    })
+
+    await check('Attachment-only drafts survive failed saves and queue review without loss or duplication', async () => {
+      const id = await make()
+      const file = { id: 'attached-file', name: 'diagram.png', type: 'image/png', size: 120, lastModified: 1 }
+      store.getState().setAttachments(id, [file])
+      client.sendMessage = async () => { throw new Error('Save unavailable') }
+      await w().send(id)
+      assert.deepEqual(store.getState().attachmentDrafts[id], [file])
+      assert.equal(users(id).length, 0)
+      client.sendMessage = originalSend
+      const sending = w().send(id)
+      await settle()
+      assert.deepEqual(users(id)[0].attachments, [file])
+      assert.deepEqual(store.getState().attachmentDrafts[id], [])
+      const queuedFile = { ...file, id: 'queued-file', name: 'queued.png' }
+      store.getState().setAttachments(id, [queuedFile])
+      w().enqueue(id)
+      w().pauseQueue(id)
+      const queued = w().queues[id].entries[0]
+      assert.deepEqual(queued.attachments, [queuedFile])
+      assert.equal(w().editQueued(id, queued.id, ''), true)
+      assert.equal(w().reviewQueued(id, queued.id), true)
+      assert.deepEqual(w().queues[id].entries[0].attachments, [queuedFile])
+      calls.at(-1).complete(); await sending; await settle()
+      const resuming = w().resumeQueue(id); await settle()
+      assert.deepEqual(users(id).at(-1).attachments, [queuedFile])
+      calls.at(-1).fail(); await resuming; await settle()
+      const retrying = w().resumeQueue(id); await settle()
+      assert.equal(users(id).length, 2, 'Resuming a saved queued attachment must not resend it')
+      calls.at(-1).complete(); await retrying
+      assert.equal(w().queues[id].entries.length, 0)
+    })
+
+    await check('Local file previews prune only after the last message, fork, queue, or draft reference disappears', async () => {
+      const id = await make()
+      const files = prepareAttachments([new File(['png fixture'], 'preview.png', { type: 'image/png' })], [])
+      store.getState().setAttachments(id, files)
+      const url = attachmentPreview(files[0])
+      assert.ok(url)
+      const sending = w().send(id); await settle()
+      assert.equal(attachmentPreview(files[0]), url, 'Save/refresh must not revoke the transitioning draft')
+      calls.at(-1).complete(); await sending
+      let fork
+      await store.getState().mutate(async () => { fork = await client.forkConversation(id, users(id)[0].id) })
+      await store.getState().mutate(() => client.updateMessage(id, users(id)[0].id, { redacted: true }))
+      assert.equal(attachmentPreview(files[0]), url, 'An independent fork keeps its preview after source redaction')
+      await store.getState().mutate(() => client.deleteConversation(fork.id))
+      assert.equal(attachmentPreview(files[0]), undefined, 'Last reference deletion releases file bytes and URL')
+      const queuedFiles = prepareAttachments([new File(['fixture'], 'queue.png', { type: 'image/png' })], [])
+      store.getState().setAttachments(id, queuedFiles)
+      w().pauseQueue(id); w().enqueue(id)
+      assert.ok(attachmentPreview(queuedFiles[0]))
+      w().removeQueued(id, w().queues[id].entries[0].id)
+      assert.equal(attachmentPreview(queuedFiles[0]), undefined)
+      const draftFiles = prepareAttachments([new File(['fixture'], 'draft.png', { type: 'image/png' })], [])
+      store.getState().setAttachments(id, draftFiles)
+      assert.ok(attachmentPreview(draftFiles[0]))
+      w().reset(id)
+      assert.equal(attachmentPreview(draftFiles[0]), undefined)
     })
 
     console.log(`Workspace checks passed (${checks.length}):\n${checks.map(label => `- ${label}`).join('\n')}`)

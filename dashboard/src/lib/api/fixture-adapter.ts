@@ -1,4 +1,5 @@
 import { agents } from "./fixtures/agents"
+import { validateAttachments } from "../conversation-attachments"
 import { sessions, plan, planningIntent } from "./fixtures/chat"
 import { tickets } from "./fixtures/inbox"
 import { jobs } from "./fixtures/jobs"
@@ -316,16 +317,17 @@ export function createFixtureClient(): ConkerClient {
       const { session, conversation } = findConversation(id)
       idle(id)
       if (session.archived) throw new Error("Restore this conversation before sending a message.")
-      if (!text.trim() || text.length > 4000) throw new Error("Use 1–4,000 characters for a message.")
+      const attachments = validateAttachments(options?.attachments || [])
+      if ((!text.trim() && !attachments.length) || text.length > 4000) throw new Error("Add a message or attachment, with up to 4,000 characters.")
       if (options?.replyTo && !conversation.messages.some(message => message.id === options.replyTo && !message.redacted)) {
         throw new Error("The message you are replying to is no longer available.")
       }
-      const message = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString() }
+      const message = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) }
       if (session.isDraft) {
         session.isDraft = false
-        if (session.title === "New chat") session.title = message.text.replace(/\s+/g, " ").slice(0, 64)
+        if (session.title === "New chat") session.title = (message.text || attachments.map(item => item.name).join(", ")).replace(/\s+/g, " ").slice(0, 64)
       }
-      session.subtitle = message.text.replace(/\s+/g, " ").slice(0, 120)
+      session.subtitle = (message.text || attachments.map(item => item.name).join(", ")).replace(/\s+/g, " ").slice(0, 120)
       state.messages[id] = [...(state.messages[id] || []), message]
       const contextMessageIds = activeConversationMessages(conversation.messages).map(item => item.id)
       conversation.messages.push({ ...message, role: "user", status: "complete", contextMessageIds, ...(options?.replyTo ? { replyTo: options.replyTo } : {}) })
@@ -422,6 +424,7 @@ export function createFixtureClient(): ConkerClient {
         if (update.pinned && conversation.contextPolicy) conversation.contextPolicy.messagePolicies[message.id] = "keep-exact"
       }
       if (update.redacted) {
+        delete message.attachments
         message.text = ""
         message.redacted = true
         message.pinned = false
@@ -437,7 +440,7 @@ export function createFixtureClient(): ConkerClient {
       }
       // Legacy consumers must not reveal text after an edit or redaction.
       const local = state.messages[id]?.find(item => item.id === messageId)
-      if (local) local.text = message.text
+      if (local) { local.text = message.text; if (update.redacted) delete local.attachments }
       const thread = state.threads[id]
       const original = thread?.messages.find(item => item.id === messageId)
       if (original) original.text = message.text
@@ -582,7 +585,9 @@ export function createFixtureClient(): ConkerClient {
         run.phase = "streaming"
         run.label = "Writing"
         publishActivity()
-        const text = options.previewScenario === "slow-response"
+        const text = prompt?.attachments?.length
+          ? "Local attachment preview saved. File contents were not uploaded, read, or sent to a model. Reloading clears these files and this preview conversation."
+          : options.previewScenario === "slow-response"
           ? "Development preview: this response streams slowly so you can inspect the queue and scrolling. You can write another message, queue it, edit or remove it, and pause the queue while this response continues. Stop preserves partial text and holds queued requests until you explicitly resume. Reading earlier content keeps your position; the small bottom control brings you back to the latest response. No model, tools, agents or external services are running."
           : options.previewScenario === "rich-answer" ? richAnswerFixture.text : reply.presentationMode === "character"
           ? "Simulated reply: I have your message. Once connected, I will answer in your character’s style. No tools have run."
