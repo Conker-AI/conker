@@ -21,6 +21,8 @@ import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import { MessageActions } from "./message-actions"
 import { ConversationRail } from "./conversation-rail"
 import { ConversationComposer } from "./conversation-composer"
+import { ConversationCanvas } from "@/components/artifacts/conversation-canvas"
+import { useArtifactWorkspace } from "@/lib/artifact-workspace"
 
 // Completed rich blocks should not reparse on every token of the next response.
 const MessageAnswer = memo(function MessageAnswer({ message, sessionId }: { message: ConversationMessage; sessionId: string }) {
@@ -64,6 +66,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const activity = useConversationWorkspace(state => state.activities[session.id])
   const activeQueued = useConversationWorkspace(state => state.activeQueued[session.id])
   const unanswered = useConversationWorkspace(state => state.unanswered[session.id])
+  const artifactSelection = useArtifactWorkspace(state => state.selections[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(!hash)
@@ -161,6 +164,6 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
       </div>
       <ConversationComposer key={session.id} session={session} name={name} companionWorkspace={companionWorkspace} inputRef={composer} />
     </section>
-    <ConversationRail session={session}>{reference}</ConversationRail>
+    {artifactSelection ? <ConversationCanvas sessionId={session.id} /> : <ConversationRail session={session}>{reference}</ConversationRail>}
   </div>
 }

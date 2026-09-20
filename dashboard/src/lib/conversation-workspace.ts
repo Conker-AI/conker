@@ -5,6 +5,7 @@ import { getAvailableModels } from "@/lib/api/model-catalogue"
 import type { ConversationRun } from "@/lib/api/conversation-types"
 import { captureQueuedTurn, validateQueuedTurn, MAX_QUEUED_TURNS, type QueuedTurn, type TurnQueue } from "@/lib/conversation-continuity"
 import { mergeActivityRun } from "@/lib/conversation-activity"
+import { useArtifactWorkspace } from "@/lib/artifact-workspace"
 
 export type RailView = "overview" | "forks" | "source" | "explain" | "usage" | "privacy" | "daily" | "activity"
 type Rail = { open: boolean; view: RailView; messageId?: string; sourceId?: string; runId?: string; stepId?: string }
@@ -156,7 +157,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
   }
   return {
     rails: {}, nextModels: {}, replies: {}, notices: {}, streams: {}, activities: {}, queues: {}, selectedVersions: {}, previews: {}, activeQueued: {}, unanswered: {},
-    openRail: (id, view = "overview", messageId, detail) => set(state => ({ rails: { ...state.rails, [id]: { open: true, view, messageId, ...detail } } })),
+    openRail: (id, view = "overview", messageId, detail) => { useArtifactWorkspace.getState().close(id); set(state => ({ rails: { ...state.rails, [id]: { open: true, view, messageId, ...detail } } })) },
     closeRail: id => set(state => ({ rails: { ...state.rails, [id]: { ...state.rails[id], open: false, view: state.rails[id]?.view || "overview" } } })),
     setNextModel: (id, modelId) => set(state => ({ nextModels: { ...state.nextModels, [id]: modelId } })),
     setReply: (id, messageId) => set(state => ({ replies: { ...state.replies, [id]: messageId } })),

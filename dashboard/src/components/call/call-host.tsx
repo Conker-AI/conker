@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
-import { Link } from "react-router-dom"
-import { Captions, CaptionsOff, Check, Copy, Expand, Image, Keyboard, Maximize2, MessageSquare, Mic, MicOff, Minus, MoreHorizontal, Pause, Phone, PhoneOff, Play, Settings2, Square, Video, VideoOff, Volume2, VolumeX, X } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { Captions, CaptionsOff, Check, Copy, Expand, FileBox, Image, Keyboard, Maximize2, MessageSquare, Mic, MicOff, Minus, MoreHorizontal, Pause, Phone, PhoneOff, Play, Settings2, Square, Video, VideoOff, Volume2, VolumeX, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -15,6 +15,7 @@ import { characterDraft } from "@/lib/api/character"
 import { useConker } from "@/lib/api/store"
 import { getAvailableModels } from "@/lib/api/model-catalogue"
 import { useCallWorkspace } from "@/lib/call-workspace"
+import { useArtifactWorkspace } from "@/lib/artifact-workspace"
 import { useCallMedia } from "@/hooks/use-call-media"
 import { useCallCaptions } from "@/hooks/use-call-captions"
 import { readAloud } from "@/lib/voice/read-aloud"
@@ -41,6 +42,7 @@ function CameraPreview({ stream }: { stream: MediaStream }) {
 }
 
 function CallExperience({ call }: { call: CallSession }) {
+  const navigate = useNavigate()
   const { view, minimize, expand, dismiss, configure, end, interrupt, error, start } = useCallWorkspace()
   const data = useConker(value => value)
   const profile = useMemo(() => characterDraft(data.profile), [data.profile])
@@ -221,6 +223,7 @@ function CallExperience({ call }: { call: CallSession }) {
             <div role="group" aria-label={`${call.name} controls`} className="call-companion-controls flex min-w-0 flex-wrap items-center gap-2">
               <span className="call-control-name text-xs font-medium text-muted-foreground">{call.name}</span>
               <CallControl label={`${call.name} settings`} icon={Settings2} onClick={() => openSettings("companion")} />
+              <CallControl label="Open artifacts while keeping the call" icon={FileBox} onClick={() => { const selected = useArtifactWorkspace.getState().selections[call.conversationId]; close(); navigate(selected ? `/artifacts/${encodeURIComponent(selected.artifactId)}${selected.version ? `?version=${selected.version}` : ""}` : "/artifacts") }} />
               <CallControl label={hasPlayback ? "Stop reading reply" : "Read latest reply with browser voice"} icon={hasPlayback ? Square : Play} disabled={(!hasPlayback && call.paused) || !latest || !call.channels.voice || !readAloud.supported()} onClick={playReply} />
               <CallControl label={call.channels.voice ? "Mute companion voice" : "Unmute companion voice"} icon={call.channels.voice ? Volume2 : VolumeX} active={call.channels.voice} onClick={() => void configure({ channels: { voice: !call.channels.voice } })} />
               <CallControl label={call.channels.avatar ? "Show conversation" : "Show companion appearance"} icon={call.channels.avatar ? MessageSquare : Image} active={call.channels.avatar} onClick={() => void configure({ channels: { avatar: !call.channels.avatar } })} />

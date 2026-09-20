@@ -18,6 +18,7 @@
     "check:agents": "node scripts/check-agents.cjs",
     "check:agent-collaboration": "node scripts/check-agent-collaboration.cjs",
     "check:projects": "node scripts/check-projects.cjs && node scripts/check-project-integration.cjs",
+    "check:artifacts": "node scripts/check-artifacts.cjs && node scripts/check-artifact-integration.cjs && node scripts/check-artifact-renderer.cjs",
     "check:tasks": "node scripts/check-tasks.cjs",
     "check:context-policy": "node scripts/check-context-policy.cjs",
     "check:conversation-context": "node scripts/check-conversation-context.cjs",

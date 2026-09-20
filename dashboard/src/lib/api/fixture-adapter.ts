@@ -34,6 +34,9 @@ import { contextPolicyForMessages, normalizeContextPolicy, planContext } from ".
 import { collaborationReferences, createAgentCollaborationPreviewClient } from "./agent-collaboration-preview"
 import { createProjectPreviewClient } from "./project-preview"
 import { projectPreviewState } from "./project-snapshot"
+import { createArtifactPreviewClient, resolveArtifactView } from "./artifact-preview"
+import { artifactPreviewState } from "./artifact-snapshot"
+import type { ArtifactRecord } from "./artifact-types"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -50,6 +53,7 @@ function pause(ms: number, signal?: AbortSignal): Promise<void> {
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
+    artifacts: [],
     projects: [],
     collaboration: { templates: [], teams: [], agentPreparations: [], teamPreparations: [] },
     tasks: [],
@@ -82,6 +86,12 @@ export function createFixtureClient(): ConkerClient {
     files,
   })
   state.conversations = createConversations(state.sessions, state.threads, state.agents)
+  // Never place raw source copies in Snapshot, even temporarily.
+  let artifactRecords: ArtifactRecord[] = []
+  const artifactClient = createArtifactPreviewClient({
+    getSnapshot: () => artifactPreviewState(state, artifactRecords),
+    setArtifacts: records => { artifactRecords = records },
+  })
   state.conversations[state.companionSessionId].presentationMode = state.profile.studio?.modes.default || "character"
   const streaming = new Set<string>()
   const runningJobs = new Set<string>()
@@ -163,6 +173,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    artifacts: artifactClient,
     projects: projectClient,
     collaboration: {
       ...collaborationClient,
@@ -201,7 +212,11 @@ export function createFixtureClient(): ConkerClient {
     },
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
-    async load() { await refreshToolCatalogue(); return structuredClone(state) },
+    async load() {
+      await refreshToolCatalogue()
+      const source = artifactPreviewState(state, artifactRecords)
+      return structuredClone({ ...state, artifacts: artifactRecords.map(record => resolveArtifactView(source, record)) })
+    },
     createAgent(input) { return withToolCatalogue(() => {
       const configuration = normalizeAgentInput(input, state)
       const model = state.modelsConfiguration.models.find(item => item.id === configuration.modelId)

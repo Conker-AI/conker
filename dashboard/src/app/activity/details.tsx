@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import type { ActivityEventRecord, ActivityRunRecord, TaskRecord, TaskStatus } from "@/lib/api/task-types"
 import { Output, Provenance, SourceLink, TaskStatusBadge } from "./presentation"
 import { displayTime, isTerminal, runHref, taskHref } from "./format"
+import { useConker } from "@/lib/api/store"
 
 export function TaskDetails({ task, tasks, runs, agentName, sessionTitle, pending, error, edit, review, archive }: {
   task: TaskRecord; tasks: TaskRecord[]; runs: ActivityRunRecord[]; agentName: string; sessionTitle: string;
@@ -14,12 +15,14 @@ export function TaskDetails({ task, tasks, runs, agentName, sessionTitle, pendin
 }) {
   const parent = tasks.find(item => item.id === task.parentTaskId)
   const children = tasks.filter(item => item.parentTaskId === task.id)
+  const artifacts = useConker(data => data.artifacts).filter(artifact => artifact.task?.taskId === task.id && (artifact.taskAvailability === "available" || artifact.taskAvailability === "archived"))
   return <><OverlayBody>
     <ReferenceSection title="Outcome"><p className="whitespace-pre-wrap">{task.outcome}</p><div className="flex flex-wrap gap-2"><TaskStatusBadge status={task.status} /><Provenance value="preview" />{task.archivedAt && <Badge variant="outline">Archived</Badge>}</div><p className="text-xs text-muted-foreground">Owner-reported status · no executor connected. Changes reset on reload.</p>{task.statusNote && <p className="whitespace-pre-wrap text-sm">{task.statusNote}</p>}</ReferenceSection>
     <ReferenceSection title="Completion criteria"><ul className="space-y-3">{task.criteria.map(criterion => <li key={criterion.id} className="space-y-1"><p className="text-sm">{criterion.text}</p><span className="text-xs text-muted-foreground">{task.completedCriterionIds.includes(criterion.id) ? "Reviewed by owner" : "Not yet reviewed"}</span></li>)}</ul></ReferenceSection>
     <ReferenceSection title="Responsibility and conversation"><p className="text-sm">Assigned to {agentName}</p><SourceLink href={`/chat/${encodeURIComponent(task.sessionId)}`}>{sessionTitle}</SourceLink><p className="text-xs text-muted-foreground">Assignment does not change the conversation’s agent or grant execution authority.</p></ReferenceSection>
     {(parent || children.length > 0) && <ReferenceSection title="Related tasks">{parent && <p><Link className="text-sm underline underline-offset-4" to={taskHref(parent.id)}>Parent: {parent.outcome}</Link></p>}{children.length > 0 && <ul className="space-y-3">{children.map(child => <li key={child.id} className="space-y-1"><Link className="text-sm underline underline-offset-4" to={taskHref(child.id)}>{child.outcome}</Link><div><TaskStatusBadge status={child.status} /></div></li>)}</ul>}</ReferenceSection>}
     <ReferenceSection title="Linked attempts">{task.runIds.length ? <ul className="space-y-3">{task.runIds.map(id => { const run = runs.find(item => item.id === id); return <li key={id}>{run ? <><Link className="text-sm underline underline-offset-4" to={runHref(run.id)}>{run.label}</Link><div className="mt-1 flex flex-wrap gap-2"><Provenance value={run.provenance} /><span className="text-xs text-muted-foreground">{run.status}</span></div></> : <p className="text-sm text-muted-foreground">Linked run unavailable. Its reference is retained.</p>}</li> })}</ul> : <p className="text-sm text-muted-foreground">No attempts linked. Edit the task to link an existing conversation, job or tool run.</p>}</ReferenceSection>
+    <ReferenceSection title="Saved outputs">{artifacts.length ? <ul className="space-y-3">{artifacts.map(artifact => <li key={artifact.id}><Link className="text-sm underline underline-offset-4" to={`/artifacts/${encodeURIComponent(artifact.id)}?version=${artifact.currentVersion}`}>{artifact.title}</Link><p className="mt-1 text-xs text-muted-foreground">Version {artifact.currentVersion}{artifact.archivedAt ? " · Archived" : ""} · Preview</p></li>)}</ul> : <p className="text-sm text-muted-foreground">Save an assistant response to Artifacts and choose this task to link a versioned output.</p>}</ReferenceSection>
     <ReferenceSection title="Tracking history"><ol className="space-y-3">{task.changes.slice().reverse().map(change => <li key={change.id}><p className="text-sm whitespace-pre-wrap">{change.note}</p><p className="mt-1 text-xs text-muted-foreground">{displayTime(change.at)}</p></li>)}</ol></ReferenceSection>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
   </OverlayBody><FormActions inset>

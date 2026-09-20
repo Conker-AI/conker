@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useNavigate } from "react-router-dom"
-import { Check, Copy, CornerUpLeft, FileSearch, GitFork, Info, MoreHorizontal, Pencil, Pin, RotateCcw, Share2, Square, ThumbsDown, ThumbsUp, Trash2, Volume2 } from "lucide-react"
+import { Check, Copy, CornerUpLeft, FileSearch, FileBox, GitFork, Info, MoreHorizontal, Pencil, Pin, RotateCcw, Share2, Square, ThumbsDown, ThumbsUp, Trash2, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,8 @@ import { useConker, useConkerStore } from "@/lib/api/store"
 import { useConversationWorkspace } from "@/lib/conversation-workspace"
 import { hasDownstreamMessages } from "@/lib/conversation-continuity"
 import { readableAnswer } from "@/lib/rich-answer"
+import { SaveResponseArtifact } from "./save-response-artifact"
+import { useArtifactWorkspace } from "@/lib/artifact-workspace"
 
 function ActionButton({ label, className, ...props }: ComponentProps<typeof Button> & { label: string }) {
   return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" {...props} aria-label={label} className={cn("size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground aria-pressed:text-primary", className)} /></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>
@@ -29,6 +31,8 @@ export function MessageActions({ session, message }: { session: Session; message
   const mainId = useConker(data => data.companionSessionId)
   const conversationModelId = useConker(data => data.conversations[session.id].modelId)
   const messages = useConker(data => data.conversations[session.id].messages)
+  const artifacts = useConker(data => data.artifacts).filter(artifact => artifact.source?.sessionId === session.id && artifact.source.messageId === message.id && !artifact.archivedAt)
+  const [savingArtifact, setSavingArtifact] = useState(false)
   const pending = useConkerStore(state => state.pending)
   const error = useConkerStore(state => state.error)
   const streaming = useConversationWorkspace(state => state.streams[session.id])
@@ -92,6 +96,8 @@ export function MessageActions({ session, message }: { session: Session; message
         }}><GitFork />Fork from here</DropdownMenuItem>
         {assistant ? <DropdownMenuSub><DropdownMenuSubTrigger disabled={busy || message.redacted || !models.length}><RotateCcw />Retry with model</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 max-w-72 overflow-y-auto">{models.map(model => <DropdownMenuItem key={model.id} onSelect={() => void retry(session.id, message.id, model.id)}>{model.name}<span className="ml-auto text-xs text-muted-foreground">{model.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub> : <DropdownMenuItem disabled={message.redacted || !message.text || !speech.supported} onSelect={speak}><Volume2 />{speech.active ? "Stop reading" : "Read aloud"}</DropdownMenuItem>}
         <DropdownMenuSeparator />
+        {assistant && <DropdownMenuItem disabled={busy || message.redacted || message.status !== "complete" || !message.text} onSelect={() => setSavingArtifact(true)}><FileBox />Save to artifacts</DropdownMenuItem>}
+        {artifacts.length > 0 && <DropdownMenuSub><DropdownMenuSubTrigger><FileBox />Open artifact</DropdownMenuSubTrigger><DropdownMenuSubContent>{artifacts.map(artifact => <DropdownMenuItem key={artifact.id} onSelect={() => { useConversationWorkspace.getState().closeRail(session.id); useArtifactWorkspace.getState().open(session.id, artifact.id) }}>{artifact.title}</DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub>}
         <DropdownMenuItem disabled={busy || message.redacted} onSelect={() => void update({ pinned: !message.pinned })}><Pin />{message.pinned ? "Unpin message" : "Pin message"}</DropdownMenuItem>
         {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={edit}><Pencil />Edit message</DropdownMenuItem>}
         <DropdownMenuItem disabled={busy || message.redacted} variant="destructive" onSelect={() => setDialog("redact")}><Trash2 />Delete / redact</DropdownMenuItem>
@@ -105,6 +111,7 @@ export function MessageActions({ session, message }: { session: Session; message
       <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()}>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
       {message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}
     </div>
+    {savingArtifact && <SaveResponseArtifact sessionId={session.id} message={message} onClose={() => setSavingArtifact(false)} />}
     <Dialog open={dialog === "edit"} onOpenChange={open => { if (!open && !pending) setDialog(null) }}>
       <TaskDialogContent title={editNeedsFork ? "Edit in a new fork" : "Edit message"} description={editNeedsFork ? "Later replies used the original words. Save this edit in a new conversation ending here; the existing conversation stays intact." : "Edits are marked in this preview. They do not regenerate the conversation or repeat tools."}
         onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>

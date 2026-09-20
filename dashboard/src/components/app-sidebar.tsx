@@ -9,6 +9,7 @@ import {
   Inbox,
   BookOpen,
   Folder,
+  Files,
   History,
   Bot,
   Wrench,
@@ -50,6 +51,7 @@ const data = {
       label: "Reference",
       items: [
         { title: "Projects", url: appNavigation.projects.path, icon: Folder },
+        { title: "Artifacts", url: appNavigation.artifacts.path, icon: Files },
         { title: "Memory", url: appNavigation.memory.path, icon: BookOpen },
       ],
     },

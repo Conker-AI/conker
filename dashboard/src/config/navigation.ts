@@ -15,6 +15,8 @@ export const appNavigation = {
   memory: { path: "/memory", title: "Memory" },
   projects: { path: "/projects", title: "Projects" },
   project: { path: "/projects/:id", title: "Project", parent: "projects" },
+  artifacts: { path: "/artifacts", title: "Artifacts" },
+  artifact: { path: "/artifacts/:id", title: "Artifact", parent: "artifacts" },
   journal: { path: "/journal", title: "Journal" },
   activity: { path: "/activity", title: "Activity" },
   agents: { path: "/agents", title: "Agents" },
@@ -82,10 +84,12 @@ export function getPageNavigation(pathname: string, search: string, data: Snapsh
   const session = key === "conversation" ? data.sessions.find(item => item.id === params.id) : undefined
   const ticket = key === "request" ? data.tickets.find(item => item.id === params.id) : undefined
   const project = key === "project" ? data.projects.find(item => item.id === params.id) : undefined
+  const artifact = key === "artifact" ? data.artifacts.find(item => item.id === params.id) : undefined
   const name = data.profile.name || "Conker"
   const title = key === "conversation" ? session?.title || "Conversation not found"
     : key === "request" ? ticket?.request || "Request not found"
-    : key === "project" ? project?.name || "Project not found" : definition.title
+    : key === "project" ? project?.name || "Project not found"
+    : key === "artifact" ? artifact?.title || "Artifact not found" : definition.title
   const crumbs: RouteCrumb[] = [{ title, to: pathname }]
   let parent = definition.parent as AppRoute | undefined
   while (parent) {

@@ -19,6 +19,7 @@ import {
   Terminal,
   FolderTree,
   Folder,
+  Files,
   type LucideIcon,
 } from "lucide-react"
 
@@ -136,6 +137,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
     // Reference
     { title: "Projects", url: appNavigation.projects.path, group: "Reference", icon: Folder },
+    { title: "Artifacts", url: appNavigation.artifacts.path, group: "Reference", icon: Files },
     { title: "Memory", url: appNavigation.memory.path, group: "Reference", icon: BookOpen },
     { title: "Activity", url: appNavigation.activity.path, group: "Control", icon: History },
     { title: "Runs", url: pageSectionHref("activity", "", "runs"), group: "Activity", icon: History },

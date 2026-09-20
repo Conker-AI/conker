@@ -53,6 +53,8 @@ export type DailyBriefing = {
   }
 }
 export type Snapshot = {
+  /** Resolved owner views only; hidden-source bodies and raw comparison text never escape. */
+  artifacts: import("./artifact-types").ArtifactView[]
   projects: import("./project-types").ProjectRecord[]
   collaboration: import("./agent-collaboration-types").CollaborationData
   tasks: import("./task-types").TaskRecord[]
@@ -79,6 +81,7 @@ export type Snapshot = {
 
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
 export interface ConkerClient {
+  readonly artifacts: import("./artifact-types").ArtifactClient
   readonly projects: import("./project-types").ProjectClient
   readonly collaboration: import("./agent-collaboration-types").AgentCollaborationClient
   readonly tasks: import("./task-types").TaskClient

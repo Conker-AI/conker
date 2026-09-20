@@ -13,6 +13,8 @@ const ApprovalDetailPage = lazy(() => import("@/app/inbox/detail-page"))
 const MemoryPage = lazy(() => import("@/app/memory/page"))
 const ProjectsRoute = lazy(() => import("@/app/projects/route").then(module => ({ default: module.ProjectsRoute })))
 const ProjectEditorRoute = lazy(() => import("@/app/projects/route").then(module => ({ default: module.ProjectEditorRoute })))
+const ArtifactsRoute = lazy(() => import("@/app/artifacts/route").then(module => ({ default: module.ArtifactsRoute })))
+const ArtifactDetailRoute = lazy(() => import("@/app/artifacts/route").then(module => ({ default: module.ArtifactDetailRoute })))
 const ActivityPage = lazy(() => import("@/app/activity/page"))
 const JournalRedirect = lazy(() => import("@/app/journal/redirect"))
 const AgentsPage = lazy(() => import("@/app/agents/page"))
@@ -42,6 +44,8 @@ export const routes: RouteConfig[] = [
   { path: appNavigation.memory.path, element: <MemoryPage /> },
   { path: appNavigation.projects.path, element: <ProjectsRoute /> },
   { path: appNavigation.project.path, element: <ProjectEditorRoute /> },
+  { path: appNavigation.artifacts.path, element: <ArtifactsRoute /> },
+  { path: appNavigation.artifact.path, element: <ArtifactDetailRoute /> },
   { path: appNavigation.journal.path, element: <JournalRedirect /> },
   { path: appNavigation.activity.path, element: <ActivityPage /> },
   { path: appNavigation.agents.path, element: <AgentsPage /> },
