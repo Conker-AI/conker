@@ -41,7 +41,7 @@ export type RuntimeSubmission = {
   inputMessageId: string | null; finalMessageId: string | null; messageRefs: RuntimeMessageRef[]
   state: 'preparing' | 'bound' | 'preparation_failed' | 'preparation_interrupted' | 'forgotten'
   status: string; acted: boolean; contentStatus: 'available' | 'forgotten'; createdAt: string; updatedAt: string
-  pendingText: string | null
+  pendingText: string | null; failureCode: 'preparation_failed' | 'preparation_interrupted' | 'task_fork_required' | 'source_changed' | null
 }
 export type RuntimePendingSubmission = Pick<RuntimeSubmission, 'requestId' | 'requestedSessionId' | 'sessionId' | 'turnId' | 'state' | 'status' | 'createdAt' | 'updatedAt' | 'contentStatus'>
 export const createTurnRequestId = () => globalThis.crypto.randomUUID()
@@ -175,9 +175,11 @@ export function parseRuntimeSubmission(value: unknown, requestId?: string, sessi
   if (['preparing', 'preparation_failed', 'preparation_interrupted'].includes(preparation) && (turnId || effective || input || final || refs.length)) return bad()
   if (!turnId && (effective || input || final || refs.length)) return bad()
   if ((refs.find(ref => ref.purpose === 'input')?.messageId ?? null) !== input || (refs.find(ref => ref.purpose === 'final')?.messageId ?? null) !== final) return bad()
+  const failureCode = contentStatus === 'forgotten' || row.failure_code == null ? null : row.failure_code
+  if (failureCode !== null && !['preparation_failed', 'preparation_interrupted', 'task_fork_required', 'source_changed'].includes(String(failureCode))) return bad()
   const pendingText = contentStatus === 'forgotten' ? null : nullable(row.pending_text, value => text(value, 32_000))
   if (pendingText !== null && ([...pendingText].length > 16_000 || preparation === 'bound')) return bad()
-  return { requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText,
+  return { requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
     messageRefs: refs, state: contentStatus === 'forgotten' ? 'forgotten' : preparation, status: state(row.status), acted: bool(row.acted), contentStatus,
     createdAt: date(row.created_at), updatedAt: date(row.updated_at) }
 }

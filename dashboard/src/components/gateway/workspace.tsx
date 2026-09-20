@@ -22,6 +22,8 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   sourcePrivacy: GatewaySourcePrivacyState
 }) {
   const location = useLocation(), navigate = useNavigate(), [params] = useSearchParams()
+  const retainedTaskId = useStore(conversationState, value => value.taskIntent?.taskId)
+  const dispatchBlocked = useStore(conversationState, value => !!value.operation)
   const selected = useStore(conversationState, state => state.selected)
   const activityActive = location.pathname === '/activity', session = params.get('session')
   const tab = params.get('tab') === 'runs' ? 'runs' : params.get('tab') === 'events' ? 'events' : 'tasks'
@@ -36,7 +38,14 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       <nav aria-label="Workspace" className="flex overflow-x-auto px-4 sm:px-6"><NavLink to={selected ? `/chats?session=${encodeURIComponent(selected)}` : '/chats'} className={navClass(!activityActive)}>Conversations</NavLink><NavLink to="/activity?tab=tasks" className={navClass(activityActive)}>Activity</NavLink></nav>
       {activityActive && <nav aria-label="Activity sections" className="flex overflow-x-auto border-t px-4 sm:px-6">{(['tasks', 'runs', 'events'] as const).map(value => <Link key={value} aria-current={tab === value ? 'page' : undefined} className={navClass(tab === value)} to={`/activity?tab=${value}`}>{value[0].toUpperCase() + value.slice(1)}</Link>)}</nav>}
     </header>
-    <div className={cn('min-h-0 flex-1 flex-col', activityActive ? 'hidden' : 'flex')} aria-hidden={activityActive}><GatewayRuntimeWorkspace client={runtime} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} embedded visible={!activityActive} onSelectSession={selectSession} /></div>
-    <div className={cn('min-h-0 flex-1', activityActive ? 'block' : 'hidden')} aria-hidden={!activityActive}><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active={activityActive} /></div>
+    <div className={cn('min-h-0 flex-1 flex-col', activityActive ? 'hidden' : 'flex')} aria-hidden={activityActive}><GatewayRuntimeWorkspace client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} embedded visible={!activityActive} onSelectSession={selectSession} /></div>
+    <div className={cn('min-h-0 flex-1', activityActive ? 'block' : 'hidden')} aria-hidden={!activityActive}><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active={activityActive} dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
+      if (conversationState.getState().operation) return
+      activityState.setState({ notice: null })
+      const prior = conversationState.getState().taskIntent
+      const intent = prior ? { ...prior, open: true } : { taskId: task.id, sessionId: task.sessionId, open: true }
+      conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
+      selectSession(intent.sessionId)
+    }} /></div>
   </div>
 }

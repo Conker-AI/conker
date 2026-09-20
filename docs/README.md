@@ -10,6 +10,10 @@ Start with the [product overview and screenshots](../README.md), then choose the
 | [Current state](current-state.md) | Source-verified implementation boundaries and integration gaps. |
 | [Contributing](../CONTRIBUTING.md) | Change scope, verification and repository hygiene. |
 | [Browser authentication](browser-auth.md) | HTTPS gateway, host setup, session recovery and rollout prerequisites. |
+| [Live gateway workspace](gateway-workspace.md) | Fixture/live separation, authenticated conversation transport and remaining integration limits. |
+| [Recorded tasks and Activity](live-activity.md) | Durable task tracking, exact run records, concurrent edits and recovery. |
+| [Protected writes and turn recovery](gateway-verification-recovery.md) | Fresh operation-bound verification, verified unlock deadlines and durable submission identities. |
+| [Completion plan and evidence](completion-plan.md) | Ordered launch work, local checkpoints and acceptance evidence. |
 | [Backup and recovery](recovery.md) | Capturing stores, verifying snapshots and held restoration. |
 
 ## Understand the system

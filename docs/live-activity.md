@@ -5,6 +5,7 @@ Pi is the owner of durable AI-work tasks. This increment connects its SQLite tas
 ## Meaning of each record
 
 - A task records the desired outcome, completion criteria and the owner's reported progress. Creating one does not schedule or execute work.
+- **Work on this task** explicitly reviews and submits its saved objective through the verified conversation pipeline. It links the actual run without automatically completing task tracking; see [live-task-dispatch.md](live-task-dispatch.md).
 - A run is an existing Pi turn. Its actual status is preserved, including approval/budget waits, interrupted work, unknown effects and acted-without-reply.
 - An event records a task, run or action state change. It contains identities and states, not a reconstructed account of model reasoning or copied private prose.
 
@@ -36,4 +37,4 @@ Desktop light/dark and 390px dark layouts were inspected through screenshots and
 
 ## Remaining launch work
 
-Atomic turn request identities, optional revision-checked task binding, exact message association, fresh operation-bound verification and a verified unlock deadline are now implemented. See [gateway-verification-recovery.md](gateway-verification-recovery.md). Task dispatch controls, durable specialists/teams and full preview-to-live feature integration remain separate work. Server deployment, real provider/gate effects, approval/recovery and backup/restore acceptance are still required. See [completion-plan.md](completion-plan.md) for the active ledger and [gateway-workspace.md](gateway-workspace.md) for the authentication boundary.
+Atomic turn request identities, revision-checked task dispatch, exact message association, fresh operation-bound verification and a verified unlock deadline are now implemented. See [gateway-verification-recovery.md](gateway-verification-recovery.md). Durable specialists/teams and full preview-to-live feature integration remain separate work. Server deployment, real provider/gate effects, approval/recovery and backup/restore acceptance are still required. See [completion-plan.md](completion-plan.md) for the active ledger and [gateway-workspace.md](gateway-workspace.md) for the authentication boundary.

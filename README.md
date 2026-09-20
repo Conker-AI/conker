@@ -11,7 +11,7 @@
 
 ![Conker Home: requests, recent activity and workspace navigation, using sample data](docs/images/home.png)
 
-**Development status:** the React dashboard is an interactive frontend preview. Backend services live in independent repositories; the dashboard is not connected to them yet. Screenshots show fixtures, not live actions or server telemetry.
+**Development status:** the full React workspace remains an interactive preview. A separate authenticated gateway now connects real conversations and durable Tasks/Runs/Events to Pi, with fresh verification for writes and recovery after lost turn responses. Backend services remain independent repositories. The screenshots below show fixtures; server deployment and live provider/tool acceptance are still outstanding. See the [completion ledger](docs/completion-plan.md) for verified increments and remaining work.
 
 ## What Conker is for
 
@@ -88,12 +88,12 @@ Next frontend work is in the [chat delivery plan](docs/chat-delivery-plan.md). T
 
 ## Modular by design
 
-The connected architecture is below. Dashed lines identify integration boundaries; the current dashboard uses fixtures.
+The architecture is below. The preview and live gateway are explicit modes; the live mode does not fall back to fixtures. Dashed lines identify remaining integration boundaries.
 
 ```mermaid
 flowchart TB
     Owner[Owner] --> Dashboard[Conker dashboard]
-    Dashboard -. integration pending .-> Gateway[HTTPS owner gateway]
+    Dashboard --> Gateway[HTTPS owner gateway]
     Gateway --> Pi[Pi: turns, sessions and coordination]
     Gateway -. owner approval channel pending .-> ToolGate[ToolGate: controlled actions]
     Pi --> ToolGate
