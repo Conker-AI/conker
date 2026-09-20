@@ -45,3 +45,31 @@ Pi coordinates work. ToolGate governs action execution. The gateway separates ow
 ## What this audit changed
 
 Documentation and screenshots only: no service wiring, credential changes, Docker operations, registry publishing, repository transfers or product feature implementation. The chat delivery milestone remains a plan awaiting the owner's execution goal.
+
+## September 20, 2026 — backend source addendum
+
+This addendum preserves the September 19 audit above as history. The detailed
+[launch integration audit](launch-integration-audit.md) records the backend handoff,
+proposed memory-policy resolution and acceptance checklist. This was a source
+inspection, not a deployment or published-image verification.
+
+- The actual adjacent Pi checkout is `../gates/pi` from this repository. It contains
+  both the runtime and separate HTTPS gateway. Session/turn/fork/resume, model
+  routing, scoped ToolGate execution, durable action identities and memory delivery
+  are implemented. Pi does not yet expose task/job/agent management or a complete
+  ordered public Activity API; optional action `job_id` is not that lifecycle.
+- The gateway's intended ToolGate owner routes remain absent from ToolGate. Its
+  existing admin decision endpoint is not a browser-owner capability. The memory
+  ingestion environment wiring remains absent from umbrella Compose.
+- The Pi image build packages runtime and gateway only. Neither inspected API
+  mounts dashboard assets, and umbrella Compose has no frontend service. Packaged
+  same-origin frontend serving remains part of integration work.
+- Current conversation ingestion automatically admits sufficiently high-signal
+  owner statements as quoted MemoryGate memory rows. It does not require owner
+  approval and differs from ADR-0002's derived-evidence/scheduled-promotion account.
+  The launch audit proposes an explicit evidence/claim versus approved-promotion
+  decision; this documentation changes neither admission behavior nor existing data.
+- Current MemoryGate bootstrap source and boundary tests preserve revocation,
+  owner-modified scope and rotation. Older service memory documentation still warns
+  that bootstrap can resurrect keys; that warning is stale for the inspected source.
+  The behavior of the pinned published image remains unverified.
