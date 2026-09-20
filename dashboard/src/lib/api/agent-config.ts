@@ -39,6 +39,7 @@ export function agentReferences(data: Snapshot, id: string): string[] {
   if (data.sessions.some(session => session.agentId === id || (!session.agentId && session.agent === agent?.name))) references.push("conversations")
   if (Object.values(data.conversations).some(conversation => conversation.initialAgentId === id || conversation.messages.some(message => message.agentId === id || message.activity?.steps.some(step => step.agentId === id || step.handoffTo?.id === id)) || conversation.handoffs.some(handoff => handoff.fromAgentId === id || handoff.toAgentId === id))) references.push("conversation history")
   if (data.jobs.some(job => job.agentId === id)) references.push("jobs")
+  if (data.tasks?.some(task => task.agentId === id)) references.push("tasks")
   if (data.tickets.some(ticket => names.includes(ticket.agent)) || data.entries.some(entry => names.includes(entry.actor))) references.push("recorded evidence")
   return references
 }

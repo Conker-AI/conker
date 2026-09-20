@@ -26,6 +26,9 @@ import { normalizeMemoryInput } from "../memory-explorer"
 import { createCharacterStudio } from "./character-defaults"
 import { createCallFixture } from "./call-fixture"
 import { agentReferences, normalizeAgentInput } from "./agent-config"
+import { createTaskPreviewClient } from "./task-preview"
+import { projectActivity } from "./activity-projection"
+import type { ActivityRunRecord } from "./task-types"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -42,6 +45,7 @@ function pause(ms: number, signal?: AbortSignal): Promise<void> {
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
+    tasks: [],
     companionSessionId: "companion",
     dailyBriefing: {
       date: "2026-09-12",
@@ -74,6 +78,15 @@ export function createFixtureClient(): ConkerClient {
   state.conversations[state.companionSessionId].presentationMode = state.profile.studio?.modes.default || "character"
   const streaming = new Set<string>()
   const runningJobs = new Set<string>()
+  const toolWorkspace = createToolWorkspacePreview(tools)
+  let taskRunSources: ActivityRunRecord[] = []
+  const taskClient = createTaskPreviewClient({
+    getSnapshot: () => ({ tasks: state.tasks, agents: state.agents, sessions: state.sessions, runs: taskRunSources }),
+    setTasks: tasks => { state.tasks = tasks },
+  })
+  const refreshTaskRuns = async () => {
+    taskRunSources = projectActivity({ ...state, tools: await toolWorkspace.list(), journalProvenance: "sample" }).runs
+  }
   const findJob = (id: string) => {
     const job = state.jobs.find(item => item.id === id)
     if (!job) throw new Error("Job not found. Refresh the list and try again.")
@@ -120,7 +133,12 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
-    toolWorkspace: createToolWorkspacePreview(tools),
+    toolWorkspace,
+    tasks: {
+      ...taskClient,
+      async create(input) { await refreshTaskRuns(); return taskClient.create(input) },
+      async update(id, input, revision) { await refreshTaskRuns(); return taskClient.update(id, input, revision) },
+    },
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
@@ -144,6 +162,7 @@ export function createFixtureClient(): ConkerClient {
     async archiveAgent(id, archived) {
       const agent = specialist(id)
       if (typeof archived !== "boolean") throw new Error("Choose archive or restore.")
+      if (archived && state.tasks.some(task => task.agentId === id && !["completed", "cancelled"].includes(task.status))) throw new Error("Reassign or resolve this agent’s tasks before archiving it.")
       if (archived && (state.sessions.some(session => session.agentId === id && streaming.has(session.id)) || state.jobs.some(job => job.agentId === id && (job.status === "Scheduled" || runningJobs.has(job.id))))) throw new Error("Pause this agent’s jobs and finish its active replies before archiving it.")
       if (archived) agent.archivedAt = new Date().toISOString()
       else delete agent.archivedAt
@@ -276,6 +295,7 @@ export function createFixtureClient(): ConkerClient {
     async deleteConversation(id) {
       findConversation(id)
       idle(id)
+      if (state.tasks.some(task => task.sessionId === id)) throw new Error("This conversation is linked to task history. Archive it to preserve those references.")
       delete state.messages[id]
       delete state.threads[id]
       state.replyRequests = state.replyRequests.filter(item => item !== id)
