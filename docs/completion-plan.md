@@ -2,6 +2,21 @@
 
 Owner-authorized September 20, 2026. Baseline checkpoint: `df3aad220f01da5387ca63c5c4f5fdf112363086` on `feat/dashboard`. Work and commits stay local unless publication is requested. This is the active execution ledger; `roadmap.md` retains the historical checkpoint narrative and `workspace-control-plan.md` retains the broader vision.
 
+## Active scope correction — frontend first (September 20)
+
+The owner corrected the execution order. This section supersedes the broader launch sequence below until the frontend milestone is explicitly reported complete.
+
+**Current goal:** Finish Conker's existing frontend against the agreed product journeys using the existing ConkerClient fixtures. Preserve the accepted theme, shell, layouts and modular boundary. Repair concrete interaction, navigation, draft, accessibility and responsive defects; keep preview limitations honest. Commit coherent increments locally. Report frontend complete only with a bounded audit and verification record. Then stop at this milestone; backend completion and integration are separate subsequent phases.
+
+1. Preserve existing backend/integration commits and leave them deferred. Do not wire the unfinished owner Inbox or change Pi, ToolGate or MemoryGate during this phase.
+2. Audit existing frontend journeys in bounded groups: conversations/calls/settings; agents/teams/projects/artifacts/activity; tools/jobs/memory/system. Reuse prior evidence and targeted checks.
+3. Record reproducible blockers, repair each batch, and verify affected desktop/mobile and theme states. Run the frontend build and relevant existing checks once after integration.
+4. Confirm navigation, source links, empty/error states, draft preservation, honest fixture status and critical creation/edit/review flows. Do not expand into new speculative features or redesign accepted screens.
+5. Commit each verified batch and publish a frontend acceptance report distinguishing working fixture behavior from deferred runtime capabilities.
+6. Only after reporting the frontend milestone, proceed to missing backend capabilities, then wire and deploy as separately scoped work.
+
+The goal tool's existing objective cannot be edited through its exposed status-only update API. This checked-in scope is the authoritative correction; the broader ledger below is retained as history and later-phase backlog.
+
 ## Outcome
 
 An owner can give the Companion an objective, inspect and steer the resulting task, see real execution and outputs, continue after a disconnect, and deliberately retain useful evidence-backed memory. The same interface configures independent services through Pi. Every shipped operation states whether it is live, preview, unavailable or degraded. A working editor is not proof of a working executor.
@@ -130,4 +145,4 @@ Implemented execution contract: reserve a durable turn request identity before a
 
 ## Current next action
 
-P2 Activity, P3 specialist CRUD, P4 Teams/Templates, P5 Projects, P6 context controls, P7 helper-model configuration and P8 native artifacts/canvas have verified preview increments. The production entry now authenticates through Pi and exposes real conversation transport and durable Tasks/Runs/Events without loading fixtures. Operation-bound verification, a server-enforced verified deadline, durable turn identities and exact message links are connected. Next: live task dispatch using the same guarded conversation pipeline, then owner decision/recovery controls and durable full-workspace integration. Do not infer message-to-turn links from timestamps. Persistent agents/teams/projects/context and helper-model execution remain integration work; preview changes still reset on reload.
+Finish the **fixture-backed frontend** using the scope correction above. Backend/live gateway increments remain preserved and deferred, including the owner Inbox checkpoint. Current frontend finish evidence is tracked in [frontend-acceptance.md](frontend-acceptance.md). No deployment or external service execution is part of this phase.
