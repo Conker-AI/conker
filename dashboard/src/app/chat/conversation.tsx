@@ -56,13 +56,14 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const data = useConker(data => data)
   const conversation = data.conversations[session.id]
   const { drafts, setDraft } = useConkerStore()
-  const { openRail, notify, selectVersion } = useConversationWorkspace()
+  const { openRail, notify, selectVersion, retryUnanswered } = useConversationWorkspace()
   const selectedVersions = useConversationWorkspace(state => state.selectedVersions[session.id])
   const pending = useConkerStore(state => state.pending)
   const mutate = useConkerStore(state => state.mutate)
   const stream = useConversationWorkspace(state => state.streams[session.id])
   const activity = useConversationWorkspace(state => state.activities[session.id])
   const activeQueued = useConversationWorkspace(state => state.activeQueued[session.id])
+  const unanswered = useConversationWorkspace(state => state.unanswered[session.id])
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(!hash)
@@ -142,6 +143,10 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
               if (await mutate(async () => { fork = await conkerClient.forkConversation(session.id, id) }) && fork) navigate(`/chat/${fork.id}`)
             }} />}
             <MessageActions session={session} message={message} />
+            {!message.redacted && unanswered?.messageId === message.id && <section aria-label="Unanswered request" className="mt-3 w-full space-y-3 rounded-lg border bg-muted p-3 text-left">
+              <div className="space-y-1"><p className="text-sm font-medium">Reply could not start</p><p className="text-xs leading-5 text-muted-foreground">{unanswered.reason}</p><p className="text-xs leading-5 text-muted-foreground">Your request is saved. Review the settings, then retry this request with the current context. No new message will be added.</p></div>
+              <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={pending || !!stream} onClick={() => openRail(session.id, "overview")}>Review context</Button><Button size="sm" disabled={pending || !!stream || session.archived || messages.at(-1)?.id !== message.id} onClick={() => void retryUnanswered(session.id)}>Retry saved request</Button></div>
+            </section>}
           </article>{conversation.handoffs.filter(event => versions.some(version => version.id === event.afterMessageId)).map(event => <div key={event.id} role="note" aria-label="Agent handoff" className="flex flex-wrap items-center justify-center gap-2 border-y py-3 text-xs text-muted-foreground"><span>{event.fromName}</span><ArrowRight className="size-3" /><span>{event.toName}</span><span>· Conversation handed over</span></div>)}</Fragment>
           })}
           {(streamingVisible || pendingActivity) && <div aria-label={stream ? "Streaming preview response" : "Response activity"} className="space-y-3">

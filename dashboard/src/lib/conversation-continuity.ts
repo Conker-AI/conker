@@ -1,6 +1,7 @@
 import type { ConversationMessage, ConversationPrivacy, ConversationState } from "./api/conversation-types"
 import type { Snapshot } from "./api/client"
 import { getAvailableModels } from "./api/model-catalogue"
+import type { ContextPolicy } from "./api/context-policy"
 
 export const MAX_QUEUED_TURNS = 5
 
@@ -17,6 +18,9 @@ export type QueuedTurn = {
   presentationMode: "focus" | "character"
   authorityFingerprint: string
   routeFingerprint: string
+  contextFingerprint: string
+  contextPolicy?: ContextPolicy
+  agentInstructions: string
   createdAt: string
   previewScenario?: string
   /** Retained after a successful save when only response generation failed. */
@@ -36,6 +40,13 @@ function routeFingerprint(data: Snapshot, modelId: string) {
   return JSON.stringify([model?.providerId, model?.route, provider?.endpoint])
 }
 
+function contextFingerprint(data: Snapshot, sessionId: string) {
+  const conversation = data.conversations[sessionId]
+  const agentId = data.sessions.find(session => session.id === sessionId)?.agentId || conversation.initialAgentId
+  const policy = conversation.contextPolicy
+  return JSON.stringify({ policy: policy ? { ...policy, messagePolicies: Object.fromEntries(Object.entries(policy.messagePolicies).sort(([a], [b]) => a.localeCompare(b))) } : null, pins: conversation.messages.filter(message => message.pinned && !message.redacted).map(message => message.id).sort(), agentInstructions: data.agents.find(agent => agent.id === agentId)?.configuration?.instructions || "" })
+}
+
 export function captureQueuedTurn(data: Snapshot, sessionId: string, text: string, modelId: string, replyTo?: string): QueuedTurn {
   const session = data.sessions.find(item => item.id === sessionId)
   const conversation = data.conversations[sessionId]
@@ -51,6 +62,9 @@ export function captureQueuedTurn(data: Snapshot, sessionId: string, text: strin
     privacy: { ...conversation.privacy }, modelId, modelLabel: model.name,
     presentationMode: conversation.presentationMode || "focus",
     authorityFingerprint: authorityFingerprint(conversation), routeFingerprint: routeFingerprint(data, modelId),
+    contextFingerprint: contextFingerprint(data, sessionId),
+    contextPolicy: conversation.contextPolicy ? structuredClone(conversation.contextPolicy) : undefined,
+    agentInstructions: data.agents.find(agent => agent.id === (session.agentId || conversation.initialAgentId))?.configuration?.instructions || "",
     createdAt: new Date().toISOString(),
   }
 }
@@ -66,6 +80,7 @@ export function validateQueuedTurn(entry: QueuedTurn, data: Snapshot): string | 
   if ((conversation.presentationMode || "focus") !== entry.presentationMode) return "The conversation mode changed. Review this queued message before sending."
   if (!getAvailableModels(data.modelsConfiguration).some(model => model.id === entry.modelId)) return "The queued model is disabled. Review this message and choose an available model."
   if (routeFingerprint(data, entry.modelId) !== entry.routeFingerprint) return "The queued model route changed. Review this message before sending."
+  if (contextFingerprint(data, entry.sessionId) !== entry.contextFingerprint) return "Context instructions, message policies or exact pins changed. Review this queued message before sending."
   if (authorityFingerprint(conversation) !== entry.authorityFingerprint) return "Conversation access changed. Review this queued message before sending."
   if (entry.replyTo && !conversation.messages.some(item => item.id === entry.replyTo && !item.redacted)) return "The queued reply target was removed. Review this message before sending."
   if (entry.sentMessageId) {

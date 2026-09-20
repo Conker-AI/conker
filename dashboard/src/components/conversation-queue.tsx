@@ -16,7 +16,7 @@ type Props = {
   onResume: () => void
   onRemove: (id: string) => void
   onEdit: (id: string, text: string) => boolean
-  /** Explicitly recapture current model, privacy, agent and authority after user review. */
+  /** Explicitly recapture current model, privacy, context, agent and authority after user review. */
   onReview: (id: string) => boolean
 }
 
@@ -56,7 +56,7 @@ export function ConversationQueue({ queue, busy, activeEntryId, onPause, onResum
         <form className="flex min-h-0 flex-col" onSubmit={event => { event.preventDefault(); if (editing && text.trim() && onEdit(editing.id, text)) setEditingId(null) }}>
           <OverlayBody className="space-y-4">
             <div className="space-y-2"><Label htmlFor="queued-message-edit">Message</Label><Textarea id="queued-message-edit" value={text} onChange={event => setText(event.target.value)} rows={5} maxLength={4000} disabled={!!editing?.sentMessageId} /></div>
-            {editing && <div className="space-y-2 text-xs text-muted-foreground"><p>{editing.modelLabel} · {privacyLabel(editing)} · {editing.presentationMode === "character" ? "Character" : "Focus"}</p><p>{editing.sentMessageId ? "The message is already in the conversation. Remove it from the queue to edit or fork its saved message." : "Model and privacy stay as captured. If settings changed, explicitly update this entry before resuming."}</p>{!editing.sentMessageId && <Button type="button" variant="outline" size="sm" onClick={() => { if (onEdit(editing.id, text) && onReview(editing.id)) setEditingId(null) }} disabled={!text.trim() || busy}>Use current chat settings</Button>}</div>}
+            {editing && <div className="space-y-2 text-xs text-muted-foreground"><p>{editing.modelLabel} · {privacyLabel(editing)} · {editing.presentationMode === "character" ? "Character" : "Focus"}</p><p>{editing.sentMessageId ? "The message is already in the conversation. Remove it from the queue to edit or fork its saved message." : "Model, privacy and context stay as captured. If settings changed, explicitly update this entry before resuming."}</p>{!editing.sentMessageId && <Button type="button" variant="outline" size="sm" onClick={() => { if (onEdit(editing.id, text) && onReview(editing.id)) setEditingId(null) }} disabled={!text.trim() || busy}>Use current chat settings</Button>}</div>}
           </OverlayBody>
           <FormActions inset><Button type="button" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button><Button disabled={!text.trim() || busy || !!editing?.sentMessageId}>Save message</Button></FormActions>
         </form>

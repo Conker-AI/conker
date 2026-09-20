@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ReferenceSection } from "@/components/reference-section"
 import { RunStepDetail } from "@/components/conversation-run"
+import { ConversationContext } from "@/components/conversation-context"
 import { safeAnswerUrl } from "@/lib/rich-answer"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { useConker } from "@/lib/api/store"
@@ -93,6 +94,10 @@ function RailContent({ session, children }: { session: Session; children?: React
           {selected.pinned && <Badge variant="outline">Pinned</Badge>}
           {!selected.redacted && <Button variant="outline" size="sm" onClick={() => openRail(session.id, "source", selected.id)}><FileSearch />View sources</Button>}
         </ReferenceSection>
+        {selected.role === "assistant" && !selected.redacted && <ReferenceSection title="Context at this response" icon={<Brain />}>
+          <p className={note}>{selected.contextMessageIds ? `${selected.contextMessageIds.length} source messages recorded for this response.` : "Source message IDs were not recorded for this sample."} Retries keep this response’s instruction and policy snapshot.</p>
+          {selected.contextPolicySnapshot ? <><p className={note}>Preview window {selected.contextPolicySnapshot.budget.contextWindowTokens.toLocaleString()} · output reserve {selected.contextPolicySnapshot.budget.outputReserveTokens.toLocaleString()}</p><details><summary className="cursor-pointer text-xs font-medium">Recorded instructions</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5">{selected.agentInstructionsSnapshot ? `Agent: ${selected.agentInstructionsSnapshot}\n\n` : ""}{selected.contextPolicySnapshot.sessionInstructions ? `Session: ${selected.contextPolicySnapshot.sessionInstructions}` : "No session instructions."}</p></details></> : <p className={note}>No context policy was configured for this response.</p>}
+        </ReferenceSection>}
       </> : <p className={note}>This message is no longer available.</p>
     }
     case "usage":
@@ -154,6 +159,7 @@ function RailContent({ session, children }: { session: Session; children?: React
           {conversation.files.length ? <ul className="divide-y divide-border">{conversation.files.map(file => <li key={file.id}>{file.source?.startsWith("/") ? <Link className={referenceLink} to={file.source} onClick={close}>{file.name}<ArrowUpRight className="size-4 shrink-0" /></Link> : <p className="py-2">{file.name}</p>}</li>)}</ul> : <p className={note}>No files in this conversation.</p>}
           <p className={note}>References only. Uploads are not connected.</p>
         </ReferenceSection>
+        <ConversationContext key={session.id} session={session} />
         <ReferenceSection title={`Pinned messages · ${pins.length}`} icon={<Pin />}>
           {pins.length ? <ul className="divide-y divide-border">{pins.map(message => <li key={message.id}><Link className={referenceLink} to={`${sessionLink(session.id)}#${encodeURIComponent(message.id)}`} onClick={close}><span className="line-clamp-3">{message.redacted ? "Redacted message" : message.text}</span><ArrowUpRight className="size-4 shrink-0" /></Link></li>)}</ul> : <p className={note}>Pin a message from its ⋯ menu to keep it here.</p>}
         </ReferenceSection>
@@ -192,6 +198,8 @@ export function ConversationRail({ session, children }: { session: Session; chil
   useEffect(() => {
     if (!wide || !rail?.open) return
     const escape = (event: KeyboardEvent) => {
+      // A nested context editor owns Escape; keep the rail and its draft mounted.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return
       if (event.key === "Escape" && !event.defaultPrevented) { close(session.id); restoreFocus() }
     }
     document.addEventListener("keydown", escape)

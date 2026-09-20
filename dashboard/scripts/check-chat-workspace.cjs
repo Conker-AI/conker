@@ -34,6 +34,7 @@ async function main() {
       options.signal?.addEventListener('abort', abort, { once: true })
       if (options.signal?.aborted) abort()
     })
+    const controlledStream = client.streamReply
     await store.getState().load()
     const make = async () => { const session = await client.createConversation('conker'); workspace.getState().reset(session.id); store.getState().setDraft(session.id, ''); await store.getState().load(); return session.id }
     const draft = (id, text) => store.getState().setDraft(id, text)
@@ -43,7 +44,7 @@ async function main() {
     const check = async (label, action) => {
       try { await action(); checks.push(label) }
       catch (error) { failures.push({ label, error }); }
-      finally { client.sendMessage = originalSend; for (const id of Object.keys(w().streams)) if (w().streams[id]) w().stop(id); await settle() }
+      finally { client.sendMessage = originalSend; client.streamReply = controlledStream; for (const id of Object.keys(w().streams)) if (w().streams[id]) w().stop(id); await settle() }
     }
 
     await check('Queue drains once, preserves captured model and accepts edit/remove while streaming', async () => {
@@ -217,6 +218,56 @@ async function main() {
       const afterDecision = w().resumeQueue(id); await settle()
       assert.equal(calls.length, start + 2, 'A resolved Inbox request incorrectly blocks the queue')
       calls[start + 1].complete(); await afterDecision
+    })
+
+    await check('Context-blocked saved request can recover without duplicate input or invented attempt', async () => {
+      const id = await make()
+      client.streamReply = originalStream
+      const budget = { contextWindowTokens: 20, outputReserveTokens: 10, otherInputTokens: 0 }
+      await client.updateConversation(id, { contextPolicy: { sessionInstructions: '', messagePolicies: {}, budget } }); await store.getState().load()
+      draft(id, 'This request deliberately exceeds the tiny configured context budget and must be preserved for recovery.')
+      await w().send(id)
+      const request = users(id)[0]
+      assert.ok(request)
+      assert.equal(w().unanswered[id].messageId, request.id)
+      assert.equal(store.getState().drafts[id], '')
+      assert.equal(store.getState().data.conversations[id].messages.length, 1, 'Preflight rejection must not invent an assistant/execution record')
+      assert.equal(w().activities[id], undefined)
+      await client.updateConversation(id, { contextPolicy: { sessionInstructions: '', messagePolicies: {}, budget: { ...budget, contextWindowTokens: 8192 } } }); await store.getState().load()
+      draft(id, 'A separate unsent next-turn draft')
+      w().setPreview(id, 'search-read')
+      assert.equal(await w().retryUnanswered(id), true)
+      const messages = store.getState().data.conversations[id].messages
+      assert.equal(users(id).length, 1)
+      assert.equal(messages.length, 2)
+      assert.equal(messages[1].contextMessageId, request.id)
+      assert.ok(messages[1].activity.steps.every(step => step.kind === 'phase'), 'Recovery must not run the selected action preview')
+      assert.equal(w().unanswered[id], undefined)
+      assert.equal(store.getState().drafts[id], 'A separate unsent next-turn draft')
+      assert.equal(w().previews[id], 'search-read')
+      assert.equal(w().queues[id].paused, true)
+    })
+
+    await check('Unanswered recovery refuses redacted or superseded requests', async () => {
+      const id = await make()
+      client.streamReply = originalStream
+      await client.updateConversation(id, { contextPolicy: { sessionInstructions: '', messagePolicies: {}, budget: { contextWindowTokens: 20, outputReserveTokens: 10, otherInputTokens: 0 } } }); await store.getState().load()
+      draft(id, 'An over-budget request with enough text to force the context preflight to reject it.')
+      await w().send(id)
+      const request = users(id)[0]
+      assert.ok(w().unanswered[id])
+      await client.updateMessage(id, request.id, { redacted: true }); await store.getState().load()
+      assert.equal(await w().retryUnanswered(id), false)
+      assert.equal(store.getState().data.conversations[id].messages.length, 1)
+      assert.equal(users(id)[0].text, '')
+      draft(id, 'Another over-budget request whose captured boundary must never be silently replaced.')
+      await w().send(id)
+      const blockedId = w().unanswered[id].messageId
+      await originalSend(id, 'A later saved request'); await store.getState().load()
+      assert.notEqual(users(id).at(-1).id, blockedId)
+      const count = store.getState().data.conversations[id].messages.length
+      assert.equal(await w().retryUnanswered(id), false)
+      assert.equal(store.getState().data.conversations[id].messages.length, count)
     })
 
     console.log(`Workspace checks passed (${checks.length}):\n${checks.map(label => `- ${label}`).join('\n')}`)

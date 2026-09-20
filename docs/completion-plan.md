@@ -99,7 +99,9 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 | 2026-09-20 | Route feedback isolation | 50a6e654 | Errors from one screen no longer follow navigation to an unrelated screen. |
 | 2026-09-20 | Task and Activity domain | b460f99d | Revision-safe task lifecycle, owner-reviewed completion, shared Activity projection and source references; focused tests. |
 | 2026-09-20 | Context policy foundation | e9f8dc98 | Separate instruction scopes, exact pins, explicit include/exclude/summary/retrieve policy, estimates and conflicts; no fabricated summarization. |
-| 2026-09-20 | Activity workspace | this increment | Create/edit/review task dialogs, route-retained drafts, searchable references, Tasks/Runs/Events, Journal redirect, precise job/message source links. Task/agent/tool/navigation/job tests, lint and build passed. Browser: creation through completion, invalid-completion guard, desktop light/dark, 390px mobile, preserved Journal actor filter and focused job receipt. |
+| 2026-09-20 | Activity workspace | 3581e803 | Create/edit/review task dialogs, route-retained drafts, searchable references, Tasks/Runs/Events, Journal redirect, precise job/message source links. Task/agent/tool/navigation/job tests, lint and build passed. Browser: creation through completion, invalid-completion guard, desktop light/dark, 390px mobile, preserved Journal actor filter and focused job receipt. |
+
+| 2026-09-20 | Conversation context controls | this increment | Session instructions, exact pins, per-message inclusion policies, budget conflicts and original response snapshots. Browser checked invalid reserve, exclusion preserving transcript, desktop/light and narrow/dark editor, nested Escape, overflow recovery without duplicate message or lost unsent draft. Context and 15 workspace checks pass. Retrieval/summarization/provider-token counts remain explicitly unwired. |
 
 ## Questions and external dependencies
 

@@ -29,6 +29,7 @@ import { agentReferences, normalizeAgentInput } from "./agent-config"
 import { createTaskPreviewClient } from "./task-preview"
 import { projectActivity, toolActivityRunIds } from "./activity-projection"
 import type { ActivityRunRecord } from "./task-types"
+import { contextPolicyForMessages, normalizeContextPolicy, planContext } from "./context-policy"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -275,6 +276,12 @@ export function createFixtureClient(): ConkerClient {
     },
     async updateConversation(id, update) {
       const { session, conversation } = findConversation(id)
+      const contextPolicy = update.contextPolicy === undefined ? undefined : normalizeContextPolicy(update.contextPolicy)
+      if (contextPolicy) {
+        idle(id)
+        if (session.archived) throw new Error("Restore this conversation before editing context.")
+        if (Object.keys(contextPolicy.messagePolicies).some(messageId => !conversation.messages.some(message => message.id === messageId && !message.redacted))) throw new Error("Context policies must reference available messages in this conversation.")
+      }
       if (update.title !== undefined && (typeof update.title !== "string" || !update.title.trim() || update.title.trim().length > 120)) {
         throw new Error("Use 1–120 characters for a conversation title.")
       }
@@ -294,6 +301,7 @@ export function createFixtureClient(): ConkerClient {
       if (update.pinned !== undefined) session.pinned = update.pinned
       if (update.archived !== undefined) session.archived = update.archived
       if (update.modelId !== undefined) conversation.modelId = update.modelId
+      if (contextPolicy) conversation.contextPolicy = contextPolicy
       if (update.presentationMode !== undefined) conversation.presentationMode = update.presentationMode
       if (update.incognito !== undefined || update.privacy !== undefined) {
         const previousMemory = conversation.privacy.memoryDisabled
@@ -349,7 +357,10 @@ export function createFixtureClient(): ConkerClient {
       }
       if (update.rating !== undefined) message.rating = update.rating
       if (update.text !== undefined) { message.text = update.text.trim(); message.edited = true; message.scenario = false; delete message.rating; delete message.activity; delete message.citations; delete message.source }
-      if (update.pinned !== undefined) message.pinned = update.pinned
+      if (update.pinned !== undefined) {
+        message.pinned = update.pinned
+        if (update.pinned && conversation.contextPolicy) conversation.contextPolicy.messagePolicies[message.id] = "keep-exact"
+      }
       if (update.redacted) {
         message.text = ""
         message.redacted = true
@@ -359,6 +370,10 @@ export function createFixtureClient(): ConkerClient {
         delete message.source
         delete message.activity
         delete message.citations
+        delete message.contextPolicySnapshot
+        delete message.agentInstructionsSnapshot
+        if (conversation.contextPolicy) conversation.contextPolicy = contextPolicyForMessages(conversation.contextPolicy, conversation.messages)
+        for (const item of conversation.messages) if (item.contextPolicySnapshot) item.contextPolicySnapshot = contextPolicyForMessages(item.contextPolicySnapshot, conversation.messages)
       }
       // Legacy consumers must not reveal text after an edit or redaction.
       const local = state.messages[id]?.find(item => item.id === messageId)
@@ -395,6 +410,8 @@ export function createFixtureClient(): ConkerClient {
         ...message, scenario: false,
         ...(!message.redacted ? { source: { id: message.id, label: `From ${session.title}`, href: `${path}#${encodeURIComponent(message.id)}` } } : {}),
       }))
+      if (conversation.contextPolicy) next.contextPolicy = contextPolicyForMessages(conversation.contextPolicy, next.messages)
+      for (const message of next.messages) if (message.contextPolicySnapshot) message.contextPolicySnapshot = contextPolicyForMessages(message.contextPolicySnapshot, next.messages)
       // A handoff after the selected message is outside a fork ending at that message.
       const included = new Set(next.messages.slice(0, -1).map(message => message.id))
       next.handoffs = structuredClone(conversation.handoffs.filter(event => included.has(event.afterMessageId)))
@@ -418,9 +435,16 @@ export function createFixtureClient(): ConkerClient {
       if (options.retryMessageId && !retryTarget) {
         throw new Error("Choose an available companion message to retry.")
       }
-      const context = retryTarget ? contextBeforeMessage(conversation.messages, retryTarget.id) : activeConversationMessages(conversation.messages)
-      const prompt = [...context].reverse().find(message => message.role === "user" && !message.redacted)
+      const boundary = retryTarget ? contextBeforeMessage(conversation.messages, retryTarget.id) : activeConversationMessages(conversation.messages)
+      const requestedPolicy = retryTarget ? retryTarget.contextPolicySnapshot : conversation.contextPolicy
+      const contextPolicy = requestedPolicy ? contextPolicyForMessages(requestedPolicy, boundary) : undefined
+      const agentInstructions = retryTarget ? retryTarget.agentInstructionsSnapshot || "" : findAgent(session.agentId || conversation.initialAgentId).configuration?.instructions || ""
+      const contextPlan = contextPolicy ? planContext({ policy: contextPolicy, messages: boundary, privacy: conversation.privacy, inheritedInstructions: agentInstructions ? [{ scope: "agent", text: agentInstructions }] : [] }) : undefined
+      if (contextPlan && contextPlan.nextAction !== "within-estimated-budget") throw new Error(`Review conversation context before replying: ${contextPlan.conflicts[0]?.detail || "The preview context is unresolved."}`)
+      const context = contextPlan ? boundary.filter(message => contextPlan.messages.some(row => row.messageId === message.id && row.disposition === "included-exact")) : boundary
+      const prompt = [...boundary].reverse().find(message => message.role === "user" && !message.redacted)
       if (!prompt) throw new Error("Send a message before asking for a reply.")
+      if (!context.some(message => message.id === prompt.id)) throw new Error("The latest request is excluded from context. Include it before requesting a reply.")
       const replyId = crypto.randomUUID()
       const reply: ConversationMessage = {
         id: replyId, role: "assistant", text: "", createdAt: new Date().toISOString(),
@@ -428,6 +452,8 @@ export function createFixtureClient(): ConkerClient {
         presentationMode: retryTarget?.presentationMode || conversation.presentationMode || "focus",
         responseFamilyId: retryTarget ? responseFamilyId(conversation.messages, retryTarget) : replyId,
         contextMessageId: prompt.id, contextMessageIds: context.map(message => message.id),
+        ...(contextPolicy ? { contextPolicySnapshot: structuredClone(contextPolicy) } : {}),
+        agentInstructionsSnapshot: agentInstructions,
         modelId, status: "complete", ...(options.retryMessageId ? { retryOf: options.retryMessageId } : {}),
       }
       let run: ConversationRun = {

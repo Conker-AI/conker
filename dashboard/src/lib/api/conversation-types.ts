@@ -57,6 +57,9 @@ export type ConversationMessage = {
   responseFamilyId?: string
   contextMessageId?: string
   contextMessageIds?: string[]
+  /** Configuration used for this response; later edits never rewrite its context. */
+  contextPolicySnapshot?: import("./context-policy").ContextPolicy
+  agentInstructionsSnapshot?: string
   replyTo?: string
   retryOf?: string
   activity?: ConversationRun
@@ -66,6 +69,7 @@ export type ConversationPrivacy = { memoryDisabled: boolean; harnessDisabled: bo
 export type ConversationHandoff = { id: string; afterMessageId: string; fromAgentId: string; toAgentId: string; fromName: string; toName: string; createdAt: string }
 
 export type ConversationState = {
+  contextPolicy?: import("./context-policy").ContextPolicy
   messages: ConversationMessage[]
   /** Derived: true when either privacy exclusion is enabled. */
   incognito: boolean
@@ -89,6 +93,7 @@ export type ConversationState = {
 }
 
 export type ConversationUpdate = {
+  contextPolicy?: import("./context-policy").ContextPolicy
   presentationMode?: import("./character").CharacterMode
   title?: string
   pinned?: boolean

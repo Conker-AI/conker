@@ -53,6 +53,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const nextModel = useConversationWorkspace(state => state.nextModels[session.id])
   const replyId = useConversationWorkspace(state => state.replies[session.id])
   const notice = useConversationWorkspace(state => state.notices[session.id])
+  const unanswered = useConversationWorkspace(state => state.unanswered[session.id])
   const voice = useVoiceTyping(session.id, inputRef)
   const call = useCallWorkspace(state => state.call)
   const startCall = useCallWorkspace(state => state.start)
@@ -62,6 +63,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const useTextRef = useRef<HTMLButtonElement>(null)
   const previousActive = useRef(false)
   const conversation = data.conversations[session.id]
+  const noticeInRecovery = notice === unanswered?.reason && conversation?.messages.some(message => message.id === unanswered?.messageId && message.role === "user" && !message.redacted)
   const models = getAvailableModels(data.modelsConfiguration)
   const modelId = nextModel || conversation?.modelId || data.modelsConfiguration.defaultModelId
   const model = models.find(item => item.id === modelId)
@@ -143,7 +145,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
       {draft.length > 3600 ? <span id="composer-limit" className={cn("shrink-0 tabular-nums", overLimit && "text-destructive")}>{draft.length.toLocaleString()} / 4,000</span> : <span className="hidden shrink-0 sm:inline">{voice.active ? "Esc to cancel" : `${queueing ? "Enter to queue" : "Enter to send"} · Shift + Enter for a new line`}</span>}
     </div>
     {voice.error && <div role="alert" className="mt-2 flex items-start gap-2 px-1"><p className="flex-1 text-xs leading-5 text-muted-foreground">{voice.error}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Dismiss voice typing notice" onClick={voice.clearError}><X /></Button></div>}
-    {notice && <p role="status" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{notice}</p>}
+    {notice && <p role="status" className={noticeInRecovery ? "sr-only" : "mt-1 px-1 text-xs leading-5 text-muted-foreground"}>{notice}</p>}
     {callError && !call && <p role="alert" className="mt-1 px-1 text-xs leading-5 text-muted-foreground">{callError}</p>}
   </div>
 }

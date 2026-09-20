@@ -9,6 +9,7 @@ import { mergeActivityRun } from "@/lib/conversation-activity"
 export type RailView = "overview" | "forks" | "source" | "explain" | "usage" | "privacy" | "daily" | "activity"
 type Rail = { open: boolean; view: RailView; messageId?: string; sourceId?: string; runId?: string; stepId?: string }
 type Stream = { text: string; modelId: string; phase: "thinking" | "streaming" }
+type UnansweredRequest = { messageId: string; modelId: string; reason: string }
 type Workspace = {
   rails: Record<string, Rail>
   nextModels: Record<string, string>
@@ -20,6 +21,7 @@ type Workspace = {
   selectedVersions: Record<string, Record<string, string>>
   previews: Record<string, string>
   activeQueued: Record<string, string | undefined>
+  unanswered: Record<string, UnansweredRequest | undefined>
   openRail: (id: string, view?: RailView, messageId?: string, detail?: { sourceId?: string; runId?: string; stepId?: string }) => void
   closeRail: (id: string) => void
   setNextModel: (id: string, modelId: string) => void
@@ -30,6 +32,7 @@ type Workspace = {
   reset: (id: string) => void
   send: (id: string) => Promise<void>
   retry: (id: string, messageId: string, modelId: string) => Promise<boolean>
+  retryUnanswered: (id: string) => Promise<boolean>
   stop: (id: string) => void
   enqueue: (id: string) => void
   editQueued: (id: string, entryId: string, text: string) => boolean
@@ -54,13 +57,13 @@ function approvalWait(id: string): string | null {
 
 export const useConversationWorkspace = create<Workspace>((set, get) => {
   const queueUpdate = (id: string, update: (queue: TurnQueue) => TurnQueue) => set(state => ({ queues: { ...state.queues, [id]: update(state.queues[id] || { entries: [], paused: false }) } }))
-  const run = async (id: string, retryMessageId?: string, retryModelId?: string, entry?: QueuedTurn) => {
+  const run = async (id: string, retryMessageId?: string, retryModelId?: string, entry?: QueuedTurn, savedRequestId?: string) => {
     if (get().streams[id] || useConkerStore.getState().pending) return false
     const store = useConkerStore.getState()
     const data = store.data
     if (!data) return false
     const draft = entry?.text ?? store.drafts[id] ?? ""
-    if (!retryMessageId && !draft.trim()) return false
+    if (!retryMessageId && !savedRequestId && !draft.trim()) return false
     const modelId = entry?.modelId || retryModelId || get().nextModels[id] || data.conversations[id]?.modelId || data.modelsConfiguration.defaultModelId
     if (!modelId || !getAvailableModels(data.modelsConfiguration).some(model => model.id === modelId)) {
       get().notify(id, "Choose an enabled model in Tools, or configure a default in Settings.")
@@ -72,11 +75,13 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     }
     const controller = new AbortController()
     controllers.set(id, controller)
-    const previewScenario = retryMessageId || entry?.sentMessageId ? undefined : entry ? entry.previewScenario : get().previews[id]
-    if (!entry && !retryMessageId) get().setPreview(id, "")
+    const previewScenario = retryMessageId || savedRequestId || entry?.sentMessageId ? undefined : entry ? entry.previewScenario : get().previews[id]
+    if (!entry && !retryMessageId && !savedRequestId) get().setPreview(id, "")
     set(state => ({ activeQueued: { ...state.activeQueued, [id]: entry?.id }, streams: { ...state.streams, [id]: { text: "", modelId, phase: "thinking" } }, activities: { ...state.activities, [id]: undefined }, notices: { ...state.notices, [id]: "" } }))
+    let requestId = savedRequestId
+    let startFailure: string | undefined
     try {
-      if (!retryMessageId && !entry?.sentMessageId) {
+      if (!retryMessageId && !savedRequestId && !entry?.sentMessageId) {
         const replyTo = entry ? entry.replyTo : data.conversations[id]?.messages.find(message => message.id === get().replies[id] && !message.redacted)?.id
         let savedMessageId: string | undefined
         const saved = await store.mutate(async () => { savedMessageId = (await conkerClient.sendMessage(id, draft, { replyTo })).id })
@@ -86,6 +91,8 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
         }
         if (entry) queueUpdate(id, queue => ({ ...queue, entries: queue.entries.map(item => item.id === entry.id ? { ...item, sentMessageId: savedMessageId } : item) }))
         else {
+          requestId = savedMessageId
+          set(state => ({ unanswered: { ...state.unanswered, [id]: undefined } }))
           if (useConkerStore.getState().drafts[id] === draft) store.setDraft(id, "")
           get().setReply(id)
         }
@@ -109,16 +116,26 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
       if (response.responseFamilyId) get().selectVersion(id, response.responseFamilyId, response.id)
       return !controller.signal.aborted && response.status !== "stopped" && response.status !== "failed" && response.activity?.status !== "stopped" && response.activity?.status !== "failed"
     } catch (error) {
-      if (!(error instanceof Error && error.name === "AbortError")) get().notify(id, error instanceof Error ? error.message : "The preview response failed. Your message is retained.")
+      if (!(error instanceof Error && error.name === "AbortError")) {
+        startFailure = error instanceof Error ? error.message : "The preview response failed. Your message is retained."
+        get().notify(id, startFailure)
+      }
       return false
     } finally {
       await useConkerStore.getState().load()
-      if (!entry && !retryMessageId && get().nextModels[id] === modelId) get().setNextModel(id, "")
+      if (!entry && !retryMessageId && !savedRequestId && get().nextModels[id] === modelId) get().setNextModel(id, "")
       controllers.delete(id)
       set(state => {
         const activity = state.activities[id]
-        const saved = useConkerStore.getState().data?.conversations[id]?.messages.some(message => message.activity?.id === activity?.id)
-        return { activeQueued: { ...state.activeQueued, [id]: undefined }, streams: { ...state.streams, [id]: undefined }, activities: { ...state.activities, [id]: saved ? undefined : activity } }
+        const messages = useConkerStore.getState().data?.conversations[id]?.messages || []
+        const saved = messages.some(message => message.activity?.id === activity?.id)
+        const unanswered = { ...state.unanswered }
+        if (!entry && requestId) {
+          const request = messages.find(message => message.id === requestId && !message.redacted)
+          const hasReply = messages.some(message => message.role === "assistant" && message.contextMessageId === requestId)
+          unanswered[id] = startFailure && request && !hasReply && !activity && !state.streams[id]?.text ? { messageId: requestId, modelId, reason: startFailure } : undefined
+        }
+        return { unanswered, activeQueued: { ...state.activeQueued, [id]: undefined }, streams: { ...state.streams, [id]: undefined }, activities: { ...state.activities, [id]: saved ? undefined : activity } }
       })
     }
   }
@@ -138,7 +155,7 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     } finally { draining.delete(id) }
   }
   return {
-    rails: {}, nextModels: {}, replies: {}, notices: {}, streams: {}, activities: {}, queues: {}, selectedVersions: {}, previews: {}, activeQueued: {},
+    rails: {}, nextModels: {}, replies: {}, notices: {}, streams: {}, activities: {}, queues: {}, selectedVersions: {}, previews: {}, activeQueued: {}, unanswered: {},
     openRail: (id, view = "overview", messageId, detail) => set(state => ({ rails: { ...state.rails, [id]: { open: true, view, messageId, ...detail } } })),
     closeRail: id => set(state => ({ rails: { ...state.rails, [id]: { ...state.rails[id], open: false, view: state.rails[id]?.view || "overview" } } })),
     setNextModel: (id, modelId) => set(state => ({ nextModels: { ...state.nextModels, [id]: modelId } })),
@@ -149,9 +166,9 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     reset: id => {
       controllers.get(id)?.abort()
       set(state => {
-        const rails = { ...state.rails }, nextModels = { ...state.nextModels }, replies = { ...state.replies }, notices = { ...state.notices }, activities = { ...state.activities }, queues = { ...state.queues }, selectedVersions = { ...state.selectedVersions }, previews = { ...state.previews }
-        delete rails[id]; delete nextModels[id]; delete replies[id]; delete notices[id]; delete activities[id]; delete queues[id]; delete selectedVersions[id]; delete previews[id]
-        return { rails, nextModels, replies, notices, activities, queues, selectedVersions, previews }
+        const rails = { ...state.rails }, nextModels = { ...state.nextModels }, replies = { ...state.replies }, notices = { ...state.notices }, activities = { ...state.activities }, queues = { ...state.queues }, selectedVersions = { ...state.selectedVersions }, previews = { ...state.previews }, unanswered = { ...state.unanswered }
+        delete rails[id]; delete nextModels[id]; delete replies[id]; delete notices[id]; delete activities[id]; delete queues[id]; delete selectedVersions[id]; delete previews[id]; delete unanswered[id]
+        return { rails, nextModels, replies, notices, activities, queues, selectedVersions, previews, unanswered }
       })
     },
     send: async id => {
@@ -162,6 +179,18 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
     retry: async (id, messageId, modelId) => {
       get().pauseQueue(id, "A response is being retried. Resume the queue after reviewing it.")
       return run(id, messageId, modelId)
+    },
+    retryUnanswered: async id => {
+      const request = get().unanswered[id]
+      const data = useConkerStore.getState().data
+      const messages = data?.conversations[id]?.messages || []
+      // Only the saved latest request can resume without silently changing its boundary.
+      if (!request || messages.at(-1)?.id !== request.messageId || messages.at(-1)?.redacted) {
+        get().notify(id, "This unanswered request changed or has later messages. Continue from its message explicitly.")
+        return false
+      }
+      get().pauseQueue(id, "Review the recovered reply before resuming queued messages.")
+      return run(id, undefined, get().nextModels[id] || request.modelId, undefined, request.messageId)
     },
     stop: id => { get().pauseQueue(id, "Response stopped. Queued messages will wait until you resume."); controllers.get(id)?.abort(); get().notify(id, "Preview response stopped. No tools were run.") },
     enqueue: id => {
