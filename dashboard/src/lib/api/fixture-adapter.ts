@@ -25,6 +25,7 @@ import { normalizeMemoryInput } from "../memory-explorer"
 
 import { createCharacterStudio } from "./character-defaults"
 import { createCallFixture } from "./call-fixture"
+import { agentReferences, normalizeAgentInput } from "./agent-config"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -94,6 +95,16 @@ export function createFixtureClient(): ConkerClient {
     return agent
   }
   const agentName = (id: string) => { const agent = findAgent(id); return agent.kind === "companion" ? state.profile.name : agent.name }
+  const availableAgent = (id: string) => {
+    const agent = findAgent(id)
+    if (agent.archivedAt) throw new Error("Restore this agent before starting work, or choose another agent.")
+    return agent
+  }
+  const specialist = (id: string) => {
+    const agent = findAgent(id)
+    if (agent.kind === "companion") throw new Error("Your Companion keeps its identity. Use Character Studio to edit it.")
+    return agent
+  }
   const availableModel = (id: string | null) => {
     if (!id || !getAvailableModels(state.modelsConfiguration).some(model => model.id === id)) {
       throw new Error("Choose an enabled model from Settings.")
@@ -113,6 +124,37 @@ export function createFixtureClient(): ConkerClient {
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
     async load() { return structuredClone(state) },
+    async createAgent(input) {
+      const configuration = normalizeAgentInput(input, state)
+      const model = state.modelsConfiguration.models.find(item => item.id === configuration.modelId)
+      const agent = { id: `agent-${crypto.randomUUID()}`, name: configuration.name, role: configuration.role, kind: "agent" as const, model: model?.name || "Default route", grants: 0, cost: "Not metered", status: "idle" as const, configuration, version: 1 }
+      state.agents.push(agent)
+      return structuredClone(agent)
+    },
+    async saveAgent(id, input) {
+      const agent = specialist(id)
+      if (agent.archivedAt) throw new Error("Restore this agent before editing it.")
+      if (state.sessions.some(session => session.agentId === id && streaming.has(session.id)) || state.jobs.some(job => job.agentId === id && runningJobs.has(job.id))) throw new Error("Wait for this agent’s preview work to finish before editing it.")
+      const configuration = normalizeAgentInput(input, state, id)
+      if (agent.name !== configuration.name) agent.historicalNames = [...new Set([...(agent.historicalNames || []), agent.name])]
+      Object.assign(agent, { name: configuration.name, role: configuration.role, configuration, model: state.modelsConfiguration.models.find(model => model.id === configuration.modelId)?.name || "Default route", version: (agent.version || 0) + 1 })
+      for (const session of state.sessions) if (session.agentId === id) session.agent = agent.name
+      return structuredClone(agent)
+    },
+    async archiveAgent(id, archived) {
+      const agent = specialist(id)
+      if (typeof archived !== "boolean") throw new Error("Choose archive or restore.")
+      if (archived && (state.sessions.some(session => session.agentId === id && streaming.has(session.id)) || state.jobs.some(job => job.agentId === id && (job.status === "Scheduled" || runningJobs.has(job.id))))) throw new Error("Pause this agent’s jobs and finish its active replies before archiving it.")
+      if (archived) agent.archivedAt = new Date().toISOString()
+      else delete agent.archivedAt
+      return structuredClone(agent)
+    },
+    async deleteAgent(id) {
+      specialist(id)
+      const references = agentReferences(state, id)
+      if (references.length) throw new Error(`This agent is referenced by ${references.join(", ")}. Archive it to preserve history.`)
+      state.agents = state.agents.filter(agent => agent.id !== id)
+    },
     async createMemory(input) {
       const value = normalizeMemoryInput(input)
       const id = `note-${crypto.randomUUID()}`
@@ -130,6 +172,7 @@ export function createFixtureClient(): ConkerClient {
     },
     async deleteMemory(id) {
       if (!state.memories.some(item => item.id === id)) throw new Error("Memory not found.")
+      if (state.agents.some(agent => agent.configuration?.memory.memoryIds.includes(id))) throw new Error("Remove this memory from agent configurations before deleting it.")
       state.memories = state.memories.filter(item => item.id !== id)
     },
     async saveCharacter(profile) {
@@ -139,7 +182,7 @@ export function createFixtureClient(): ConkerClient {
     },
     async previewCharacter(profile, mode) { const { previewCharacter } = await import("./character"); return previewCharacter(profile, mode) },
     async createConversation(agentId) {
-      const agent = findAgent(agentId)
+      const agent = availableAgent(agentId)
       const existing = state.sessions.find(session => session.isDraft && session.agentId === agent.id && !session.archived)
       if (existing) return structuredClone(existing)
       const session = {
@@ -149,13 +192,15 @@ export function createFixtureClient(): ConkerClient {
       }
       state.sessions.unshift(session)
       state.conversations[session.id] = createConversationState(agent.id)
+      state.conversations[session.id].modelId = agent.configuration?.modelId || null
+      if (agent.configuration) state.conversations[session.id].memory = { scope: agent.configuration.memory.scope, sources: agent.configuration.memory.memoryIds.map(id => ({ id, label: state.memories.find(memory => memory.id === id)?.title || id })), writeEnabled: false }
       state.conversations[session.id].presentationMode = agent.kind === "companion" ? state.profile.studio?.modes.default || "character" : "focus"
       return structuredClone(session)
     },
     async handoffConversation(id, agentId) {
       const { session, conversation } = findConversation(id)
       idle(id)
-      const agent = findAgent(agentId)
+      const agent = availableAgent(agentId)
       if (id === state.companionSessionId) throw new Error("Your companion keeps its identity. Start a separate chat with this agent.")
       if (session.archived) throw new Error("Restore this conversation before changing its agent.")
       if (session.agentId === agent.id) return structuredClone(session)
@@ -171,6 +216,8 @@ export function createFixtureClient(): ConkerClient {
       return structuredClone(session)
     },
     async sendMessage(id, text, options) {
+      const target = findConversation(id)
+      availableAgent(target.session.agentId || target.conversation.initialAgentId)
       const { session, conversation } = findConversation(id)
       idle(id)
       if (session.archived) throw new Error("Restore this conversation before sending a message.")
@@ -326,6 +373,7 @@ export function createFixtureClient(): ConkerClient {
     async streamReply(id, options, onChunk) {
       const { session, conversation } = findConversation(id)
       idle(id)
+      availableAgent(session.agentId || conversation.initialAgentId)
       if (session.archived) throw new Error("Restore this conversation before requesting a reply.")
       const modelId = availableModel(options.modelId || conversation.modelId || state.modelsConfiguration.defaultModelId)
       const retryTarget = options.retryMessageId ? conversation.messages.find(message => message.id === options.retryMessageId && message.role === "assistant" && !message.redacted) : undefined
@@ -459,6 +507,7 @@ export function createFixtureClient(): ConkerClient {
     },
     async updateJob(id, action) {
       const job = findJob(id)
+      if (action === "run" || job.status === "Paused") availableAgent(job.agentId)
       if (action === "toggle") job.status = job.status === "Paused" ? "Scheduled" : "Paused"
       else {
         runningJobs.add(id)
@@ -473,7 +522,7 @@ export function createFixtureClient(): ConkerClient {
     },
     async createJob(input) {
       const { enabled, ...config } = normalizeJobInput(input)
-      findAgent(config.agentId)
+      availableAgent(config.agentId)
       const job = { ...config, id: crypto.randomUUID(), purpose: config.instructions.split("\n")[0].slice(0, 160), schedule: describeJobTiming(config.timing), status: enabled ? "Scheduled" as const : "Paused" as const, lastRun: "Never run", nextRun: "Awaiting scheduler", runs: 0, history: [] }
       state.jobs.unshift(job)
       return structuredClone(job)
@@ -481,7 +530,7 @@ export function createFixtureClient(): ConkerClient {
     async saveJob(id, input) {
       const job = findJob(id)
       const { enabled, ...config } = normalizeJobInput(input)
-      findAgent(config.agentId)
+      if (config.agentId !== job.agentId || enabled) availableAgent(config.agentId)
       Object.assign(job, config, { purpose: config.instructions.split("\n")[0].slice(0, 160), schedule: describeJobTiming(config.timing), status: enabled ? "Scheduled" : "Paused", nextRun: "Awaiting scheduler" })
       return structuredClone(job)
     },

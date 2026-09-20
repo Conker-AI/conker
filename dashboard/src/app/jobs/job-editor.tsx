@@ -13,10 +13,11 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
   job?: Job; agents: Agent[]; pending: boolean; onSave: (input: JobInput) => Promise<void>; onCancel: () => void
 }) {
   const id = useId()
+  const availableAgents = agents.filter(agent => !agent.archivedAt)
   const [value, setValue] = useState<JobInput>(() => job ? {
     name: job.name, instructions: job.instructions, agentId: job.agentId,
     timing: { ...job.timing }, timeZone: job.timeZone, enabled: job.status === "Scheduled",
-  } : { name: "", instructions: "", agentId: agents.find(agent => agent.kind === "companion")?.id ?? agents[0]?.id ?? "", timing: { kind: "daily", time: "09:00", day: 0, hours: 24 }, timeZone: "Asia/Jerusalem", enabled: true })
+  } : { name: "", instructions: "", agentId: availableAgents.find(agent => agent.kind === "companion")?.id ?? availableAgents[0]?.id ?? "", timing: { kind: "daily", time: "09:00", day: 0, hours: 24 }, timeZone: "Asia/Jerusalem", enabled: true })
   const [errors, setErrors] = useState<ReturnType<typeof jobInputErrors>>({})
   const set = <K extends keyof JobInput>(key: K, next: JobInput[K]) => {
     setValue(current => ({ ...current, [key]: next }))
@@ -52,7 +53,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
         <Label htmlFor={`${id}-agentId`}>Agent</Label>
         <Select value={value.agentId} onValueChange={next => set("agentId", next)} disabled={pending}>
           <SelectTrigger id={`${id}-agentId`} className="w-full" aria-invalid={!!errors.agentId} aria-describedby={describedBy("agentId")}><SelectValue placeholder="Choose an agent" /></SelectTrigger>
-          <SelectContent>{agents.map(agent => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectContent>
+          <SelectContent>{agents.filter(agent => agent.archivedAt && agent.id === value.agentId).map(agent => <SelectItem key={agent.id} value={agent.id} disabled>{agent.name} · Archived</SelectItem>)}{availableAgents.map(agent => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectContent>
         </Select>
         {error("agentId")}
       </div>

@@ -94,7 +94,8 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 | 2026-09-20 | Preserve pre-goal state | df3aad22 | Clean working tree at baseline; prior Tools build/tests/screenshots recorded in tools-workspace.md. |
 | 2026-09-20 | Master plan | 9b051274 | Ordered packages, engineering defaults and launch acceptance recorded. |
 | 2026-09-20 | Backend integration audit | 6d920906 | Source-verified transport gaps and memory-policy contradiction; no deployment claim. |
-| 2026-09-20 | Tools readability and value selection | this increment | Branch-safe searchable sources; readable selected step; desktop light/dark and mobile inspected; focused tests/build/lint. |
+| 2026-09-20 | Tools readability and value selection | 6164f6f8 | Branch-safe searchable sources; readable selected step; desktop light/dark and mobile inspected; focused tests/build/lint. |
+| 2026-09-20 | Agent lifecycle preview | this increment | Create/edit, route-retained drafts, archive/restore, reference-protected deletion; model/tool/memory configuration; archived-agent selectors and call/job guards. Desktop light/dark, mobile editor and validation inspected. Agent/call/job/chat-continuity/navigation checks and build passed. |
 
 ## Questions and external dependencies
 
@@ -106,4 +107,4 @@ Required before deployment: exact server target, approved deployment path, worki
 
 ## Current next action
 
-Finish evidence inventory; implement P1's Tools readability/direct-input improvements while establishing P2/P3 shared domain contracts. Update this section after each committed increment with concrete remaining work and known limitations.
+Integrate the tested P2 task/activity domain into an Activity workspace and preserve Journal links. P3 specialist CRUD is now functional in preview; server persistence and live instruction/tool enforcement remain integration work. P1 Tools increment is verified; other shared surfaces remain on the ledger. Context-policy domain work proceeds independently. Agent drafts survive routes but all fixture state still resets on reload.

@@ -9,7 +9,7 @@ import { useConker, useConkerStore } from "@/lib/api/store"
 export default function NewChatPage() {
   const [params] = useSearchParams()
   const agents = useConker(data => data.agents)
-  const agentId = params.get("agent") || agents.find(agent => agent.kind === "companion")?.id || agents[0]?.id
+  const agentId = params.get("agent") || agents.find(agent => !agent.archivedAt && agent.kind === "companion")?.id || agents.find(agent => !agent.archivedAt)?.id
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState("")

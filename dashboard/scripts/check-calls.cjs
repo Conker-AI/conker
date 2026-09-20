@@ -12,6 +12,7 @@ function load(relative) {
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
   const module = { exports: {} }; cache.set(relative, module)
   new Function('require', 'module', 'exports', compiled.outputText)(request => {
+    if (request === 'zod') return require('zod')
     assert.ok(request.startsWith('.'), `Unexpected external dependency: ${request}`)
     return load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`)
   }, module, module.exports)

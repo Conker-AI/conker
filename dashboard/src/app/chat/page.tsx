@@ -72,7 +72,7 @@ export default function ChatsPage() {
     if (!latestByAgent.has(session.agent)) latestByAgent.set(session.agent, session)
   }
   const latestAgentSessions = [...latestByAgent.values()].filter(session => matches(session, agentQuery))
-  const unusedAgents = agents.filter(agent => !latestByAgent.has(agent.name) && `${agent.name} ${agent.role}`.toLocaleLowerCase().includes(agentQuery.trim().toLocaleLowerCase()))
+  const unusedAgents = agents.filter(agent => !agent.archivedAt && !latestByAgent.has(agent.name) && `${agent.name} ${agent.role}`.toLocaleLowerCase().includes(agentQuery.trim().toLocaleLowerCase()))
 
   return <BaseLayout variant="collection" title="Chats" description="A space for each topic. Start fresh or pick up where you left off.">
       <RouteSection value="sessions">

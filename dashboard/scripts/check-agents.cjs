@@ -1,0 +1,80 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { webcrypto } = require('node:crypto')
+const root = path.resolve(__dirname, '..')
+const ts = require(path.join(root, 'node_modules/typescript'))
+const cache = new Map()
+globalThis.crypto ??= webcrypto
+function load(relative) {
+  if (cache.has(relative)) return cache.get(relative).exports
+  const source = fs.readFileSync(path.join(root, relative), 'utf8').replaceAll('import.meta.env', '({})')
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
+  const module = { exports: {} }
+  cache.set(relative, module)
+  const resolve = request => {
+    if (request === 'zod') return require('zod')
+    assert.ok(request.startsWith('.'), `Unexpected dependency: ${request}`)
+    return load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`)
+  }
+  new Function('require', 'module', 'exports', compiled.outputText)(resolve, module, module.exports)
+  return module.exports
+}
+async function main() {
+  const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
+  const client = createFixtureClient()
+  const initial = await client.load()
+  const companion = initial.agents.find(agent => agent.kind === 'companion')
+  const input = { name: ' Researcher ', role: ' Research assistant ', instructions: ' Cite sources. ', modelId: initial.modelsConfiguration.defaultModelId, toolIds: [initial.tools[0].id], memory: { scope: 'selected', memoryIds: [initial.memories[0].id] } }
+  for (const patch of [{ name: ' ' }, { name: companion.name }, { role: '' }, { instructions: '' }, { modelId: '' }, { modelId: 'missing' }, { toolIds: ['missing'] }, { memory: { scope: 'selected', memoryIds: [] } }, { memory: { scope: 'selected', memoryIds: ['missing'] } }, { memory: { scope: 'none', memoryIds: [initial.memories[0].id] } }]) await assert.rejects(client.createAgent({ ...input, ...patch }))
+  assert.equal((await client.load()).agents.length, initial.agents.length)
+  for (const action of [() => client.saveAgent(companion.id, input), () => client.archiveAgent(companion.id, true), () => client.deleteAgent(companion.id)]) await assert.rejects(action, /Companion/)
+  const agent = await client.createAgent(input)
+  assert.equal(agent.name, 'Researcher')
+  assert.equal(agent.grants, 0)
+  assert.equal(agent.version, 1)
+  input.toolIds.length = 0
+  agent.configuration.instructions = 'External mutation'
+  assert.equal((await client.load()).agents.find(item => item.id === agent.id).configuration.instructions, 'Cite sources.')
+  await assert.rejects(client.createAgent({ ...input, name: 'researcher' }), /unique/)
+  await assert.rejects(client.deleteMemory(initial.memories[0].id), /agent configurations/)
+  const session = await client.createConversation(agent.id)
+  assert.equal((await client.load()).conversations[session.id].modelId, input.modelId)
+  await client.sendMessage(session.id, 'Hello')
+  const reply = client.streamReply(session.id, {}, () => {})
+  await assert.rejects(client.archiveAgent(agent.id, true), /active replies/)
+  await assert.rejects(client.saveAgent(agent.id, input), /finish/)
+  await reply
+  const before = (await client.load()).conversations[session.id].messages.find(message => message.role === 'assistant')
+  await client.saveAgent(agent.id, { ...input, name: 'Analyst', modelId: null })
+  const after = await client.load()
+  assert.equal(after.sessions.find(item => item.id === session.id).agent, 'Analyst')
+  assert.equal(after.conversations[session.id].messages.find(message => message.id === before.id).agentName, 'Researcher', 'Historical attribution is immutable')
+  assert.equal(after.conversations[session.id].modelId, input.modelId, 'Existing conversation route is preserved')
+  await assert.rejects(client.deleteAgent(agent.id), /Archive/)
+  const call = await client.calls.start(session.id)
+  await client.archiveAgent(agent.id, true)
+  await assert.rejects(client.calls.start(session.id), /Restore/)
+  await assert.rejects(client.calls.send(call.id, 'Blocked', new AbortController().signal, () => {}), /Restore/)
+  await client.calls.end(call.id)
+  await assert.rejects(client.calls.start(session.id), /Restore/)
+  await assert.rejects(client.createConversation(agent.id), /Restore/)
+  await assert.rejects(client.sendMessage(session.id, 'Blocked'), /Restore/)
+  await assert.rejects(client.streamReply(session.id, {}, () => {}), /Restore/)
+  await assert.rejects(client.saveAgent(agent.id, input), /Restore/)
+  await client.archiveAgent(agent.id, false)
+  const jobInput = { name: 'Research', instructions: 'Research', agentId: agent.id, timing: { kind: 'daily', time: '09:00', day: 0, hours: 24 }, timeZone: 'UTC', enabled: true }
+  const job = await client.createJob(jobInput)
+  await assert.rejects(client.archiveAgent(agent.id, true), /Pause/)
+  await client.updateJob(job.id, 'toggle')
+  await client.archiveAgent(agent.id, true)
+  await assert.rejects(client.updateJob(job.id, 'run'), /Restore/)
+  await assert.rejects(client.updateJob(job.id, 'toggle'), /Restore/)
+  await assert.rejects(client.createJob(jobInput), /Restore/)
+  const disposable = await client.createAgent({ ...input, name: 'Temporary' })
+  await client.deleteAgent(disposable.id)
+  await assert.rejects(client.createConversation(disposable.id), /available/)
+  assert.equal((await createFixtureClient().load()).agents.length, initial.agents.length, 'Fixture changes never persist or leak between clients')
+  console.log('Agent CRUD, validation, reference retention, archive protection and isolation checks passed.')
+}
+main().catch(error => { console.error(error); process.exitCode = 1 })

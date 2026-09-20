@@ -15,6 +15,7 @@ export const appNavigation = {
   memory: { path: "/memory", title: "Memory" },
   journal: { path: "/journal", title: "Journal" },
   agents: { path: "/agents", title: "Agents" },
+  editAgent: { path: "/agents/:id/edit", title: "Edit agent", parent: "agents" },
   tools: { path: "/tools", title: "Tools" },
   jobs: { path: "/jobs", title: "Jobs" },
   system: { path: "/system", title: "System" },

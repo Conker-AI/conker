@@ -27,14 +27,14 @@ export function ConversationAgent({ session }: { session: Session }) {
     <TaskDialogContent title={hasMessages ? "Hand off this chat" : "Who would you like to talk to?"} description={hasMessages ? "The next agent receives this chat’s history. Earlier replies keep their original author, and your Incognito settings stay in place." : "Choose an agent for this topic. You can hand the conversation over later."}>
       <OverlayBody>
       <RadioGroup value={selected} onValueChange={setSelected} disabled={busy} aria-label="Conversation agent" className="gap-2">
-        {data.agents.map(agent => <Label key={agent.id} htmlFor={`agent-${agent.id}`} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
+        {data.agents.filter(agent => !agent.archivedAt).map(agent => <Label key={agent.id} htmlFor={`agent-${agent.id}`} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
           <AgentIdentityPortrait name={agent.name} /><span className="min-w-0 flex-1"><span className="block text-sm">{agent.kind === "companion" ? data.profile.name : agent.name}</span><span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{agent.kind === "companion" ? "Ideas, questions, research, and everyday help" : agent.role}</span></span><RadioGroupItem id={`agent-${agent.id}`} value={agent.id} />
         </Label>)}
       </RadioGroup>
       {hasMessages && <p className="text-xs leading-5 text-muted-foreground">The model choice stays separate. Existing execution grants are cleared; no live tools are connected in this preview.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </OverlayBody>
-      <FormActions inset><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={busy || !selected} onClick={async () => {
+      <FormActions inset><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={busy || !selected || !!data.agents.find(agent => agent.id === selected)?.archivedAt} onClick={async () => {
         const saved = await useConkerStore.getState().mutate(() => conkerClient.handoffConversation(session.id, selected))
         if (saved) setOpen(false)
         else setError(useConkerStore.getState().error || "Could not change agent. Try again.")

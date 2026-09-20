@@ -56,9 +56,9 @@ export const agentColumns = (open: (agent: Agent) => void): ColumnDef<Agent>[] =
     cell: ({ row }) => {
       const active = row.original.status === "active"
       return (
-<StatusBadge tone={active ? "live" : "neutral"}>{active ? "Active" : "Idle"}</StatusBadge>
+<StatusBadge tone={!row.original.archivedAt && active ? "live" : "neutral"}>{row.original.archivedAt ? "Archived" : active ? "Active" : "Idle"}</StatusBadge>
       )
     },
   },
-  { id: "chat", header: "", enableHiding: false, cell: ({ row }) => <Button asChild variant="outline" size="sm"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`}><SquarePen />New chat</Link></Button> },
+  { id: "chat", header: "", enableHiding: false, cell: ({ row }) => row.original.archivedAt ? null : <Button asChild variant="outline" size="sm"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`}><SquarePen />New chat</Link></Button> },
 ]

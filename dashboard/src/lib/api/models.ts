@@ -7,6 +7,21 @@ export type Agent = {
   grants: number
   cost: string
   status: "active" | "idle"
+  /** Authored configuration only. Tool selection never grants execution authority. */
+  configuration?: AgentInput
+  version?: number
+  archivedAt?: string
+  /** Retained solely to resolve older evidence that stored a display name. */
+  historicalNames?: string[]
+}
+
+export type AgentInput = {
+  name: string
+  role: string
+  instructions: string
+  modelId: string | null
+  toolIds: string[]
+  memory: { scope: "none" | "conversation" | "selected"; memoryIds: string[] }
 }
 
 
