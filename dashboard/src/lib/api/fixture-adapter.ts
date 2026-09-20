@@ -7,6 +7,7 @@ import { memories, memorySearch } from "./fixtures/memory"
 import { services, vitals, system } from "./fixtures/system"
 import { tools } from "./fixtures/tools"
 import { createToolWorkspacePreview } from "./tool-workspace-preview"
+import { projectToolCatalogue } from "./tool-catalogue"
 import { threads } from "./fixtures/threads"
 import { terminal } from "./fixtures/terminal"
 import { files } from "./fixtures/files"
@@ -30,6 +31,7 @@ import { createTaskPreviewClient } from "./task-preview"
 import { projectActivity, toolActivityRunIds } from "./activity-projection"
 import type { ActivityRunRecord } from "./task-types"
 import { contextPolicyForMessages, normalizeContextPolicy, planContext } from "./context-policy"
+import { collaborationReferences, createAgentCollaborationPreviewClient } from "./agent-collaboration-preview"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -46,6 +48,7 @@ function pause(ms: number, signal?: AbortSignal): Promise<void> {
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
+    collaboration: { templates: [], teams: [], agentPreparations: [], teamPreparations: [] },
     tasks: [],
     companionSessionId: "companion",
     dailyBriefing: {
@@ -84,9 +87,25 @@ export function createFixtureClient(): ConkerClient {
     return state.tasks.some(task => task.runIds.some(id => ids.has(id)))
   } })
   let taskRunSources: ActivityRunRecord[] = []
+  const refreshToolCatalogue = async () => { state.tools = projectToolCatalogue(await toolWorkspace.list()) }
+  // Registry writes and consumers share one critical section, including awaited reads.
+  let catalogueMutation: Promise<unknown> = Promise.resolve()
+  const withToolCatalogue = <T>(action: () => T | Promise<T>): Promise<T> => {
+    const result = catalogueMutation.then(async () => { await refreshToolCatalogue(); return action() })
+    catalogueMutation = result.then(() => undefined, () => undefined)
+    return result
+  }
   const taskClient = createTaskPreviewClient({
     getSnapshot: () => ({ tasks: state.tasks, agents: state.agents, sessions: state.sessions, runs: taskRunSources }),
     setTasks: tasks => { state.tasks = tasks },
+  })
+  const collaborationClient = createAgentCollaborationPreviewClient({
+    getSnapshot: () => ({ ...state.collaboration, agents: state.agents, companionName: state.profile.name,
+      modelIds: getAvailableModels(state.modelsConfiguration).map(model => model.id),
+      toolIds: state.tools.map(tool => tool.id), memoryIds: state.memories.map(memory => memory.id),
+      contextSourceIds: state.sessions.filter(session => !session.archived).map(session => `session:${session.id}`),
+    }),
+    setData: data => { state.collaboration = data },
   })
   const refreshTaskRuns = async () => {
     taskRunSources = projectActivity({ ...state, tools: await toolWorkspace.list(), journalProvenance: "sample", fixture: true }).runs
@@ -137,9 +156,25 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    collaboration: {
+      ...collaborationClient,
+      createTemplate(input) { return withToolCatalogue(() => collaborationClient.createTemplate(input)) },
+      updateTemplate(id, input, revision) { return withToolCatalogue(() => collaborationClient.updateTemplate(id, input, revision)) },
+      publishTemplate(id, revision) { return withToolCatalogue(() => collaborationClient.publishTemplate(id, revision)) },
+      instantiateTemplate(id, version, input, revision) { return withToolCatalogue(() => collaborationClient.instantiateTemplate(id, version, input, revision)) },
+      createTeam(input) { return withToolCatalogue(() => collaborationClient.createTeam(input)) },
+      updateTeam(id, input, revision) { return withToolCatalogue(() => collaborationClient.updateTeam(id, input, revision)) },
+      prepareTeam(id, revision) { return withToolCatalogue(() => collaborationClient.prepareTeam(id, revision)) },
+    },
     toolWorkspace: {
       ...toolWorkspace,
-      async remove(id) {
+      create(name, kind) { return withToolCatalogue(() => toolWorkspace.create(name, kind)) },
+      save(definition) { return withToolCatalogue(() => toolWorkspace.save(definition)) },
+      publish(id) { return withToolCatalogue(() => toolWorkspace.publish(id)) },
+      run(id, input, version) { return withToolCatalogue(() => toolWorkspace.run(id, input, version)) },
+      remove(id) { return withToolCatalogue(async () => {
+        if (state.agents.some(agent => agent.configuration?.toolIds.includes(id))) throw new Error("This tool is referenced by agent configurations. Remove those selections before deleting it.")
+        if (collaborationReferences(state.collaboration, "tool", id).length) throw new Error("This tool is referenced by team or template configuration history. Keep it to preserve those references.")
         await refreshTaskRuns()
         const runIds = new Set(taskRunSources.filter(run => run.source.kind === "tool" && run.source.toolId === id).map(run => run.id))
         let previousSize = -1
@@ -149,24 +184,24 @@ export function createFixtureClient(): ConkerClient {
         }
         if (state.tasks.some(task => task.runIds.some(runId => runIds.has(runId)))) throw new Error("This tool has runs linked to task history. Keep it to preserve their evidence.")
         return toolWorkspace.remove(id)
-      },
+      }) },
     },
     tasks: {
       ...taskClient,
-      async create(input) { await refreshTaskRuns(); return taskClient.create(input) },
-      async update(id, input, revision) { await refreshTaskRuns(); return taskClient.update(id, input, revision) },
+      create(input) { return withToolCatalogue(async () => { await refreshTaskRuns(); return taskClient.create(input) }) },
+      update(id, input, revision) { return withToolCatalogue(async () => { await refreshTaskRuns(); return taskClient.update(id, input, revision) }) },
     },
     calls: createCallFixture(() => state),
     voiceInput: unavailableVoiceInput,
-    async load() { return structuredClone(state) },
-    async createAgent(input) {
+    async load() { await refreshToolCatalogue(); return structuredClone(state) },
+    createAgent(input) { return withToolCatalogue(() => {
       const configuration = normalizeAgentInput(input, state)
       const model = state.modelsConfiguration.models.find(item => item.id === configuration.modelId)
       const agent = { id: `agent-${crypto.randomUUID()}`, name: configuration.name, role: configuration.role, kind: "agent" as const, model: model?.name || "Default route", grants: 0, cost: "Not metered", status: "idle" as const, configuration, version: 1 }
       state.agents.push(agent)
       return structuredClone(agent)
-    },
-    async saveAgent(id, input) {
+    }) },
+    saveAgent(id, input) { return withToolCatalogue(() => {
       const agent = specialist(id)
       if (agent.archivedAt) throw new Error("Restore this agent before editing it.")
       if (state.sessions.some(session => session.agentId === id && streaming.has(session.id)) || state.jobs.some(job => job.agentId === id && runningJobs.has(job.id))) throw new Error("Wait for this agent’s preview work to finish before editing it.")
@@ -175,7 +210,7 @@ export function createFixtureClient(): ConkerClient {
       Object.assign(agent, { name: configuration.name, role: configuration.role, configuration, model: state.modelsConfiguration.models.find(model => model.id === configuration.modelId)?.name || "Default route", version: (agent.version || 0) + 1 })
       for (const session of state.sessions) if (session.agentId === id) session.agent = agent.name
       return structuredClone(agent)
-    },
+    }) },
     async archiveAgent(id, archived) {
       const agent = specialist(id)
       if (typeof archived !== "boolean") throw new Error("Choose archive or restore.")
@@ -187,7 +222,7 @@ export function createFixtureClient(): ConkerClient {
     },
     async deleteAgent(id) {
       specialist(id)
-      const references = agentReferences(state, id)
+      const references = [...agentReferences(state, id), ...collaborationReferences(state.collaboration, "agent", id)]
       if (references.length) throw new Error(`This agent is referenced by ${references.join(", ")}. Archive it to preserve history.`)
       state.agents = state.agents.filter(agent => agent.id !== id)
     },
@@ -209,6 +244,7 @@ export function createFixtureClient(): ConkerClient {
     async deleteMemory(id) {
       if (!state.memories.some(item => item.id === id)) throw new Error("Memory not found.")
       if (state.agents.some(agent => agent.configuration?.memory.memoryIds.includes(id))) throw new Error("Remove this memory from agent configurations before deleting it.")
+      if (collaborationReferences(state.collaboration, "memory", id).length) throw new Error("This memory is referenced by team or template configuration history. Keep it to preserve those references.")
       state.memories = state.memories.filter(item => item.id !== id)
     },
     async saveCharacter(profile) {
@@ -319,6 +355,7 @@ export function createFixtureClient(): ConkerClient {
     async deleteConversation(id) {
       findConversation(id)
       idle(id)
+      if (collaborationReferences(state.collaboration, "context", `session:${id}`).length) throw new Error("This conversation is referenced by team configuration history. Archive it to preserve that context.")
       if (state.tasks.some(task => task.sessionId === id)) throw new Error("This conversation is linked to task history. Archive it to preserve those references.")
       const conversationRuns = projectActivity({ ...state, tools: [], journalProvenance: "sample" }).runs.filter(run => run.source.kind === "conversation" && run.source.sessionId === id)
       if (state.tasks.some(task => task.runIds.some(runId => conversationRuns.some(run => run.id === runId)))) throw new Error("This conversation contains runs linked to task history. Archive it to preserve their evidence.")

@@ -22,7 +22,17 @@ function load(relative) {
 }
 async function main() {
   const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
+  for (const removeFirst of [true, false]) {
+    const concurrent = createFixtureClient()
+    await concurrent.toolWorkspace.publish('notes')
+    const remove = () => concurrent.toolWorkspace.remove('notes')
+    const select = () => concurrent.createAgent({ name: 'Concurrent specialist', role: 'Research', instructions: 'Review evidence.', modelId: null, toolIds: ['notes'], memory: { scope: 'none', memoryIds: [] } })
+    const results = await Promise.allSettled((removeFirst ? [remove, select] : [select, remove]).map(action => action()))
+    assert.deepEqual(results.map(result => result.status), ['fulfilled', 'rejected'], 'Removing a tool cannot race a new agent selection')
+  }
   const client = createFixtureClient()
+  assert.equal((await client.load()).tools.length, 0, 'Draft tools are not selectable')
+  await client.toolWorkspace.publish('calendar')
   const initial = await client.load()
   const companion = initial.agents.find(agent => agent.kind === 'companion')
   const input = { name: ' Researcher ', role: ' Research assistant ', instructions: ' Cite sources. ', modelId: initial.modelsConfiguration.defaultModelId, toolIds: [initial.tools[0].id], memory: { scope: 'selected', memoryIds: [initial.memories[0].id] } }
@@ -33,6 +43,19 @@ async function main() {
   assert.equal(agent.name, 'Researcher')
   assert.equal(agent.grants, 0)
   assert.equal(agent.version, 1)
+  await assert.rejects(client.toolWorkspace.remove('calendar'), /agent configurations/)
+  await client.toolWorkspace.remove('notes')
+  await assert.rejects(client.createAgent({ ...input, name: 'Deleted capability', toolIds: ['notes'] }), /existing tools/)
+  const freshTool = await client.toolWorkspace.create('New published capability')
+  freshTool.draft.agentVisible = true
+  await client.toolWorkspace.save(freshTool.draft)
+  await assert.rejects(client.createAgent({ ...input, name: 'Draft capability', toolIds: [freshTool.id] }), /existing tools/)
+  await client.toolWorkspace.publish(freshTool.id)
+  const newlyConfigured = await client.createAgent({ ...input, name: 'Fresh capability', toolIds: [freshTool.id] })
+  assert.deepEqual(newlyConfigured.configuration.toolIds, [freshTool.id], 'Direct create sees publication without load')
+  await client.deleteAgent(newlyConfigured.id)
+  await client.toolWorkspace.remove(freshTool.id)
+  await assert.rejects(client.saveAgent(agent.id, { ...input, toolIds: [freshTool.id] }), /existing tools/)
   input.toolIds.length = 0
   agent.configuration.instructions = 'External mutation'
   assert.equal((await client.load()).agents.find(item => item.id === agent.id).configuration.instructions, 'Cite sources.')

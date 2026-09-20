@@ -551,11 +551,12 @@ export function ToolConfiguration({
           onChange={(outputs) => update({ outputs })}
         />
         {registryTool && (
-          <ReferenceSection title="Fixture registry">
+          <ReferenceSection title="Published capability">
             <p className="text-xs text-muted-foreground">
-              Recorded sample facts for {registryTool.name}. These are read-only
-              registry details, not live permissions or activity from this
-              draft.
+              Latest visible preview publication for {registryTool.name}
+              {registryTool.publishedVersion ? ` · v${registryTool.publishedVersion}` : ""}.
+              These details describe the published configuration and grant no
+              authority. Unpublished draft changes are excluded.
             </p>
             <dl className="space-y-3">
               <div>

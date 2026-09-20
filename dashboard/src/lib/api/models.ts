@@ -123,9 +123,11 @@ export type Service = {
 
 export type Tool = {
   id: string
+  /** Current eligible preview publication, not an execution grant or version pin. */
+  publishedVersion?: number
   name: string
   purpose: string
-  sensitivity: "Observe" | "Prepare" | "Act locally" | "Act outward"
+  sensitivity: "Observe" | "Prepare" | "Write" | "Act locally" | "Act outward"
   scope: string
   recentUse: string
 }

@@ -103,7 +103,8 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 
 | 2026-09-20 | Conversation context controls | a489ee7d | Session instructions, exact pins, per-message inclusion policies, budget conflicts and original response snapshots. Browser checked invalid reserve, exclusion preserving transcript, desktop/light and narrow/dark editor, nested Escape, overflow recovery without duplicate message or lost unsent draft. Context and 15 workspace checks pass. Retrieval/summarization/provider-token counts remain explicitly unwired. |
 
-| 2026-09-20 | Replaceable model role configuration | this increment | Four independent roles, owner eligibility, explicit fallback/timeout rules, manual locks and privacy-aware planning. Disabled explicit conversation models and original retry models are preserved. Browser verified invalid role validation, saved routing configuration, desktop light/dark and narrow layout; model-role tests, lint/type/build passed. Actual helper dispatch remains unwired. |
+| 2026-09-20 | Replaceable model role configuration | bf8ba197 | Four independent roles, owner eligibility, explicit fallback/timeout rules, manual locks and privacy-aware planning. Disabled explicit conversation models and original retry models are preserved. Browser verified invalid role validation, saved routing configuration, desktop light/dark and narrow layout; model-role tests, lint/type/build passed. Actual helper dispatch remains unwired. |
+| 2026-09-20 | Teams and Templates | this increment | Owner-authored template drafts, immutable published versions, reviewed instantiation, scoped team roles/handoffs/budgets and immutable prepared snapshots. Current published tool catalogue shared with Agents; concurrent deletion and selection serialized. Browser verified template-to-agent creation, retained team draft, searchable assignment, team save/preparation, mobile inspector and budget rejection. Domain, agent, task, navigation checks, lint/type/build passed. Team execution remains unwired. |
 
 ## Questions and external dependencies
 
@@ -115,4 +116,4 @@ Required before deployment: exact server target, approved deployment path, worki
 
 ## Current next action
 
-P2 Activity is functional in preview with protected task evidence and precise source links. Finish P6 context UI/recovery verification, then integrate P4 Teams/Templates and P7 helper-model configuration. P3 specialist CRUD and P1 Tools readability are verified preview increments. Server persistence, real task execution and helper-model dispatch remain integration work; fixture changes still reset on reload.
+P2 Activity, P3 specialist CRUD, P4 Teams/Templates, P6 context controls and P7 helper-model configuration have verified preview increments. Integrate P5 Projects next, then the artifact/canvas lifecycle and authenticated backend path. Server persistence, real task/team execution and helper-model dispatch remain integration work; fixture changes still reset on reload.
