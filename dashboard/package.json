@@ -16,6 +16,8 @@
     "check:tools": "node scripts/check-tool-workspace.cjs",
     "check:jobs": "node scripts/check-jobs.cjs",
     "check:agents": "node scripts/check-agents.cjs",
+    "check:tasks": "node scripts/check-tasks.cjs",
+    "check:context-policy": "node scripts/check-context-policy.cjs",
     "check:navigation": "node scripts/check-navigation.cjs",
     "check:memory": "node scripts/check-memory.cjs && node scripts/check-memory-layout.cjs",
     "check:conversation": "node scripts/check-conversation.cjs",
