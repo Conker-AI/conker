@@ -1,5 +1,6 @@
 import { agents } from "./fixtures/agents"
 import { validateAttachments } from "../conversation-attachments"
+import { normalizeResearchMode, researchLabel } from "../conversation-research"
 import { sessions, plan, planningIntent } from "./fixtures/chat"
 import { tickets } from "./fixtures/inbox"
 import { jobs } from "./fixtures/jobs"
@@ -318,11 +319,12 @@ export function createFixtureClient(): ConkerClient {
       idle(id)
       if (session.archived) throw new Error("Restore this conversation before sending a message.")
       const attachments = validateAttachments(options?.attachments || [])
+      const researchMode = normalizeResearchMode(options?.researchMode)
       if ((!text.trim() && !attachments.length) || text.length > 4000) throw new Error("Add a message or attachment, with up to 4,000 characters.")
       if (options?.replyTo && !conversation.messages.some(message => message.id === options.replyTo && !message.redacted)) {
         throw new Error("The message you are replying to is no longer available.")
       }
-      const message = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString(), ...(attachments.length ? { attachments } : {}) }
+      const message = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString(), ...(attachments.length ? { attachments } : {}), ...(researchMode !== "off" ? { researchMode } : {}) }
       if (session.isDraft) {
         session.isDraft = false
         if (session.title === "New chat") session.title = (message.text || attachments.map(item => item.name).join(", ")).replace(/\s+/g, " ").slice(0, 64)
@@ -425,6 +427,7 @@ export function createFixtureClient(): ConkerClient {
       }
       if (update.redacted) {
         delete message.attachments
+        delete message.researchMode
         message.text = ""
         message.redacted = true
         message.pinned = false
@@ -440,7 +443,7 @@ export function createFixtureClient(): ConkerClient {
       }
       // Legacy consumers must not reveal text after an edit or redaction.
       const local = state.messages[id]?.find(item => item.id === messageId)
-      if (local) { local.text = message.text; if (update.redacted) delete local.attachments }
+      if (local) { local.text = message.text; if (update.redacted) { delete local.attachments; delete local.researchMode } }
       const thread = state.threads[id]
       const original = thread?.messages.find(item => item.id === messageId)
       if (original) original.text = message.text
@@ -485,7 +488,7 @@ export function createFixtureClient(): ConkerClient {
       fork.isDraft = false
       state.sessions.unshift(fork)
       state.conversations[forkId] = next
-      state.messages[forkId] = next.messages.filter(message => message.role === "user").map(({ id, text, createdAt }) => ({ id, text, createdAt }))
+      state.messages[forkId] = next.messages.filter(message => message.role === "user").map(({ id, text, createdAt, attachments, researchMode }) => ({ id, text, createdAt, ...(attachments ? { attachments } : {}), ...(researchMode ? { researchMode } : {}) }))
       return structuredClone(fork)
     },
     async streamReply(id, options, onChunk) {
@@ -507,6 +510,7 @@ export function createFixtureClient(): ConkerClient {
       const context = contextPlan ? boundary.filter(message => contextPlan.messages.some(row => row.messageId === message.id && row.disposition === "included-exact")) : boundary
       const prompt = [...boundary].reverse().find(message => message.role === "user" && !message.redacted)
       if (!prompt) throw new Error("Send a message before asking for a reply.")
+      const researchMode = normalizeResearchMode(retryTarget ? retryTarget.researchMode : prompt.researchMode)
       if (!context.some(message => message.id === prompt.id)) throw new Error("The latest request is excluded from context. Include it before requesting a reply.")
       const replyId = crypto.randomUUID()
       const reply: ConversationMessage = {
@@ -515,6 +519,7 @@ export function createFixtureClient(): ConkerClient {
         presentationMode: retryTarget?.presentationMode || conversation.presentationMode || "focus",
         responseFamilyId: retryTarget ? responseFamilyId(conversation.messages, retryTarget) : replyId,
         contextMessageId: prompt.id, contextMessageIds: context.map(message => message.id),
+        ...(researchMode !== "off" ? { researchMode } : {}),
         ...(contextPolicy ? { contextPolicySnapshot: structuredClone(contextPolicy) } : {}),
         agentInstructionsSnapshot: agentInstructions,
         modelId, status: "complete", ...(options.retryMessageId ? { retryOf: options.retryMessageId } : {}),
@@ -552,7 +557,7 @@ export function createFixtureClient(): ConkerClient {
           throw new Error("Model service disconnected (fixture). Your message is saved. Choose Normal preview and retry; no automatic reconnect is available.")
         }
         // Development fixtures are opt-in; retries never inherit previous tool work.
-        if (options.previewScenario && isActivityScenarioName(options.previewScenario)) {
+        if (researchMode === "off" && options.previewScenario && isActivityScenarioName(options.previewScenario)) {
           const snapshots = createActivityScenario(options.previewScenario)
           const epoch = Date.now()
           const fixtureEpoch = new Date(snapshots[0].startedAt!).getTime()
@@ -579,20 +584,32 @@ export function createFixtureClient(): ConkerClient {
         }
         publishActivity()
         await pause(450, options.signal)
+        if (researchMode !== "off") {
+          const startedAt = new Date().toISOString()
+          run.steps[0] = { ...run.steps[0], status: "complete", endedAt: startedAt }
+          run.steps.push({ id: "research-preview", kind: "phase", status: "running", label: `${researchLabel(researchMode)} preview`, startedAt, detail: "Requested mode recorded only. No web search, source retrieval, or external service ran. Memory and privacy settings are unchanged; this mode grants no permissions." })
+          run.phase = "searching"
+          run.label = `${researchLabel(researchMode)} preview`
+          publishActivity()
+          await pause(450, options.signal)
+          run.steps[1] = { ...run.steps[1], status: "complete", endedAt: new Date().toISOString() }
+        }
         const writingAt = new Date().toISOString()
         run.steps[0] = { ...run.steps[0], status: "complete", endedAt: writingAt }
         run.steps.push({ id: "write", kind: "phase", status: "running", label: "Writing preview response", startedAt: writingAt, detail: "Simulated text stream. No tools or agents are being executed." })
         run.phase = "streaming"
         run.label = "Writing"
         publishActivity()
-        const text = prompt?.attachments?.length
+        const text = researchMode !== "off"
+          ? `${researchLabel(researchMode)} preview: your requested mode is saved with this message. No web search or source retrieval was performed, and there are no research results yet. Memory, privacy, and permissions are unchanged.${prompt.attachments?.length ? " Attached file contents were not uploaded or read." : ""}`
+          : prompt?.attachments?.length
           ? "Local attachment preview saved. File contents were not uploaded, read, or sent to a model. Reloading clears these files and this preview conversation."
           : options.previewScenario === "slow-response"
           ? "Development preview: this response streams slowly so you can inspect the queue and scrolling. You can write another message, queue it, edit or remove it, and pause the queue while this response continues. Stop preserves partial text and holds queued requests until you explicitly resume. Reading earlier content keeps your position; the small bottom control brings you back to the latest response. No model, tools, agents or external services are running."
           : options.previewScenario === "rich-answer" ? richAnswerFixture.text : reply.presentationMode === "character"
           ? "Simulated reply: I have your message. Once connected, I will answer in your character’s style. No tools have run."
           : "Simulated reply: Your message is saved. A connected model will respond here. No tools have run."
-        if (options.previewScenario === "rich-answer") reply.citations = structuredClone(richAnswerFixture.citations)
+        if (researchMode === "off" && options.previewScenario === "rich-answer") reply.citations = structuredClone(richAnswerFixture.citations)
         for (const chunk of text.match(options.previewScenario === "rich-answer" ? /[\s\S]{1,100}/g : /[\s\S]{1,6}/g) || []) {
           await pause(150, options.signal)
           reply.text += chunk

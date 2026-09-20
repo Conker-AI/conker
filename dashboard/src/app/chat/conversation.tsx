@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import { ConversationAttachments } from "@/components/conversation-attachments"
+import { researchLabel } from "@/lib/conversation-research"
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react"
 import { ArrowDown, ArrowRight, CalendarDays, TriangleAlert } from "lucide-react"
 import { ApprovalRequest } from "@/components/approval-request"
@@ -140,6 +141,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
             {!message.redacted && message.activity && <ConversationRun run={message.activity} profile={authorPortrait.profile} mode={message.presentationMode || presentationMode} onInspectStep={(runId, stepId) => openRail(session.id, "activity", message.id, { runId, stepId })} />}
             {message.replyTo && <p className="mb-1 truncate text-xs text-muted-foreground">Replying to: {messages.find(item => item.id === message.replyTo)?.redacted ? "Redacted message" : messages.find(item => item.id === message.replyTo)?.text || "Earlier message"}</p>}
             <div className={message.role === "user" ? "rounded-xl border bg-card px-4 py-3" : "space-y-3"}>
+              {!message.redacted && message.researchMode && message.researchMode !== "off" && <Badge variant="outline" className="mb-2">{researchLabel(message.researchMode)} · Preview</Badge>}
               {!message.redacted && <ConversationAttachments attachments={message.attachments} />}
               {message.redacted ? <p className="text-sm italic text-muted-foreground">Message redacted</p> : <>{message.text && (message.role === "assistant" ? <MessageAnswer message={message} sessionId={session.id} /> : <p dir="auto" className="whitespace-pre-wrap text-[15px] leading-7 [overflow-wrap:anywhere]">{message.text}</p>)}{message.scenario && !message.edited && <Scenario session={session} messageId={message.id} />}</>}
             </div>

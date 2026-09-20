@@ -3,6 +3,7 @@ import type { Snapshot } from "./api/client"
 import { getAvailableModels } from "./api/model-catalogue"
 import type { ContextPolicy } from "./api/context-policy"
 import { validateAttachments, type ConversationAttachment } from "./conversation-attachments"
+import { normalizeResearchMode, type ResearchMode } from "./conversation-research"
 
 export const MAX_QUEUED_TURNS = 5
 
@@ -12,6 +13,7 @@ export type QueuedTurn = {
   sessionId: string
   text: string
   attachments?: ConversationAttachment[]
+  researchMode?: ResearchMode
   replyTo?: string
   agentId: string
   privacy: ConversationPrivacy
@@ -49,8 +51,9 @@ function contextFingerprint(data: Snapshot, sessionId: string) {
   return JSON.stringify({ policy: policy ? { ...policy, messagePolicies: Object.fromEntries(Object.entries(policy.messagePolicies).sort(([a], [b]) => a.localeCompare(b))) } : null, pins: conversation.messages.filter(message => message.pinned && !message.redacted).map(message => message.id).sort(), agentInstructions: data.agents.find(agent => agent.id === agentId)?.configuration?.instructions || "" })
 }
 
-export function captureQueuedTurn(data: Snapshot, sessionId: string, text: string, modelId: string, replyTo?: string, files: ConversationAttachment[] = []): QueuedTurn {
+export function captureQueuedTurn(data: Snapshot, sessionId: string, text: string, modelId: string, replyTo?: string, files: ConversationAttachment[] = [], requestedResearchMode?: ResearchMode): QueuedTurn {
   const attachments = validateAttachments(files)
+  const researchMode = normalizeResearchMode(requestedResearchMode)
   const session = data.sessions.find(item => item.id === sessionId)
   const conversation = data.conversations[sessionId]
   const model = getAvailableModels(data.modelsConfiguration).find(item => item.id === modelId)
@@ -62,6 +65,7 @@ export function captureQueuedTurn(data: Snapshot, sessionId: string, text: strin
   return {
     id: crypto.randomUUID(), sessionId, text: text.trim(), replyTo,
     ...(attachments.length ? { attachments } : {}),
+    ...(researchMode !== "off" ? { researchMode } : {}),
     agentId: session.agentId || conversation.initialAgentId,
     privacy: { ...conversation.privacy }, modelId, modelLabel: model.name,
     presentationMode: conversation.presentationMode || "focus",
@@ -90,6 +94,7 @@ export function validateQueuedTurn(entry: QueuedTurn, data: Snapshot): string | 
   if (entry.sentMessageId) {
     const saved = conversation.messages.find(item => item.id === entry.sentMessageId && !item.redacted)
     if (!saved) return "The saved queued message is no longer available. Remove this queue entry and retry its message explicitly."
+    if ((saved.researchMode || "off") !== (entry.researchMode || "off")) return "The saved research mode changed. Remove this queue entry and retry its message explicitly."
     if (saved.role !== "user" || saved.text !== entry.text || saved.replyTo !== entry.replyTo || JSON.stringify(saved.attachments || []) !== JSON.stringify(entry.attachments || [])) return "The saved queued message changed. Remove this queue entry and retry the edited message explicitly."
   }
   return null

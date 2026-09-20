@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { ConversationAttachments } from "@/components/conversation-attachments"
 import { prepareAttachments, discardLocalAttachment } from "@/lib/conversation-attachments"
+import { normalizeResearchMode, researchLabel } from "@/lib/conversation-research"
 import { Link, useLocation } from "react-router-dom"
-import { ArrowUp, Check, ChevronDown, Keyboard, ListPlus, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
+import { ArrowUp, Check, ChevronDown, Globe, Keyboard, ListPlus, LoaderCircle, Mic, Paperclip, Phone, SlidersHorizontal, Square, X } from "lucide-react"
 import { ConversationQueue } from "@/components/conversation-queue"
 import { ConversationPreviewControls } from "@/components/conversation-preview-controls"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useVoiceTyping } from "@/hooks/use-voice-typing"
 import { useConker, useConkerStore } from "@/lib/api/store"
@@ -46,6 +47,8 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const setDraft = useConkerStore(state => state.setDraft)
   const attachments = useConkerStore(state => state.attachmentDrafts[session.id])
   const setAttachments = useConkerStore(state => state.setAttachments)
+  const researchMode = useConkerStore(state => state.researchDrafts[session.id] || "off")
+  const setResearchMode = useConkerStore(state => state.setResearchMode)
   const attachmentInput = useRef<HTMLInputElement>(null)
   const [attachmentError, setAttachmentError] = useState("")
   const pending = useConkerStore(state => state.pending)
@@ -113,6 +116,10 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
     <form aria-label="Message composer" data-voice-state={voice.phase} className={cn("conversation-composer rounded-xl border border-input bg-card text-card-foreground p-2 shadow-sm focus-within:border-ring", voice.active && "border-ring")} onSubmit={event => { event.preventDefault(); sendDraft() }} onKeyDown={event => { if (event.key === "Escape" && voice.active) { event.preventDefault(); voice.cancel() } }}>
       {reply && <div className="mb-1 flex min-w-0 items-center gap-2 rounded-md bg-muted px-2 py-1"><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Replying to {reply.role === "user" ? "your message" : name}: {reply.redacted ? "Redacted message" : reply.text}</p><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Cancel reply" onClick={() => setReply(session.id)}><X /></Button></div>}
       <div hidden={voice.active}>
+        {researchMode !== "off" && <div className="mb-1 flex flex-wrap items-center gap-2 px-2">
+          <Button type="button" variant="secondary" size="sm" disabled={pending || session.archived} aria-label={`Turn off ${researchLabel(researchMode)}`} onClick={() => setResearchMode(session.id, "off")}><Globe />{researchLabel(researchMode)} · Preview<X /></Button>
+          <span className="text-xs text-muted-foreground">Next message · no search connected</span>
+        </div>}
         <input ref={attachmentInput} type="file" multiple hidden aria-label="Choose local attachments" onChange={event => {
           const files = Array.from(event.target.files || [])
           event.target.value = ""
@@ -144,6 +151,14 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
           <DropdownMenuLabel>For this message</DropdownMenuLabel>
           <DropdownMenuItem disabled={pending} onSelect={() => attachmentInput.current?.click()}><Paperclip />Attach files<span className="ml-auto text-xs">Local preview</span></DropdownMenuItem>
           <p className="px-2 py-1.5 text-xs text-muted-foreground">Up to 5 files, 10 MB each, 25 MB total. Files stay in this tab; no upload or content ingestion.</p>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Research for next message</DropdownMenuLabel>
+          <DropdownMenuRadioGroup aria-label="Research mode" value={researchMode} onValueChange={value => setResearchMode(session.id, normalizeResearchMode(value))}>
+            <DropdownMenuRadioItem value="off" disabled={pending}>Off</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="web" disabled={pending}>Web<span className="ml-auto text-xs text-muted-foreground">Preview</span></DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="deep" disabled={pending}>Deep research<span className="ml-auto text-xs text-muted-foreground">Preview</span></DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">Records a requested mode only. No external search runs. Memory, privacy, and permissions stay unchanged.</p>
           <DropdownMenuSeparator /><p className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">Voice typing uses your browser’s speech service, which may process audio online. Conker does not save the recording.</p>
         </DropdownMenuContent></DropdownMenu>
         <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="sm" className="min-w-0 max-w-52 shrink gap-1 text-muted-foreground" aria-label={`Choose model and provider: ${modelLabel}, ${provider?.name || "No provider"}`} disabled={session.archived}><span className="min-w-0 truncate">{modelLabel}</span><ChevronDown className="size-3" />{nextModel && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Next-turn override" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="start" side="top" className="max-h-80 w-72 overflow-y-auto">

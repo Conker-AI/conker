@@ -5,11 +5,14 @@ import type { Snapshot, Character } from "./client"
 import type { TicketStatus } from "./models"
 import type { Connections } from "./config"
 import type { ConversationAttachment } from "../conversation-attachments"
+import { normalizeResearchMode, type ResearchMode } from "../conversation-research"
 
 type State = {
   data: Snapshot | null; error: string; pending: boolean; notice: string
   drafts: Record<string, string>
   attachmentDrafts: Record<string, ConversationAttachment[]>
+  researchDrafts: Record<string, ResearchMode>
+  setResearchMode: (id: string, mode: ResearchMode) => void
   setAttachments: (id: string, value: ConversationAttachment[]) => void
   load: () => Promise<void>
   mutate: (action: () => Promise<unknown>, notice?: string) => Promise<boolean>
@@ -23,7 +26,8 @@ type State = {
   saveConnections: (value: Connections) => Promise<boolean>
 }
 export const useConkerStore = create<State>((set, get) => ({
-  data: null, error: "", pending: false, notice: "", drafts: {}, attachmentDrafts: {},
+  data: null, error: "", pending: false, notice: "", drafts: {}, attachmentDrafts: {}, researchDrafts: {},
+  setResearchMode: (id, mode) => set(state => ({ researchDrafts: { ...state.researchDrafts, [id]: normalizeResearchMode(mode) } })),
   setAttachments: (id, value) => set(state => ({ attachmentDrafts: { ...state.attachmentDrafts, [id]: value } })),
   load: async () => {
     set({ error: "" })
@@ -50,9 +54,11 @@ export const useConkerStore = create<State>((set, get) => ({
   send: async id => {
     const text = get().drafts[id] || ""
     const attachments = get().attachmentDrafts[id] || []
+    const researchMode = get().researchDrafts[id] || "off"
     if (!text.trim() && !attachments.length) return false
-    const saved = await get().mutate(() => conkerClient.sendMessage(id, text, { attachments }))
+    const saved = await get().mutate(() => conkerClient.sendMessage(id, text, { attachments, researchMode }))
     if (saved && get().drafts[id] === text) get().setDraft(id, "")
+    if (saved && (get().researchDrafts[id] || "off") === researchMode) get().setResearchMode(id, "off")
     if (saved) get().setAttachments(id, (get().attachmentDrafts[id] || []).filter(item => !attachments.some(sent => sent.id === item.id)))
     return saved
   },

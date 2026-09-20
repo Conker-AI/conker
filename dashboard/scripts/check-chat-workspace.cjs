@@ -330,6 +330,41 @@ async function main() {
       assert.equal(attachmentPreview(draftFiles[0]), undefined)
     })
 
+    await check('Research drafts survive save failure and queued snapshots remain independent of later selections', async () => {
+      const id = await make(), otherId = 'week'
+      store.getState().setResearchMode(id, 'web')
+      store.getState().setResearchMode(otherId, 'deep')
+      draft(id, 'Research request')
+      client.sendMessage = async () => { throw new Error('Save unavailable') }
+      await w().send(id)
+      assert.equal(store.getState().researchDrafts[id], 'web')
+      client.sendMessage = originalSend
+      const sending = w().send(id); await settle()
+      assert.equal(users(id)[0].researchMode, 'web')
+      assert.equal(store.getState().researchDrafts[id], 'off')
+      assert.equal(store.getState().researchDrafts[otherId], 'deep', 'Other session draft stays unchanged')
+      store.getState().setResearchMode(id, 'deep'); draft(id, 'Queued deep request')
+      w().pauseQueue(id); w().enqueue(id)
+      const queued = w().queues[id].entries[0]
+      assert.equal(queued.researchMode, 'deep')
+      assert.equal(store.getState().researchDrafts[id], 'off')
+      store.getState().setResearchMode(id, 'web')
+      assert.equal(w().editQueued(id, queued.id, 'Edited deep request'), true)
+      assert.equal(w().reviewQueued(id, queued.id), true)
+      assert.equal(w().queues[id].entries[0].researchMode, 'deep', 'Reviewing chat settings does not replace the requested research mode')
+      calls.at(-1).complete(); await sending; await settle()
+      const resuming = w().resumeQueue(id); await settle()
+      assert.equal(users(id).at(-1).researchMode, 'deep')
+      calls.at(-1).fail(); await resuming; await settle()
+      const retrying = w().resumeQueue(id); await settle()
+      assert.equal(users(id).length, 2)
+      assert.equal(users(id).at(-1).researchMode, 'deep')
+      calls.at(-1).complete(); await retrying
+      assert.equal(store.getState().researchDrafts[id], 'web', 'Queued send and retry leave next draft mode intact')
+      w().reset(id)
+      assert.equal(store.getState().researchDrafts[id], 'off')
+    })
+
     console.log(`Workspace checks passed (${checks.length}):\n${checks.map(label => `- ${label}`).join('\n')}`)
     for (const failure of failures) console.error(`FAIL: ${failure.label}\n${failure.error.stack}`)
     if (failures.length) process.exitCode = 1

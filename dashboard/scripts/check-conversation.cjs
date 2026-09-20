@@ -311,6 +311,43 @@ async function main() {
   const nativeTimeout = globalThis.setTimeout
   globalThis.setTimeout = (callback, delay, ...args) => nativeTimeout(callback, Math.min(delay, 2), ...args)
   try {
+    await check('Research modes remain preview-only, preserve privacy, and retry the original immutable mode', async () => {
+      for (const researchMode of ['web', 'deep']) {
+        const client = createFixtureClient()
+        await client.updateConversation('companion', { privacy: { memoryDisabled: true, harnessDisabled: true } })
+        const before = await client.load()
+        await assert.rejects(client.sendMessage('companion', 'Invalid research', { researchMode: 'invented' }), /Off, Web, or Deep research/)
+        assert.deepEqual((await client.load()).conversations.companion.messages, before.conversations.companion.messages)
+        const request = await client.sendMessage('companion', 'Compare these options', { researchMode })
+        assert.equal(request.researchMode, researchMode)
+        const activity = []
+        const response = await client.streamReply('companion', { previewScenario: 'rich-answer', onActivity: run => activity.push(run) }, () => {})
+        assert.equal(response.researchMode, researchMode)
+        assert.match(response.text, /preview:.*No web search or source retrieval was performed/)
+        assert.equal(response.citations, undefined, 'Research previews must not invent citations or borrow fixture results')
+        assert.ok(activity.some(run => run.phase === 'searching' && /preview/.test(run.label)))
+        assert.ok(activity.every(run => run.provenance === 'preview'))
+        assert.ok(response.activity.steps.every(step => step.kind === 'phase'), 'Recording a mode must not manufacture execution receipts')
+        const state = await client.load()
+        for (const key of ['privacy', 'memory', 'grants', 'autonomy']) assert.deepEqual(state.conversations.companion[key], before.conversations.companion[key])
+        for (const key of ['tickets', 'jobs', 'entries', 'replyRequests']) assert.deepEqual(state[key], before[key])
+        await client.sendMessage('companion', 'Later ordinary request')
+        const later = await client.streamReply('companion', {}, () => {})
+        assert.equal(later.researchMode, undefined)
+        const retry = await client.streamReply('companion', { retryMessageId: response.id }, () => {})
+        assert.equal(retry.researchMode, researchMode)
+        assert.equal(retry.contextMessageId, request.id)
+        const fork = await client.forkConversation('companion', request.id)
+        const forked = await client.load()
+        assert.equal(forked.conversations[fork.id].messages.at(-1).researchMode, researchMode)
+        assert.equal(forked.messages[fork.id].at(-1).researchMode, researchMode)
+        await client.updateMessage('companion', request.id, { redacted: true })
+        const redacted = await client.load()
+        assert.equal(redacted.conversations.companion.messages.find(message => message.id === request.id).researchMode, undefined)
+        assert.equal(redacted.messages.companion.find(message => message.id === request.id).researchMode, undefined)
+      }
+    })
+
     await check('Simulation uses the selected default and emits deltas without executing anything', async () => {
       const client = createFixtureClient()
       await client.sendMessage('companion', 'Please help with a task.')
