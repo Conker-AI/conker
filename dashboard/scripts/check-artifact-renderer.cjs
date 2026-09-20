@@ -13,11 +13,26 @@ function load(relative) {
   return module.exports
 }
 const { artifactSource, parseArtifactSource, artifactChartModel, fencedArtifactCode, emptyArtifactContent } = load('src/components/artifacts/content.ts')
-for (const kind of ['markdown', 'code', 'table', 'chart']) {
+for (const kind of ['markdown', 'code', 'table', 'chart', 'diagram', 'media']) {
   const value = emptyArtifactContent(kind)
   assert.deepEqual(parseArtifactSource(kind, artifactSource(value), value.language), value)
   if (kind === 'chart' || kind === 'table') assert.equal(value.rows.length, 0, 'Creation supplies no invented sample data')
+  if (kind === 'diagram') assert.deepEqual([value.nodes, value.edges], [[], []])
 }
+const diagram = { kind: 'diagram', nodes: [{ id: 'a', label: '<script>inert label</script>', x: 0, y: 0 }, { id: 'b', label: 'Review', x: 200, y: 120 }], edges: [{ id: 'ab', source: 'a', target: 'b', label: 'Then' }] }
+assert.deepEqual(parseArtifactSource('diagram', artifactSource(diagram)), diagram)
+for (const invalid of [
+  { ...diagram, nodes: [diagram.nodes[0], diagram.nodes[0]] },
+  { ...diagram, edges: [diagram.edges[0], diagram.edges[0]] },
+  { ...diagram, edges: [{ ...diagram.edges[0], target: 'missing' }] },
+  { ...diagram, edges: [{ ...diagram.edges[0], target: 'a' }] },
+  { ...diagram, nodes: [{ ...diagram.nodes[0], x: 10001 }] },
+  { ...diagram, nodes: [{ ...diagram.nodes[0], label: '' }] },
+  { ...diagram, nodes: [{ ...diagram.nodes[0], style: { color: 'red' } }] },
+  { ...diagram, nodes: Array.from({ length: 101 }, (_, i) => ({ id: `n${i}`, label: 'Node', x: 0, y: 0 })) },
+  { ...diagram, edges: Array.from({ length: 201 }, (_, i) => ({ ...diagram.edges[0], id: `e${i}` })) },
+  { ...diagram, execute: 'alert(1)' },
+]) assert.throws(() => parseArtifactSource('diagram', JSON.stringify(invalid)))
 const table = { kind: 'table', columns: ['Name', 'Value'], rows: [['<script>alert(1)</script>', '=HYPERLINK("https://example.com")']] }
 assert.deepEqual(parseArtifactSource('table', JSON.stringify(table)), table, 'Cell data remains text for the native table')
 assert.throws(() => parseArtifactSource('table', '{"kind":"table","columns":["A"],"rows":[["one","two"]]}'), /column/)

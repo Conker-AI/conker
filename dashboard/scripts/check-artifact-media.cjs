@@ -1,0 +1,26 @@
+const assert = require('node:assert/strict')
+const path = require('node:path')
+const { createRequire } = require('node:module')
+const root = path.resolve(__dirname, '..')
+const fromRoot = createRequire(path.join(root, 'package.json'))
+const { buildSync } = createRequire(fromRoot.resolve('vite'))('esbuild')
+const React = require('react')
+const { renderToStaticMarkup } = require('react-dom/server')
+const result = buildSync({ stdin: { contents: 'export {normalizeMediaUrl} from "./src/lib/artifact-media"; export {ArtifactMediaPreview} from "./src/components/artifacts/media-preview";', resolveDir: root }, write: false, bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/*'], tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
+const compiled = { exports: {} }
+new Function('require', 'module', 'exports', result.outputFiles[0].text)(fromRoot, compiled, compiled.exports)
+const { normalizeMediaUrl, ArtifactMediaPreview } = compiled.exports
+assert.equal(normalizeMediaUrl('  https://EXAMPLE.com/file.mp4  '), 'https://example.com/file.mp4')
+assert.equal(normalizeMediaUrl(' '), '')
+for (const input of ['javascript:alert(1)', 'data:image/svg+xml,<svg/>', 'file:///secret', 'http://example.com/a', 'https://user:pass@example.com/a', '/relative.png', 'https://example.com/' + 'a'.repeat(2048)]) assert.throws(() => normalizeMediaUrl(input))
+for (const mediaType of ['image', 'audio', 'video']) {
+  const html = renderToStaticMarkup(React.createElement(ArtifactMediaPreview, { content: { mediaType, url: 'https://example.com/private-file', description: '<script>test</script>' } }))
+  assert.ok(html.includes('Load media'))
+  assert.ok(html.includes('Loading contacts this host'))
+  assert.ok(!/<(?:img|video|audio|iframe)\b/.test(html), 'External bytes must not load before explicit action')
+  assert.ok(!html.includes('<script>test</script>'), 'Description remains escaped text')
+  assert.ok(!html.includes('private-file'), 'Placeholder need only reveal host, not full URL')
+}
+const empty = renderToStaticMarkup(React.createElement(ArtifactMediaPreview, { content: { mediaType: 'image', url: '', description: '' } }))
+assert.ok(empty.includes('Add an HTTPS media URL'))
+console.log('Media validation and inert initial render checks passed: HTTPS references, credential rejection, escaped descriptions and explicit load boundary.')

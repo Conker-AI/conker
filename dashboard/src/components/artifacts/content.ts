@@ -10,7 +10,7 @@ export function parseArtifactSource(kind: ArtifactContent["kind"], source: strin
   if (source.length > 250_000) throw new Error("Source must fit within 250,000 characters.")
   if (kind === "markdown" || kind === "code") return normalizeArtifactContent({ kind, text: source, ...(kind === "code" ? { language } : {}) })
   let value: unknown
-  try { value = JSON.parse(source) } catch { throw new Error("Use valid JSON for the table or chart data.") }
+  try { value = JSON.parse(source) } catch { throw new Error("Use valid JSON for the structured artifact data.") }
   const content = normalizeArtifactContent(value)
   if (content.kind !== kind) throw new Error(`Keep this artifact's ${kind} format.`)
   return content
@@ -36,6 +36,8 @@ export function artifactChartModel(content: Extract<ArtifactContent, { kind: "ch
 }
 
 export function emptyArtifactContent(kind: ArtifactContent["kind"]): ArtifactContent {
+  if (kind === "media") return { kind, mediaType: "image", url: "", description: "" }
+  if (kind === "diagram") return { kind, nodes: [], edges: [] }
   if (kind === "markdown") return { kind, text: "" }
   if (kind === "code") return { kind, text: "", language: "text" }
   if (kind === "table") return { kind, columns: ["Column 1", "Column 2"], rows: [] }

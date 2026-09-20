@@ -5,7 +5,14 @@ const ts = require('typescript')
 const source = fs.readFileSync(path.resolve(__dirname, '../src/lib/api/artifact-preview.ts'), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const loaded = { exports: {} }
-new Function('require', 'module', 'exports', code)(name => { assert.equal(name, 'zod'); return require('zod') }, loaded, loaded.exports)
+new Function('require', 'module', 'exports', code)(name => {
+  if (name === 'zod') return require('zod')
+  assert.equal(name, '../artifact-media')
+  const helper = { exports: {} }
+  const helperCode = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../src/lib/artifact-media.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  new Function('module', 'exports', helperCode)(helper, helper.exports)
+  return helper.exports
+}, loaded, loaded.exports)
 const { createArtifactPreviewClient } = loaded.exports
 const at = '2026-09-20T12:00:00Z'
 const privacy = { memoryDisabled: false, harnessDisabled: false }
@@ -20,6 +27,24 @@ function fixture() {
 const owner = { title: 'Owner note', content: { kind: 'markdown', text: 'My own content.' } }
 const fromMessage = { title: 'Original response title with private detail', sessionId: 'chat', messageId: 'reply', taskId: 'task' }
 async function main() {
+  const diagramFixture = fixture()
+  const diagram = { kind: 'diagram', nodes: [{ id: 'a', label: 'Input', x: 0, y: 0 }, { id: 'b', label: 'Output', description: 'Review before acting.', x: 0, y: 160 }], edges: [{ id: 'ab', source: 'a', target: 'b', label: 'Review' }] }
+  const diagramRecord = await diagramFixture.client.create({ title: 'Directed diagram', content: diagram })
+  const diagramExport = await diagramFixture.client.export(diagramRecord.id)
+  assert.equal(diagramExport.mime, 'application/json;charset=utf-8')
+  assert.ok(diagramExport.filename.endsWith('.json'))
+  assert.deepEqual(JSON.parse(diagramExport.text), diagram)
+  const nextDiagram = structuredClone(diagram)
+  nextDiagram.nodes[0].label = 'Changed input'
+  const diagramRevision = await diagramFixture.client.appendVersion(diagramRecord.id, { content: nextDiagram }, diagramRecord.revision)
+  assert.deepEqual(diagramRevision.versions[0].content, diagram)
+  const diagramRestored = await diagramFixture.client.restore(diagramRecord.id, 1, diagramRevision.revision)
+  assert.deepEqual(diagramRestored.versions.at(-1).content, diagram)
+  const linkedDiagram = await diagramFixture.client.createFromMessage(fromMessage)
+  await diagramFixture.client.appendVersion(linkedDiagram.id, { content: diagram }, linkedDiagram.revision)
+  diagramFixture.state().messages[0].redacted = true
+  assert.equal((await diagramFixture.client.get(linkedDiagram.id)).versions.length, 0)
+  await assert.rejects(diagramFixture.client.export(linkedDiagram.id))
   const { client, state, writes } = fixture()
   const sourceState = JSON.stringify({ sessions: state().sessions, messages: state().messages, tasks: state().tasks })
   for (const invalid of [

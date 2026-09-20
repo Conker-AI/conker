@@ -1,10 +1,14 @@
 import { z } from "zod"
+import { normalizeMediaUrl } from "../artifact-media"
 import type { ArtifactAvailability, ArtifactClient, ArtifactContent, ArtifactExport, ArtifactPreviewState, ArtifactRecord, ArtifactVersion, ArtifactView } from "./artifact-types"
 import type { ConversationCitation } from "./conversation-types"
 
 const idSchema = z.string().trim().min(1).max(200)
 const titleSchema = z.string().trim().min(1).max(160)
+const diagramId = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/)
 const contentSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("media"), mediaType: z.enum(["image", "audio", "video"]), url: z.string().max(2048), description: z.string().max(2000) }).strict(),
+  z.object({ kind: z.literal("diagram"), nodes: z.array(z.object({ id: diagramId, label: z.string().trim().min(1).max(200), description: z.string().max(2000).optional(), x: z.number().finite().min(-10000).max(10000), y: z.number().finite().min(-10000).max(10000) }).strict()).max(100), edges: z.array(z.object({ id: diagramId, source: diagramId, target: diagramId, label: z.string().max(200).optional() }).strict()).max(200) }).strict(),
   z.object({ kind: z.literal("markdown"), text: z.string().max(200_000) }).strict(),
   z.object({ kind: z.literal("code"), text: z.string().max(200_000), language: z.string().trim().regex(/^[a-zA-Z0-9+#._-]{0,40}$/) }).strict(),
   z.object({ kind: z.literal("table"), columns: z.array(z.string().max(1000)).min(1).max(32), rows: z.array(z.array(z.string().max(10_000)).max(32)).max(1000) }).strict(),
@@ -22,6 +26,14 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   return result.data
 }
 function checkedContent(value: ArtifactContent): ArtifactContent {
+  if (value.kind === "media") value = { ...value, url: normalizeMediaUrl(value.url) }
+  if (value.kind === "diagram") {
+    const ids = new Set(value.nodes.map(node => node.id))
+    if (ids.size !== value.nodes.length) throw new Error("Diagram node IDs must be distinct.")
+    if (new Set(value.edges.map(edge => edge.id)).size !== value.edges.length) throw new Error("Diagram connection IDs must be distinct.")
+    if (value.edges.some(edge => !ids.has(edge.source) || !ids.has(edge.target))) throw new Error("Every diagram connection must reference existing node IDs.")
+    if (value.edges.some(edge => edge.source === edge.target)) throw new Error("Diagram connections must join two different nodes.")
+  }
   if (JSON.stringify(value).length > 250_000) throw new Error("Artifact content must fit within 250,000 serialized characters.")
   if (value.kind === "table" && value.rows.some(row => row.length !== value.columns.length)) throw new Error("Every table row must match the column count.")
   if (value.kind === "chart") {
@@ -89,13 +101,13 @@ function exportVersion(record: ArtifactView, version: ArtifactVersion): Artifact
     : ""
   const extensions: Record<string, string> = { javascript: "js", js: "js", typescript: "ts", ts: "ts", jsx: "jsx", tsx: "tsx", python: "py", py: "py", json: "json", css: "css", sql: "sql", bash: "sh", yaml: "yaml", markdown: "md", html: "html.txt", svg: "svg.txt", xml: "xml.txt" }
   const language = content.kind === "code" ? content.language.toLowerCase() : ""
-  const extension = content.kind === "markdown" ? "md" : content.kind === "table" ? "csv" : content.kind === "chart" ? "json" : Object.hasOwn(extensions, language) ? extensions[language] : "txt"
+  const extension = content.kind === "markdown" ? "md" : content.kind === "table" ? "csv" : content.kind === "chart" || content.kind === "diagram" || content.kind === "media" ? "json" : Object.hasOwn(extensions, language) ? extensions[language] : "txt"
   // ASCII basename, no path/control characters, no hidden files or reserved device names.
   let base = version.title.normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "artifact"
   if (/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(base)) base = `artifact-${base}`
   return { artifactId: record.id, version: version.version, filename: `${base}-v${version.version}.${extension}`,
-    mime: content.kind === "table" ? "text/csv;charset=utf-8" : content.kind === "chart" ? "application/json;charset=utf-8" : "text/plain;charset=utf-8",
-    text: content.kind === "table" ? csv(content) : content.kind === "chart" ? JSON.stringify(content, null, 2) : content.text + sourceAppendix,
+    mime: content.kind === "table" ? "text/csv;charset=utf-8" : content.kind === "chart" || content.kind === "diagram" || content.kind === "media" ? "application/json;charset=utf-8" : "text/plain;charset=utf-8",
+    text: content.kind === "table" ? csv(content) : content.kind === "chart" || content.kind === "diagram" || content.kind === "media" ? JSON.stringify(content, null, 2) : content.text + sourceAppendix,
     provenance: "preview", privateOrigin: record.privateOrigin === true, execution: "not-wired" }
 }
 
@@ -136,7 +148,7 @@ export function createArtifactPreviewClient(options: {
   }
   function create(state: ArtifactPreviewState, title: string, content: ArtifactContent, task: ArtifactRecord["task"], source: ArtifactRecord["source"] = null, sourceText: string | null = null, citations: ConversationCitation[] = []) {
     if (state.artifacts.length >= 500) throw new Error("This preview supports up to 500 artifacts.")
-    checkedContent(content)
+    content = checkedContent(content)
     const id = `artifact_${newId()}`, at = now()
     if (state.artifacts.some(item => item.id === id)) throw new Error("Artifact identity collision. Retry creation.")
     const record: ArtifactRecord = { id, title, revision: 1, createdAt: at, updatedAt: at, archivedAt: null, provenance: "preview", origin: source ? "conversation-copy" : "owner-authored", source, sourceTextAtCreation: sourceText, task,
@@ -146,7 +158,7 @@ export function createArtifactPreviewClient(options: {
   }
   function append(state: ArtifactPreviewState, record: ArtifactRecord, content: ArtifactContent, title: string, note: string, restoredFromVersion?: number, citations: ConversationCitation[] = []) {
     editable(state, record)
-    checkedContent(content)
+    content = checkedContent(content)
     if (record.versions.length >= 100 || JSON.stringify(record.versions).length + JSON.stringify(content).length + JSON.stringify(citations).length > 4_000_000) throw new Error("Artifact history reached its preview limit. Export the retained versions.")
     const at = now()
     record.versions.push({ version: record.versions.at(-1)!.version + 1, title, content, note, createdAt: at, author: "owner", ...(restoredFromVersion === undefined ? {} : { restoredFromVersion }), ...(citations.length ? { citations: structuredClone(citations) } : {}) })

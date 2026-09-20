@@ -25,7 +25,7 @@ Audit in progress. Previous per-feature evidence remains in completion-plan.md a
 
 ### Remaining frontend work
 
-- Complete attachment selection/preview/send metadata across draft, queue and transcript; no ingestion or external uploads in this phase.
+- Attachment selection/preview/send metadata is verified below; ingestion and external uploads remain deferred.
 - Complete final conversation/call and shared-shell rendered checks, then the integrated frontend build.
 - Record exact frontend feature coverage and deferred runtime capabilities before claiming the milestone.
 
@@ -37,7 +37,7 @@ Audit in progress. Previous per-feature evidence remains in completion-plan.md a
 
 ### Explicit feature coverage still to resolve
 
-The original agreed detail list includes web/deep-research next-turn controls and broader canvas renderers. Current composer has no research configuration; current artifact union supports Markdown/math/code/table/chart only. These are frontend gaps to scope and finish, not proof that a backend is required before any UI can exist. Media generation, actual research execution, provider capability discovery, server persistence and arbitrary-code execution remain backend/integration work. GPU avatars and video emotion processing remain the explicitly deferred future phase.
+The original agreed detail list includes web/deep-research next-turn controls and broader canvas renderers. Research configuration and diagram/media reference formats are now implemented and verified below. Remaining coverage must still be reconciled with the agreed screen controls before declaring the milestone. Media generation, actual research execution, provider capability discovery, server persistence and arbitrary-code execution remain backend/integration work. GPU avatars and video emotion processing remain the explicitly deferred future phase.
 
 ### Local attachment frontend
 
@@ -49,3 +49,12 @@ The original agreed detail list includes web/deep-research next-turn controls an
 - OS file picker opened but local fixture selection was denied by browser connector permissions. Synthetic browser files prove the input handler and rendering, not OS file selection permission.
 
 Final attachment verification: navigating Chats -> original conversation retained all five selected files and enabled Send. Production `npm run build` and scoped ESLint passed; only the existing non-failing upstream Zod annotation warnings remain.
+
+### Research and native canvas additions — September 20
+
+- Composer Tools now supports Off / Web / Deep research. Per-conversation drafts, queued turns, retries and forks retain the captured choice. A successful send clears the next-turn choice. Fixture output states that search has not run; it does not fabricate sources.
+- Browser verified Deep research selection at 390x640, send, recorded mode on both messages, next-turn reset, and desktop result rendering. Screenshots inspected; no overflow or console errors in the research journey. Conversation (23), workspace (18), context and continuity checks passed.
+- Artifacts now support bounded node/edge diagrams and HTTPS image/audio/video references through the existing immutable version workflow. Diagram nodes select for details; a list provides a non-canvas alternative. Canvas resizing refits the diagram and keyboard instructions match read-only graph behavior.
+- Browser created a diagram, edited JSON, saved version 2 and selected a node. Desktop/mobile screenshots inspected. Media creation/source save verified; before Load there was no media element or host request. An intentionally unavailable HTTPS source displayed recovery; Unload returned to the idle state. Mobile failure screenshot inspected. Successful remote playback was not exercised.
+- Artifact lifecycle/integration/renderer/media suites, TypeScript, scoped ESLint and design guard passed. Final production build passed including the diagram resize/accessibility correction; only non-failing upstream Zod annotation warnings remain.
+- Actual research execution, uploads/ingestion, media generation, arbitrary applications/3D and provider integration remain deferred. These additions do not call backend services.

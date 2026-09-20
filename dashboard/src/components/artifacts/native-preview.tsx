@@ -5,6 +5,8 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import type { ArtifactContent } from "@/lib/api/artifact-types"
 import type { ConversationCitation } from "@/lib/api/conversation-types"
 import { artifactChartModel, fencedArtifactCode } from "./content"
+import { ArtifactDiagramPreview } from "./diagram-preview"
+import { ArtifactMediaPreview } from "./media-preview"
 
 function ArtifactTable({ columns, rows, caption }: { columns: string[]; rows: string[][]; caption: string }) {
   return <Table tabIndex={0} aria-label={caption}><TableCaption>{caption} · {rows.length} rows</TableCaption><TableHeader><TableRow>{columns.map((column, index) => <TableHead key={index} className="min-w-28 whitespace-normal break-words">{column || `Column ${index + 1}`}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.map((row, index) => <TableRow key={index}>{row.map((cell, column) => <TableCell key={column} className="max-w-96 whitespace-pre-wrap break-words">{cell}</TableCell>)}</TableRow>)}</TableBody></Table>
@@ -22,6 +24,8 @@ function ArtifactChart({ content }: { content: Extract<ArtifactContent, { kind: 
 
 /** Trusted native components render validated content; no user HTML, CSS, or expressions. */
 export function ArtifactPreview({ content, citations }: { content: ArtifactContent; citations?: ConversationCitation[] }) {
+  if (content.kind === "diagram") return <ArtifactDiagramPreview key={JSON.stringify(content)} content={content} />
+  if (content.kind === "media") return <ArtifactMediaPreview content={content} />
   if (content.kind === "markdown") return content.text ? <RichAnswer text={content.text} citations={citations} /> : <p className="text-sm text-muted-foreground">This document is empty. Add text in Source.</p>
   if (content.kind === "code") return content.text ? <RichAnswer text={fencedArtifactCode(content.text, content.language)} /> : <p className="text-sm text-muted-foreground">This code artifact is empty. Add code in Source; it will remain inert text.</p>
   if (content.kind === "table") return <ArtifactTable columns={content.columns} rows={content.rows} caption="Artifact table" />

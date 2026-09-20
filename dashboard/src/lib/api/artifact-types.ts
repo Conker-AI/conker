@@ -2,9 +2,11 @@ import type { ConversationCitation, ConversationPrivacy } from "./conversation-t
 
 /** Native data only. Code is inert text; chart data never contains expressions. */
 export type ArtifactContent =
+  | { kind: "media"; mediaType: "image" | "audio" | "video"; url: string; description: string }
   | { kind: "markdown"; text: string }
   | { kind: "code"; text: string; language: string }
   | { kind: "table"; columns: string[]; rows: string[][] }
+  | { kind: "diagram"; nodes: { id: string; label: string; description?: string; x: number; y: number }[]; edges: { id: string; source: string; target: string; label?: string }[] }
   | { kind: "chart"; chartType: "bar" | "line" | "area"; xLabel: string; series: { label: string }[]; rows: { label: string; values: number[] }[] }
 export type ArtifactVersion = {
   version: number; title: string; content: ArtifactContent; note: string; createdAt: string
