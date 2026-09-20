@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Inbox,
   BookOpen,
+  Folder,
   History,
   Bot,
   Wrench,
@@ -48,6 +49,7 @@ const data = {
     {
       label: "Reference",
       items: [
+        { title: "Projects", url: appNavigation.projects.path, icon: Folder },
         { title: "Memory", url: appNavigation.memory.path, icon: BookOpen },
       ],
     },

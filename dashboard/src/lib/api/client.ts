@@ -53,6 +53,7 @@ export type DailyBriefing = {
   }
 }
 export type Snapshot = {
+  projects: import("./project-types").ProjectRecord[]
   collaboration: import("./agent-collaboration-types").CollaborationData
   tasks: import("./task-types").TaskRecord[]
   companionSessionId: string
@@ -78,6 +79,7 @@ export type Snapshot = {
 
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
 export interface ConkerClient {
+  readonly projects: import("./project-types").ProjectClient
   readonly collaboration: import("./agent-collaboration-types").AgentCollaborationClient
   readonly tasks: import("./task-types").TaskClient
   readonly mode: "fixture" | "http"

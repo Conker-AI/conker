@@ -32,6 +32,8 @@ import { projectActivity, toolActivityRunIds } from "./activity-projection"
 import type { ActivityRunRecord } from "./task-types"
 import { contextPolicyForMessages, normalizeContextPolicy, planContext } from "./context-policy"
 import { collaborationReferences, createAgentCollaborationPreviewClient } from "./agent-collaboration-preview"
+import { createProjectPreviewClient } from "./project-preview"
+import { projectPreviewState } from "./project-snapshot"
 
 function aborted() { return new DOMException("Reply stopped.", "AbortError") }
 
@@ -48,6 +50,7 @@ function pause(ms: number, signal?: AbortSignal): Promise<void> {
 /** Explicit fixture transport: mutable per adapter instance, reset on reload, no network. */
 export function createFixtureClient(): ConkerClient {
   const state: Snapshot = structuredClone({
+    projects: [],
     collaboration: { templates: [], teams: [], agentPreparations: [], teamPreparations: [] },
     tasks: [],
     companionSessionId: "companion",
@@ -98,6 +101,10 @@ export function createFixtureClient(): ConkerClient {
   const taskClient = createTaskPreviewClient({
     getSnapshot: () => ({ tasks: state.tasks, agents: state.agents, sessions: state.sessions, runs: taskRunSources }),
     setTasks: tasks => { state.tasks = tasks },
+  })
+  const projectClient = createProjectPreviewClient({
+    getSnapshot: () => projectPreviewState(state),
+    setProjects: projects => { state.projects = projects },
   })
   const collaborationClient = createAgentCollaborationPreviewClient({
     getSnapshot: () => ({ ...state.collaboration, agents: state.agents, companionName: state.profile.name,
@@ -156,6 +163,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    projects: projectClient,
     collaboration: {
       ...collaborationClient,
       createTemplate(input) { return withToolCatalogue(() => collaborationClient.createTemplate(input)) },

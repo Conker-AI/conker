@@ -18,6 +18,7 @@ import {
   Server,
   Terminal,
   FolderTree,
+  Folder,
   type LucideIcon,
 } from "lucide-react"
 
@@ -134,6 +135,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     { title: "Inbox", url: appNavigation.inbox.path, group: "Daily loop", icon: Inbox },
 
     // Reference
+    { title: "Projects", url: appNavigation.projects.path, group: "Reference", icon: Folder },
     { title: "Memory", url: appNavigation.memory.path, group: "Reference", icon: BookOpen },
     { title: "Activity", url: appNavigation.activity.path, group: "Control", icon: History },
     { title: "Runs", url: pageSectionHref("activity", "", "runs"), group: "Activity", icon: History },

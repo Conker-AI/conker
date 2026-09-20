@@ -49,7 +49,7 @@ async function main() {
     }
   })
   check('Sidebar destinations are independent roots while Home remains the entry point', () => {
-    const roots = ['home', 'companion', 'chats', 'inbox', 'memory', 'journal', 'agents', 'tools', 'jobs', 'system', 'settings']
+    const roots = ['home', 'companion', 'chats', 'inbox', 'memory', 'projects', 'journal', 'agents', 'tools', 'jobs', 'system', 'settings']
     for (const key of roots) {
       const route = appNavigation[key]
       assert.equal(route.parent, undefined, `${key} must be a top-level destination`)
@@ -65,6 +65,9 @@ async function main() {
     assert.equal(matchAppRoute('/chat/week').params.id, 'week')
     assert.equal(matchAppRoute('/chat/new').key, 'newChat')
     assert.equal(matchAppRoute('/activity').key, 'activity')
+    assert.equal(matchAppRoute('/projects').key, 'projects')
+    assert.equal(matchAppRoute('/projects/project_one').key, 'project')
+    assert.equal(matchAppRoute('/projects/project_one/unknown').key, 'notFound')
     assert.equal(matchAppRoute('/agents/workshop/edit').key, 'editAgent')
     assert.deepEqual(getPageNavigation('/activity', '?tab=runs', data).sections.map(section => section.value), ['tasks', 'runs', 'events'])
     assert.deepEqual(getPageNavigation('/chat/new', '', data).crumbs.map(crumb => crumb.to), ['/chat', '/chat/new'])
@@ -90,6 +93,11 @@ async function main() {
     assert.equal(pageSectionHref('settings', '?tab=account', 'unknown'), '/settings')
   })
   check('Detail breadcrumbs use real names and a deterministic parent on direct loads', () => {
+    const withProject = { ...data, projects: [{ id: 'project_one', name: 'Research workspace' }] }
+    const project = getPageNavigation('/projects/project_one', '', withProject)
+    assert.equal(project.title, 'Research workspace')
+    assert.deepEqual(project.crumbs, [{ title: 'Projects', to: '/projects' }, { title: 'Research workspace', to: '/projects/project_one' }])
+    assert.equal(getPageNavigation('/projects/missing', '', data).title, 'Project not found')
     const conversation = getPageNavigation('/chat/week', '', data)
     assert.deepEqual(conversation.crumbs.map(crumb => crumb.to), ['/chat', '/chat/week'])
     assert.equal(conversation.title, data.sessions.find(session => session.id === 'week').title)
