@@ -1,6 +1,22 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Braces } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  toolValueSources,
+  type ToolValueSource,
+} from "@/lib/tool-value-sources";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +38,7 @@ import {
   type JsonValue,
   type ToolNode,
   type WorkspaceRecord,
+  type ToolRun,
 } from "@/lib/tool-workspace";
 
 export function Field({
@@ -73,25 +90,75 @@ function ValueInput({
   label,
   value,
   onChange,
+  sources,
 }: {
   label: string;
   value: JsonValue | undefined;
   onChange: (v: JsonValue) => void;
+  sources: ToolValueSource[];
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Input
-      aria-label={label}
-      value={typeof value === "string" ? value : JSON.stringify(value ?? "")}
-      onChange={(e) => {
-        let parsed: JsonValue;
-        try {
-          parsed = JSON.parse(e.target.value) as JsonValue;
-        } catch {
-          parsed = e.target.value;
-        }
-        onChange(parsed);
-      }}
-    />
+    <div className="flex gap-1">
+      <Input
+        aria-label={label}
+        value={typeof value === "string" ? value : JSON.stringify(value ?? "")}
+        onChange={(e) => {
+          let parsed: JsonValue;
+          try {
+            parsed = JSON.parse(e.target.value) as JsonValue;
+          } catch {
+            parsed = e.target.value;
+          }
+          onChange(parsed);
+        }}
+      />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            aria-label={`Choose source for ${label.toLowerCase()}`}
+            title="Choose an input or previous result"
+          >
+            <Braces />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-80 max-w-[calc(100vw-2rem)] p-0"
+        >
+          <Command>
+            <CommandInput placeholder="Find an input or result…" />
+            <CommandList>
+              <CommandEmpty>
+                No available values. Connect an earlier step or define inputs.
+              </CommandEmpty>
+              {sources.map((source) => (
+                <CommandItem
+                  key={source.path}
+                  value={`${source.path} ${source.label}`}
+                  onSelect={() => {
+                    onChange(source.path);
+                    setOpen(false);
+                  }}
+                  className="flex-col items-start gap-1"
+                >
+                  <span>{source.label}</span>
+                  <code className="text-xs text-muted-foreground break-all">
+                    {source.path}
+                  </code>
+                  <span className="text-xs text-muted-foreground">
+                    {source.detail}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 export function JsonEditor({
@@ -163,17 +230,22 @@ export function JsonEditor({
 }
 export function NodeFields({
   node,
+  definition,
+  run,
   records,
   onChange,
   argumentSource,
   onArgumentSourceChange,
 }: {
   node: ToolNode;
+  definition: ToolDefinition;
+  run?: ToolRun;
   records: WorkspaceRecord[];
   onChange: (node: ToolNode) => void;
   argumentSource?: string;
   onArgumentSourceChange: (source: string | null) => void;
 }) {
+  const sources = toolValueSources(definition, node.id, run);
   const config = (key: string, value: JsonValue) =>
     onChange({ ...node, config: { ...node.config, [key]: value } });
   return (
@@ -273,6 +345,7 @@ export function NodeFields({
           hint="Use literal JSON, plain text, $input.name, $steps.stepId or $last."
         >
           <ValueInput
+            sources={sources}
             label="Step value"
             value={node.config.value}
             onChange={(v) => config("value", v)}
@@ -295,6 +368,7 @@ export function NodeFields({
           </Field>
           <Field label="Left value">
             <ValueInput
+              sources={sources}
               label="Left value"
               value={node.config.left}
               onChange={(v) => config("left", v)}
@@ -303,6 +377,7 @@ export function NodeFields({
           {node.config.operator !== "exists" && (
             <Field label="Right value">
               <ValueInput
+                sources={sources}
                 label="Right value"
                 value={node.config.right}
                 onChange={(v) => config("right", v)}
@@ -321,6 +396,7 @@ export function NodeFields({
             hint="An array or a reference such as $input.items."
           >
             <ValueInput
+              sources={sources}
               label="Loop items"
               value={node.config.items}
               onChange={(v) => config("items", v)}

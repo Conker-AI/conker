@@ -37,4 +37,8 @@ Production integration must translate the editor definition to ToolGate's curren
 
 ## Verification
 
+September 20 completion increment: scalar value fields now offer a searchable caller-input/previous-result picker. It excludes downstream and branch-specific results at joins, and labels nested fields observed in an exact-draft test. Direct reference entry remains available for conditional/optional paths. The canvas retains readable zoom while inspecting, centers the selected step on available space, shows zoom percentage/reset, wraps details and highlights adjacent connections using semantic theme colors. Explicit Fit still supplies the whole-graph overview.
+
+Verified at 1440×900 in light/dark and 390×844 with the mobile step list, inspector and picker. Keyboard search/Enter selected a reference, no horizontal page overflow was observed, and a fresh-page check distinguishes runtime errors from a React Flow development HMR warning. Build, scoped lint and reference/branch tests passed. Remaining P1 work is other representative surfaces; this does not establish live ToolGate execution.
+
 `npm run check:tools` covers validation, invalid references, missing optional values, branch behavior, contracts, version isolation, nested limits, recursion, deletion dependencies and fixture isolation. Browser checks cover both conditional paths, invalid source recovery, argument-buffer route persistence, Apply/Undo, preview publication, responsive composition and themes. Screenshot evidence is local under `dashboard/.impeccable/review/tools/`.

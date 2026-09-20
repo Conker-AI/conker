@@ -640,6 +640,8 @@ export function ToolEditor({
                   <NodeFields
                     key={node.id}
                     node={node}
+                    definition={definition}
+                    run={canvasRun}
                     records={records}
                     argumentSource={argumentSources[node.id]}
                     onArgumentSourceChange={(text) =>

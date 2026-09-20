@@ -92,7 +92,9 @@ Packages are not a waterfall: P2/P3 domain work can proceed independently of P1 
 | Date | Increment | Commit | Evidence |
 | --- | --- | --- | --- |
 | 2026-09-20 | Preserve pre-goal state | df3aad22 | Clean working tree at baseline; prior Tools build/tests/screenshots recorded in tools-workspace.md. |
-| 2026-09-20 | Master plan and implementation audit | pending | Read active client/screen contracts; parallel frontend/backend source inventories underway. |
+| 2026-09-20 | Master plan | 9b051274 | Ordered packages, engineering defaults and launch acceptance recorded. |
+| 2026-09-20 | Backend integration audit | 6d920906 | Source-verified transport gaps and memory-policy contradiction; no deployment claim. |
+| 2026-09-20 | Tools readability and value selection | this increment | Branch-safe searchable sources; readable selected step; desktop light/dark and mobile inspected; focused tests/build/lint. |
 
 ## Questions and external dependencies
 

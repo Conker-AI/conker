@@ -59,7 +59,9 @@ function StepNode({ data }: NodeProps<CanvasNode>) {
           <Icon size={19} />
         </span>
         <div className="min-w-0">
-          <strong className="block truncate text-sm">{data.step.label}</strong>
+          <strong className="block text-sm break-words">
+            {data.step.label}
+          </strong>
           <span className="text-xs text-muted-foreground">
             {NODE_LABELS[data.step.type]}
           </span>
@@ -143,24 +145,24 @@ export function ToolCanvas({
 }) {
   const [instance, setInstance] =
     useState<ReactFlowInstance<CanvasNode> | null>(null);
-  const container = useRef<HTMLDivElement>(null);
   const mobile = useIsMobile();
+  const container = useRef<HTMLDivElement>(null);
   const [showGraph, setShowGraph] = useState(false);
+  const [zoom, setZoom] = useState(1);
   useEffect(() => {
-    if (!instance || !container.current) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const observer = new ResizeObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        void instance.fitView({ padding: 0.15, maxZoom: 0.95 });
-      }, 120);
-    });
-    observer.observe(container.current);
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
+    if (!instance || !selected || !container.current) return;
+    const centerSelected = () => {
+      const node = instance.getNode(selected);
+      if (node)
+        void instance.setCenter(node.position.x + 104, node.position.y + 55, {
+          zoom: Math.max(instance.getZoom(), 0.85),
+          duration: 0,
+        });
     };
-  }, [instance, mobile, showGraph]);
+    const observer = new ResizeObserver(centerSelected);
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [instance, selected]);
   const nodes = useMemo(
     () =>
       definition.nodes.map((step) => ({
@@ -185,12 +187,19 @@ export function ToolCanvas({
         type: "smoothstep",
         label: edge.branch,
         markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: "var(--muted-foreground)", strokeWidth: 1.4 },
+        style: {
+          stroke:
+            edge.source === selected || edge.target === selected
+              ? "var(--primary)"
+              : "var(--muted-foreground)",
+          strokeWidth:
+            edge.source === selected || edge.target === selected ? 2 : 1.4,
+        },
         labelStyle: { fill: "var(--foreground)", fontSize: 11 },
         labelBgStyle: { fill: "var(--card)" },
         ariaLabel: `Connection ${edge.source} to ${edge.target}${edge.branch ? ` (${edge.branch})` : ""}`,
       })),
-    [definition.edges],
+    [definition.edges, selected],
   );
   return (
     <div
@@ -272,7 +281,8 @@ export function ToolCanvas({
                   onSelect(change.id);
             }}
             fitView
-            fitViewOptions={{ padding: 0.25, maxZoom: 0.95 }}
+            fitViewOptions={{ padding: 0.15, minZoom: 0.85, maxZoom: 1 }}
+            onMoveEnd={(_, viewport) => setZoom(viewport.zoom)}
             minZoom={0.2}
             maxZoom={1.5}
             defaultEdgeOptions={{ type: "smoothstep" }}
@@ -296,6 +306,15 @@ export function ToolCanvas({
               onClick={() => void instance?.zoomOut()}
             >
               <Minus />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 min-w-16 font-mono text-xs"
+              aria-label="Reset zoom to 100 percent"
+              onClick={() => void instance?.zoomTo(1)}
+            >
+              {Math.round(zoom * 100)}%
             </Button>
             <Button
               variant="outline"
