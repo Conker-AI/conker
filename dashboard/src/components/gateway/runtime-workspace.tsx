@@ -18,9 +18,10 @@ import { RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, t
 import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, hasActiveRuntimeTurn, resolveAttempt, type GatewayRuntimeWorkspaceState } from './runtime-state'
+import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
-export type GatewayRuntimeWorkspaceProps = { client: GatewayRuntimeClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState }
+export type GatewayRuntimeWorkspaceProps = { client: GatewayRuntimeClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; embedded?: boolean; visible?: boolean; onSelectSession?: (id: string | null) => void }
 
 export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
   const body = message.content.kind === 'unavailable'
@@ -32,10 +33,13 @@ export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
 }
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
-export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRuntimeWorkspaceProps) {
+export function GatewayRuntimeWorkspace({ client, authStore, state, sourcePrivacy, embedded = false, visible = true, onSelectSession }: GatewayRuntimeWorkspaceProps) {
   const auth = useStore(authStore)
   const [localState] = useState(createGatewayRuntimeWorkspaceState)
   const workspace = state ?? localState
+  const [localPrivacy] = useState(createGatewaySourcePrivacyState)
+  const privacy = sourcePrivacy ?? localPrivacy
+  const forgottenIds = useStore(privacy, value => value.sessionIds)
   const { selected, drafts, uncertain, title, createUnknown, operation } = useStore(workspace)
   const setSelected = (value: string | null) => workspace.setState({ selected: value })
   const setTitle = (value: string) => workspace.setState({ title: value })
@@ -62,8 +66,8 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
   const active = auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed
   const activeRef = useRef(active)
   activeRef.current = active
-  const current = detail?.id === selected ? detail : null
-  const draft = selected ? drafts[selected] ?? '' : ''
+  const current = detail?.id === selected ? forgottenIds.includes(detail.id) ? maskForgottenConversation(detail) : detail : null
+  const draft = selected && !forgottenIds.includes(selected) ? drafts[selected] ?? '' : ''
   const attempt = selected ? uncertain[selected] : undefined
   const pending = sendPending || detailPending || !active
 
@@ -79,20 +83,23 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
     try {
       const rows = await request(signal => client.listSessions({ signal }))
       if (!mounted.current || !activeRef.current || generation !== listGeneration.current) return false
-      setSessions(rows)
+      privacy.getState().markForgotten(rows.filter(row => row.status === 'forgotten').map(row => row.id))
+      setSessions(rows.map(row => privacy.getState().sessionIds.includes(row.id) ? maskForgottenSession(row) : row))
       if (workspace.getState().createUnknown) workspace.setState({ createUnknown: 'checked' })
       return true
     } catch (error) {
       if (mounted.current && activeRef.current && generation === listGeneration.current) setListError(gatewayError(error).message)
       return false
     } finally { if (mounted.current && generation === listGeneration.current) setListPending(false) }
-  }, [client, request, workspace])
+  }, [client, privacy, request, workspace])
   const refreshDetail = useCallback(async (id: string) => {
     const generation = ++detailGeneration.current
     setDetailPending(true); setDetailError(null)
     try {
-      const next = await request(signal => client.getSession(id, { signal }))
+      const response = await request(signal => client.getSession(id, { signal }))
       if (!mounted.current || !activeRef.current || generation !== detailGeneration.current || selectedRef.current !== id) return false
+      if (response.status === 'forgotten') privacy.getState().markForgotten([id])
+      const next = privacy.getState().sessionIds.includes(id) ? maskForgottenConversation(response) : response
       setDetail(next)
       const accepted = workspace.getState().uncertain[id]
       if (accepted?.accepted && next.turns.some(turn => turn.id === accepted.turnId)) workspace.setState(values => {
@@ -105,7 +112,7 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
       if (mounted.current && activeRef.current && generation === detailGeneration.current) setDetailError(gatewayError(error).message)
       return false
     } finally { if (mounted.current && generation === detailGeneration.current) setDetailPending(false) }
-  }, [client, request, workspace])
+  }, [client, privacy, request, workspace])
 
   useEffect(() => {
     mounted.current = true
@@ -115,13 +122,19 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
   useEffect(() => { if (active) void refreshList(); else { for (const controller of controllers.current) controller.abort(); controllers.current.clear() } }, [active, refreshList])
   useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
+    if (!forgottenIds.length) return
+    workspace.setState(value => ({ drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) ? { ...attempt, text: '' } : attempt])) }))
+    setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)
+    setSessions(values => values.map(value => forgottenIds.includes(value.id) ? maskForgottenSession(value) : value))
+  }, [forgottenIds, workspace])
+  useEffect(() => {
     if (!Object.values(drafts).some(value => value.length) && !Object.keys(uncertain).length && !title && !createUnknown && !sendPending && !createPending) return
     const preventLoss = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
     window.addEventListener('beforeunload', preventLoss)
     return () => window.removeEventListener('beforeunload', preventLoss)
   }, [drafts, uncertain, title, createUnknown, sendPending, createPending])
 
-  function openSession(id: string) { selectedRef.current = id; setSelected(id); setDetail(null); setDetailError(null); setNotice(null); setReviewed(false) }
+  function openSession(id: string) { selectedRef.current = id; setSelected(id); setDetail(null); setDetailError(null); setNotice(null); setReviewed(false); onSelectSession?.(id) }
   async function createSession() {
     if (workspace.getState().operation || createUnknown || !activeRef.current) return
     const epoch = workspace.getState().epoch
@@ -150,10 +163,10 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
       const destination = receipt.sessionId ?? id
       workspace.setState(values => ({ drafts: { ...values.drafts, [id]: values.drafts[id] === text ? '' : values.drafts[id] } }))
       if (!mounted.current || !activeRef.current) {
-        workspace.setState(values => ({ selected: destination, uncertain: { ...values.uncertain, [destination]: { text, turnId: receipt.turnId, checked: false, accepted: true } } }))
+        workspace.setState(values => ({ selected: destination, uncertain: { ...values.uncertain, [destination]: { text: privacy.getState().sessionIds.includes(destination) ? '' : text, turnId: receipt.turnId, checked: false, accepted: true } } }))
         return
       }
-      workspace.setState(values => ({ uncertain: { ...values.uncertain, [destination]: { text, turnId: receipt.turnId, checked: false, accepted: true } } }))
+      workspace.setState(values => ({ uncertain: { ...values.uncertain, [destination]: { text: privacy.getState().sessionIds.includes(destination) ? '' : text, turnId: receipt.turnId, checked: false, accepted: true } } }))
       if (selectedRef.current !== destination) openSession(destination)
       setNotice(`${destination !== id ? 'The server continued in a fork. ' : ''}Turn ${receipt.turnId} was accepted${receipt.status ? ` (${receipt.status.replaceAll('_', ' ')})` : ''}.`)
       // A receipt is not a completed transcript; fetch actual persisted detail, never invent a reply.
@@ -164,7 +177,7 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
       if (workspace.getState().epoch !== epoch) return
       if (error instanceof RuntimeMutationError && error.outcome === 'rejected') { if (mounted.current) setDetailError(error.message) }
       else {
-        workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { text, turnId: error instanceof RuntimeMutationError ? error.turnId : undefined, checked: false } } }))
+        workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { text: privacy.getState().sessionIds.includes(id) ? '' : text, turnId: error instanceof RuntimeMutationError ? error.turnId : undefined, checked: false } } }))
         if (mounted.current) { setReviewed(false); setDetailError('Send outcome unknown. The server may have accepted this text. Sending again could duplicate work.') }
       }
     } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
@@ -179,7 +192,7 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
     if (detailChecked && listChecked && mounted.current && selectedRef.current === id) workspace.setState(values => values.uncertain[id] ? { uncertain: { ...values.uncertain, [id]: checkedAttempt(values.uncertain[id]) } } : {})
   }
   function resolve(decision: 'found' | 'allow-new') {
-    if (!selected || !attempt?.checked || !reviewed || !current || hasActiveRuntimeTurn(current)) return
+    if (!selected || !attempt?.checked || !reviewed || !current || current.status === 'forgotten' || hasActiveRuntimeTurn(current)) return
     const result = resolveAttempt(attempt, draft, decision)
     workspace.setState(values => { const next = { ...values.uncertain }; delete next[selected]; return { drafts: { ...values.drafts, [selected]: result.draft }, uncertain: next } })
     setReviewed(false); setDetailError(null)
@@ -188,11 +201,12 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
   async function logout() {
     if (await authStore.getState().logout()) window.location.reload()
   }
-  const matches = sessions.filter(session => `${session.title} ${session.id}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+  const safeSessions = sessions.map(session => forgottenIds.includes(session.id) ? maskForgottenSession(session) : session)
+  const matches = safeSessions.filter(session => `${session.title} ${session.id}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
 
   if (!active) return null
-  return <div className="flex h-svh min-h-0 flex-col bg-background text-foreground">
-    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" /><span className="font-semibold">Conker</span><Badge variant="outline">Live gateway</Badge><div className="ml-auto flex items-center gap-2"><ModeToggle /><Button size="sm" variant="ghost" disabled={auth.pending} onClick={() => void logout()}><LogOut />Sign out</Button></div></header>
+  return <div className={cn('flex min-h-0 flex-col bg-background text-foreground', embedded ? 'h-full flex-1' : 'h-svh')}>
+    {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" /><span className="font-semibold">Conker</span><Badge variant="outline">Live gateway</Badge><div className="ml-auto flex items-center gap-2"><ModeToggle /><Button size="sm" variant="ghost" disabled={auth.pending} onClick={() => void logout()}><LogOut />Sign out</Button></div></header>}
     <main className="flex min-h-0 flex-1">
       <aside aria-label="Conversations" className={cn('min-h-0 w-full shrink-0 flex-col border-r sm:flex sm:w-72 lg:w-80', selected ? 'hidden' : 'flex')}>
         <div className="space-y-3 border-b p-4"><div className="flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">Conversations</h2><div className="flex gap-1"><Button size="icon" variant="ghost" aria-label="Refresh conversations" disabled={listPending} onClick={() => void refreshList()}><RefreshCw className={cn(listPending && 'animate-spin motion-reduce:animate-none')} /></Button><Button size="sm" onClick={() => setCreateOpen(true)}><Plus />New</Button></div></div><CollectionSearch label="Search conversations" placeholder="Search conversations…" value={query} onChange={event => setQuery(event.target.value)} /></div>
@@ -204,7 +218,7 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
       </aside>
       <section aria-label="Selected conversation" className={cn('min-h-0 min-w-0 flex-1 flex-col', selected ? 'flex' : 'hidden sm:flex')}>
         {!selected ? <CollectionEmpty title="Open a conversation" description="Choose saved history or create a conversation. Responses come from the connected runtime." icon={<MessageSquare />} action={<Button onClick={() => setCreateOpen(true)}><Plus />New conversation</Button>} /> : <>
-          <header className="flex shrink-0 items-center gap-2 border-b p-4"><Button className="sm:hidden" size="icon" variant="ghost" aria-label="Back to conversations" onClick={() => { setSelected(null); selectedRef.current = null }}><ArrowLeft /></Button><div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold">{current?.status === 'forgotten' ? 'Forgotten conversation' : current?.title || sessions.find(item => item.id === selected)?.title || 'Conversation'}</h2><p className="truncate text-xs text-muted-foreground">{selected}{current ? ` · ${current.status}` : ''}</p></div><Button size="sm" variant="outline" disabled={detailPending || sendPending} onClick={() => void checkHistory()}><RefreshCw />Check history</Button></header>
+          <header className="flex shrink-0 items-center gap-2 border-b p-4"><Button className="sm:hidden" size="icon" variant="ghost" aria-label="Back to conversations" onClick={() => { setSelected(null); selectedRef.current = null; onSelectSession?.(null) }}><ArrowLeft /></Button><div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold">{current?.status === 'forgotten' ? 'Forgotten conversation' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'Conversation'}</h2><p className="truncate text-xs text-muted-foreground">{selected}{current ? ` · ${current.status}` : ''}</p></div><Button size="sm" variant="outline" disabled={detailPending || sendPending} onClick={() => void checkHistory()}><RefreshCw />Check history</Button></header>
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6" tabIndex={0} aria-label="Saved conversation history">
             {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
             {detailError && <p role="alert" className="text-sm text-destructive">{detailError}</p>}
@@ -215,12 +229,12 @@ export function GatewayRuntimeWorkspace({ client, authStore, state }: GatewayRun
             {current && current.turns.length > 0 && <details className="border-t pt-4"><summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Turn records ({current.turns.length}) · latest {current.turns.at(-1)?.status.replaceAll('_', ' ')}</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
           </div>
           <div className="shrink-0 space-y-3 border-t p-4 sm:px-6">
-            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}><Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p><Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button></div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
+            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}><Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || forgottenIds.includes(selected) || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p><Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button></div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
           </div>
         </>}
       </section>
     </main>
-    <Dialog open={createOpen} onOpenChange={next => { if (!createPending) setCreateOpen(next) }}><TaskDialogContent title="New conversation" description="Create a conversation in the connected runtime. The title is optional." onInteractOutside={event => event.preventDefault()} showCloseButton={!createPending}>
+    <Dialog open={visible && createOpen} onOpenChange={next => { if (!createPending) setCreateOpen(next) }}><TaskDialogContent title="New conversation" description="Create a conversation in the connected runtime. The title is optional." onInteractOutside={event => event.preventDefault()} showCloseButton={!createPending}>
       <form className="flex min-h-0 flex-col" onSubmit={event => { event.preventDefault(); void createSession() }}><OverlayBody><div className="space-y-2"><Label htmlFor="gateway-title">Title</Label><Input id="gateway-title" value={title} maxLength={1024} disabled={createPending} onChange={event => setTitle(event.target.value)} autoFocus /></div>{createError && <p role="alert" className="text-sm text-destructive">{createError}</p>}{createUnknown && <div className="space-y-3"><p className="text-xs leading-5 text-muted-foreground">The server may already have created a conversation. Close this dialog to inspect the list. Your title stays here until creation succeeds.</p><Button type="button" variant="outline" disabled={listPending} onClick={() => void refreshList()}>Check server conversation list</Button>{createUnknown === 'checked' && <Button type="button" variant="outline" onClick={() => { setCreateUnknown(null); setCreateError('Creation enabled after your review. Creating again may duplicate the previous conversation.') }}>I reviewed the list; allow another creation</Button>}</div>}</OverlayBody><FormActions inset><Button type="button" variant="outline" disabled={createPending} onClick={() => setCreateOpen(false)}>Close</Button><Button type="submit" disabled={createPending || Boolean(createUnknown)}>{createPending ? 'Creating…' : 'Create conversation'}</Button></FormActions></form>
     </TaskDialogContent></Dialog>
   </div>

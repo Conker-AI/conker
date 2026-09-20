@@ -45,10 +45,12 @@ export type GatewayTransport = ReturnType<typeof createGatewayTransport>
 const ids = '[A-Za-z0-9_-]+'
 const routes: Record<GatewayMethod, RegExp[]> = {
   GET: [ /^\/health$/, /^\/auth\/session$/, /^\/auth\/sessions$/, /^\/api\/owner\/requests$/,
-    /^\/api\/pi\/(health|sessions|turns\/unreplied|approvals|tools|models|memory)$/,
-    new RegExp(`^/api/pi/(sessions|messages)/${ids}$`) ],
+    /^\/api\/pi\/(health|sessions|turns\/unreplied|approvals|tools|models|memory|tasks|runs|events)$/,
+    new RegExp(`^/api/pi/(sessions|messages|tasks|runs)/${ids}$`),
+    new RegExp(`^/api/pi/tasks/requests/${ids}$`) ],
   POST: [ /^\/auth\/(login|logout|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`),
-    new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/sessions$/,
+    new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/(sessions|tasks)$/,
+    new RegExp(`^/api/pi/tasks/${ids}/(update|transition|archive)$`),
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`) ],
 }
 function object(value: unknown): value is Record<string, unknown> {

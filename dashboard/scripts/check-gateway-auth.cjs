@@ -54,6 +54,15 @@ async function main() {
   assert.equal(f.calls[0].options.headers.Authorization, undefined)
   console.log('PASS same-origin HTTPS, route/method boundaries, encoded query and browser request policy')
 
+  const activityReads = ['/api/pi/tasks', '/api/pi/tasks/task_1', '/api/pi/tasks/requests/create_request_123', '/api/pi/runs', '/api/pi/runs/turn_1', '/api/pi/events']
+  const activityWrites = ['/api/pi/tasks', '/api/pi/tasks/task_1/update', '/api/pi/tasks/task_1/transition', '/api/pi/tasks/task_1/archive']
+  f = fixture([...activityReads, ...activityWrites].map(() => json({ ok: true })))
+  for (const route of activityReads) await f.transport.request(route)
+  for (const route of activityWrites) await f.transport.request(route, { method: 'POST', csrfToken: 'a'.repeat(43), body: {} })
+  assert.equal(f.calls.length, activityReads.length + activityWrites.length)
+  for (const route of ['/api/pi/tasks/task_1/run', '/api/pi/tasks/task_1/delete', '/api/pi/events', '/api/pi/runs/turn_1']) await rejects(f.transport.request(route, { method: 'POST', csrfToken: 'a'.repeat(43), body: {} }), 'validation')
+  console.log('PASS bounded task metadata and Activity reads; no execution or generic event-write route')
+
   f = fixture([])
   for (const body of [null, [], { x: undefined }, { x: Infinity }, { x: new Date() }]) await rejects(f.transport.request('/auth/login', { method: 'POST', csrfToken: 'a'.repeat(43), body }), 'validation')
   const circular = {}; circular.x = circular
