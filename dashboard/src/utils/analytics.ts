@@ -3,6 +3,8 @@
  * Uses environment variables to conditionally load GTM in production
  */
 
+import { runtimeMode } from '@/lib/runtime-mode'
+
 declare global {
   interface Window {
     dataLayer: unknown[];
@@ -18,6 +20,7 @@ const IS_PRODUCTION = import.meta.env.PROD;
  * Only loads GTM if VITE_GTM_ID environment variable is set AND in production mode
  */
 export const initGTM = (): void => {
+  if (runtimeMode !== 'fixture') return;
   if (!GTM_ID) {
     console.log('GTM not initialized - VITE_GTM_ID environment variable not set');
     return;
@@ -59,7 +62,7 @@ export const initGTM = (): void => {
  * @param parameters - Event parameters
  */
 export const trackEvent = (eventName: string, parameters?: Record<string, unknown>): void => {
-  if (!GTM_ID || !IS_PRODUCTION || typeof window === 'undefined') return;
+  if (runtimeMode !== 'fixture' || !GTM_ID || !IS_PRODUCTION || typeof window === 'undefined') return;
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
@@ -74,7 +77,7 @@ export const trackEvent = (eventName: string, parameters?: Record<string, unknow
  * @param title - Optional page title
  */
 export const trackPageView = (path: string, title?: string): void => {
-  if (!GTM_ID || !IS_PRODUCTION || typeof window === 'undefined') return;
+  if (runtimeMode !== 'fixture' || !GTM_ID || !IS_PRODUCTION || typeof window === 'undefined') return;
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({

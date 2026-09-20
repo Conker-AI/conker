@@ -34,7 +34,7 @@ const paletteExceptions = new Map([
   ["src/utils/shadcn-ui-theme-presets.ts", "Theme preset source data."],
 ])
 const isFoundation = file => file.startsWith("src/components/ui/")
-const isDesignSystem = file => file === "src/components/design-system/index.tsx"
+const isDesignSystem = file => file === "src/components/design-system/primitives.tsx"
 const paletteNames = "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose"
 const colorUtility = "(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|outline|fill|stroke|decoration|shadow|from|via|to|divide|accent|caret|placeholder)"
 const paletteClass = new RegExp(`(?:^|:)!?${colorUtility}-(?:(?:${paletteNames})-(?:50|[1-9]00|950)|white|black)(?:/[^\\s]+)?$`)
@@ -149,6 +149,11 @@ function selfTest() {
   const test = (name, run) => { run(); passed++; console.log(`PASS ${name}`) }
   const check = (source, file = "src/app/inbox/page.tsx") => inspect(file, sourceFile(file, source))
   test("standard page heading bypass is rejected", () => assert.equal(check('const Page = () => <h1>Inbox</h1>')[0]?.rule, "page-heading"))
+  test("heading and search ownership follows the extracted primitives only", () => {
+    const source = 'import { Input } from "@/components/ui/input"; const Primitive = () => <><h1>Title</h1><Input type="search" /></>'
+    assert.deepEqual(check(source, "src/components/design-system/primitives.tsx"), [])
+    assert.deepEqual(check(source, "src/components/design-system/index.tsx").map(issue => issue.rule), ["page-heading", "collection-search"])
+  })
   test("raw Radix wrapper tabs in a route are rejected", () => assert.equal(check('import { Tabs } from "@/components/ui/tabs"')[0]?.rule, "page-tabs"))
   test("aliased raw search Input is rejected", () => assert.equal(check('import { Input as Field } from "@/components/ui/input"; const Page = () => <Field type="search" />')[0]?.rule, "collection-search"))
   test("DataTable searchPlaceholder bypass is rejected", () => assert.equal(check('const Toolbar = () => <Input placeholder={searchPlaceholder} />', "src/components/data-table.tsx")[0]?.rule, "collection-search"))

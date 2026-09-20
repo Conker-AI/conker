@@ -64,7 +64,7 @@ global.document = {
   createElement: () => ({ dataset: {} }),
   head: { append: link => fontLinks.push(link) },
 }
-const { loadThemeFonts } = load('src/lib/fonts.ts')
+const { loadThemeFonts } = load('src/lib/fonts.ts', { './runtime-mode': { runtimeMode: 'fixture' } })
 loadThemeFonts({ 'font-sans': '"Plus Jakarta Sans", sans-serif', 'font-mono': 'Geist Mono, monospace' })
 loadThemeFonts({ 'font-sans': 'Plus Jakarta Sans, sans-serif', 'font-mono': 'Geist Mono, monospace' })
 assert.equal(fontLinks.length, 2, 'repeat selections reuse the loaded font stylesheets')
@@ -73,6 +73,9 @@ loadThemeFonts({ 'font-sans': 'Unrecognized Custom Font, sans-serif' })
 assert.equal(fontLinks.length, 2, 'custom imports never fetch unknown font URLs')
 loadThemeFonts({})
 assert.equal(fontLinks[2].dataset.conkerFont, 'Inter', 'reset restores a loaded default font')
+const gatewayFonts = load('src/lib/fonts.ts', { './runtime-mode': { runtimeMode: 'gateway' } })
+gatewayFonts.loadThemeFonts({ 'font-sans': 'Roboto, sans-serif' })
+assert.equal(fontLinks.length, 3, 'gateway mode never requests external font stylesheets')
 
 let cleanup
 let onSystemChange
