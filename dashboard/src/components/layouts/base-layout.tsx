@@ -35,6 +35,11 @@ export function BaseLayout({ children, title, description, actions, status, vari
     pageScroll.current?.scrollTo(0, 0)
   }, [pathname, search])
 
+  React.useEffect(() => {
+    // Mutation feedback belongs to the page where the operation happened.
+    useConkerStore.setState({ error: "", notice: "" })
+  }, [pathname])
+
   const content = (
     <SidebarInset key="content" className="min-h-0 overflow-clip">
       <SiteHeader />
