@@ -19,7 +19,7 @@
     "check:agent-collaboration": "node scripts/check-agent-collaboration.cjs",
     "check:projects": "node scripts/check-projects.cjs && node scripts/check-project-integration.cjs",
     "check:artifacts": "node scripts/check-artifacts.cjs && node scripts/check-artifact-integration.cjs && node scripts/check-artifact-renderer.cjs",
-    "check:gateway": "node scripts/check-runtime-mode.cjs && node scripts/check-gateway-auth.cjs && node scripts/check-gateway-boundary.cjs && node scripts/check-gateway-runtime.cjs && node scripts/check-gateway-workspace.cjs && node scripts/check-gateway-activity.cjs && node scripts/check-gateway-activity-workspace.cjs && node scripts/check-gateway-imports.cjs",
+    "check:gateway": "node scripts/check-runtime-mode.cjs && node scripts/check-gateway-auth.cjs && node scripts/check-gateway-boundary.cjs && node scripts/check-gateway-verification.cjs && node scripts/check-gateway-runtime.cjs && node scripts/check-gateway-workspace.cjs && node scripts/check-gateway-activity.cjs && node scripts/check-gateway-activity-workspace.cjs && node scripts/check-gateway-imports.cjs",
     "check:tasks": "node scripts/check-tasks.cjs",
     "check:context-policy": "node scripts/check-context-policy.cjs",
     "check:conversation-context": "node scripts/check-conversation-context.cjs",

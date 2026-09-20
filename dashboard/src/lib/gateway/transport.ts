@@ -2,7 +2,7 @@
 export const GATEWAY_JSON_LIMIT = 65_536
 // The gateway caps request bodies, but does not cap proxy responses. Bound browser memory separately.
 export const GATEWAY_RESPONSE_LIMIT = 8 * 1024 * 1024
-export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed'
+export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'The gateway requires this page to use the same HTTPS origin.',
   validation: 'This request is not supported by the browser gateway.',
@@ -18,6 +18,9 @@ const messages: Record<GatewayErrorKind, string> = {
   'upstream-denied': 'The request was denied while your browser session remains active. It was not retried.',
   'verification-failed': 'Your browser session could not be verified. The operation was not retried.',
   'session-changed': 'Your browser session changed before this response arrived. Its server outcome may be unknown.',
+  'verification-cancelled': 'Password verification was cancelled before the operation was sent.',
+  'verification-required': 'The gateway did not admit this operation. Verify this exact operation again before submitting.',
+  'verification-password': 'The password was not accepted. The operation has not been sent.',
 }
 export class GatewayError extends Error {
   readonly kind: GatewayErrorKind
@@ -47,8 +50,9 @@ const routes: Record<GatewayMethod, RegExp[]> = {
   GET: [ /^\/health$/, /^\/auth\/session$/, /^\/auth\/sessions$/, /^\/api\/owner\/requests$/,
     /^\/api\/pi\/(health|sessions|turns\/unreplied|approvals|tools|models|memory|tasks|runs|events)$/,
     new RegExp(`^/api/pi/(sessions|messages|tasks|runs)/${ids}$`),
+    new RegExp(`^/api/pi/turn-submissions/${ids}$`), new RegExp(`^/api/pi/sessions/${ids}/submissions$`),
     new RegExp(`^/api/pi/tasks/requests/${ids}$`) ],
-  POST: [ /^\/auth\/(login|logout|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`),
+  POST: [ /^\/auth\/(login|logout|verify|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`),
     new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/(sessions|tasks)$/,
     new RegExp(`^/api/pi/tasks/${ids}/(update|transition|archive)$`),
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`) ],
@@ -74,6 +78,12 @@ function jsonBody(value: unknown): string {
   const text = JSON.stringify(value)
   if (text.length > GATEWAY_JSON_LIMIT || new TextEncoder().encode(text).byteLength > GATEWAY_JSON_LIMIT) throw new GatewayError('too-large')
   return text
+}
+export type GatewayVerifiedOperation = { method: 'POST'; path: string; body: Record<string, unknown> }
+/** Capture the exact validated JSON before a password prompt can yield to other edits. */
+export function snapshotGatewayOperation(path: string, body: unknown): GatewayVerifiedOperation {
+  if (!path.startsWith('/api/') || !routes.POST.some(route => route.test(path))) throw new GatewayError('validation')
+  return { method: 'POST', path, body: JSON.parse(jsonBody(body)) as Record<string, unknown> }
 }
 async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
   if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
@@ -118,11 +128,12 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
   } catch { throw new GatewayError('configuration') }
   const fetcher = options.fetch ?? globalThis.fetch.bind(globalThis)
   return {
-    async request(path: string, options: GatewayRequest & { csrfToken?: string } = {}): Promise<Record<string, unknown>> {
+    async request(path: string, options: GatewayRequest & { csrfToken?: string; verificationToken?: string } = {}): Promise<Record<string, unknown>> {
       const method = options.method ?? 'GET'
       if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
+      if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()
       if (options.query) {
         const entries = Object.entries(options.query)
@@ -138,6 +149,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       const headers: Record<string, string> = { Accept: 'application/json' }
       if (body !== undefined) headers['Content-Type'] = 'application/json'
       if (method === 'POST') headers['X-CSRF-Token'] = options.csrfToken!
+      if (options.verificationToken) headers['X-Conker-Verification'] = options.verificationToken
       try {
         const response = await fetcher(`${origin}${path}${suffix}`, {
           method, headers, body, signal: options.signal, credentials: 'same-origin',
@@ -153,7 +165,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               if (object(value.detail) && typeof value.detail.turn_id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value.detail.turn_id)) turnId = value.detail.turn_id
             } catch { /* Error bodies are never displayed; only a bounded turn identity can be retained. */ }
           } else await response.body?.cancel().catch(() => undefined)
-          throw new GatewayError(response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId)
+          throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId)
         }
         return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {

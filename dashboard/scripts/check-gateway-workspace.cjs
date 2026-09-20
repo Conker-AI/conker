@@ -9,13 +9,16 @@ new Function('require', 'module', 'exports', code)(request => {
   if (request === 'zustand/vanilla') return require(request)
   throw new Error(`Unexpected live workspace state dependency: ${request}`)
 }, loaded, loaded.exports)
-const { createGatewayRuntimeWorkspaceState, canSubmitRuntime, checkedAttempt, resolveAttempt } = loaded.exports
+const { createGatewayRuntimeWorkspaceState, canSubmitRuntime, checkedAttempt, resolveAttempt, recoverSubmissionDraft } = loaded.exports
 const detail = { id: 'a', status: 'open', turns: [] }
 assert.equal(canSubmitRuntime('hello', false, undefined, detail), true)
 for (const args of [
   ['', false, undefined, detail], ['   ', false, undefined, detail], ['a'.repeat(16001), false, undefined, detail],
   ['hello', true, undefined, detail], ['hello', false, undefined, null],
   ['hello', false, undefined, { ...detail, status: 'forgotten' }],
+  ['hello', false, undefined, { ...detail, status: 'closed' }],
+  ['hello', false, undefined, { ...detail, status: 'forked' }],
+  ['hello', false, undefined, { ...detail, pendingSubmissions: [{ state: 'preparing' }] }],
   ['hello', false, undefined, { ...detail, turns: [{ id: 'turn', endedAt: null, status: 'running' }] }],
   ['hello', false, { text: 'earlier', checked: false }, detail],
 ]) assert.equal(canSubmitRuntime(...args), false)
@@ -48,3 +51,10 @@ assert.equal(workspace.getState().operation, null)
 assert.equal(workspace.getState().title, '')
 assert.equal(workspace.getState().createUnknown, null)
 console.log('Gateway workspace send guards, explicit uncertainty resolution, retained drafts/locks and auth-reset epoch checks passed.')
+
+assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ status: 'interrupted', acted: true, endedAt: '2026-09-20T12:00:00Z' }] }), false)
+assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ status: 'interrupted', acted: false, endedAt: '2026-09-20T12:00:00Z' }] }), true)
+const interrupted = { text: '', checked: true, requestId: 'saved_request_identity', submission: { state: 'preparation_interrupted', contentStatus: 'available', pendingText: 'Saved before crash' } }
+assert.equal(recoverSubmissionDraft(interrupted, ''), 'Saved before crash')
+assert.equal(recoverSubmissionDraft(interrupted, 'Newer draft'), 'Newer draft')
+assert.equal(recoverSubmissionDraft({ ...interrupted, submission: { ...interrupted.submission, contentStatus: 'forgotten' } }, ''), '')

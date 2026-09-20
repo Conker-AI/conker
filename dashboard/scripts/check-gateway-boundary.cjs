@@ -9,9 +9,13 @@ const root = path.resolve(__dirname, '..')
 const source = fs.readFileSync(path.join(root, 'src/components/auth/gateway-boundary.tsx'), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
 const moduleResult = { exports: {} }
+const policyModule = { exports: {} }
+const policyCode = ts.transpileModule(fs.readFileSync(path.join(root, 'src/lib/gateway/session-policy.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+new Function('module', 'exports', policyCode)(policyModule, policyModule.exports)
 const primitive = tag => ({ children, ...props }) => React.createElement(tag, props, children)
 // Isolate authorization rendering from visual primitives and fixture composition.
 const modules = {
+  '@/lib/gateway/session-policy': policyModule.exports,
   '@/components/companion-portrait': { CompanionPortrait: () => null },
   '@/components/design-system/primitives': {
     PageHeader: ({ title, description }) => React.createElement('header', null, React.createElement('h1', null, title), React.createElement('p', null, description)),
@@ -42,14 +46,14 @@ function state(patch = {}) {
     bootstrap: action, revalidate: action, login: action, logout: action, ...patch,
   }))
 }
-const session = { authenticated: true, sessionId: 'session', expiresAt: 1800000000, setupRequired: false }
+const session = { authenticated: true, sessionId: 'session', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: Date.now() / 1000 + 1800, setupRequired: false }
 function render(store) { return renderToStaticMarkup(React.createElement(GatewayBoundary, { store }, React.createElement(ProtectedWorkspace))) }
 for (const phase of ['checking', 'anonymous', 'setup-required', 'error']) {
   const html = render(state({ phase }))
   assert.ok(!html.includes('PRIVATE_WORKSPACE_SENTINEL'), phase + ' must gate protected children')
 }
 assert.equal(childrenRendered, 0, 'Protected component is never invoked while access is unverified')
-for (const patch of [{ pending: true }, { logoutUnconfirmed: true }, { session: null }, { session: { ...session, setupRequired: true } }, { session: { ...session, authenticated: false } }]) {
+for (const patch of [{ pending: true }, { logoutUnconfirmed: true }, { session: null }, { session: { ...session, setupRequired: true } }, { session: { ...session, authenticated: false } }, { session: { ...session, unlockExpiresAt: Date.now() / 1000 - 1 } }, { session: { ...session, unlockExpiresAt: null } }, { session: { ...session, unlockExpiresAt: undefined } }]) {
   assert.ok(!render(state({ phase: 'authenticated', session, ...patch })).includes('PRIVATE_WORKSPACE_SENTINEL'), 'Contradictory or pending state cannot mount protected work')
 }
 assert.ok(render(state({ phase: 'authenticated', session })).includes('PRIVATE_WORKSPACE_SENTINEL'))

@@ -134,6 +134,51 @@ async function main() {
     await invoke(setup.client)
     assert.equal(setup.calls[0][1].signal, signal, 'View teardown may abort transport; it never asserts server cancellation')
   }
+  const requestId = 'request_browser_qa_0001'
+  const submission = () => ({ request_id: requestId, requested_session_id: 's_one', effective_session_id: 's_fork', turn_id: 'trn_new', task_id: null,
+    input_message_id: 'msg_input', final_message_id: 'msg_final', state: 'bound', status: 'complete', acted: false,
+    message_refs: [{ message_id: 'msg_input', purpose: 'input', action_id: null, seq: 1 }, { message_id: 'msg_final', purpose: 'final', action_id: null, seq: 2 }],
+    pending_text: null, failure_code: null, content_status: 'available', created_at: session.created_at, updated_at: session.created_at + 1 })
+  setup = clientReturning({ submission: submission() })
+  const saved = await setup.client.submitRequest('s_one', 'Ask once', requestId)
+  assert.equal(saved.sessionId, 's_fork'); assert.equal(saved.inputMessageId, 'msg_input'); assert.equal(saved.finalMessageId, 'msg_final')
+  assert.equal(saved.messageRefs.length, 2)
+  assert.ok(!JSON.stringify(saved).includes('PRIVATE'))
+  assert.deepEqual(setup.calls, [['/api/pi/sessions/s_one/turns', { method: 'POST', body: { text: 'Ask once', request_id: requestId } }]])
+  setup = clientReturning(submission())
+  await setup.client.getSubmission(requestId, 's_one')
+  assert.equal(setup.calls[0][0], `/api/pi/turn-submissions/${requestId}`)
+  const preparing = { ...submission(), pending_text: 'Saved input before crash', state: 'preparing', status: 'preparing', effective_session_id: null, turn_id: null, input_message_id: null, final_message_id: null, message_refs: [] }
+  setup = clientReturning(preparing)
+  assert.equal((await setup.client.getSubmission(requestId, 's_one')).pendingText, 'Saved input before crash')
+  setup = clientReturning({ ...preparing, state: 'forgotten', content_status: 'forgotten', pending_text: 'PRIVATE forgotten' })
+  assert.ok(!JSON.stringify(await setup.client.getSubmission(requestId, 's_one')).includes('PRIVATE'))
+  for (const mutate of [r => r.request_id = 'different_request_id', r => r.requested_session_id = 's_wrong', r => r.final_message_id = 'msg_wrong', r => r.message_refs.push(r.message_refs[0]), r => r.message_refs[1].seq = 1, r => r.message_refs[0].action_id = 'foreign_action', r => r.turn_id = null, r => r.task_id = 'unexpected_task']) {
+    const wrong = submission(); mutate(wrong)
+    setup = clientReturning({ submission: wrong })
+    await assert.rejects(setup.client.submitRequest('s_one', 'Ask once', requestId), error => error.outcome === 'unknown')
+    assert.equal(setup.calls.length, 1)
+  }
+  for (const kind of ['verification-cancelled', 'verification-required']) {
+    setup = clientReturning(() => { throw new GatewayError(kind) })
+    await assert.rejects(setup.client.submitRequest('s_one', 'Ask once', requestId), error => error.outcome === 'rejected')
+  }
+  setup = clientReturning({ submission: { ...submission(), task_id: 'tsk_one' } })
+  await setup.client.submitRequest('s_one', 'Work on task', requestId, { taskId: 'tsk_one', taskExpectedRevision: 3 })
+  assert.equal(setup.calls[0][1].body.task_expected_revision, 3)
+  setup = clientReturning({})
+  await assert.rejects(setup.client.submitRequest('s_one', 'Ask', 'short'), error => error.kind === 'validation')
+  await assert.rejects(setup.client.submitRequest('s_one', 'Ask', requestId, { taskId: 'tsk_one' }), error => error.kind === 'validation')
+  assert.equal(setup.calls.length, 0)
+  const pendingMeta = { ...preparing, request_id: requestId, pending_text: 'PRIVATE pending' }
+  setup = clientReturning({ ...detail(), pending_submissions: [pendingMeta], pending_submissions_truncated: true })
+  const pendingDetail = await setup.client.getSession('s_one')
+  assert.equal(pendingDetail.pendingSubmissions[0].state, 'preparing')
+  assert.equal(pendingDetail.pendingSubmissionsTruncated, true)
+  assert.ok(!JSON.stringify(pendingDetail.pendingSubmissions).includes('PRIVATE'))
+  setup = clientReturning({ results: [pendingMeta], next_cursor: null })
+  await setup.client.listPendingSubmissions('s_one', { cursor: requestId })
+  assert.deepEqual(setup.calls[0], ['/api/pi/sessions/s_one/submissions', { query: { limit: 50, cursor: requestId } }])
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://conker.test', fetch: async () => {
     requests++

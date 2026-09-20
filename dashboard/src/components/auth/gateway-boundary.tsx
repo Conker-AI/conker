@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useStore } from "zustand"
 import { LogOut, RefreshCw } from "lucide-react"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { createGatewayAuthStore } from "@/lib/gateway/auth-store"
+import { gatewaySessionDeadline, gatewaySessionUnlocked } from "@/lib/gateway/session-policy"
 
 type GatewayStore = ReturnType<typeof createGatewayAuthStore>
 type GatewayProps = { store: GatewayStore; onSignedOut?: () => void }
@@ -47,19 +48,23 @@ async function signOut(store: GatewayStore, onSignedOut?: () => void) {
 /** Mount above every live-data provider and media host. Never depends on a fixture Snapshot. */
 export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps & { children: ReactNode }) {
   const state = useStore(store)
-  const checkedExpiry = useRef<string | null>(null)
   useEffect(() => { void store.getState().bootstrap() }, [store])
   useEffect(() => {
     if (state.phase !== "authenticated" || !state.session) return
-    // One absolute-expiry check, not a heartbeat that would keep idle sessions alive.
-    const identity = `${state.session.sessionId}:${state.session.expiresAt}`
-    if (checkedExpiry.current === identity) return
-    const remaining = state.session.expiresAt * 1000 - Date.now()
-    const timer = window.setTimeout(() => { checkedExpiry.current = identity; void store.getState().revalidate() }, Math.max(0, Math.min(remaining, 2_147_483_647)))
-    return () => window.clearTimeout(timer)
+    const deadline = gatewaySessionDeadline(state.session)
+    const lockIfExpired = () => {
+      const current = store.getState()
+      if (current.phase === "authenticated" && !gatewaySessionUnlocked(current.session)) current.lock()
+    }
+    // Only local deadline checks. Reads and background polling cannot extend the server unlock window.
+    const timer = window.setTimeout(lockIfExpired, Math.max(0, Math.min((deadline ?? 0) * 1000 - Date.now(), 2_147_483_647)))
+    window.addEventListener('focus', lockIfExpired)
+    window.addEventListener('pageshow', lockIfExpired)
+    document.addEventListener('visibilitychange', lockIfExpired)
+    return () => { window.clearTimeout(timer); window.removeEventListener('focus', lockIfExpired); window.removeEventListener('pageshow', lockIfExpired); document.removeEventListener('visibilitychange', lockIfExpired) }
   }, [store, state.phase, state.session])
 
-  if (state.phase === "authenticated" && state.session?.authenticated && !state.session.setupRequired && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
+  if (state.phase === "authenticated" && gatewaySessionUnlocked(state.session) && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
   if (state.phase === "checking" || state.pending) return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
   if (state.logoutUnconfirmed) return <GatewayFrame title="Sign-out was not confirmed" description="This screen is locked. The server session may still be active until sign-out succeeds or the host revokes it.">
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
@@ -71,7 +76,7 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
     <Button onClick={() => void store.getState().revalidate()}><RefreshCw />Check setup again</Button>
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
   </GatewayFrame>
-  if (state.phase === "anonymous") return <GatewaySignIn store={store} />
+  if (state.phase === "anonymous" || state.phase === "authenticated" && !gatewaySessionUnlocked(state.session)) return <GatewaySignIn store={store} />
   return <GatewayFrame title="Could not verify access" description="Check that the gateway is running and that you opened its configured HTTPS address.">
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
     <Button onClick={() => void store.getState().revalidate()}><RefreshCw />Retry connection</Button>

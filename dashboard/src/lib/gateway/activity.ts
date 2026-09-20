@@ -1,5 +1,6 @@
 import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
+import { parseRuntimeMessageRefs, type RuntimeMessageRef } from './runtime'
 
 /** Recorded Pi activity only. These records never use preview fixtures or imply task execution. */
 export type GatewayTaskStatus = 'planned' | 'in_progress' | 'blocked' | 'completed' | 'cancelled'
@@ -24,6 +25,7 @@ export type GatewayActivityRun = {
   provider: string | null; model: string | null; startedAt: string; endedAt: string | null
   taskIds: string[]; action: { id: string; state: string; jobId: string | null } | null
   source: { kind: 'conversation'; sessionId: string }; outputs: []
+  messageRefs: RuntimeMessageRef[]
   provenance: 'recorded'; contentStatus: GatewayContentStatus
 }
 export type GatewayTaskCreate = {
@@ -64,8 +66,8 @@ export class GatewayActivityMutationError extends Error {
   readonly gatewayKind: GatewayError['kind']
   constructor(failure: GatewayError, identity: { taskId?: string; requestId?: string }) {
     const conflict = failure.status === 409
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied'].includes(failure.kind) ||
-      (failure.status !== undefined && [400, 401, 403, 404, 413, 422, 429].includes(failure.status))
+    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
+      (failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status))
     super(conflict ? 'The server could not accept this change. Reload the current task and review its state, source and links before trying again.'
       : rejected ? failure.message : 'The change outcome is uncertain. Check its task or request identity before deciding what to do next.')
     this.name = 'GatewayActivityMutationError'
@@ -166,7 +168,7 @@ function run(value: unknown): GatewayActivityRun {
     provider: nullable(row.provider, item => text(item, 256)), model: nullable(row.model, item => text(item, 512)),
     startedAt: timestamp(row.started_at), endedAt: nullable(row.ended_at, timestamp),
     taskIds: ids(row.task_ids, 200), action: action && { id: identifier(action.id), state: state(action.state), jobId: nullable(action.job_id, identifier) },
-    source: { kind: 'conversation', sessionId }, outputs: [], provenance: 'recorded', contentStatus: visibility }
+    source: { kind: 'conversation', sessionId }, outputs: [], messageRefs: row.message_refs === undefined ? [] : parseRuntimeMessageRefs(row.message_refs), provenance: 'recorded', contentStatus: visibility }
 }
 function inputRevision(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) return inputInvalid()

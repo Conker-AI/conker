@@ -8,7 +8,7 @@ Pi is the owner of durable AI-work tasks. This increment connects its SQLite tas
 - A run is an existing Pi turn. Its actual status is preserved, including approval/budget waits, interrupted work, unknown effects and acted-without-reply.
 - An event records a task, run or action state change. It contains identities and states, not a reconstructed account of model reasoning or copied private prose.
 
-Only Companion assignment is supported by the durable ledger today. The specialist/team editors still need a persistent agent registry and dispatcher. Exact output-message associations are also missing from older turns, so the run API returns no inferred outputs. Conversation links open the actual source session.
+Only Companion assignment is supported by the durable ledger today. The specialist/team editors still need a persistent agent registry and dispatcher. New turns record exact input, intermediate, tool-result and final message references; run inspectors link directly to those messages. Older turns remain explicitly unassociated and the API does not infer artifact outputs. Conversation links open the actual source session.
 
 ## Task lifecycle
 
@@ -36,4 +36,4 @@ Desktop light/dark and 390px dark layouts were inspected through screenshots and
 
 ## Remaining launch work
 
-Task execution, atomic turn request identities, exact input/output association, fresh privileged verification, unattended-screen locking, durable specialists/teams, and full preview-to-live feature integration remain separate work. Server deployment, real provider/gate effects, approval/recovery and backup/restore acceptance are still required. See [completion-plan.md](completion-plan.md) for the active ledger and [gateway-workspace.md](gateway-workspace.md) for the authentication boundary.
+Atomic turn request identities, optional revision-checked task binding, exact message association, fresh operation-bound verification and a verified unlock deadline are now implemented. See [gateway-verification-recovery.md](gateway-verification-recovery.md). Task dispatch controls, durable specialists/teams and full preview-to-live feature integration remain separate work. Server deployment, real provider/gate effects, approval/recovery and backup/restore acceptance are still required. See [completion-plan.md](completion-plan.md) for the active ledger and [gateway-workspace.md](gateway-workspace.md) for the authentication boundary.

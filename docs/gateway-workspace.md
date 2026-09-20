@@ -19,8 +19,8 @@ Drafts and uncertain mutation locks survive temporary same-session authenticatio
 
 ## Recovery and boundaries
 
-- Mutations are never automatically retried. The existing Pi turn endpoint has no browser idempotency contract.
-- Lost or malformed acknowledgements retain the draft and block further sends. The owner checks server history and possible forks, then explicitly acknowledges the outcome. This acknowledgement itself sends no text.
+- Mutations are never automatically retried. Turn submissions now reserve a durable request identity before preparation and atomically bind the effective session, input, turn and optional task.
+- Lost or malformed acknowledgements retain the draft and block further sends. The owner checks the saved submission by identity. An explicit retry after a not-found result keeps the original request identity; a known interrupted preparation can restore its saved input without overwriting a newer draft.
 - An accepted turn missing from the fetched detail also blocks a new send until reconciled.
 - Unfinished turns and recoverable states such as approval waits, budget waits, action-in-progress, unknown effects and acted-without-reply remain blocked even when a turn has an end timestamp.
 - Logout is not queued behind a slow turn. Late responses from a different or revoked browser session are discarded. Aborting a browser fetch does not claim cancellation of server work.
@@ -34,4 +34,6 @@ Browser QA uses the actual Pi HTTPS gateway and cookie/CSRF implementation with 
 
 ## Still outstanding
 
-The full preview shell is not a live backend adapter. Durable task metadata and recorded Activity are now connected; see [live-activity.md](live-activity.md). Agents, projects, artifacts, context policies, tools/jobs and memory operations still need owner contracts and integration. Streaming events, exact turn/message associations, server idempotency, cancellation/resume controls, paginated full-history search, durable drafts, fresh privileged verification and user-presence idle locking remain separate work. Current gateway idle expiry follows request activity; it is not a guarantee that an unattended unlocked screen is protected immediately. Server deployment and a real effect/approval/recovery/backup exercise remain launch gates.
+The full preview shell is not a live backend adapter. Durable task metadata and recorded Activity are now connected; see [live-activity.md](live-activity.md). Fresh operation-bound password verification, a server-enforced verified unlock deadline, durable turn identities and exact message associations are connected; see [gateway-verification-recovery.md](gateway-verification-recovery.md) for their limits and newer real-SQLite browser evidence. Polling cannot extend that verified window.
+
+Agents, projects, artifacts, context policies, tools/jobs and memory operations still need owner contracts and integration. Streaming events, cancellation/resume controls, paginated full-history search and ordinary unsent-draft persistence remain separate work. Server deployment and a real effect/approval/recovery/backup exercise remain launch gates.

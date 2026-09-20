@@ -17,19 +17,24 @@ const { createGatewayAuthStore } = load('auth-store.ts')
 const origin = 'https://conker.example'
 const now = 10_000
 const password = 'A real long passphrase 🔐'
-const wire = (authenticated = false, suffix = 'a') => ({ authenticated, csrf_token: suffix.repeat(43), session_id: suffix.repeat(24), expires_at: now + (authenticated ? 86400 : 600), setup_required: false })
+const wire = (authenticated = false, suffix = 'a') => ({ authenticated, csrf_token: suffix.repeat(43), session_id: suffix.repeat(24), expires_at: now + (authenticated ? 86400 : 600), unlock_expires_at: authenticated ? now + 1800 : null, setup_required: false })
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); return { promise, resolve, reject } }
 const tick = () => new Promise(resolve => setImmediate(resolve))
 function fixture(steps) {
   const calls = []
+  const verificationCalls = []
   const transport = createGatewayTransport({ origin, fetch: async (url, options) => {
+    // Existing transport/auth cases model an explicitly confirmed password. Verification's interactive
+    // lifecycle and exact dispatch counts are covered separately by check-gateway-verification.cjs.
+    if (url.endsWith('/auth/verify')) { verificationCalls.push({ url, options }); return json({ verification_token: 'v'.repeat(43), verification_expires_at: now + 120, unlock_expires_at: now + 1800 }) }
     calls.push({ url, options })
     const step = steps.shift()
     assert.notEqual(step, undefined, `Unexpected ${options.method} ${url}`)
     return typeof step === 'function' ? step(url, options) : step
   } })
-  return { calls, transport, client: createGatewayAuthClient({ transport, now: () => now }) }
+  const verification = { request: (_review, verify, signal) => verify(password, signal ?? new AbortController().signal), cancelAll: () => {} }
+  return { calls, verificationCalls, transport, client: createGatewayAuthClient({ transport, verification, now: () => now }) }
 }
 async function rejects(promise, kind, status) {
   await assert.rejects(promise, error => error instanceof GatewayError && error.kind === kind && (status === undefined || error.status === status))
@@ -115,7 +120,7 @@ async function main() {
   store.dispose()
   console.log('PASS concurrent bootstrap/login rotation, private CSRF, snapshot isolation and confirmed logout')
 
-  for (const invalid of [{ ...wire(), expires_at: now }, { ...wire(), expires_at: now + 999999 }, { ...wire(), authenticated: 'yes' }, { ...wire(true), setup_required: true }, { ...wire(), csrf_token: 'short' }, { ...wire(), session_id: '../bad' }]) {
+  for (const invalid of [{ ...wire(), expires_at: now }, { ...wire(), expires_at: now + 999999 }, { ...wire(), authenticated: 'yes' }, { ...wire(true), setup_required: true }, { ...wire(), csrf_token: 'short' }, { ...wire(), session_id: '../bad' }, { ...wire(true), unlock_expires_at: null }, { ...wire(true), unlock_expires_at: now }, { ...wire(true), unlock_expires_at: now + 999999 }, { ...wire(), unlock_expires_at: now + 1800 }]) {
     const current = fixture([json(invalid)])
     await rejects(current.client.bootstrap(), 'invalid-response')
     assert.equal(current.client.getSession(), null)
