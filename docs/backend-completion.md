@@ -1,5 +1,16 @@
 # Backend completion ledger
 
+## September 21 — authenticated terminal gateway
+
+Gateway adds operator-disabled-by-default terminal routes. Creation uses exact
+password proof; subsequent bounded I/O/resize/close is bound to the same browser
+session with CSRF on writes. Background AuthStore validation closes expired/revoked
+leases. Base64 output includes cursor/drop information; uncertain writes explicitly
+must not replay. Shell runs on the configured gateway host/container, not SystemGate.
+Forty-four gateway/verification/lease tests passed with fake PTYs; earlier WSL check
+verified actual Linux PTY behavior separately. Ruff/diff checks pass. Combined live
+gateway/Linux testing and final frontend wiring have not occurred; no deployment.
+
 ## September 21 — terminal session leases
 
 Gateway terminal manager binds ephemeral PTYs to browser-session identities, requires
