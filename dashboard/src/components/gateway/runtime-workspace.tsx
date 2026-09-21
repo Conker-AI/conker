@@ -1,3 +1,5 @@
+import { GatewayModelPicker } from './model-picker'
+import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence } from "./model-routing-evidence"
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from 'zustand'
@@ -28,7 +30,7 @@ import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGateway
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
-export type GatewayRuntimeWorkspaceProps = { client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; embedded?: boolean; visible?: boolean; onSelectSession?: (id: string | null) => void }
+export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; embedded?: boolean; visible?: boolean; onSelectSession?: (id: string | null) => void }
 
 export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
   const body = message.content.kind === 'unavailable'
@@ -40,7 +42,7 @@ export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
 }
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
-export function GatewayRuntimeWorkspace({ client, activityClient, authStore, state, sourcePrivacy, embedded = false, visible = true, onSelectSession }: GatewayRuntimeWorkspaceProps) {
+export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, embedded = false, visible = true, onSelectSession }: GatewayRuntimeWorkspaceProps) {
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -57,6 +59,7 @@ export function GatewayRuntimeWorkspace({ client, activityClient, authStore, sta
   const [sessions, setSessions] = useState<RuntimeSession[]>([])
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
   const [query, setQuery] = useState('')
+  const [modelChoices, setModelChoices] = useState<Record<string, string>>({})
   const [listPending, setListPending] = useState(false)
   const [detailPending, setDetailPending] = useState(false)
   const sendPending = operation === 'send'
@@ -80,7 +83,8 @@ export function GatewayRuntimeWorkspace({ client, activityClient, authStore, sta
   const current = detail?.id === selected ? forgottenIds.includes(detail.id) ? maskForgottenConversation(detail) : detail : null
   const draft = selected && !forgottenIds.includes(selected) ? drafts[selected] ?? '' : ''
   const attempt = selected ? uncertain[selected] : undefined
-  const pending = sendPending || detailPending || !active
+  const manualRequired = Boolean(selected && harnessBySession?.[selected] && !modelChoices[selected])
+  const pending = sendPending || detailPending || !active || manualRequired
 
   const request = useCallback(async <T,>(action: (signal: AbortSignal) => Promise<T>): Promise<T> => {
     const controller = new AbortController()
@@ -194,6 +198,7 @@ export function GatewayRuntimeWorkspace({ client, activityClient, authStore, sta
   }
   async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch) {
     if (workspace.getState().operation || !activeRef.current) return
+    if (harnessBySession?.[id] && !modelChoices[id]) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'send' }); setDetailError(null); setNotice(null); setTaskError(null)
     let dispatched = false
@@ -211,7 +216,7 @@ export function GatewayRuntimeWorkspace({ client, activityClient, authStore, sta
         if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
       }
       dispatched = true
-      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding }))
+      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelChoices[id] ? { modelId: modelChoices[id] } : {}) }))
       if (workspace.getState().epoch !== epoch) return
       if (prepared) workspace.setState({ taskIntent: null })
       await acceptSubmission(id, text, receipt, taskBinding)
@@ -307,7 +312,7 @@ export function GatewayRuntimeWorkspace({ client, activityClient, authStore, sta
           </div>
           <div className="shrink-0 space-y-3 border-t p-4 sm:px-6">
             {safeTaskIntent && !safeTaskIntent.open && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">Task request saved separately from your draft.</span><Button size="sm" variant="outline" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: { ...safeTaskIntent, open: true } })}>Review task request</Button><Button size="sm" variant="ghost" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: null })}>Discard task request</Button></div>}
-            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}><Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || forgottenIds.includes(selected) || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p><Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button></div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
+            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}>{control && <GatewayModelPicker key={selected} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}<Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || forgottenIds.includes(selected) || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p><Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button></div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
           </div>
         </>}
       </section>

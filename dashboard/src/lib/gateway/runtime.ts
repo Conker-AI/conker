@@ -205,12 +205,13 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (requestId.length < 16) throw new GatewayError('validation')
       return parseRuntimeSubmission(await auth.request(`/api/pi/turn-submissions/${requestId}`, options), requestId, requestedSessionId)
     },
-    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number } = {}): Promise<RuntimeSubmission> {
+    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string } = {}): Promise<RuntimeSubmission> {
       inputId(sessionId); inputId(requestId)
       if (requestId.length < 16 || typeof userText !== 'string' || !userText.trim() || [...userText].length > 16_000 || (options.taskId === undefined) !== (options.taskExpectedRevision === undefined)) throw new GatewayError('validation')
       if (options.taskId !== undefined && (!inputId(options.taskId) || !Number.isSafeInteger(options.taskExpectedRevision) || options.taskExpectedRevision! < 1)) throw new GatewayError('validation')
+      if (options.modelId !== undefined && (typeof options.modelId !== 'string' || !options.modelId.length || options.modelId.length > 200)) throw new GatewayError('validation')
       try {
-        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         const receipt = parseRuntimeSubmission(response.submission, requestId, sessionId)
         if (receipt.taskId !== (options.taskId ?? null)) return bad()
         return receipt

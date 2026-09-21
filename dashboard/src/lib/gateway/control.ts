@@ -38,6 +38,17 @@ const configuration = z.object({
   defaultModelId: z.string().max(200).nullable(),
   roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment }) }),
 })
+const projectSource = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('conversation'), sessionId: identity }),
+  z.object({ kind: z.literal('task'), taskId: identity }),
+  z.object({ kind: z.literal('file'), sessionId: identity, fileId: identity }),
+])
+const sessionSettings = z.object({ revision: count, settings: z.object({
+  agentId: identity, privacy: z.object({ memoryDisabled: z.boolean(), harnessDisabled: z.boolean() }),
+  projectId: identity.nullable().optional(), projectSources: z.array(projectSource).max(20).optional(),
+  presentationMode: z.enum(['focus', 'character']).nullable().optional(),
+}).strict() })
+export type OwnerSessionSettings = z.infer<typeof sessionSettings>
 const modelSettings = z.object({ revision: count, configuration: configuration.nullable() })
 const providerHealth = z.object({ status: z.string().max(60), model: z.string().max(240).optional(), busy: z.boolean().optional() })
 const providers = z.object({
@@ -70,6 +81,15 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async sessionSettings(id: string, signal?: AbortSignal): Promise<OwnerSessionSettings> {
+      return parse(sessionSettings, await auth.request(`/api/control/pi/sessions/${parse(identity, id, true)}/settings`, { signal }))
+    },
+    async saveSessionSettings(id: string, value: OwnerSessionSettings, signal?: AbortSignal): Promise<OwnerSessionSettings> {
+      const parsed = parse(sessionSettings, value, true)
+      return parse(sessionSettings, await auth.request(`/api/control/pi/sessions/${parse(identity, id, true)}/settings`, {
+        method: 'POST', body: { expected_revision: parsed.revision, settings: parsed.settings }, signal,
+      }))
+    },
     async providers(signal?: AbortSignal): Promise<ProviderStatus[]> {
       const value = parse(providers, await auth.request('/api/pi/models', { signal }))
       return [{ id: value.local.provider, ...value.local.health, model: value.local.model, capabilities: ['text'] },

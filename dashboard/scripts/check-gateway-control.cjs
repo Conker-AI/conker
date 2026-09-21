@@ -44,12 +44,20 @@ async function main() {
   assert.ok(!JSON.stringify(saved).includes('NEVER SEND'))
   assert.ok(!JSON.stringify(saved).includes('http://private'))
   assert.equal(snapshotGatewayOperation(saved[0], saved[1].body).path, saved[0])
+  result = { revision: 1, settings: { agentId: 'companion', privacy: { memoryDisabled: true, harnessDisabled: false }, projectId: 'project_1', projectSources: [{ kind: 'conversation', sessionId: 'ses_source' }] } }
+  const settings = await client.sessionSettings('ses_one')
+  await client.saveSessionSettings('ses_one', settings)
+  assert.deepEqual(calls.at(-1)[1].body.settings.projectSources, settings.settings.projectSources)
+  assert.equal(snapshotGatewayOperation(calls.at(-1)[0], calls.at(-1)[1].body).path, '/api/control/pi/sessions/ses_one/settings')
+  await assert.rejects(client.sessionSettings('../secret'), error => error.kind === 'validation')
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => { requests++; return new Response(JSON.stringify(result), { headers: { 'content-type': 'application/json' } }) } })
   await transport.request('/api/control/pi/models/configuration')
   await transport.request('/api/control/pi/memory/objects', { query: { search: 'hello' } })
   await assert.rejects(transport.request('/api/control/pi/vault'), error => error.kind === 'validation')
-  assert.equal(requests, 2)
+  await transport.request('/api/control/pi/sessions/ses_one/settings')
+  await assert.rejects(transport.request('/api/control/pi/sessions/ses_one/turns'), error => error.kind === 'validation')
+  assert.equal(requests, 3)
   console.log('Gateway owner control: bounded memory reads, identity/scope checks, catalogue credential exclusion and route isolation passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -122,3 +122,22 @@ is wired. Conversation rendering is still the narrower live runtime view; full
 chat controls, other sidebar workspaces, vector search and multimodal ingestion
 remain separate gaps. Memory reranking remains opt-in/off. ToolGate is running
 without execution scopes; no arbitrary script access was silently granted.
+
+
+### Live privacy and explicit model selection
+
+- Appbar Incognito opens the two-switch dialog. It reads persisted session settings
+  through a narrowly allowlisted owner endpoint and saves with revision checks and
+  operation-bound password verification. Existing agent/project selections survive.
+- Composer lists enabled models eligible for the answer role. An explicit choice
+  is submitted as model_id and bypasses automatic routing. With harness disabled,
+  the composer requires that choice before sending.
+- Actual Chrome test: set both privacy switches, selected Qwen 2.5 3B, sent a private
+  test request, received `Private mode works.`. Turn `trn_ebc076cf0e79486a` has both
+  immutable privacy flags true, only an answer-model attempt, and both persisted
+  messages have allow_ingest=0 with no memory-outbox entries. This verifies the
+  real path, in addition to the focused privacy tests.
+- Reload retains Incognito; manual model selections remain workspace-local.
+  No errors appeared in the inspected browser console. Mobile dialog was visually
+  checked. Build, gateway contract/verification checks, focused ESLint and 18 Pi
+  owner/session-privacy/decision tests passed.
