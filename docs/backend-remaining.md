@@ -7,6 +7,16 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Verified source distinctions
 
+Latest recovery increment: ToolGate `567aa56` adds an offline authoritative action
+receipt overlay for a restored database, leaving original immutable records intact.
+Post-backup completed actions replay cached receipts; interrupted actions remain
+unknown. Inconsistent or incomplete source evidence retains a persistent recovery
+hold. Service startup rejects held databases before migrations/bootstrap; fresh
+dispatch is denied. Sixteen focused journal/recovery tests pass. This does not
+promote recovery or reconcile spending; both services must be stopped and the
+operator must identify the current authoritative source. Coordinated promotion
+and external-state reconciliation remain open. No frontend wiring or deployment.
+
 | Requirement | Current evidence | Remaining proof/work |
 | --- | --- | --- |
 | P2–P6 tasks, agents, teams, projects, context | Pi has committed runtime modules and focused acceptance evidence in backend-completion.md, including team execution and frozen character/context settings. | Final integrated regression and contract review; do not rebuild the existing ledgers or editors. |
