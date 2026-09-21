@@ -1,3 +1,18 @@
+## September 21 - reply-only recovery after stop
+
+Pi adds owner-only POST /turns/{id}/reply-only with a retained request ID. Only
+acted_no_reply turns with resolved action receipts can be claimed. Recovery uses
+saved results and no available tools; no action dispatch is repeated. Replays
+inspect status, including after database reopen. A fresh Stop invalidates recovery
+consent at provider boundaries and atomic final persistence. Cancellation and
+recovery identities remain stored; ordinary resume cannot inherit the permission.
+
+Verification: 67 focused recovery/cancellation/tool-loop/submission tests pass.
+New tests cover successful narration, durable replay, a second stop, deliberate
+new recovery, unresolved-action refusal, duplicate claim and owner-only HTTP.
+New control module/test lint passes. No frontend wiring, paid calls or deployment.
+P9 queue, steer and per-message retry/fork remain pending.
+
 ## September 21 - cancellation during preparation
 
 Pi now accepts owner cancellation by retained submission ID, before or after
