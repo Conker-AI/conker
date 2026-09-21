@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--turn-id", required=True)
+    parser.add_argument("--expected-ranking", choices=("ranked", "fallback"), default="ranked")
     args = parser.parse_args()
     config = json.loads((ROOT / ".local-run/configuration.json").read_text())
     env = config["environments"]["pi"]
@@ -29,8 +30,9 @@ def main():
         records = package["memories"]
         assert 2 <= len(records) <= 8, "At least two real retrieved memories are needed"
         receipt = package["retrieval"]["reranking"]
-        assert receipt["status"] == "ranked", "Ranking did not complete; inspect fallback"
-        assert receipt["order"] == [r["id"] for r in records]
+        assert receipt["status"] == args.expected_ranking, "Unexpected ranking outcome"
+        if args.expected_ranking == "ranked":
+            assert receipt["order"] == [r["id"] for r in records]
         snapshot = db.execute("SELECT prefix FROM turn_context_inputs WHERE turn_id=?", (args.turn_id,)).fetchone()
         assert snapshot and all(r["id"] in snapshot[0] for r in records), "Answer context is missing retrieved records"
     payload = {"query": package["query"], "scope": "selected", "memory_ids": [r["id"] for r in records], "max_items": 8}

@@ -4,6 +4,26 @@ Owner authorization: September 21, 2026. Run and verify the existing pieces toge
 on this Windows machine before any later Ubuntu deployment. Preserve independent
 services, existing privacy/approval boundaries, and the accepted dashboard design.
 
+## Current acceptance status (22 September)
+
+The chronological notes below retain earlier checkpoints; this table supersedes
+statements that browser access, routing, memory ranking or startup docs are pending.
+
+| Requirement | Current evidence |
+| --- | --- |
+| Local pinned Laya installation and measurement | Pinned SDK/checkpoint and Windows lock in services/decisions; CPU benchmark 6/8 routing cases, 315 ms warm median, about 2 GB RSS |
+| Replaceable bounded decision transport | Pi DecisionProvider and authenticated /v1/choose service; focused tests cover invalid choices, budgets, timeouts, fallbacks and privacy |
+| Live automatic/manual model selection | Browser turn trn_32afa79bf4264ea1 routed through Laya to Qwen; manual override verified while Laya was stopped |
+| Real memory ingestion/retrieval/ranking | Two user requirements admitted to PostgreSQL and recalled in a different session; check_local_memory_turn.py verifies source fields, citations and answer context |
+| Live UI/status | Accepted shell with authenticated conversations, model settings, memory graph/database and Inbox; ranked/fallback/degraded receipts inspected in Chrome |
+| Privacy/permissions | Private turn trn_78e5f65542e84dce admitted no messages; operation-bound password checks; expired tool approvals refused; narrowly scoped echo approval/execution verified then grant removed |
+| Failure behavior | Real stopped-Laya test: automatic routing failed, manual Qwen succeeded with both memory records and visible fallback |
+| Persistence/startup | Local isolated persistent state and source launcher; Pi/gateway/Laya restarts preserve conversations/configuration; docs/local-windows-startup.md |
+| Remaining integration limits | Many accepted frontend features remain preview-only; live chat is narrower than the complete fixture UI. No vector embeddings, multimodal ingestion, production-quality local answer model, or Ubuntu deployment |
+
+The Laya/routing/memory journeys now have real end-to-end evidence. This does not
+claim that every dashboard screen or previously planned feature is connected.
+
 ## Sequence
 
 1. Inventory existing runtime/gateway/frontend contracts and local resources.
@@ -244,3 +264,18 @@ Qwen model unnecessarily attempted that tool during acknowledgement requests;
 that quality limitation remains, even though the boundary rejected oversized
 arguments and no extra action was approved. Tool availability should be deliberately
 scoped for real tasks; the acceptance tool is no longer advertised.
+
+### Actual decision-service outage acceptance
+
+Stopped only the owned local Laya service. Automatic-routing turn
+trn_cf77138ea2584860 failed with no eligible-model substitution; the browser's
+saved-submission reconciliation revealed the terminal failure and released sending.
+With Laya still stopped, an explicitly selected Qwen turn
+trn_d6ef97790d414df9 completed, retained both real memory records and displayed the
+fallback relevance receipt. The answer still used the saved requirements. The
+read-only memory verifier accepts --expected-ranking fallback for this turn.
+Restarted Laya; authenticated /health returned ready, pinned model ID, busy=false.
+
+Usability gap observed: a failed turn's record gives its status but little recovery
+guidance after reconciliation. The underlying refusal remains safe and visible;
+this is not evidence of polished failure UX.
