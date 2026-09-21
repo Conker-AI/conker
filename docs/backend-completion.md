@@ -1,5 +1,21 @@
 # Backend completion ledger
 
+## September 21 — per-run owner budget binding
+
+Pi `ba49b98` adds optional requireBudget definitions: automatic/manual occurrences
+wait in awaiting_budget without dispatch. The owner binds an existing ToolGate
+budget via the owner-only run endpoint. Actor/root validation precedes an atomic
+one-time binding, then the run becomes ready. Approval resumes retain the binding;
+run listings expose its ID and reopened SQLite retains it. Concurrent same-budget
+binding replays; reuse on another run is rejected. Later occurrences wait again.
+
+ToolGate `8c0780b` provides execution-actor-scoped read-only budget metadata;
+other actors receive 404. It creates no spending authority. Existing dispatch
+reservation remains authoritative for caps, policy and root lineage. Pi focused
+jobs/recovery: 53 passed; ToolGate spending: 24 passed. Pi Ruff/diff checks passed;
+all effects are synthetic. Combined service protocol acceptance and recurring
+owner-delegated budget provisioning remain open; no paid call or UI wiring.
+
 ## September 21 — scheduled execution transport boundaries
 
 Pi PublishedJobs now streams execution/reconciliation receipts with a 256 KiB
