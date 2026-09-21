@@ -29,7 +29,7 @@ def initialize():
         return
     gates = ROOT.parent / "gates"
     keys = {name: secrets.token_urlsafe(36) for name in
-            ("pi", "gateway", "toolgate", "owner", "execution", "memory", "read", "ingest", "decisions", "salt", "callback", "postgres")}
+            ("pi", "gateway", "pi_owner", "toolgate", "owner", "execution", "memory", "read", "ingest", "decisions", "salt", "callback", "postgres")}
     keys["execution"] = "tgx_" + keys["execution"]
     keys["read"] = "mg_read_" + keys["read"]
     keys["salt"] = secrets.token_hex(16)
@@ -61,6 +61,7 @@ def initialize():
                 "TOOLGATE_BOOTSTRAP_EXECUTION_KEY": keys["execution"], "TOOLGATE_BOOTSTRAP_SCOPES": "",
                 "MEMORYGATE_URL": "http://127.0.0.1:8020", "MEMORYGATE_READ_KEY": keys["read"]},
             "pi": {"PI_ADMIN_KEY": keys["pi"], "PI_GATEWAY_KEY_SHA256": key_hash("gateway"),
+                "PI_OWNER_KEY_SHA256": key_hash("pi_owner"),
                 "PI_DB_PATH": str(STATE / "pi/pi.db"), "PI_OLLAMA_URL": "http://127.0.0.1:11434",
                 "PI_MODEL": "qwen3:4b", "PI_TOOLGATE_URL": "http://127.0.0.1:8010",
                 "PI_TOOLGATE_KEY": keys["execution"], "PI_MEMORYGATE_URL": "http://127.0.0.1:8020",
@@ -69,6 +70,7 @@ def initialize():
                 "PI_DECISION_KEY": keys["decisions"], "PI_MEMORY_RERANK_ENABLED": "false"},
             "gateway": {"GATEWAY_ORIGIN": "https://localhost:8050", "GATEWAY_DB_PATH": str(STATE / "gateway/auth.db"),
                 "GATEWAY_PI_URL": "http://127.0.0.1:8051", "PI_GATEWAY_KEY": keys["gateway"],
+                "GATEWAY_PI_OWNER_KEY": keys["pi_owner"],
                 "GATEWAY_TOOLGATE_URL": "http://127.0.0.1:8010", "GATEWAY_TOOLGATE_OWNER_KEY": keys["owner"],
                 "GATEWAY_DASHBOARD_DIR": str(ROOT / "dashboard/dist")},
         },
