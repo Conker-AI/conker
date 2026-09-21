@@ -1,3 +1,21 @@
+## September 21 - ordinary turn cancellation (partial P9)
+
+Pi cbc7f0f adds owner-only idempotent stop requests for running ordinary turns.
+Provider/dispatch checkpoints and atomic final-message persistence observe the
+request. Late model answers are discarded with a cancelled receipt. Completed
+effects retain their journal and acted_no_reply state; unknown remote outcomes
+can be reconciled by read-only receipt checks without rerunning dispatch.
+
+Verification: 69 focused turn-control/submission/tool-loop/session-settings tests
+pass. Tests cover persisted replay, stop during provider/action execution,
+final-commit ordering, owner authentication and unknown receipt reconciliation.
+New module/test Ruff checks pass. Broader touched-file lint retains existing
+formatting/line-length failures and is not claimed green.
+
+Remaining: preparation cancellation, explicit reply-only recovery after stop,
+queued turns, steering, per-message retry/fork. Stops are cooperative, not remote
+process termination or effect rollback. No frontend wiring or deployment.
+
 # Backend completion ledger
 
 ## September 21 — integrated Pi regression and P9 gap correction
