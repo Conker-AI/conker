@@ -1,5 +1,16 @@
 # Backend completion ledger
 
+## September 21 — call transcription timing preservation
+
+Call runtime now returns validated adapter transcription segment times in the
+original response rather than discarding them. No extra persistent transcript or
+media is created; replay omits the segments. Pause/end/generation checks suppress
+stale captions, including text-only output calls. Successful call API responses
+use no-store. Seventy-two call/commit-boundary/speech/character tests pass; added
+segment retention, replay and interruption checks and cache-header assertion.
+Ruff/diff checks pass. These are completed-turn segment times, not live streaming
+captions or exact word-aligned TTS. No browser/device wiring or speech host enabled.
+
 ## September 21 — cancellation of waiting scheduled work
 
 Pi adds owner-only cancellation for ready/budget-held/approval-held runs. The
