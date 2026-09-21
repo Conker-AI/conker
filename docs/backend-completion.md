@@ -181,3 +181,9 @@ These entries supersede the corresponding open items in the historical checkpoin
 
 - Corrected Pi's overly narrow root-response cap to 512 KiB, accommodating ToolGate's existing 32,768-character configuration bound even when non-BMP Unicode paths are JSON-escaped. The prior 64 KB limitation above is resolved; bounded parsing, strict metadata projection and oversized-response rejection remain intact.
 - **11 root/API checks passed**, including a catalogue within ToolGate's actual limits whose escaped response exceeds the old cap. Scoped Ruff and diff checks pass. Synthetic transport only; no filesystem reads or frontend changes. Directory pagination, other system capabilities and the wider backend remain unfinished.
+## Current remaining-work index
+
+See [backend-remaining.md](backend-remaining.md) for the source-audited remaining
+requirements and work order. The chronological entries below remain evidence,
+including their limitations; old "missing" statements can be superseded by later
+commits. This index does not mark the backend complete or narrow the agreed scope.
