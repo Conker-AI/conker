@@ -1,8 +1,7 @@
 import type { ConkerClient } from "./client"
-import { createFixtureClient } from "./fixture-adapter"
-import { browserVoiceInput } from "../voice/browser-voice-input"
 
-// The only composition point. Install an HTTP implementation here when contracts exist.
-export const conkerClient: ConkerClient = { ...createFixtureClient(), voiceInput: browserVoiceInput }
+// Composition owns the transport. Importing shared UI must never initialize sample data.
+export let conkerClient: ConkerClient
+export function installConkerClient(client: ConkerClient) { conkerClient = client }
 export type * from "./client"
 export type * from "./models"

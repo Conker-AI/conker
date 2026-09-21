@@ -48,7 +48,8 @@ for (const entry of ['src/components/auth/gateway-entry.tsx', 'src/components/au
   console.log(`PASS ${entry}: ${reachable.size} value-dependency modules, no fixture state`)
 }
 // Prove the traversal recognizes the known boundary and follows barrel reexports.
-const fixtureGraph = graph('src/lib/api/index.ts')
+const fixtureGraph = graph('src/components/fixture-workspace.tsx')
 assert.ok([...fixtureGraph.keys()].some(file => slash(path.relative(root, file)) === 'src/lib/api/fixture-adapter.ts'))
+assert.ok(![...graph('src/lib/api/index.ts').keys()].some(file => slash(path.relative(root, file)) === 'src/lib/api/fixture-adapter.ts'))
 assert.ok([...graph('src/components/design-system/index.tsx').keys()].some(file => slash(path.relative(root, file)) === 'src/lib/api/store.ts'))
 console.log('Gateway import isolation checks passed.')
