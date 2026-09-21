@@ -24,6 +24,22 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P7/P8/P11 image-input increment: Pi `e8a84e3` validates still PNG/JPEG/WebP inputs
+and sends exact scoped attachment bytes through Ollama, OpenRouter, OpenAI and
+Anthropic wire formats. Excluding a message excludes its images; original-context
+replay retains them. Unknown adapters refuse images, and OpenRouter checks the
+model's advertised image modality. 73 focused checks pass, including provider
+payloads, privacy, context exclusion and replay. This supersedes the older table's
+unsupported-image-input statement. Live model capability/quality remains unproven;
+OCR and video input remain open. No paid model calls or frontend wiring were used.
+
+Pi `fc8c266` fixes configured research dispatch: its usage wrapper now forwards
+the bounded provider method with the configured deadline, without an unbounded
+fallback. 16 focused research/model-role checks pass. Full Pi regression at
+`fc8c266`: **1000 passed, 8 skipped**, one existing Starlette/httpx deprecation
+warning, in 377.52 seconds. This covers the combined research, PDF and image
+changes. Skipped live-service/platform-dependent checks remain unproven.
+
 P8/P11 PDF increment: Pi now extracts PDF text layers in a short-lived worker and
 uses the existing attachment/privacy/passage/citation pipeline. Page labels and
 image-only-page notices are retained. Password-protected, unreadable and excessive
