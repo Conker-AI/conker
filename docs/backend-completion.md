@@ -237,3 +237,18 @@ commits. This index does not mark the backend complete or narrow the agreed scop
 - Internal persistence does not complete port control: executor sequence, exact
   reviewed-source admission, network handling and recovery/API integration remain.
   The complete backend acceptance audit remains open; no final UI wiring/deployment.
+
+## Internal Docker port replacement executor
+
+- ToolGate `0b88ab8`: executes journaled stop/snapshot/retire/rename/disconnect/create/
+  optional-start/verify steps from the stored specification. Source configuration
+  and state are checked before effects. Original containers/snapshots remain for
+  recovery; the original restart policy is disabled and preserved on the replacement.
+  Observed ports, mount identities and network identity/aliases are checked.
+- **52 executor/private-journal/lifecycle tests passed** with simulated Docker,
+  temporary SQLite and synthetic encryption keys. Create/edit/remove, stopped/running
+  sources, lost replies at every mutation, revocation and stale/mismatched observations
+  are covered. Scoped lint/diff pass. Local commit; no actual containers changed.
+- Not yet callable through public APIs: exact reviewed-source admission, retained
+  container recovery, replacement target lineage and Pi integration remain. Real
+  Docker fidelity/application health are unverified. No backend-completion claim.
