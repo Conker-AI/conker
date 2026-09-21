@@ -222,3 +222,18 @@ commits. This index does not mark the backend complete or narrow the agreed scop
   Docker replacement/recovery, network identity handling, scope integration and Pi
   owner API. The preview continues to state execution is unimplemented; these tests
   do not demonstrate a successful real-container migration or overall completion.
+
+## Durable replacement records
+
+- ToolGate `f78d760`: private port-replacement payloads are encrypted with the
+  existing vault cipher and bound to their parent execution identity. Ordered step
+  claims are committed before dispatch; concurrent/repeated claims cannot authorize
+  a duplicate. Existing parent recovery blocks further execution after interruption.
+  Public step evidence accepts only structured state and image/container references.
+- **44 payload/existing-journal/specification tests passed**, using temporary SQLite
+  and real encryption with synthetic keys. Scoped Ruff and diff checks pass; existing
+  FastAPI/Starlette deprecation warnings remain. No real vault values or Docker
+  resources accessed. Local commit only.
+- Internal persistence does not complete port control: executor sequence, exact
+  reviewed-source admission, network handling and recovery/API integration remain.
+  The complete backend acceptance audit remains open; no final UI wiring/deployment.
