@@ -24,6 +24,12 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P13 input caption timing now requests and validates provider word timestamps,
+preserving them in transient call responses under the existing interruption guard.
+85 speech/call/character tests pass, including malformed timing, unavailable
+timing, pause and replay. Timing remains a provider estimate; this does not close
+TTS word alignment, browser audio encoding or reference voice cloning.
+
 P10 recurring budgets: ToolGate `1fb4bdb` adds finite owner allowances bound to
 actor, exact publication and arguments, with immutable per-run allocations and
 transactional reservation enforcement. Pi now provisions those allowances using
