@@ -1,5 +1,17 @@
 # Backend completion ledger
 
+## September 21 — scheduled execution transport boundaries
+
+Pi PublishedJobs now streams execution/reconciliation receipts with a 256 KiB
+body limit, configured timeout and elapsed deadline checks, identity encoding,
+and explicit proxy/redirect isolation. Bad responses remain unknown and never
+trigger another effect request. Focused job execution/store/worker/continuity:
+44 passed; Ruff/diff checks passed. Mock HTTP streams verify oversized/encoded/
+redirected/timed-out/late responses, stream cleanup and single dispatch.
+This does not provision paid authority. ToolGate spending-job identities are
+owner-created actor/root-action-bound grants, distinct from Pi schedule IDs;
+binding those grants for paid scheduled execution remains outstanding.
+
 ## September 21 — integrated regression and restored browser authority
 
 ToolGate full suite: 586 passed, 8 skipped, three existing deprecation warnings.
