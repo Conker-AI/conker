@@ -1,5 +1,18 @@
 # Backend completion ledger
 
+## September 21 — editable document and spreadsheet downloads
+
+Pi owner artifacts now support authenticated native file downloads plus Markdown
+DOCX and table XLSX. Existing live source/provenance checks gate every export;
+known-private owner exports remain allowed, unknown privacy fails closed. Responses
+use safe attachment names/no-store/nosniff. XLSX strings never become formulas;
+DOCX preserves headings, paragraphs and source-reference text with explicit basic
+formatting limits. In-memory generation only; 2 MiB output and 5000 DOCX paragraph
+bounds, invalid XML control rejection. Runtime Office dependencies are pinned.
+Twenty-two artifact/download tests pass with actual package reopening, Unicode,
+formula-looking values, source denial and auth/version/content checks. Ruff/diff
+checks pass. No frontend/gateway wiring, PDF rendering or media generation added.
+
 ## September 21 — Pi/MemoryGate read authority contract
 
 Companion `8aa202cf` verifies Pi MemoryClient against real MemoryGate auth and
