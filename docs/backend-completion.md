@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — document text inputs
+
+Pi now extracts inert Markdown/CSV/JSON plus bounded DOCX body text through the
+existing attachment/submission path. DOCX paragraphs/table text reach the recorder
+model with exact attachment binding; images/layout/PDF/OCR remain unsupported.
+Entity declarations, archive ambiguity/encryption and extraction-size violations
+fail explicitly. Thirty-eight focused tests and changed-file Ruff checks passed.
+See Pi docs/document-text.md. Passage citations and richer deliverables remain open;
+no owner files, paid calls, final frontend wiring or deployment were used.
+
 ## September 21 — integrated Pi regression checkpoint
 
 At Pi `d6cc22c`, `python -m pytest tests -q --maxfail=5` completed with **796 passed,
