@@ -59,7 +59,12 @@ Memory reranking is separately opt-in with `PI_MEMORY_RERANK_ENABLED=true`.
 It runs after scoped retrieval, preserves every original record and its evidence,
 and only changes ordering. Its inputs are marked 160-character previews.
 No-harness skips it. Failure retains baseline order and a visible receipt.
-It is off in the initial local stack until broader evaluation is accepted.
+Fresh stack initialization defaults it off. It is enabled in the current local
+acceptance setup. `check_memory_pipeline.py` exercises the real decision service
+and durable Pi context storage with synthetic retrieval records; run with Pi on
+PYTHONPATH and PI_DECISION_URL/PI_DECISION_KEY in the process environment.
+`memory-pipeline-local.json` records the warm result. This does not establish
+broad relevance accuracy or test real MemoryGate retrieval ranking.
 
 ## Local stack progress
 

@@ -19,7 +19,7 @@ function load(relative) {
 const { createGatewayRuntimeClient, RuntimeMutationError } = load('src/lib/gateway/runtime.ts')
 const { GatewayError, createGatewayTransport } = load('src/lib/gateway/transport.ts')
 const session = { id: 's_one', parent_id: null, title: 'A real session', status: 'open', created_at: 1_700_000_000, closed_at: null, summary: null }
-const memory = { configured: false, pending_ingestion: 2, blocked_delivery: 0, pending_deletion: 0, notices: ['Memory delivery pending.'], retrieval: { secret: 'Do not expose raw retrieval' } }
+const memory = { configured: false, pending_ingestion: 2, blocked_delivery: 0, pending_deletion: 0, notices: ['Memory delivery pending.'], retrieval: { status: 'degraded', package: { memories: [{ id: 'memory_one', text: 'Do not expose raw retrieval' }], retrieval: { mode: 'lexical', reranking: { status: 'fallback', provider: 'decisions', secret: 'Do not expose raw retrieval' } } } } }
 const message = { id: 'msg_one', session_id: session.id, seq: 1, role: 'user', content: 'Owner text', created_at: session.created_at }
 const turn = { id: 'trn_one', session_id: session.id, status: 'acted_no_reply', acted: 1, started_at: session.created_at, ended_at: null,
   provider: 'local', model: 'configured-model', input_tokens: 8, output_tokens: null, cost_usd: null, detail: 'Reply unavailable',
@@ -42,6 +42,7 @@ async function main() {
   assert.equal(loaded.turns[0].costUsd, null)
   assert.equal(loaded.turns[0].action.jobId, 'job_one')
   assert.equal(loaded.memory.pendingIngestion, 2)
+  assert.deepEqual(loaded.turns[0].memory.retrieval, { status: 'degraded', mode: 'lexical', records: 1, reranking: { status: 'fallback', provider: 'decisions', model: null } })
   assert.ok(!JSON.stringify(loaded).includes('Do not expose raw retrieval'))
   // Host forgetting retains list/detail records with this fourth session state.
   const forgotten = detail()

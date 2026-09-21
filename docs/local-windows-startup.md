@@ -68,5 +68,6 @@ unconnected screens say so explicitly. Memory retrieval uses text fallback witho
 vector embeddings. Laya is an English decision classifier; CPU answer generation
 is performed separately by Ollama. Routing sees only the latest request, and
 uncertain or unavailable routing may stop according to the configured policy.
-Manual model selection is available. Memory reranking remains opt-in/off.
+Manual model selection is available. Bounded memory reranking is enabled in the
+current local configuration; a fresh launcher initialization defaults it off.
 ToolGate has no execution scopes configured in this isolated setup.

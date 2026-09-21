@@ -141,3 +141,24 @@ without execution scopes; no arbitrary script access was silently granted.
   No errors appeared in the inspected browser console. Mobile dialog was visually
   checked. Build, gateway contract/verification checks, focused ESLint and 18 Pi
   owner/session-privacy/decision tests passed.
+
+
+### Memory relevance activation and status correction
+
+Local PI_MEMORY_RERANK_ENABLED is now true (the fresh-install default remains off).
+The persisted context pipeline was exercised with synthetic retrieved records and
+real HTTP Laya inference, in a temporary Pi SQLite database. The first call fell
+back; a subsequent warm call ranked sport/work/food with 0.9369 relative decision
+confidence. Every original record and source field survived unchanged. This is not
+an end-to-end MemoryGate retrieval quality test. Reproduction script and sanitized
+report: services/decisions/check_memory_pipeline.py and memory-pipeline-local.json.
+The fallback's exact cause was not established; a direct warm HTTP check returned
+200 with 473.66 ms inference, so the bounded timeout remains relevant on this CPU.
+
+Fixed a status bug: a saved settings revision no longer automatically makes
+lexical/degraded retrieval healthy. Explicit scoped retrieval can remain healthy
+without vector search; unavailable semantic search still reports degraded. Ten
+memory tests pass. Live turn records now show memory status, supplied record count,
+search mode, and relevance-ranking outcome without exposing the raw context
+package. Browser checked both degraded and privacy-disabled receipts; build,
+focused lint and runtime adapter checks pass.

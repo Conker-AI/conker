@@ -1,0 +1,20 @@
+{
+  "retrieval": "synthetic",
+  "decision_transport": "live HTTP",
+  "persistence": "temporary SQLite",
+  "all_records_preserved": true,
+  "search_status": "degraded",
+  "receipt": {
+    "status": "ranked",
+    "method": "relative-relevance",
+    "provider": "decisions",
+    "model": "laya-english@1c5edc17",
+    "confidence": 0.9369,
+    "previewCharacters": 160,
+    "order": [
+      "sport",
+      "work",
+      "food"
+    ]
+  }
+}

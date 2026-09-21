@@ -15,6 +15,7 @@ export type RuntimeMessage = {
 export type RuntimeMemory = {
   configured: boolean; pendingIngestion: number; blockedDelivery: number
   pendingDeletion: number; notices: string[]
+  retrieval?: { status: string; mode: string | null; records: number; reranking: { status: string; provider: string | null; model: string | null } | null }
 }
 export type RuntimeTurn = {
   id: string; sessionId: string
@@ -116,9 +117,18 @@ function session(value: unknown): RuntimeSession {
 }
 function memory(value: unknown): RuntimeMemory {
   const row = record(value)
+  let retrieval: RuntimeMemory['retrieval']
+  if (row.retrieval != null) {
+    const saved = record(row.retrieval), pack = saved.package == null ? null : record(saved.package)
+    const metadata = pack?.retrieval == null ? null : record(pack.retrieval)
+    const ranking = metadata?.reranking == null ? null : record(metadata.reranking)
+    retrieval = { status: state(saved.status), mode: metadata?.mode == null ? null : text(metadata.mode, 80),
+      records: pack?.memories == null ? 0 : array(pack.memories, 100).length,
+      reranking: ranking ? { status: state(ranking.status), provider: ranking.provider == null ? null : text(ranking.provider, 100), model: ranking.model == null ? null : text(ranking.model, 240) } : null }
+  }
   return { configured: bool(row.configured), pendingIngestion: count(row.pending_ingestion),
     blockedDelivery: count(row.blocked_delivery), pendingDeletion: count(row.pending_deletion),
-    notices: array(row.notices, 32).map(item => text(item, 4096)) }
+    notices: array(row.notices, 32).map(item => text(item, 4096)), ...(retrieval ? { retrieval } : {}) }
 }
 function message(value: unknown, sessionId: string, forgotten = false): RuntimeMessage {
   const row = record(value)
