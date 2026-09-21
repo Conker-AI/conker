@@ -4,6 +4,7 @@ import { memoryGraph, type MemoryNode } from "./memory-explorer"
 export type WorkspaceNode = Omit<MemoryNode, "kind"> & {
   kind: MemoryNode["kind"] | "folder"
   colorIndex: number
+  displayKind?: string
   parentId?: string
 }
 export type WorkspaceEdge = { id: string; source: string; target: string; kind: "topic" | "source" | "parent" }
@@ -109,7 +110,7 @@ export function layoutMemoryGraph(nodes: WorkspaceNode[], edges: WorkspaceEdge[]
     for (let i = 0; i < ordered.length; i++) for (let j = i + 1; j < ordered.length; j++) {
       const a = positions.get(ordered[i].id)!, b = positions.get(ordered[j].id)!
       const dx = b.x - a.x || 0.1, dy = b.y - a.y || 0.1
-      const distance = Math.hypot(dx, dy), minimum = ordered[i].kind === "folder" || ordered[j].kind === "folder" ? 80 : 62
+      const distance = Math.hypot(dx, dy), minimum = !categories.length ? 165 : ordered[i].kind === "folder" || ordered[j].kind === "folder" ? 80 : 62
       if (distance >= minimum) continue
       const move = (minimum - distance) * 0.28
       a.x -= dx / distance * move; a.y -= dy / distance * move

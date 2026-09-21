@@ -19,10 +19,12 @@ interface BaseLayoutProps {
   description?: string
   actions?: React.ReactNode
   status?: React.ReactNode
+  header?: React.ReactNode
+  sidebar?: React.ReactNode
   variant?: "page" | "collection" | "conversation" | "workspace" | "canvas"
 }
 
-export function BaseLayout({ children, title, description, actions, status, variant = "page" }: BaseLayoutProps) {
+export function BaseLayout({ children, title, description, actions, status, header, sidebar: sidebarOverride, variant = "page" }: BaseLayoutProps) {
   const error = useConkerStore(state => state.error)
   const { config } = useSidebarConfig()
   const conversation = variant === "conversation" || variant === "canvas"
@@ -42,7 +44,7 @@ export function BaseLayout({ children, title, description, actions, status, vari
 
   const content = (
     <SidebarInset key="content" className="min-h-0 overflow-clip">
-      <SiteHeader />
+      {header ?? <SiteHeader />}
       {conversation ? <div className="flex min-h-0 flex-1 flex-col">
         {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive">{error}</p>}
         {children}
@@ -79,7 +81,7 @@ export function BaseLayout({ children, title, description, actions, status, vari
       }
       className={cn("h-dvh min-h-0 overflow-clip", config.side === "right" && "flex-row-reverse")}
     >
-      {sidebar}
+      {sidebarOverride ?? sidebar}
       {content}
     </SidebarProvider>
   )

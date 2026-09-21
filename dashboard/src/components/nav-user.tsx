@@ -8,6 +8,7 @@ import {
   CircleUser,
 } from "lucide-react"
 import { Link } from "react-router-dom"
+import type { ReactNode } from "react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -28,12 +29,14 @@ import {
 
 export function NavUser({
   user,
+  footer,
 }: {
   user: {
     name: string
     email: string
     avatar: string
   }
+  footer?: ReactNode
 }) {
   const { isMobile } = useSidebar()
 
@@ -100,7 +103,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Local fixture · no account connection</DropdownMenuLabel>
+            {footer ?? <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Local fixture · no account connection</DropdownMenuLabel>}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

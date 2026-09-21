@@ -69,6 +69,12 @@ that local setup. PostgreSQL uses a dedicated Docker container/volume on loopbac
 port 55432. The source APIs bind to loopback: ToolGate 8010, MemoryGate 8020,
 Pi 8051, decisions 8060, gateway HTTPS 8050. No existing deployment state is used.
 
-The full dashboard is still awaiting transport integration. Vector embeddings,
-browser acceptance and final system-wide verification remain pending. Do not
-mistake listening ports or the fixture dashboard for completed acceptance.
+The authenticated dashboard shell now connects real memory exploration, model
+configuration and persisted conversations. Browser routing acceptance passed with
+a 538 ms Laya decision and a local Qwen answer. See
+`docs/local-integration-plan.md` for evidence and remaining gaps; other dashboard
+features and vector embeddings are not yet fully integrated.
+
+The routing adapter sends only the latest user request (up to 1,600 characters),
+not the whole conversation. Its receipt names this input scope. Context-dependent
+follow-ups require manual model choice or a more capable contextual router.

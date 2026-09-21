@@ -32,6 +32,10 @@
 @media (max-width:767px) {
  .memory-workspace-toolbar { padding:8px; gap:6px; }
  .memory-toolbar-spacer { display:none; }
+ .memory-live-search { order:5; flex-basis:100%; }
+ .memory-live-search > :first-child { flex:1; min-width:0; }
+ .memory-workspace-toolbar:has(.memory-live-search) [aria-label="Memory object type"] { flex:1; width:auto; min-width:0; }
+ .memory-workspace-toolbar:has(.memory-live-search) [aria-label="Memory view"] { width:110px; }
  .memory-workspace-toolbar [aria-label="Memory dataset"] { margin-left:auto; }
  .memory-workspace-body:has(.workspace-inspector) { padding-bottom:42dvh; }
  .memory-folder-browser { width:160px; min-width:160px; }

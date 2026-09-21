@@ -18,6 +18,7 @@ import {
 
 type ModelsProvidersProps = {
   configuration: ModelsConfiguration
+  serverManaged?: boolean
   pending: boolean
   onSave: (configuration: ModelsConfiguration) => Promise<boolean>
 }
@@ -25,14 +26,14 @@ type ModelsProvidersProps = {
 // Retain an unfinished in-memory form across Settings navigation, like other editors.
 let retainedDraft: ModelsConfiguration | null = null
 
-export function ModelsProviders({ configuration, pending, onSave }: ModelsProvidersProps) {
-  const [draft, setDraft] = useState<ModelsConfiguration>(() => retainedDraft || structuredClone(configuration))
+export function ModelsProviders({ configuration, pending, onSave, serverManaged = false }: ModelsProvidersProps) {
+  const [draft, setDraft] = useState<ModelsConfiguration>(() => (!serverManaged && retainedDraft) || structuredClone(configuration))
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const availableModels = getAvailableModels(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(configuration)
-  useEffect(() => { retainedDraft = dirty ? draft : null }, [dirty, draft])
+  useEffect(() => { if (!serverManaged) retainedDraft = dirty ? draft : null }, [dirty, draft, serverManaged])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }
     window.addEventListener("beforeunload", warn)
@@ -58,12 +59,12 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
         <CardTitle><h2>Models / Providers</h2></CardTitle>
         <CardDescription>Manage the catalogue used by conversation model picks and the default route.</CardDescription>
       </div>
-      <Badge variant="outline">Not connected</Badge>
+      <Badge variant="outline">{serverManaged ? "Server configuration" : "Not connected"}</Badge>
     </CardHeader>
     <CardContent>
       <form className="space-y-6" noValidate onSubmit={async event => {
         event.preventDefault()
-        const validation = validateModelsConfiguration(draft)
+        const validation = validateModelsConfiguration(draft, serverManaged)
         setError(validation)
         if (validation) return
         try {
@@ -75,7 +76,7 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
           setError("The draft could not be saved. Try again.")
         }
       }}>
-        <p className="text-sm leading-6 text-muted-foreground">Preview configuration only. Nothing is sent to a provider. Endpoints and keys stay in memory until reload; use a placeholder key while trying this out.</p>
+        <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Saved on this machine. Provider credentials and endpoints are managed by the server; changing eligibility does not grant tool access." : "Preview configuration only. Nothing is sent to a provider. Endpoints and keys stay in memory until reload; use a placeholder key while trying this out."}</p>
         <div className="grid items-start gap-3 border-y py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="space-y-1">
             <Label htmlFor="default-model-route">Default route</Label>
@@ -95,9 +96,9 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
           <section className="min-w-0 space-y-4" aria-labelledby="model-providers-title">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 id="model-providers-title" className="font-medium">Providers</h3>
-              <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
+              {!serverManaged && <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
                 {showKeys ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}{showKeys ? "Hide keys" : "Show keys"}
-              </Button>
+              </Button>}
             </div>
             {!draft.providers.length && <CollectionEmpty title="No providers configured" description="Provider configuration will appear here when it is available." />}
             {draft.providers.map(provider => <fieldset key={provider.id} className="min-w-0 space-y-3 border-t pt-3" disabled={pending}>
@@ -105,11 +106,11 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{provider.name}</span>
-                  <Badge variant="outline" className="text-muted-foreground">Not connected</Badge>
+                  <Badge variant="outline" className="text-muted-foreground">{serverManaged ? "Server managed" : "Not connected"}</Badge>
                 </div>
                 <Switch aria-label={`Enable ${provider.name}`} checked={provider.enabled} onCheckedChange={enabled => updateProvider(provider.id, { enabled })} />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              {!serverManaged && <div className="grid gap-3 sm:grid-cols-2">
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor={`model-${provider.id}-endpoint`}>Endpoint</Label>
                   <Input id={`model-${provider.id}-endpoint`} type="url" autoComplete="off" spellCheck={false} value={provider.endpoint} onChange={event => updateProvider(provider.id, { endpoint: event.target.value })} />
@@ -118,7 +119,7 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
                   <Label htmlFor={`model-${provider.id}-key`}>API key draft</Label>
                   <Input id={`model-${provider.id}-key`} type={showKeys ? "text" : "password"} autoComplete="off" spellCheck={false} placeholder="Placeholder key" value={provider.apiKeyDraft} onChange={event => updateProvider(provider.id, { apiKeyDraft: event.target.value })} />
                 </div>
-              </div>
+              </div>}
             </fieldset>)}
           </section>
           <section className="min-w-0 space-y-4" aria-labelledby="model-catalogue-title">
@@ -126,7 +127,7 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
               <h3 id="model-catalogue-title" className="font-medium">Model catalogue</h3>
               <span className="text-xs text-muted-foreground">{availableModels.length} enabled</span>
             </div>
-            <p className="text-sm leading-6 text-muted-foreground">Sample model names and routes. Availability, capabilities, and pricing have not been checked.</p>
+            <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Configured routes. Availability depends on the running provider, not this enabled switch." : "Sample model names and routes. Availability, capabilities, and pricing have not been checked."}</p>
             <div className="divide-y border-y">
               {!draft.models.length && <CollectionEmpty title="No models configured" description="Models from your configuration will appear here and in the composer." />}
               {draft.models.map(model => {
@@ -144,6 +145,7 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
                     <div className="mt-2 space-y-2">
                       <Label htmlFor={`model-route-${model.id}`}>Request model ID</Label>
                       <Input id={`model-route-${model.id}`} value={model.route} disabled={pending} autoComplete="off" spellCheck={false} onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, route: event.target.value } : item) })} />
+                      {serverManaged && <><Label htmlFor={`model-purpose-${model.id}`}>Routing guidance</Label><Input id={`model-purpose-${model.id}`} value={model.routingDescription ?? ""} maxLength={240} disabled={pending} placeholder="Which tasks suit this model?" onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, routingDescription: event.target.value } : item) })} /></>}
                     </div>
                   </details>
                 </div>
@@ -151,16 +153,16 @@ export function ModelsProviders({ configuration, pending, onSave }: ModelsProvid
             </div>
           </section>
         </div>
-        <ModelRolesEditor configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
+        <ModelRolesEditor serverManaged={serverManaged} configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
         {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
-        <FormActions description={<span role="status">{saved ? "Saved for this preview. Catalogue available to chat; helper roles remain unwired." : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
+        <FormActions description={<span role="status">{saved ? (serverManaged ? "Saved on the server." : "Saved for this preview. Catalogue available to chat; helper roles remain unwired.") : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
           <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => {
             setDraft(structuredClone(configuration))
             setError(null)
             setSaved(false)
             setShowKeys(false)
           }}>Discard changes</Button>
-          <Button type="submit" disabled={pending || !dirty}>{pending ? "Saving…" : "Save model draft"}</Button>
+          <Button type="submit" disabled={pending || !dirty}>{pending ? "Saving…" : serverManaged ? "Save model settings" : "Save model draft"}</Button>
         </FormActions>
       </form>
     </CardContent>

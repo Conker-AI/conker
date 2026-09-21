@@ -1,3 +1,4 @@
+import { createGatewayControlClient } from "@/lib/gateway/control"
 import { GatewayBoundary } from "./gateway-boundary"
 import { GatewayOperationVerification } from "./gateway-verification"
 import { createGatewayServices } from "@/lib/gateway/services"
@@ -19,11 +20,11 @@ const services = (() => {
     const activityState = createGatewayActivityWorkspaceState()
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy])
-    return { value: { ...value, workspace, activityState, sourcePrivacy, activity: createGatewayActivityClient(value.auth), runtime: createGatewayRuntimeClient(value.auth) }, error: null }
+    return { value: { ...value, control: createGatewayControlClient(value.auth), workspace, activityState, sourcePrivacy, activity: createGatewayActivityClient(value.auth), runtime: createGatewayRuntimeClient(value.auth) }, error: null }
   } catch (error) { return { value: null, error: error instanceof GatewayError ? error.message : "Gateway configuration could not be loaded." } }
 })()
 
 export default function GatewayEntry() {
   if (!services.value) return <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-background p-6 text-foreground"><PageHeader title="Open Conker over HTTPS" /><p role="alert" className="max-w-lg text-center text-sm text-muted-foreground">{services.error} Open the configured HTTPS gateway address. No connection was attempted.</p></main>
-  return <><GatewayBoundary store={services.value.store}><GatewayWorkspace authStore={services.value.store} runtime={services.value.runtime} activity={services.value.activity} conversationState={services.value.workspace} activityState={services.value.activityState} sourcePrivacy={services.value.sourcePrivacy} /></GatewayBoundary><GatewayOperationVerification store={services.value.verification} authStore={services.value.store} /></>
+  return <><GatewayBoundary store={services.value.store}><GatewayWorkspace control={services.value.control} authStore={services.value.store} runtime={services.value.runtime} activity={services.value.activity} conversationState={services.value.workspace} activityState={services.value.activityState} sourcePrivacy={services.value.sourcePrivacy} /></GatewayBoundary><GatewayOperationVerification store={services.value.verification} authStore={services.value.store} /></>
 }

@@ -18,7 +18,7 @@ import {
   Server,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useConker } from "@/lib/api/store"
+import { useConkerStore } from "@/lib/api/store"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -69,9 +69,11 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const owner = useConker(data => data.auth.ownerName)
-  const pendingCount = useConker((state) => state.tickets.filter((ticket) => ticket.status === "Needs you").length)
+export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: React.ComponentProps<typeof Sidebar> & { ownerName?: string; inboxCount?: number; accountFooter?: React.ReactNode }) {
+  const storedOwner = useConkerStore(state => state.data?.auth.ownerName)
+  const storedCount = useConkerStore(state => state.data?.tickets.filter(ticket => ticket.status === "Needs you").length ?? 0)
+  const owner = ownerName ?? storedOwner ?? "Owner"
+  const pendingCount = inboxCount ?? storedCount
   return (
     <Sidebar {...props}>
       <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-2">
@@ -98,7 +100,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{ ...data.user, name: owner }} />
+        <NavUser user={{ ...data.user, name: owner }} footer={accountFooter} />
       </SidebarFooter>
     </Sidebar>
   )

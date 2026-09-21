@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch"
 import { getAvailableModels, type ModelsConfiguration } from "@/lib/api/model-catalogue"
 import { createModelRoles, MODEL_ROLES, MODEL_ROLE_LABELS, modelRolesErrors, type ModelRole, type ModelRoleAssignment, type ModelRolesConfiguration } from "@/lib/api/model-roles"
 
-export function ModelRolesEditor({ configuration, pending, onChange }: { configuration: ModelsConfiguration; pending: boolean; onChange: (roles: ModelRolesConfiguration) => void }) {
+export function ModelRolesEditor({ configuration, pending, onChange, serverManaged = false }: { serverManaged?: boolean; configuration: ModelsConfiguration; pending: boolean; onChange: (roles: ModelRolesConfiguration) => void }) {
   const settings = configuration.roleSettings || createModelRoles(configuration)
   const available = getAvailableModels(configuration)
   const errors = modelRolesErrors(settings, configuration)
@@ -18,9 +18,9 @@ export function ModelRolesEditor({ configuration, pending, onChange }: { configu
     updateRole(role, { [key]: modelId, eligibleModelIds: modelId ? [...new Set([...assignment.eligibleModelIds, modelId])] : assignment.eligibleModelIds })
   }
   return <section aria-labelledby="model-roles-title" className="space-y-4 border-t pt-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="model-roles-title" className="font-medium">Model roles</h3><Badge variant="outline">Preview · not wired</Badge></div>
-    <p className="text-sm leading-6 text-muted-foreground">Assign replaceable models to each role. These choices do not activate helper calls or change the current chat executor; conversations still use their selected model or Default route. Capability, price and privacy compatibility remain unverified.</p>
-    <div className="grid items-start gap-3 md:grid-cols-2"><div className="space-y-1"><Label htmlFor="answer-selection-mode">Answer selection</Label><p className="text-xs leading-5 text-muted-foreground">A manual lock never falls back to another model. Router mode permits a separate routing model to choose only among the answer role’s eligible models.</p></div><Select value={settings.answerMode} disabled={pending} onValueChange={mode => onChange({ ...settings, answerMode: mode as ModelRolesConfiguration["answerMode"], roles: { ...settings.roles, answer: mode === "manual" ? { ...settings.roles.answer, failure: "stop", fallbackModelId: null } : settings.roles.answer } })}><SelectTrigger id="answer-selection-mode" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="manual">Manual answer lock (preview)</SelectItem><SelectItem value="router">Configured router (preview)</SelectItem></SelectContent></Select></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="model-roles-title" className="font-medium">Model roles</h3><Badge variant="outline">{serverManaged ? "Server roles" : "Preview · not wired"}</Badge></div>
+    <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Assign replaceable models to each role. Routing applies to new turns without a manual override. No-harness mode disables helper calls. Typed decision models cannot generate answers or summaries." : "Assign replaceable models to each role. These choices do not activate helper calls or change the current chat executor; conversations still use their selected model or Default route. Capability, price and privacy compatibility remain unverified."}</p>
+    <div className="grid items-start gap-3 md:grid-cols-2"><div className="space-y-1"><Label htmlFor="answer-selection-mode">Answer selection</Label><p className="text-xs leading-5 text-muted-foreground">A manual lock never falls back to another model. Router mode permits a separate routing model to choose only among the answer role’s eligible models.</p></div><Select value={settings.answerMode} disabled={pending} onValueChange={mode => onChange({ ...settings, answerMode: mode as ModelRolesConfiguration["answerMode"], roles: { ...settings.roles, answer: mode === "manual" ? { ...settings.roles.answer, failure: "stop", fallbackModelId: null } : settings.roles.answer } })}><SelectTrigger id="answer-selection-mode" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="manual">Manual answer lock{!serverManaged && " (preview)"}</SelectItem><SelectItem value="router">Configured router{!serverManaged && " (preview)"}</SelectItem></SelectContent></Select></div>
     <div className="space-y-3">{MODEL_ROLES.map(role => {
       const assignment = settings.roles[role]
       const name = MODEL_ROLE_LABELS[role]
@@ -43,6 +43,6 @@ export function ModelRolesEditor({ configuration, pending, onChange }: { configu
       </details>
     })}</div>
     {configuration.roleSettings && errors.length > 0 && <div role="status" className="space-y-1 rounded-md border bg-muted p-3">{errors.map((error, index) => <p key={index} className="text-xs leading-5 text-destructive">{error}</p>)}</div>}
-    <p className="text-xs leading-5 text-muted-foreground">No harness disables routing, selection and summarization helpers. No memory separately excludes memory access. Every future adapter must recheck capability, provider privacy and spend limits before sending data.</p>
+    <p className="text-xs leading-5 text-muted-foreground">No harness disables routing, selection and summarization helpers. No memory separately excludes memory access. {serverManaged ? "The runtime checks provider availability and configured limits before execution." : "Every future adapter must recheck capability, provider privacy and spend limits before sending data."}</p>
   </section>
 }

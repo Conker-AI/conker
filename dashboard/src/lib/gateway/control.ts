@@ -9,7 +9,7 @@ const kind = z.enum(['memory', 'entity', 'evidence', 'analysis', 'episode', 'obs
 const connectionCounts = z.record(z.string().max(120), count)
 const memoryCard = z.object({
   type: kind, id: identity, title: z.string().max(160), preview: z.string().max(400),
-  preview_truncated: z.boolean(), status: z.string().max(100).nullable(), confidence: z.number().finite().nullable(),
+  preview_truncated: z.boolean(), status: z.string().max(100).nullable(), confidence: z.union([z.number().finite(), z.string().max(40)]).nullable(),
   available_fields: z.array(z.string().max(60)).max(20),
   memory_type: z.string().max(100).optional(), do_not_generalize: z.boolean().optional(),
   valid_from: z.string().nullable().optional(), valid_until: z.string().nullable().optional(),
@@ -39,6 +39,13 @@ const configuration = z.object({
   roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment }) }),
 })
 const modelSettings = z.object({ revision: count, configuration: configuration.nullable() })
+const providerHealth = z.object({ status: z.string().max(60), model: z.string().max(240).optional(), busy: z.boolean().optional() })
+const providers = z.object({
+  local: z.object({ provider: z.string().max(100), model: z.string().max(240), health: providerHealth }),
+  direct: z.record(z.string(), z.object({ provider: z.string().max(100), health: providerHealth, capabilities: z.array(z.string().max(60)).max(20), allow_paid: z.boolean() })),
+  hosted: z.object({ status: z.string().max(60), provider: z.string().max(100).optional(), allow_paid: z.boolean().optional() }),
+})
+export type ProviderStatus = { id: string; status: string; model?: string; busy?: boolean; capabilities: string[] }
 export type MemoryObjectKind = z.infer<typeof kind>
 export type MemoryObjectCard = z.infer<typeof memoryCard>
 export type MemoryLibrary = z.infer<typeof library>
@@ -63,6 +70,12 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async providers(signal?: AbortSignal): Promise<ProviderStatus[]> {
+      const value = parse(providers, await auth.request('/api/pi/models', { signal }))
+      return [{ id: value.local.provider, ...value.local.health, model: value.local.model, capabilities: ['text'] },
+        ...Object.values(value.direct).map(item => ({ id: item.provider, ...item.health, capabilities: item.capabilities })),
+        ...(value.hosted.provider ? [{ id: value.hosted.provider, status: value.hosted.status, capabilities: ['text'] }] : [])]
+    },
     async models(signal?: AbortSignal): Promise<OwnerModelSettings> {
       return parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { signal }))
     },

@@ -27,9 +27,15 @@ const edgeTypes = { memoryLink: MemoryLink }
 export function MemoryGraph({ graph, hierarchy, selectedId, focusRequest, onSelect }: { graph: { nodes: WorkspaceNode[]; edges: WorkspaceEdge[] }; hierarchy: boolean; selectedId: string; focusRequest: string; onSelect: (node: WorkspaceNode | null) => void }) {
   const initial = useMemo(() => {
     const positions = layoutMemoryGraph(graph.nodes, graph.edges, hierarchy)
-    return graph.nodes.map(record => ({ id: record.id, type: "memoryPoint" as const, position: positions.get(record.id) || { x: 0, y: 0 }, data: { record, emphasized: false, dimmed: false, detailed: false }, ariaLabel: `${record.kind}: ${record.label}. Select to inspect.`, style: { width: 120, height: 36 }, deletable: false }))
+    return graph.nodes.map(record => ({ id: record.id, type: "memoryPoint" as const, position: positions.get(record.id) || { x: 0, y: 0 }, data: { record, emphasized: false, dimmed: false, detailed: false }, ariaLabel: `${record.displayKind ?? record.kind}: ${record.label}. Select to inspect.`, style: { width: 120, height: 36 }, deletable: false }))
   }, [graph, hierarchy])
   const [nodes, setNodes] = useState<Point[]>(initial)
+  const [previousInitial, setPreviousInitial] = useState(initial)
+  if (previousInitial !== initial) {
+    const positions = new Map(nodes.map(node => [node.id, node.position]))
+    setPreviousInitial(initial)
+    setNodes(initial.map(node => ({ ...node, position: positions.get(node.id) ?? node.position })))
+  }
   const [instance, setInstance] = useState<ReactFlowInstance<Point> | null>(null)
   const [hoverId, setHoverId] = useState("")
   const [focus, setFocus] = useState(false)

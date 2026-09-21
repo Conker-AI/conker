@@ -2,7 +2,7 @@ import { modelRolesErrors, type ModelRolesConfiguration } from "./model-roles"
 
 /** Editable preview configuration. No provider is contacted by the fixture client. */
 export type ModelProvider = {
-  id: "openrouter" | "anthropic" | "openai"
+  id: string
   name: string
   endpoint: string
   apiKeyDraft: string
@@ -15,6 +15,7 @@ export type CatalogueModel = {
   name: string
   route: string
   enabled: boolean
+  routingDescription?: string
 }
 
 export type ModelsConfiguration = {
@@ -52,10 +53,11 @@ export function getDefaultModel(configuration: ModelsConfiguration): CatalogueMo
   return getAvailableModels(configuration).find(model => model.id === configuration.defaultModelId)
 }
 
-export function validateModelsConfiguration(configuration: ModelsConfiguration): string | null {
+export function validateModelsConfiguration(configuration: ModelsConfiguration, serverManaged = false): string | null {
   if (new Set(configuration.providers.map(provider => provider.id)).size !== configuration.providers.length) return "Each provider must have a unique ID."
   if (new Set(configuration.models.map(model => model.id)).size !== configuration.models.length) return "Each model must have a unique ID."
   for (const provider of configuration.providers) {
+    if (serverManaged) continue
     if (!provider.endpoint.trim()) {
       if (provider.enabled) return `Add an endpoint for ${provider.name}, or disable this provider.`
       continue

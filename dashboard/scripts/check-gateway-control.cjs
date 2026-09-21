@@ -24,6 +24,8 @@ async function main() {
   assert.equal(page.next_after, 'memory:m_one')
   assert.equal(page.objects[0].connections.derived_from, 2)
   assert.equal(page.private, undefined)
+  result.objects[0].confidence = 'high'
+  assert.equal((await client.library()).objects[0].confidence, 'high', 'MemoryGate memories use named confidence levels; other objects use numeric values')
   assert.deepEqual(calls[0], ['/api/control/pi/memory/objects', { query: { search: 'project', limit: 1 }, signal: undefined }])
   result.scope = 'selected'
   await assert.rejects(client.library(), error => error.kind === 'invalid-response')

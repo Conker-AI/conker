@@ -90,3 +90,35 @@ PostgreSQL instead of SQLite startup migrations) were corrected and tested.
 Existing repositories were clean at the start. Make narrow local commits after
 verified increments. No remote push, Ubuntu deployment, paid inference or automatic
 permission expansion is part of this goal.
+
+
+## September 22: authenticated browser checkpoint
+
+The accepted shell now wraps the live gateway workspace, without importing fixture
+records. Memory has Network/Database search, scoped record inspection, on-demand
+relationships and paged content; Settings edits the real model catalogue with
+fresh verification and optimistic revisions. Provider health and saved routing
+receipts are visible. Other unconnected sidebar routes explicitly say so.
+
+Verified in Chrome against HTTPS port 8050:
+- Signed in; inspected persisted evidence and its evaluated_by analysis edge.
+- Saved catalogue revision 2 through password verification; routing enabled.
+- Sent “Please say hi in one brief sentence.” and received “Hi.” from local
+  Qwen 2.5 3B. Laya selection took 538 ms; overall answer took about 13.7 seconds.
+  Both calls and the 56% decision confidence are visible in the saved turn receipt.
+- The first routed request failed because conversation context exceeded the small
+  classifier budget. The adapter now uses only the latest user request, explicitly
+  labelled in the receipt, and rejects oversized requests instead of truncating.
+  Context-dependent follow-ups still need a general router or manual selection.
+- Gateway restart preserved authentication, saved messages and catalogue revision.
+- Desktop memory and phone Settings were inspected. Phone Memory revealed toolbar
+  overlap and label collisions; these were fixed and rechecked at 390 × 844.
+- Build, focused ESLint, gateway fixture-isolation/control/workspace/verification
+  checks and 23 Pi decision/owner/model-role tests passed. Screenshots were viewed
+  inline; no screenshot files were saved.
+
+This is an integration checkpoint, not a claim that every accepted frontend feature
+is wired. Conversation rendering is still the narrower live runtime view; full
+chat controls, other sidebar workspaces, vector search and multimodal ingestion
+remain separate gaps. Memory reranking remains opt-in/off. ToolGate is running
+without execution scopes; no arbitrary script access was silently granted.

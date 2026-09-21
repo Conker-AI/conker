@@ -39,7 +39,9 @@ function graph(entry) {
   }
   return chains
 }
-const forbidden = file => /^(src\/lib\/api\/(index|store|provider|fixture-adapter|rich-answer-fixture)\.(ts|tsx)|src\/components\/fixture-workspace\.tsx)$/.test(file) || /(^|\/)fixtures?(\/|\.)/.test(file)
+// Shared store/transport are now empty until a composition explicitly installs a
+// client. Follow their imports, but reject actual sample factories and records.
+const forbidden = file => /^(src\/lib\/api\/(fixture-adapter|rich-answer-fixture)\.(ts|tsx)|src\/components\/fixture-workspace\.tsx)$/.test(file) || /(^|\/)fixtures?(\/|\.)/.test(file)
 for (const entry of ['src/components/auth/gateway-entry.tsx', 'src/components/auth/gateway-boundary.tsx', 'src/components/rich-answer.tsx', 'src/components/design-system/primitives.tsx']) {
   const reachable = graph(entry)
   for (const [file, chain] of reachable) {
