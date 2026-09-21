@@ -1,3 +1,17 @@
+## September 21 - cancellation during preparation
+
+Pi now accepts owner cancellation by retained submission ID, before or after
+turn binding. Preparing requests become terminal cancelled receipts while their
+pending input/drafts remain. Upload reservations are released, in-flight context
+selection is interrupted, and a late summary cannot create a fork. The same
+request ID remains an inspection/replay rather than a restart.
+
+Verification: 58 focused cancellation, submission, context-selection, attachment
+and session-settings tests pass. Coverage includes cancellation inside the actual
+selector and summary callbacks, both sides of binding, protected routes, and
+reuse of a released attachment by a new request. No paid provider was used.
+Remaining P9 work includes reply-only recovery, queue, steer and message forks.
+
 ## September 21 - ordinary turn cancellation (partial P9)
 
 Pi cbc7f0f adds owner-only idempotent stop requests for running ordinary turns.
