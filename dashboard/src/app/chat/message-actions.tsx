@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ComponentProps } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Check, Copy, CornerUpLeft, FileSearch, FileBox, GitFork, Info, MoreHorizontal, Pencil, Pin, RotateCcw, Share2, Square, ThumbsDown, ThumbsUp, Trash2, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { MessageActionButton as ActionButton } from "@/components/message-action-button"
 import { useReadAloud } from "@/hooks/use-read-aloud"
 import { cn } from "@/lib/utils"
 import { Dialog } from "@/components/ui/dialog"
@@ -21,9 +21,6 @@ import { readableAnswer } from "@/lib/rich-answer"
 import { SaveResponseArtifact } from "./save-response-artifact"
 import { useArtifactWorkspace } from "@/lib/artifact-workspace"
 
-function ActionButton({ label, className, ...props }: ComponentProps<typeof Button> & { label: string }) {
-  return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" {...props} aria-label={label} className={cn("size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground aria-pressed:text-primary", className)} /></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>
-}
 
 export function MessageActions({ session, message }: { session: Session; message: ConversationMessage }) {
   const configuration = useConker(data => data.modelsConfiguration)

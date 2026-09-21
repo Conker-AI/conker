@@ -1,3 +1,4 @@
+import { GatewayMessageActions } from './message-actions'
 import { GatewayModelPicker } from './model-picker'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evidence"
@@ -38,7 +39,7 @@ export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
     : message.role === 'assistant' ? <RichAnswer text={message.content.text} />
       : <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
-  return <article className="min-w-0 space-y-2" aria-label={`${message.role} message ${message.sequence}`}><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{message.role === 'user' ? 'You' : 'Conker'}</span><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString()}</time></div>{body}</article>
+  return <article className="min-w-0 space-y-2" aria-label={`${message.role} message ${message.sequence}`}><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{message.role === 'user' ? 'You' : 'Conker'}</span></div>{body}<GatewayMessageActions key={`${message.id}:${message.content.kind}`} message={message} /></article>
 }
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */

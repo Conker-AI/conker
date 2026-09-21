@@ -290,3 +290,16 @@ rendered. The Review models link reaches the real settings page. Checked the sav
 outage turn at 390x844 and 1440x1000; the guidance wraps within the existing layout.
 Focused ESLint, design checks, TypeScript and Vite build pass (upstream Zod annotation
 warnings only). The gateway was restarted to serve the new build.
+
+### Shared live message controls
+
+Live user/assistant messages now offer copy-text and authenticated local message
+links, with timestamps beneath the content. Extracted the existing preview's
+MessageActionButton unchanged for both paths, avoiding fixture-store imports.
+Forgotten/unsupported content disables both controls. Copy failures give manual
+selection guidance; successful links explicitly announce that sign-in is required.
+Desktop and phone live screenshots and the light preview message toolbar were
+inspected. Clipboard writes reported success; clipboard read-back was denied by
+browser permission and was not bypassed. Opening the generated route shape for an
+observed message selected/highlighted the correct record. Focused lint, import
+isolation (112 live dependency modules), design checks and production build pass.
