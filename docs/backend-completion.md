@@ -1,3 +1,19 @@
+## September 21 - exact reply targets
+
+Pi c4c6a14 adds reply_to to direct/queued requests and explicit queue review. The
+reference is included in request identity and immutable execution settings; saved
+input-message reads expose it. Only available user/assistant messages belonging
+to the conversation or its explicitly inherited context are accepted. Excluded
+or unselected retrieval targets stop for review, and automatic summarization
+cannot silently discard a reply target. Model input identifies the selected
+message without elevating the source content to permissions.
+
+Verification: 27 reply/queue/model/context checks passed, then 20 reply/retrieval
+checks passed after adding omitted-candidate coverage. Tests cover restart,
+conflicting replay, foreign/excluded targets, queue review/clear, substituted
+references and no silent summary. No frontend wiring or deployment changed.
+Research modes, steering and per-message retry/fork remain open.
+
 ## September 21 - per-request model selection
 
 Pi ordinary turn and queue endpoints now accept optional model_id. Admission
