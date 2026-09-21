@@ -81,6 +81,7 @@ export type Snapshot = {
 
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
 export interface ConkerClient {
+  readonly ownerPreferences: import("./owner-preferences-types").OwnerPreferencesClient
   readonly systemRuntime: import("./system-runtime-types").SystemRuntimeClient
   readonly artifacts: import("./artifact-types").ArtifactClient
   readonly projects: import("./project-types").ProjectClient

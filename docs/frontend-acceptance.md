@@ -65,3 +65,22 @@ Final attachment verification: navigating Chats -> original conversation retaine
 - Browser verified duplicate mapping rejection, successful mapping creation, linked container inspection, stop confirmation with initial Cancel focus, and both related ports becoming inactive. Mobile dark inspector and 390x640 validation dialog screenshots inspected; dialog stays within 16px gutters and scrolls validation into view. Desktop process table screenshot inspected. No console errors in this journey.
 - Runtime domain checks and scoped lint passed; navigation/type/design verification passed. All actions explicitly simulate only; no host services, Docker or sockets were touched. Final build result recorded with commit.
 - Remaining explicit canvas gap: isolated interactive HTML preview is frontend work and is being completed; prior blanket arbitrary-app deferral did not satisfy this requirement. A privileged model/tool bridge remains separate backend/integration work.
+
+### Completion gate reconciliation
+
+| Area | Frontend evidence | Still required before frontend sign-off |
+| --- | --- | --- |
+| Conversations and calls | Recorded desktop/mobile journeys; conversation, workspace, continuity, context, voice and call suites; attachment and research increments | Preserve verified behavior; no further blanket audit |
+| Agents, Teams, Templates, Projects and Activity | Lifecycle/source/draft checks and per-feature browser evidence in completion-plan.md | Backend execution is a later phase, not a missing local editor |
+| Tools, Jobs and Memory | Prior editor/navigation checks, recovery fixes and graph/database evidence | Preserve existing service boundaries |
+| System | be768b48, runtime checks, production build, desktop/mobile conflict/create/stop verification | Real host execution belongs to backend phase |
+| Artifacts | Native formats, immutable versions, source privacy, diagram/media checks and browser evidence | Explicit-run isolated interactive HTML preview and its isolation verification |
+| Owner preferences | Appearance, layout, connections, model roles and character settings exist | Reconcile reachable proactivity/security preference controls with P15/P16 |
+| Final report | Incremental commits and truthful fixture labels | Complete remaining rows, verify integrated result and report frontend milestone before backend changes |
+
+### Final feature additions — September 21
+
+- HTML artifacts: explicit Run/Stop, immutable source/history, inert .html.txt export, nested opaque sandbox frames without a host bridge. Browser verified inline click interaction, stopped initial state, parent DOM/storage/fetch rejection, and outer-CSP blocking of self-frame navigation with no external document request. See artifact-workspace.md for limits; this is not a CPU/memory quota or general secure execution service.
+- Proactivity settings now expose quiet hours, IANA time zone, urgency/urgent exceptions and daily suggestions/research/cost limits. Account exposes idle timeout. All are configured-only; no permissions, notification delivery or locking are implied.
+- Browser rejected invalid timezone, retained Europe/London draft through Chats and return, saved successfully, and saved five-minute idle preference. Mobile screenshot caught a min-width clipping issue; corrected form/fieldset/select constraints and verified sections fit within the card. Desktop/light Account and mobile/dark Proactivity reviewed. No console errors.
+- Artifact and preference suites, navigation, scoped lint, TypeScript and design guard passed. Integrated build passed; the final CSS-only constraint fix is included in the final verification build.

@@ -1,4 +1,5 @@
 import { ModelsProviders } from "./models-providers"
+import { OwnerPreferencesEditor } from "./owner-preferences"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -98,6 +99,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <p className="text-sm leading-6">Owner: {owner}</p>
             <p className="text-sm leading-6 text-muted-foreground">This is an open fixture preview. Authentication and password changes need a backend; no password is stored.</p>
+            <OwnerPreferencesEditor section="account" />
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" asChild><Link to="/setup">Preview first-run setup</Link></Button>
               <Button variant="outline" asChild><Link to="/login">Preview login</Link></Button>
@@ -105,6 +107,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </RouteSection>
+      <RouteSection value="proactivity"><Card><CardHeader><CardTitle><h2>Proactivity</h2></CardTitle><CardDescription>When to interrupt, how much to suggest, and the limits you want. Configured only; delivery and enforcement are not connected.</CardDescription></CardHeader><CardContent><OwnerPreferencesEditor section="proactivity" /></CardContent></Card></RouteSection>
     <ImportModal open={importOpen} onOpenChange={setImportOpen} onImport={theme => {
       preferences.setSelectedTheme("")
       preferences.setSelectedTweakcnTheme("")
