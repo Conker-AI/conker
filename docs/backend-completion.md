@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — owner notification polling channel
+
+Pi adds owner-authenticated no-store notification polling and durable display
+acknowledgement separate from read acknowledgement. Stable event IDs support
+deduplication and at-least-once reconnect behavior. Existing latest-status, quiet
+hours and privacy filters apply; no copied title payloads are retained. Thirteen
+continuity/job/delivery tests passed. External push, generated briefings, urgency
+classification and proactive model-budget reservation remain open; final UI wiring
+is not performed. Details: Pi docs/continuity-notifications.md.
+
 ## September 21 — team memory reads
 
 Prepared teams now carry a separate frozen memory-read policy from the owner source
