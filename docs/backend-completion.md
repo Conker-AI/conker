@@ -1,5 +1,14 @@
 # Backend completion ledger
 
+## September 21 — grounded continuity summary
+
+Pi briefing now summarizes returned unseen status updates with completed/attention
+counts and up to five source-linked highlights. It explicitly labels page scope and
+more results; it does not equate update count with unique tasks. Privacy/forgetting
+and seen-state filters run before construction. Thirteen continuity/job/notification
+tests passed with added summary identity, paging and disappearance assertions; Ruff
+passed. No model calls, external notifications or frontend wiring were added.
+
 ## September 21 — authenticated terminal gateway
 
 Gateway adds operator-disabled-by-default terminal routes. Creation uses exact
