@@ -22,6 +22,9 @@ async function main() {
   const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
   const client = createFixtureClient(), runtime = client.systemRuntime
   const otherScreens = await client.load(), original = await runtime.load()
+  for (const action of ['start', 'stop', 'restart']) await assert.rejects(runtime.act('process', 'dashboard', action), /inspect-only/)
+  assert.deepEqual(await runtime.load(), original, 'Inspect-only refusal cannot mutate records or receipts')
+  assert.deepEqual(original.processes.find(item => item.id === 'memory').controlTarget, { kind: 'container', id: 'memory-service', actions: ['start', 'stop', 'restart'] })
   let updates = 0
   const unsubscribe = runtime.subscribe(() => updates++)
   const stop = runtime.act('container', 'memory-service', 'stop')
@@ -64,9 +67,9 @@ async function main() {
   assert.ok(after.receipts.every(item => /Simulated/.test(item.detail) && /No host/.test(item.detail)))
   assert.ok(updates > 0)
   unsubscribe(); const count = updates
-  await runtime.act('process', 'dashboard', 'restart')
+  await runtime.act('process', 'memory', 'restart')
   assert.equal(updates, count)
-  for (let index = 0; index < 32; index++) await runtime.act('process', 'dashboard', 'restart')
+  for (let index = 0; index < 32; index++) await runtime.act('process', 'memory', 'restart')
   assert.equal((await runtime.load()).receipts.length, 30, 'Preview receipt history is bounded')
   after.processes[0].name = 'External mutation'
   assert.notEqual((await runtime.load()).processes[0].name, 'External mutation')

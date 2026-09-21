@@ -5,9 +5,9 @@ function seed(): SystemRuntimeSnapshot {
     mode: "fixture",
     processes: [
       { id: "dashboard", name: "Dashboard preview", pid: 2418, command: "node dashboard/server.js", user: "owner", status: "Running", cpuPercent: 1.2, memoryMb: 148, restarts: 0 },
-      { id: "memory", name: "Memory service", pid: 2604, command: "python -m memory_service", user: "service", status: "Running", cpuPercent: 2.4, memoryMb: 384, restarts: 0, containerId: "memory-service" },
-      { id: "tool", name: "Tool worker", pid: 2740, command: "node worker.js", user: "service", status: "Running", cpuPercent: 0.4, memoryMb: 92, restarts: 0, containerId: "tool-worker" },
-      { id: "index", name: "Index worker", pid: 2801, command: "python -m index_worker", user: "service", status: "Stopped", cpuPercent: 0, memoryMb: 0, restarts: 0, containerId: "index-worker" },
+      { id: "memory", name: "Memory service", pid: 2604, command: "python -m memory_service", user: "service", status: "Running", cpuPercent: 2.4, memoryMb: 384, restarts: 0, containerId: "memory-service", controlTarget: { kind: "container", id: "memory-service", actions: ["start", "stop", "restart"] } },
+      { id: "tool", name: "Tool worker", pid: 2740, command: "node worker.js", user: "service", status: "Running", cpuPercent: 0.4, memoryMb: 92, restarts: 0, containerId: "tool-worker", controlTarget: { kind: "container", id: "tool-worker", actions: ["start", "stop", "restart"] } },
+      { id: "index", name: "Index worker", pid: 2801, command: "python -m index_worker", user: "service", status: "Stopped", cpuPercent: 0, memoryMb: 0, restarts: 0, containerId: "index-worker", controlTarget: { kind: "container", id: "index-worker", actions: ["start", "stop", "restart"] } },
     ],
     containers: [
       { id: "memory-service", name: "memory-service", image: "conker/memory:preview", status: "Running", processId: "memory", restarts: 0 },
@@ -62,6 +62,7 @@ export function createSystemRuntimeFixture(): SystemRuntimeClient {
         const container = kind === "container" ? next.containers.find(item => item.id === id) : next.containers.find(item => item.processId === id)
         const process = next.processes.find(item => item.id === (kind === "container" ? container?.processId : id))
         if (!process) throw new Error("This runtime item is unavailable.")
+        if (kind === "process" && (!process.controlTarget?.actions.includes(action) || (process.controlTarget.kind === "container" && process.controlTarget.id !== container?.id))) throw new Error("This process is inspect-only. Lifecycle actions require a managed service or container target.")
         if (action === "stop" && process.status === "Stopped") throw new Error("This item is already stopped in the preview.")
         if (action === "start" && process.status === "Running") throw new Error("This item is already running in the preview.")
         process.status = action === "stop" ? "Stopped" : "Running"

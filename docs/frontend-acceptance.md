@@ -126,3 +126,19 @@ Focus returned to input. Browser log contained one older development HMR store
 reset error at 14:49, before this navigation; no new errors during these interactions.
 Final backend transport remains disconnected. This closes the narrow reopened
 frontend item; backend research and other recorded gaps remain open.
+
+### System process capability reconciliation - September 21
+
+The process fixture now distinguishes inspection from a configured lifecycle target.
+Dashboard preview is inspect-only; direct fixture calls to start, stop or restart
+it fail without changing records or receipts. Container-backed samples retain
+their explicit target identity and supported actions, displayed in the inspector.
+Controls respect the per-process action list. This models the existing backend's
+separate inventory and allowlisted lifecycle contracts; it adds no PID executor.
+
+The focused runtime suite, scoped ESLint and production build pass (existing
+non-failing upstream Zod annotation warnings). Browser inspection verified the
+inspect-only explanation without lifecycle buttons at desktop and 390x844, and
+restarted the container-backed Memory service with its restart count updating.
+The narrow managed-target panel remained scrollable with both actions reachable.
+Final transport translation, live authority and deployment remain deferred.
