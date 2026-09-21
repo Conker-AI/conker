@@ -24,6 +24,14 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P15/P12 recovery increment: Pi has an offline preview/replay tool that applies a
+surviving authoritative Pi store's session forgetting receipts to an older copy,
+reusing existing dependent-data redaction and physical scrubbing. Exclusive leases,
+scope confirmation, source coverage, idempotence and interruption hold checks pass
+with the existing forgetting suite (21 tests). The restored copy remains blocked
+from startup. This does not yet reconcile independent MemoryGate deletions, newer
+effects or revocations and does not prove the supplied source is the newest copy.
+
 P16 atomic admission ledger now reserves daily suggestions/research minutes/cost
 cents under a writer lock, current revision and quiet-hours/urgency policy.
 35 focused preference/continuity/admission tests pass, including concurrency,
