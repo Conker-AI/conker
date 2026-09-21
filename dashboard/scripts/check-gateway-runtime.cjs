@@ -193,6 +193,17 @@ async function main() {
     return true
   })
   assert.equal(requests, 1)
+  setup = clientReturning({ turn_id: 'trn_one' })
+  await setup.client.resumeTurn('trn_one')
+  assert.deepEqual(setup.calls[0], ['/api/pi/turns/trn_one/resume', { method: 'POST', body: {}, signal: undefined }])
+  await assert.rejects(setup.client.resumeTurn('../unsafe'), error => error.kind === 'validation')
+  setup = clientReturning({ turn_id: 'trn_other' })
+  await assert.rejects(setup.client.resumeTurn('trn_one'), error => error instanceof RuntimeMutationError && error.outcome === 'unknown')
+  const approvalDetail = detail()
+  approvalDetail.turns[0].approval_request_id = 'request_one'
+  assert.equal((await clientReturning(approvalDetail).client.getSession('s_one')).turns[0].approvalRequestId, 'request_one')
+  approvalDetail.status = 'forgotten'
+  assert.equal((await clientReturning(approvalDetail).client.getSession('s_one')).turns[0].approvalRequestId, null)
   console.log('Gateway runtime contract checks passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

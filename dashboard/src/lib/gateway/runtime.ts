@@ -23,7 +23,7 @@ export type RuntimeTurn = {
   status: string; acted: boolean; startedAt: string; endedAt: string | null
   provider: string | null; model: string | null
   inputTokens: number | null; outputTokens: number | null; costUsd: number | null
-  detail: string | null; action: { id: string; state: string; jobId: string | null } | null
+  approvalRequestId?: string | null; detail: string | null; action: { id: string; state: string; jobId: string | null } | null
   memory: RuntimeMemory
 }
 export type RuntimeSessionDetail = RuntimeSession & {
@@ -149,7 +149,7 @@ function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn
   const row = record(value)
   if (id(row.session_id) !== sessionId || (row.acted !== 0 && row.acted !== 1)) return bad()
   const action = row.action === null ? null : record(row.action)
-  return { id: id(row.id), sessionId, status: state(row.status), acted: row.acted === 1,
+  return { approvalRequestId: forgotten || row.approval_request_id == null ? null : id(row.approval_request_id), id: id(row.id), sessionId, status: state(row.status), acted: row.acted === 1,
     startedAt: date(row.started_at), endedAt: nullable(row.ended_at, date),
     provider: nullable(row.provider, item => text(item, 256)), model: nullable(row.model, item => text(item, 512)),
     inputTokens: nullable(row.input_tokens, count), outputTokens: nullable(row.output_tokens, count),
@@ -203,6 +203,13 @@ function pendingSubmission(value: unknown, sessionId: string): RuntimePendingSub
 
 export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async resumeTurn(turnId: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+      inputId(turnId)
+      try {
+        const response = await auth.request(`/api/pi/turns/${turnId}/resume`, { method: 'POST', body: {}, signal: options.signal })
+        if (id(response.turn_id) !== turnId) return bad()
+      } catch (error) { throw new RuntimeMutationError(gatewayError(error)) }
+    },
     async listPendingSubmissions(sessionId: string, options: { signal?: AbortSignal; cursor?: string } = {}): Promise<{ results: RuntimePendingSubmission[]; nextCursor: string | null }> {
       inputId(sessionId); if (options.cursor) inputId(options.cursor)
       const response = await auth.request(`/api/pi/sessions/${sessionId}/submissions`, { query: { limit: 50, ...(options.cursor ? { cursor: options.cursor } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })

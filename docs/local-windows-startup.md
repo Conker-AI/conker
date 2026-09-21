@@ -70,4 +70,4 @@ is performed separately by Ollama. Routing sees only the latest request, and
 uncertain or unavailable routing may stop according to the configured policy.
 Manual model selection is available. Bounded memory reranking is enabled in the
 current local configuration; a fresh launcher initialization defaults it off.
-ToolGate has no execution scopes configured in this isolated setup.
+The local acceptance setup now grants the Pi bootstrap credential only `tool:conker.integration-echo`. This owner-confirmed `local_echo` tool returns a digest and length; it has no file, network, command or secret access. Fresh installs still start without tool execution scopes. Local approval expiry is 300 seconds for new requests; previously expired requests stay invalid.

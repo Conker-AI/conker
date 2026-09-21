@@ -7,7 +7,7 @@ export type UncertainTurn = { taskBinding?: TaskSubmissionBinding; rejectionStat
 export function createGatewayRuntimeWorkspaceState() {
   return createStore<{
     epoch: number; selected: string | null; drafts: Record<string, string>; uncertain: Record<string, UncertainTurn>
-    taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | null
+    taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | 'resume' | null
     reset: () => void
   }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null,
     reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null }),

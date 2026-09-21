@@ -174,3 +174,30 @@ local setup, with no console errors. The phone view was inspected. Owner-client,
 fixture-isolation, focused lint and build checks pass. This verifies the list path;
 a real action approval/continuation round trip is still outstanding because this
 isolated execution credential currently has no tool scopes.
+
+### Live tool approval and continuation — 22 September
+
+Added live chat links to the exact Inbox request and an explicitly verified resume
+operation. Reply-only recovery uses the existing resume endpoint. Unsafe turn IDs,
+mismatched response IDs and forgotten approval projection have contract checks.
+Resume errors survive the subsequent history refresh.
+
+The isolated ToolGate registry has one owner-confirmed local_echo tool,
+conker.integration-echo, and the Pi bootstrap credential has only that tool scope.
+Approval expiry was changed from 60 to 300 seconds for new local requests after
+manual review exceeded the original window. No expired approval was extended.
+
+Chrome on the real HTTPS gateway verified request
+06cd366b-181e-4903-b44c-ee6461ebcc9f: password-confirmed Inbox approval, then
+password-confirmed continuation of trn_b6c7478e06e747f8. ToolGate recorded exactly
+one completed action, pi_b7d4766dde384ca2a745bb725fd96a48. Pi saved its digest and
+length (25) result, acted=1 and complete. Incognito memory remained disabled with
+zero pending ingestion. Two earlier expired approvals were refused without action.
+
+Model quality remains a limitation: Qwen 2.5 initially shortened the tool ID,
+then used it correctly after correction. Its final post-tool sentence repeated an
+older private-test answer instead of describing the saved result. Execution is
+verified; narration quality is NOT accepted yet. Do not describe this as a fully
+successful assistant answer. Phone screenshot checked; browser console had no
+warnings/errors. Runtime/workspace checks and production build passed (upstream
+Zod annotation warnings remain).
