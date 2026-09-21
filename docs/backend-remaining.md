@@ -7,6 +7,29 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Verified source distinctions
 
+### September 21 scope reconciliation and joint recovery evidence
+
+Original P14 and the accepted runtime interface require bounded lifecycle actions,
+port mapping edits, inspection and truthful failures. They do not expose automatic
+rollback/cleanup. Keep unresolved intermediate Docker states documented; do not
+invent a rollback system as a prerequisite merely because older audit notes below
+called it unfinished. Original P16 requires continuity delivery and owner policy,
+not a new autonomous research dispatcher. The existing reservation endpoint does
+not activate autonomous work. Automatic dispatch remains a separate future feature.
+
+P15 still explicitly requires backup/restore verification. A new joint offline test
+(`tests/test_recovery_reconciliation.py`) uses the actual Pi, ToolGate and MemoryGate
+modules against temporary snapshots: post-backup session/memory deletions replay,
+local Qdrant points are removed and read back, completed external-action receipts
+are recovered without dispatch, restored execution keys are revoked, retained
+history stays readable through offline SQL and recovery holds remain enforced.
+It passes. This is not a promoted or live Docker/PostgreSQL restore proof. Docker
+Desktop's Linux daemon was unavailable on this host; WSL integration was also
+unavailable. The live drill remains unverified, not passed.
+
+Full ToolGate regression at `558d3e3`: 640 passed, 8 skipped. The skips and synthetic
+Docker boundary do not establish live server behavior. Pi regression is in progress.
+
 Container recovery now also settles a lost start acknowledgement or a crash before
 the final verification claim, using full read-only Docker verification and fresh
 approval. Observed creation of an intentionally stopped replacement is covered too.
