@@ -282,6 +282,46 @@ def test_wal_resident_messages_survive_snapshot(tmp_path):
         connection.close()
 
 
+def test_restored_execution_keys_and_spending_authority_are_revoked(tmp_path):
+    toolgate_store(tmp_path)
+    path = tmp_path / "toolgate.db"
+    with sqlite3.connect(path) as db:
+        db.executescript("""
+            CREATE TABLE v2_agent_keys(id TEXT PRIMARY KEY,status TEXT,key_hash TEXT);
+            INSERT INTO v2_agent_keys VALUES('active','active','hash1'),('old','revoked','hash2');
+            CREATE TABLE v2_spend_policy(id INTEGER PRIMARY KEY,enabled INTEGER);
+            INSERT INTO v2_spend_policy VALUES(1,1);
+            CREATE TABLE v2_spend_allowances(allowance_id TEXT PRIMARY KEY);
+            INSERT INTO v2_spend_allowances VALUES('first'),('second');
+            CREATE TABLE v2_spend_allowance_revocations(allowance_id TEXT PRIMARY KEY,revoked_at REAL);
+            INSERT INTO v2_spend_allowance_revocations VALUES('first',123);
+        """)
+    result = recovery_data.invalidate_approvals(path)
+    assert result["revoked_execution_keys"] == 1
+    assert result["revoked_spending_allowances"] == 1 and result["spending_disabled"]
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT count(*) FROM v2_agent_keys WHERE status='active'").fetchone()[0] == 0
+        assert db.execute("SELECT enabled FROM v2_spend_policy").fetchone()[0] == 0
+        assert db.execute("SELECT revoked_at FROM v2_spend_allowance_revocations WHERE allowance_id='first'").fetchone()[0] == 123
+    repeated = recovery_data.invalidate_approvals(path)
+    assert repeated["revoked_execution_keys"] == repeated["revoked_spending_allowances"] == 0
+
+
+def test_unknown_allowance_schema_rolls_back_authority_changes(tmp_path):
+    toolgate_store(tmp_path)
+    path = tmp_path / "toolgate.db"
+    with sqlite3.connect(path) as db:
+        db.executescript("""
+            CREATE TABLE v2_agent_keys(id TEXT PRIMARY KEY,status TEXT);
+            INSERT INTO v2_agent_keys VALUES('key','active');
+            CREATE TABLE v2_spend_allowances(allowance_id TEXT PRIMARY KEY);
+        """)
+    with pytest.raises(sqlite3.OperationalError):
+        recovery_data.invalidate_approvals(path)
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT status FROM v2_agent_keys").fetchone()[0] == "active"
+
+
 def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)

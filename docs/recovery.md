@@ -90,6 +90,13 @@ Consumed approvals are not rewritten as new approvals. Pi's incomplete turns are
 their original status and `acted` flag; they are held without replay or an invented outcome.
 MemoryGate jobs are parked as `recovery_held`, with original statuses retained in the report.
 
+ToolGate execution keys are also revoked, paid dispatch policy is disabled, and
+every restored recurring spending allowance receives a revocation receipt. An
+existing revocation is preserved. This avoids reviving authority from before a
+newer revocation; clearing lockdown alone cannot restore those credentials.
+Reconfiguration of runtime authority belongs to the later reviewed resumption
+step. An incomplete spending schema fails recovery rather than skipping revocation.
+
 PostgreSQL restores transactionally into a new, offline instance, using a new temporary database
 credential. It restores objects under the managed `memorygate` role; cluster globals and custom
 ownership/grants are retained for later review, not automatically executed. It is stopped after

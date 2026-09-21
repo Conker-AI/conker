@@ -174,6 +174,25 @@ def invalidate_approvals(database: Path) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     with closing(sqlite3.connect(database)) as db, db:
         db.execute("BEGIN IMMEDIATE")
+        tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        revoked_keys = 0
+        if "v2_agent_keys" in tables:
+            revoked_keys = db.execute(
+                "UPDATE v2_agent_keys SET status='revoked' WHERE status!='revoked'"
+            ).rowcount
+        spending_disabled = "v2_spend_policy" in tables
+        if spending_disabled:
+            db.execute("UPDATE v2_spend_policy SET enabled=0")
+        revoked_allowances = 0
+        if "v2_spend_allowances" in tables:
+            # Do not manufacture an incomplete schema or silently skip a ledger.
+            # Current allowance records are revoked by immutable separate receipts.
+            revoked_allowances = db.execute(
+                "INSERT INTO v2_spend_allowance_revocations(allowance_id,revoked_at) "
+                "SELECT allowance_id,? FROM v2_spend_allowances a WHERE NOT EXISTS "
+                "(SELECT 1 FROM v2_spend_allowance_revocations r WHERE r.allowance_id=a.allowance_id)",
+                (datetime.now(timezone.utc).timestamp(),),
+            ).rowcount
         # Reject an unknown schema rather than quietly invalidating zero tokens.
         rows = db.execute(
             "SELECT id, body FROM v2_objects WHERE kind='request'"
@@ -210,7 +229,9 @@ def invalidate_approvals(database: Path) -> dict:
             "ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body,updated_at=excluded.updated_at",
             ("settings", "control-plane", json.dumps(settings), now, now),
         )
-    return {"invalidated_requests": invalidated, "lockdown": True}
+    return {"invalidated_requests": invalidated, "lockdown": True,
+            "revoked_execution_keys": revoked_keys, "spending_disabled": spending_disabled,
+            "revoked_spending_allowances": revoked_allowances}
 
 
 def invalidate_browser_sessions(database: Path) -> dict:
