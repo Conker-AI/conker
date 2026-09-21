@@ -328,3 +328,17 @@ commits. This index does not mark the backend complete or narrow the agreed scop
   names/diff pass. Temporary stores and simulated effects only, local commits.
 - Recovery for uncertain operations, real Docker validation and wider backend
   completion remain open. No frontend wiring, deployment or GitHub push.
+
+## Read-only replacement recovery evidence
+
+- ToolGate `7782c7c`: originating-actor scoped no-store recovery inspection reports
+  steps and known container observations for uncertain replacements. Missing,
+  unavailable and unconfirmed identities are distinct. Only bounded Docker GETs
+  occur; journal state and reservations remain unchanged. Private configuration is
+  omitted, and binding equality is not treated as automatic finalization.
+- **16 recovery/admission/boundary checks passed**; five recovery checks rerun after
+  partial-evidence labeling also pass. Synthetic Docker/temporary storage only;
+  scoped lint/shared undefined-name/diff checks pass, existing warnings remain.
+- Corrective recovery execution/finalization and Pi recovery transport remain open,
+  alongside real Docker verification and wider backend acceptance. Local commit;
+  no final UI wiring, deployment or pushes.
