@@ -1,5 +1,24 @@
 # Backend completion ledger
 
+## September 21 — integrated Pi regression and P9 gap correction
+
+At Pi `7c10233`, full `tests` suite: 840 passed, eight skipped, one existing
+Starlette/httpx warning. Dependencies include the newly pinned Office exporters.
+Seven external live-service checks remain skipped; the Linux terminal test is
+skipped on Windows and has separate successful WSL evidence. This is backend
+regression evidence, not proof that all product requirements are implemented.
+
+Source audit of api.py, submissions.py, session_settings.py, loop.py and existing
+P9 docs confirms ordinary conversations reject concurrent submissions as busy;
+there is no durable future-turn queue, steering endpoint or ordinary turn cancel
+endpoint. Call/job interruption cannot stand in for these requirements. Existing
+fork is whole-session and lacks request idempotency; per-message fork and selected
+retry model need their own contract. The remaining-work ledger now states these
+as implementation gaps rather than a generic review task. Next work must reuse
+submission snapshots, tool action receipts and atomic final-message boundaries:
+stopping a model cannot erase an already-dispatched effect or allow a late reply.
+No frontend changes, deployment or backend completion claim in this checkpoint.
+
 ## September 21 — editable document and spreadsheet downloads
 
 Pi owner artifacts now support authenticated native file downloads plus Markdown
