@@ -24,6 +24,14 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P14 recovery increment: ToolGate now commits the final replacement verification
+and container lineage in one transaction. A crash after this commit can use the
+existing owner-reviewed receipt recovery without Docker replay; a failed lineage
+write cannot leave a misleading successful verification. The 37 focused executor,
+lineage, boundary and finalization checks pass (synthetic Docker transport).
+Earlier-stage partial replacement recovery/cleanup remains open; this increment
+does not authorize re-running uncertain Docker effects.
+
 1. Integrated Pi regression during `a0822eb`: 921 passed, 8 skipped (seven live-service
    checks plus Linux-only terminal on Windows), one existing test-client deprecation
    warning. ToolGate at `52ebf8e`: 586 passed, 8 skipped. Skipped/external-service
