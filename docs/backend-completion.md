@@ -19,3 +19,10 @@ Frontend fixture milestone: Conker commit `eec445d2`. Backend work follows it; f
 ## Verification limits
 
 Local temporary test databases only. No user database migration, external effects or live secrets used. Current commits are foundations, not a declaration of backend completion. New frontend capability contracts must remain separate from fixture behavior and from browser gateway integration.
+
+## September 21 backend increments
+
+- ToolGate `3297be4`: atomic server-allocated definition versions and optional stale-edit preconditions; 57 focused tests passed. Publication/execution pinning remains in progress.
+- Pi `e16295f`: strict agent configuration, immutable history, singular companion protection, archive/restore and owner-only APIs. Definitions do not yet configure session execution or confer grants.
+- Pi `295851f`: durable revisioned projects, archive/restore/removal rules, live-source resolution contract, privacy-aware context metadata selection and owner APIs. Unknown source privacy fails closed. Authoritative session privacy/file resolution is still required before live linking; no caller labels used as authority.
+- Combined Pi project/agent/preference/store/task tests: 68 passed. Project scoped Ruff checks pass. Teams/templates implementation is next; no claim of full backend completion.
