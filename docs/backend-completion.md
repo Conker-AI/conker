@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — verified attachment citation identities
+
+Final-message persistence validates bracketed attachment passage references against
+the exact turn's bound input attachments. Unknown/out-of-range IDs and forged
+provider attachment IDs are not promoted to structured citations. Stored references
+contain no source excerpt or filename; inspection uses current source checks.
+Twenty-four passage/submission/citation tests passed; changed module/test Ruff and
+diff checks passed. This verifies identity, not factual support. Earlier-turn
+attachment citation promotion remains unsupported; no frontend wiring changed.
+
 ## September 21 — attachment passage references
 
 Pi adds stable attachment-bound passage IDs, Unicode offsets and hashes to model
