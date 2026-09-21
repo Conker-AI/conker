@@ -11,6 +11,7 @@
 .conker-backup.lock
 .conker-recovery.json
 .test-gates/
+.local-run/
 
 # Python
 __pycache__/

@@ -1,0 +1,52 @@
+[
+  {
+    "query": "What food should I order for Alex?",
+    "expected": "food",
+    "first": "food",
+    "receipt": {
+      "status": "fallback",
+      "method": "relative-relevance",
+      "provider": "decisions",
+      "reason": "Decision service unavailable or input unsupported."
+    },
+    "elapsed_ms": 716.34
+  },
+  {
+    "query": "When does Alex train judo?",
+    "expected": "sport",
+    "first": "sport",
+    "receipt": {
+      "status": "ranked",
+      "method": "relative-relevance",
+      "provider": "decisions",
+      "model": "laya-english@1c5edc17",
+      "confidence": 0.5793,
+      "previewCharacters": 160,
+      "order": [
+        "sport",
+        "work",
+        "food"
+      ]
+    },
+    "elapsed_ms": 710.83
+  },
+  {
+    "query": "What software project is Alex building?",
+    "expected": "work",
+    "first": "work",
+    "receipt": {
+      "status": "ranked",
+      "method": "relative-relevance",
+      "provider": "decisions",
+      "model": "laya-english@1c5edc17",
+      "confidence": 0.8141,
+      "previewCharacters": 160,
+      "order": [
+        "work",
+        "sport",
+        "food"
+      ]
+    },
+    "elapsed_ms": 675.34
+  }
+]

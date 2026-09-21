@@ -1,0 +1,9 @@
+# Install CPU torch first from https://download.pytorch.org/whl/cpu on this machine.
+torch==2.8.0
+transformers==4.57.6
+laya @ git+https://github.com/NandhaKishorM/laya.git@573e5b62696ba441230cd6be71d593331b5d23af
+fastapi==0.138.2
+uvicorn==0.49.0
+httpx==0.28.1
+psutil==7.2.2
+hf-xet==1.2.0

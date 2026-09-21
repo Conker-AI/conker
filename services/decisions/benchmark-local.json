@@ -1,0 +1,133 @@
+{
+  "model": "laya-english@1c5edc17",
+  "device": "cpu",
+  "threads": 4,
+  "load_ms": 10521.98,
+  "rss_mb": 1998,
+  "correct": 6,
+  "total": 8,
+  "warm_median_ms": 314.96,
+  "cases": [
+    {
+      "input": "Hi, how are you?",
+      "expected": "simple",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.9531,
+        "complex": 0.0469
+      },
+      "confidence": 0.7268,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 499.07
+    },
+    {
+      "input": "Rewrite this sentence politely: Send the report today.",
+      "expected": "simple",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.897,
+        "complex": 0.103
+      },
+      "confidence": 0.5216,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 338.21
+    },
+    {
+      "input": "What is the capital of France?",
+      "expected": "simple",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.8834,
+        "complex": 0.1166
+      },
+      "confidence": 0.4804,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 306.42
+    },
+    {
+      "input": "Translate good morning into Spanish.",
+      "expected": "simple",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.8844,
+        "complex": 0.1156
+      },
+      "confidence": 0.4835,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 275.56
+    },
+    {
+      "input": "Design a distributed database that remains consistent during network partitions and explain tradeoffs.",
+      "expected": "complex",
+      "type": "choice",
+      "choice": "complex",
+      "probabilities": {
+        "simple": 0.4584,
+        "complex": 0.5416
+      },
+      "confidence": 0.005,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 336.41
+    },
+    {
+      "input": "Find the concurrency bug in our transaction design and prove your fix avoids duplicate payments.",
+      "expected": "complex",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.5363,
+        "complex": 0.4637
+      },
+      "confidence": 0.0038,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 331.15
+    },
+    {
+      "input": "Compare three architectural approaches for a durable workflow engine with recovery after a crash.",
+      "expected": "complex",
+      "type": "choice",
+      "choice": "simple",
+      "probabilities": {
+        "simple": 0.5947,
+        "complex": 0.4053
+      },
+      "confidence": 0.0261,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 314.96
+    },
+    {
+      "input": "Develop a rigorous proof of convergence for a novel optimization algorithm.",
+      "expected": "complex",
+      "type": "choice",
+      "choice": "complex",
+      "probabilities": {
+        "simple": 0.2087,
+        "complex": 0.7913
+      },
+      "confidence": 0.261,
+      "action": {
+        "act_probability": 1.0
+      },
+      "elapsed_ms": 304.08
+    }
+  ],
+  "limitation": "Eight hand-labeled smoke cases; not a general quality benchmark."
+}
