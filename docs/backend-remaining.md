@@ -7,6 +7,13 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Verified source distinctions
 
+Container recovery now also settles a lost start acknowledgement or a crash before
+the final verification claim, using full read-only Docker verification and fresh
+approval. Observed creation of an intentionally stopped replacement is covered too.
+42 focused executor/recovery/finalization tests and one stopped-source case pass.
+No Docker mutation is replayed; unknown create identities and earlier incomplete
+operations still require recovery work. Live Docker proof remains separate.
+
 Latest recovery increment: ToolGate `567aa56` adds an offline authoritative action
 receipt overlay for a restored database, leaving original immutable records intact.
 Post-backup completed actions replay cached receipts; interrupted actions remain
