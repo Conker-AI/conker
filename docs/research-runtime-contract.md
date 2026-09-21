@@ -53,3 +53,14 @@ paths remain authoritative. Authenticated research receipts project original
 source observations and message/action IDs; fetched does not mean cited/verified.
 61 focused scripted-service checks pass. No live provider/search proof is claimed.
 Deep research remains unavailable pending its iterative planner and execution.
+
+## Deep executor checkpoint
+
+Pi now retains a validated public plan as an intermediate message and permits up
+to four adaptive research.web searches (or the lower configured tool limit).
+Each follow-up sees previous source results; approval continuation preserves the
+plan and existing receipts. Synthesis/reply recovery does not repeat completed
+searches. Existing forgetting scrubs the plan. 70 focused tests pass.
+Remaining: aggregate provider usage across planning/search selection/synthesis and
+integrated regression. Current final-call cost is not whole-research cost. Source
+execution is tested with doubles; live search and final UI wiring remain unverified.
