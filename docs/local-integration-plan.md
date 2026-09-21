@@ -201,3 +201,20 @@ verified; narration quality is NOT accepted yet. Do not describe this as a fully
 successful assistant answer. Phone screenshot checked; browser console had no
 warnings/errors. Runtime/workspace checks and production build passed (upstream
 Zod annotation warnings remain).
+
+### Post-action narration correction
+
+Pi 107519d separates resumed narration from tool selection: no tool catalogue is
+advertised to a stage that cannot dispatch tools, and its recorded system context
+explicitly asks for the latest request's saved result. The instruction is included
+in the context snapshot rather than added after capture. Action, reply-recovery
+and research regression tests: 38 passed.
+
+Repeated the full browser path after restarting Pi. Turn trn_78e5f65542e84dce,
+approval cb26a26a-88e3-48fe-9063-0145513f9fe6 and action
+pi_1e9ddef7adfd4a068d84d9c26bee3cb7 completed. The browser displayed a reply citing
+the actual saved digest 771e9489a6f2042dec2609f19bfd471b5c69521a23050431e787cd1d4ae6b97d
+and result length 22. No additional action was requested during narration. Memory
+admitted zero records and filtered all three messages for this private turn.
+This corrects the demonstrated stale-answer case, not a general model-quality
+guarantee. Local Qwen remains a small CPU acceptance model.
