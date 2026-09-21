@@ -252,3 +252,17 @@ commits. This index does not mark the backend complete or narrow the agreed scop
 - Not yet callable through public APIs: exact reviewed-source admission, retained
   container recovery, replacement target lineage and Pi integration remain. Real
   Docker fidelity/application health are unverified. No backend-completion claim.
+
+## Exact port review admission
+
+- ToolGate `1138f38`: expiring actor-bound reviews freeze the private replacement
+  specification behind a separate public preview. Review consumption attaches the
+  payload to its exact action in the existing journal transaction. Cross-actor,
+  expired, reused and target-mismatched reviews cannot be admitted; failed admission
+  rolls back the review claim. Creating a preview is not owner approval.
+- **18 focused review/private-record tests passed**, including concurrent consumers,
+  transaction rollback and wrong-key failures, using temporary SQLite and synthetic
+  vault keys. Scoped lint/diff pass. Local commit only.
+- Helpers still need scoped review routes and normal approval/callable-tool integration.
+  Retained review payload lifecycle, replacement recovery/target lineage and Pi
+  integration remain; overall backend completion is not claimed.
