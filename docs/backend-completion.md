@@ -298,3 +298,19 @@ commits. This index does not mark the backend complete or narrow the agreed scop
 - Remaining port work: ToolGate recovery and managed-target lineage, retention and
   real Docker validation. Wider backend acceptance remains open. No deployment,
   final wiring, GitHub push or usage reset performed.
+
+## Managed replacement target continuity
+
+- ToolGate `d2cda29`: completed verified replacement records derive the current
+  manageable container from the operator's configured root. Retained ancestors
+  leave ordinary discovery; root removal revokes derived authority, and another
+  socket path does not inherit the relationship. Pending/unknown sources are
+  withheld from ordinary lifecycle operations and discovery. Different reviews
+  cannot admit concurrent replacement of the same source.
+- **63 lineage/lifecycle/executor/boundary/review checks passed**, with synthetic
+  Docker and temporary databases/keys. Scoped lint/diff pass; existing warnings
+  remain. Local commits only; no real containers changed.
+- Recovery remains open. Ordinary lifecycle operations still require shared target
+  admission to close their check-to-dispatch race with replacement. Socket-path
+  identity assumes operator endpoint control. Real Docker verification, retention
+  and wider backend acceptance remain unfinished; no final wiring/deployment.
