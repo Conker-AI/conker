@@ -24,6 +24,15 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P8/P11 PDF increment: Pi now extracts PDF text layers in a short-lived worker and
+uses the existing attachment/privacy/passage/citation pipeline. Page labels and
+image-only-page notices are retained. Password-protected, unreadable and excessive
+files return explicit unsupported status. 57 focused attachment tests pass,
+including real worker extraction, model context/citations, restart and forgetting.
+Linux resource limits are implemented but not exercised by the Windows run.
+OCR, image model input and final agreed-format acceptance remain open; the older
+table's unsupported-PDF statement is superseded for text-layer PDFs only.
+
 P14 recovery increment: ToolGate now commits the final replacement verification
 and container lineage in one transaction. A crash after this commit can use the
 existing owner-reviewed receipt recovery without Docker replay; a failed lineage
