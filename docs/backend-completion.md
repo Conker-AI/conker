@@ -1,3 +1,20 @@
+## September 21 - per-message conversation branches
+
+Pi adds an owner-only idempotent message fork: exact prefix through an input/final
+response, original conversation unchanged, existing inherited-context references
+rather than copied messages or duplicate memory events. Current agent/project and
+context settings carry over under revision checks. Exact pins beyond the boundary
+require review. Existing summaries require an explicit reviewed summary because
+their contents may exceed the selected boundary. Private source restrictions are
+inherited and cannot be disabled on the child. Branch-history has bounded pages.
+
+Verification: 37 branch/context/settings/forgetting checks passed; 5 focused fork
+checks passed after adding exact-pin preservation. Tests cover real child model
+context, restart replay, no extra memory events, stale/foreign targets, privacy
+relaxation refusal, owner routes, pagination and summary/pin review. New files lint
+passes. Creation makes no model/tool calls. Retry-model remains pending; final UI
+wiring and deployment remain excluded.
+
 ## September 21 - exact reply targets
 
 Pi c4c6a14 adds reply_to to direct/queued requests and explicit queue review. The
