@@ -62,6 +62,22 @@ alone does not pick up a new build. Pi source changes likewise need a Pi restart
 
 ## Current limits
 
+### Reading health results
+
+MemoryGate currently reports `degraded`: PostgreSQL and text retrieval work, but
+Qdrant and embeddings are unavailable. ToolGate's dependency health preserves that
+reported degradation instead of treating HTTP 200 as full readiness (ToolGate
+`d7aefd9`, verified against the running services; 10 health tests passed).
+Its two-second dependency probe can also time out on a cold MemoryGate health
+request; do not infer data loss from that probe alone.
+
+The System screen's ToolGate row comes from Pi's authenticated execution-access
+check (`/v2/agent/status`): Ready there means the execution credential is accepted
+and ToolGate is not in lockdown. It does not assert that every ToolGate dependency
+or connector works. For dependency readiness inspect ToolGate `/health` separately.
+
+### Feature availability
+
 Read `local-integration-plan.md` for verified journeys and remaining work. The
 live shell connects memory inspection, model settings, conversations, activity,
 Inbox approvals and System health;
