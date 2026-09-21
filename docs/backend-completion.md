@@ -1,5 +1,14 @@
 # Backend completion ledger
 
+## September 21 — terminal session leases
+
+Gateway terminal manager binds ephemeral PTYs to browser-session identities, requires
+validation/authorization before spawn, and retains request IDs to prevent repeat
+creation. Cross-session access is refused; periodic validation closes revoked leases
+without browser polling. Global/per-session limits and shutdown cleanup are present.
+Two synthetic manager tests and Ruff passed. HTTP routing and real AuthStore callback
+integration remain open; no shell was exposed through the network.
+
 ## September 21 — Linux owner PTY lifecycle
 
 Pi adds an ephemeral Linux Bash PTY primitive with explicit environment, bounded
