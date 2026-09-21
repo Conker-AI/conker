@@ -92,3 +92,15 @@ Frontend fixture milestone complete at 11b155f2, following the recorded per-feat
 Frontend coverage is local preview behavior, not production readiness. Server persistence, authenticated idle-lock enforcement, notification scheduling, provider research/generation, upload ingestion, model presentation/update delivery, team execution and real system actions remain backend work. Final wiring and deployment stay deferred until owner review. Browser media success playback and physical mic/camera hardware were not exercised in this audit; their stated verification limits remain unchanged.
 
 The owner authorized automatic continuation into existing backend inventories and missing capabilities after this report. The combined goal remains active; frontend completion does not mean the backend or final integration is complete.
+
+
+### Reopened narrow acceptance item - September 21
+
+Backend contract reconciliation found that P9 explicitly names queue versus steer
+versus cancel, but the accepted fixture workspace implements only queue and stop.
+The steering interaction is therefore incomplete despite the earlier broad milestone.
+Backend support now exists independently in Pi `a0822eb`. Add the matching fixture
+control through ConkerClient, preserve drafts/queue/current-run identity, and verify
+normal application, in-flight-action refusal, stopped/failed behavior and desktop/
+mobile rendering. Keep backend transport disconnected. Complete this item before
+expanding backend research modes; do not treat a server endpoint as frontend proof.

@@ -1,3 +1,29 @@
+## September 21 - active-turn steering backend
+
+Pi `a0822eb` adds owner steering POST and receipt GET routes for actively running
+ordinary conversation turns. Steering appends one retained user instruction under
+an idempotent request identity. Stale answers/tool proposals are discarded before
+new action admission or final persistence; the same turn continues with its original
+configuration, tool-step ceiling and completed-action evidence. Already admitted
+or unresolved tool actions refuse steering explicitly; Stop remains distinct.
+
+Reported usage for discarded answers is retained and included in successful turn
+totals; unknown components remain unknown. Pending inputs after restart remain
+not_applied and never execute just because their receipt is read. Forgetting removes
+the instruction content and input hash. Call/team controls remain separate.
+
+Validation: 921 passed, 8 skipped in the full isolated Pi suite (286.65 seconds).
+Ten focused steering checks also passed after the final receipt-field refinement.
+Focused Ruff and diff checks passed; one existing Starlette/httpx warning remains.
+No external provider calls, final browser wiring, deployment or pushes occurred.
+
+Audit found an explicit frontend gap: the accepted fixture has queue and stop but
+no steering control. Reopen that narrow frontend acceptance item and complete its
+fixture/browser verification before adding further research backend behavior.
+Research inventory found existing ToolGate research.web and bounded source bundles;
+reuse them. A bundle alone is not general deep research. See the new
+research-runtime-contract.md for the actual source inventory and remaining work.
+
 ## September 21 - durable answer retries and response versions
 
 Pi `b42e7d9` implements response families, revisioned owner selection, one selected
