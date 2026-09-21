@@ -24,6 +24,15 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P13 reference voice transport: explicit Qwen3 Base adapter accepts validated
+embedded PCM references (optional local decoder for supported compressed media).
+Calls freeze reference identity before model work while keeping bytes out of
+model context, request preferences and returned call records. 80 focused speech,
+call and character tests pass, including reference edits and replay. No voice
+service was contacted: real likeness/latency, remote retention and generated-word
+alignment remain unproven. Base and VoiceDesign require appropriate configured
+models and do not silently substitute for one another.
+
 P13 compressed audio input: Pi accepts WebM/Ogg/MP3 through an explicitly configured
 local FFmpeg path, converting to the existing validated PCM contract. No browser
 capture or final transport wiring was added. 90 speech/call/character tests pass,
