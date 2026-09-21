@@ -218,3 +218,29 @@ and result length 22. No additional action was requested during narration. Memor
 admitted zero records and filtered all three messages for this private turn.
 This corrects the demonstrated stale-answer case, not a general model-quality
 guarantee. Local Qwen remains a small CPU acceptance model.
+
+### Real cross-conversation memory acceptance
+
+Browser-created source session ses_b932f8f7a77a4ffa contains two labelled restatements
+of existing owner requirements (launch languages and local-before-Ubuntu testing).
+Both user messages were admitted through Pi's outbox into real MemoryGate PostgreSQL;
+assistant output was not admitted. A separate browser-created session
+ses_9806c103f2814279 recalled them in turn trn_32afa79bf4264ea1. Laya ranked both
+real retrieved memories (relative confidence 0.2355), preserved their source fields
+and citations, and routed the answer to local Qwen (442.01 ms routing decision).
+The answer correctly identified English first, Russian/Hebrew later and Windows
+before deployment. The memory receipt in Chrome shows two lexical records,
+ranked by laya-english@1c5edc17, while retaining degraded search status. A phone
+screenshot was inspected; the browser console had no warnings/errors.
+
+scripts/check_local_memory_turn.py verifies that exact persisted turn against the
+live source records and recorded answer context. This is real ingestion/retrieval,
+not the earlier synthetic retrieval pipeline check. It does not establish broad
+ranking accuracy, vector retrieval, or multimodal storage. Embeddings remain
+unconfigured and two admitted records await indexing.
+
+The temporary echo execution scope was removed after approval testing. The small
+Qwen model unnecessarily attempted that tool during acknowledgement requests;
+that quality limitation remains, even though the boundary rejected oversized
+arguments and no extra action was approved. Tool availability should be deliberately
+scoped for real tasks; the acceptance tool is no longer advertised.

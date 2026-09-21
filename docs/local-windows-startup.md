@@ -70,4 +70,21 @@ is performed separately by Ollama. Routing sees only the latest request, and
 uncertain or unavailable routing may stop according to the configured policy.
 Manual model selection is available. Bounded memory reranking is enabled in the
 current local configuration; a fresh launcher initialization defaults it off.
-The local acceptance setup now grants the Pi bootstrap credential only `tool:conker.integration-echo`. This owner-confirmed `local_echo` tool returns a digest and length; it has no file, network, command or secret access. Fresh installs still start without tool execution scopes. Local approval expiry is 300 seconds for new requests; previously expired requests stay invalid.
+The approval test temporarily granted only `tool:conker.integration-echo` to Pi.
+That execution grant has now been removed; the tool record remains for inspection.
+Local approval expiry is 300 seconds for new requests; expired requests stay invalid.
+
+## Verify persisted memory recall
+
+The browser-created recall turn `trn_32afa79bf4264ea1` retrieved two admitted
+requirements from a different conversation and passed them through real Laya
+ranking into the answer context. Run the read-only verifier from this repository:
+
+```powershell
+& $conkerPython scripts/check_local_memory_turn.py --turn-id trn_32afa79bf4264ea1
+```
+
+It checks the persisted Pi context against live MemoryGate source records and
+citations without displaying the source text or credentials. It fails if those
+records were subsequently changed, forgotten, or are unavailable. This is a local
+acceptance record, not a portable seeded fixture or a relevance-quality benchmark.
