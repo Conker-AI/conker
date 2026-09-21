@@ -1,5 +1,21 @@
 # Backend completion ledger
 
+## September 21 — Pi/MemoryGate read authority contract
+
+Companion `8aa202cf` verifies Pi MemoryClient against real MemoryGate auth and
+context handlers with temporary SQLite and synthetic keys. Selected retrieval
+excludes foreign/unselected records and never invokes broad/vector/model helpers;
+changing the namespace header is denied, revocation applies to the same client
+immediately, and bootstrap cannot reactivate the key. No ingest header is sent.
+The contract test passed; MemoryGate bootstrap/scoped-context tests: 17 passed;
+Pi team-memory/authority/execution tests: 25 passed. Ruff/diff checks pass.
+
+Run the contract with Pi and MemoryGate services/api on PYTHONPATH and
+DATABASE_URL=sqlite://, using the backend dependencies. A separate local venv
+provided missing psycopg/Qdrant imports; no database server or model was contacted.
+This proves HTTP-handler/SQLite authority, not a live PostgreSQL deployment or
+vector retrieval performance. Cross-service deletion/retention remains open.
+
 ## September 21 — actual Linux terminal through authenticated gateway
 
 Pi `ae991b6` adds a Linux-only combined test with real Bash PTY, real password
