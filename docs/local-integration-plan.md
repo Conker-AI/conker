@@ -162,3 +162,15 @@ memory tests pass. Live turn records now show memory status, supplied record cou
 search mode, and relevance-ranking outcome without exposing the raw context
 package. Browser checked both degraded and privacy-disabled receipts; build,
 focused lint and runtime adapter checks pass.
+
+
+### Owner inbox connection
+
+The existing GatewayOwnerWorkspace and its tested decision/recovery client are now
+mounted at /inbox in the live shell. Its retained notes and uncertain decisions
+participate in the same authentication reset boundary as chat and activity.
+Chrome loaded the real ToolGate owner channel successfully: zero requests in this
+local setup, with no console errors. The phone view was inspected. Owner-client,
+fixture-isolation, focused lint and build checks pass. This verifies the list path;
+a real action approval/continuation round trip is still outstanding because this
+isolated execution credential currently has no tool scopes.
