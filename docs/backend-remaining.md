@@ -24,6 +24,21 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P16 urgency now uses recorded status: uncertain external effects are urgent;
+ordinary failures/approvals are meaningful. Per-event quiet-hours exceptions and
+urgent-only filtering preserve owner inspection; off still wins. Cancelled work
+is counted separately from attention. 36 continuity/job/preference checks pass.
+Proactive work reservations remain separate from notification polling and from
+the already-implemented ToolGate monetary allowances.
+
+Bounded follow-up audit: prioritize coordinated post-backup deletion/effect
+reconciliation (scripts/recovery.py) and earlier-stage container replacement
+recovery (ToolGate port_finalization.py). Older table wording about missing
+reference voices, compressed audio, recurring allowances, still-image inputs,
+research and steering is superseded by the verified increments below. Browser
+capture/playback wiring and deployment remain outside this backend stopping point;
+live voice quality/latency and real-daemon proof must be reported as unverified.
+
 P13 reference voice transport: explicit Qwen3 Base adapter accepts validated
 embedded PCM references (optional local decoder for supported compressed media).
 Calls freeze reference identity before model work while keeping bytes out of
