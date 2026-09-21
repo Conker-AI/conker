@@ -1,5 +1,17 @@
 # Backend completion ledger
 
+## September 21 — protected receipt finalization API
+
+ToolGate now exposes POST `/v2/agent/system/port-finalizations`, using the existing
+owner Inbox verification channel with distinct recovery arguments. Original tool
+execution approval cannot be borrowed. Current scope/policy and originating actor
+are checked; approval consumption and recovered receipt commit atomically. Repeated
+completed requests return the recorded receipt without Docker effects. Partial
+executions cannot request this recovery approval. Twenty-two focused tests passed;
+six endpoint/core tests reran after annotation/import cleanup. New core/test Ruff
+and diff checks pass; existing server-wide lint findings remain. Pi transport and
+partial-effect recovery remain open. No final frontend wiring or deployment.
+
 ## September 21 — direct providers, authored voice, receipt recovery
 
 - Pi `4839be7`: frozen character design, pronunciation and Focus/Character delivery
