@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — actual Linux terminal through authenticated gateway
+
+Pi `ae991b6` adds a Linux-only combined test with real Bash PTY, real password
+hashing and FastAPI TestClient. It verifies exact proof admission, CSRF rejection,
+request replay without respawn, resize, output/cursors, environment isolation,
+and automatic process exit after AuthStore revocation without terminal polling.
+Passed under WSL using pinned Pi dependencies in a disposable venv; Ruff/diff
+checks pass. This closes the separate-layer terminal proof gap. No network
+listener, browser wiring, user files, deployment or ToolGate effects were involved.
+
 ## September 21 — call transcription timing preservation
 
 Call runtime now returns validated adapter transcription segment times in the
