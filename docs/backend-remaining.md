@@ -24,6 +24,13 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P12/P15 vector deletion verification now derives IDs from held target receipts,
+deletes synchronously and reads points back before recording an evidence digest.
+Five replay/cleanup tests pass, including actual embedded Qdrant with unrelated
+points preserved. Failed attempts remove prior current verification. The supplied
+isolated index is verified; networked PostgreSQL/Qdrant and coordinated effect/
+authority reconciliation remain open. No recovery hold is released.
+
 P12/P15 MemoryGate deletion replay now applies supplied authoritative identities
 to an offline target, retains an application-startup hold, prevents late source
 uploads and returns stable vector-delete IDs even on retry. 27 focused tests pass
