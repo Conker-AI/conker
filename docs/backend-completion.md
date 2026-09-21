@@ -1,5 +1,16 @@
 # Backend completion ledger
 
+## September 21 — integrated Pi regression checkpoint
+
+At Pi `d6cc22c`, `python -m pytest tests -q --maxfail=5` completed with **796 passed,
+7 skipped**, one existing Starlette/httpx deprecation warning, in 121.66 seconds.
+The seven skipped cases are tests/test_module_contract.py's external live-service
+health checks (shared fixture skips when no service is available). The working tree
+remained clean. This run covers local integration regressions after direct providers,
+character speech, port recovery, specialist/team memory and notifications; it does
+not prove live accounts, real Docker, cross-service deployment or missing features.
+The remaining-work checklist has been refreshed against the current source.
+
 ## September 21 — owner notification polling channel
 
 Pi adds owner-authenticated no-store notification polling and durable display

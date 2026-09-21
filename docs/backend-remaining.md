@@ -10,25 +10,24 @@ against fixtures; final transport wiring and deployment require the later review
 | Requirement | Current evidence | Remaining proof/work |
 | --- | --- | --- |
 | P2–P6 tasks, agents, teams, projects, context | Pi has committed runtime modules and focused acceptance evidence in backend-completion.md, including team execution and frozen character/context settings. | Final integrated regression and contract review; do not rebuild the existing ledgers or editors. |
-| P3/P4 memory authority | `pi/team_execution.py` explicitly rejects role memory scopes other than `none`. | Authorized specialist/team namespaces and tests showing scope cannot widen. Configuration alone is insufficient. |
-| P7 providers | `pi/api.py` constructs Ollama and OpenRouter providers; model-role routing/configuration is already implemented. | Reconcile direct-provider selections offered by Settings with supported adapters; implement missing agreed adapters, preserve manual locks and helper privacy. |
+| P3/P4 memory authority | Pi `9db4637` and `89065d7` add operator-owned specialist read clients and team reads with source privacy and narrowed selections. | Final integrated regression, live key revocation behavior, and complete authority review; no namespace provisioning has occurred. |
+| P7 providers | Pi `1611240` adds opt-in direct OpenAI/Anthropic text adapters alongside Ollama/OpenRouter and role routing. | Integrated regression; live account verification and unsupported streaming/multimodal/effort capabilities remain explicit. |
 | P8/P11 artifacts and files | Artifact persistence/versioning exists. `pi/attachment_turns.py` feeds only extracted UTF-8 plaintext into model input and rejects other content. | Required richer processing/deliverable behavior, explicit format capability states, actual citations/provenance and focused output checks. Rendering a fixture image is not multimodal model input. |
 | P9 conversations | Durable drafts, submissions, context, source links and literal conversation search have committed evidence. | Integrated acceptance review of queue/steer/cancel, branches/retry model and intended search scope; no blanket claim from storage tests. |
 | P10 tools/jobs | Published pinned execution, nested workflows, deterministic schedule and receipts already exist. | Remaining grant/spending admission and end-to-end independent service contract checks. Arbitrary code execution is explicitly deferred by P10's JSON-source rule. |
 | P12 memory | Scoped retrieval and reviewed corrections already have Pi/MemoryGate implementations. | Remaining retention/recovery integration and namespace authority; do not replace MemoryGate with a duplicate store. |
-| P13 calls | `pi/calls.py` has actual typed/STT/model/TTS turns, pause/interruption, transcript association and privacy. Its capabilities explicitly say characterVoice is not implemented. `pi/speech.py` accepts bounded PCM WAV. | Character voice settings must affect synthesis; reconcile supported browser audio, timing and interactive call requirements. Camera/perception/GPU character rendering remain explicitly deferred. Do not make new audio-retention promises. |
-| P14 system | ToolGate/Pi inventory, configured-container lifecycle, scoped systemd service lifecycle and directory metadata are implemented. Files UI source only expands/selects/copies paths. | Reviewed container port create/change/delete and authenticated terminal behavior; ordinary PID termination needs its own identity/authority design if retained by accepted controls. Directory metadata does not satisfy terminal or content editing. |
+| P13 calls | Typed/STT/model/TTS turns, pause/interruption and privacy exist. Pi `4839be7` passes authored character settings to opt-in Qwen3 VoiceDesign. | Reference cloning, supported browser audio/timing and integrated call acceptance remain. Camera/perception/GPU rendering remain deferred. No new recording-retention claim. |
+| P14 system | Inventory, container/systemd lifecycle, directory metadata, owner-reviewed port replacement and verified lost-receipt recovery exist. | Partial replacement recovery/cleanup and authenticated terminal behavior; ordinary PID termination needs accepted identity/authority scope. Real Docker behavior has only synthetic verification so far. |
 | P15 recovery/auth | Existing operation-bound gateway verification and action journals; `tests/test_backend_restore.py` exercises temporary Pi SQLite snapshots and no effect replay. | Coordinated restore across services, post-backup deletion/effect reconciliation, gateway session invalidation, independent fresh-verification coverage. A Pi snapshot test is not proof of cross-service recovery. |
-| P16 continuity | `pi/continuity.py` derives real task/run/job feed and acknowledgements, but explicitly returns `notificationDelivery=not-configured` and `summaryGeneration=none`. | Meaningful result notification/briefing behavior, quiet hours/urgency and budget reservations without duplicate delivery. Configured preferences are not delivery. |
+| P16 continuity | Pi `d6cc22c` adds durable owner polling delivery with separate shown/read acknowledgement, stable IDs and quiet-hours/privacy filtering. | While-away summary, urgency classification and proactive budget reservations; external push is unconfigured. Polling delivery does not prove final frontend notification behavior. |
 | P17 deployment | Explicitly outside the present stopping point. | Owner review first; no deployment, final UI wiring, GitHub pushes or reset redemption during backend work. |
 
 ## Work order
 
-1. Finish remaining P14 actions using existing ToolGate authority and receipts;
-   next inspect Docker's actual port-reconfiguration constraints before choosing
-   an implementation. Preserve the accepted editor's create/edit/remove behavior.
-2. Complete namespace authority and grant/budget admission shared by teams and
-   proactivity. Reuse existing MemoryGate/ToolGate authorization.
+1. Run integrated Pi regression after the provider/memory/recovery increments and
+   repair demonstrated failures before adding further runtime behavior.
+2. Finish remaining P14 terminal/recovery actions and grant/budget admission;
+   reuse existing ToolGate/MemoryGate authority and receipts.
 3. Close agreed provider, attachment/deliverable and call-presentation gaps.
 4. Implement remaining continuity delivery and coordinated recovery behavior.
 5. Audit all P0–P16 requirements against current source, independent service
