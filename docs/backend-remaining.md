@@ -24,6 +24,13 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P12/P15 MemoryGate deletion replay now applies supplied authoritative identities
+to an offline target, retains an application-startup hold, prevents late source
+uploads and returns stable vector-delete IDs even on retry. 27 focused tests pass
+with temporary SQLite and no live services. Hold records survive logical backups.
+Vector cleanup is explicitly unverified; PostgreSQL/vector drill, coordinated
+effect/authority reconciliation and resumption remain open.
+
 P12/P15 MemoryGate `85c9421` adds content-free deletion identities to memory/skill,
 entity, observation, episode/link and conversation deletion transactions and
 logical backups. 29 receipt/revision/conversation checks pass; four focused
