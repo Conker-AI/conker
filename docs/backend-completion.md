@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — Linux owner PTY lifecycle
+
+Pi adds an ephemeral Linux Bash PTY primitive with explicit environment, bounded
+input/output, cursor loss reporting, resize, idempotent close and independent expiry.
+A real WSL Ubuntu stdlib check passed for I/O, job control, omitted synthetic secrets,
+close and unattended expiry in a temporary directory. Ruff/diff checks passed.
+There is intentionally no network route yet: owner session admission, revocation
+and gateway transport remain unfinished. This is not a container sandbox and does
+not claim control of detached descendants. See Pi docs/owner-terminal.md.
+
 ## September 21 — verified attachment citation identities
 
 Final-message persistence validates bracketed attachment passage references against
