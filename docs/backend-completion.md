@@ -1,5 +1,16 @@
 # Backend completion ledger
 
+## September 21 — cancellation of waiting scheduled work
+
+Pi adds owner-only cancellation for ready/budget-held/approval-held runs. The
+transaction competes with dispatch admission; dispatched and uncertain work cannot
+be relabeled cancelled. Cancellation survives restart, replays idempotently,
+retains receipts and budget identity, and releases overlap for later occurrences.
+Continuity marks it resolved. Thirty-three focused job/continuity tests pass,
+including a blocked dispatch race and restart; Ruff/diff checks pass.
+This withdraws Pi dispatch only, not independent ToolGate approval authority;
+no refund/reusable-grant assumption, browser wiring or deployment was added.
+
 ## September 21 — combined budget contract and existing recovery audit
 
 Companion `d16de5a1` adds an offline cross-repository drill with real Pi admission,
