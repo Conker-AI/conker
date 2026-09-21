@@ -24,6 +24,13 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P12/P15 MemoryGate `85c9421` adds content-free deletion identities to memory/skill,
+entity, observation, episode/link and conversation deletion transactions and
+logical backups. 29 receipt/revision/conversation checks pass; four focused
+skill/receipt checks pass after completing route coverage. Receipt failure rolls
+back deletion. This is forward coverage only: historical deletion completeness,
+restored-record/index replay and cross-service promotion remain open.
+
 P15/P12 recovery increment: Pi has an offline preview/replay tool that applies a
 surviving authoritative Pi store's session forgetting receipts to an older copy,
 reusing existing dependent-data redaction and physical scrubbing. Exclusive leases,
