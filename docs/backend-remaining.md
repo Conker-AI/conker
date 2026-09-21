@@ -24,6 +24,16 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P10 recurring budgets: ToolGate `1fb4bdb` adds finite owner allowances bound to
+actor, exact publication and arguments, with immutable per-run allocations and
+transactional reservation enforcement. Pi now provisions those allowances using
+durable scheduled run IDs and the existing budget-binding contract. Lost replies
+reuse the same allocation; held runs rotate separately from ready work. ToolGate
+54 initial spending/allowance tests and 32 updated allowance/API tests passed;
+Pi's scheduler/budget/cancellation/continuity set passed 58 tests, followed by four
+allowance tests including the new HTTP contract check. No paid calls, frontend
+wiring or deployment. Whole backend acceptance remains open.
+
 P7/P8/P11 image-input increment: Pi `e8a84e3` validates still PNG/JPEG/WebP inputs
 and sends exact scoped attachment bytes through Ollama, OpenRouter, OpenAI and
 Anthropic wire formats. Excluding a message excludes its images; original-context
