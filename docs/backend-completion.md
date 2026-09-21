@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — attachment passage references
+
+Pi adds stable attachment-bound passage IDs, Unicode offsets and hashes to model
+source text, plus owner-authenticated no-store excerpt resolution. Existing source
+integrity/privacy/removal checks apply. Thirty-eight attachment/document regressions
+passed, then six passage/turn tests passed after formatting. New tests cover exact
+Unicode reconstruction, session isolation and removal. Changed-file Ruff passed.
+Free-form model citation validation remains open; passage supply alone is not proof
+of source use. No frontend wiring was changed.
+
 ## September 21 — document text inputs
 
 Pi now extracts inert Markdown/CSV/JSON plus bounded DOCX body text through the
