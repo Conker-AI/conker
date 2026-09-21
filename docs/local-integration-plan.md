@@ -303,3 +303,16 @@ inspected. Clipboard writes reported success; clipboard read-back was denied by
 browser permission and was not bypassed. Opening the generated route shape for an
 observed message selected/highlighted the correct record. Focused lint, import
 isolation (112 live dependency modules), design checks and production build pass.
+
+### Live System health
+
+/system now reports real Pi storage, MemoryGate, ToolGate and provider status via
+the already-allowlisted authenticated health/models endpoints. Typed parsing strips
+arbitrary backend fields/reasons, validates the expected service, and rejects
+malformed health envelopes. Independent provider/runtime failures remain visible;
+refresh clears stale results, pending work is abortable on unmount/auth reset.
+The page shows server check time/cache age and explicitly distinguishes status
+reporting from unconnected terminal/files/Docker/port controls. Desktop 1440x1000
+and phone 390x844 inspected: real MemoryGate degraded, optional hosted unconfigured,
+others ready. Browser console clean. Control contract, lint, fixture-isolation,
+design and build checks passed. Gateway restarted with this build.

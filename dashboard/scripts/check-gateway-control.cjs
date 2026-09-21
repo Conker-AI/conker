@@ -20,6 +20,16 @@ async function main() {
   const calls = []
   let result = { scope: 'all', objects: [{ ...card, connections: { derived_from: 2 } }], total: 2, next_after: 'memory:m_one', search_mode: 'text', private: 'not projected' }
   const client = createGatewayControlClient({ request: async (...args) => { calls.push(args); return structuredClone(result) } })
+  const libraryResult = result
+  result = { service: 'pi', version: 'test', status: 'degraded', checked_at: '2026-09-22T00:00:00Z', age_seconds: 2,
+    checks: Object.fromEntries(['store', 'memory', 'local_provider', 'hosted_provider', 'action_boundary'].map(key => [key, { status: 'ok', secret: 'never project' }])) }
+  const health = await client.health()
+  assert.equal(health.checks.store.secret, undefined)
+  assert.equal(calls.pop()[0], '/api/pi/health')
+  result.service = 'wrong-service'
+  await assert.rejects(client.health(), error => error.kind === 'invalid-response')
+  calls.pop()
+  result = libraryResult
   const page = await client.library({ search: 'project', limit: 1 })
   assert.equal(page.next_after, 'memory:m_one')
   assert.equal(page.objects[0].connections.derived_from, 2)

@@ -56,6 +56,13 @@ const providers = z.object({
   direct: z.record(z.string(), z.object({ provider: z.string().max(100), health: providerHealth, capabilities: z.array(z.string().max(60)).max(20), allow_paid: z.boolean() })),
   hosted: z.object({ status: z.string().max(60), provider: z.string().max(100).optional(), allow_paid: z.boolean().optional() }),
 })
+const serviceCheck = z.object({ status: z.string().min(1).max(60) })
+const systemHealth = z.object({ service: z.literal('pi'), version: short, status: short,
+  checked_at: z.string().datetime({ offset: true }), age_seconds: z.number().finite().nonnegative(),
+  checks: z.object({ store: serviceCheck, memory: serviceCheck, local_provider: serviceCheck,
+    hosted_provider: serviceCheck, action_boundary: serviceCheck }),
+})
+export type SystemHealth = z.infer<typeof systemHealth>
 export type ProviderStatus = { id: string; status: string; model?: string; busy?: boolean; capabilities: string[] }
 export type MemoryObjectKind = z.infer<typeof kind>
 export type MemoryObjectCard = z.infer<typeof memoryCard>
@@ -81,6 +88,9 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async health(signal?: AbortSignal): Promise<SystemHealth> {
+      return parse(systemHealth, await auth.request('/api/pi/health', { signal }))
+    },
     async sessionSettings(id: string, signal?: AbortSignal): Promise<OwnerSessionSettings> {
       return parse(sessionSettings, await auth.request(`/api/control/pi/sessions/${parse(identity, id, true)}/settings`, { signal }))
     },

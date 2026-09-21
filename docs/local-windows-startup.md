@@ -63,7 +63,8 @@ alone does not pick up a new build. Pi source changes likewise need a Pi restart
 ## Current limits
 
 Read `local-integration-plan.md` for verified journeys and remaining work. The
-live shell connects memory inspection, model settings, conversations and activity;
+live shell connects memory inspection, model settings, conversations, activity,
+Inbox approvals and System health;
 unconnected screens say so explicitly. Memory retrieval uses text fallback without
 vector embeddings. Laya is an English decision classifier; CPU answer generation
 is performed separately by Ollama. Routing sees only the latest request, and
