@@ -1,3 +1,18 @@
+## September 21 - durable queue lifecycle (execution pending)
+
+Pi now stores up to five waiting/claimed messages per ordinary conversation with
+retained enqueue IDs and captured execution/context configuration. Owner routes
+support edit, remove, pause, resume and explicit review. Revision checks reject
+stale edits. Settings mismatch pauses the queue without updating its choices.
+Deleted/unavailable attachments pause entries without dropping text. Forgetting
+scrubs payloads, snapshots and original hashes.
+
+Verification: 23 queue/forgetting tests pass, covering reopen/order/cap, idempotent
+creation, stale edits, no resurrection, privacy review, deleted attachment,
+physical forgetting and owner authentication. New module/test Ruff passes.
+This is lifecycle only: no queue executor, submission handoff or automatic drain
+is claimed. Per-entry model/reply/research execution remains to implement.
+
 ## September 21 - stopped-state compatibility audit
 
 Pi d83322e fixes two older terminal-state checks that treated cancelled turns as
