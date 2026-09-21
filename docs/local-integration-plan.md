@@ -279,3 +279,14 @@ Restarted Laya; authenticated /health returned ready, pinned model ID, busy=fals
 Usability gap observed: a failed turn's record gives its status but little recovery
 guidance after reconciliation. The underlying refusal remains safe and visible;
 this is not evidence of polished failure UX.
+
+### Failed-turn recovery guidance
+
+The live turn record now maps the known model-route failure to actionable guidance:
+review model availability in Settings or explicitly choose an available model in
+the composer. Other failed turns retain generic review guidance, with an additional
+action-outcome warning when an action exists. Arbitrary provider errors are not
+rendered. The Review models link reaches the real settings page. Checked the saved
+outage turn at 390x844 and 1440x1000; the guidance wraps within the existing layout.
+Focused ESLint, design checks, TypeScript and Vite build pass (upstream Zod annotation
+warnings only). The gateway was restarted to serve the new build.
