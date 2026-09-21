@@ -206,3 +206,19 @@ commits. This index does not mark the backend complete or narrow the agreed scop
   preservation, durable step journal/recovery, scoped execution and Pi API remain.
   The response states execution is unimplemented. P14 and the broader backend goal
   remain incomplete; final frontend wiring and deployment remain deferred.
+
+## Private port replacement configuration
+
+- ToolGate `dbc4741`: internal replacement payload preparation retains container
+  configuration, runtime/resource settings, bind declarations and network settings;
+  anonymous volumes resolve to existing volume names. A private fingerprint detects
+  configuration changes. Unsupported external dependencies reject before effects.
+- Writable-layer snapshot image ID is required before constructing the eventual
+  create request; existing volumes are reused separately and tmpfs reset is explicit.
+  Raw environment/configuration stay out of the public preview and object repr.
+- **67 specification/preview/planner tests passed**, plus scoped Ruff and diff
+  checks. Synthetic documents/HTTP only. Local commit, no Docker resource changes.
+- Still incomplete: durable private storage and replacement step journal, actual
+  Docker replacement/recovery, network identity handling, scope integration and Pi
+  owner API. The preview continues to state execution is unimplemented; these tests
+  do not demonstrate a successful real-container migration or overall completion.
