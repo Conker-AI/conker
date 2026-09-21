@@ -28,3 +28,18 @@ Remaining implementation:
 
 This inventory is from current local source, not a live-network provider test.
 Do not build a duplicate search engine or silently reactivate paid fallback.
+
+## September 21 implementation checkpoint
+
+Pi now captures off/web/deep in turn requests, immutable submission settings and
+receipt identity, queued payload/admission, and revision-bound saved drafts.
+Consuming a submitted draft clears its mode only if its revision is still current.
+Queue edits/reviews retain the choice. Calls/team-role submissions cannot acquire
+research through this ordinary-conversation field. Default off remains compatible.
+
+89 focused Pi tests pass across research, drafts/forgetting, queue execution,
+submission identity, reply targets and settings, including authenticated HTTP
+forwarding. This is contract foundation only: web/deep currently report durable
+research_unavailable before retrieval/model calls. The bounded ToolGate-backed
+executor, progress/source/synthesis receipts and recovery remain unfinished.
+No search-provider calls or browser/backend wiring were performed.
