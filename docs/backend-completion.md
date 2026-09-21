@@ -1,3 +1,21 @@
+## September 21 - exact retry input groundwork
+
+Pi local commits `4fa8b96` and `9423a65` preserve the last prepared answer input
+and reconstruct its original ordered message references, non-message instructions,
+reply marker and attachment passages. Completed snapshots are immutable; session
+forgetting scrubs their copied prompt segments. Replay checks source availability,
+original policy, project references and stricter current privacy without calling
+retrieval, a provider or a tool. No duplicate source input is created.
+
+Validation: 49 capture/context/submission/forgetting checks passed, then 31 combined
+replay/context/reply/attachment/fork checks passed. Focused Ruff checks passed.
+One existing Starlette/httpx deprecation warning remains. No live provider calls.
+
+Still outstanding: retry admission/endpoint, durable response-family versions and
+active selection, exact retry citation binding, cancellation/restart integration.
+This is internal groundwork, not a completed per-message retry feature. Backend
+phase remains active; no frontend wiring, deployment or push occurred.
+
 ## September 21 - integrated conversation regression and retry contract audit
 
 Full Pi suite at 0a7603a: 889 passed, 8 skipped, one existing Starlette/httpx
