@@ -52,7 +52,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
   const attachmentInput = useRef<HTMLInputElement>(null)
   const [attachmentError, setAttachmentError] = useState("")
   const pending = useConkerStore(state => state.pending)
-  const { send, stop, setNextModel, setReply, openRail, pauseQueue, resumeQueue, removeQueued, editQueued, reviewQueued, setPreview } = useConversationWorkspace()
+  const { send, stop, steer, setNextModel, setReply, openRail, pauseQueue, resumeQueue, removeQueued, editQueued, reviewQueued, setPreview } = useConversationWorkspace()
   const queue = useConversationWorkspace(state => state.queues[session.id])
   const activeQueued = useConversationWorkspace(state => state.activeQueued[session.id])
   const preview = useConversationWorkspace(state => state.previews[session.id])
@@ -167,6 +167,7 @@ export function ConversationComposer({ session, name, companionWorkspace, inputR
           <DropdownMenuSeparator /><DropdownMenuItem asChild><Link to="/settings?tab=models">Manage models / providers</Link></DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {stream && <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="sm" disabled={!draft.trim() || overLimit || pending || session.archived} onClick={() => { void steer(session.id).then(() => inputRef.current?.focus()) }}>Steer</Button></TooltipTrigger><TooltipContent side="top">Use this text to guide the current response. Files and settings stay for your next message.</TooltipContent></Tooltip>}
           <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className={iconControl} aria-label="Start voice typing" disabled={session.archived || !!stream || (!!call && !call.endedAt)} onClick={startVoice}><Mic /></Button></TooltipTrigger><TooltipContent side="top">{call && !call.endedAt ? "End the call to use voice typing" : "Voice typing"}</TooltipContent></Tooltip>
           {stream && <Button type="button" variant="outline" size="icon" className={iconControl} aria-label="Stop response" title="Stop response" onClick={() => stop(session.id)}><Square /></Button>}
           {draft.trim() || attachments?.length ? <Button type="submit" size="icon" className={iconControl} disabled={overLimit || pending || session.archived || !model} aria-label={queueing ? "Queue message" : "Send message"} title={queueing ? "Queue message" : "Send message"}>{queueing ? <ListPlus /> : <ArrowUp />}</Button> : !stream &&

@@ -98,6 +98,8 @@ export function createFixtureClient(): ConkerClient {
   })
   state.conversations[state.companionSessionId].presentationMode = state.profile.studio?.modes.default || "character"
   const streaming = new Set<string>()
+  const steering = new Map<string, (runId: string, requestId: string, text: string) => import("./conversation-types").SteeringReceipt>()
+  const steeringReceipts = new Map<string, { sessionId: string; text: string; receipt: import("./conversation-types").SteeringReceipt }>()
   const runningJobs = new Set<string>()
   const toolWorkspace = createToolWorkspacePreview(tools, { retainRun: run => {
     const ids = new Set(toolActivityRunIds(run))
@@ -544,6 +546,34 @@ export function createFixtureClient(): ConkerClient {
         publishActivity()
       }
       streaming.add(id)
+      let steeringRevision = 0
+      const steeringMessages: ConversationMessage[] = []
+      steering.set(id, (runId, requestId, text) => {
+        if (runId !== run.id || run.status !== "running" || options.signal?.aborted) throw new Error("This response is no longer running. Your draft is retained.")
+        if (["tool", "agent", "waiting"].includes(run.phase)) throw new Error("An action is already in progress or waiting for a decision. Wait for its result or stop future work; your draft is retained.")
+        if (options.retryMessageId || (options.previewScenario && isActivityScenarioName(options.previewScenario))) throw new Error("This response preview does not support steering. Your draft is retained; use Normal or Slow response preview.")
+        if (!requestId || !text.trim() || text.length > 4000) throw new Error("Use 1–4,000 characters for a steering instruction.")
+        if (steeringMessages.length >= 10) throw new Error("This response already has ten steering instructions. Finish or stop it first.")
+        const message: ConversationMessage = { id: crypto.randomUUID(), role: "user", text: text.trim(), createdAt: new Date().toISOString(), status: "complete" }
+        if (contextPolicy) {
+          const plan = planContext({ messages: [...boundary, ...steeringMessages, message], policy: contextPolicy, privacy: conversation.privacy, inheritedInstructions: agentInstructions ? [{ scope: "agent", text: agentInstructions }] : [] })
+          if (plan.nextAction !== "within-estimated-budget") throw new Error("Review the conversation context before steering. Your draft is retained.")
+        }
+        steeringMessages.push(message)
+        conversation.messages.push(message)
+        state.messages[id] = [...(state.messages[id] || []), { id: message.id, text: message.text, createdAt: message.createdAt }]
+        conversation.usage.inputTokens += Math.ceil(message.text.length / 4)
+        reply.contextMessageIds = [...(reply.contextMessageIds || []), message.id]
+        reply.text = ""
+        reply.citations = undefined
+        steeringRevision += 1
+        options.onReset?.()
+        const now = new Date().toISOString()
+        run = { ...run, sequence: (run.sequence || 0) + 1, label: "Applying steering", steps: [...run.steps, { id: requestId, kind: "commentary", status: "complete", label: "Steering instruction saved", startedAt: now, endedAt: now, detail: "Applies to this preview response. No model or tool is connected." }] }
+        publishActivity()
+        touch(id)
+        return { requestId, runId, messageId: message.id, status: "applied" }
+      })
       let saved = false
       const saveReply = () => {
         if (saved) return
@@ -613,9 +643,14 @@ export function createFixtureClient(): ConkerClient {
           : options.previewScenario === "rich-answer" ? richAnswerFixture.text : reply.presentationMode === "character"
           ? "Simulated reply: I have your message. Once connected, I will answer in your character’s style. No tools have run."
           : "Simulated reply: Your message is saved. A connected model will respond here. No tools have run."
-        if (researchMode === "off" && options.previewScenario === "rich-answer") reply.citations = structuredClone(richAnswerFixture.citations)
-        for (const chunk of text.match(options.previewScenario === "rich-answer" ? /[\s\S]{1,100}/g : /[\s\S]{1,6}/g) || []) {
+        if (!steeringRevision && researchMode === "off" && options.previewScenario === "rich-answer") reply.citations = structuredClone(richAnswerFixture.citations)
+        const steeredText = "Steering preview: your updated instruction is saved with this response. No model, tool or external service ran."
+        let revision = steeringRevision
+        let chunks = (steeringRevision ? steeredText : text).match(options.previewScenario === "rich-answer" ? /[\s\S]{1,100}/g : /[\s\S]{1,6}/g) || []
+        for (let index = 0; index < chunks.length || revision !== steeringRevision;) {
           await pause(150, options.signal)
+          if (revision !== steeringRevision) { revision = steeringRevision; chunks = steeredText.match(/[\s\S]{1,6}/g) || []; index = 0 }
+          const chunk = chunks[index++]
           reply.text += chunk
           onChunk(chunk)
           if (options.signal?.aborted) throw aborted()
@@ -631,7 +666,20 @@ export function createFixtureClient(): ConkerClient {
           if (options.signal?.aborted) return structuredClone(reply)
         }
         throw error
-      } finally { streaming.delete(id) }
+      } finally { streaming.delete(id); steering.delete(id) }
+    },
+    async steerConversation(id, runId, requestId, text) {
+      findConversation(id)
+      const previous = steeringReceipts.get(requestId)
+      if (previous) {
+        if (previous.sessionId !== id || previous.text !== text || previous.receipt.runId !== runId) throw new Error("This steering request was already used for another instruction.")
+        return structuredClone(previous.receipt)
+      }
+      const apply = steering.get(id)
+      if (!apply) throw new Error("This response is no longer running. Your draft is retained; send it as a new message.")
+      const receipt = apply(runId, requestId, text)
+      steeringReceipts.set(requestId, { sessionId: id, text, receipt })
+      return structuredClone(receipt)
     },
     async saveModelsConfiguration(value) {
       const error = validateModelsConfiguration(value)

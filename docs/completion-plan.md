@@ -158,3 +158,10 @@ Implemented execution contract: reserve a durable turn request identity before a
 ## Current next action
 
 Finish the **fixture-backed frontend** using the scope correction above. Backend/live gateway increments remain preserved and deferred, including the owner Inbox checkpoint. Current frontend finish evidence is tracked in [frontend-acceptance.md](frontend-acceptance.md). No deployment or external service execution is part of this phase.
+
+### September 21 - steering frontend reconciliation
+
+Closed the missing P9 current-response steering control through the fixture client.
+25 conversation and 19 workspace checks, build/design/scoped lint and desktop/mobile
+browser verification recorded in frontend-acceptance.md. Current backend scope
+continues with research execution; final transport wiring remains deferred.

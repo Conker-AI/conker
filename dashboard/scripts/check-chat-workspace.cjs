@@ -19,6 +19,7 @@ async function main() {
     const { useConversationWorkspace: workspace, useConkerStore: store, conkerClient: client, prepareAttachments, attachmentPreview } = require(output)
     const originalSend = client.sendMessage
     const originalStream = client.streamReply
+    const originalSteer = client.steerConversation
     const calls = []
     client.streamReply = (id, options) => new Promise((resolve, reject) => {
       let ended = false
@@ -44,8 +45,42 @@ async function main() {
     const check = async (label, action) => {
       try { await action(); checks.push(label) }
       catch (error) { failures.push({ label, error }); }
-      finally { client.sendMessage = originalSend; client.streamReply = controlledStream; for (const id of Object.keys(w().streams)) if (w().streams[id]) w().stop(id); await settle() }
+      finally { client.sendMessage = originalSend; client.streamReply = controlledStream; client.steerConversation = originalSteer; for (const id of Object.keys(w().streams)) if (w().streams[id]) w().stop(id); await settle() }
     }
+
+    await check('Steering retries use the same request and retain queue, attachments and next-turn settings', async () => {
+      const id = await make()
+      draft(id, 'first'); const sending = w().send(id); await settle()
+      const call = calls.at(-1)
+      call.options.onActivity({ id: 'active-run', status: 'running', phase: 'thinking', label: 'Thinking', steps: [], provenance: 'preview', startedAt: new Date().toISOString() })
+      draft(id, 'later'); w().enqueue(id)
+      const queue = structuredClone(w().queues[id])
+      w().setNextModel(id, 'openrouter-gpt')
+      store.getState().setResearchMode(id, 'web')
+      store.getState().setAttachments(id, [{ id: 'file', name: 'notes.txt', type: 'text/plain', size: 2, lastModified: 1 }])
+      draft(id, 'shorter')
+      const requests = []
+      client.steerConversation = async (...args) => {
+        requests.push(args)
+        if (requests.length === 1) throw new Error('Receipt unavailable')
+        call.options.onReset()
+        draft(id, 'new text typed during save')
+        return { requestId: args[2], runId: args[1], messageId: 'steer-message', status: 'applied' }
+      }
+      assert.equal(await w().steer(id), false)
+      assert.equal(store.getState().drafts[id], 'shorter')
+      assert.equal(await w().steer(id), true)
+      assert.deepEqual(requests[0], requests[1])
+      assert.equal(requests[0][1], 'active-run')
+      assert.equal(store.getState().drafts[id], 'new text typed during save')
+      assert.equal(store.getState().attachmentDrafts[id].length, 1)
+      assert.equal(store.getState().researchDrafts[id], 'web')
+      assert.equal(w().nextModels[id], 'openrouter-gpt')
+      assert.deepEqual(w().queues[id], queue)
+      w().stop(id); await sending
+      assert.equal(await w().steer(id), false)
+      assert.equal(requests.length, 2)
+    })
 
     await check('Queue drains once, preserves captured model and accepts edit/remove while streaming', async () => {
       const id = await make(), start = calls.length

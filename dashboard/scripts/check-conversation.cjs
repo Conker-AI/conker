@@ -442,6 +442,43 @@ async function main() {
       const state = await client.load()
       assert.equal(JSON.stringify(state.conversations).includes('test-key-do-not-expose'), false)
     })
+    await check('Steering resets partial output in the same run and replays receipts without duplicate messages', async () => {
+      const client = createFixtureClient()
+      const prompt = await client.sendMessage('companion', 'Explain this')
+      let runId, instruction, resetCount = 0, streamed = ''
+      const response = await client.streamReply('companion', {
+        onActivity: run => { runId ??= run.id; assert.equal(run.id, runId) },
+        onReset: () => { resetCount++; streamed = '' },
+      }, chunk => {
+        streamed += chunk
+        instruction ??= client.steerConversation('companion', runId, 'stable-steer-request', 'Make it shorter')
+      })
+      const receipt = await instruction
+      assert.equal(resetCount, 1)
+      assert.equal(response.text, streamed)
+      assert.match(response.text, /^Steering preview:/)
+      assert.equal(response.contextMessageId, prompt.id)
+      assert.ok(response.contextMessageIds.includes(receipt.messageId))
+      assert.deepEqual(await client.steerConversation('companion', runId, 'stable-steer-request', 'Make it shorter'), receipt)
+      await assert.rejects(client.steerConversation('companion', runId, 'stable-steer-request', 'Different'), /already used/)
+      await assert.rejects(client.steerConversation('companion', runId, 'another-request', 'Too late'), /no longer|finished/i)
+      const messages = (await client.load()).conversations.companion.messages
+      assert.deepEqual(messages.filter(m => m.role === 'user').map(m => m.text), ['Explain this', 'Make it shorter'])
+      assert.equal(messages.filter(m => m.role === 'assistant').length, 1)
+    })
+    await check('In-flight action steering is refused without saving an instruction', async () => {
+      const client = createFixtureClient()
+      await client.sendMessage('companion', 'Show the action preview')
+      let refusal
+      await client.streamReply('companion', { previewScenario: 'delegation', onActivity: run => {
+        if (run.status === 'running' && run.phase === 'agent' && !refusal) {
+          refusal = assert.rejects(client.steerConversation('companion', run.id, 'blocked-steer', 'Change it'), /already in progress/)
+        }
+      } }, () => {})
+      assert.ok(refusal, 'The fixture must exercise an active agent action')
+      await refusal
+      assert.equal((await client.load()).conversations.companion.messages.filter(m => m.role === 'user').length, 1)
+    })
   } finally { globalThis.setTimeout = nativeTimeout }
 
   await check('Response ratings persist, toggle, stay independent in forks, and clear when content changes', async () => {

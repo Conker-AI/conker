@@ -36,6 +36,7 @@ type Workspace = {
   retry: (id: string, messageId: string, modelId: string) => Promise<boolean>
   retryUnanswered: (id: string) => Promise<boolean>
   stop: (id: string) => void
+  steer: (id: string) => Promise<boolean>
   enqueue: (id: string) => void
   editQueued: (id: string, entryId: string, text: string) => boolean
   reviewQueued: (id: string, entryId: string) => boolean
@@ -44,6 +45,7 @@ type Workspace = {
   resumeQueue: (id: string) => Promise<void>
 }
 const controllers = new Map<string, AbortController>()
+const steeringRequests = new Map<string, { runId: string; text: string; requestId: string }>()
 const draining = new Set<string>()
 
 function approvalWait(id: string): string | null {
@@ -111,7 +113,9 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
         if (invalid) { get().pauseQueue(id, invalid); return false }
       }
       const savedAttempt = entry?.sentMessageId ? [...(useConkerStore.getState().data?.conversations[id]?.messages || [])].reverse().find(message => message.role === "assistant" && message.contextMessageId === entry.sentMessageId && !message.redacted) : undefined
-      const response = await conkerClient.streamReply(id, { modelId, retryMessageId: retryMessageId || savedAttempt?.id, signal: controller.signal, previewScenario, onActivity: activity => {
+      const response = await conkerClient.streamReply(id, { modelId, retryMessageId: retryMessageId || savedAttempt?.id, signal: controller.signal, previewScenario, onReset: () => {
+        if (controllers.get(id) === controller && !controller.signal.aborted) set(state => ({ streams: { ...state.streams, [id]: { modelId, phase: "thinking", text: "" } } }))
+      }, onActivity: activity => {
         if (controllers.get(id) !== controller) return
         set(state => ({ activities: { ...state.activities, [id]: mergeActivityRun(state.activities[id], activity) } }))
         if (activity.phase === "waiting" || activity.steps.some(step => step.status === "waiting")) get().pauseQueue(id, "Waiting for a decision. Review the activity before resuming queued messages.")
@@ -201,6 +205,22 @@ export const useConversationWorkspace = create<Workspace>((set, get) => {
       return run(id, undefined, get().nextModels[id] || request.modelId, undefined, request.messageId)
     },
     stop: id => { get().pauseQueue(id, "Response stopped. Queued messages will wait until you resume."); controllers.get(id)?.abort(); get().notify(id, "Preview response stopped. No tools were run.") },
+    steer: async id => {
+      const store = useConkerStore.getState()
+      const text = store.drafts[id] || ""
+      const activity = get().activities[id]
+      if (!text.trim() || text.length > 4000 || store.pending) return false
+      if (!get().streams[id] || !activity || activity.status !== "running") { get().notify(id, "This response is no longer running. Your draft is retained; send it as a new message."); return false }
+      const previous = steeringRequests.get(id)
+      const request = previous?.runId === activity.id && previous.text === text ? previous : { runId: activity.id, text, requestId: crypto.randomUUID() }
+      steeringRequests.set(id, request)
+      const saved = await store.mutate(() => conkerClient.steerConversation(id, activity.id, request.requestId, text))
+      if (!saved) { get().notify(id, useConkerStore.getState().error || "Could not steer this response. Your draft is retained."); return false }
+      steeringRequests.delete(id)
+      if (useConkerStore.getState().drafts[id] === text) store.setDraft(id, "")
+      get().notify(id, "Steering instruction saved for this preview response. Attachments and next-message settings stay in your draft.")
+      return true
+    },
     enqueue: id => {
       const data = useConkerStore.getState().data
       if (!data) return

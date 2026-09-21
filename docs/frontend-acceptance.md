@@ -104,3 +104,25 @@ control through ConkerClient, preserve drafts/queue/current-run identity, and ve
 normal application, in-flight-action refusal, stopped/failed behavior and desktop/
 mobile rendering. Keep backend transport disconnected. Complete this item before
 expanding backend research modes; do not treat a server endpoint as frontend proof.
+
+### Steering acceptance closed - September 21
+
+The composer now separates Steer (current response), Queue (next message / Enter),
+and Stop. Fixture steering preserves run identity and original input, resets old
+partial output, saves one steering message, and returns an idempotent receipt.
+Uncertain saves retain a stable request ID. Newer typed text, attachments, queued
+messages, research choice and next-model choice survive. Active tool/agent actions
+and unsupported retry/scenario previews refuse steering explicitly.
+
+Verification: 25 conversation checks and 19 workspace checks pass, including
+receipt replay/conflict, partial reset, finished-run refusal, in-flight-action
+refusal, failed-save retry, and concurrent draft preservation. Scoped ESLint,
+design guard and production build pass (existing upstream Zod comment warnings).
+Impeccable detector returned no findings. Inspected 1101x913 desktop and 390x844
+mobile screenshots during streaming: Steer, Stop and Queue remain distinct and
+inside the composer; model label truncates on mobile. Browser click saved the
+instruction and showed Applying steering, then the explicit preview response.
+Focus returned to input. Browser log contained one older development HMR store
+reset error at 14:49, before this navigation; no new errors during these interactions.
+Final backend transport remains disconnected. This closes the narrow reopened
+frontend item; backend research and other recorded gaps remain open.

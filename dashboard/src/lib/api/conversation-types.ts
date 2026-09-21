@@ -106,4 +106,5 @@ export type ConversationUpdate = {
 }
 
 export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean; rating?: "up" | "down" | null }
-export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void; /** Explicit developer fixture selection; absent for ordinary turns. */ previewScenario?: string }
+export type SteeringReceipt = { requestId: string; runId: string; messageId: string; status: "applied" }
+export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void; onReset?: () => void; /** Explicit developer fixture selection; absent for ordinary turns. */ previewScenario?: string }

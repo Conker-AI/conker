@@ -110,6 +110,7 @@ export interface ConkerClient {
   forkConversation(sessionId: string, messageId: string): Promise<Session>
   /** Text deltas and optional public activity snapshots. Fixture mode simulates text only; retry never repeats actions. */
   streamReply(sessionId: string, options: ReplyOptions, onChunk: (chunk: string) => void): Promise<ConversationMessage>
+  steerConversation(sessionId: string, runId: string, requestId: string, text: string): Promise<import("./conversation-types").SteeringReceipt>
   saveModelsConfiguration(value: ModelsConfiguration): Promise<ModelsConfiguration>
   requestReply(sessionId: string): Promise<void>
   decideTicket(id: string, status: TicketStatus): Promise<Ticket>
