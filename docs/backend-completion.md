@@ -266,3 +266,19 @@ commits. This index does not mark the backend complete or narrow the agreed scop
 - Helpers still need scoped review routes and normal approval/callable-tool integration.
   Retained review payload lifecycle, replacement recovery/target lineage and Pi
   integration remain; overall backend completion is not claimed.
+
+## ToolGate port review and execution API
+
+- ToolGate `abef6cb`: scoped no-store review create/read routes and reserved
+  `system.port-control` invocation. Owner approval includes the actual proposed
+  mapping change. Review and approval consumption share the action transaction;
+  per-step live authority/publication checks and existing replay receipts apply.
+  Invalid definition substitutions and inherited workflow approval are rejected.
+- **67 boundary/executor/review/journal/publication/container-boundary tests passed**
+  with synthetic Docker and temporary encrypted storage. Seven boundary checks
+  rerun after the final preview-state correction also pass. Scoped lint/shared
+  undefined-name/diff checks pass; existing deprecation warnings remain.
+- This supersedes prior internal-only port executor status. Pi transport,
+  retained-container recovery, replacement-target lineage, retention and real-Docker
+  verification remain incomplete. No real containers modified, frontend wired,
+  service deployed or GitHub push performed. Backend goal remains active.
