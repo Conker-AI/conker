@@ -342,3 +342,16 @@ commits. This index does not mark the backend complete or narrow the agreed scop
 - Corrective recovery execution/finalization and Pi recovery transport remain open,
   alongside real Docker verification and wider backend acceptance. Local commit;
   no final UI wiring, deployment or pushes.
+
+## Pi recovery inspection transport
+
+- Pi `8d60200`: owner no-store recovery route reads ToolGate evidence using the saved
+  port action identity. It validates container/action references, step order, state,
+  time and bindings, strips extra data and never modifies the action ledger or
+  accepts upstream permission to resume/release. Review/recovery share bounded
+  parsing/transport; recovery only issues GET.
+- **40 recovery/review/port/container-action checks passed**, using temporary stores
+  and synthetic HTTP. Scoped lint/diff pass; existing test-client warning remains.
+  Local commit only, no UI wiring or host operations.
+- Corrective recovery/finalization, retention, real Docker verification and broader
+  backend acceptance remain unfinished. The goal remains active.
