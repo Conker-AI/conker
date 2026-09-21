@@ -316,3 +316,20 @@ reporting from unconnected terminal/files/Docker/port controls. Desktop 1440x100
 and phone 390x844 inspected: real MemoryGate degraded, optional hosted unconfigured,
 others ready. Browser console clean. Control contract, lint, fixture-isolation,
 design and build checks passed. Gateway restarted with this build.
+
+### Live scoped tool inventory
+
+/tools now lists the tools ToolGate exposes to Pi's execution credential, with
+shared searchable collection rows and a DetailPanel for declared inputs. This is
+not the owner registry/editor. Unavailable/not-configured responses are distinct
+from a verified empty scope. The typed adapter bounds strings/collections and
+strips input defaults, unknown metadata and backend errors. It uses the existing
+GET /api/pi/tools route, without browser admin credentials or new write routes.
+
+Temporarily restored only the owner-confirmed local echo grant, inspected its
+real input schema in Chrome on desktop/phone, then removed the grant. The live
+list returned to the explicit no-tools-granted state. ToolGate still records only
+the two earlier accepted executions; inspection executed nothing. Corrected the
+local test tool description to match its actual digest/length result. Build,
+focused lint and control-adapter checks passed. Workflow editing, registration and
+permission management still need their owner-management integration.

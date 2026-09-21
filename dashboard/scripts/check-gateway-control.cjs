@@ -29,6 +29,13 @@ async function main() {
   result.service = 'wrong-service'
   await assert.rejects(client.health(), error => error.kind === 'invalid-response')
   calls.pop()
+  result = { status: 'ok', results: [{ id: 'conker.echo', name: 'Echo', description: 'Local tool', inputs: [{ name: 'value', type: 'string', default: 'do not expose', secret: 'do not expose' }] }] }
+  const inventory = await client.tools()
+  assert.equal(calls.pop()[0], '/api/pi/tools')
+  assert.deepEqual(inventory.results[0].inputs[0], { name: 'value', type: 'string' })
+  result = { status: 'unavailable', results: [], reason: 'private backend exception' }
+  assert.deepEqual(await client.tools(), { status: 'unavailable', results: [] })
+  calls.pop()
   result = libraryResult
   const page = await client.library({ search: 'project', limit: 1 })
   assert.equal(page.next_after, 'memory:m_one')

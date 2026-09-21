@@ -63,6 +63,14 @@ const systemHealth = z.object({ service: z.literal('pi'), version: short, status
     hosted_provider: serviceCheck, action_boundary: serviceCheck }),
 })
 export type SystemHealth = z.infer<typeof systemHealth>
+const toolInventory = z.object({ status: z.enum(['ok', 'unavailable', 'not_configured']),
+  results: z.array(z.object({ id: z.string().min(1).max(200), name: z.string().max(240),
+    description: z.string().max(8000), inputs: z.array(z.object({ name: z.string().max(200),
+      type: z.string().max(100).default('string'), required: z.boolean().optional(),
+      description: z.string().max(4000).optional() })).max(100),
+  })).max(1000),
+})
+export type ToolInventory = z.infer<typeof toolInventory>
 export type ProviderStatus = { id: string; status: string; model?: string; busy?: boolean; capabilities: string[] }
 export type MemoryObjectKind = z.infer<typeof kind>
 export type MemoryObjectCard = z.infer<typeof memoryCard>
@@ -88,6 +96,9 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async tools(signal?: AbortSignal): Promise<ToolInventory> {
+      return parse(toolInventory, await auth.request('/api/pi/tools', { signal }))
+    },
     async health(signal?: AbortSignal): Promise<SystemHealth> {
       return parse(systemHealth, await auth.request('/api/pi/health', { signal }))
     },

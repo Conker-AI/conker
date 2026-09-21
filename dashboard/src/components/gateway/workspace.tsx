@@ -1,3 +1,4 @@
+import { GatewayToolsInventory } from './tools-inventory'
 import { GatewaySystemStatus } from './system-status'
 import { GatewayOwnerWorkspace } from './owner-workspace'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
@@ -40,8 +41,9 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const memoryActive = location.pathname === '/memory', modelsActive = location.pathname === '/settings'
   const chatActive = ['/chat', '/chats', '/companion'].includes(location.pathname)
   const inboxActive = location.pathname === '/inbox'
+  const toolsActive = location.pathname === '/tools'
   const systemActive = location.pathname === '/system' && (!params.get('tab') || params.get('tab') === 'overview')
-  const supported = systemActive || inboxActive || memoryActive || modelsActive || chatActive || location.pathname === '/activity'
+  const supported = toolsActive || systemActive || inboxActive || memoryActive || modelsActive || chatActive || location.pathname === '/activity'
   const retainedTaskId = useStore(conversationState, value => value.taskIntent?.taskId)
   const dispatchBlocked = useStore(conversationState, value => !!value.operation)
   const activityActive = location.pathname === '/activity', session = params.get('session')
@@ -51,6 +53,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   return <BaseLayout variant="canvas" header={<GatewayHeader>{chatActive && session && <GatewayPrivacyControl key={session} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} />}</GatewayHeader>} sidebar={<AppSidebar variant={config.variant} collapsible={config.collapsible} side={config.side} ownerName="Owner" inboxCount={0} accountFooter={<Button variant="ghost" className="w-full justify-start" onClick={async () => { if (await authStore.getState().logout()) window.location.reload() }}><LogOut />Sign out</Button>} />}>
     <div className={cn('min-h-0 flex-1', inboxActive ? 'block' : 'hidden')} aria-hidden={!inboxActive}><GatewayOwnerWorkspace client={owner} state={ownerState} active={inboxActive} /></div>
+    {toolsActive && <GatewayToolsInventory client={control} />}
     {systemActive && <GatewaySystemStatus client={control} />}
     {memoryActive && <GatewayMemoryWorkspace client={control} />}
     {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto"><GatewayModelsSettings client={control} /></div>}
