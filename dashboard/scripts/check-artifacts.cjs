@@ -27,6 +27,22 @@ function fixture() {
 const owner = { title: 'Owner note', content: { kind: 'markdown', text: 'My own content.' } }
 const fromMessage = { title: 'Original response title with private detail', sessionId: 'chat', messageId: 'reply', taskId: 'task' }
 async function main() {
+  const htmlFixture = fixture()
+  const htmlContent = { kind: 'html', text: '<button onclick="this.textContent=1">Count</button>' }
+  const htmlRecord = await htmlFixture.client.create({ title: 'Local HTML app', content: htmlContent })
+  const htmlExport = await htmlFixture.client.export(htmlRecord.id)
+  assert.equal(htmlExport.text, htmlContent.text)
+  assert.ok(htmlExport.filename.endsWith('.html.txt'), 'Downloaded HTML stays inert text by default')
+  assert.equal(htmlExport.mime, 'text/plain;charset=utf-8')
+  const htmlRevision = await htmlFixture.client.appendVersion(htmlRecord.id, { content: { kind: 'html', text: '<p>Changed</p>' } }, htmlRecord.revision)
+  assert.deepEqual(htmlRevision.versions[0].content, htmlContent)
+  const restoredHtml = await htmlFixture.client.restore(htmlRecord.id, 1, htmlRevision.revision)
+  assert.deepEqual(restoredHtml.versions.at(-1).content, htmlContent)
+  const sourceHtml = await htmlFixture.client.createFromMessage(fromMessage)
+  await htmlFixture.client.appendVersion(sourceHtml.id, { content: htmlContent }, sourceHtml.revision)
+  htmlFixture.state().messages[0].redacted = true
+  assert.equal((await htmlFixture.client.get(sourceHtml.id)).versions.length, 0)
+  await assert.rejects(htmlFixture.client.export(sourceHtml.id))
   const diagramFixture = fixture()
   const diagram = { kind: 'diagram', nodes: [{ id: 'a', label: 'Input', x: 0, y: 0 }, { id: 'b', label: 'Output', description: 'Review before acting.', x: 0, y: 160 }], edges: [{ id: 'ab', source: 'a', target: 'b', label: 'Review' }] }
   const diagramRecord = await diagramFixture.client.create({ title: 'Directed diagram', content: diagram })
@@ -51,7 +67,9 @@ async function main() {
     { ...owner, title: ' ' }, { ...owner, title: 'a'.repeat(161) }, { ...owner, source: { sessionId: 'chat', messageId: 'reply' } },
     { ...owner, content: { kind: 'markdown', text: 'a'.repeat(200001) } },
     { ...owner, content: { kind: 'code', text: 'alert(1)', language: '../../html' } },
-    { ...owner, content: { kind: 'html', text: '<script>alert(1)</script>' } },
+    { ...owner, content: { kind: 'unknown-app', text: '<script>alert(1)</script>' } },
+    { ...owner, content: { kind: 'html', text: 'x'.repeat(200001) } },
+    { ...owner, content: { kind: 'html', text: '<p>safe</p>', sandbox: 'allow-same-origin' } },
     { ...owner, content: { kind: 'table', columns: ['A'], rows: [['1', '2']] } },
     { ...owner, content: { kind: 'table', columns: ['A'], rows: Array(1001).fill(['a']) } },
     { ...owner, content: { kind: 'table', columns: ['A'], rows: Array(26).fill(['a'.repeat(10000)]) } },

@@ -2,6 +2,7 @@ import type { ConversationCitation, ConversationPrivacy } from "./conversation-t
 
 /** Native data only. Code is inert text; chart data never contains expressions. */
 export type ArtifactContent =
+  | { kind: "html"; text: string }
   | { kind: "media"; mediaType: "image" | "audio" | "video"; url: string; description: string }
   | { kind: "markdown"; text: string }
   | { kind: "code"; text: string; language: string }

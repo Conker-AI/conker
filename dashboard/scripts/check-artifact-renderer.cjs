@@ -13,12 +13,14 @@ function load(relative) {
   return module.exports
 }
 const { artifactSource, parseArtifactSource, artifactChartModel, fencedArtifactCode, emptyArtifactContent } = load('src/components/artifacts/content.ts')
-for (const kind of ['markdown', 'code', 'table', 'chart', 'diagram', 'media']) {
+for (const kind of ['markdown', 'code', 'table', 'chart', 'diagram', 'media', 'html']) {
   const value = emptyArtifactContent(kind)
   assert.deepEqual(parseArtifactSource(kind, artifactSource(value), value.language), value)
   if (kind === 'chart' || kind === 'table') assert.equal(value.rows.length, 0, 'Creation supplies no invented sample data')
   if (kind === 'diagram') assert.deepEqual([value.nodes, value.edges], [[], []])
 }
+assert.deepEqual(parseArtifactSource('html', '<button onclick="this.textContent=1">Run</button>'), { kind: 'html', text: '<button onclick="this.textContent=1">Run</button>' })
+assert.throws(() => parseArtifactSource('html', 'x'.repeat(200001)), /200000/)
 const diagram = { kind: 'diagram', nodes: [{ id: 'a', label: '<script>inert label</script>', x: 0, y: 0 }, { id: 'b', label: 'Review', x: 200, y: 120 }], edges: [{ id: 'ab', source: 'a', target: 'b', label: 'Then' }] }
 assert.deepEqual(parseArtifactSource('diagram', artifactSource(diagram)), diagram)
 for (const invalid of [

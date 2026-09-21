@@ -7,6 +7,7 @@ const idSchema = z.string().trim().min(1).max(200)
 const titleSchema = z.string().trim().min(1).max(160)
 const diagramId = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/)
 const contentSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("html"), text: z.string().max(200_000) }).strict(),
   z.object({ kind: z.literal("media"), mediaType: z.enum(["image", "audio", "video"]), url: z.string().max(2048), description: z.string().max(2000) }).strict(),
   z.object({ kind: z.literal("diagram"), nodes: z.array(z.object({ id: diagramId, label: z.string().trim().min(1).max(200), description: z.string().max(2000).optional(), x: z.number().finite().min(-10000).max(10000), y: z.number().finite().min(-10000).max(10000) }).strict()).max(100), edges: z.array(z.object({ id: diagramId, source: diagramId, target: diagramId, label: z.string().max(200).optional() }).strict()).max(200) }).strict(),
   z.object({ kind: z.literal("markdown"), text: z.string().max(200_000) }).strict(),
@@ -101,7 +102,7 @@ function exportVersion(record: ArtifactView, version: ArtifactVersion): Artifact
     : ""
   const extensions: Record<string, string> = { javascript: "js", js: "js", typescript: "ts", ts: "ts", jsx: "jsx", tsx: "tsx", python: "py", py: "py", json: "json", css: "css", sql: "sql", bash: "sh", yaml: "yaml", markdown: "md", html: "html.txt", svg: "svg.txt", xml: "xml.txt" }
   const language = content.kind === "code" ? content.language.toLowerCase() : ""
-  const extension = content.kind === "markdown" ? "md" : content.kind === "table" ? "csv" : content.kind === "chart" || content.kind === "diagram" || content.kind === "media" ? "json" : Object.hasOwn(extensions, language) ? extensions[language] : "txt"
+  const extension = content.kind === "html" ? "html.txt" : content.kind === "markdown" ? "md" : content.kind === "table" ? "csv" : content.kind === "chart" || content.kind === "diagram" || content.kind === "media" ? "json" : Object.hasOwn(extensions, language) ? extensions[language] : "txt"
   // ASCII basename, no path/control characters, no hidden files or reserved device names.
   let base = version.title.normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "artifact"
   if (/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(base)) base = `artifact-${base}`

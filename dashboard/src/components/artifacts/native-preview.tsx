@@ -7,6 +7,7 @@ import type { ConversationCitation } from "@/lib/api/conversation-types"
 import { artifactChartModel, fencedArtifactCode } from "./content"
 import { ArtifactDiagramPreview } from "./diagram-preview"
 import { ArtifactMediaPreview } from "./media-preview"
+import { ArtifactHtmlPreview } from "./html-preview"
 
 function ArtifactTable({ columns, rows, caption }: { columns: string[]; rows: string[][]; caption: string }) {
   return <Table tabIndex={0} aria-label={caption}><TableCaption>{caption} · {rows.length} rows</TableCaption><TableHeader><TableRow>{columns.map((column, index) => <TableHead key={index} className="min-w-28 whitespace-normal break-words">{column || `Column ${index + 1}`}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.map((row, index) => <TableRow key={index}>{row.map((cell, column) => <TableCell key={column} className="max-w-96 whitespace-pre-wrap break-words">{cell}</TableCell>)}</TableRow>)}</TableBody></Table>
@@ -22,8 +23,9 @@ function ArtifactChart({ content }: { content: Extract<ArtifactContent, { kind: 
   return <div className="space-y-5"><ChartContainer config={model.config} className="h-80 w-full" aria-label={`${content.chartType} chart${content.xLabel ? ` by ${content.xLabel}` : ""}`}>{chart}</ChartContainer>{content.xLabel && <p className="text-center text-xs text-muted-foreground">{content.xLabel}</p>}<details><summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">View chart data</summary><div className="mt-4"><ArtifactTable columns={[content.xLabel || "Label", ...content.series.map(series => series.label)]} rows={content.rows.map(row => [row.label, ...row.values.map(String)])} caption="Chart values" /></div></details></div>
 }
 
-/** Trusted native components render validated content; no user HTML, CSS, or expressions. */
+/** Native renderers stay inert; HTML execution requires an explicit isolated preview. */
 export function ArtifactPreview({ content, citations }: { content: ArtifactContent; citations?: ConversationCitation[] }) {
+  if (content.kind === "html") return <ArtifactHtmlPreview content={content} />
   if (content.kind === "diagram") return <ArtifactDiagramPreview key={JSON.stringify(content)} content={content} />
   if (content.kind === "media") return <ArtifactMediaPreview content={content} />
   if (content.kind === "markdown") return content.text ? <RichAnswer text={content.text} citations={citations} /> : <p className="text-sm text-muted-foreground">This document is empty. Add text in Source.</p>
