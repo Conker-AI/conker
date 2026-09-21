@@ -104,8 +104,10 @@ There is deliberately no `resume` or promotion command in this patch:
   others have no tombstone, and an old backup cannot know about later deletions. Existing source
   evidence must be preserved and a complete replay contract implemented under B3/C2 before
   restored data can be exposed. An empty or unavailable ledger is not proof of no deletions.
-- ToolGate has no durable pre-dispatch journal (B6). A missing receipt cannot prove an action did
-  not happen. External systems and available newer records must be checked; old work is never
+- Current ToolGate has a durable pre-dispatch journal, but this recovery utility does not
+  reconcile restored rows with newer receipts or effects. Older snapshots may predate the journal.
+  A missing receipt cannot prove an action did not happen. External systems and newer records
+  must be checked; old work is never
   automatically re-executed. Later credential revocations also require review before resumption.
 - MemoryGate's runtime encryption key currently lives outside a persistent mount (B11). It is
   captured from the existing container and restored into a separate recovery volume. Migrating

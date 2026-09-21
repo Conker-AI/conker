@@ -65,7 +65,7 @@ BLOCKERS = [
         "An old snapshot cannot establish deletions made after it was taken."
     ),
     (
-        "External-effect reconciliation blocked: ToolGate lacks a durable pre-dispatch journal (B6). "
+        "External-effect reconciliation blocked: restored journals are not reconciled with newer receipts. "
         "Review external systems before resolving uncertain actions; never replay them automatically."
     ),
     (
@@ -664,7 +664,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             "stores": stores,
             "files": inventory(staging),
             "deletion_ledger": "unavailable",
-            "execution_journal": "unavailable",
+            "execution_journal": "not_reconciled",
             "recovery_program_sha256": sha256(Path(__file__)),
             "recovery_data_sha256": sha256(
                 Path(__file__).with_name("recovery_data.py")
