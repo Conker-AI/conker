@@ -1,3 +1,27 @@
+## September 21 - durable answer retries and response versions
+
+Pi `b42e7d9` implements response families, revisioned owner selection, one selected
+answer at the original chronological context slot, immutable inherited branch
+selection, and retained transcript evidence. Pi `a467183` adds owner retry POST
+and receipt GET routes with stable request identity, atomic admission, an explicit
+eligible model, original context/policy, source input identity and no repeated
+user message or tool action. Successful completion atomically records the answer,
+its family and selection. Context rules preserve pinned versions pending review.
+Queues pause explicitly; cancellation/restart/failure retain the same attempt.
+Attachment citations retain original source identities even when retrying a retry.
+
+Evidence: 911 passed, 8 skipped in the complete isolated Pi suite (310 seconds).
+The final receipt-input refinement was then covered by 28 retry/queue/cancellation
+checks. Focused Ruff and diff whitespace checks passed. The skips remain external
+service/Linux-only evidence gaps, not proof of those integrations. One existing
+Starlette/httpx test-client deprecation warning remains. No paid/live model calls.
+
+P9 retry/version behavior is now implemented. Steering and research modes remain;
+frontend source search found research-mode preview metadata but no steering control,
+so the next pass must reconcile that requirement honestly rather than assume it
+was already covered by frontend acceptance. Other backend checklist items remain.
+No final frontend transport wiring, deployment or push occurred.
+
 ## September 21 - exact retry input groundwork
 
 Pi local commits `4fa8b96` and `9423a65` preserve the last prepared answer input
