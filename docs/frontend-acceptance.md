@@ -4,13 +4,13 @@ Scope: fixture-backed localhost:5173 only. Backend, live gateway and deployment 
 
 ## Finish checklist
 
-- [ ] Conversations, composer, context, call controls and Settings: inspect key user paths and repair material frontend defects.
-- [ ] Agents/Teams/Templates, Projects, Activity and Artifacts: check create/edit/inspect/source paths.
-- [ ] Tools, Jobs, Memory and System: check editor/control/navigation paths.
-- [ ] Shared shell: desktop/mobile, theme/layout behavior, no page overflow, useful focus/labels.
-- [ ] Relevant existing frontend checks and production build pass.
-- [ ] Changed UI screenshots inspected; remaining limitations categorized as frontend blockers or deferred backend features.
-- [ ] Verified commits and final frontend milestone reported to owner.
+- [x] Conversations, composer, context, call controls and Settings: inspect key user paths and repair material frontend defects.
+- [x] Agents/Teams/Templates, Projects, Activity and Artifacts: check create/edit/inspect/source paths.
+- [x] Tools, Jobs, Memory and System: check editor/control/navigation paths.
+- [x] Shared shell: desktop/mobile, theme/layout behavior, no page overflow, useful focus/labels.
+- [x] Relevant existing frontend checks and production build pass.
+- [x] Changed UI screenshots inspected; remaining limitations categorized as frontend blockers or deferred backend features.
+- [x] Verified commits and final frontend milestone reported to owner.
 
 ## Evidence and findings
 
@@ -84,3 +84,11 @@ Final attachment verification: navigating Chats -> original conversation retaine
 - Proactivity settings now expose quiet hours, IANA time zone, urgency/urgent exceptions and daily suggestions/research/cost limits. Account exposes idle timeout. All are configured-only; no permissions, notification delivery or locking are implied.
 - Browser rejected invalid timezone, retained Europe/London draft through Chats and return, saved successfully, and saved five-minute idle preference. Mobile screenshot caught a min-width clipping issue; corrected form/fieldset/select constraints and verified sections fit within the card. Desktop/light Account and mobile/dark Proactivity reviewed. No console errors.
 - Artifact and preference suites, navigation, scoped lint, TypeScript and design guard passed. Integrated build passed; the final CSS-only constraint fix is included in the final verification build.
+
+## Frontend milestone — verified September 21
+
+Frontend fixture milestone complete at 11b155f2, following the recorded per-feature evidence above and completion-plan.md. Final integrated build passed with only upstream non-failing Zod annotation warnings; working tree was clean. HTML preview mobile/light screenshot additionally verified readable default text and no horizontal overflow using a staged fixture through ConkerClient; earlier real creation/edit/run/stop journey remains the interaction evidence.
+
+Frontend coverage is local preview behavior, not production readiness. Server persistence, authenticated idle-lock enforcement, notification scheduling, provider research/generation, upload ingestion, model presentation/update delivery, team execution and real system actions remain backend work. Final wiring and deployment stay deferred until owner review. Browser media success playback and physical mic/camera hardware were not exercised in this audit; their stated verification limits remain unchanged.
+
+The owner authorized automatic continuation into existing backend inventories and missing capabilities after this report. The combined goal remains active; frontend completion does not mean the backend or final integration is complete.
