@@ -314,3 +314,17 @@ commits. This index does not mark the backend complete or narrow the agreed scop
   admission to close their check-to-dispatch race with replacement. Socket-path
   identity assumes operator endpoint control. Real Docker verification, retention
   and wider backend acceptance remain unfinished; no final wiring/deployment.
+
+## Shared container mutation admission
+
+- ToolGate `b3c07b3`: lifecycle and replacement executors now reserve a container in
+  the journal admission transaction, closing their previously documented race.
+  Conflicting pending/unknown actions reject before effects and roll back approval
+  and review consumption. Completed actions permit later admission; uncertain
+  ownership has no automatic timeout. Coordination covers ToolGate, not external
+  operator Docker clients.
+- **51 admission/boundary/journal/spending tests passed**; four admission tests
+  rerun after test-fixture import correction also pass. Scoped lint/shared undefined
+  names/diff pass. Temporary stores and simulated effects only, local commits.
+- Recovery for uncertain operations, real Docker validation and wider backend
+  completion remain open. No frontend wiring, deployment or GitHub push.
