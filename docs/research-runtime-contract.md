@@ -84,3 +84,14 @@ separate scopes. Five focused cases pass; integrated Pi regression: 960 passed,
 8 skipped, one existing test-client deprecation warning, 295.70 seconds.
 Skipped live-service and host-specific checks remain unproven. Page-fetch integration
 identified above remains open; accounting is no longer the next research blocker.
+
+## Source-reading implementation checkpoint
+
+Deep Research now offers the existing research.fetch capability when scoped,
+requires a result ID from a successful search in the same turn, and bounds reads
+to 12000 characters. Searches and reads share the saved action ceiling. Source
+observations remain in ordinary action/message receipts; unknown fetch outcomes
+reconcile without another read. Foreign handles, URLs and excessive arguments
+fail before dispatch. Bounded excerpts may be truncated and are not full-page proof.
+32 focused research tests pass; final fetch suite has nine passing cases including
+cross-conversation provenance and lost receipts. No external services were called.
