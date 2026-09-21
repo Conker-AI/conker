@@ -1,5 +1,17 @@
 # Backend completion ledger
 
+## September 21 — specialist memory authority
+
+Pi now accepts operator-owned agent/namespace/read-key-environment bindings through
+`PI_MEMORY_AGENT_READ_BINDINGS`. Unmapped specialists do not borrow Companion
+credentials; configured specialists preserve selected/conversation filters and
+memory-disabled privacy. No specialist ingestion credential is supplied. Startup
+rejects invalid bindings with static errors. Team memory is still blocked pending
+explicit source-privacy handling. Fourteen authority/memory tests passed; team
+regressions passed in the broader run, and all nine session-settings tests passed
+after updating the intentional unmapped status and the direct-provider router test
+double. No real namespace/key provisioning or frontend wiring was performed.
+
 ## September 21 — Pi receipt recovery transport
 
 Pi `de67aca` adds owner-authenticated POST
