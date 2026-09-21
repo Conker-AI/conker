@@ -1,5 +1,25 @@
 # Backend completion ledger
 
+## September 21 — direct providers, authored voice, receipt recovery
+
+- Pi `4839be7`: frozen character design, pronunciation and Focus/Character delivery
+  reach explicit Qwen3 VoiceDesign synthesis. Agent reports 91 focused tests (10 new)
+  and Ruff passed. Reference cloning/non-English remain unsupported; expressiveness
+  is instruction-based, not calibrated. No real synthesis or media retention changes.
+- Pi `1611240`: direct OpenAI/Anthropic text adapters with paid opt-in, role/helper
+  registry, timeout/error/usage handling and truthful model status; includes voice
+  opt-in startup forwarding. Agent reports 100 focused tests passed. Streaming,
+  direct discovery, multimodal/native-tool payloads, effort controls and live-account
+  verification are not claimed. Existing local/hosted adapters remain available.
+- ToolGate `aa516a8`: internal recovery for fully verified replacements whose final
+  receipt was lost. Requires observed complete steps, recorded lineage, same actor,
+  configured source and transactional authorization; no Docker calls. Twenty focused
+  recovery/boundary/admission tests passed, Ruff and diff checks clean. Protected API
+  and Pi integration, partial-effect correction and cleanup remain unfinished.
+
+These increments do not complete the backend acceptance audit. No frontend wiring,
+deployment, pushes or paid provider calls were performed.
+
 Frontend fixture milestone: Conker commit `eec445d2`. Backend work follows it; final dashboard wiring, deployment and pushes remain excluded until owner review. Existing services stay independent.
 
 ## Inventory and work order
