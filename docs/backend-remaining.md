@@ -24,6 +24,14 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P15 restore now revokes all restored ToolGate execution keys and recurring spend
+allowances, disables paid policy and retains lockdown/approval invalidation. A
+partial allowance schema fails transactionally rather than silently skipping it.
+The complete offline recovery suite passes 33 tests in WSL Linux. The initial
+Windows run had five shell-path failures (Windows paths passed to WSL Bash);
+the compatible Linux rerun exercises those actual guards successfully. This
+does not yet reconcile newer action receipts or authorize recovery resumption.
+
 P12/P15 vector deletion verification now derives IDs from held target receipts,
 deletes synchronously and reads points back before recording an evidence digest.
 Five replay/cleanup tests pass, including actual embedded Qdrant with unrelated
