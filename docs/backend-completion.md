@@ -1,3 +1,22 @@
+## September 21 - stopped-state compatibility audit
+
+Pi d83322e fixes two older terminal-state checks that treated cancelled turns as
+unresolved: future session settings and reviewed context forks now work after a
+stop. Startup preserves a stopped/no-effect turn as cancelled, while an unknown
+remote effect still takes precedence and remains outcome_unknown. Reviewed forks
+also refuse active submission preparation and interrupted turns that already acted.
+
+Verification: 29 focused cancellation/context/recovery/settings checks passed,
+then 17 cancellation/context checks passed after adding the fork preparation race
+regression. Tests exercise a new message and changed privacy after stop, restart
+with unknown effects, and reviewed fork after stop. No browser wiring changed.
+
+Queue contract audit: the accepted frontend caps queues at five entries, retains
+per-entry model/privacy/context/agent selections, supports edit/remove and explicit
+review, pauses on mismatches or unresolved actions, and distinguishes queueing from
+steering. Backend queue implementation must preserve these behaviors with durable
+request identities and must not silently refresh settings on Resume.
+
 ## September 21 - reply-only recovery after stop
 
 Pi adds owner-only POST /turns/{id}/reply-only with a retained request ID. Only
