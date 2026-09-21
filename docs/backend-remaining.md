@@ -24,6 +24,14 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P16 atomic admission ledger now reserves daily suggestions/research minutes/cost
+cents under a writer lock, current revision and quiet-hours/urgency policy.
+35 focused preference/continuity/admission tests pass, including concurrency,
+restart, lost-response replay, identity conflicts and time-zone edits. Owner-only
+budget endpoints expose it; reservation receipts grant no execution authority.
+Autonomous proactive dispatch still needs to bind these reservations to bounded
+execution before P16 can be called complete. No automatic work was activated.
+
 P16 urgency now uses recorded status: uncertain external effects are urgent;
 ordinary failures/approvals are meaningful. Per-event quiet-hours exceptions and
 urgent-only filtering preserve owner inspection; off still wins. Cancelled work
