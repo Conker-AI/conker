@@ -1,5 +1,15 @@
 # Backend completion ledger
 
+## September 21 — team memory reads
+
+Prepared teams now carry a separate frozen memory-read policy from the owner source
+conversation while team transcript privacy remains memory-disabled. Retrieval uses
+the role agent's explicit client, existing narrowed scope, and original source ID
+for conversation scope. Live source privacy is checked before retrieval; legacy
+prepared runs without the policy stay disabled. Thirty-one existing team/authority/
+memory tests passed plus two real-loop temporary-store tests verifying source reads,
+later privacy tightening and absence of team ingestion. No real service was called.
+
 ## September 21 — specialist memory authority
 
 Pi now accepts operator-owned agent/namespace/read-key-environment bindings through
