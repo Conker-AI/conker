@@ -43,3 +43,13 @@ forwarding. This is contract foundation only: web/deep currently report durable
 research_unavailable before retrieval/model calls. The bounded ToolGate-backed
 executor, progress/source/synthesis receipts and recovery remain unfinished.
 No search-provider calls or browser/backend wiring were performed.
+
+## Web executor checkpoint
+
+Web now executes one scoped research.web action through Pi's existing ToolGate
+boundary, with a bounded model-generated query and saved-evidence synthesis.
+The normal approval, budget, unknown-outcome, cancellation and reply-recovery
+paths remain authoritative. Authenticated research receipts project original
+source observations and message/action IDs; fetched does not mean cited/verified.
+61 focused scripted-service checks pass. No live provider/search proof is claimed.
+Deep research remains unavailable pending its iterative planner and execution.
