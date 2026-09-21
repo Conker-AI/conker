@@ -29,3 +29,8 @@ Local temporary test databases only. No user database migration, external effect
 
 - Pi `c922556`: runtime session instructions/history policies, atomic per-turn policy capture, estimated budget conflicts and offline forgetting cleanup. 54 context/loop/submission/forgetting tests passed; scoped Ruff clean. Reviewed fork transfer, retrieval selection, summary editing, inherited instruction layers and effective input snapshots remain open; configured policies currently block forks rather than losing pins.
 - ToolGate `c633a0b`: immutable publication/history catalogue committed, with exact child snapshots and bounded dependency validation; pinned execution/approval identity implementation is in progress.
+
+- Pi `04555ca`: reviewed context fork with exact revision/message boundary, idempotent request receipt, original-message pin references and no duplicate memory ingestion. 56 focused tests passed. This resolves the reviewed-fork transfer gap above; automatic summary forks remain blocked for explicit policies.
+- Pi `a08e1dd`: persistent templates/teams, immutable published/prepared definitions, role selections/budget checks, archive/removal safeguards. 72 focused tests passed. Actual team dispatch remains to implement.
+- MemoryGate `92d8598`: complete runtime context restricted to selected IDs or receipt-proven conversation scope; broad briefing/entity/episode helpers excluded. 31 focused tests passed. Pi enforcement is being implemented through immutable session settings and privacy snapshots.
+- Artifact persistence, session privacy enforcement and published execution are in progress in separate owned modules. Final backend audit remains open.
