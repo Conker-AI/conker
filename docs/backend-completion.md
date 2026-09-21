@@ -1,5 +1,21 @@
 # Backend completion ledger
 
+## September 21 — integrated regression and restored browser authority
+
+ToolGate full suite: 586 passed, 8 skipped, three existing deprecation warnings.
+A reproducible ordering failure came from bootstrap tests reloading the exception
+class registered by FastAPI; `52ebf8e` patches the temporary storage boundary
+instead. The stale-publication HTTP 409 assertion is unchanged and passes.
+Focused path/publication tests: 14 passed; Ruff/diff checks passed.
+
+Pi full suite at `15eebbc`: 812 passed, 7 skipped, one existing Starlette warning.
+The later `73cba45` adds an auth snapshot/revoke/reopen drill: old sessions and
+operation proofs are rejected, proof rows removed, password login retained.
+All three recovery tests pass; Ruff/diff checks passed. Normal startup is not
+restore authorization: explicit host revocation must happen before exposure.
+Cross-service effect/deletion reconciliation, live-service checks, final wiring
+and deployment are not proven by these tests and remain outside this checkpoint.
+
 ## September 21 â€” grounded continuity summary
 
 Pi briefing now summarizes returned unseen status updates with completed/attention
