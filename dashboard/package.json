@@ -15,6 +15,7 @@
     "check:character": "node scripts/check-character.cjs",
     "check:tools": "node scripts/check-tool-workspace.cjs",
     "check:jobs": "node scripts/check-jobs.cjs",
+    "check:system": "node scripts/check-system-runtime.cjs",
     "check:agents": "node scripts/check-agents.cjs",
     "check:agent-collaboration": "node scripts/check-agent-collaboration.cjs",
     "check:projects": "node scripts/check-projects.cjs && node scripts/check-project-integration.cjs",

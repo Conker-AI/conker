@@ -1,4 +1,5 @@
 import { agents } from "./fixtures/agents"
+import { createSystemRuntimeFixture } from "./system-runtime-fixture"
 import { validateAttachments } from "../conversation-attachments"
 import { normalizeResearchMode, researchLabel } from "../conversation-research"
 import { sessions, plan, planningIntent } from "./fixtures/chat"
@@ -175,6 +176,7 @@ export function createFixtureClient(): ConkerClient {
   const unwired: AuthResult = { wired: false, message: "Authentication is not connected. No password was stored and this dashboard is not protected." }
   return {
     mode: "fixture",
+    systemRuntime: createSystemRuntimeFixture(),
     artifacts: artifactClient,
     projects: projectClient,
     collaboration: {

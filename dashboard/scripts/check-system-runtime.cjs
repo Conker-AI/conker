@@ -1,0 +1,77 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { webcrypto } = require('node:crypto')
+const root = path.resolve(__dirname, '..')
+const ts = require(path.join(root, 'node_modules/typescript'))
+const cache = new Map()
+globalThis.crypto ??= webcrypto
+function load(relative) {
+  if (cache.has(relative)) return cache.get(relative).exports
+  const source = fs.readFileSync(path.join(root, relative), 'utf8').replaceAll('import.meta.env', '({})')
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
+  const module = { exports: {} }; cache.set(relative, module)
+  new Function('require', 'module', 'exports', compiled.outputText)(request => {
+    if (request === 'zod') return require(path.join(root, 'node_modules/zod'))
+    assert.ok(request.startsWith('.'), `Unexpected dependency ${request}`)
+    return load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`)
+  }, module, module.exports)
+  return module.exports
+}
+async function main() {
+  const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
+  const client = createFixtureClient(), runtime = client.systemRuntime
+  const otherScreens = await client.load(), original = await runtime.load()
+  let updates = 0
+  const unsubscribe = runtime.subscribe(() => updates++)
+  const stop = runtime.act('container', 'memory-service', 'stop')
+  await assert.rejects(runtime.act('process', 'memory', 'restart'), /Wait/)
+  await stop
+  const stopped = await runtime.load()
+  assert.equal(stopped.containers.find(item => item.id === 'memory-service').status, 'Stopped')
+  assert.equal(stopped.processes.find(item => item.id === 'memory').status, 'Stopped')
+  assert.equal(stopped.ports.find(item => item.id === 'memory-port').listening, false)
+  await assert.rejects(runtime.act('process', 'memory', 'stop'), /already stopped/)
+  await runtime.act('process', 'memory', 'restart')
+  const restarted = await runtime.load()
+  assert.equal(restarted.containers.find(item => item.id === 'memory-service').status, 'Running')
+  assert.equal(restarted.containers.find(item => item.id === 'memory-service').restarts, 1)
+  assert.equal(restarted.processes.find(item => item.id === 'memory').restarts, 1)
+  assert.equal(restarted.ports.find(item => item.id === 'memory-port').listening, true)
+  assert.deepEqual(restarted.processes.find(item => item.id === 'tool'), original.processes.find(item => item.id === 'tool'))
+  const input = { containerId: 'index-worker', hostAddress: '127.0.0.1', hostPort: 9090, containerPort: 8080, protocol: 'tcp' }
+  for (const invalid of [{ hostPort: 0 }, { hostPort: 65536 }, { containerPort: 1.5 }, { containerPort: NaN }, { protocol: 'http' }, { containerId: 'missing' }, { hostAddress: '8.8.8.8' }]) await assert.rejects(runtime.savePort({ ...input, ...invalid }))
+  assert.equal((await runtime.load()).ports.length, original.ports.length, 'Invalid input must be atomic')
+  const port = await runtime.savePort(input)
+  assert.equal(port.listening, false)
+  input.containerPort = 9999; port.hostPort = 1
+  assert.equal((await runtime.load()).ports.find(item => item.id === port.id).targetPort, 8080, 'Input and return values cannot mutate saved records')
+  await assert.rejects(runtime.savePort({ ...input, hostAddress: '0.0.0.0' }), /reserved/)
+  await assert.rejects(runtime.savePort({ ...input, hostPort: 3000, hostAddress: '0.0.0.0' }), /reserved/)
+  const udp = await runtime.savePort({ ...input, protocol: 'udp' })
+  assert.equal(udp.hostPort, 9090, 'Protocols reserve separate bindings')
+  await runtime.act('container', 'index-worker', 'start')
+  assert.equal((await runtime.load()).ports.find(item => item.id === port.id).listening, true)
+  await runtime.savePort({ ...input, hostPort: 9091 }, port.id)
+  assert.equal((await runtime.load()).ports.find(item => item.id === port.id).hostPort, 9091)
+  await assert.rejects(runtime.savePort(input, 'dashboard-port'), /Only/)
+  await assert.rejects(runtime.removePort('dashboard-port'), /read-only/)
+  await runtime.removePort(port.id)
+  assert.equal((await runtime.load()).ports.some(item => item.id === port.id), false)
+  await assert.rejects(runtime.removePort(port.id), /Only/)
+  await assert.rejects(runtime.act('container', 'missing', 'restart'), /unavailable/)
+  const after = await runtime.load()
+  assert.ok(after.receipts.every(item => /Simulated/.test(item.detail) && /No host/.test(item.detail)))
+  assert.ok(updates > 0)
+  unsubscribe(); const count = updates
+  await runtime.act('process', 'dashboard', 'restart')
+  assert.equal(updates, count)
+  for (let index = 0; index < 32; index++) await runtime.act('process', 'dashboard', 'restart')
+  assert.equal((await runtime.load()).receipts.length, 30, 'Preview receipt history is bounded')
+  after.processes[0].name = 'External mutation'
+  assert.notEqual((await runtime.load()).processes[0].name, 'External mutation')
+  assert.deepEqual(await client.load(), otherScreens, 'Runtime fixture must not change unrelated snapshot data')
+  assert.deepEqual(await createFixtureClient().systemRuntime.load(), original, 'New fixture clients reset runtime changes')
+  console.log('System runtime passed: coherent process/container/port lifecycle, mutation locking, mapping validation/conflicts, CRUD isolation, copied snapshots, subscriptions, truthful receipts, reload reset, and unchanged other screens.')
+}
+main().catch(error => { console.error(error); process.exitCode = 1 })

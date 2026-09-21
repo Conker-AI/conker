@@ -2,6 +2,18 @@
 
 Owner-authorized September 20, 2026. Baseline checkpoint: `df3aad220f01da5387ca63c5c4f5fdf112363086` on `feat/dashboard`. Work and commits stay local unless publication is requested. This is the active execution ledger; `roadmap.md` retains the historical checkpoint narrative and `workspace-control-plan.md` retains the broader vision.
 
+## Scope update — September 21: backend follows frontend automatically
+
+The owner explicitly changed the stopping point. This section supersedes conflicting phase-stop language below and in the active goal's original text.
+
+1. Finish and verify the current frontend against fixtures, preserving the agreed scope and recording evidence in frontend-acceptance.md. Commit verified increments locally.
+2. Report the frontend milestone, then automatically continue to backend work without waiting for another instruction.
+3. First inventory the existing Pi, MemoryGate, ToolGate and related backend implementations. Reuse existing capabilities; implement only missing contracts and behavior required by the agreed frontend. Verify backend behavior independently with focused tests and incremental local commits.
+4. Stop after backend completion and verification for owner review. Report exact changes, test evidence, limitations and remaining integration work.
+5. Final frontend/backend wiring and deployment remain a separate phase after review. Do not push or consume reset credits.
+
+The combined frontend-then-backend goal is now registered and active. Report the frontend milestone before starting backend changes; stop after backend verification for owner review.
+
 ## Active scope correction — frontend first (September 20)
 
 The owner corrected the execution order. This section supersedes the broader launch sequence below until the frontend milestone is explicitly reported complete.

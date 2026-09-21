@@ -39,7 +39,7 @@ export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
   activity: [{ value: "tasks", label: "Tasks" }, { value: "runs", label: "Runs" }, { value: "events", label: "Events" }],
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
-  system: [{ value: "overview", label: "Overview" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],
+  system: [{ value: "overview", label: "Overview" }, { value: "processes", label: "Processes" }, { value: "ports", label: "Ports" }, { value: "containers", label: "Containers" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],
   companionSettings: [{ value: "identity", label: "Identity & soul" }, { value: "speaking", label: "Speaking style" }, { value: "appearance", label: "Appearance" }, { value: "voice", label: "Voice" }, { value: "modes", label: "Expression & modes" }],
   settings: [
     { value: "appearance", label: "Appearance" },
