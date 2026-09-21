@@ -64,3 +64,23 @@ searches. Existing forgetting scrubs the plan. 70 focused tests pass.
 Remaining: aggregate provider usage across planning/search selection/synthesis and
 integrated regression. Current final-call cost is not whole-research cost. Source
 execution is tested with doubles; live search and final UI wiring remain unverified.
+
+## Source-reading inventory refinement
+
+ToolGate also already exposes research.fetch and research.fetch-batch using
+server-issued result IDs, with bounded extraction and URL safety. The current Pi
+deep executor deliberately uses search snippets only. Reuse these fetch capabilities
+for source reading rather than add arbitrary URL fetching. Preserve provenance and
+per-turn result-handle validation, shared action limits, approvals and recovery.
+This source-reading integration remains open; do not present snippets as read pages.
+
+## Accounting verification
+
+A content-free provider-attempt ledger now sums planning, query selection,
+synthesis and reply recovery within bound research turns. Pending/failed/missing
+usage stays unknown, including after process interruption. Steering does not double
+count attempts. ToolGate service bills and pre-turn context/memory preparation are
+separate scopes. Five focused cases pass; integrated Pi regression: 960 passed,
+8 skipped, one existing test-client deprecation warning, 295.70 seconds.
+Skipped live-service and host-specific checks remain unproven. Page-fetch integration
+identified above remains open; accounting is no longer the next research blocker.
