@@ -282,3 +282,19 @@ commits. This index does not mark the backend complete or narrow the agreed scop
   retained-container recovery, replacement-target lineage, retention and real-Docker
   verification remain incomplete. No real containers modified, frontend wired,
   service deployed or GitHub push performed. Backend goal remains active.
+
+## Pi port review and action interface
+
+- Pi `eda918c`: owner review create/read routes use bounded ToolGate transport,
+  validate the requested container/operation/mapping delta and return only metadata.
+  `/system/actions/ports` reuses durable action identities, saved approval resume,
+  history and receipt inspection. Existing container/service rows remain compatible.
+  Replacement receipts validate IDs, retained-original state and bounded mappings;
+  malformed successes remain unknown. No direct Docker connection or private
+  container configuration is added to Pi.
+- **40 port-review/port-action/container/service tests passed** using temporary stores
+  and synthetic transports. Scoped lint/diff pass; existing test-client deprecation
+  warning remains. Local commit only; frontend fixtures remain independent.
+- Remaining port work: ToolGate recovery and managed-target lineage, retention and
+  real Docker validation. Wider backend acceptance remains open. No deployment,
+  final wiring, GitHub push or usage reset performed.
