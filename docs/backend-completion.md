@@ -176,3 +176,8 @@ These entries supersede the corresponding open items in the historical checkpoin
 - Pi `68ee356`: additive Store/startup hooks and owner `/system/files/roots` plus listing create/inspect/resume routes. Bounded scoped root transport validates configured roots without touching local files; unavailable and empty states are distinct. Metadata responses disallow caching. Documentation encoding normalized to UTF-8 during integration.
 - **43 directory-request/root/API/inventory checks passed** using temporary SQLite and synthetic HTTP, including the actual ToolGateClient, exact payload/replay, authentication and invalid-path rejection. Scoped lint/shared undefined-name/diff checks pass. Local commits only; no real root configured, file contents accessed, frontend wired or service deployed.
 - Remaining limits: sampled listings have no pagination; the root transport rejects replies above 64 KB, including a larger otherwise-valid catalogue, rather than partially displaying success. No content reader/editor or terminal is claimed. P14 and the overall backend remain incomplete.
+
+## Root catalogue boundary correction
+
+- Corrected Pi's overly narrow root-response cap to 512 KiB, accommodating ToolGate's existing 32,768-character configuration bound even when non-BMP Unicode paths are JSON-escaped. The prior 64 KB limitation above is resolved; bounded parsing, strict metadata projection and oversized-response rejection remain intact.
+- **11 root/API checks passed**, including a catalogue within ToolGate's actual limits whose escaped response exceeds the old cap. Scoped Ruff and diff checks pass. Synthetic transport only; no filesystem reads or frontend changes. Directory pagination, other system capabilities and the wider backend remain unfinished.
