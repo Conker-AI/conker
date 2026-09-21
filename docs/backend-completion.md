@@ -85,3 +85,9 @@ These entries supersede the corresponding open items in the historical checkpoin
 
 - MemoryGate `703a0a8`: verified the earlier simple revocation fix and closed the remaining combined rename/rotation gap. Bootstrap now binds to a permanent key identity; revoked, rotated, renamed or deleted keys cannot silently produce fresh authority on restart. Ambiguous pre-upgrade keys fail closed for owner provisioning review; concurrent seeders retain one identity.
 - Verification: **15 authentication/destructive-action checks passed**, followed by **8 bootstrap checks passed** with the final concurrent-seeding case. New/changed model and test lint passes; service undefined-name checks and diff check pass. Existing metadata initialization creates the additive binding table; no live database migration or restart performed. Pi `9976a8e` corrects stale bootstrap guidance. This closes a concrete P15 revocation issue, not the remaining cross-service recovery acceptance.
+
+## Companion continuity input
+
+- Pi `01c3686`: owner-readable unseen work feed from actual task/run events, latest-state projection, source links and attention flags. Read-only inspection never acknowledges work; explicit atomic acknowledgements survive restart. Private/forgotten sources are excluded, pagination is bounded, and later status changes remain unseen independently of older acknowledgements.
+- Quiet-hour/proactivity suppression is explicit; manual viewing remains available. No invented urgency, generated briefing or configured outbound delivery is claimed. Scheduled-job outcomes outside the task/run ledger, notification transports, generation and proactive budget reservations remain open.
+- **26 continuity/preference checks passed**, followed by **20 continuity/task checks passed**; new files pass Ruff and diff check. No frontend wiring or services enabled.
