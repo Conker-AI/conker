@@ -1,5 +1,17 @@
 # Backend completion ledger
 
+## September 21 — Pi receipt recovery transport
+
+Pi `de67aca` adds owner-authenticated POST
+`/system/actions/{identity}/recovery/finalize`, backed by ToolGate `e1e44ac`.
+Recovery approval remains separate from execution approval and discoverable in
+ToolGate's owner Inbox. Strict receipt validation updates the original Pi action;
+malformed/mismatched replies and transport loss leave it unresolved for inspection.
+Twenty-six focused tests passed; nine finalization tests reran after adding owner
+route coverage and formatting. Ruff and diff checks passed. Tests used synthetic
+HTTP and temporary SQLite only. Partial-effect recovery remains unfinished; final
+frontend wiring and real Docker/provider verification were not performed.
+
 ## September 21 — protected receipt finalization API
 
 ToolGate now exposes POST `/v2/agent/system/port-finalizations`, using the existing
