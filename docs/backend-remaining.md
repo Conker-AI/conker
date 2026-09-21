@@ -24,10 +24,10 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
-1. Integrated Pi regression at `7c10233`: 840 passed, 8 skipped (seven live-service
-   checks plus Linux-only terminal on Windows); ToolGate at
-   `52ebf8e`: 586 passed, 8 skipped. Bootstrap test module-reload contamination
-   repaired. Skipped/external-service checks remain unproven, not passed.
+1. Integrated Pi regression at `0a7603a`: 889 passed, 8 skipped (seven live-service
+   checks plus Linux-only terminal on Windows), one existing test-client deprecation
+   warning. ToolGate at `52ebf8e`: 586 passed, 8 skipped. Skipped/external-service
+   checks remain unproven, not passed.
 2. Close P9 ordinary-chat execution control: durable cancellation at existing
    execution boundaries, explicit steering vs queued future turns, and reviewed
    per-message fork/retry behavior. Reuse submissions, snapshots and action journals.

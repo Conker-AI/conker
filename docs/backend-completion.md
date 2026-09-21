@@ -1,3 +1,20 @@
+## September 21 - integrated conversation regression and retry contract audit
+
+Full Pi suite at 0a7603a: 889 passed, 8 skipped, one existing Starlette/httpx
+warning, 144.13 seconds. The skips are seven external live-service checks and the
+Linux-only terminal check on Windows (separate Linux evidence already recorded).
+This verifies the combined cancellation, recovery, queue, per-turn model/reply and
+message-branch changes against the existing suite, not overall backend completion.
+
+Frontend retry contract was inspected in fixture-adapter.ts streamReply and
+conversation version/context helpers. Retry retains the original response's
+context boundary, context policy and agent instructions, creates a new response
+version in the same family, and allows a selected model. It must not be replaced
+with a fresh prompt using today's entire history or silently turned into a fork.
+Implementation still needs version provenance/selection, immutable context-message
+references, original attachment citation resolution and idempotent retry receipts.
+Tool results must remain evidence; retry must not re-dispatch completed effects.
+
 ## September 21 - per-message conversation branches
 
 Pi adds an owner-only idempotent message fork: exact prefix through an input/final
