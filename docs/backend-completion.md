@@ -187,3 +187,22 @@ See [backend-remaining.md](backend-remaining.md) for the source-audited remainin
 requirements and work order. The chronological entries below remain evidence,
 including their limitations; old "missing" statements can be superseded by later
 commits. This index does not mark the backend complete or narrow the agreed scope.
+
+## Reviewed port-change preview foundation
+
+- ToolGate `62c7862`: pure exact create/edit/remove mapping planner preserves
+  unrelated mappings, detects conflicts and identifies replacement/downtime.
+  Docker's v1.45 create/update contract confirms port publication requires container
+  replacement; the preview does not pretend there is an in-place update API.
+- ToolGate `01fa4d1`: read-only configured-daemon inspection adapter supplies
+  observed allocations and IPv4/IPv6 bindings to that planner. Stopped containers
+  require concrete configured bindings. Missing runtime publications and unsupported
+  states fail without discarding mappings. Returned data excludes raw container
+  configuration and environment. Configuration is rechecked after inspection.
+- **70 focused preview/planner/container-control tests passed**, using synthetic
+  HTTP only; scoped Ruff and diff checks pass. Local commits only. No Docker
+  resources were accessed or changed.
+- This is a foundation, not completed port control: replacement specification/data
+  preservation, durable step journal/recovery, scoped execution and Pi API remain.
+  The response states execution is unimplemented. P14 and the broader backend goal
+  remain incomplete; final frontend wiring and deployment remain deferred.
