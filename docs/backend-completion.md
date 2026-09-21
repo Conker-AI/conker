@@ -1,3 +1,25 @@
+## September 21 - queue execution and restart reconciliation
+
+Pi 3a12690 atomically admits queue entries inside ordinary submission reservation.
+Position, revision, pause, configuration and payload are checked under the same
+writer transaction. Stable submission IDs prevent duplicate provider/tool work.
+Owner run-next and opt-in PI_QUEUE_ENABLED worker drain FIFO; competing workers
+share the durable claim. The worker rotates past busy conversations. Shutdown
+joins bounded in-flight work before closing the store.
+
+Successful receipts retire entries, including after lost responses/restart.
+Stopped/failed entries remain visible and pause the queue; approval/budget/unknown
+effects pause following messages. Resume never silently retries failed work.
+Unknown action results remain subject to existing reconciliation. New requests
+are required for intentional retries. Attachments use existing submission binding.
+
+Verification: 51 combined queue/submission/cancellation/recovery tests passed;
+10 execution tests passed after adding fairness coverage. Tests cover real loop
+FIFO execution, concurrent consumers, changed-settings admission, restart before
+binding and after completion, approval hold, file binding and ordinary busy turns.
+New module/test Ruff passes. Per-entry model overrides, reply targets and research
+controls remain explicit contract gaps. No browser wiring or deployment enabled.
+
 ## September 21 - durable queue lifecycle (execution pending)
 
 Pi now stores up to five waiting/claimed messages per ordinary conversation with
