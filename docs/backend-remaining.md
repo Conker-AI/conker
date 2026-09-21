@@ -32,6 +32,13 @@ lineage, boundary and finalization checks pass (synthetic Docker transport).
 Earlier-stage partial replacement recovery/cleanup remains open; this increment
 does not authorize re-running uncertain Docker effects.
 
+The next P14 increment adds owner-reviewed recovery when only the final inspection
+failed: new executions retain encrypted, action/socket-bound pre-effect evidence;
+recovery rechecks exact containers against the intended settings and atomically
+finalizes verification/lineage/receipt. Approval is rechecked and uncertain mutations
+are never repeated. 63 focused tests pass using a synthetic Docker transport.
+Earlier-stage recovery/cleanup and real-daemon acceptance remain open.
+
 1. Integrated Pi regression during `a0822eb`: 921 passed, 8 skipped (seven live-service
    checks plus Linux-only terminal on Windows), one existing test-client deprecation
    warning. ToolGate at `52ebf8e`: 586 passed, 8 skipped. Skipped/external-service
