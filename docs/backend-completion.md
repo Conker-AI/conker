@@ -1,3 +1,19 @@
+## September 21 - per-request model selection
+
+Pi ordinary turn and queue endpoints now accept optional model_id. Admission
+validates answer-role eligibility plus enabled provider/model. The selected model
+is included in request identity and frozen execution snapshots; helper roles stay
+separate. No fallback occurs for an explicit answer choice. Queue review can
+explicitly change or clear the choice; admission rejects a substituted choice.
+Call and team model selections remain in their existing scoped controls.
+
+Verification: 52 model/queue/submission tests pass, including actual HTTP and loop
+selection, catalogue modification after reservation, conflicting replay, invalid
+model rollback, unavailable provider without fallback, queue selection/review and
+substitution rejection. New queue/model tests lint passes. No paid calls or final
+frontend wiring. Reply targets, research modes, steering and message retry/fork
+remain outstanding contracts; this does not claim P9 globally complete.
+
 ## September 21 - queue execution and restart reconciliation
 
 Pi 3a12690 atomically admits queue entries inside ordinary submission reservation.
