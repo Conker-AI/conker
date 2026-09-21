@@ -7,6 +7,15 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Verified source distinctions
 
+**Final independent-backend checkpoint:** see backend-review.md for the reconciled
+P0–P17 evidence map and supported limits. The owner enabled Docker; the live isolated
+Docker/PostgreSQL held restore/interruption drill passed (1 test, 58.25 seconds).
+Linux filesystem (27) and real gateway/PTY (1) checks also passed. The earlier engine
+blocker and pending-regression statements below are historical. Implementation and
+independent verification stop here for owner review; final wiring/deployment remain
+out of scope. Production recovery promotion is unsupported and must not be inferred
+from the successful held restore exercise.
+
 ### September 21 scope reconciliation and joint recovery evidence
 
 Original P14 and the accepted runtime interface require bounded lifecycle actions,

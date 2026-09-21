@@ -4,11 +4,12 @@ Frontend fixtures are accepted, including the later steering and managed-process
 capability corrections. Backend modules remain independent. No final browser
 wiring, deployment, GitHub push or paid-service call was performed in this phase.
 
-This is a review checkpoint, **not a claim that every acceptance gate is closed**.
-The remaining live Docker/PostgreSQL restore drill needs a running Docker Linux
-daemon. Windows Docker reports its engine pipe missing; WSL reports integration
-unavailable. Coordinated recovery currently stays held and is not a supported
-production promotion path. Do not remove recovery holds to resume production.
+The independent backend implementation/verification phase is complete for owner
+review. This does not claim deployment or end-to-end browser acceptance. After the
+owner enabled Docker, the existing isolated Docker/PostgreSQL restore drill passed.
+It verifies the supported held restoration path, including readable restored data,
+revoked approvals and isolation during interruption. Coordinated production
+promotion is not implemented. Do not remove recovery holds to resume production.
 
 ## Requirement evidence
 
@@ -33,7 +34,7 @@ table describes the current checkpoint rather than those intermediate states.
 | P12 memory | MemoryGate memory/runtime/evidence/corrections/conversation ingestion; Pi scoped clients/proposals. Revision, namespace, revocation, filtered ingestion and reviewed corrections covered by memory suites. |
 | P13 calls | Pi calls/speech/audio decoder/character/reference voice; typed and speech turn contracts, interruption, text fallback, replay, frozen reference and validated STT timestamps covered by call/speech suites. Real voice quality/latency, physical devices and browser transport remain unverified. No retained call audio or generated-word timing claim. |
 | P14 system | ToolGate inventory, allowlisted service/container lifecycle, directory inspection and reviewed port replacement; Pi authenticated transport and terminal. Synthetic Docker checks plus real Linux PTY/filesystem checks. Unknown intermediate mutations remain held, never silently replayed; automatic rollback/cleanup is not an accepted frontend operation. |
-| P15 auth/recovery | Gateway fresh verification/revocation; durable journals; offline snapshots/deletion replay/index cleanup/receipt reconciliation. Joint test preserves retained history, rejects restored authority and avoids duplicate effects. Live Docker/PostgreSQL recovery and usable coordinated promotion remain unproven. |
+| P15 auth/recovery | Gateway fresh verification/revocation; durable journals; offline snapshots/deletion replay/index cleanup/receipt reconciliation. Joint test preserves retained history, rejects restored authority and avoids duplicate effects. Live Docker/PostgreSQL held restore/interruption drill passes; production promotion remains unsupported. |
 | P16 continuity | Pi source-linked summaries, durable polling, shown/read acknowledgements, privacy, quiet hours/urgency and atomic budget reservations. Corresponding suites cover delivery and policy. No autonomous dispatcher is activated by setting budgets; external push is unconfigured. |
 | P17 deployment | Outside this phase; owner review precedes wiring and server deployment. |
 
@@ -47,19 +48,25 @@ table describes the current checkpoint rather than those intermediate states.
   numbers overlap the broad filesystem suite and must not be added as unique tests.
 - Companion offline recovery previously **33 passed on Linux**; new joint actual-
   module reconciliation test **1 passed** against temporary SQLite and embedded Qdrant.
+- Live Docker Linux engine 29.5.3: existing opt-in Docker/PostgreSQL restore and
+  interruption drill **1 passed in 58.25 seconds**. It uses pinned fixture images,
+  temporary stores and network-isolated helpers. Restored data was queried, stale
+  approvals rejected and interrupted restore isolation inspected. No named drill
+  or recovery containers remained afterward; no global Docker cleanup was run.
 - Frontend managed-target correction: runtime suite, scoped ESLint, production build,
   desktop and 390×844 browser checks passed. Known dependency deprecations and Zod
   annotation warnings are non-failing.
 
 Live-service module-contract skips remain unverified. These results do not prove
-production Docker, remote PostgreSQL/Qdrant, paid providers, physical audio devices,
+production operation, remote PostgreSQL/Qdrant, paid providers, physical audio devices,
 or final end-to-end browser integration. Re-run only the relevant checks when those
 environments become available; no broad-suite repetition is needed without changes.
 
-## Next bounded step
+## Owner review and next phase
 
-Use the existing opt-in isolated Docker restore drill once a Linux engine is
-available. Review its result and the supported restoration boundary before claiming
-P15 complete. Do not turn this into unrestricted recovery automation, a new autonomous
-research worker, GPU/video perception or a second implementation of existing gates.
-All implementation checkpoints are local Git commits and can be reviewed independently.
+Stop here for owner review as requested. Review the accepted fixture frontend and
+independent backend contracts/limits, then separately authorize final transport
+wiring and server deployment. Configured-service health, real provider/voice quality
+and one real end-to-end owner task belong to that later environment acceptance.
+Unrestricted recovery automation, autonomous research dispatch and GPU/video
+perception were not added. All implementation checkpoints are local Git commits.

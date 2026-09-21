@@ -2,6 +2,17 @@
 
 Owner-authorized September 20, 2026. Baseline checkpoint: `df3aad220f01da5387ca63c5c4f5fdf112363086` on `feat/dashboard`. Work and commits stay local unless publication is requested. This is the active execution ledger; `roadmap.md` retains the historical checkpoint narrative and `workspace-control-plan.md` retains the broader vision.
 
+## Independent backend milestone — September 21
+
+The ordered frontend-then-backend phase is complete for owner review. Current
+requirement-level evidence and limitations are in `backend-review.md`; the initial
+status table below is historical. Independent full suites pass (Pi 1039, ToolGate
+640, MemoryGate 106), with live-service skips kept explicit. Linux PTY/filesystem,
+joint offline reconciliation, and the isolated live Docker/PostgreSQL held restore
+drill have additional passing evidence. Frontend build/browser corrections are
+recorded in frontend-acceptance.md. Stop at owner review: no final wiring, deployment
+or pushes. Held restore is verified; production promotion remains unsupported.
+
 ## Scope update — September 21: backend follows frontend automatically
 
 The owner explicitly changed the stopping point. This section supersedes conflicting phase-stop language below and in the active goal's original text.
