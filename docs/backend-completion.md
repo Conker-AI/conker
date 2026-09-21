@@ -1,5 +1,24 @@
 # Backend completion ledger
 
+## September 21 — combined budget contract and existing recovery audit
+
+Companion `d16de5a1` adds an offline cross-repository drill with real Pi admission,
+ToolGate HTTP handlers/authentication/publications/reservations and temporary SQLite.
+Only transport delivery and the provider are synthetic. Both ordinary completion
+and lost-acknowledgement cases pass: reservation precedes provider execution,
+foreign budget lookup fails, exactly one provider call costs 58 fixture microusd,
+and Pi resolves the saved receipt without redispatch. Run with both backend
+checkouts on PYTHONPATH: `python -m pytest tests/test_scheduled_budget_contract.py -q`.
+
+Existing Companion recovery suite: 31 passed under WSL using requirements-dev.txt
+in a disposable venv. Windows' Bash path translation was unsuitable for its shell
+checks; that was not an application defect. No Docker drill was run. Existing
+recovery already snapshots service stores and revokes restored browser authority
+under an offline hold. `ff7e4dbd` corrects the obsolete missing-journal claim:
+current journals exist, but restored/newer effect reconciliation remains unproven.
+The two contract cases plus the affected recovery snapshot case pass after this
+change; Ruff on the contract drill and git diff checks pass.
+
 ## September 21 — per-run owner budget binding
 
 Pi `ba49b98` adds optional requireBudget definitions: automatic/manual occurrences
