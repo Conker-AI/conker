@@ -24,6 +24,13 @@ against fixtures; final transport wiring and deployment require the later review
 
 ## Work order
 
+P13 compressed audio input: Pi accepts WebM/Ogg/MP3 through an explicitly configured
+local FFmpeg path, converting to the existing validated PCM contract. No browser
+capture or final transport wiring was added. 90 speech/call/character tests pass,
+including actual local encode/decode of all three containers, process timeout,
+duration ceiling and credential-free decoder environment. This closes the backend
+format adapter gap; browser recording integration remains in the later wiring phase.
+
 P13 input caption timing now requests and validates provider word timestamps,
 preserving them in transient call responses under the existing interruption guard.
 85 speech/call/character tests pass, including malformed timing, unavailable
