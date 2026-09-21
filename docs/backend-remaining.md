@@ -27,8 +27,16 @@ It passes. This is not a promoted or live Docker/PostgreSQL restore proof. Docke
 Desktop's Linux daemon was unavailable on this host; WSL integration was also
 unavailable. The live drill remains unverified, not passed.
 
-Full ToolGate regression at `558d3e3`: 640 passed, 8 skipped. The skips and synthetic
-Docker boundary do not establish live server behavior. Pi regression is in progress.
+Current full regressions: ToolGate at `558d3e3`: 640 passed, 8 skipped;
+Pi at `da52384`: 1039 passed, 8 skipped; MemoryGate at `e2c0ddd`: 106 passed,
+7 skipped. These ran independently against temporary data, without paid calls or
+deployment. The skips and synthetic Docker boundary do not establish live server
+behavior. Existing deprecation warnings are non-failing.
+
+Frontend process capabilities are reconciled in `82ac0a51`: unmanaged processes
+are inspect-only and managed samples carry target identities/action lists. Runtime
+checks, scoped lint, build and desktop/mobile browser inspection passed. Backend
+target translation remains final wiring, not a missing arbitrary-PID executor.
 
 Container recovery now also settles a lost start acknowledgement or a crash before
 the final verification claim, using full read-only Docker verification and fresh
