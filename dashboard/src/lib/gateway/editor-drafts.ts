@@ -8,6 +8,8 @@ const revision = z.number().int().positive().safe()
 const summary = z.object({ id: identity, revision, updated_at: z.string().datetime({ offset: true }), name: z.string().min(1).max(100), kind: z.enum(['connector', 'workflow']) })
 const page = z.object({ items: z.array(summary).max(100), next_after: identity.nullable() })
 const saved = z.object({ id: identity, revision, updated_at: z.string().datetime({ offset: true }), document: z.unknown() })
+const publication = z.object({ draft_id: identity, revision, automation_id: z.string().regex(/^editor-[a-f0-9]{32}$/), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), published_at: z.string().datetime({ offset: true }) })
+const publicationHistory = z.object({ items: z.array(publication.extend({ authorization: z.enum(['auto', 'owner_confirmation']), available: z.boolean() })).max(100) })
 export type EditorDraft = { id: string; revision: number; updated_at: string; document: ToolDefinition }
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value)
@@ -34,6 +36,17 @@ export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request
     },
     async get(id: string, signal?: AbortSignal) {
       return record(await auth.request(path(id), { signal }), id)
+    },
+    async publications(id: string, signal?: AbortSignal) {
+      const result = parse(publicationHistory, await auth.request(`${path(id)}/publications`, { signal }))
+      if (result.items.some(item => item.draft_id !== id)) throw new GatewayError('invalid-response')
+      return result.items
+    },
+    async publish(id: string, expectedRevision: number, previousVersion: number, authorization: 'auto' | 'owner_confirmation', signal?: AbortSignal) {
+      if (!revision.safeParse(expectedRevision).success || !Number.isSafeInteger(previousVersion) || previousVersion < 0) throw new GatewayError('validation')
+      const result = parse(publication, await auth.request(`${path(id)}/publish`, { method: 'POST', body: { expected_revision: expectedRevision, expected_publication_version: previousVersion, authorization }, signal }))
+      if (result.draft_id !== id || result.revision !== expectedRevision) throw new GatewayError('invalid-response')
+      return result
     },
     async save(document: ToolDefinition, expectedRevision: number, signal?: AbortSignal) {
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new GatewayError('validation')

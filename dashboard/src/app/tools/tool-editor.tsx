@@ -80,11 +80,15 @@ export function ToolEditor({
   records,
   onBack,
   liveSave,
+  livePublish,
+  liveHistory,
 }: {
   record: WorkspaceRecord;
   records: WorkspaceRecord[];
   onBack: () => void;
   liveSave?: (definition: ToolDefinition) => Promise<void>;
+  livePublish?: () => void;
+  liveHistory?: () => void;
 }) {
   const [definition, setDefinition] = useState(
     () => (liveSave ? undefined : drafts.get(record.id)?.definition) ?? record.draft,
@@ -425,9 +429,10 @@ export function ToolEditor({
           <PopoverContent align="end" className="flex flex-col gap-2">
             <Button
               variant="outline"
-              disabled={!!liveSave || busy || pendingEdits || issues.length > 0}
+              disabled={(!!liveSave && (!livePublish || dirty)) || busy || pendingEdits || issues.length > 0}
               onClick={() =>
                 void task(async () => {
+                  if (livePublish) { livePublish(); return; }
                   if (pendingEdits)
                     throw new Error(
                       "Apply or discard pending changes before publishing.",
@@ -441,7 +446,7 @@ export function ToolEditor({
               }
             >
               <Check />
-              {liveSave ? "Publishing not connected" : "Publish preview version"}
+              {liveSave ? "Publish saved version" : "Publish preview version"}
             </Button>
             <Button
               variant="ghost"
@@ -451,7 +456,7 @@ export function ToolEditor({
               <Download />
               Export definition
             </Button>
-            <Button variant="ghost" disabled={!!liveSave} onClick={() => setPanel("history")}>
+            <Button variant="ghost" disabled={!!liveSave && !liveHistory} onClick={() => liveHistory ? liveHistory() : setPanel("history")}>
               <History />
               Versions & runs
             </Button>
@@ -491,7 +496,7 @@ export function ToolEditor({
           {expanded ? <Minimize /> : <Maximize />}
         </Button>
       </div>
-      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved drafts persist in ToolGate. Publishing, testing and connector bindings are not connected yet; steps do not execute.</p>}
+      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version to pin its registered dependencies. Publishing does not run it or grant access; live run controls are not connected yet.</p>}
       {error && (
         <div role="alert" className="tools-feedback text-destructive">
           {error}

@@ -100,3 +100,32 @@ bounded loop settings, typed publication versions, supported configuration field
 and references. A reference to another step must be available on every incoming
 path, so a merged branch cannot accidentally read a value from the branch that
 did not run. Seven graph tests plus draft/owner route tests passed (29 total).
+
+## Published graph runtime and live publication
+
+ToolGate `2acf86d` executes editor graphs as an explicit automation block through
+the existing publication, scoped execution, approval and durable action journal.
+It preserves graph values and per-node receipts, bounds nested work and output,
+pins all branches' dependencies, and rejects unpublished execution. Known graph
+failures are recorded as `WORKFLOW_FAILED`; uncertain dispatch remains held.
+The focused graph/publication/workflow/approval selection passed 53 tests.
+
+Owner publication now atomically binds an exact saved draft revision to a stable
+automation identity and immutable version. Stale revisions, registry conflicts,
+invalid graphs and missing dependencies fail without partially publishing.
+Publishing does not create execution credentials or modify scopes. Owner approval
+is the default; selecting automatic authorization still requires a scoped caller.
+History reports whether dependencies remain available. It returns the latest 100
+versions. The owner-publication and existing publication tests passed 14 tests.
+
+The live editor now exposes Publish saved version and version history through a
+password-bound gateway route. Gateway API/verification tests passed 43 tests;
+the dashboard build, focused lint, verification and import-isolation checks passed.
+Browser evidence: published revision 1 of Browser draft acceptance
+(`tool-9b565ddc-6708-41f3-8644-bcba5624fc91`), confirmed version 1 in history after
+reload, and inspected desktop 1440x1000 and phone 390x844 screenshots. No console
+errors or warnings. No agent grant or workflow execution was made by this action.
+
+Remaining: real registered capability selection, explicit execution grants, live
+run controls and journal receipts in the editor. Test remains disabled until that
+path is connected; it never substitutes the preview executor.

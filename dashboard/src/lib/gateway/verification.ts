@@ -10,6 +10,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   const details: string[] = []
   const safeId = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null
   if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(path)) { title = 'Save tool draft'; target = `Draft ${parts[4]}`; details.push('Saves the editor document only. Does not publish, execute or grant access.') }
+  else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/publish$/.test(path)) { title = 'Publish workflow version'; target = `Draft ${parts[4]}`; details.push('Creates an immutable version with pinned dependencies. Does not run it or grant agent access.'); details.push(body.authorization === 'auto' ? 'Scoped callers may run this version without per-run approval.' : 'Each run requires owner confirmation.') }
   else if (path === '/api/control/pi/models/configuration') { title = 'Save model configuration'; target = 'Models and decision roles'; details.push('Changes model eligibility, defaults and routing roles. Provider credentials stay on the server.') }
   else if (/^\/api\/control\/pi\/sessions\/[A-Za-z0-9_-]+\/settings$/.test(path)) { title = 'Save conversation privacy'; target = `Conversation ${parts[5]}`; details.push('Changes settings for future turns. Existing messages are not erased.') }
   else if (path === '/api/pi/sessions') { title = 'Create a conversation'; target = 'New conversation'; details.push('Creates one persisted conversation.') }
