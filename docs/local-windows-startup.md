@@ -106,6 +106,13 @@ Run history survives page reloads. A lost response retains its action identity;
 refresh history instead of creating a duplicate action. Remove workflow access
 when a test is finished; unrelated grants are retained.
 
+For companion chat discovery, enable the editor's agent visibility before publishing
+and grant the workflow explicitly. Pi lists only available published workflows for
+its execution key, with all nested workflow scopes required. Capability identities
+pin both version and digest across approval/resume; updates do not silently alter
+an already selected action. The local Qwen 2.5 3B model needed an exact-ID instruction
+in acceptance testing, so do not assume reliable autonomous tool selection.
+
 ### Memory recall evidence
 
 To exercise synthetic nested workflows against the running local ToolGate, run

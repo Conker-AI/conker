@@ -37,20 +37,37 @@ statements that browser access, routing, memory ranking or startup docs are pend
 The Laya/routing/memory journeys now have real end-to-end evidence. This does not
 claim that every dashboard screen or previously planned feature is connected.
 
-### Remaining workflow integration found in completion audit
+### Companion workflow integration: audit finding and resolution
 
-Editor-run acceptance is complete, including real nested branches/loop/calculation
-and retained browser receipts. However, Pi's `ToolGateClient.tools()` still reads
-only `/v2/agent/tools`, and `invoke()` dispatches only individual tools. Therefore
-the companion cannot yet discover and invoke a published editor workflow as one
-capability. This is required by the owner's workflow request and keeps the goal open.
+Editor-run acceptance included real nested branches/loop/calculation and retained
+browser receipts. The completion audit then found Pi exposed only individual tools.
+ToolGate `d7d7a74` now exposes safe scoped published-workflow metadata; hidden editor
+workflows, unavailable publications and missing nested grants are excluded. Pi
+`5825373` adds those capabilities to its existing tool list, pins version and digest
+in the capability identity, dispatches with execution authority only, and validates
+the returned publication before accepting success/failure. Existing individual
+tool behavior remains intact. Eight ToolGate run/catalogue tests and thirteen Pi
+tool/workflow-adapter tests passed.
 
-Next implementation must expose safe, scoped, available published-workflow metadata;
-pin the selected publication across approval/resume; dispatch through the existing
-automation journal without owner credentials; adapt completed/failed automation
-receipts; preserve existing individual tool behavior. Verify a companion turn can
-select a workflow, pause for Inbox review, resume the same action, and narrate its
-real result. Do not treat the editor's successful run as proof of that chat path.
+Browser session `ses_a31dc91d20e142ed`, turn `trn_fd84048d80cb4749`, selected the
+published acceptance workflow, paused for Inbox request
+`03c5c6f9-8ccf-4da7-9afa-04d37fd5f72b`, resumed after owner verification and completed
+with acted=1. The model reported the real digest and length 27. Memory was disabled
+for this synthetic conversation. The temporary workflow scope was removed afterward;
+the agent catalogue returned empty. Chrome showed no warnings/errors.
+
+Model limitation: Qwen 2.5 3B initially shortened the opaque capability ID and no
+action occurred. Supplying the exact ID worked. This verifies the integration and
+approval path, not reliable autonomous tool selection by this small model.
+
+Final local checks: build/design/lint passed; 46 gateway API/verification tests and
+21 editor execution/publication/run tests passed before the capability extension;
+the affected adapter/catalogue suites then passed as noted above. Live Laya health
+reported ready. Persisted memory recall was rechecked against MemoryGate and retained
+both source records and their citations in the answer context. All four repository
+worktrees were clean at the audit checkpoint; subsequent capability work is committed.
+Reproduction and deliberately unconnected product features remain documented in
+`local-windows-startup.md`. No remote push or Ubuntu deployment was performed.
 
 ## Sequence
 
