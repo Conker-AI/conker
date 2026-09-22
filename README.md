@@ -11,7 +11,7 @@
 
 ![Conker Home: requests, recent activity and workspace navigation, using sample data](docs/images/home.png)
 
-**Development status:** the full React workspace remains an interactive preview. A separate authenticated gateway now connects real conversations and durable Tasks/Runs/Events to Pi, with fresh verification for writes and recovery after lost turn responses. Backend services remain independent repositories. The screenshots below show fixtures; server deployment and live provider/tool acceptance are still outstanding. See the [completion ledger](docs/completion-plan.md) for verified increments and remaining work.
+**Development status:** an interactive frontend preview and a separate authenticated local stack. Verified local integrations include conversations, memory retrieval with provenance, protected approvals, and published workflow execution from the editor and chat. Calls and several management surfaces remain preview-only. Ubuntu deployment is a separate acceptance stage. See the [project map](docs/conker-project.md) and [local integration evidence](docs/local-integration-plan.md).
 
 ## What Conker is for
 

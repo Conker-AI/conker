@@ -2,6 +2,8 @@
 
 Start with the [product overview and screenshots](../README.md), then choose the guide for the work you want to do. Plans describe intended behavior; they do not prove a feature is connected.
 
+Start with the [Conker project map](conker-project.md) for ownership, readiness and setup.
+
 ## Run and develop
 
 | Guide | Use it for |
