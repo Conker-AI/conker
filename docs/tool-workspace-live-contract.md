@@ -86,3 +86,17 @@ The translation layer, live connector binding, publication and execution remain
 pending. These drafts cannot yet run; no preview receipts are presented as live
 execution. Conflict errors preserve the unsaved editor state rather than retrying
 an overwrite automatically.
+
+## Backend graph validation
+
+ToolGate now validates executable graph shape separately from draft storage.
+Owner-only GET `/v2/owner/editor-drafts/{id}/validation` reports the exact saved
+revision, node-specific issues, and graph validity. It explicitly reports
+`execution_ready: false`; valid structure alone does not prove connector binding,
+publication or permission readiness. This endpoint is not yet exposed in the UI.
+
+Checks include a unique Input, complete branch edges, cycles, disconnected nodes,
+bounded loop settings, typed publication versions, supported configuration fields
+and references. A reference to another step must be available on every incoming
+path, so a merged branch cannot accidentally read a value from the branch that
+did not run. Seven graph tests plus draft/owner route tests passed (29 total).
