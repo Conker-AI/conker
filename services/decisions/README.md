@@ -83,3 +83,11 @@ features and vector embeddings are not yet fully integrated.
 The routing adapter sends only the latest user request (up to 1,600 characters),
 not the whole conversation. Its receipt names this input scope. Context-dependent
 follow-ups require manual model choice or a more capable contextual router.
+
+## Catalogue-selected memory ranking
+
+Settings → Models / Providers → Model roles → Memory ranking replaces PI_MEMORY_RERANK_ENABLED. Existing configurations migrate with ranking disabled. Explicitly select and enable a model.
+
+For the configured `decisions` provider, register a catalogue entry with route `memory-ranking`; use a separate `model-routing` entry for routing. Each role has an independent primary, timeout and optional fallback. Other configured completion providers can rank using the JSON contract. Invalid results keep retrieval order and every original record. No-memory and no-harness still prevent relevant helper calls.
+
+Laya remains an optional decision-service implementation, not a MemoryGate dependency. A replacement behind PI_DECISION_URL must implement /v1/choose; a different protocol needs a Pi adapter. Adding a catalogue entry does not install models or grant credentials.

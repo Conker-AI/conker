@@ -67,7 +67,7 @@ def initialize():
                 "PI_TOOLGATE_KEY": keys["execution"], "PI_MEMORYGATE_URL": "http://127.0.0.1:8020",
                 "PI_MEMORYGATE_INGEST_KEY": keys["ingest"], "PI_MEMORYGATE_READ_KEY": keys["read"],
                 "PI_MEMORYGATE_AGENT_ID": "local_companion", "PI_DECISION_URL": "http://127.0.0.1:8060",
-                "PI_DECISION_KEY": keys["decisions"], "PI_MEMORY_RERANK_ENABLED": "false"},
+                "PI_DECISION_KEY": keys["decisions"]},
             "gateway": {"GATEWAY_ORIGIN": "https://localhost:8050", "GATEWAY_DB_PATH": str(STATE / "gateway/auth.db"),
                 "GATEWAY_PI_URL": "http://127.0.0.1:8051", "PI_GATEWAY_KEY": keys["gateway"],
                 "GATEWAY_PI_OWNER_KEY": keys["pi_owner"],
