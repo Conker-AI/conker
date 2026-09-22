@@ -47,5 +47,25 @@ restores loop variables (including absent/null values and early exits), and reje
 non-finite calculations before they enter result receipts. The workflow/core/approval
 test selection passed 68 tests. ToolGate was restarted locally with these changes.
 
-The translation layer and live editor are still pending. The current live Tools screen
-is a scoped inventory, not the complete editor.
+## Implemented owner draft transport
+
+ToolGate `3fe882c` adds bounded editor documents in a separate durable
+`v2_editor_drafts` table. Owner-only list/get/save routes preserve disconnected
+drafts and require an expected revision; concurrent or stale saves fail with 409.
+No tool, automation, publication or execution grant is created by saving.
+
+Gateway `901a998` exposes only list/get/save at `/api/owner/editor-drafts` and
+`/api/owner/editor-drafts/{id}`. Saves require the existing origin/CSRF checks and
+one-use password proof bound to the exact path and body. Publish/run paths are not
+admitted by this transport. ToolGate owner/draft tests passed 21 tests; gateway
+API/verification tests passed 42 tests.
+
+Verified against the running local HTTPS gateway using its trusted local certificate:
+`local-draft-acceptance` saved as revision 1 and reloaded unchanged. An unverified
+save and reuse of its consumed proof both returned 428. This labelled draft is
+retained, unpublished, for the editor integration check.
+
+The frontend workspace adapter, translation layer, publication and execution UI
+remain pending. The current live Tools screen is a scoped inventory, not the
+complete editor. Do not route the preview runner to these saved documents and
+present its receipts as live execution.
