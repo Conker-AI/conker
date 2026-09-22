@@ -74,7 +74,7 @@ export function parseOwnerRequest(value: unknown, expectedId?: string): OwnerReq
     result.decision = { status: decision.status as OwnerRequestStatus, actor: text(decision.actor, 256), note: text(decision.note, 2000), at: date(decision.at) }
   }
   if (result.reviewable && (result.status !== 'pending' || !result.approval.originValid || result.approval.consumedAt !== null || !result.approval.expiresAt ||
-    result.unavailableReason !== null || result.action.subjectType !== 'tool' || !result.action.subjectId || result.action.args === null || result.action.version === null)) fail()
+    result.unavailableReason !== null || !['tool', 'automation'].includes(result.action.subjectType ?? '') || !result.action.subjectId || result.action.args === null || result.action.version === null)) fail()
   return result
 }
 

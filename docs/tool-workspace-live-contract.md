@@ -150,3 +150,31 @@ revision 2. The selected identity and arguments survived reload. Desktop and pho
 screenshots confirm a readable searchable picker; no console errors or warnings.
 Revision 2 remains unpublished and unexecuted; revision 1 is still the earlier
 two-node publication.
+
+## Live execution checkpoint (22 September)
+
+The preceding checkpoints are historical. Revision 2 is now published as version
+2 and has completed through the browser. The editor offers explicit caller access,
+published-version selection, JSON arguments, Inbox review, same-action resume,
+and persisted per-node results. It uses ToolGate's existing execution journal,
+scopes and approval path; it does not execute browser scripts or fixture tools.
+
+Run `editor_33e809c33f5940af93f0a1a3c58af8e5` completed Input, Call connector and
+Return. The real echo produced length 27 and SHA256
+`81b56ebd62346bd424253051db38f19f6023a5b976b12f1299e880ed5b8db94a`.
+Approval `3cb0bbb9-d1e7-4273-b33f-2f9cdf117abe` was reviewed in Inbox and consumed
+on resume. An earlier expired approval was refused. The temporary root workflow
+grant was removed afterward in the UI; the completed receipt remains readable.
+
+The browser check exposed an Inbox parser that accepted only tool requests.
+It now accepts automation requests too, retaining strict status/origin/argument
+checks; the owner-client regression check passes. Desktop 1440x1000 and phone
+390x844 screenshots show readable results and accessible footer controls. Chrome
+reported a focus/aria-hidden warning during the stacked password dialog transition;
+that accessibility issue remains to resolve. No JavaScript exception was reported.
+
+Focused backend evidence: six editor-run tests cover exact grants, replay,
+approval/resume, absent scopes, lost responses and declared input defaults;
+46 gateway API/verification tests cover the owner and execution channels. Build,
+design check and focused lint pass. Further acceptance still needs nested workflow
+selection/execution and branch/loop journeys, plus the dialog focus fix.

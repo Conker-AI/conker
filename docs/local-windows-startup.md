@@ -93,6 +93,21 @@ Local approval expiry is 300 seconds for new requests; expired requests stay inv
 
 ## Verify persisted memory recall
 
+### Run a published editor workflow
+
+The gateway uses `GATEWAY_TOOLGATE_EXECUTION_KEY`, separate from its owner key.
+The local launcher supplies the existing Pi execution credential for both new and
+existing local configurations. This does not add scopes. Save a draft, publish it
+from More actions, open Run, and explicitly allow workflow access. Each mutation
+requires an operation-bound owner password check. Runs with owner-confirmation
+policy pause for Inbox review; return to the same run and resume after approval.
+The local approval window is five minutes. Expired approvals cannot execute.
+Run history survives page reloads. A lost response retains its action identity;
+refresh history instead of creating a duplicate action. Remove workflow access
+when a test is finished; unrelated grants are retained.
+
+### Memory recall evidence
+
 The browser-created recall turn `trn_32afa79bf4264ea1` retrieved two admitted
 requirements from a different conversation and passed them through real Laya
 ranking into the answer context. Run the read-only verifier from this repository:

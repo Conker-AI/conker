@@ -12,6 +12,10 @@ const publication = z.object({ draft_id: identity, revision, automation_id: z.st
 const publicationHistory = z.object({ items: z.array(publication.extend({ authorization: z.enum(['auto', 'owner_confirmation']), available: z.boolean() })).max(100) })
 const capability = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), name: z.string().max(160), description: z.string().max(800), version: revision, authorization: z.string().max(40), inputs: z.array(z.object({ name: z.string().max(200), type: z.string().max(40), required: z.boolean(), description: z.string().max(500) })).max(100) })
 const catalogue = z.object({ items: z.array(capability).max(100), next_after: z.string().max(80).nullable() })
+const access = z.object({ actor_id: z.string().max(100), actor_name: z.string().max(160), automation_id: z.string().max(80), enabled: z.boolean(), required_scopes: z.array(z.string().max(100)).max(500) })
+const outcome = z.object({ code: z.string().max(80), action_id: z.string().regex(/^editor_[a-f0-9]{32}$/), message: z.string().max(2000).optional(), request_id: z.string().max(100).optional(), result: z.unknown().optional(), steps: z.array(z.object({ nodeId: z.string().max(64), label: z.string().max(100), type: z.string().max(40), status: z.enum(['completed', 'failed', 'skipped']), output: z.unknown().optional(), error: z.string().max(2000).optional() })).max(60).optional() })
+const runHistory = z.object({ items: z.array(z.object({ action_id: z.string().max(100), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), created_at: z.string().datetime({ offset: true }), args: z.record(z.string(), z.unknown()), response: outcome })).max(30) })
+export type EditorRun = z.infer<typeof runHistory>['items'][number]
 export type EditorCapability = z.infer<typeof capability>
 export type EditorDraft = { id: string; revision: number; updated_at: string; document: ToolDefinition }
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -35,6 +39,20 @@ export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request
   return {
     async capabilities(kind: 'tool' | 'workflow', q = '', after?: string, signal?: AbortSignal) {
       return parse(catalogue, await auth.request('/api/owner/editor-capabilities', { query: { kind, q, limit: 50, ...(after ? { after } : {}) }, signal }))
+    },
+    async access(id: string, version: number, digest: string, signal?: AbortSignal) {
+      return parse(access, await auth.request(`${path(id)}/access`, { query: { version, digest }, signal }))
+    },
+    async setAccess(id: string, version: number, digest: string, enabled: boolean, signal?: AbortSignal) {
+      return parse(access, await auth.request(`${path(id)}/access`, { method: 'POST', body: { version, digest, enabled }, signal }))
+    },
+    async runs(id: string, signal?: AbortSignal) {
+      return parse(runHistory, await auth.request(`${path(id)}/runs`, { signal })).items
+    },
+    async run(id: string, body: { version: number; digest: string; action_id: string; args: Record<string, unknown>; approval_request_id?: string }, signal?: AbortSignal) {
+      const result = parse(outcome, await auth.request(`${path(id)}/runs`, { method: 'POST', body, signal }))
+      if (result.action_id !== body.action_id) throw new GatewayError('invalid-response')
+      return result
     },
     async list(after?: string, signal?: AbortSignal) {
       if (after && !identity.safeParse(after).success) throw new GatewayError('validation')

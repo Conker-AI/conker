@@ -12,6 +12,7 @@ import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design
 import { createToolDefinition, type ToolDefinition } from '@/lib/tool-workspace'
 import type { EditorDraft, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import { GatewayCapabilityPicker } from './capability-picker'
+import { GatewayWorkflowRuns } from './workflow-runs'
 
 export function GatewayToolDrafts({ client }: { client: GatewayEditorDrafts }) {
   const [params, setParams] = useSearchParams(), id = params.get('draft')
@@ -62,6 +63,7 @@ export function GatewayToolDrafts({ client }: { client: GatewayEditorDrafts }) {
 }
 
 function LiveDraftEditor({ draft, client, save, onBack }: { draft: EditorDraft; client: GatewayEditorDrafts; save: (document: ToolDefinition) => Promise<void>; onBack: () => void }) {
+  const [runsOpen, setRunsOpen] = useState(false)
   const [open, setOpen] = useState(false), [loading, setLoading] = useState(false), [busy, setBusy] = useState(false)
   const [versions, setVersions] = useState<Awaited<ReturnType<GatewayEditorDrafts['publications']>> | null>(null)
   const [authorization, setAuthorization] = useState<'auto' | 'owner_confirmation'>('owner_confirmation')
@@ -90,7 +92,8 @@ function LiveDraftEditor({ draft, client, save, onBack }: { draft: EditorDraft; 
   }
   const published = versions?.some(version => version.revision === draft.revision)
   return <>
-    <ToolEditor record={{ id: draft.id, draft: draft.document, published: [], runs: [] }} records={[]} liveSave={save} livePublish={() => void show()} liveHistory={() => void show()} capabilityPicker={(node, onChange) => <GatewayCapabilityPicker client={client} node={node} onChange={onChange} />} onBack={onBack} />
+    <ToolEditor record={{ id: draft.id, draft: draft.document, published: [], runs: [] }} records={[]} liveSave={save} livePublish={() => void show()} liveHistory={() => void show()} liveRun={() => setRunsOpen(true)} capabilityPicker={(node, onChange) => <GatewayCapabilityPicker client={client} node={node} onChange={onChange} />} onBack={onBack} />
+    <GatewayWorkflowRuns id={draft.id} name={draft.document.name} client={client} open={runsOpen} onClose={() => setRunsOpen(false)} />
     <Dialog open={open} onOpenChange={value => { if (!busy) setOpen(value) }}>
       <TaskDialogContent title="Published versions" description={`${draft.document.name} · saved draft revision ${draft.revision}`}>
         <OverlayBody className="space-y-4">

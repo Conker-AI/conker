@@ -71,6 +71,7 @@ def initialize():
             "gateway": {"GATEWAY_ORIGIN": "https://localhost:8050", "GATEWAY_DB_PATH": str(STATE / "gateway/auth.db"),
                 "GATEWAY_PI_URL": "http://127.0.0.1:8051", "PI_GATEWAY_KEY": keys["gateway"],
                 "GATEWAY_PI_OWNER_KEY": keys["pi_owner"],
+                "GATEWAY_TOOLGATE_EXECUTION_KEY": keys["execution"],
                 "GATEWAY_TOOLGATE_URL": "http://127.0.0.1:8010", "GATEWAY_TOOLGATE_OWNER_KEY": keys["owner"],
                 "GATEWAY_DASHBOARD_DIR": str(ROOT / "dashboard/dist")},
         },
@@ -96,6 +97,11 @@ def serve(name, config):
         if key.startswith(prefixes):
             del os.environ[key]
     os.environ.update(config["environments"][name])
+    if name == "gateway":
+        # Existing local configurations reuse Pi's scoped ToolGate caller. No
+        # scope is added here: the owner grants workflow access explicitly in UI.
+        os.environ.setdefault("GATEWAY_TOOLGATE_EXECUTION_KEY",
+            config["environments"]["pi"].get("PI_TOOLGATE_KEY", ""))
     if name in {"pi", "gateway"}:
         path = Path(config["repositories"]["pi"])
     elif name == "memorygate":

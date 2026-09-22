@@ -22,6 +22,8 @@ async function main() {
   const parsed = parseOwnerRequest(fixture())
   assert.ok(!JSON.stringify(parsed).includes('DO NOT COPY'))
   assert.deepEqual(parsed.action.args, { value: 'Test only' })
+  const workflow = fixture(); workflow.action.subject_type = 'automation'
+  assert.equal(parseOwnerRequest(workflow).action.subjectType, 'automation')
   assert.deepEqual(ownerDecisionEligibility(parsed, Date.parse('2026-09-20T12:01:00Z')), { approve: true, reject: true, expired: false })
   assert.deepEqual(ownerDecisionEligibility(parsed, Date.parse('2026-09-20T12:06:00Z')), { approve: false, reject: true, expired: true })
   const expired = { ...parsed, reviewable: false, unavailableReason: 'expired' }
@@ -34,7 +36,7 @@ async function main() {
   }
   for (const mutate of [value => value.id = '../traversal', value => value.kind = 'info', value => value.status = 'unknown', value => value.reviewable = 'true',
     value => value.approval.origin_valid = false, value => value.approval.consumed_at = '2026-09-20T12:00:01Z', value => value.approval.expires_at = null,
-    value => value.action.args = null, value => value.action.version = 0, value => value.action.subject_type = 'automation', value => value.action.args.value = 'x'.repeat(32769), value => value.action.args.value = 9007199254740993,
+    value => value.action.args = null, value => value.action.version = 0, value => value.action.subject_type = 'unknown', value => value.action.args.value = 'x'.repeat(32769), value => value.action.args.value = 9007199254740993,
     value => value.decision = { status: 'approved', actor: 'owner', note: '', at: value.created_at }, value => value.created_at = 'invalid',
     value => value.unavailable_reason = 'provider raw error', value => value.title = 'x'.repeat(1025)]) {
     const value = fixture(); mutate(value); assert.throws(() => parseOwnerRequest(value), error => error.kind === 'invalid-response')

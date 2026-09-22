@@ -83,6 +83,7 @@ export function ToolEditor({
   liveSave,
   livePublish,
   liveHistory,
+  liveRun,
   capabilityPicker,
 }: {
   record: WorkspaceRecord;
@@ -91,6 +92,7 @@ export function ToolEditor({
   liveSave?: (definition: ToolDefinition) => Promise<void>;
   livePublish?: () => void;
   liveHistory?: () => void;
+  liveRun?: () => void;
   capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
 }) {
   const [definition, setDefinition] = useState(
@@ -410,15 +412,16 @@ export function ToolEditor({
         <Button
           size="sm"
           disabled={
-            !!liveSave || busy || pendingEdits || (version === "draft" && issues.length > 0)
+            (!!liveSave && (!liveRun || dirty)) || busy || pendingEdits || (version === "draft" && issues.length > 0)
           }
           onClick={() => {
+            if (liveRun) { liveRun(); return; }
             setPanel("test");
             void test();
           }}
         >
           <TestTube2 />
-          Test
+          {liveRun ? 'Run' : 'Test'}
         </Button>
         <Popover>
           <PopoverTrigger asChild>
@@ -500,7 +503,7 @@ export function ToolEditor({
           {expanded ? <Minimize /> : <Maximize />}
         </Button>
       </div>
-      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version to pin its registered dependencies. Publishing does not run it or grant access; live run controls are not connected yet.</p>}
+      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>}
       {error && (
         <div role="alert" className="tools-feedback text-destructive">
           {error}
@@ -593,12 +596,12 @@ export function ToolEditor({
                   variant="ghost"
                   size="sm"
                   aria-pressed={!!panel}
-                  disabled={!!liveSave}
-                  aria-label="Test panel"
-                  onClick={() => setPanel(panel ? null : "test")}
+                  disabled={!!liveSave && !liveRun}
+                  aria-label={liveRun ? 'Workflow runs' : 'Test panel'}
+                  onClick={() => liveRun ? liveRun() : setPanel(panel ? null : "test")}
                 >
                   <PanelBottom />
-                  <span className="hidden sm:inline">Test panel</span>
+                  <span className="hidden sm:inline">{liveRun ? 'Runs' : 'Test panel'}</span>
                 </Button>
               </div>
               <div className="tools-canvas-row">
@@ -934,8 +937,7 @@ export function ToolEditor({
             `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : liveSave ? "Save to preserve changes" : "Changes reset on reload"}`}
         </span>
         <span className="hidden sm:inline">
-          {issues.length ? "Needs attention" : "Definition valid"} · No live
-          execution
+          {issues.length ? "Needs attention" : "Definition valid"} · {liveRun ? 'Published runs via ToolGate' : 'No live execution'}
         </span>
       </footer>
       <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved ToolGate draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />

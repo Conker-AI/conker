@@ -31,6 +31,7 @@ statements that browser access, routing, memory ranking or startup docs are pend
 | Privacy/permissions | Private turn trn_78e5f65542e84dce admitted no messages; operation-bound password checks; expired tool approvals refused; narrowly scoped echo approval/execution verified then grant removed |
 | Failure behavior | Real stopped-Laya test: automatic routing failed, manual Qwen succeeded with both memory records and visible fallback |
 | Persistence/startup | Local isolated persistent state and source launcher; Pi/gateway/Laya restarts preserve conversations/configuration; docs/local-windows-startup.md |
+| Workflow editor execution | Browser draft revision 2 published; explicit scoped grant, Inbox approval, same-action resume and real echo result verified; temporary grant removed. See tool-workspace-live-contract.md for receipts and remaining nested/branch/focus checks |
 | Remaining integration limits | Many accepted frontend features remain preview-only; live chat is narrower than the complete fixture UI. No vector embeddings, multimodal ingestion, production-quality local answer model, or Ubuntu deployment |
 
 The Laya/routing/memory journeys now have real end-to-end evidence. This does not
