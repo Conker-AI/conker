@@ -73,7 +73,12 @@ export function validateToolDefinition(value: unknown, live = false): Validation
   if (roots.length !== 1) add("nodes", "Use exactly one Input node.")
   if (!d.nodes.some(n => n.type === "return")) add("nodes", "Add a Return node.")
   for (const node of d.nodes) {
-    const schema = live && node.type === 'tool_call' ? z.object({ tool: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), args: z.record(z.string(), json) }).strict() : configs[node.type]
+    const registeredId = z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/)
+    const schema = live && node.type === 'tool_call'
+      ? z.object({ tool: registeredId, args: z.record(z.string(), json) }).strict()
+      : live && node.type === 'workflow_call'
+        ? z.object({ toolId: registeredId, version: z.number().int().min(1), args: z.record(z.string(), json) }).strict()
+        : configs[node.type]
     const result = schema.safeParse(node.config)
     if (!result.success) result.error.issues.forEach(issue => add(`nodes.${node.id}.config.${issue.path.join(".")}`, issue.message, node.id))
     const out = d.edges.filter(e => e.source === node.id)

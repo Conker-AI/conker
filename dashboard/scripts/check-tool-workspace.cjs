@@ -19,6 +19,15 @@ async function main() {
   const { createToolWorkspacePreview, executeToolPreview, createToolWorkspaceFixtures } = load('src/lib/api/tool-workspace-preview.ts')
   const { validateToolDefinition, parseToolDraft, parseToolDefinition, createToolNode, createToolDefinition } = load('src/lib/tool-workspace.ts')
   for (const record of createToolWorkspaceFixtures()) assert.deepEqual(validateToolDefinition(record.draft), [], record.id)
+  const nestedLive = createToolDefinition('nested-live', 'Nested live')
+  const nestedNode = createToolNode('workflow_call')
+  nestedNode.config = { toolId: 'conker.daily-brief', version: 2, args: {} }
+  nestedLive.nodes.splice(1, 0, nestedNode)
+  nestedLive.edges = [{ id: 'to-child', source: nestedLive.nodes[0].id, target: nestedNode.id }, { id: 'from-child', source: nestedNode.id, target: nestedLive.nodes[2].id }]
+  assert.deepEqual(validateToolDefinition(nestedLive, true), [], 'Live nested references accept registered dotted identities')
+  assert.ok(validateToolDefinition(nestedLive).length, 'Preview keeps its own identity contract')
+  nestedNode.config.toolId = '../invalid'
+  assert.ok(validateToolDefinition(nestedLive, true).length, 'Live nested references reject invalid registry identities')
   const client = createToolWorkspacePreview()
   let updates = 0
   const unsubscribe = client.subscribe(() => updates++)
