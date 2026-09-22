@@ -11,6 +11,7 @@ import { CollectionPanel, CollectionRow, CollectionSection, PageHeader } from '@
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { createToolDefinition, type ToolDefinition } from '@/lib/tool-workspace'
 import type { EditorDraft, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
+import { GatewayCapabilityPicker } from './capability-picker'
 
 export function GatewayToolDrafts({ client }: { client: GatewayEditorDrafts }) {
   const [params, setParams] = useSearchParams(), id = params.get('draft')
@@ -89,7 +90,7 @@ function LiveDraftEditor({ draft, client, save, onBack }: { draft: EditorDraft; 
   }
   const published = versions?.some(version => version.revision === draft.revision)
   return <>
-    <ToolEditor record={{ id: draft.id, draft: draft.document, published: [], runs: [] }} records={[]} liveSave={save} livePublish={() => void show()} liveHistory={() => void show()} onBack={onBack} />
+    <ToolEditor record={{ id: draft.id, draft: draft.document, published: [], runs: [] }} records={[]} liveSave={save} livePublish={() => void show()} liveHistory={() => void show()} capabilityPicker={(node, onChange) => <GatewayCapabilityPicker client={client} node={node} onChange={onChange} />} onBack={onBack} />
     <Dialog open={open} onOpenChange={value => { if (!busy) setOpen(value) }}>
       <TaskDialogContent title="Published versions" description={`${draft.document.name} · saved draft revision ${draft.revision}`}>
         <OverlayBody className="space-y-4">

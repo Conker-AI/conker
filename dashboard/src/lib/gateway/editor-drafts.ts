@@ -10,6 +10,9 @@ const page = z.object({ items: z.array(summary).max(100), next_after: identity.n
 const saved = z.object({ id: identity, revision, updated_at: z.string().datetime({ offset: true }), document: z.unknown() })
 const publication = z.object({ draft_id: identity, revision, automation_id: z.string().regex(/^editor-[a-f0-9]{32}$/), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), published_at: z.string().datetime({ offset: true }) })
 const publicationHistory = z.object({ items: z.array(publication.extend({ authorization: z.enum(['auto', 'owner_confirmation']), available: z.boolean() })).max(100) })
+const capability = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), name: z.string().max(160), description: z.string().max(800), version: revision, authorization: z.string().max(40), inputs: z.array(z.object({ name: z.string().max(200), type: z.string().max(40), required: z.boolean(), description: z.string().max(500) })).max(100) })
+const catalogue = z.object({ items: z.array(capability).max(100), next_after: z.string().max(80).nullable() })
+export type EditorCapability = z.infer<typeof capability>
 export type EditorDraft = { id: string; revision: number; updated_at: string; document: ToolDefinition }
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value)
@@ -30,6 +33,9 @@ function record(value: unknown, expectedId: string): EditorDraft {
 }
 export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async capabilities(kind: 'tool' | 'workflow', q = '', after?: string, signal?: AbortSignal) {
+      return parse(catalogue, await auth.request('/api/owner/editor-capabilities', { query: { kind, q, limit: 50, ...(after ? { after } : {}) }, signal }))
+    },
     async list(after?: string, signal?: AbortSignal) {
       if (after && !identity.safeParse(after).success) throw new GatewayError('validation')
       return parse(page, await auth.request('/api/owner/editor-drafts', { query: { limit: 50, ...(after ? { after } : {}) }, signal }))

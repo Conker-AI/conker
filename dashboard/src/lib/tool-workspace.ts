@@ -55,7 +55,7 @@ export function valueMatchesType(value: unknown, type: FieldType): boolean {
   if (type === "object") return value !== null && typeof value === "object" && !Array.isArray(value)
   return typeof value === type && (type !== "number" || Number.isFinite(value))
 }
-export function validateToolDefinition(value: unknown): ValidationIssue[] {
+export function validateToolDefinition(value: unknown, live = false): ValidationIssue[] {
   const parsed = definitionSchema.safeParse(value)
   if (!parsed.success) return parsed.error.issues.map(issue => ({ path: issue.path.join("."), message: issue.message }))
   const d = parsed.data as ToolDefinition
@@ -73,7 +73,8 @@ export function validateToolDefinition(value: unknown): ValidationIssue[] {
   if (roots.length !== 1) add("nodes", "Use exactly one Input node.")
   if (!d.nodes.some(n => n.type === "return")) add("nodes", "Add a Return node.")
   for (const node of d.nodes) {
-    const result = configs[node.type].safeParse(node.config)
+    const schema = live && node.type === 'tool_call' ? z.object({ tool: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), args: z.record(z.string(), json) }).strict() : configs[node.type]
+    const result = schema.safeParse(node.config)
     if (!result.success) result.error.issues.forEach(issue => add(`nodes.${node.id}.config.${issue.path.join(".")}`, issue.message, node.id))
     const out = d.edges.filter(e => e.source === node.id)
     if (node.type === "input" && d.edges.some(e => e.target === node.id)) add("edges", "Input cannot have incoming connections.", node.id)
@@ -90,7 +91,7 @@ export function validateToolDefinition(value: unknown): ValidationIssue[] {
       else if (root === "steps" && (!key || !ids.has(key) || key === node.id)) add("config", `Step reference ${value} must name another existing node.`, node.id)
     }
     Object.values(node.config).forEach(inspectReferences)
-    if (node.type === "tool_call") {
+    if (node.type === "tool_call" && !live) {
       const effect = ["email.send", "files.delete", "reminder.create"].includes(String(node.config.tool)) ? "write" : node.config.tool === "email.draft" ? "prepare" : "read"
       if (effect === "write" && d.effect !== "write" || effect === "prepare" && d.effect === "read") add("effect", `Declared effect must cover ${node.config.tool}: ${effect}.`, node.id)
     }

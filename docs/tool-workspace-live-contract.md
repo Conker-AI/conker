@@ -126,6 +126,27 @@ Browser evidence: published revision 1 of Browser draft acceptance
 reload, and inspected desktop 1440x1000 and phone 390x844 screenshots. No console
 errors or warnings. No agent grant or workflow execution was made by this action.
 
-Remaining: real registered capability selection, explicit execution grants, live
-run controls and journal receipts in the editor. Test remains disabled until that
+Remaining: explicit execution grants, live run controls and journal receipts in
+the editor. Test remains disabled until that
 path is connected; it never substitutes the preview executor.
+
+## Registered capability picker
+
+The live step inspector now searches the real ToolGate registry through an
+owner-only, read-only, paginated metadata endpoint. Tool results expose names,
+descriptions, input requirements and authorization; they exclude executor config,
+vault bindings and input defaults. Workflow results expose the latest available
+immutable publication for each identity, excluding revoked dependencies.
+
+Live validation accepts registered ToolGate identities instead of the preview's
+fixed mock names. Preview validation/execution stays fixture-only. New live tool
+nodes start without a selected capability. Backend catalogue tests passed (2);
+gateway API tests passed (18); dashboard build, focused lint, tool workspace checks,
+TypeScript and import isolation passed.
+
+Browser evidence: searched `echo`, selected `conker.integration-echo`, supplied
+`{"value":"Workflow browser acceptance"}`, and saved Browser draft acceptance as
+revision 2. The selected identity and arguments survived reload. Desktop and phone
+screenshots confirm a readable searchable picker; no console errors or warnings.
+Revision 2 remains unpublished and unexecuted; revision 1 is still the earlier
+two-node publication.

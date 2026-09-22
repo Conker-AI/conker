@@ -236,6 +236,7 @@ export function NodeFields({
   onChange,
   argumentSource,
   onArgumentSourceChange,
+  capabilityPicker,
 }: {
   node: ToolNode;
   definition: ToolDefinition;
@@ -244,6 +245,7 @@ export function NodeFields({
   onChange: (node: ToolNode) => void;
   argumentSource?: string;
   onArgumentSourceChange: (source: string | null) => void;
+  capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
 }) {
   const sources = toolValueSources(definition, node.id, run);
   const config = (key: string, value: JsonValue) =>
@@ -266,7 +268,7 @@ export function NodeFields({
       {node.type === "workflow_call" && (
         <>
           <Field label="Published tool">
-            <Select
+            {capabilityPicker ? capabilityPicker(node, onChange) : <Select
               value={`${node.config.toolId}@${node.config.version}`}
               onValueChange={(v) => {
                 const [toolId, version] = v.split("@");
@@ -294,11 +296,10 @@ export function NodeFields({
                   )),
                 )}
               </SelectContent>
-            </Select>
+            </Select>}
           </Field>
           <p className="text-xs text-muted-foreground">
-            Publish a preview version of another tool first. This call stays
-            pinned to that version.
+            {capabilityPicker ? 'Select a published workflow. This call stays pinned to its selected version.' : 'Publish a preview version of another tool first. This call stays pinned to that version.'}
           </p>
           <JsonEditor
             key={`${node.id}-args`}
@@ -317,12 +318,12 @@ export function NodeFields({
       {node.type === "tool_call" && (
         <>
           <Field label="Tool">
-            <Choice
+            {capabilityPicker ? capabilityPicker(node, onChange) : <Choice
               label="Tool to call"
               value={String(node.config.tool)}
               options={MOCK_CONNECTORS}
               onChange={(v) => config("tool", v)}
-            />
+            />}
           </Field>
           <JsonEditor
             key={`${node.id}-args`}
@@ -335,7 +336,7 @@ export function NodeFields({
                 throw new Error("Arguments must be a JSON object.");
               config("args", v as JsonValue);
             }}
-            hint="Fixture response only. No service is called."
+            hint={capabilityPicker ? 'Arguments are passed to the registered tool when a published workflow runs.' : 'Fixture response only. No service is called.'}
           />
         </>
       )}

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { ToolNode } from '@/lib/tool-workspace';
 import {
   ArrowLeft,
   Check,
@@ -82,6 +83,7 @@ export function ToolEditor({
   liveSave,
   livePublish,
   liveHistory,
+  capabilityPicker,
 }: {
   record: WorkspaceRecord;
   records: WorkspaceRecord[];
@@ -89,6 +91,7 @@ export function ToolEditor({
   liveSave?: (definition: ToolDefinition) => Promise<void>;
   livePublish?: () => void;
   liveHistory?: () => void;
+  capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
 }) {
   const [definition, setDefinition] = useState(
     () => (liveSave ? undefined : drafts.get(record.id)?.definition) ?? record.draft,
@@ -133,7 +136,7 @@ export function ToolEditor({
     sourceDirty = source !== null && source !== serial(definition);
   const hasUnappliedFields = Object.keys(argumentSources).length > 0;
   const pendingEdits = sourceDirty || hasUnappliedFields;
-  const issues = validateToolDefinition(definition),
+  const issues = validateToolDefinition(definition, !!liveSave),
     node = definition.nodes.find((n) => n.id === selected);
   const canvasRun =
     !pendingEdits && testedDefinition === serial(definition) ? run : undefined;
@@ -295,6 +298,7 @@ export function ToolEditor({
       x: (base?.position.x ?? 0) + 260,
       y: (base?.position.y ?? 160) + 150,
     });
+    if (liveSave && type === 'tool_call') next.config.tool = '';
     let edges = definition.edges;
     if (
       base &&
@@ -651,6 +655,7 @@ export function ToolEditor({
               >
                 <OverlayBody>
                   <NodeFields
+                    capabilityPicker={capabilityPicker}
                     key={node.id}
                     node={node}
                     definition={definition}
