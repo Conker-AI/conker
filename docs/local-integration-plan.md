@@ -6,6 +6,18 @@ services, existing privacy/approval boundaries, and the accepted dashboard desig
 
 ## Current acceptance status (22 September)
 
+Scope confirmation: the owner explicitly restored full workflow execution to this
+goal after considering an original-integration-only audit. Continue through real
+binding, publication, execution and browser receipts; draft persistence alone is
+not completion. Keep unfinished broader dashboard capabilities visible and do not
+represent fixture features as connected. No remote push or Ubuntu deployment.
+
+Latest focused audit: 39 Pi decision/model-role/memory-authority/explorer/memory
+tests and four decision-service tests passed. A specialist-memory test fixture
+had omitted retrieval health metadata while expecting `ok`; it now tests missing,
+healthy and unavailable metadata explicitly without changing scope or privacy
+assertions (Pi `c2ce620`).
+
 The chronological notes below retain earlier checkpoints; this table supersedes
 statements that browser access, routing, memory ranking or startup docs are pending.
 
