@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { createGatewayEditorDrafts } from './editor-drafts'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -96,6 +97,7 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    editorDrafts: createGatewayEditorDrafts(auth),
     async tools(signal?: AbortSignal): Promise<ToolInventory> {
       return parse(toolInventory, await auth.request('/api/pi/tools', { signal }))
     },

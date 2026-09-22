@@ -9,7 +9,8 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   let title = 'Confirm gateway operation', target = path
   const details: string[] = []
   const safeId = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null
-  if (path === '/api/control/pi/models/configuration') { title = 'Save model configuration'; target = 'Models and decision roles'; details.push('Changes model eligibility, defaults and routing roles. Provider credentials stay on the server.') }
+  if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(path)) { title = 'Save tool draft'; target = `Draft ${parts[4]}`; details.push('Saves the editor document only. Does not publish, execute or grant access.') }
+  else if (path === '/api/control/pi/models/configuration') { title = 'Save model configuration'; target = 'Models and decision roles'; details.push('Changes model eligibility, defaults and routing roles. Provider credentials stay on the server.') }
   else if (/^\/api\/control\/pi\/sessions\/[A-Za-z0-9_-]+\/settings$/.test(path)) { title = 'Save conversation privacy'; target = `Conversation ${parts[5]}`; details.push('Changes settings for future turns. Existing messages are not erased.') }
   else if (path === '/api/pi/sessions') { title = 'Create a conversation'; target = 'New conversation'; details.push('Creates one persisted conversation.') }
   else if (/^\/api\/pi\/sessions\/.+\/turns$/.test(path)) { title = 'Send a conversation turn'; target = `Conversation ${parts[4]}`; if (typeof body.text === 'string') details.push(`${[...body.text].length.toLocaleString()} characters from your submitted draft.`); details.push('The runtime may call its configured model and tools.') }
@@ -20,7 +21,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     title = path.endsWith('/update') ? 'Update task metadata' : path.endsWith('/transition') ? 'Record task status' : body.archived === false ? 'Restore task tracking' : 'Archive task tracking'
     target = `Task ${parts[4]}`; details.push('Changes tracking only; does not start or stop a turn.')
   } else if (/^\/api\/owner\/requests\/.+\/decision$/.test(path)) { title = 'Submit an owner decision'; target = `Owner request ${parts[4]}`; details.push('Records the decision for this exact owner request.') }
-  if (typeof body.expected_revision === 'number' && Number.isSafeInteger(body.expected_revision)) details.push(`Expected ${path.startsWith('/api/control/') ? 'configuration' : 'task'} revision ${body.expected_revision}.`)
+  if (typeof body.expected_revision === 'number' && Number.isSafeInteger(body.expected_revision)) details.push(`Expected ${path.startsWith('/api/owner/editor-drafts/') ? 'draft' : path.startsWith('/api/control/') ? 'configuration' : 'task'} revision ${body.expected_revision}.`)
   if (typeof body.status === 'string' && /^[a-z_]{1,40}$/.test(body.status)) details.push(`${path.startsWith('/api/owner/') ? 'Owner decision' : 'Owner-reported status'}: ${body.status.replaceAll('_', ' ')}.`)
   if (Array.isArray(body.criteria)) details.push(`${body.criteria.length} completion criteria.`)
   if (Array.isArray(body.run_ids)) details.push(`${body.run_ids.length} existing run links.`)

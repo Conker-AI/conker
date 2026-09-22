@@ -65,7 +65,24 @@ Verified against the running local HTTPS gateway using its trusted local certifi
 save and reuse of its consumed proof both returned 428. This labelled draft is
 retained, unpublished, for the editor integration check.
 
-The frontend workspace adapter, translation layer, publication and execution UI
-remain pending. The current live Tools screen is a scoped inventory, not the
-complete editor. Do not route the preview runner to these saved documents and
-present its receipts as live execution.
+## Live editor draft UI
+
+The Tools inventory now links to `/tools?view=drafts`. This lists owner drafts,
+loads additional pages explicitly, and searches the loaded records. New draft
+creation and Save use the password-verified transport. `/tools?draft=<id>` mounts
+the existing Build/Source/Configure editor, preserving its canvas and mobile step
+list. The live editor does not use the preview draft cache or preview registry
+records. Publication, duplication, deletion and test controls remain disabled.
+
+Browser evidence: changed the description of `local-draft-acceptance`, verified
+the owner password, and reloaded the saved revision 2. Created
+`tool-9b565ddc-6708-41f3-8644-bcba5624fc91` (Browser draft acceptance) through the
+phone-width UI. Inspected desktop 1440x1000 and phone 390x844 screenshots; no browser
+console errors or warnings were reported. Build, focused lint, control/verification
+checks and gateway import isolation passed. The browser retains its existing
+64 KiB request limit; oversized drafts fail visibly before submission.
+
+The translation layer, live connector binding, publication and execution remain
+pending. These drafts cannot yet run; no preview receipts are presented as live
+execution. Conflict errors preserve the unsaved editor state rather than retrying
+an overwrite automatically.

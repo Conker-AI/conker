@@ -498,15 +498,19 @@ function SchemaFields({
     </ReferenceSection>
   );
 }
-export function ToolConfiguration({
-  definition,
-  onChange,
-}: {
-  definition: ToolDefinition;
-  onChange: (definition: ToolDefinition) => void;
-}) {
+type ConfigurationProps = { live?: boolean; definition: ToolDefinition; onChange: (definition: ToolDefinition) => void }
+export function ToolConfiguration(props: ConfigurationProps & { live?: boolean }) {
+  return props.live ? <ConfigurationFields {...props} registryTools={[]} tickets={[]} /> : <PreviewConfiguration {...props} />;
+}
+function PreviewConfiguration(props: ConfigurationProps) {
   const registryTools = useConker((data) => data.tools);
   const tickets = useConker((data) => data.tickets);
+  return <ConfigurationFields {...props} registryTools={registryTools} tickets={tickets} />;
+}
+function ConfigurationFields({ definition, onChange, registryTools, tickets, live }: ConfigurationProps & {
+  registryTools: import("@/lib/api/models").Tool[];
+  tickets: import("@/lib/api/models").Ticket[];
+}) {
   const registryTool =
     registryTools.find((tool) => tool.id === definition.id) ??
     registryTools.find((tool) => tool.name === definition.name);
@@ -620,7 +624,7 @@ export function ToolConfiguration({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Preview metadata only. Publishing here grants no live access.
+            {live ? "Draft metadata only. Saving grants no execution access." : "Preview metadata only. Publishing here grants no live access."}
           </p>
           <Field
             label="Connection references"
@@ -640,9 +644,9 @@ export function ToolConfiguration({
               }
             />
           </Field>
-          <Button variant="link" asChild>
+          {!live && <Button variant="link" asChild>
             <Link to="/settings?tab=connections">Manage connections</Link>
-          </Button>
+          </Button>}
         </ReferenceSection>
         <ReferenceSection title="Execution limits">
           {(
@@ -673,9 +677,7 @@ export function ToolConfiguration({
         </ReferenceSection>
         <ReferenceSection title="Runtime boundary">
           <p className="text-sm text-muted-foreground">
-            ToolGate owns credentials and action policy. Tests use local
-            fixtures. Arbitrary code, real model calls and scheduling are not
-            connected.
+            {live ? "ToolGate stores this draft. Compilation, publication, credential binding and execution remain unavailable." : "ToolGate owns credentials and action policy. Tests use local fixtures. Arbitrary code, real model calls and scheduling are not connected."}
           </p>
         </ReferenceSection>
       </div>

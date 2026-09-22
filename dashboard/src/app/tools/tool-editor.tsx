@@ -79,20 +79,22 @@ export function ToolEditor({
   record,
   records,
   onBack,
+  liveSave,
 }: {
   record: WorkspaceRecord;
   records: WorkspaceRecord[];
   onBack: () => void;
+  liveSave?: (definition: ToolDefinition) => Promise<void>;
 }) {
   const [definition, setDefinition] = useState(
-    () => drafts.get(record.id)?.definition ?? record.draft,
+    () => (liveSave ? undefined : drafts.get(record.id)?.definition) ?? record.draft,
   );
   const [source, setSource] = useState<string | null>(
-    () => drafts.get(record.id)?.source ?? null,
+    () => (liveSave ? undefined : drafts.get(record.id)?.source) ?? null,
   );
   const [argumentSources, setArgumentSources] = useState<
     Record<string, string>
-  >(() => drafts.get(record.id)?.argumentSources ?? {});
+  >(() => (liveSave ? undefined : drafts.get(record.id)?.argumentSources) ?? {});
   const [testedDefinition, setTestedDefinition] = useState<string | null>(null);
   const [mode, setMode] = useState<EditorMode>("build"),
     [selected, setSelected] = useState<string | null>(null);
@@ -118,6 +120,7 @@ export function ToolEditor({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [remove, setRemove] = useState(false);
+  const [leave, setLeave] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null),
     [connectTo, setConnectTo] = useState<string | null>(null),
     [branch, setBranch] = useState("true");
@@ -132,8 +135,8 @@ export function ToolEditor({
     !pendingEdits && testedDefinition === serial(definition) ? run : undefined;
   const stepReceipt = canvasRun?.steps.find((s) => s.nodeId === selected);
   useEffect(() => {
-    drafts.set(record.id, { definition, source, argumentSources });
-  }, [record.id, definition, source, argumentSources]);
+    if (!liveSave) drafts.set(record.id, { definition, source, argumentSources });
+  }, [record.id, definition, source, argumentSources, liveSave]);
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => {
       if (dirty || pendingEdits) event.preventDefault();
@@ -241,8 +244,9 @@ export function ToolEditor({
         throw new Error(
           "Apply or discard pending source and argument changes before saving.",
         );
-      await conkerClient.toolWorkspace.save(definition);
-      setNotice("Draft saved for this preview session.");
+      if (liveSave) await liveSave(definition);
+      else await conkerClient.toolWorkspace.save(definition);
+      setNotice(liveSave ? "Draft saved to ToolGate." : "Draft saved for this preview session.");
     });
   const connect = (connection: Connection) => {
     const from = definition.nodes.find((n) => n.id === connection.source);
@@ -315,6 +319,7 @@ export function ToolEditor({
   };
   const test = () =>
     task(async () => {
+      if (liveSave) throw new Error("Live workflow execution is not connected yet.");
       if (pendingEdits)
         throw new Error(
           "Apply or discard pending source and argument changes before testing.",
@@ -344,7 +349,7 @@ export function ToolEditor({
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${definition.id}.preview.json`;
+    a.download = `${definition.id}.${liveSave ? "draft" : "preview"}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -358,14 +363,15 @@ export function ToolEditor({
           variant="ghost"
           size="icon"
           aria-label="Back to tool library"
-          onClick={onBack}
+          disabled={busy}
+          onClick={() => { if (liveSave && (dirty || pendingEdits)) setLeave(true); else onBack(); }}
         >
           <ArrowLeft />
         </Button>
         <div className="tool-title">
           <strong className="truncate text-sm">{definition.name}</strong>
           <span className="text-xs text-muted-foreground">
-            {dirty ? "Unsaved draft" : "Draft"} · local preview
+            {dirty ? "Unsaved draft" : "Draft"} · {liveSave ? "ToolGate draft" : "local preview"}
           </span>
         </div>
         <Select
@@ -396,7 +402,7 @@ export function ToolEditor({
         <Button
           size="sm"
           disabled={
-            busy || pendingEdits || (version === "draft" && issues.length > 0)
+            !!liveSave || busy || pendingEdits || (version === "draft" && issues.length > 0)
           }
           onClick={() => {
             setPanel("test");
@@ -419,7 +425,7 @@ export function ToolEditor({
           <PopoverContent align="end" className="flex flex-col gap-2">
             <Button
               variant="outline"
-              disabled={busy || pendingEdits || issues.length > 0}
+              disabled={!!liveSave || busy || pendingEdits || issues.length > 0}
               onClick={() =>
                 void task(async () => {
                   if (pendingEdits)
@@ -435,7 +441,7 @@ export function ToolEditor({
               }
             >
               <Check />
-              Publish preview version
+              {liveSave ? "Publishing not connected" : "Publish preview version"}
             </Button>
             <Button
               variant="ghost"
@@ -445,13 +451,13 @@ export function ToolEditor({
               <Download />
               Export definition
             </Button>
-            <Button variant="ghost" onClick={() => setPanel("history")}>
+            <Button variant="ghost" disabled={!!liveSave} onClick={() => setPanel("history")}>
               <History />
               Versions & runs
             </Button>
             <Button
               variant="ghost"
-              disabled={pendingEdits}
+              disabled={!!liveSave || pendingEdits}
               onClick={() =>
                 void task(async () => {
                   const copied = await conkerClient.toolWorkspace.create(
@@ -470,7 +476,7 @@ export function ToolEditor({
               <Copy />
               Duplicate tool
             </Button>
-            <Button variant="ghost" onClick={() => setRemove(true)}>
+            <Button variant="ghost" disabled={!!liveSave} onClick={() => setRemove(true)}>
               <Trash2 />
               Delete preview tool
             </Button>
@@ -485,6 +491,7 @@ export function ToolEditor({
           {expanded ? <Minimize /> : <Maximize />}
         </Button>
       </div>
+      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved drafts persist in ToolGate. Publishing, testing and connector bindings are not connected yet; steps do not execute.</p>}
       {error && (
         <div role="alert" className="tools-feedback text-destructive">
           {error}
@@ -577,6 +584,7 @@ export function ToolEditor({
                   variant="ghost"
                   size="sm"
                   aria-pressed={!!panel}
+                  disabled={!!liveSave}
                   aria-label="Test panel"
                   onClick={() => setPanel(panel ? null : "test")}
                 >
@@ -845,7 +853,7 @@ export function ToolEditor({
         )}
         {mode === "configure" && (
           <div className="tool-config-scroll">
-            <ToolConfiguration definition={definition} onChange={change} />
+            <ToolConfiguration definition={definition} onChange={change} live={!!liveSave} />
           </div>
         )}
       </div>
@@ -913,13 +921,14 @@ export function ToolEditor({
       <footer className="tools-status">
         <span role="status">
           {notice ||
-            `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : "Changes reset on reload"}`}
+            `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : liveSave ? "Save to preserve changes" : "Changes reset on reload"}`}
         </span>
         <span className="hidden sm:inline">
           {issues.length ? "Needs attention" : "Definition valid"} · No live
           execution
         </span>
       </footer>
+      <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved ToolGate draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />
       <ConfirmationDialog
         open={remove}
         onOpenChange={setRemove}

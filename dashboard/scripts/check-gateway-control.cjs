@@ -75,6 +75,19 @@ async function main() {
   await transport.request('/api/control/pi/sessions/ses_one/settings')
   await assert.rejects(transport.request('/api/control/pi/sessions/ses_one/turns'), error => error.kind === 'validation')
   assert.equal(requests, 3)
+  const definition = load('src/lib/tool-workspace.ts').createToolDefinition('draft-one', 'Draft one')
+  result = { id: definition.id, revision: 1, updated_at: '2026-09-22T00:00:00Z', document: definition }
+  const draft = await client.editorDrafts.get(definition.id)
+  assert.equal(calls.pop()[0], '/api/owner/editor-drafts/draft-one')
+  assert.deepEqual(draft.document, definition)
+  await client.editorDrafts.save(definition, 0)
+  assert.equal(calls.pop()[1].body.expected_revision, 0)
+  result.id = 'different'
+  await assert.rejects(client.editorDrafts.get(definition.id), error => error.kind === 'invalid-response')
+  await assert.rejects(client.editorDrafts.get('../vault'), error => error.kind === 'validation')
+  await transport.request('/api/owner/editor-drafts')
+  await transport.request('/api/owner/editor-drafts/draft-one', { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 0, document: definition } })
+  await assert.rejects(transport.request('/api/owner/editor-drafts/draft-one/publish', { method: 'POST', body: {} }), error => error.kind === 'validation')
   console.log('Gateway owner control: bounded memory reads, identity/scope checks, catalogue credential exclusion and route isolation passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

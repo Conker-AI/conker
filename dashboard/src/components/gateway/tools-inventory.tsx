@@ -1,6 +1,6 @@
 import { DetailPanel, OverlayBody } from '@/components/design-system/overlays'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { PageHeader, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
@@ -21,6 +21,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const rows = value?.results.filter(tool => `${tool.name} ${tool.id} ${tool.description}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
   return <main className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title="Available tools" description="Tools currently exposed to Pi by its scoped ToolGate connection." density="compact" /><Button size="sm" variant="outline" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}>Refresh tools</Button></div>
+    <Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Open tool drafts</Link></Button>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking ToolGate…</p>}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'The runtime has no ToolGate connection configured.' : 'ToolGate is unavailable. This does not mean your tool inventory is empty.'}</p>}
@@ -33,6 +34,6 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
         {selected && <OverlayBody><div className="space-y-3"><code className="break-all text-xs">{selected.id}</code><p className="whitespace-pre-wrap break-words text-sm">{selected.description}</p><h3 className="text-sm font-medium">Inputs</h3>{selected.inputs.length ? <dl className="divide-y">{selected.inputs.map((input, index) => <div key={`${input.name}:${index}`} className="space-y-1 py-2 text-sm"><dt className="break-words font-medium">{input.name} · {input.type}{input.required === undefined ? '' : input.required ? ' · required' : ' · optional'}</dt>{input.description && <dd className="break-words text-muted-foreground">{input.description}</dd>}</div>)}</dl> : <p className="text-sm text-muted-foreground">No inputs declared.</p>}</div></OverlayBody>}
       </DetailPanel>
     </>}
-    <p className="text-xs text-muted-foreground">This is the runtime's available-tool list. Registration, workflow editing and permission management are not connected here yet. Availability does not bypass ToolGate's approval rules.</p>
+    <p className="text-xs text-muted-foreground">This is the runtime's available-tool list. Draft editing is available separately. Publication and permission management are not connected here yet. Availability does not bypass ToolGate's approval rules.</p>
   </main>
 }
