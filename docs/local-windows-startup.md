@@ -108,6 +108,12 @@ when a test is finished; unrelated grants are retained.
 
 ### Memory recall evidence
 
+To exercise synthetic nested workflows against the running local ToolGate, run
+`& $conkerPython scripts/check_local_workflow.py`. It creates retained acceptance
+drafts/publications/receipts, temporarily grants only those new workflows and
+revokes their scopes afterward. It runs both branches, a bounded loop, a
+calculation and a same-action replay without invoking external connectors.
+
 The browser-created recall turn `trn_32afa79bf4264ea1` retrieved two admitted
 requirements from a different conversation and passed them through real Laya
 ranking into the answer context. Run the read-only verifier from this repository:

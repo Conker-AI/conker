@@ -1,6 +1,11 @@
 # Connecting the existing tool editor
 
-Inspected 22 September 2026 against the dashboard ToolDefinition and ToolGate V2Automation implementations. This is the remaining integration contract, not a claim that the editor is live.
+Inspected 22 September 2026 against the dashboard ToolDefinition and ToolGate V2Automation implementations.
+
+Current status: live draft save, catalogue binding, immutable publication, explicit
+grants, approval/resume and durable execution receipts are connected and verified.
+The sections below retain the implementation history; their pending statements
+describe those earlier checkpoints. The final checkpoints supersede them.
 
 ## Keep the workspace; translate explicitly
 
@@ -176,5 +181,23 @@ that accessibility issue remains to resolve. No JavaScript exception was reporte
 Focused backend evidence: six editor-run tests cover exact grants, replay,
 approval/resume, absent scopes, lost responses and declared input defaults;
 46 gateway API/verification tests cover the owner and execution channels. Build,
-design check and focused lint pass. Further acceptance still needs nested workflow
-selection/execution and branch/loop journeys, plus the dialog focus fix.
+design check and focused lint pass.
+
+## Nested execution and focus follow-up
+
+`scripts/check_local_workflow.py` runs against the real local ToolGate process.
+It saves and publishes a parent and child, grants their specific scopes, exercises
+both condition branches in the child, a bounded trim loop and multiplication in
+the parent, checks stable replay and history, then removes both temporary grants.
+No external service or model is called. The synthetic records remain inspectable.
+The 22 September run produced `editor_a3d7c5b27f104f6e85012e95b5e82fe9` (true)
+and `editor_db036fe45e394d81887dec13584b0872` (false) under draft
+`check-parent-675a2906dd11`. Both returned trimmed items, cost 6 and the expected
+decision. Chrome loaded their persisted history and expanded the real result.
+The focused editor execution/publication/run suite passed 21 tests.
+
+Live nested-call validation now accepts the same dotted registry identities as
+the capability picker, with regression coverage. Password focus now moves in
+Radix's open-focus phase, after the underlying dialog scope is paused, instead
+of React input autoFocus. Chrome verified focus on the password, cancellation
+without a grant, restored run controls, and no console warnings or errors.
