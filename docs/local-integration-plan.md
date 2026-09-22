@@ -37,6 +37,21 @@ statements that browser access, routing, memory ranking or startup docs are pend
 The Laya/routing/memory journeys now have real end-to-end evidence. This does not
 claim that every dashboard screen or previously planned feature is connected.
 
+### Remaining workflow integration found in completion audit
+
+Editor-run acceptance is complete, including real nested branches/loop/calculation
+and retained browser receipts. However, Pi's `ToolGateClient.tools()` still reads
+only `/v2/agent/tools`, and `invoke()` dispatches only individual tools. Therefore
+the companion cannot yet discover and invoke a published editor workflow as one
+capability. This is required by the owner's workflow request and keeps the goal open.
+
+Next implementation must expose safe, scoped, available published-workflow metadata;
+pin the selected publication across approval/resume; dispatch through the existing
+automation journal without owner credentials; adapt completed/failed automation
+receipts; preserve existing individual tool behavior. Verify a companion turn can
+select a workflow, pause for Inbox review, resume the same action, and narrate its
+real result. Do not treat the editor's successful run as proof of that chat path.
+
 ## Sequence
 
 1. Inventory existing runtime/gateway/frontend contracts and local resources.
