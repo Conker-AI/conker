@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+deployment=${CONKER_DEPLOY_DIR:-"$HOME/conker-deploy"}
+usage() {
+    printf '%s\n' 'Usage: conker status | conker auth <command>' \
+        'Auth: setup, reset-password, revoke-all, certificate, renew-certificate, health' \
+        'Password commands prompt privately in your terminal.'
+}
+
+case "${1:-help}" in
+    help|-h|--help) usage; exit 0 ;;
+    status)
+        shift
+        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        exec docker compose --project-directory "$deployment" -f "$deployment/compose.json" ps
+        ;;
+    auth)
+        shift
+        case "${1:-}" in
+            setup|reset-password|revoke-all|certificate|renew-certificate|health) ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        [ -f "$deployment/compose.json" ] || { printf '%s\n' "Deployment not found: $deployment" >&2; exit 1; }
+        exec docker compose --project-directory "$deployment" -f "$deployment/compose.json" \
+            run --rm --no-deps gateway python -m gateway "$@"
+        ;;
+    *) usage >&2; exit 2 ;;
+esac

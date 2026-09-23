@@ -40,6 +40,20 @@ sudo password prompts do not restrict a member's Docker authority.
 
 ## Operations
 
+Install this deployment's launcher, preserving any existing command first:
+
+```sh
+mkdir -p ~/.local/bin
+# If ~/.local/bin/conker exists, save it under your private recovery directory first.
+install -m 755 ~/conker-deploy/sources/companion/deploy/ubuntu/conker ~/.local/bin/conker
+conker status
+conker auth reset-password
+```
+
+The launcher targets `~/conker-deploy` (override with `CONKER_DEPLOY_DIR`). Password
+reset prompts privately and uses the same persistent auth database as the gateway.
+It does not depend on Hermes. Direct Compose equivalents:
+
 ```sh
 cd ~/conker-deploy
 docker compose -f compose.json ps
