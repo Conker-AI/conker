@@ -12,19 +12,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main():
-    config = json.loads((ROOT / '.local-run/configuration.json').read_text())
-    gateway = config['environments']['gateway']
-    headers = {'Content-Type': 'application/json',
-               'X-ToolGate-Owner-Key': gateway['GATEWAY_TOOLGATE_OWNER_KEY'],
-               'X-ToolGate-Execution-Key': config['environments']['pi']['PI_TOOLGATE_KEY']}
-
-    def request(path, body=None):
-        req = urllib.request.Request('http://127.0.0.1:8010/v2/owner/editor-drafts/' + path,
-            headers=headers, data=None if body is None else json.dumps(body).encode())
-        with urllib.request.urlopen(req, timeout=15) as response:
-            return json.load(response)
-
+def run(request):
     def node(identity, kind, content):
         return {'id': identity, 'type': kind, 'label': identity,
                 'position': {'x': 0, 'y': 0}, 'config': content}
@@ -90,6 +78,22 @@ def main():
     print(json.dumps({'parent_draft': parent_id, 'child_draft': child_id,
         'outcomes': outcomes, 'loop_and_calculation': 'verified', 'replay': 'verified',
         'temporary_grants_removed': True}, indent=2))
+
+
+def main():
+    config = json.loads((ROOT / '.local-run/configuration.json').read_text())
+    gateway = config['environments']['gateway']
+    headers = {'Content-Type': 'application/json',
+               'X-ToolGate-Owner-Key': gateway['GATEWAY_TOOLGATE_OWNER_KEY'],
+               'X-ToolGate-Execution-Key': config['environments']['pi']['PI_TOOLGATE_KEY']}
+
+    def request(path, body=None):
+        req = urllib.request.Request('http://127.0.0.1:8010/v2/owner/editor-drafts/' + path,
+            headers=headers, data=None if body is None else json.dumps(body).encode())
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return json.load(response)
+
+    run(request)
 
 
 if __name__ == '__main__':

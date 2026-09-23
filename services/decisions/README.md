@@ -55,7 +55,7 @@ precedence. The routing role's explicit fallback is used for unavailable,
 oversize, busy or low-confidence requests. `PI_DECISION_MIN_CONFIDENCE` defaults
 to 0.2; passing it does not prove a classification is right.
 
-Memory reranking is separately opt-in with `PI_MEMORY_RERANK_ENABLED=true`.
+Memory reranking is separately opt-in through the `memory-ranking` model role.
 It runs after scoped retrieval, preserves every original record and its evidence,
 and only changes ordering. Its inputs are marked 160-character previews.
 No-harness skips it. Failure retains baseline order and a visible receipt.

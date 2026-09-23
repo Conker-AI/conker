@@ -11,7 +11,7 @@
 
 ![Conker Home: requests, recent activity and workspace navigation, using sample data](docs/images/home.png)
 
-**Development status:** an interactive frontend preview and a separate authenticated local stack. Verified local integrations include conversations, memory retrieval with provenance, protected approvals, and published workflow execution from the editor and chat. Calls and several management surfaces remain preview-only. Ubuntu deployment is a separate acceptance stage. See the [project map](docs/conker-project.md) and [local integration evidence](docs/local-integration-plan.md).
+**Development status:** an interactive frontend preview and a separate authenticated local stack. Verified local integrations include conversations, memory retrieval with provenance, protected approvals, and published workflow execution from the editor and chat. Calls and several management surfaces remain preview-only. The connected subset is deployed on Ubuntu; see the [deployment guide](deploy/ubuntu/README.md) and [acceptance record](deploy/ubuntu/acceptance-2026-09-23.md). See the [project map](docs/conker-project.md) and [local integration evidence](docs/local-integration-plan.md).
 
 ## What Conker is for
 

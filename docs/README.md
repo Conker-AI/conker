@@ -8,6 +8,7 @@ Start with the [Conker project map](conker-project.md) for ownership, readiness 
 
 | Guide | Use it for |
 | --- | --- |
+| [Ubuntu deployment](../deploy/ubuntu/README.md) | Isolated source build, private networking, operations and acceptance. |
 | [Dashboard](../dashboard/README.md) | Local frontend setup, actual routes, fixture limits and checks. |
 | [Current state](current-state.md) | Source-verified implementation boundaries and integration gaps. |
 | [Contributing](../CONTRIBUTING.md) | Change scope, verification and repository hygiene. |

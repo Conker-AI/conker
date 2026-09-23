@@ -37,7 +37,7 @@ The dashboard is the common control surface; services remain execution and stora
 | Workflows | Editor publication, nested execution, approvals and explicit chat invocation verified locally |
 | Calls and character | Interactive frontend; complete realtime voice/vision pipeline remains future integration |
 | System | Several controls and telemetry remain preview-only |
-| Ubuntu | Destination-server acceptance outstanding |
+| Ubuntu | Connected subset deployed and verified; [acceptance and limits](../deploy/ubuntu/acceptance-2026-09-23.md) |
 
 ## Shared delivery
 
