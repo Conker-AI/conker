@@ -78,9 +78,10 @@ Resetting the owner password revokes previous browser sessions. Keep the initial
 password file private and remove it after setting a personal passphrase.
 Do not print `.env` files, full Docker inspection output or credentials into tickets.
 
-Logs are rotated. Cleanup is limited to disposable package caches and explicitly
-identified deployment artifacts; old applications, volumes and model stores are
-preserved. Roll back host binding changes with the recorded systemd configuration,
+Logs are rotated. The dedicated server's audited legacy AgentGate and FreeLLMAPI
+workloads have been retired, with private data archives under `recovery`.
+OS services, Docker, Tailscale, SSH and remote development access are retained.
+Roll back host binding changes with the recorded systemd configuration,
 and remove only the new Tailscale Serve port if reverting this deployment.
 
 For a consistent cold backup, stop this Compose project, archive `state` and
@@ -89,3 +90,30 @@ For a consistent cold backup, stop this Compose project, archive `state` and
 checkpoint revisions are retained. Verify the archive digest. A restore must remain
 isolated until gateway sessions are revoked; a valid archive alone is not a tested
 restore. Keep an off-machine copy before relying on this server for irreplaceable data.
+
+### Dedicated-server cleanup, 23 September 2026
+
+`retire_freellmapi.py` archives and verifies FreeLLMAPI's volume before removing its
+container, volume and image. It also removes the exact obsolete AgentGate backup
+cron entry and archives old Hermes state, backup files and development scripts.
+The old AgentGate review virtual environment was archived separately. Six unused
+legacy Docker networks and an empty old SystemGate backup directory were removed.
+Only the ten Conker application containers remain. Gateway health, MemoryGate's
+Postgres/Qdrant/embedding checks, semantic retrieval and Laya ranking passed after
+cleanup. No application credentials are recorded in this repository.
+
+**Firewall follow-up requires interactive sudo:** the existing LAN SSH exception
+must be removed before claiming Tailscale-only inbound application access:
+
+```sh
+sudo ufw delete allow from 192.168.1.0/24 to any port 22 proto tcp
+sudo ufw status verbose
+```
+
+Keep the existing `tailscale0` IPv4/IPv6 allow rules and default inbound deny.
+After applying, verify a fresh Tailscale SSH connection and HTTPS on port 8443,
+then verify that a LAN connection to port 22 fails. Conker's Docker gateway is
+published only on loopback; do not publish backend ports on all interfaces.
+Tailscale transport traffic itself remains necessary. The firewall change was
+prepared but not applied by the cleanup script because sudo requires the owner's
+password.
