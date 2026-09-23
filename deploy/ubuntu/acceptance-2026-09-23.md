@@ -55,3 +55,16 @@ visibility does not imply full host control.
 The initial owner password is stored privately on the host and in the owner's
 ignored local deployment folder. Set a personal passphrase and remove those initial
 password copies. The source guide contains the host reset command.
+
+## Subsequent legacy retirement
+
+At the owner's request, the obsolete AgentGate deployment was retired after the
+initial installation. Fourteen inspected legacy containers and their private volumes
+were removed after stopped-state archives were verified. The Pi adapter's writable
+state was copied separately. Old source checkouts and systemd definitions were moved
+into the private recovery folder, and obsolete image references were removed without
+force. The old Tailscale HTTPS port 443 route was removed; Conker remains on 8443.
+
+FreeLLMAPI was preserved pending confirmation that no other project uses it.
+The request to make a machine Tailscale-only is pending clarification of whether the
+owner means Ubuntu, Windows, or both. No LAN firewall exclusion is claimed yet.
