@@ -40,6 +40,10 @@ async function rejects(promise, kind, status) {
   await assert.rejects(promise, error => error instanceof GatewayError && error.kind === kind && (status === undefined || error.status === status))
 }
 async function main() {
+  const shortLogin = fixture([json(wire()), json(wire(true, 'b'))])
+  assert.equal((await shortLogin.client.login('1234')).authenticated, true)
+  assert.equal(JSON.parse(shortLogin.calls[1].options.body).password, '1234')
+  console.log('PASS existing short host credentials reach server authentication unchanged')
   for (const invalid of ['', 'http://localhost:5173', `${origin}/`, `${origin}/api`, 'https://me:secret@conker.example', `${origin}?q=1`]) {
     assert.throws(() => createGatewayTransport({ origin: invalid }), error => error.kind === 'configuration')
   }

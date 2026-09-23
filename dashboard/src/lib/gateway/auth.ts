@@ -60,7 +60,8 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
     revalidate(): Promise<GatewaySession> { return serial(readSession) },
     login(password: string): Promise<GatewaySession> {
       return serial(async () => {
-        if (typeof password !== 'string' || [...password].length < 15 || [...password].length > 1024) throw new GatewayError('validation')
+        // Password creation policy belongs to the host; authenticate existing credentials unchanged.
+        if (typeof password !== 'string' || !password.length || [...password].length > 1024) throw new GatewayError('validation')
         if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) await readSession()
         if (session!.setupRequired) throw new GatewayError('validation')
         if (session!.authenticated) return publicSession()!

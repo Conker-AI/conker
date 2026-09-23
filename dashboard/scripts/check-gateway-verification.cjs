@@ -44,6 +44,12 @@ async function prompt(f, body = { text: 'Private draft never shown in the verifi
   return { result }
 }
 async function main() {
+  const short = fixture(); await short.client.bootstrap()
+  const shortRequest = await prompt(short)
+  assert.equal(await short.verification.getState().submit('1234'), true)
+  assert.ok((await shortRequest.result).value)
+  assert.equal(short.calls.find(call => call.path === '/auth/verify').body.password, '1234')
+  console.log('PASS existing short credentials reach server verification unchanged')
   let f = fixture(); await f.store.getState().bootstrap()
   let resets = 0
   bindGatewayWorkspaceReset(f.store, [{ getState: () => ({ reset: () => { resets++ } }) }])

@@ -47,7 +47,7 @@ export function createGatewayVerificationStore() {
     submit: async password => {
       const challenge = current
       if (!challenge || store.getState().pending) return false
-      if (typeof password !== 'string' || [...password].length < 15 || [...password].length > 1024) { store.setState({ error: new GatewayError('validation') }); return false }
+      if (typeof password !== 'string' || !password.length || [...password].length > 1024) { store.setState({ error: new GatewayError('validation') }); return false }
       store.setState({ pending: true, error: null })
       try {
         const token = await challenge.verify(password, challenge.controller.signal)
