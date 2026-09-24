@@ -15,8 +15,10 @@ async function main() {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'conker-workspace-'))
   try {
     const output = path.join(temporary, 'workspace.cjs')
-    await build({ stdin: { contents: 'export {useConversationWorkspace} from "./src/lib/conversation-workspace"; export {useConkerStore} from "./src/lib/api/store"; export {conkerClient} from "./src/lib/api"; export {prepareAttachments, attachmentPreview} from "./src/lib/conversation-attachments";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
-    const { useConversationWorkspace: workspace, useConkerStore: store, conkerClient: client, prepareAttachments, attachmentPreview } = require(output)
+    await build({ stdin: { contents: 'export {useConversationWorkspace} from "./src/lib/conversation-workspace"; export {useConkerStore} from "./src/lib/api/store"; export {conkerClient, installConkerClient} from "./src/lib/api"; export {createFixtureClient} from "./src/lib/api/fixture-adapter"; export {prepareAttachments, attachmentPreview} from "./src/lib/conversation-attachments";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
+    const bundle = require(output)
+    bundle.installConkerClient(bundle.createFixtureClient())
+    const { useConversationWorkspace: workspace, useConkerStore: store, conkerClient: client, prepareAttachments, attachmentPreview } = bundle
     const originalSend = client.sendMessage
     const originalStream = client.streamReply
     const originalSteer = client.steerConversation

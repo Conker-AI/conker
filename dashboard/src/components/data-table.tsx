@@ -29,9 +29,9 @@ import { CollectionSearch, CollectionEmpty } from "@/components/design-system/pr
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { DataTableViewOptions } from "@/app/tasks/components/data-table-view-options"
-import { DataTableFacetedFilter } from "@/app/tasks/components/data-table-faceted-filter"
-import { DataTablePagination } from "@/app/tasks/components/data-table-pagination"
+import { DataTableViewOptions } from "@/components/table/data-table-view-options"
+import { DataTableFacetedFilter } from "@/components/table/data-table-faceted-filter"
+import { DataTablePagination } from "@/components/table/data-table-pagination"
 
 export interface DataTableFilter {
   column: string

@@ -10,8 +10,10 @@ async function main() {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'conker-preferences-'))
   try {
     const output = path.join(temporary, 'preferences.cjs')
-    await build({ stdin: { contents: 'export {useOwnerPreferences} from "./src/lib/owner-preferences-workspace"; export {conkerClient} from "./src/lib/api"; export {createFixtureClient} from "./src/lib/api/fixture-adapter";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
-    const { useOwnerPreferences: workspace, conkerClient: client, createFixtureClient } = require(output)
+    await build({ stdin: { contents: 'export {useOwnerPreferences} from "./src/lib/owner-preferences-workspace"; export {conkerClient, installConkerClient} from "./src/lib/api"; export {createFixtureClient} from "./src/lib/api/fixture-adapter";', resolveDir: root }, outfile: output, bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': '{}' }, tsconfig: path.join(root, 'tsconfig.app.json'), logLevel: 'silent' })
+    const bundle = require(output)
+    bundle.installConkerClient(bundle.createFixtureClient())
+    const { useOwnerPreferences: workspace, conkerClient: client, createFixtureClient } = bundle
     const original = await client.ownerPreferences.load(), snapshot = await client.load()
     const valid = { ...original, quietHours: { ...original.quietHours, start: '23:00', end: '06:30', timeZone: '  UTC  ' }, dailyBudget: { suggestions: 0, researchMinutes: 0, costCents: 0 }, idleTimeoutMinutes: 5 }
     const saved = await client.ownerPreferences.save(valid)

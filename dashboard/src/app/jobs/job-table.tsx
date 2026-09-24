@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { DataTable } from "@/components/data-table"
 import { RecordItem } from "@/components/design-system"
 import { Badge } from "@/components/ui/badge"
-import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
+import { DataTableColumnHeader } from "@/components/table/data-table-column-header"
 import { JobActions, type JobControls } from "./row-actions"
 import type { Job } from "@/lib/api/models"
 

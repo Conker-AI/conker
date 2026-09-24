@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { AgentIdentityPortrait } from "@/components/design-system"
 
 import { StatusBadge } from "@/components/status-badge"
-import { DataTableColumnHeader } from "@/app/tasks/components/data-table-column-header"
+import { DataTableColumnHeader } from "@/components/table/data-table-column-header"
 import type { Agent } from "@/lib/api/models"
 
 export const agentColumns = (open: (agent: Agent) => void): ColumnDef<Agent>[] => [

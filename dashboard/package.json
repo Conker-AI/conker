@@ -35,14 +35,10 @@
     "check:chat-workspace": "node scripts/check-chat-workspace.cjs",
     "check:voice": "node scripts/check-voice.cjs",
     "check:theme": "node scripts/check-theme.cjs",
-    "check:calls": "node scripts/check-calls.cjs"
+    "check:calls": "node scripts/check-calls.cjs",
+    "check": "node scripts/run-checks.mjs"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/modifiers": "^9.0.0",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -67,11 +63,9 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-table": "^8.21.3",
     "@xyflow/react": "^12.11.6",
-    "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
     "katex": "^0.18.7",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.562.0",
