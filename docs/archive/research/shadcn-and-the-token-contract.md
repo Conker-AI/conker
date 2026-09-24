@@ -150,7 +150,7 @@ function Button({ className, variant = "default", size = "default", asChild = fa
 
 shadcn is a **code distribution platform**, not a dependency. `shadcn add` writes source into the
 repo; there is no runtime package to upgrade and no version skew. That is the same reasoning
-[ADR-0003](../adr/0003-the-gates-go-headless.md) used to put the design system in this repository.
+[ADR-0003](../../adr/0003-the-gates-go-headless.md) used to put the design system in this repository.
 
 A `components.json` can point at more than the default registry:
 
@@ -195,7 +195,7 @@ the same abstraction either way, which is precisely why it is safe to revisit wh
 `1.0.0` final. Betting a system meant to outlive its author on an RC that has not moved in eight
 weeks is the trade this project has consistently declined.
 
-Resolved by [ADR-0009](../adr/0009-radix-primitives-for-now.md): Radix.
+Resolved by [ADR-0009](../../adr/0009-radix-primitives-for-now.md): Radix.
 
 ---
 
@@ -213,7 +213,7 @@ Resolved by [ADR-0009](../adr/0009-radix-primitives-for-now.md): Radix.
 
 ## 7. Implementation check — 2026-09-11
 
-The foundation now lives in [`design-system/`](../../design-system/README.md).
+The foundation now lives in [`design-system/`](../../../design-system/README.md).
 Three details needed correction when using CLI 4.21.0 and the actual registry:
 
 - The custom status vocabulary above previously listed five transport-style

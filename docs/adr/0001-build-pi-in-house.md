@@ -51,4 +51,4 @@ approval round-trip works end to end because MCP elicitation is out of the pictu
 **Not the reason.** Hermes's built-in memory and tools were disableable. A from-zero Hermes was
 available and was declined, not impossible. Recorded so this is not reopened on a false premise.
 
-Full findings: [`docs/research/hermes-architecture.md`](../research/hermes-architecture.md).
+Full findings: [`docs/research/hermes-architecture.md`](../archive/research/hermes-architecture.md).

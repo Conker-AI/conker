@@ -1,7 +1,7 @@
 # Architecture
 
-How Conker is shaped. **Why** each choice was made lives in [`adr/`](adr/); this document describes
-the system that resulted. Vocabulary is defined in [`../CONTEXT.md`](../CONTEXT.md). Build order is
+How Conker is shaped. **Why** each choice was made lives in [`adr/`](../adr/); this document describes
+the system that resulted. Vocabulary is defined in [`../CONTEXT.md`](CONTEXT.md). Build order is
 in [`roadmap.md`](roadmap.md).
 
 **Reading this document:** this is the architectural design, including intended
@@ -149,7 +149,7 @@ budget. Its output is proposals. It executes nothing.
 
 ## 4. What Conker may do without asking
 
-Configured by the owner, per action class. See [ADR-0006](adr/0006-autonomy-is-a-configurable-policy.md).
+Configured by the owner, per action class. See [ADR-0006](../adr/0006-autonomy-is-a-configurable-policy.md).
 
 | Class | Default |
 |---|---|
@@ -184,12 +184,12 @@ so each stays independently forkable and runnable.
 > than a rule with one exception in it. The installer treats all five identically as a result.
 
 Two further things the installer settled, both visible in
-[`docker-compose.yml`](../docker-compose.yml):
+[`docker-compose.yml`](../../docker-compose.yml):
 
 - **One Ollama, shared.** Pi thinks with it and Embeddings vectorises with it. The gates' own
   compose files each ran their own, which downloads and stores every model twice for no benefit.
 - **The compose file is committed, not generated.** The installer writes `.env` and nothing else;
-  versions live in [`versions.env`](../versions.env) and resolve into the compose file. Pinning is
+  versions live in [`versions.env`](../../versions.env) and resolve into the compose file. Pinning is
   therefore one legible diff rather than a file that only exists after a script has run — and what
   a stranger reads in the repository is exactly what runs.
 

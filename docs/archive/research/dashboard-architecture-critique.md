@@ -143,7 +143,7 @@ The switching motion deserves more care than any decorative animation:
 - Do not reorder contacts beneath the pointer whenever an agent emits an event.
 - Reserve attention badges for owner-relevant decisions, not internal agent chatter.
 
-The current [fixture chat](C:/Users/The1a/dev/companion/dashboard/src/pages/chat.tsx) clears drafts and local messages on session changes. That is reasonable scaffolding, but it is precisely the behavior the messenger architecture must replace.
+The current [fixture chat](../../../dashboard/src/app/chat/components/chat.tsx) clears drafts and local messages on session changes. That is reasonable scaffolding, but it is precisely the behavior the messenger architecture must replace.
 
 **3. Put the fixture seam below the application’s data model.**
 

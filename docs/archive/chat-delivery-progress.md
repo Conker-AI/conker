@@ -47,11 +47,11 @@ These are frontend fixtures, not connected AI services.
 
 | View | Evidence |
 | --- | --- |
-| Named-agent activity and reference rail | [Desktop dark](images/chat-milestone/activity-desktop-dark.png) |
-| Rich response | [Desktop light](images/chat-milestone/rich-desktop-light.png) · [Mobile dark](images/chat-milestone/rich-mobile-dark.png) |
-| Expanded table | [Mobile dark](images/chat-milestone/table-mobile-dark.png) |
-| Paused, edited queue | [Mobile dark](images/chat-milestone/queue-mobile-dark.png) |
-| Existing theme with radius override | [Desktop dark](images/chat-milestone/chat-custom-radius-dark.png) |
+| Named-agent activity and reference rail | [Desktop dark](../images/chat-milestone/activity-desktop-dark.png) |
+| Rich response | [Desktop light](../images/chat-milestone/rich-desktop-light.png) · [Mobile dark](../images/chat-milestone/rich-mobile-dark.png) |
+| Expanded table | [Mobile dark](../images/chat-milestone/table-mobile-dark.png) |
+| Paused, edited queue | [Mobile dark](../images/chat-milestone/queue-mobile-dark.png) |
+| Existing theme with radius override | [Desktop dark](../images/chat-milestone/chat-custom-radius-dark.png) |
 
 ## Solid, preview and deferred
 

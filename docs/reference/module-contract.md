@@ -3,7 +3,7 @@
 Every Conker module presents identically from outside. A programmer who has read one finds their
 way around any other in a minute, and **one dashboard renders any module's state without special
 cases** — which is the whole reason this exists. See
-[ADR-0003](adr/0003-the-gates-go-headless.md).
+[ADR-0003](../adr/0003-the-gates-go-headless.md).
 
 Five modules are in scope: **Pi**, **MemoryGate**, **ToolGate**, **SystemGate**, **Embeddings**.
 
@@ -68,7 +68,7 @@ different facts, and merging them is how a dashboard starts lying.
 | Ships | Requirement |
 |---|---|
 | `README.md` | Same sections, same order: what it is · its boundary · run it · configure it · API · status vocabulary |
-| `openapi.json` | **Generated**, never hand-written. This is what a forker swaps against ([ADR-0007](adr/0007-three-swap-contracts.md)). |
+| `openapi.json` | **Generated**, never hand-written. This is what a forker swaps against ([ADR-0007](../adr/0007-three-swap-contracts.md)). |
 | `docker-compose.yml` | Runs standalone for development, composes into the whole for real use. |
 | `CHANGELOG.md` | Honest versioning, so replacing a module has visible consequences. |
 | `.gitattributes` | `* text=auto eol=lf`. These run on Linux; a CRLF in an entrypoint is a "bad interpreter" failure nothing on Windows surfaces. |

@@ -5,7 +5,7 @@ responsible for. [`architecture.md`](architecture.md) §6 names the nine screens
 detail.
 
 **Status: proposed.** Nothing here is settled until it is argued over. The permission model in §1 is
-a proposed change to [ADR-0006](adr/0006-autonomy-is-a-configurable-policy.md) and needs its own ADR
+a proposed change to [ADR-0006](../adr/0006-autonomy-is-a-configurable-policy.md) and needs its own ADR
 before anything is built on it.
 
 Only a slice ships in C1 — see [`roadmap.md`](roadmap.md). The whole map exists now because
@@ -52,7 +52,7 @@ just never said which tool sat where, so in practice everything asked.
 
 Every shipped product surveyed offers one: Higgsfield has *Always allow*, Cofounder has *Decide
 all*. They exist because approve-fatigue is real, and they are why
-[ADR-0006](adr/0006-autonomy-is-a-configurable-policy.md) forbids them — a boundary that gets
+[ADR-0006](../adr/0006-autonomy-is-a-configurable-policy.md) forbids them — a boundary that gets
 clicked away has stopped being a boundary.
 
 Two rates give the honest version of the same relief. When a class of action asks too often, the

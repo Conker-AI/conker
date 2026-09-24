@@ -27,7 +27,7 @@ Activity run inspectors link to exact input, intermediate, tool-result and final
 - A request identity prevents duplicate turn dispatch, not every possible external effect. Existing ToolGate action reconciliation remains necessary.
 - Resume and manual fork do not yet have request identities. The live UI does not claim retry-safe controls for them.
 - Unsent drafts remain in the open workspace. Ordinary unsent text is not yet persisted across reload; reserved preparation input is durable on Pi.
-- Task-to-turn binding and explicit live task dispatch are connected; see [live-task-dispatch.md](live-task-dispatch.md). Full specialist/team integration remains outstanding.
+- Task-to-turn binding and explicit live task dispatch are connected; see [live-task-dispatch.md](../archive/live-task-dispatch.md). Full specialist/team integration remains outstanding.
 - Streaming, steering, cancellation, owner decision UI, durable full-shell features and deployment acceptance remain separate launch work.
 
 ## Verification

@@ -16,7 +16,7 @@ hardcodes actor `local-mcp` (default name `"Pi MCP"`), exposes every active tool
 scope do not.
 
 Three further defects were found in the gates, documented in
-[`docs/research/gate-surfaces.md`](../research/gate-surfaces.md).
+[`docs/research/gate-surfaces.md`](../archive/research/gate-surfaces.md).
 
 ## Decision
 

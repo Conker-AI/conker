@@ -4,7 +4,7 @@ This guide describes the B4 browser-authentication boundary. **September 19, 202
 status:** `versions.env` now pins Pi 0.4.0, and the reviewed Pi source includes the
 gateway package. ToolGate's dedicated owner channel remains an integration
 dependency. This source review did not verify published images or a deployed
-approval round trip. See [current state](current-state.md).
+approval round trip. See [current state](../archive/current-state.md).
 
 The browser connects to a separate HTTPS gateway. The Pi execution worker has
 neither the owner's ToolGate approval credential nor access to the gateway volume.

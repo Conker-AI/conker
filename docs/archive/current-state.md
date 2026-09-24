@@ -25,14 +25,14 @@ The earlier `design-system/` package is a separate foundation/test surface, not 
 | SystemGate | Read-only host and service observations. | Shell, process termination and Docker mutations must not be added to this observation boundary by assumption. |
 | Embeddings | Separate text-to-vector service backed by Ollama. | Model availability and dimension/configuration compatibility must be checked in deployment. |
 
-The independently versioned module pins currently recorded in [`versions.env`](../versions.env) are Pi 0.4.0, ToolGate 0.3.0, MemoryGate 0.3.0, SystemGate 0.2.3 and Embeddings 0.1.2. That file remains authoritative; this table is a dated observation, not an additional pin source.
+The independently versioned module pins currently recorded in [`versions.env`](../../versions.env) are Pi 0.4.0, ToolGate 0.3.0, MemoryGate 0.3.0, SystemGate 0.2.3 and Embeddings 0.1.2. That file remains authoritative; this table is a dated observation, not an additional pin source.
 
 ## Integration work that must not be hidden by the README
 
 1. **Dashboard transport.** Implement and verify the frontend-to-gateway adapter before marking fixture actions live.
 2. **Browser owner approvals.** The gateway expects `GET /v2/owner/requests` and `POST /v2/owner/requests/{id}/decision` with `X-ToolGate-Owner-Key`. The reviewed ToolGate source instead exposes its admin decision route under `/v2/requests/{id}/decision`. Do not pass an admin key to the browser or worker to bypass this gap.
 3. **Pi memory configuration.** Pi supports `PI_MEMORYGATE_URL`, `PI_MEMORYGATE_INGEST_KEY` and `PI_MEMORYGATE_READ_KEY`; Conker's current Pi Compose environment does not wire them. Verify both provisioning and the actual ingestion/retrieval round trip before promising that the assembled stack remembers.
-4. **Recovery.** Restore intentionally enters a held state. Complete deletion replay and external-action reconciliation remain prerequisites to a safe return to service; see [recovery](recovery.md).
+4. **Recovery.** Restore intentionally enters a held state. Complete deletion replay and external-action reconciliation remain prerequisites to a safe return to service; see [recovery](../reference/recovery.md).
 5. **Release verification.** Source inspection and image pins are not proof that the published images, configuration and frontend work together. A release needs a deployment smoke test and boundary checks.
 6. **Licensing.** The root documentation historically declares MIT, but no root `LICENSE` is present. Confirm the intended notice and artwork rights before presenting the repository as a fully packaged public release. Preserve existing third-party notices.
 

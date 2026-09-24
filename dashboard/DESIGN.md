@@ -1,6 +1,6 @@
 # Conker dashboard design system
 
-This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/design-language.md).
+This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.
 
@@ -127,7 +127,7 @@ Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `sr
 
 ## Palette and theming
 
-**The owner's selected shadcnstore template is the shared styling authority.** Read [template-reference.md](../docs/template-reference.md) for the pinned source, component/feature map and narrow Conker adaptations. [color-system.md](../docs/color-system.md) defines the color usage contract. The September 16 instruction supersedes the previous mixed-surface system.
+**The owner's selected shadcnstore template is the shared styling authority.** Read [template-reference.md](../docs/reference/template-reference.md) for the pinned source, component/feature map and narrow Conker adaptations. [color-system.md](../docs/reference/color-system.md) defines the color usage contract. The September 16 instruction supersedes the previous mixed-surface system.
 
 Use the template's semantic pairs directly: background/foreground, card/card-foreground, popover/popover-foreground, primary/primary-foreground, secondary/secondary-foreground, muted/muted-foreground, accent/accent-foreground, and sidebar-specific pairs. Border, input, ring and chart tokens retain their standard meanings. A custom card value must render as that exact color, without an added foreground mix.
 
@@ -276,7 +276,7 @@ Retries are versions of one response, with compact Previous/Next controls beneat
 
 Activity artwork follows supplied state, with a Focus orb and Character media/fallback. Keep padded full artwork, quiet terminal states and motion suppression for reduced motion, hidden/offscreen content and disabled Studio motion. Failed or blocked media playback falls back to the portrait. Announce phase changes, not every token or timer tick. Automatic queue dispatch, streamed updates and completion preserve manual reading position; only explicit send/jump actions force the thread to the bottom.
 
-Checks: `check:rich-answer`, `check:chat-continuity`, `check:chat-workspace` and `check:activity`, alongside existing conversation/call/voice/theme checks. The scoped delivery evidence and limits live in [chat-delivery-progress.md](../docs/chat-delivery-progress.md).
+Checks: `check:rich-answer`, `check:chat-continuity`, `check:chat-workspace` and `check:activity`, alongside existing conversation/call/voice/theme checks. The scoped delivery evidence and limits live in [chat-delivery-progress.md](../docs/archive/chat-delivery-progress.md).
 
 ## Voice typing
 
@@ -342,7 +342,7 @@ Selecting a graph point, folder-browser record or database record immediately up
 
 The default illustrative dataset contains 50 fictional, read-only records across five categories in `src/lib/memory-demo.ts`. Keep it isolated from the memory store and explicitly labeled as illustrative, not the user's data. Sample records selects the original four claims and preserved source URLs; only that fixture dataset supports create/edit/delete through `ConkerClient`. Source-hash links open the sample dataset. Edits retain original source/text for review, new notes are unreviewed, and fixture changes reset on reload. JSON inspection/export reports the selected dataset with its preview/demo boundary. There is no live vector search, media upload/transcription, physical file editing or production MemoryGate write.
 
-Research and integration boundaries are in [memory-workspace-research.md](../docs/memory-workspace-research.md). The canvas revision was reviewed in desktop dark/light and 390×844 mobile captures, including searchable selection, dock geometry, hierarchy and maximize/restore. The review found stale layout zoom and mobile point occlusion; both were corrected and visually rechecked. Build, design guard, affected lint, memory/layout, navigation and daily-overview checks passed. This verifies the frontend preview, not a production memory connection.
+Research and integration boundaries are in [memory-workspace-research.md](../docs/archive/memory-workspace-research.md). The canvas revision was reviewed in desktop dark/light and 390×844 mobile captures, including searchable selection, dock geometry, hierarchy and maximize/restore. The review found stale layout zoom and mobile point occlusion; both were corrected and visually rechecked. Build, design guard, affected lint, memory/layout, navigation and daily-overview checks passed. This verifies the frontend preview, not a production memory connection.
 
 ## Tools workspace
 
@@ -354,4 +354,4 @@ Selection opens the shared nonmodal `WorkspaceInspector`, composed with `Overlay
 
 Test results and version/run history occupy an optional bottom panel. Only a receipt matching the exact current draft may color steps or supply their output; historical receipts remain inspectable with their earlier-draft/version notice. Source edits canonical JSON. Preserve invalid source and unapplied step arguments until explicit Apply/Discard, with validation beside the task and visible draft feedback. Creation uses `TaskDialogContent` and `FormActions`; deletion uses `ConfirmationDialog`.
 
-Keep local-preview and reload-reset boundaries visible. Fixture tests, credential references and preview publication do not imply external execution, real credentials, live MCP registration or scheduled jobs. The current graph supports bounded transformations and published child calls; arbitrary scripts, general loop bodies, joins, waits, retries, AI nodes and resumable workers remain deferred. [tools-workspace.md](../docs/tools-workspace.md) owns the exact implemented scope and verification record. Check this surface in desktop light/dark and narrow layouts, including inspector and receipt-panel coexistence; use `npm run check:tools` and the shared design/build checks for relevant changes.
+Keep local-preview and reload-reset boundaries visible. Fixture tests, credential references and preview publication do not imply external execution, real credentials, live MCP registration or scheduled jobs. The current graph supports bounded transformations and published child calls; arbitrary scripts, general loop bodies, joins, waits, retries, AI nodes and resumable workers remain deferred. [tools-workspace.md](../docs/archive/tools-workspace.md) owns the exact implemented scope and verification record. Check this surface in desktop light/dark and narrow layouts, including inspector and receipt-panel coexistence; use `npm run check:tools` and the shared design/build checks for relevant changes.

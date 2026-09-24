@@ -2,7 +2,7 @@
 
 The idea, and what already exists.
 
-> **Part 1 is superseded by [`../philosophy.md`](../philosophy.md).**
+> **Part 1 is superseded by [`../philosophy.md`](../../reference/philosophy.md).**
 > It remains here as the origin of the project and is still worth reading as that. But it had holes
 > big enough to build the wrong product through — no accounting for the attention automation costs,
 > no distinction between repetition and waste, no way for memory to be wrong about you and recover,

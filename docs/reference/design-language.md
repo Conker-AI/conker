@@ -1,6 +1,6 @@
 # Conker design language
 
-> Implementation authority (2026-09-13): [dashboard/DESIGN.md](../dashboard/DESIGN.md) and the shared code in `dashboard/src/components/design-system` now define exact component, spacing, type and palette contracts. The owner's accepted Chats collection is the reference for Chats, Inbox and other collections. Earlier Framer-source-of-truth language and approximate dimensions below are historical direction; current shared components and the owner's latest instructions take precedence. Standard validation enforces the design contract and rendered review checks visual results.
+> Implementation authority (2026-09-13): [dashboard/DESIGN.md](../../dashboard/DESIGN.md) and the shared code in `dashboard/src/components/design-system` now define exact component, spacing, type and palette contracts. The owner's accepted Chats collection is the reference for Chats, Inbox and other collections. Earlier Framer-source-of-truth language and approximate dimensions below are historical direction; current shared components and the owner's latest instructions take precedence. Standard validation enforces the design contract and rendered review checks visual results.
 
 The owner's design direction, captured so any agent (Astra included) builds to the same standard.
 This records the product direction behind the implemented shadcn/React dashboard. Exact implementation rules live in dashboard/DESIGN.md.
@@ -38,7 +38,7 @@ on top.** The reference the owner pointed to is **[libraries.dev](https://librar
 
 The owner explicitly selected the shadcnstore dashboard template on September 16 as the authority for shared styling. [template-reference.md](template-reference.md) records the pinned source, feature map and permitted Conker adaptations. Use its direct semantic color variables and real component treatments. The previous custom surface-mixing layer is retired.
 
-Conker keeps its content, features, compact composition, custom appbar/sidebar controls, green default accent and complete photo portraits. Presets/imports retain their exact palette values. [dashboard/DESIGN.md](../dashboard/DESIGN.md) governs density and composition; [color-system.md](color-system.md) governs color use.
+Conker keeps its content, features, compact composition, custom appbar/sidebar controls, green default accent and complete photo portraits. Presets/imports retain their exact palette values. [dashboard/DESIGN.md](../../dashboard/DESIGN.md) governs density and composition; [color-system.md](color-system.md) governs color use.
 
 ## What "get shadcn" means for the build
 
@@ -49,7 +49,7 @@ Conker keeps its content, features, compact composition, custom appbar/sidebar c
 
 ## Screen intents (quick reference)
 
-Interaction placement follows the owner-approved September 16 contract in [dashboard/DESIGN.md](../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16). Focused creation and multi-field edits use centered task dialogs; contextual evidence and history use a right panel; complex configuration stays on dedicated pages. Confirmations name their target and consequences. Save/discard ordering, feedback, responsive record lists, and overlay geometry are shared components, not route-specific decisions. Preserve Conker's current visual identity while making equivalent actions behave consistently.
+Interaction placement follows the owner-approved September 16 contract in [dashboard/DESIGN.md](../../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16). Focused creation and multi-field edits use centered task dialogs; contextual evidence and history use a right panel; complex configuration stays on dedicated pages. Confirmations name their target and consequences. Save/discard ordering, feedback, responsive record lists, and overlay geometry are shared components, not route-specific decisions. Preserve Conker's current visual identity while making equivalent actions behave consistently.
 
 - **Session list / Chats** — productive. Dense outlined list, find-fast.
 - **Inbox list** — productive. Outlined rows, effect badges, glance meta.

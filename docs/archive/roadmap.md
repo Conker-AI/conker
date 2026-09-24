@@ -42,7 +42,7 @@ Nothing else. No proposals, no approvals, no nightly analysis.
    Today they publish source only, so `docker-compose` has nothing to pin. **Nothing is installable
    until this exists.** First line of work, no exceptions.
 
-2. **Security fixes, upstream in the gate repos.** See [ADR-0005](adr/0005-toolgate-is-the-only-action-path.md)
+2. **Security fixes, upstream in the gate repos.** See [ADR-0005](../adr/0005-toolgate-is-the-only-action-path.md)
    and the research in [`research/gate-surfaces.md`](research/gate-surfaces.md).
    - MemoryGate refuses to start with no key configured; CORS stops defaulting to `*`.
    - ToolGate's vault is encrypted at rest.
@@ -53,7 +53,7 @@ Nothing else. No proposals, no approvals, no nightly analysis.
 3. **The embedding service.** New module, sidecar, HTTP interface.
    Default **Qwen3-Embedding-0.6B**; **EmbeddingGemma-300M** as the low-resource preset. MemoryGate
    calls it; the `hash` mode is deleted. Unreachable embedding means `degraded` plus a lexical
-   fallback that says so. See [ADR-0004](adr/0004-multilingual-embeddings-from-a-sidecar.md).
+   fallback that says so. See [ADR-0004](../adr/0004-multilingual-embeddings-from-a-sidecar.md).
    Re-embed now — existing vectors are noise, so the migration is free today and never again.
 
 4. **Pi.** The largest piece.
@@ -74,7 +74,7 @@ These are cheap now and expensive at C4. Everything above inherits them:
 
 - **Append-only history.** Current models bind reasoning to the producing model and reject edited
   history.
-- **Pi owns transcripts; MemoryGate owns evidence.** See [ADR-0002](adr/0002-transcripts-and-evidence.md).
+- **Pi owns transcripts; MemoryGate owns evidence.** See [ADR-0002](../adr/0002-transcripts-and-evidence.md).
 - **Every action goes through ToolGate.** No local shell in Pi, no file access.
 - **Nothing assumes text-only**, or C5 and C6 become rewrites instead of additions.
 
@@ -106,7 +106,7 @@ Autonomy raised to Act-locally and Act-outward with per-capability limits. Tools
 screens. Expanded ToolGate capability.
 
 Conker stops only proposing and starts doing — under a policy the owner set deliberately.
-See [ADR-0006](adr/0006-autonomy-is-a-configurable-policy.md).
+See [ADR-0006](../adr/0006-autonomy-is-a-configurable-policy.md).
 
 ---
 
@@ -125,7 +125,7 @@ Teams, grants, Flows, Loops, Workers, agent-group templates.
 ## C8 — It is in the room
 
 Spatial presence — room sensors, projection, gesture — with the consent and privacy design that
-[`Conker Spatial Presence`](../docs/concept/the-idea.md) already demands.
+[`Conker Spatial Presence`](concept/the-idea.md) already demands.
 
 ---
 

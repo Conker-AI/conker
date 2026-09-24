@@ -1,6 +1,6 @@
 # UI interaction pass — 16 September 2026
 
-The owner approved one consistent interaction system while preserving Conker's current style. The implementation contract is [dashboard/DESIGN.md](../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16), reinforced by dashboard/AGENTS.md. Shared application patterns live in `src/components/design-system`.
+The owner approved one consistent interaction system while preserving Conker's current style. The implementation contract is [dashboard/DESIGN.md](../../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16), reinforced by dashboard/AGENTS.md. Shared application patterns live in `src/components/design-system`.
 
 ## Delivered
 

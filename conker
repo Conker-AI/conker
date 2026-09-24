@@ -153,7 +153,7 @@ cmd_tailscale() {
             say "  Remote browser access also needs HTTPS forwarding to the local gateway."
             say "  Configure its exact HTTPS address as GATEWAY_ORIGIN before signing in."
             say ""
-            info "See docs/browser-auth.md. Joining Tailscale alone does not expose the localhost listener."
+            info "See docs/reference/browser-auth.md. Joining Tailscale alone does not expose the localhost listener."
         else
             say "  Not connected yet. Run:"
             say "     ${BOLD}sudo tailscale up${OFF}"
@@ -163,7 +163,7 @@ cmd_tailscale() {
         say "     ${BOLD}curl -fsSL https://tailscale.com/install.sh | sh${OFF}"
         say "     ${BOLD}sudo tailscale up${OFF}"
         say ""
-        info "Then configure HTTPS forwarding as described in docs/browser-auth.md."
+        info "Then configure HTTPS forwarding as described in docs/reference/browser-auth.md."
     fi
     say ""
     warn "One thing Conker will not do: bind to 0.0.0.0."

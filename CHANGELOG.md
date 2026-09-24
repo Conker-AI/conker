@@ -39,7 +39,7 @@ which module versions a release pins.
   are unchanged. See `docs/recovery.md` for the validation boundary and recovery procedure.
 
 Installer implementation (deployment readiness still requires the checks in
-[`docs/current-state.md`](docs/current-state.md)):
+[`docs/current-state.md`](docs/archive/current-state.md)):
 
 - **`./install.sh`** — checks the machine, asks three questions in plain
   language, generates every secret, writes `.env` at `0600`, pulls pinned

@@ -8,7 +8,7 @@ the most confident secondary claims turned out to be wrong.
 
 The MemoryGate and ToolGate dashboards were built on **React + Vite + TypeScript + Tailwind v4 +
 oxlint**, with `lucide-react` for icons and `react-router-dom`. Those dashboards are being retired
-([ADR-0003](../adr/0003-the-gates-go-headless.md)), but the stack choice is prior art from this
+([ADR-0003](../../adr/0003-the-gates-go-headless.md)), but the stack choice is prior art from this
 project rather than a guess, and nothing found here argues against it.
 
 **Decision: keep that stack.** One frontend toolchain across the project, and no migration cost paid
@@ -59,7 +59,7 @@ puts in front, and far easier for the module contract's CI to exercise.
 ## Design tokens: Tailwind v4 `@theme`, and one trap
 
 Tailwind v4 moved configuration into CSS with `@theme`, and tokens become **real CSS variables** the
-browser and other CSS can read. That fits [ADR-0003](../adr/0003-the-gates-go-headless.md)'s
+browser and other CSS can read. That fits [ADR-0003](../../adr/0003-the-gates-go-headless.md)'s
 requirement that tokens are defined once and consumed everywhere.
 
 > [!WARNING]
@@ -114,7 +114,7 @@ downloads is a very large amount of production traffic keeping its API honest.
 **Decision: add no primitive library yet.**
 
 C1's dashboard is one screen. Choosing a primitives library before knowing which primitives are
-needed is exactly the premature dependency [ADR-0008](../adr/0008-supply-chain-policy.md) asks about
+needed is exactly the premature dependency [ADR-0008](../../adr/0008-supply-chain-policy.md) asks about
 — *how much would we write ourselves* (a chat view: very little) and *where does it sit* (under the
 entire UI). Semantic HTML and the design system's tokens cover C1.
 
@@ -138,4 +138,4 @@ package globally and registering `node <path>/dist/index.js` connects immediatel
 
 Still worth adding when their work arrives: **Playwright MCP** at [#31](https://github.com/alexeybe1kin/conker/issues/31),
 and the **mobbin** MCP (already configured) for reference flows. The three-to-five server ceiling in
-[`../agents/toolchain.md`](../agents/toolchain.md) still holds.
+[`../agents/toolchain.md`](../../agents/toolchain.md) still holds.

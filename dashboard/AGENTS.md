@@ -11,4 +11,4 @@ Read [DESIGN.md](DESIGN.md) before changing visible Conker UI. It is the design 
 
 - Follow the interaction-placement rules in DESIGN.md for every new or changed screen. Short creation/configuration uses `TaskDialogContent`; reference uses `DetailPanel`; destructive actions use `ConfirmationDialog`; form footers use `FormActions`. Multi-section editors stay on dedicated pages. Responsive record tables use `DataTable` with `renderItem`/`RecordItem`, preserving one search/filter/sort state. Do not rebuild these patterns locally or turn every action into a drawer.
 
-- The owner's shared styling authority is the pinned shadcnstore template. Read [template-reference.md](../docs/template-reference.md) before changing colors or primitives. Preserve direct theme mappings, valid upstream recipes, Conker's compact composition and custom navigation.
+- The owner's shared styling authority is the pinned shadcnstore template. Read [template-reference.md](../docs/reference/template-reference.md) before changing colors or primitives. Preserve direct theme mappings, valid upstream recipes, Conker's compact composition and custom navigation.

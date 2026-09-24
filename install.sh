@@ -469,7 +469,7 @@ pull_and_start() {
     if ! compose run --rm --no-deps -T gateway python -c 'import gateway.api' 2>"$LOG"; then
         die "The browser gateway preflight failed." \
             "Check Docker with docker info and verify that PI_VERSION includes the B4 gateway." \
-            "For branch review and the release gate, follow docs/browser-auth.md."
+            "For branch review and the release gate, follow docs/reference/browser-auth.md."
     fi
     if ! compose up -d 2>"$LOG"; then
         # A port conflict is the most common way this fails, and Docker reports
@@ -635,7 +635,7 @@ finish() {
     say ""
     say "  ${BOLD}Open:${OFF}  ${BLUE}${url}${OFF}"
     info "First set your browser password on this host: ./conker auth setup"
-    info "Trust this installation's local TLS certificate before signing in; see docs/browser-auth.md."
+    info "Trust this installation's local TLS certificate before signing in; see docs/reference/browser-auth.md."
     info "This release provides the auth API; dashboard screens are a separate checkpoint."
     say ""
     say "  ${BOLD}Your backups are in:${OFF}"

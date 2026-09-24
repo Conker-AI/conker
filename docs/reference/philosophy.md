@@ -2,7 +2,7 @@
 
 What Conker is for, what it must never become, and how to tell whether it is working.
 
-This supersedes Part 1 of [`concept/the-idea.md`](concept/the-idea.md) as the statement of intent.
+This supersedes Part 1 of [`concept/the-idea.md`](../archive/concept/the-idea.md) as the statement of intent.
 That document remains as the origin — this one is what the architecture answers to.
 
 It exists because the original framing had holes big enough to build the wrong product through, and

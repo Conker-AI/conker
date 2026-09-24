@@ -15,11 +15,11 @@ not `../pi`. The source links below resolve in that adjacent-checkout layout;
 they are inspection references, not portable dependencies of this repository.
 
 Conker owns the required network contracts; service implementations own their
-enforcement. The controlling decisions are [ADR-0001](adr/0001-build-pi-in-house.md),
-[ADR-0002](adr/0002-transcripts-and-evidence.md),
-[ADR-0005](adr/0005-toolgate-is-the-only-action-path.md),
-[ADR-0006](adr/0006-autonomy-is-a-configurable-policy.md) and
-[ADR-0007](adr/0007-three-swap-contracts.md). The [module contract](module-contract.md)
+enforcement. The controlling decisions are [ADR-0001](../adr/0001-build-pi-in-house.md),
+[ADR-0002](../adr/0002-transcripts-and-evidence.md),
+[ADR-0005](../adr/0005-toolgate-is-the-only-action-path.md),
+[ADR-0006](../adr/0006-autonomy-is-a-configurable-policy.md) and
+[ADR-0007](../adr/0007-three-swap-contracts.md). The [module contract](../reference/module-contract.md)
 requires generated OpenAPI, truthful health, boundary tests and secure startup.
 The [roadmap](roadmap.md) preserves checkpoint order; its original missing-source
 statements do not override current source inspection.
@@ -39,16 +39,16 @@ statements do not override current source inspection.
 
 Source references:
 
-- [Pi API](../../gates/pi/pi/api.py), [browser allowlist](../../gates/pi/pi/browser_contract.py),
-  [gateway API](../../gates/pi/gateway/api.py) and [generated Pi OpenAPI](../../gates/pi/docs/pi-openapi.json).
-- [Routing](../../gates/pi/pi/routing.py), [provider adapters](../../gates/pi/pi/providers.py),
-  [ToolGate client](../../gates/pi/pi/toolgate.py), [action persistence](../../gates/pi/pi/actions.py)
-  and [session/turn projections](../../gates/pi/pi/store.py).
-- [ToolGate API](../../gates/toolgate/toolgate/api/server.py): scoped tool discovery,
+- [Pi API](../../../gates/pi/pi/api.py), [browser allowlist](../../../gates/pi/pi/browser_contract.py),
+  [gateway API](../../../gates/pi/gateway/api.py) and [generated Pi OpenAPI](../../../gates/pi/docs/pi-openapi.json).
+- [Routing](../../../gates/pi/pi/routing.py), [provider adapters](../../../gates/pi/pi/providers.py),
+  [ToolGate client](../../../gates/pi/pi/toolgate.py), [action persistence](../../../gates/pi/pi/actions.py)
+  and [session/turn projections](../../../gates/pi/pi/store.py).
+- [ToolGate API](../../services/decisions/server.py): scoped tool discovery,
   invocation, action receipts, requests, decisions, events, automations and spending.
-- [Pi memory contract](../../gates/pi/docs/memory.md),
-  [MemoryGate runtime routes](../../gates/memorygate/services/api/app/routes/runtime.py)
-  and [conversation receiver](../../gates/memorygate/services/api/app/services/conversation_memory.py).
+- [Pi memory contract](../../../gates/pi/docs/memory.md),
+  [MemoryGate runtime routes](../../../gates/memorygate/services/api/app/routes/runtime.py)
+  and [conversation receiver](../../../gates/memorygate/services/api/app/services/conversation_memory.py).
 
 ## Memory policy: contradiction and proposed resolution
 
@@ -62,7 +62,7 @@ creates evidence, admission analysis, memory and lineage together. Assistant out
 and tool results are excluded from this particular owner-statement ingestion path.
 
 This is a material policy mismatch, not merely missing frontend wiring. The
-[conversation-memory documentation](../../gates/memorygate/docs/conversation-memory.md)
+[conversation-memory documentation](../../../gates/memorygate/docs/conversation-memory.md)
 describes the behavior honestly, but it does not supersede ADR-0002. Simply enabling
 the existing Compose variables would activate automatic admission; it would not
 deliver an approved-memory workflow.
@@ -93,13 +93,13 @@ authorize a data migration, or imply that these promotion endpoints already exis
 
 ## Deployment dependencies
 
-[Compose](../docker-compose.yml) runs a separate gateway and Pi worker using the
+[Compose](../../docker-compose.yml) runs a separate gateway and Pi worker using the
 same Pi image. The gateway owns its auth/TLS volume and joins a separate owner
 control network; Pi has no published port or owner approval credential. Service
 ports that are published bind to loopback. Qdrant has a separate internal network.
 Loopback access is not an outbound-network policy.
 
-- [Pi's Dockerfile](../../gates/pi/Dockerfile) packages the runtime and gateway,
+- [Pi's Dockerfile](../../services/decisions/Dockerfile) packages the runtime and gateway,
   not the dashboard. Neither inspected API mounts dashboard assets, and umbrella
   Compose has no frontend service. Same-origin frontend asset serving/proxy
   packaging must be implemented and tested alongside the adapter.
@@ -115,19 +115,19 @@ Loopback access is not an outbound-network policy.
   model; hosted routing additionally depends on provider access and policy.
 - HTTPS requires a configured owner password and trusted certificate. Remote
   access requires an explicit HTTPS proxy/origin arrangement; Tailscale membership
-  alone does not expose a loopback-bound service. See [browser auth](browser-auth.md).
-- [versions.env](../versions.env) currently pins Pi 0.4.0, ToolGate 0.3.0,
+  alone does not expose a loopback-bound service. See [browser auth](../reference/browser-auth.md).
+- [versions.env](../../versions.env) currently pins Pi 0.4.0, ToolGate 0.3.0,
   MemoryGate 0.3.0, SystemGate 0.2.3 and Embeddings 0.1.2. Source presence and pins
   do not prove registry artifacts contain these changes or run together.
 - Backup/restore must preserve transcripts, source lineage, gate receipts and
   approval state. Restore remains held until deletion replay and external-action
-  reconciliation are complete; see [recovery](recovery.md).
+  reconciliation are complete; see [recovery](../reference/recovery.md).
 
 One stale service-document warning needs correction during that service's next
 documentation pass: current MemoryGate source preserves bootstrap key revocation,
 scope and rotation, with boundary tests in
-[test_bootstrap_revocation.py](../../gates/memorygate/services/api/tests/test_bootstrap_revocation.py).
-[The helper](../../gates/memorygate/services/api/app/services/auth_settings_service.py)
+[test_bootstrap_revocation.py](../../../gates/memorygate/services/api/tests/test_bootstrap_revocation.py).
+[The helper](../../../gates/memorygate/services/api/app/services/auth_settings_service.py)
 returns existing authority rather than reactivating it. Older memory documentation
 still warns of resurrection. This source fact does not verify the pinned image.
 

@@ -21,12 +21,12 @@ The dashboard is the common control surface; services remain execution and stora
 
 ## Start here
 
-- [Frontend preview](../dashboard/README.md): no backend needed; sample data is explicit.
-- [Connected local stack](local-windows-startup.md): isolated Windows services and stores.
+- [Frontend preview](../../dashboard/README.md): no backend needed; sample data is explicit.
+- [Connected local stack](../reference/local-windows.md): isolated Windows services and stores.
 - [Integration evidence](local-integration-plan.md): checks, receipts and limitations.
-- [Workflow contract](tool-workspace-live-contract.md): publication, access and runs.
-- [Decision service](../services/decisions/README.md): optional CPU Laya and measured limits.
-- [Design contract](../dashboard/DESIGN.md): shared frontend rules.
+- [Workflow contract](../reference/tool-workspace-live-contract.md): publication, access and runs.
+- [Decision service](../../services/decisions/README.md): optional CPU Laya and measured limits.
+- [Design contract](../../dashboard/DESIGN.md): shared frontend rules.
 
 ## Readiness
 
@@ -37,7 +37,7 @@ The dashboard is the common control surface; services remain execution and stora
 | Workflows | Editor publication, nested execution, approvals and explicit chat invocation verified locally |
 | Calls and character | Interactive frontend; complete realtime voice/vision pipeline remains future integration |
 | System | Several controls and telemetry remain preview-only |
-| Ubuntu | Connected subset deployed and verified; [acceptance and limits](../deploy/ubuntu/acceptance-2026-09-23.md) |
+| Ubuntu | Connected subset deployed and verified; [acceptance and limits](../../deploy/ubuntu/acceptance-2026-09-23.md) |
 
 ## Shared delivery
 

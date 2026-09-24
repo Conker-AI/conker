@@ -27,7 +27,7 @@ x-service: &service
 services:
 
   # Browser authority lives in a separate process and volume from the worker.
-  # Release prerequisite: PI_VERSION must contain the gateway package (see docs/browser-auth.md).
+  # Release prerequisite: PI_VERSION must contain the gateway package (see docs/reference/browser-auth.md).
   gateway:
     <<: *service
     image: ghcr.io/alexeybe1kin/pi:${PI_VERSION}

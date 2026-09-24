@@ -6,7 +6,7 @@ Backend containers are not required to explore it, and starting them does not
 connect the preview automatically.
 
 [Product overview and screenshots](../README.md) · [Design contract](DESIGN.md) ·
-[Current integration state](../docs/current-state.md) · [Contributing](../CONTRIBUTING.md)
+[Status](../docs/status.md) · [Contributing](../CONTRIBUTING.md)
 
 ## Run locally
 
@@ -71,11 +71,11 @@ transport; do not scatter direct service calls through UI components.
 - Character authoring and previews are documented in [Character Studio](CHARACTER_STUDIO.md).
   Configuration is not proof that voice cloning, emotion inference or 3D rendering runs.
 
-See the [current-state audit](../docs/current-state.md) for service integration gaps.
+See [status](../docs/status.md) for what is connected.
 
 ## Theme, layout and components
 
-Read [DESIGN.md](DESIGN.md) and the shared [design language](../docs/design-language.md)
+Read [DESIGN.md](DESIGN.md) and the shared [design language](../docs/reference/design-language.md)
 before changing the interface. Preserve semantic color pairs, shared primitives,
 theme fidelity, compact spacing and layouts appropriate to each screen. Strong
 visual priority does not require narrowing every page or giving every region a border.
@@ -115,8 +115,8 @@ in [`../docs/images/`](../docs/images/).
 
 ## Planned work
 
-- [Chat delivery plan](../docs/chat-delivery-plan.md): proposed bounded frontend milestone.
-- [Interaction catalogue](../docs/ai-chat-ui-inventory-2026-09-19.md): researched options, not a commitment to ship every pattern.
-- [Workspace proposal](../docs/workspace-control-plan.md): future flows, teams, memory exploration and owner controls.
+- [Chat delivery plan](../docs/archive/chat-delivery-plan.md): proposed bounded frontend milestone.
+- [Interaction catalogue](../docs/archive/ai-chat-ui-inventory-2026-09-19.md): researched options, not a commitment to ship every pattern.
+- [Workspace proposal](../docs/archive/workspace-control-plan.md): future flows, teams, memory exploration and owner controls.
 
 The template's license is retained in [third-party notices](THIRD_PARTY_LICENSES/shadcn-dashboard-template.txt).

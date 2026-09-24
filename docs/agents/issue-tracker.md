@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues in [`alexeybe1kin/conker`](https://github.com/alexeybe1kin/conker). Use the `gh` CLI for all operations.
+Issues and specs for this repo live as GitHub issues in [`Conker-AI/conker`](https://github.com/Conker-AI/conker). Use the `gh` CLI for all operations.
 
 ## Conventions
 
