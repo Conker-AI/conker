@@ -1,7 +1,7 @@
 # Status
 
 **The one place that says what works.** Update this page in the same change that alters it.
-Last verified: **23 September 2026** (Ubuntu server acceptance).
+Last verified: **23 September 2026** (Ubuntu server acceptance); streaming added 24 September.
 
 **Live** means verified end to end with real services. **Preview** means the UI works with sample
 data. **Planned** means designed, not built.
@@ -24,7 +24,8 @@ data. **Planned** means designed, not built.
 | Agents, Jobs | **Preview** | Need backend contracts |
 | Character Studio | **Preview** | Settings are saved; voice cloning, emotion and 3D are not connected |
 | Calls (voice/video) | **Preview** | Browser mic and camera only; no real-time AI voice |
-| Streaming replies, cancel, full-history search | **Planned** | |
+| Streaming replies | **Built, not deployed** | Answers appear as they are written (Pi, gateway, live chat). Needs the Ubuntu stack rebuilt from current sources |
+| Stop/cancel from chat, full-history search | **Planned** | |
 | Correct or forget a memory from the UI | **Planned** | |
 
 ## Infrastructure
