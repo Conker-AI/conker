@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
+import { followLivePreview } from '@/lib/gateway/live-preview'
 import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, hasActiveRuntimeTurn, recoverSubmissionDraft, resolveAttempt, type GatewayRuntimeWorkspaceState } from './runtime-state'
@@ -40,6 +41,11 @@ export function RuntimeMessageRecord({ message }: { message: RuntimeMessage }) {
       : <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article className="min-w-0 space-y-2" aria-label={`${message.role} message ${message.sequence}`}><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{message.role === 'user' ? 'You' : 'Conker'}</span></div>{body}<GatewayMessageActions key={`${message.id}:${message.content.kind}`} message={message} /></article>
+}
+
+/** The answer as it is being written. Not a saved record: no actions, replaced when the turn ends. */
+function LiveAnswerPreview({ text }: { text: string }) {
+  return <article className="min-w-0 space-y-2" aria-label="Conker is writing" aria-busy="true"><div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">Conker</span><span role="status">Writing…</span></div><RichAnswer text={text} /></article>
 }
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
@@ -72,6 +78,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const createPending = operation === 'create'
   const [taskError, setTaskError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
+  // Display-only text of the answer being written; the saved turn replaces it.
+  const [preview, setPreview] = useState<{ sessionId: string; text: string } | null>(null)
   const mounted = useRef(false)
   const controllers = useRef(new Set<AbortController>())
   const detailGeneration = useRef(0)
@@ -221,6 +229,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'send' }); setDetailError(null); setNotice(null); setTaskError(null)
     let dispatched = false
+    const previewStop = new AbortController()
     try {
       if (prepared) {
         if (!activityClient || workspace.getState().uncertain[id]) throw new Error('Review the previous request before starting task work.')
@@ -235,6 +244,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
       }
       dispatched = true
+      void followLivePreview(requestId, streamed => { if (mounted.current && workspace.getState().epoch === epoch) setPreview({ sessionId: id, text: streamed }) }, { signal: previewStop.signal })
       const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelChoices[id] ? { modelId: modelChoices[id] } : {}) }))
       if (workspace.getState().epoch !== epoch) return
       if (prepared) workspace.setState({ taskIntent: null })
@@ -249,7 +259,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         if (prepared) workspace.setState({ taskIntent: null })
         if (mounted.current) { setReviewed(false); setDetailError('Send outcome unknown. Check the saved request identity before continuing.') }
       }
-    } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
+    } finally {
+      previewStop.abort()
+      if (mounted.current) setPreview(null)
+      if (workspace.getState().epoch === epoch) workspace.setState({ operation: null })
+    }
   }
   async function checkSubmission() {
     if (!selected || !attempt?.requestId || sendPending || detailPending) return
@@ -325,7 +339,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             {detailPending && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length} onRestore={() => { if (!forgottenIds.includes(selected)) workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: recoverSubmissionDraft(attempt, values.drafts[selected] ?? '') } })) }} onCheck={() => void checkSubmission()} onRetry={() => void dispatchSubmission(attempt.requestedSessionId ?? selected, attempt.text, attempt.requestId!, attempt.taskBinding)} onRelease={releaseUnstartedSubmission} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Accepted turn awaiting history' : 'Send outcome unknown'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'The server accepted this turn. Further sends are blocked until its saved record is verified.' : 'Your draft is retained. Further sends are blocked because the previous request may still run.'}{attempt.turnId ? ` Known turn: ${attempt.turnId}.` : ''} Refresh history and review the conversation list for a possible fork.</p><Button size="sm" variant="outline" disabled={detailPending || sendPending} onClick={() => void checkHistory()}>Check server history</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I reviewed server history and understand duplicate work is possible.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={!reviewed || !current || hasActiveRuntimeTurn(current)} onClick={() => resolve('found')}>Sent text is already in history</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={!reviewed || !current || hasActiveRuntimeTurn(current)} onClick={() => resolve('allow-new')}>Acknowledge unknown outcome; enable sending</Button></div></>}</div>)}
-            {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}{current?.messages.map(message => <div key={message.id} id={`record-${message.id}`} className={cn('min-w-0', focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><RuntimeMessageRecord message={message} /></div>)}
+            {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}{current?.messages.map(message => <div key={message.id} id={`record-${message.id}`} className={cn('min-w-0', focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><RuntimeMessageRecord message={message} /></div>)}{sendPending && preview && preview.sessionId === selected && preview.text && <LiveAnswerPreview text={preview.text} />}
             {current && !current.messages.length && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
             {current && current.turns.length > 0 && <details className="border-t pt-4"><summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Turn records ({current.turns.length}) · latest {current.turns.at(-1)?.status.replaceAll('_', ' ')}</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}<TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} /><ModelRoutingEvidence detail={turn.detail} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Memory · {turn.memory.retrieval.status.replaceAll('_', ' ')}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
           </div>
