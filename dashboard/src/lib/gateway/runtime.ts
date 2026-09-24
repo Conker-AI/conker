@@ -234,6 +234,11 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
         return receipt
       } catch (error) { throw new RuntimeMutationError(gatewayError(error), sessionId) }
     },
+    /** Stop a running turn. Completed effects are kept; the saved turn records the stop. */
+    async cancelSubmission(requestId: string): Promise<void> {
+      if (!/^[A-Za-z0-9_-]{16,128}$/.test(requestId)) throw new GatewayError('validation')
+      await auth.request(`/api/pi/turn-submissions/${requestId}/cancel`, { method: 'POST', body: {} })
+    },
     async listSessions(options: { signal?: AbortSignal } = {}): Promise<RuntimeSession[]> {
       const response = await auth.request('/api/pi/sessions', { query: { limit: 200 }, ...(options.signal ? { signal: options.signal } : {}) })
       return unique(array(response.results, 200).map(session))

@@ -1,4 +1,4 @@
-import { GatewayError, gatewayError, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport } from './transport'
+import { GatewayError, gatewayError, isConversationWrite, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport } from './transport'
 import { describeGatewayOperation, type GatewayVerificationPrompt } from './verification'
 
 export type GatewaySession = { authenticated: boolean; sessionId: string; expiresAt: number; unlockExpiresAt: number | null; setupRequired: boolean }
@@ -118,7 +118,7 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
       const current = () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
       if (!current()) throw new GatewayError(post ? 'verification-cancelled' : 'session-changed')
       let verificationToken: string | undefined
-      if (operation) {
+      if (operation && !isConversationWrite(path)) {
         if (!verification) throw new GatewayError('verification-required')
         verificationToken = await verification.request(describeGatewayOperation(operation), async (password, verificationSignal) => {
           if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')

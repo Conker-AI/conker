@@ -7,7 +7,8 @@ Details are in [Status](status.md).
 ## Signing in
 
 Open your Conker address (for example `https://your-server:8443`) and enter the owner password set on
-the server. Anything that changes data asks for your password again, for that one change only.
+the server. Chatting needs no further password. Risky changes (approvals, settings, workflows) ask
+for it again, for that one change only ([ADR-0010](adr/0010-conversation-writes-are-session-bound.md)).
 Forgot it? Reset it on the server: see [4 · Running Conker](4-running.md#reset-the-password).
 
 ## The screens
@@ -19,6 +20,7 @@ Forgot it? Reset it on the server: see [4 · Running Conker](4-running.md#reset-
 - **Companion** is your ongoing conversation. **Chats** are separate topic conversations.
 - Under each answer you can open **what it did**: memories used, tools called, and which model
   answered.
+- Answers appear as they are written; **Stop** ends one early and keeps what already happened.
 - Choose a model in the composer, or let routing pick one.
 - An action waiting for approval shows up as a card in the conversation, linked to the Inbox.
 

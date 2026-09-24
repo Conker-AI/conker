@@ -21,7 +21,8 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), { status
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 const password = 'Owner password with spaces 🔐'
-const route = '/api/pi/sessions/session_one/turns'
+// A write that still requires a password; conversation writes are session-only (ADR-0010).
+const route = '/api/pi/tasks/task_one/update'
 function fixture(handler) {
   let now = 10000
   const wire = () => ({ authenticated: true, setup_required: false, session_id: 'a'.repeat(24), csrf_token: 'c'.repeat(43), expires_at: 90000, unlock_expires_at: 11800 })
@@ -50,6 +51,16 @@ async function main() {
   assert.ok((await shortRequest.result).value)
   assert.equal(short.calls.find(call => call.path === '/auth/verify').body.password, '1234')
   console.log('PASS existing short credentials reach server verification unchanged')
+  for (const conversation of ['/api/pi/sessions', '/api/pi/sessions/session_one/turns', '/api/pi/sessions/session_one/fork', '/api/pi/turn-submissions/request_identity_0001/cancel']) {
+    const c = fixture(); await c.client.bootstrap()
+    assert.ok((await c.client.request(conversation, { method: 'POST', body: { text: 'hi' } })).accepted)
+    assert.equal(c.verification.getState().challenge, null)
+    assert.equal(c.calls.filter(call => call.path === '/auth/verify').length, 0)
+    const sent = c.targets()[0]
+    assert.equal(sent.path, conversation); assert.equal(sent.options.headers['X-Conker-Verification'], undefined)
+    assert.ok(sent.options.headers['X-CSRF-Token'])
+  }
+  console.log('PASS conversation writes (create, send, fork, stop) send with the session and CSRF, without a password prompt')
   let f = fixture(); await f.store.getState().bootstrap()
   let resets = 0
   bindGatewayWorkspaceReset(f.store, [{ getState: () => ({ reset: () => { resets++ } }) }])
