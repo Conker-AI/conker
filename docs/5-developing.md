@@ -96,3 +96,4 @@ The docs stay small on purpose. If a new document seems necessary, update one of
 | [0007](adr/0007-three-swap-contracts.md) | Memory, tools and embeddings are swappable |
 | [0008](adr/0008-supply-chain-policy.md) | Own the thin layers; few dependencies |
 | [0009](adr/0009-radix-primitives-for-now.md) | Radix UI primitives for now |
+| [0010](adr/0010-conversation-writes-are-session-bound.md) | Chatting needs the session, not a password per message |

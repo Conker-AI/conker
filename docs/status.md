@@ -24,8 +24,9 @@ data. **Planned** means designed, not built.
 | Agents, Jobs | **Preview** | Need backend contracts |
 | Character Studio | **Preview** | Settings are saved; voice cloning, emotion and 3D are not connected |
 | Calls (voice/video) | **Preview** | Browser mic and camera only; no real-time AI voice |
-| Streaming replies | **Built, not deployed** | Answers appear as they are written (Pi, gateway, live chat). Needs the Ubuntu stack rebuilt from current sources |
-| Stop/cancel from chat, full-history search | **Planned** | |
+| Streaming replies and Stop | **Built, not deployed** | Answers appear as they are written; Stop halts generation within a couple of tokens. Needs the Ubuntu stack rebuilt from current sources |
+| Chat without a password per message | **Built, not deployed** | Conversation writes are session-bound ([ADR-0010](adr/0010-conversation-writes-are-session-bound.md)) |
+| Full-history search | **Planned** | |
 | Correct or forget a memory from the UI | **Planned** | |
 
 ## Infrastructure

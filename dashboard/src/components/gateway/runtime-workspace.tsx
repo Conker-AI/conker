@@ -5,7 +5,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evide
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from 'zustand'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, LogOut, MessageSquare, Plus, RefreshCw, Send } from 'lucide-react'
+import { ArrowLeft, LogOut, MessageSquare, Plus, RefreshCw, Send, Square } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { CollectionEmpty, CollectionSearch, RecordItem } from '@/components/design-system/primitives'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
@@ -80,6 +80,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [createError, setCreateError] = useState<string | null>(null)
   // Display-only text of the answer being written; the saved turn replaces it.
   const [preview, setPreview] = useState<{ sessionId: string; text: string } | null>(null)
+  // The request being answered right now, so Stop can name it; cleared when the send settles.
+  const [inFlight, setInFlight] = useState<{ requestId: string; stopping: boolean } | null>(null)
   const mounted = useRef(false)
   const controllers = useRef(new Set<AbortController>())
   const detailGeneration = useRef(0)
@@ -244,6 +246,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
       }
       dispatched = true
+      setInFlight({ requestId, stopping: false })
       void followLivePreview(requestId, streamed => { if (mounted.current && workspace.getState().epoch === epoch) setPreview({ sessionId: id, text: streamed }) }, { signal: previewStop.signal })
       const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelChoices[id] ? { modelId: modelChoices[id] } : {}) }))
       if (workspace.getState().epoch !== epoch) return
@@ -261,8 +264,16 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       }
     } finally {
       previewStop.abort()
-      if (mounted.current) setPreview(null)
+      if (mounted.current) { setPreview(null); setInFlight(null) }
       if (workspace.getState().epoch === epoch) workspace.setState({ operation: null })
+    }
+  }
+  async function stopAnswer() {
+    if (!inFlight || inFlight.stopping) return
+    setInFlight({ ...inFlight, stopping: true })
+    try { await client.cancelSubmission(inFlight.requestId) }
+    catch (error) {
+      if (mounted.current) { setInFlight(value => value && { ...value, stopping: false }); setDetailError(`Stop was not confirmed: ${gatewayError(error).message}`) }
     }
   }
   async function checkSubmission() {
@@ -345,7 +356,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
           </div>
           <div className="shrink-0 space-y-3 border-t p-4 sm:px-6">
             {safeTaskIntent && !safeTaskIntent.open && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">Task request saved separately from your draft.</span><Button size="sm" variant="outline" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: { ...safeTaskIntent, open: true } })}>Review task request</Button><Button size="sm" variant="ghost" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: null })}>Discard task request</Button></div>}
-            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}>{control && <GatewayModelPicker key={selected} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}<Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || forgottenIds.includes(selected) || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p><Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button></div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
+            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void submit() }}>{control && <GatewayModelPicker key={selected} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}<Label htmlFor="gateway-composer" className="sr-only">Message Conker</Label><Textarea id="gateway-composer" rows={3} value={draft} placeholder="Message Conker…" disabled={sendPending || forgottenIds.includes(selected) || current?.status === 'forgotten'} onChange={event => workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: event.target.value } }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line. Drafts stay in this open workspace.</p>{sendPending && inFlight ? <Button type="button" variant="outline" disabled={inFlight.stopping} onClick={() => void stopAnswer()}><Square />{inFlight.stopping ? 'Stopping…' : 'Stop'}</Button> : <Button type="submit" disabled={!canSubmitRuntime(draft, pending, attempt, current)}><Send />{sendPending ? 'Sending…' : 'Send'}</Button>}</div>{[...draft].length > 16_000 && <p role="alert" className="text-xs text-destructive">Use 16,000 characters or fewer.</p>}</form>
           </div>
         </>}
       </section>
