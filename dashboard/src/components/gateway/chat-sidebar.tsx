@@ -39,13 +39,15 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
   const [sessions, setSessions] = useState<RuntimeSession[]>([])
   const [pendingApprovals, setPendingApprovals] = useState(0)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [query, setQuery] = useState('')
   const [moreOpen, setMoreOpen] = useState(() => more.some(item => item.url === location.pathname))
   const generation = useRef(0)
 
   const refresh = useCallback(() => {
     const id = ++generation.current
-    runtime.listSessions().then(rows => { if (id === generation.current) setSessions(rows) }).catch(() => undefined)
+    // A failed load is said out loud; an empty list would claim there are no chats.
+    runtime.listSessions().then(rows => { if (id === generation.current) { setSessions(rows); setLoadFailed(false) } }).catch(() => { if (id === generation.current) setLoadFailed(true) })
     owner.listRequests({ limit: 50 }).then(page => { if (id === generation.current) setPendingApprovals(page.results.filter(row => row.status === 'pending' && row.reviewable).length) }).catch(() => undefined)
   }, [runtime, owner])
   // Reload after a send or creation settles, and when the selection changes.
@@ -91,7 +93,8 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
           </SidebarMenuItem>)}
         </SidebarMenu></SidebarGroupContent>
       </SidebarGroup>)}
-      {!visible.length && <p className="px-4 py-2 text-sm text-muted-foreground">{query ? 'No chats match.' : 'Your chats will appear here.'}</p>}
+      {loadFailed ? <div role="alert" className="space-y-2 px-4 py-2 text-sm text-muted-foreground"><p>Couldn’t load your chats.</p><button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={refresh}>Try again</button></div>
+        : !visible.length && <p className="px-4 py-2 text-sm text-muted-foreground">{query ? 'No chats match.' : 'Your chats will appear here.'}</p>}
     </SidebarContent>
     <SidebarFooter className="gap-1">
       <SidebarMenu>
