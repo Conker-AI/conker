@@ -138,6 +138,8 @@ export function createFakeGateway() {
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, 120))
     let match: RegExpMatchArray | null
+    // Failure-path switch: sessionStorage 'conker-fake-fail' = 'sessions' makes the chat list fail.
+    if (method === 'GET' && path === '/api/pi/sessions' && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'sessions') fail(503)
     if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).map(sessionRow) }
     if (method === 'POST' && path === '/api/pi/sessions') {
       // Failure-path switch: a first message containing [fail] makes creation fail with a server error.
