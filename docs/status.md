@@ -32,6 +32,32 @@ data. **Planned** means designed, not built.
 
 ## Infrastructure
 
+### Local polish branch (26 September, not deployed)
+
+`fix/product-polish` in Conker and Pi contains the current polish work. It does not
+change the server status above.
+
+- Chat follows new content only when the reader is at the bottom, with a compact
+  jump-to-latest control. Desktop streaming and preserved reading position checked.
+- Home offers working entry points; demo status remains visible on mobile.
+- Memory inspection offers connection retry, clears forgotten records immediately,
+  and uses a compact mobile toolbar. Record/content inspection checked in Chrome.
+- Pi forgetting removes proposals derived from forgotten conversations, including
+  decided proposals and uncited material from the same input window: 32 focused tests.
+- Ubuntu preparation wires the separate memory-correction capability. Fresh setup,
+  repeat preparation and legacy credential preservation tested in temporary folders.
+- CLI adds doctor, logs, model list/use, and private guided provider setup. Five CLI
+  tests pass; catalogue operations were also checked against an isolated Pi database.
+  No real API keys were entered and provider authentication remains user-verified.
+- Gateway, memory, model-role, chat-adapter and tool-workspace contract checks pass.
+  ToolGate draft/publication/execution suite: 21 tests pass. Synthetic Inbox denial
+  and proposal acceptance were exercised in Chrome, including mobile layout.
+
+Remaining acceptance: run the connected workflow editor against an isolated live
+stack. The lightweight gateway preview does not simulate editor draft persistence;
+its recoverable error is not evidence of a working end-to-end editor. Production
+deployment and real hosted-provider authentication have not been performed.
+
 | Item | State |
 |---|---|
 | Ubuntu server, 10 containers, tailnet-only HTTPS | **Live** |
