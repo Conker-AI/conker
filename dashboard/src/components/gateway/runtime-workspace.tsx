@@ -30,6 +30,12 @@ import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgott
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
 
+/** A friendly greeting for the time of day, like a person would say it. */
+function greeting(now = new Date()) {
+  const hour = now.getHours()
+  return hour < 5 ? 'Hello, night owl' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : hour < 23 ? 'Good evening' : 'Hello, night owl'
+}
+
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   if (message.content.kind !== 'text') return
   const url = new URL('/chat', window.location.origin)
@@ -363,12 +369,12 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         {!selected ? <>
           <header className="flex h-14 shrink-0 items-center px-2"><SidebarTrigger className="size-9" /></header>
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-[12vh]">
-            <div className="w-full max-w-2xl space-y-6">
-              <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">What can I help with?</h2>
-              <form className="rounded-3xl border border-input bg-card p-2 shadow-sm focus-within:border-ring" onSubmit={event => { event.preventDefault(); void startChat() }}>
+            <div className="w-full max-w-2xl space-y-7">
+              <h2 className="flex items-center justify-center gap-3 font-serif text-3xl font-normal tracking-tight sm:text-4xl"><img src="/conker.png" alt="" className="size-9 object-contain sm:size-10" />{greeting()}</h2>
+              <form className="rounded-2xl border border-input bg-card p-3 shadow-sm transition-colors focus-within:border-foreground/20" onSubmit={event => { event.preventDefault(); void startChat() }}>
                 <Label htmlFor="new-chat-composer" className="sr-only">Message Conker</Label>
-                <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="Message Conker" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-48 min-h-14 resize-none border-0 bg-transparent px-3 shadow-none focus-visible:ring-0 dark:bg-transparent" />
-                <div className="flex justify-end"><Button type="submit" size="icon" className="rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
+                <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="How can I help you today?" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-48 min-h-14 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
+                <div className="flex justify-end"><Button type="submit" size="icon" className="size-8 rounded-lg" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
               </form>
               {createError && <p role="alert" className="text-center text-sm text-destructive">{createError}</p>}
               {createUnknown === 'checked' && <div className="flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
