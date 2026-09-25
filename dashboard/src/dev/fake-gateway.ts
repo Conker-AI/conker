@@ -57,6 +57,30 @@ export function createFakeGateway() {
       evidence: [{ messageId: 'ses_sky_u0', available: true, sessionId: 'ses_sky', excerpt: 'Summarize what I studied this week', createdAt: now() - 9000 }] },
   ]
   const sessionRow = (item: Session) => ({ id: item.id, parent_id: null, title: item.title, status: 'open', created_at: item.created_at, closed_at: null, summary: null })
+  const card = (type: string, id: string, title: string, preview: string, memoryType?: string) => ({ type, id, title, preview, preview_truncated: false, status: 'active',
+    confidence: 0.9, available_fields: ['content'], ...(memoryType ? { memory_type: memoryType } : {}), connections: { supports: 1, mentions: 1 } })
+  const memories = [
+    card('memory', 'mem_judo', 'Trains judo on Tuesdays and Thursdays', 'Alexey trains judo on Tuesday and Thursday evenings, so homework should be light on those days.', 'fact'),
+    card('memory', 'mem_physics', 'Physics worksheet due Fridays', 'The weekly physics worksheet is handed in every Friday.', 'fact'),
+    card('memory', 'mem_revision', 'Prefers short morning revision', 'Revision works best as a 45-minute block before school.', 'context'),
+    card('entity', 'ent_coach', 'Coach', 'Judo coach at the club; contacted by email about open mat.'),
+    card('evidence', 'evi_week', 'Chat: Plan my week', 'Help me plan this week around school and judo.'),
+  ]
+  const tools = [
+    { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
+    { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
+    { id: 'research.search', name: 'Web search', description: 'Searches the web and returns short, sourced results.', inputs: [{ name: 'query', type: 'string', required: true }] },
+  ]
+  const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelId: null })
+  const models: { revision: number; configuration: Json } = { revision: 1, configuration: {
+    providers: [{ id: 'ollama', name: 'Local (Ollama)', enabled: true }],
+    models: [
+      { id: 'qwen-small', providerId: 'ollama', name: 'Qwen 2.5 3B', route: 'qwen2.5:3b', enabled: true, routingDescription: 'Fast, everyday chat' },
+      { id: 'qwen-4b', providerId: 'ollama', name: 'Qwen 3 4B', route: 'qwen3:4b', enabled: true, routingDescription: 'Slower, a little smarter' },
+    ],
+    defaultModelId: 'qwen-small',
+    roleSettings: { answerMode: 'manual', roles: { answer: role('qwen-small', ['qwen-small']), routing: role(null, []), 'context-selection': role(null, []), summarization: role(null, []), 'memory-ranking': role(null, []), proposals: role(null, []) } },
+  } }
   const memory = { configured: true, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] }
   const find = (id: string) => sessions.find(item => item.id === id) ?? fail(404)
 
@@ -74,6 +98,17 @@ export function createFakeGateway() {
     const input: Message = { id: nextId('msg'), session_id: session.id, seq: session.messages.length + 1, role: 'user', content: text, created_at: now() }
     session.messages.push(input)
     if (session.messages.length === 1) session.title = text.slice(0, 48)
+    // A message about email parks the turn on the owner, like a real email.send tool call.
+    if (/e-?mail/i.test(text)) {
+      const turnId = nextId('trn'), approvalId = nextId('req')
+      approvals.unshift({ ...approvals[approvals.length - 1], id: approvalId, title: 'Send an email', status: 'pending', reviewable: true, unavailable_reason: null, decision: null,
+        details: `Conker wants to send an email for: "${text.slice(0, 120)}"`, created_at: iso(now()), updated_at: iso(now()), approval: { expires_at: iso(now() + 600), consumed_at: null, origin_valid: true } })
+      session.turns.push({ id: turnId, session_id: session.id, status: 'awaiting_approval', acted: 0, started_at: now(), ended_at: null, provider: 'ollama', model: 'qwen2.5:3b',
+        input_tokens: 40, output_tokens: 0, cost_usd: 0, detail: null, action: null, approval_request_id: approvalId, memory })
+      const receipt = submission(requestId, session, turnId, input, null, 'awaiting_approval')
+      submissions.set(requestId, receipt)
+      return { turn_id: turnId, session_id: session.id, status: 'awaiting_approval', acted: false, message: null, submission: receipt }
+    }
     const answer = replies[Math.floor(Math.random() * replies.length)]
     const stream = { text: '', stopped: false }
     streams.set(requestId, stream)
@@ -122,6 +157,19 @@ export function createFakeGateway() {
       return { request_id: match[1], state: 'bound' }
     }
     if ((match = path.match(/^\/api\/pi\/turn-submissions\/([^/]+)$/))) return submissions.get(match[1]) ?? fail(404)
+    if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/resume$/))) {
+      const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
+      const turn = owner.turns.find(item => item.id === match![1])!
+      const decided = approvals.find(item => item.id === turn.approval_request_id)
+      if (turn.status === 'awaiting_approval' && decided?.status === 'approved') {
+        owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'Done. I sent the email to coach and will tell you when they reply.', created_at: now() })
+        Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() })
+      } else if (turn.status === 'awaiting_approval' && decided && decided.status !== 'pending') {
+        owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: "OK, I won't send it.", created_at: now() })
+        Object.assign(turn, { status: 'complete', ended_at: now() })
+      }
+      return { turn_id: turn.id, session_id: owner.id, status: turn.status }
+    }
     if (path === '/api/pi/tasks' || path === '/api/pi/runs') return { results: [], next_cursor: null }
     if (path === '/api/pi/events') return { results: [], next_cursor: null }
     if (path === '/api/owner/requests') return { results: approvals, next_cursor: null }
@@ -139,12 +187,30 @@ export function createFakeGateway() {
       return item
     }
     if ((match = path.match(/^\/api\/control\/pi\/sessions\/([^/]+)\/settings$/))) return { revision: 0, settings: { agentId: 'companion', privacy: { memoryDisabled: false, harnessDisabled: false } } }
-    if (path === '/api/control/pi/models/configuration') return { revision: 0, configuration: null }
+    if (path === '/api/control/pi/models/configuration') {
+      if (method === 'POST') { models.revision += 1; models.configuration = options.body?.configuration as Json }
+      return models
+    }
     if (path === '/api/pi/models') return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
     if (path === '/api/pi/health') return { service: 'pi', version: '0.4.0', status: 'ok', checked_at: iso(now()), age_seconds: 1,
       checks: { store: { status: 'ok' }, memory: { status: 'ok' }, local_provider: { status: 'ok' }, hosted_provider: { status: 'not_configured' }, action_boundary: { status: 'ok' } } }
-    if (path === '/api/pi/tools') return { status: 'ok', results: [] }
-    if (path === '/api/control/pi/memory/objects') return { objects: [], next_after: null }
+    if (path === '/api/pi/tools') return { status: 'ok', results: tools }
+    if (path === '/api/control/pi/memory/objects') {
+      const search = String(options.query?.search ?? '').toLocaleLowerCase(), type = options.query?.object_type
+      const objects = memories.filter(item => (!type || item.type === type) && `${item.title} ${item.preview}`.toLocaleLowerCase().includes(search))
+      return { scope: 'all', objects, total: objects.length, next_after: null, search_mode: 'text' }
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/objects\/([a-z]+)\/([^/]+)$/))) {
+      const item = memories.find(row => row.type === match![1] && row.id === match![2]) ?? fail(404)
+      const { connections, ...object } = item
+      if (options.query?.operation === 'content') {
+        const field = String(options.query.field), text = field === 'content' ? item.preview : ''
+        return { scope: 'all', object, connections, field, content: text, total_characters: text.length, next_offset: null }
+      }
+      const others = memories.filter(row => row.id !== item.id).slice(0, 2)
+      return { scope: 'all', object, connections, next_after: null, nodes: others.map(node => ({ ...node, connections: undefined })),
+        links: others.map((node, index) => ({ id: `lnk_${item.id}_${index}`, source_type: item.type, source_id: item.id, target_type: node.type, target_id: node.id, relationship: index ? 'mentions' : 'supports', confidence: 0.8 })) }
+    }
     return fail(404)
   }
 

@@ -22,7 +22,6 @@ services/decisions/ Optional Laya decision service (routing, memory ranking)
 deploy/ubuntu/      Server deployment scripts and acceptance checks
 scripts/            Local Windows stack, recovery, verification scripts
 tests/              Installer and deployment tests
-design-system/      Earlier design foundation (the dashboard is the active one)
 docs/               These docs; reference/ for deep dives; archive/ for history
 versions.env        Pinned module versions, the only place pins live
 ```
@@ -35,10 +34,10 @@ npm ci
 npm run dev -- --host localhost --port 5173 --strictPort
 ```
 
-To see the live (gateway) screens without a server or sign-in, open any page with
-`?gateway-preview=1`. It runs them against an in-memory fake gateway (`src/dev/`, dev builds
-only); `?gateway-preview=0` turns it off. A first message containing `[fail]` exercises the
-create-failure path.
+The dev server shows the live (gateway) screens against an in-memory fake gateway
+(`src/dev/`, dev builds only), so no server or sign-in is needed. `?gateway-preview=0` switches to
+the older fixture pages and `=1` back. A message mentioning email asks for an approval; a first
+message containing `[fail]` exercises the create-failure path.
 
 Before handing off:
 
