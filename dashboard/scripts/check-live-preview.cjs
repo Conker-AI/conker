@@ -25,9 +25,8 @@ function server(bodies, status = 200, type = 'text/event-stream', chunkSize = 7)
 }
 
 async function main() {
-  const cache = path.join(root, 'node_modules/.cache')
-  await fs.mkdir(cache, { recursive: true })
-  const temporary = await fs.mkdtemp(path.join(cache, 'conker-live-preview-'))
+  // The system temp directory, so the check also runs where node_modules is read-only.
+  const temporary = await fs.mkdtemp(path.join(require('node:os').tmpdir(), 'conker-live-preview-'))
   try {
     const output = path.join(temporary, 'live-preview.cjs')
     await build({ stdin: { contents: await fs.readFile(path.join(root, 'src/lib/gateway/live-preview.ts'), 'utf8'), loader: 'ts', sourcefile: 'live-preview.ts' }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent' })

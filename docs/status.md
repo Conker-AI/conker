@@ -39,7 +39,6 @@ data. **Planned** means designed, not built.
 | Restore drill, off-machine backup copy | **Not done** |
 | LAN SSH firewall rule removal | **Pending** (needs the owner's sudo) |
 | Published images per release (GHCR) | **Unverified**; the server is built from source |
-| Root `LICENSE` file | **Missing**; MIT is intended but not declared |
 
 ## Pinned versions
 
