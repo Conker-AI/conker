@@ -5,12 +5,14 @@ import type { GatewayControlClient, OwnerModelSettings, ProviderStatus } from '@
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { withAnswerModel } from '@/lib/api/model-roles'
+import { withAnswerModel, withIdeas } from '@/lib/api/model-roles'
+import { Switch } from '@/components/ui/switch'
 
 const providerNames: Record<string, string> = { ollama: 'Local model', openrouter: 'OpenRouter', anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Google Gemini' }
 const providerName = (id: string) => providerNames[id] ?? id.charAt(0).toUpperCase() + id.slice(1)
 const providerState = (provider: ProviderStatus) => provider.busy ? 'Busy' : provider.status === 'ok' ? 'Ready' : provider.status === 'not_configured' ? 'Not set up' : 'Unavailable'
 const RUNNING_DOCS = 'https://github.com/Conker-AI/conker/blob/main/docs/4-running.md'
+const IDEAS_DOCS = 'https://github.com/Conker-AI/pi/blob/main/docs/proposals.md#turning-it-on'
 
 export function GatewayModelsSettings({ client }: { client: GatewayControlClient }) {
   const [value, setValue] = useState<OwnerModelSettings | null>(null)
@@ -39,19 +41,24 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
   // Pi answers with the Answer role's model; in router mode a helper chooses per message.
   const answering = saved?.roleSettings.answerMode === 'manual' && saved.roleSettings.roles.answer.enabled ? saved.roleSettings.roles.answer.modelId : null
   const onlyLocal = providers.length > 0 && !providers.slice(1).some(provider => provider.status === 'ok')
-  async function chooseAnswerModel(modelId: string) {
-    if (!saved || !value || pending || modelId === answering) return
+  const ideas = saved?.roleSettings.roles.proposals
+  const ideasOn = Boolean(ideas?.enabled && ideas.modelId && enabled.some(model => model.id === ideas.modelId))
+  async function save(next: Parameters<GatewayControlClient['saveModels']>[0]) {
+    if (!value || pending) return
     setPending(true); setError('')
-    try { setValue(await client.saveModels(withAnswerModel(saved, modelId), value.revision)) }
+    try { setValue(await client.saveModels(next, value.revision)) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save settings.') }
     finally { setPending(false) }
   }
+  const chooseAnswerModel = (modelId: string) => { if (saved && modelId !== answering) void save(withAnswerModel(saved, modelId)) }
+  // Ideas use the answering model; off keeps the role's other settings for next time.
+  const setIdeas = (on: boolean) => { if (saved) void save(withIdeas(saved, on ? answering ?? enabled[0]?.id ?? null : null)) }
   return <div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6">
     <section aria-labelledby="answers-heading" className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
       <div className="space-y-1"><h2 id="answers-heading" className="text-base font-medium">Answers</h2><p className="text-sm text-muted-foreground">The model that replies to you in every chat, unless you pick another one in a chat.</p></div>
       <div className="space-y-2">
         <Label htmlFor="answer-model">Answers come from</Label>
-        <Select value={answering ?? ''} disabled={pending || !enabled.length} onValueChange={value => void chooseAnswerModel(value)}>
+        <Select value={answering ?? ''} disabled={pending || !enabled.length} onValueChange={chooseAnswerModel}>
           <SelectTrigger id="answer-model" className="w-full min-w-0"><SelectValue placeholder={saved?.roleSettings.answerMode === 'router' ? 'Chosen automatically for each message' : enabled.length ? 'Choose a model' : 'No models set up yet'} /></SelectTrigger>
           <SelectContent>{enabled.map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {saved?.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent>
         </Select>
@@ -59,6 +66,13 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error} Reload the page if settings changed elsewhere.</p>}
       {onlyLocal && <p className="rounded-lg bg-muted p-3 text-sm leading-6">Conker is using a small model on your server. For answers closer to ChatGPT or Claude, add a hosted model on the server. <a className="underline underline-offset-4" href={RUNNING_DOCS} target="_blank" rel="noreferrer">How to add one</a></p>}
+      <div className="flex items-start justify-between gap-4 border-t pt-4">
+        <div className="min-w-0 space-y-1">
+          <Label htmlFor="ideas-switch">Ideas from Conker</Label>
+          <p className="text-sm leading-6 text-muted-foreground">Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. It also needs daily ideas turned on on the server. <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">How</a></p>
+        </div>
+        <Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />
+      </div>
       <div className="space-y-2 border-t pt-4">
         <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium">Connected</h3><Button size="sm" variant="ghost" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button></div>
         {providerError && <p role="status" className="text-sm text-muted-foreground">{providerError}</p>}

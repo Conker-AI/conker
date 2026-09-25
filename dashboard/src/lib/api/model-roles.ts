@@ -134,3 +134,11 @@ export function withAnswerModel<T extends { defaultModelId: string | null; roleS
   return { ...configuration, defaultModelId: modelId, roleSettings: { ...configuration.roleSettings, answerMode: "manual",
     roles: { ...configuration.roleSettings.roles, answer: { ...answer, enabled: true, modelId, eligibleModelIds, failure: "stop", fallbackModelId: null } } } }
 }
+
+/** Turns the daily ideas pass on with one model, or off. Other roles are untouched. */
+export function withIdeas<T extends { roleSettings: ModelRolesConfiguration }>(configuration: T, modelId: string | null): T {
+  const proposals = configuration.roleSettings.roles.proposals
+  const eligibleModelIds = modelId === null || proposals.eligibleModelIds.includes(modelId) ? proposals.eligibleModelIds : [...proposals.eligibleModelIds, modelId]
+  const next = modelId === null ? { ...proposals, enabled: false } : { ...proposals, enabled: true, modelId, eligibleModelIds, failure: "stop" as const, fallbackModelId: null }
+  return { ...configuration, roleSettings: { ...configuration.roleSettings, roles: { ...configuration.roleSettings.roles, proposals: next } } }
+}

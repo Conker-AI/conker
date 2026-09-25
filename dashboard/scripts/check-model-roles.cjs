@@ -21,7 +21,7 @@ function load(relative) {
 }
 async function main() {
   const { createModelsConfiguration, validateModelsConfiguration } = load('src/lib/api/model-catalogue.ts')
-  const { createModelRoles, modelRolesErrors, planModelRole, withAnswerModel } = load('src/lib/api/model-roles.ts')
+  const { createModelRoles, modelRolesErrors, planModelRole, withAnswerModel, withIdeas } = load('src/lib/api/model-roles.ts')
   const config = createModelsConfiguration()
   const settings = createModelRoles(config)
   const primary = config.defaultModelId
@@ -37,6 +37,13 @@ async function main() {
   assert.equal(withAnswerModel(chosen, secondary).roleSettings.roles.answer.eligibleModelIds.length, 2, 'Choosing again does not duplicate eligibility')
   assert.deepEqual(modelRolesErrors(chosen.roleSettings, chosen), [])
   assert.equal(routed.roleSettings.answerMode, 'router', 'The input is not mutated')
+  // The ideas switch enables only the proposals role, with an eligible model, and turns it off again.
+  const ideas = withIdeas(chosen, secondary)
+  assert.deepEqual(ideas.roleSettings.roles.proposals, { ...chosen.roleSettings.roles.proposals, enabled: true, modelId: secondary, eligibleModelIds: [...chosen.roleSettings.roles.proposals.eligibleModelIds, secondary], failure: 'stop', fallbackModelId: null })
+  assert.deepEqual(ideas.roleSettings.roles.answer, chosen.roleSettings.roles.answer)
+  assert.deepEqual(modelRolesErrors(ideas.roleSettings, ideas), [])
+  assert.equal(withIdeas(ideas, null).roleSettings.roles.proposals.enabled, false)
+  assert.deepEqual(modelRolesErrors(withIdeas(ideas, null).roleSettings, ideas), [])
   assert.equal(settings.answerMode, 'manual')
   assert.equal(settings.roles.answer.modelId, primary)
   for (const role of ['routing', 'context-selection', 'summarization']) assert.equal(settings.roles[role].enabled, false, 'Helpers are never enabled by default')
