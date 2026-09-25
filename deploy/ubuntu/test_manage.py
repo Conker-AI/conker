@@ -15,6 +15,25 @@ spec.loader.exec_module(manage)
 
 
 class ManageTest(unittest.TestCase):
+    def test_apply_without_confirmation_never_restarts_services(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, CONKER_DEPLOY_DIR=directory), contextlib.redirect_stdout(io.StringIO()):
+            (Path(directory) / 'compose.json').write_text('{}')
+            with patch.object(manage.sys.stdin, 'isatty', return_value=True), patch('builtins.input', return_value='n'), patch.object(manage.subprocess, 'run') as run:
+                self.assertEqual(manage.main(['models', 'apply']), 1)
+                run.assert_not_called()
+
+    def test_paid_provider_without_consent_does_not_collect_or_save_key(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, CONKER_DEPLOY_DIR=directory), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            root = Path(directory)
+            (root / 'state').mkdir()
+            (root / 'compose.json').write_text(json.dumps({'services': {'pi': {'env_file': ['./state/providers.env']}}}))
+            result = subprocess.CompletedProcess([], 0, json.dumps({'configuration': {'providers': [], 'models': []}}), '')
+            with patch.object(manage.sys.stdin, 'isatty', return_value=True), patch('builtins.input', side_effect=['hosted', 'test-model', 'n']), patch.object(manage.getpass, 'getpass') as secret, patch.object(manage.subprocess, 'run', return_value=result) as run:
+                self.assertEqual(manage.main(['models', 'connect', 'openai']), 1)
+                secret.assert_not_called()
+                self.assertEqual(run.call_count, 1)
+                self.assertFalse((root / 'state/providers.env').exists())
+
     def test_connect_stages_key_without_sending_it_to_commands(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
