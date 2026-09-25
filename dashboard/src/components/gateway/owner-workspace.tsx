@@ -47,7 +47,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
             else attempts[checkedId] = { ...saved, checked: true }
             return { attempts }
           })
-          setNotice(row.status === 'pending' ? 'The request is still pending. That does not prove the earlier decision was unsent. Only the identical decision may be retried.' : `ToolGate records this request as ${label(row.status)}. ${requestId ? 'Inspect the recorded decision below.' : 'Find its recorded decision in Earlier.'}`)
+          setNotice(row.status === 'pending' ? 'The request is still pending. That does not prove the earlier decision was unsent. Only the identical decision may be retried.' : `This request is ${label(row.status)}. ${requestId ? 'Inspect the recorded decision below.' : 'Find its recorded decision in Earlier.'}`)
         }
       } else {
         const page = await request(signal => client.listRequests({ limit: 50, ...(more && nextCursor ? { cursor: nextCursor } : {}), signal }))
@@ -103,7 +103,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     note={retained.notes[row.id] ?? ''} attempt={retained.attempts[row.id]} busy={busy || loading} processing={retained.pendingId === row.id}
     onNote={note => state.setState(value => ({ notes: { ...value.notes, [row.id]: note } }))}
     onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
-    onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and ToolGate confirms this request has expired. Nothing was done.') }} />
+    onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }} />
   return <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6">
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6">
       <div className="flex items-start justify-between gap-3">
@@ -113,9 +113,9 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
       {requestId && <Button asChild size="sm" variant="ghost" className="self-start"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
-      {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests...</p>}
+      {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}
       {requestId ? current && card(current, true) : <>
-        {(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests..." />}
+        {(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
         <section aria-labelledby="approvals-heading" className="flex flex-col gap-4">
           <h2 id="approvals-heading" className="text-base font-medium">Needs your OK</h2>
           {pendingRows.map(row => card(row))}
