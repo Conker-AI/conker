@@ -1,3 +1,4 @@
+import { ForgetMemory } from './forget-memory'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
@@ -84,6 +85,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
           {detailError && <p role="alert" className="text-destructive">{detailError}</p>}
+          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={() => { selectRecord(null); setRevision(value => value + 1) }} />}
           <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Content</h3><div className="flex flex-wrap gap-1">{selected.available_fields.map(field => <Button key={field} size="sm" variant="outline" onClick={() => void expandField(field)}>{field.replaceAll('_', ' ')}</Button>)}</div>{content && <><p className="text-xs text-muted-foreground">{content.field} · {content.total_characters} characters</p><pre className="whitespace-pre-wrap break-words font-sans text-sm">{content.content}</pre>{content.next_offset !== null && <Button size="sm" variant="outline" onClick={() => void expandField(content.field, content.next_offset!)}>Next part</Button>}</>}</section>
           <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Connections</h3>{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
             const outgoing = link.source_type === selected.type && link.source_id === selected.id

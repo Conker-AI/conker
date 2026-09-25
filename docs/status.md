@@ -27,7 +27,8 @@ data. **Planned** means designed, not built.
 | Streaming replies and Stop | **Built, not deployed** | Answers appear as they are written; Stop halts generation within a couple of tokens. Needs the Ubuntu stack rebuilt from current sources |
 | Chat without a password per message | **Built, not deployed** | Conversation writes are session-bound ([ADR-0010](adr/0010-conversation-writes-are-session-bound.md)) |
 | Full-history search | **Planned** | |
-| Correct or forget a memory from the UI | **Planned** | |
+| Forget a memory from the UI | **Built, not deployed** | Removes it from memory, history, audit, search and Pi's caches; the source chat is kept. Needs the correction capability configured |
+| Correct a memory from the UI | **Planned** | Backend exists (reviewed corrections); no UI yet |
 
 ## Infrastructure
 
