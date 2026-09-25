@@ -21,7 +21,7 @@ async function main() {
     const { parseProposal, createGatewayProposalClient } = require(output)
     assert.equal(parseProposal(valid).evidence[1].available, false)
     for (const bad of [{ ...valid, grantsExecutionAuthority: true }, { ...valid, evidence: [] }, { ...valid, state: 'running' }, { ...valid, id: '../x' }, { ...valid, title: 7 }])
-      assert.throws(() => parseProposal(bad), /invalid response/i)
+      assert.throws(() => parseProposal(bad), error => error.kind === 'invalid-response')
 
     const calls = []
     const client = createGatewayProposalClient({ request: async (url, options = {}) => { calls.push({ url, options }); return url.endsWith('/decision') ? { ...valid, state: 'declined', decidedAt: 2 } : { proposals: [valid] } } })
@@ -32,7 +32,7 @@ async function main() {
     await assert.rejects(client.decide('prp_1', 'run'))
     await assert.rejects(client.decide('bad id', 'accept'))
     const stale = createGatewayProposalClient({ request: async () => valid })
-    await assert.rejects(stale.decide('prp_1', 'accept'), /invalid response/i)
+    await assert.rejects(stale.decide('prp_1', 'accept'), error => error.kind === 'invalid-response')
     console.log('Proposals passed: strict parsing, no execution authority, decision validation and stale-response refusal.')
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })

@@ -26,9 +26,9 @@ async function main() {
     assert.ok(sent.options.body.request_id.length >= 16)
     await assert.rejects(client.forgetPreview('../mem'))
     const mismatched = createGatewayControlClient({ request: async () => ({ ...receipt, memoryId: 'other' }) })
-    await assert.rejects(mismatched.forgetMemory(preview), /invalid response/i)
+    await assert.rejects(mismatched.forgetMemory(preview), error => error.kind === 'invalid-response')
     const stale = createGatewayControlClient({ request: async () => ({ memoryId: 'other', revision: 1, text: 'x' }) })
-    await assert.rejects(stale.forgetPreview('mem-1'), /invalid response/i)
+    await assert.rejects(stale.forgetPreview('mem-1'), error => error.kind === 'invalid-response')
     console.log('Memory forget passed: exact preview, revision-bound request, receipt and identity checks.')
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })
