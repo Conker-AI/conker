@@ -28,7 +28,7 @@ for (const status of ['awaiting_approval', 'awaiting_budget', 'acted_no_reply', 
 assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ id: 'turn', endedAt: '2026-09-20T12:00:00Z', status: 'completed' }] }), true)
 assert.equal(canSubmitRuntime('😀'.repeat(16000), false, undefined, detail), true, 'Character bounds count Unicode code points')
 const attempt = { text: 'sent once', turnId: 'turn', checked: false }
-assert.throws(() => resolveAttempt(attempt, attempt.text, 'found'), /Check server history/)
+assert.throws(() => resolveAttempt(attempt, attempt.text, 'found'), /Check the chat first/)
 const checked = checkedAttempt(attempt)
 assert.equal(attempt.checked, false, 'History checking does not mutate the original attempt')
 assert.equal(canSubmitRuntime('next', false, checked, detail), false, 'A successful GET never silently unlocks sending')

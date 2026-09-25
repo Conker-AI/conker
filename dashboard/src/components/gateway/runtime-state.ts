@@ -21,7 +21,7 @@ export function checkedAttempt(attempt: UncertainTurn): UncertainTurn {
 }
 
 export function resolveAttempt(attempt: UncertainTurn, draft: string, decision: 'found' | 'allow-new') {
-  if (!attempt.checked) throw new Error('Check server history before resolving this attempt.')
+  if (!attempt.checked) throw new Error('Check the chat first, then choose what to do.')
   return { draft: decision === 'found' && draft === attempt.text ? '' : draft }
 }
 export function recoverSubmissionDraft(attempt: UncertainTurn, draft: string): string {
