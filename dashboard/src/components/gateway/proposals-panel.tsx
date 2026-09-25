@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import type { GatewayProposalClient, Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayError } from '@/lib/gateway/transport'
 
-const decided: Record<ProposalDecision, string> = { accept: 'Accepted. Nothing runs until you set it up or approve an action.', decline: 'Declined. Conker will not suggest this for 30 days.', never: 'Got it. Conker will not suggest this again.' }
+const decided: Record<ProposalDecision, string> = { accept: 'Accepted. Nothing runs until you set it up or approve an action.', decline: 'Declined. Conker will hold this idea back for 30 days.', never: 'Got it. Conker will not suggest this idea again; if a reworded version appears, decline it too.' }
 
 /** Proposals from the nightly pass: what Conker noticed, why, and what approving would mean. */
 export function ProposalsPanel({ client, active }: { client: GatewayProposalClient; active: boolean }) {
