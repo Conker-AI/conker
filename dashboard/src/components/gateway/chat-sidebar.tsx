@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { BookOpen, ChevronRight, ChevronsUpDown, History, Inbox, LogOut, Moon, Plus, Search, Server, Settings, Sun, UserRound, Wrench } from 'lucide-react'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { BookOpen, ChevronsUpDown, History, Inbox, LogOut, Moon, Search, Server, Settings, SquarePen, Sun, UserRound, Wrench } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
-  SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, useSidebar,
+  SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar'
 import { useCircularTransition } from '@/hooks/use-circular-transition'
 import { useTheme } from '@/hooks/use-theme'
@@ -15,7 +14,7 @@ import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
-const more = [
+const destinations = [
   { title: 'Memory', url: '/memory', icon: BookOpen },
   { title: 'Activity', url: '/activity', icon: History },
   { title: 'Tools', url: '/tools', icon: Wrench },
@@ -37,7 +36,6 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const [pendingApprovals, setPendingApprovals] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const [query, setQuery] = useState('')
-  const [moreOpen, setMoreOpen] = useState(() => more.some(item => item.url === location.pathname))
   const generation = useRef(0)
 
   const refresh = useCallback(() => {
@@ -48,6 +46,13 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   }, [runtime, owner])
   // Reload after a send or creation settles, and when the selection changes.
   useEffect(() => { if (!operation) queueMicrotask(refresh) }, [operation, selected, refresh])
+  const newChat = useCallback(() => { conversationState.setState({ selected: null }); navigate('/chat'); if (isMobile) setOpenMobile(false) }, [conversationState, navigate, isMobile, setOpenMobile])
+  // Ctrl/Cmd+Shift+O starts a new chat from anywhere; Ctrl+K stays page search.
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'o') { event.preventDefault(); newChat() } }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [newChat])
 
   const visible = sessions
     .map(session => forgotten.includes(session.id) ? maskForgottenSession(session) : session)
@@ -56,56 +61,45 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const onChat = ['/chat', '/chats', '/companion'].includes(location.pathname)
   const onPage = (url: string) => location.pathname === url
 
-  return <Sidebar variant="sidebar" collapsible="offcanvas">
-    <SidebarHeader className="gap-1 px-2 pt-3">
-      <div className="flex h-8 items-center gap-2 px-2">
-        <img src="/conker.png" alt="" className="size-6 object-contain" />
-        <span className="truncate font-serif text-lg leading-none">Conker</span>
+  return <Sidebar variant="inset" collapsible="offcanvas">
+    <SidebarHeader className="gap-1 px-2 pt-2">
+      <div className="flex h-10 items-center gap-2 px-1">
+        <span className="flex size-8 items-center justify-center rounded-lg border bg-background"><img src="/conker.png" alt="" className="size-6 object-contain" /></span>
         <span className="flex min-w-0 flex-1">{badge}</span>
+        <SidebarTrigger className="size-8 text-muted-foreground" aria-label="Collapse sidebar" />
       </div>
-      <SidebarMenu className="mt-2">
+      <SidebarMenu className="mt-1">
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={() => { conversationState.setState({ selected: null }); go('/chat') }} className="font-medium">
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Plus className="size-3.5" /></span>New chat
+          <SidebarMenuButton onClick={newChat} className="h-10 rounded-[10px] border bg-background font-medium shadow-xs hover:bg-background">
+            <SquarePen />New chat<kbd className="ml-auto hidden font-sans text-xs font-normal text-muted-foreground md:inline">Ctrl ⇧ O</kbd>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-      <label className="relative mt-1 block px-0.5">
+      <label className="relative mt-1 block">
         <span className="sr-only">Search chats</span>
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <SidebarInput type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search" className="pl-8" />
+        <SidebarInput type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search chats" className="h-9 rounded-[10px] border-transparent bg-transparent pl-8 shadow-none hover:bg-sidebar-accent focus-visible:bg-background" />
       </label>
-      <SidebarMenu className="mt-1">
+      <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={onPage('/inbox')}>
+          <SidebarMenuButton asChild isActive={onPage('/inbox')} className="h-9 rounded-[10px]">
             <Link to="/inbox" onClick={() => isMobile && setOpenMobile(false)}><Inbox />Inbox</Link>
           </SidebarMenuButton>
-          {pendingApprovals > 0 && <SidebarMenuBadge aria-label={`${pendingApprovals} waiting`} className="rounded-full bg-primary px-1.5 text-primary-foreground">{pendingApprovals}</SidebarMenuBadge>}
+          {pendingApprovals > 0 && <SidebarMenuBadge aria-label={`${pendingApprovals} waiting`} className="top-2 rounded-full bg-primary px-1.5 text-primary-foreground">{pendingApprovals}</SidebarMenuBadge>}
         </SidebarMenuItem>
-        <Collapsible open={moreOpen} onOpenChange={setMoreOpen} asChild>
-          <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-              <SidebarMenuButton className="text-muted-foreground"><ChevronRight className="transition-transform data-[state=open]:rotate-90" data-state={moreOpen ? 'open' : 'closed'} />More</SidebarMenuButton>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarMenu className="pl-4">
-                {more.map(item => <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild size="sm" isActive={onPage(item.url)}>
-                    <Link to={item.url} onClick={() => isMobile && setOpenMobile(false)}><item.icon />{item.title}</Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>)}
-              </SidebarMenu>
-            </CollapsibleContent>
-          </SidebarMenuItem>
-        </Collapsible>
+        {destinations.map(item => <SidebarMenuItem key={item.url}>
+          <SidebarMenuButton asChild isActive={onPage(item.url)} className="h-9 rounded-[10px]">
+            <Link to={item.url} onClick={() => isMobile && setOpenMobile(false)}><item.icon />{item.title}</Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>)}
       </SidebarMenu>
     </SidebarHeader>
     <SidebarContent>
       <SidebarGroup className="py-1">
-        <SidebarGroupLabel>Recents</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-sm font-normal text-muted-foreground">Chats</SidebarGroupLabel>
         <SidebarGroupContent><SidebarMenu>
           {visible.map(session => <SidebarMenuItem key={session.id}>
-            <SidebarMenuButton isActive={onChat && session.id === selected} onClick={() => go(`/chat?session=${encodeURIComponent(session.id)}`)}>
+            <SidebarMenuButton isActive={onChat && session.id === selected} onClick={() => go(`/chat?session=${encodeURIComponent(session.id)}`)} className="h-9 rounded-[10px]">
               <span className="truncate">{session.title || 'New chat'}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>)}
@@ -114,7 +108,7 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
       {loadFailed ? <div role="alert" className="space-y-2 px-4 py-2 text-sm text-muted-foreground"><p>Couldn’t load your chats.</p><button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={refresh}>Try again</button></div>
         : !visible.length && <p className="px-4 py-2 text-sm text-muted-foreground">{query ? 'No chats match.' : 'Your chats will appear here.'}</p>}
     </SidebarContent>
-    <SidebarFooter className="border-t border-sidebar-border p-2">
+    <SidebarFooter className="p-2">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>

@@ -11,7 +11,7 @@ export function PageHeader({ title, description, actions, status, density = "sta
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className={cn("break-words font-serif font-normal tracking-tight", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
+        <h1 className={cn("break-words font-semibold tracking-tight", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
         {status}
       </div>
       {description && <p className={cn("max-w-prose text-sm text-muted-foreground", density === "compact" ? "mt-1 leading-5" : "mt-2 leading-6")}>{description}</p>}
