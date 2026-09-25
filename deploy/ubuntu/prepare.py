@@ -32,6 +32,11 @@ else:
     keys["salt"] = secrets.token_hex(16)
     keyfile.write_text(json.dumps(keys))
     keyfile.chmod(0o600)
+# Upgrade existing deployments without rotating their established capabilities.
+if "correction" not in keys:
+    keys["correction"] = secrets.token_urlsafe(36)
+    keyfile.write_text(json.dumps(keys))
+    keyfile.chmod(0o600)
 digest = lambda name: hashlib.sha256(keys[name].encode()).hexdigest()
 env = {
     "postgres": {"POSTGRES_USER": "conker", "POSTGRES_DB": "conker", "POSTGRES_PASSWORD": keys["postgres"]},
@@ -46,6 +51,8 @@ env = {
         "PI_TOOLGATE_URL": "http://toolgate:8010", "PI_TOOLGATE_KEY": keys["execution"],
         "PI_MEMORYGATE_URL": "http://memorygate:8020", "PI_MEMORYGATE_INGEST_KEY": keys["ingest"],
         "PI_MEMORYGATE_READ_KEY": keys["read"], "PI_MEMORYGATE_AGENT_ID": "conker_companion",
+        "PI_MEMORY_CORRECTION_URL": "http://memorygate:8020",
+        "PI_MEMORY_CORRECTION_KEY": keys["correction"], "PI_MEMORY_CORRECTION_AGENT_ID": "conker_companion",
         "PI_DECISION_URL": "http://127.0.0.1:8060", "PI_DECISION_KEY": keys["decisions"],
         # Both workers idle until the owner acts: ideas need a Proposals model chosen in
         # Settings, and the scheduler runs only jobs the owner created.
@@ -59,6 +66,7 @@ env = {
         "MEMORYGATE_ADMIN_KEY": keys["memory"], "MEMORYGATE_BOOTSTRAP_READ_KEY": keys["read"],
         "MEMORYGATE_BOOTSTRAP_AGENT_ID": "conker_companion", "MEMORYGATE_CONVERSATION_KEY": keys["ingest"],
         "MEMORYGATE_CONVERSATION_AGENT_ID": "conker_companion", "RUNTIME_SECRET_PATH": "/data/runtime.key",
+        "MEMORYGATE_CORRECTION_KEY": keys["correction"], "MEMORYGATE_CORRECTION_AGENT_ID": "conker_companion",
         "BACKUP_DIR": "/data/backups", "OLLAMA_ENABLED": "false", "QDRANT_URL": "http://qdrant:6333",
         "EMBEDDINGS_URL": "http://embeddings:8030", "EMBEDDINGS_KEY": keys["embeddings"],
         "MEMORYGATE_CORS_ORIGINS": origin},
