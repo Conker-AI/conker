@@ -53,10 +53,15 @@ change the server status above.
   ToolGate draft/publication/execution suite: 21 tests pass. Synthetic Inbox denial
   and proposal acceptance were exercised in Chrome, including mobile layout.
 
-Remaining acceptance: run the connected workflow editor against an isolated live
-stack. The lightweight gateway preview does not simulate editor draft persistence;
-its recoverable error is not evidence of a working end-to-end editor. Production
-deployment and real hosted-provider authentication have not been performed.
+The isolated real HTTPS gateway also passed the existing nested-workflow acceptance:
+draft save, publication, owner verification, both branches, loop/calculation output,
+replay identity and removal of temporary access grants. It used fresh local data and
+no model or external connector calls.
+
+Remaining acceptance: browser interaction with that connected workflow editor.
+Chrome requires the owner to handle the localhost certificate warning. The lightweight
+gateway preview does not simulate editor draft persistence. Production deployment
+and real hosted-provider authentication have not been performed.
 
 | Item | State |
 |---|---|
