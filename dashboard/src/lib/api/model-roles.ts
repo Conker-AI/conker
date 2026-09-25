@@ -123,3 +123,14 @@ export function planModelRole(input: {
   if (!model) return { ...result, reason: "No eligible configured model is available under the current restrictions." }
   return { ...result, status: "planned", selectedModelId: model.id, providerId: model.providerId, route: model.route, timeoutMs: assignment.timeoutMs, basis, reason: basis === "fallback" ? "Explicit fallback proposed after failure or unavailability; no provider was contacted." : "Configured model proposed; capabilities and dispatch authorization still require verification." }
 }
+
+/**
+ * Makes one model answer every chat. Pi answers with the Answer role's model, not the default
+ * route, so both move together: manual mode, the model eligible and selected, no fallback.
+ */
+export function withAnswerModel<T extends { defaultModelId: string | null; roleSettings: ModelRolesConfiguration }>(configuration: T, modelId: string): T {
+  const answer = configuration.roleSettings.roles.answer
+  const eligibleModelIds = answer.eligibleModelIds.includes(modelId) ? answer.eligibleModelIds : [...answer.eligibleModelIds, modelId]
+  return { ...configuration, defaultModelId: modelId, roleSettings: { ...configuration.roleSettings, answerMode: "manual",
+    roles: { ...configuration.roleSettings.roles, answer: { ...answer, enabled: true, modelId, eligibleModelIds, failure: "stop", fallbackModelId: null } } } }
+}

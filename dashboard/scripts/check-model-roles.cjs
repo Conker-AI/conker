@@ -21,13 +21,22 @@ function load(relative) {
 }
 async function main() {
   const { createModelsConfiguration, validateModelsConfiguration } = load('src/lib/api/model-catalogue.ts')
-  const { createModelRoles, modelRolesErrors, planModelRole } = load('src/lib/api/model-roles.ts')
+  const { createModelRoles, modelRolesErrors, planModelRole, withAnswerModel } = load('src/lib/api/model-roles.ts')
   const config = createModelsConfiguration()
   const settings = createModelRoles(config)
   const primary = config.defaultModelId
   const secondary = config.models.find(model => model.id !== primary).id
   const crossProvider = config.models.find(model => model.providerId !== config.models.find(item => item.id === primary).providerId).id
   assert.deepEqual(modelRolesErrors(settings, config), [])
+  // Choosing the answer model moves the Answer role (what Pi uses) and the default together.
+  const routed = { ...config, roleSettings: { ...settings, answerMode: 'router', roles: { ...settings.roles, answer: { ...settings.roles.answer, failure: 'fallback', fallbackModelId: primary, eligibleModelIds: [primary] } } } }
+  const chosen = withAnswerModel(routed, secondary)
+  assert.equal(chosen.defaultModelId, secondary)
+  assert.equal(chosen.roleSettings.answerMode, 'manual')
+  assert.deepEqual(chosen.roleSettings.roles.answer, { ...routed.roleSettings.roles.answer, enabled: true, modelId: secondary, eligibleModelIds: [primary, secondary], failure: 'stop', fallbackModelId: null })
+  assert.equal(withAnswerModel(chosen, secondary).roleSettings.roles.answer.eligibleModelIds.length, 2, 'Choosing again does not duplicate eligibility')
+  assert.deepEqual(modelRolesErrors(chosen.roleSettings, chosen), [])
+  assert.equal(routed.roleSettings.answerMode, 'router', 'The input is not mutated')
   assert.equal(settings.answerMode, 'manual')
   assert.equal(settings.roles.answer.modelId, primary)
   for (const role of ['routing', 'context-selection', 'summarization']) assert.equal(settings.roles[role].enabled, false, 'Helpers are never enabled by default')
