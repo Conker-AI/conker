@@ -35,6 +35,11 @@ npm ci
 npm run dev -- --host localhost --port 5173 --strictPort
 ```
 
+To see the live (gateway) screens without a server or sign-in, open any page with
+`?gateway-preview=1`. It runs them against an in-memory fake gateway (`src/dev/`, dev builds
+only); `?gateway-preview=0` turns it off. A first message containing `[fail]` exercises the
+create-failure path.
+
 Before handing off:
 
 ```sh
