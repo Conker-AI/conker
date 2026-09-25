@@ -5,10 +5,10 @@ import type { Attempt, Generation } from '@/lib/chat/contract'
 import { GatewayModelPicker } from './model-picker'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evidence"
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, LogOut, MessageSquare, Plus, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowUp, LogOut, MessageSquare, MoreHorizontal, Plus, RefreshCw } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { CollectionEmpty, CollectionSearch, RecordItem } from '@/components/design-system/primitives'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
@@ -24,6 +24,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
 import { followLivePreview } from '@/lib/gateway/live-preview'
@@ -33,7 +36,7 @@ import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGateway
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
-export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; embedded?: boolean; visible?: boolean; onSelectSession?: (id: string | null) => void }
+export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; embedded?: boolean; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   if (message.content.kind !== 'text') return
@@ -44,7 +47,7 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
 }
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
-export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, embedded = false, visible = true, onSelectSession }: GatewayRuntimeWorkspaceProps) {
+export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, embedded = false, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -73,6 +76,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const createPending = operation === 'create'
   const [taskError, setTaskError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [firstMessage, setFirstMessage] = useState('')
   // Display-only text of the answer being written; the saved turn replaces it.
   const [preview, setPreview] = useState<{ sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null>(null)
   // The request being answered right now, so Stop can name it; cleared when the send settles.
@@ -179,6 +183,31 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       if (!rejected) setCreateUnknown('unchecked')
     } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
   }
+  /** A new chat is created by its first message, like any chat app. */
+  async function startChat() {
+    const text = firstMessage
+    if (!text.trim() || [...text].length > 16_000 || workspace.getState().operation || createUnknown || !activeRef.current) return
+    const epoch = workspace.getState().epoch
+    workspace.setState({ operation: 'create' }); setCreateError(null)
+    let created: string
+    try {
+      created = (await request(signal => client.createSession(text.trim().split('\n')[0].slice(0, 60), { signal }))).sessionId
+    } catch (error) {
+      if (workspace.getState().epoch !== epoch) return
+      const rejected = error instanceof RuntimeMutationError && error.outcome === 'rejected'
+      if (mounted.current) setCreateError(rejected ? error.message : 'We could not confirm the chat was created. Check your chats in the sidebar before trying again.')
+      // Reload the list so the owner can look for the chat before being offered another try.
+      if (!rejected) { setCreateUnknown('unchecked'); void refreshList() }
+      return
+    } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
+    if (workspace.getState().epoch !== epoch || !mounted.current || !activeRef.current) return
+    // Seed the draft so the text survives a failed send, exactly like a message typed in the chat.
+    workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text } }))
+    setFirstMessage('')
+    openSession(created)
+    void refreshList()
+    await dispatchSubmission(created, text, createTurnRequestId())
+  }
   async function submit() {
     const live = workspace.getState(), id = live.selected
     const text = id ? live.drafts[id] ?? '' : ''
@@ -197,11 +226,12 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     workspace.setState(values => {
       const uncertain = { ...values.uncertain }; delete uncertain[id]
       uncertain[destination] = { text: privacy.getState().sessionIds.includes(destination) ? '' : text, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, turnId: receipt.turnId!, checked: false, accepted: true, submission: receipt }
-      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] }, uncertain, selected: destination }
+      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] ?? '' }, uncertain, selected: destination }
     })
     if (!mounted.current || !activeRef.current) return
     if (selectedRef.current !== destination) openSession(destination)
-    setNotice(`${destination !== id ? 'The server continued in a fork. ' : ''}Turn ${receipt.turnId} is recorded (${receipt.status.replaceAll('_', ' ')}).`)
+    // A completed answer speaks for itself; only a fork or an unusual outcome needs a line.
+    if (destination !== id || receipt.status !== 'complete') setNotice(`${destination !== id ? 'The server continued in a fork. ' : ''}Turn ${receipt.turnId} is recorded (${receipt.status.replaceAll('_', ' ')}).`)
     selectedRef.current = destination
     await refreshDetail(destination)
     void refreshList()
@@ -363,26 +393,48 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   return <div className={cn('flex min-h-0 flex-col bg-background text-foreground', embedded ? 'h-full flex-1' : 'h-svh')}>
     {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" /><span className="font-semibold">Conker</span><Badge variant="outline">Live gateway</Badge><div className="ml-auto flex items-center gap-2"><ModeToggle /><Button size="sm" variant="ghost" disabled={auth.pending} onClick={() => void logout()}><LogOut />Sign out</Button></div></header>}
     <main className="flex min-h-0 flex-1">
-      <aside aria-label="Conversations" className={cn('min-h-0 w-full shrink-0 flex-col border-r sm:flex sm:w-72 lg:w-80', selected ? 'hidden' : 'flex')}>
+      {!embedded && <aside aria-label="Conversations" className={cn('min-h-0 w-full shrink-0 flex-col border-r sm:flex sm:w-72 lg:w-80', selected ? 'hidden' : 'flex')}>
         <div className="space-y-3 border-b p-4"><div className="flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">Conversations</h2><div className="flex gap-1"><Button size="icon" variant="ghost" aria-label="Refresh conversations" disabled={listPending} onClick={() => void refreshList()}><RefreshCw className={cn(listPending && 'animate-spin motion-reduce:animate-none')} /></Button><Button size="sm" onClick={() => setCreateOpen(true)}><Plus />New</Button></div></div><CollectionSearch label="Search conversations" placeholder="Search conversations…" value={query} onChange={event => setQuery(event.target.value)} /></div>
         <div className="min-h-0 flex-1 overflow-y-auto" tabIndex={0} aria-label="Conversation list">
           {listError && <p role="alert" className="p-4 text-sm text-destructive">{listError}</p>}
           <p className="px-4 pt-3 text-xs text-muted-foreground" role="status">{listPending ? 'Loading conversations…' : `${matches.length} conversations · latest 200`}</p>
           {matches.length ? <div className="divide-y">{matches.map(session => <div key={session.id} className={cn(session.id === selected && 'bg-accent')}><RecordItem title={session.status === 'forgotten' ? 'Forgotten conversation' : session.title || 'Untitled conversation'} description={<span className="break-all">{session.status} · {session.id}</span>} onOpen={() => openSession(session.id)} /></div>)}</div> : !listPending && <CollectionEmpty title={query ? 'No matching conversations' : 'No conversations yet'} description={query ? 'Try another title or session ID.' : 'Create a conversation to send your first message.'} icon={<MessageSquare />} onClear={query ? () => setQuery('') : undefined} />}
         </div>
-      </aside>
-      <section aria-label="Selected conversation" className={cn('min-h-0 min-w-0 flex-1 flex-col', selected ? 'flex' : 'hidden sm:flex')}>
-        {!selected ? <CollectionEmpty title="Open a conversation" description="Choose saved history or create a conversation. Responses come from the connected runtime." icon={<MessageSquare />} action={<Button onClick={() => setCreateOpen(true)}><Plus />New conversation</Button>} /> : <>
-          <header className="flex shrink-0 items-center gap-2 border-b p-4"><Button className="sm:hidden" size="icon" variant="ghost" aria-label="Back to conversations" onClick={() => { setSelected(null); selectedRef.current = null; onSelectSession?.(null) }}><ArrowLeft /></Button><div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold">{current?.status === 'forgotten' ? 'Forgotten conversation' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'Conversation'}</h2><p className="truncate text-xs text-muted-foreground">{selected}{current ? ` · ${current.status}` : ''}</p></div><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Check history</Button></header>
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6" tabIndex={0} aria-label="Saved conversation history">
+      </aside>}
+      <section aria-label="Selected conversation" className={cn('min-h-0 min-w-0 flex-1 flex-col', selected || embedded ? 'flex' : 'hidden sm:flex')}>
+        {!selected && embedded ? <>
+          <header className="flex h-14 shrink-0 items-center px-2"><SidebarTrigger className="size-9" /></header>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-[12vh]">
+            <div className="w-full max-w-2xl space-y-6">
+              <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">What can I help with?</h2>
+              <form className="rounded-3xl border border-input bg-card p-2 shadow-sm focus-within:border-ring" onSubmit={event => { event.preventDefault(); void startChat() }}>
+                <Label htmlFor="new-chat-composer" className="sr-only">Message Conker</Label>
+                <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="Message Conker" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-48 min-h-14 resize-none border-0 bg-transparent px-3 shadow-none focus-visible:ring-0 dark:bg-transparent" />
+                <div className="flex justify-end"><Button type="submit" size="icon" className="rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
+              </form>
+              {createError && <p role="alert" className="text-center text-sm text-destructive">{createError}</p>}
+              {createUnknown === 'checked' && <div className="flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
+            </div>
+          </div>
+        </> : !selected ? <CollectionEmpty title="Open a conversation" description="Choose saved history or create a conversation. Responses come from the connected runtime." icon={<MessageSquare />} action={<Button onClick={() => setCreateOpen(true)}><Plus />New conversation</Button>} /> : <>
+          {embedded ? <header className="flex h-14 shrink-0 items-center gap-1 px-2">
+            <SidebarTrigger className="size-9" />
+            <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
+            {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+            {headerExtra}
+            <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Chat options"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onSelect={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
+            </DropdownMenuContent></DropdownMenu>
+          </header> :           <header className="flex shrink-0 items-center gap-2 border-b p-4"><Button className="sm:hidden" size="icon" variant="ghost" aria-label="Back to conversations" onClick={() => { setSelected(null); selectedRef.current = null; onSelectSession?.(null) }}><ArrowLeft /></Button><div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold">{current?.status === 'forgotten' ? 'Forgotten conversation' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'Conversation'}</h2><p className="truncate text-xs text-muted-foreground">{selected}{current ? ` · ${current.status}` : ''}</p></div><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Check history</Button></header>}
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" tabIndex={0} aria-label="Saved conversation history"><div className={cn('space-y-6', embedded && 'mx-auto w-full max-w-3xl')}>
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length && !attempt.taskBinding} onRestore={() => recover('restoreDraft')} onCheck={() => recover('check')} onRetry={() => recover('retrySameRequest')} onRelease={() => recover('releaseUnstarted')} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Accepted turn awaiting history' : 'Send outcome unknown'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'The server accepted this turn. Further sends are blocked until its saved record is verified.' : 'Your draft is retained. Further sends are blocked because the previous request may still run.'}{attempt.turnId ? ` Known turn: ${attempt.turnId}.` : ''} Refresh history and review the conversation list for a possible fork.</p><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}>Check server history</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I reviewed server history and understand duplicate work is possible.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeFound.availability !== 'enabled'} onClick={() => recover('acknowledgeFound')}>Sent text is already in history</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeUnknown.availability !== 'enabled'} onClick={() => recover('acknowledgeUnknown')}>Acknowledge unknown outcome; enable sending</Button></div></>}</div>)}
             {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
-            {current && current.turns.length > 0 && <details className="border-t pt-4"><summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Turn records ({current.turns.length}) · latest {current.turns.at(-1)?.status.replaceAll('_', ' ')}</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}<TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} /><ModelRoutingEvidence detail={turn.detail} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Memory · {turn.memory.retrieval.status.replaceAll('_', ' ')}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
-          </div>
-          <div className="shrink-0 space-y-3 border-t p-4 sm:px-6">
+            {current && current.turns.length > 0 && <details className={cn(embedded ? 'text-xs text-muted-foreground' : 'border-t pt-4')}><summary className={cn('cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring', !embedded && 'text-sm font-medium')}>{embedded ? 'Details' : `Turn records (${current.turns.length}) · latest ${current.turns.at(-1)?.status.replaceAll('_', ' ')}`}</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}<TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} /><ModelRoutingEvidence detail={turn.detail} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Memory · {turn.memory.retrieval.status.replaceAll('_', ' ')}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
+          </div></div>
+          <div className={cn('shrink-0 space-y-3', embedded ? 'mx-auto w-full max-w-3xl px-3 pb-4 sm:px-6' : 'border-t p-4 sm:px-6')}>
             {safeTaskIntent && !safeTaskIntent.open && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">Task request saved separately from your draft.</span><Button size="sm" variant="outline" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: { ...safeTaskIntent, open: true } })}>Review task request</Button><Button size="sm" variant="ghost" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: null })}>Discard task request</Button></div>}
-            {control && <GatewayModelPicker key={selected} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+            {control && !embedded && <GatewayModelPicker key={selected} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
             <ChatComposer chat={chat} />
           </div>
         </>}
