@@ -24,6 +24,8 @@ class PreparationTest(unittest.TestCase):
             prepare()
             keyfile = root / "state/credentials.json"
             keys = json.loads(keyfile.read_text())
+            provider_file = root / 'state/providers.env'
+            provider_file.write_text("PI_OPENAI_KEY='synthetic-test-only'\n")
             pi, memory = environment("pi"), environment("memorygate")
             self.assertEqual(pi["PI_MEMORY_CORRECTION_KEY"], memory["MEMORYGATE_CORRECTION_KEY"])
             self.assertGreaterEqual(len(keys["correction"]), 32)
@@ -31,6 +33,9 @@ class PreparationTest(unittest.TestCase):
             self.assertEqual(pi["PI_MEMORY_CORRECTION_AGENT_ID"], memory["MEMORYGATE_CORRECTION_AGENT_ID"])
             prepare()
             self.assertEqual(keys, json.loads(keyfile.read_text()))
+            self.assertEqual(provider_file.read_text(), "PI_OPENAI_KEY='synthetic-test-only'\n")
+            manifest = json.loads((root / 'compose.json').read_text())
+            self.assertEqual(manifest['services']['pi']['env_file'][-1], './state/providers.env')
             del keys["correction"]
             keyfile.write_text(json.dumps(keys))
             prepare()

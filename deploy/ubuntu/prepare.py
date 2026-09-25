@@ -104,6 +104,11 @@ for name, memory, networks, context, dockerfile in [
 ]:
     service(name, memory, networks, build={"context": f"./sources/{context}", "dockerfile": dockerfile}, cap_drop=["ALL"], user="1000:1000")
 services["pi"]["volumes"] = ["./state/pi:/data"]
+provider_env = state / "providers.env"
+if not provider_env.exists():
+    provider_env.write_text("# Managed by conker models connect; preserved across preparation.\n")
+    provider_env.chmod(0o600)
+services["pi"]["env_file"].append("./state/providers.env")
 services["pi"]["depends_on"] = ["memorygate", "toolgate", "ollama"]
 services["gateway"].update(command=["python", "-m", "gateway", "serve"], ports=["127.0.0.1:18050:8050"],
     volumes=["./state/gateway:/auth", "./sources/companion/dashboard/dist:/dashboard:ro"], depends_on=["pi"])

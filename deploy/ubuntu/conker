@@ -3,7 +3,7 @@ set -eu
 
 deployment=${CONKER_DEPLOY_DIR:-"$HOME/conker-deploy"}
 usage() {
-    printf '%s\n' 'Usage: conker status | doctor | logs <service> | models <list|use> | auth <command>' \
+    printf '%s\n' 'Usage: conker status | doctor | logs <service> | models <list|use|connect|apply> | auth <command>' \
         'Auth: setup, reset-password, revoke-all, certificate, renew-certificate, health' \
         'Password commands prompt privately in your terminal.'
 }

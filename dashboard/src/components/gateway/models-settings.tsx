@@ -40,7 +40,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
   const enabled = saved ? saved.models.filter(model => model.enabled && saved.providers.some(provider => provider.id === model.providerId && provider.enabled)) : []
   // Pi answers with the Answer role's model; in router mode a helper chooses per message.
   const answering = saved?.roleSettings.answerMode === 'manual' && saved.roleSettings.roles.answer.enabled ? saved.roleSettings.roles.answer.modelId : null
-  const onlyLocal = providers.length > 0 && !providers.slice(1).some(provider => provider.status === 'ok')
+  const onlyLocal = providers.some(provider => provider.id === 'ollama' && provider.status === 'ok') && !providers.some(provider => ['openrouter', 'openai', 'anthropic', 'gemini'].includes(provider.id) && provider.status === 'ok')
   const ideas = saved?.roleSettings.roles.proposals
   const ideasOn = Boolean(ideas?.enabled && ideas.modelId && enabled.some(model => model.id === ideas.modelId))
   async function save(next: Parameters<GatewayControlClient['saveModels']>[0]) {
@@ -74,6 +74,15 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
         <Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />
       </div>
       <div className="space-y-2 border-t pt-4">
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Connect a model provider</summary>
+          <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+            <p>On your Conker server, run one of these commands. The terminal asks for your API key privately.</p>
+            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs text-foreground">{'conker models connect openrouter\nconker models connect openai\nconker models connect anthropic'}</pre>
+            <p>Choose the exact provider model ID during setup. Then run <code>conker models apply</code> when no work is running to load the credentials, refresh this page, and select your answer model.</p>
+            <p>Requires the updated Conker CLI on the server. <a className="underline underline-offset-4" href={RUNNING_DOCS} target="_blank" rel="noreferrer">Installation and model setup</a></p>
+          </div>
+        </details>
         <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium">Connected</h3><Button size="sm" variant="ghost" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button></div>
         {providerError && <p role="status" className="text-sm text-muted-foreground">{providerError}</p>}
         <dl className="space-y-2 text-sm">{providers.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2"><dt>{providerName(provider.id)}{provider.model && <span className="text-muted-foreground"> · {provider.model}</span>}</dt><dd className="text-muted-foreground">{providerState(provider)}</dd></div>)}</dl>

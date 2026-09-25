@@ -62,7 +62,31 @@ docker compose -f compose.json stop
 `conker models --help` describes model commands. These commands use Pi's existing
 catalogue, so the answer selection appears in Settings. A per-chat override still
 wins. `doctor` checks container state; it does not make a paid model request or
-replace an end-to-end acceptance test. Provider credential setup is still separate.
+replace an end-to-end acceptance test.
+
+### Connect a hosted model
+
+After updating the deployment sources and running `prepare.py`, use a terminal on
+the server:
+
+```sh
+conker models connect openrouter  # or openai / anthropic
+conker models apply               # restart Pi and decisions when idle
+conker models list
+conker models use YOUR_MODEL_ID
+```
+
+Setup prompts for a new catalogue ID, the provider's exact model ID and a hidden
+API key. Paid-model permission applies to all configured hosted providers; the
+prompt explains this before saving. Without that permission, only OpenRouter
+routes ending in `:free` can be added through this flow.
+
+Credentials are staged in owner-readable `state/providers.env`, preserved when
+deployment files are regenerated. Treat it as a secret alongside the other state
+files. Setup does not make a paid test request or verify the key remotely. After
+applying, refresh Settings and send a test message. If catalogue registration
+fails, credentials remain staged and nothing is restarted; inspect Settings before
+retrying. Existing model roles and per-chat overrides are preserved.
 
 ### Reset the password
 
