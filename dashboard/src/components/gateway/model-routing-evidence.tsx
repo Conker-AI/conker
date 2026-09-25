@@ -5,7 +5,7 @@ import { z } from 'zod'
 const receipt = z.object({
   modelConfigurationRevision: z.number().int().nonnegative(),
   attempts: z.array(z.object({
-    role: z.enum(['answer', 'routing', 'context-selection', 'summarization', 'memory-ranking']),
+    role: z.enum(['answer', 'routing', 'context-selection', 'summarization', 'memory-ranking', 'proposals']),
     modelId: z.string().max(200), actualModel: z.string().max(300).optional(), status: z.enum(['completed', 'unavailable']),
     decision: z.object({ confidence: z.number().min(0).max(1).optional(), elapsed_ms: z.number().nonnegative().optional(), inputScope: z.literal('latest-user-request').optional() }).optional(),
   })).max(20),

@@ -3,6 +3,7 @@ import { GatewayToolsInventory } from './tools-inventory'
 import { GatewaySystemStatus } from './system-status'
 import { GatewayOwnerWorkspace } from './owner-workspace'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
+import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import type { GatewayOwnerState } from './owner-state'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -28,8 +29,8 @@ import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewayActivityWorkspaceState } from './activity-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 
-export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState }: {
-  owner: GatewayOwnerClient; ownerState: GatewayOwnerState
+export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals }: {
+  owner: GatewayOwnerClient; ownerState: GatewayOwnerState; proposals: GatewayProposalClient
   control: GatewayControlClient
   runtime: GatewayRuntimeClient; activity: GatewayActivityClient; authStore: GatewayAuthStore
   conversationState: GatewayRuntimeWorkspaceState; activityState: GatewayActivityWorkspaceState
@@ -53,7 +54,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   }, [chatActive, conversationState, session])
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   return <BaseLayout variant="canvas" header={<GatewayHeader>{chatActive && session && <GatewayPrivacyControl key={session} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} />}</GatewayHeader>} sidebar={<AppSidebar variant={config.variant} collapsible={config.collapsible} side={config.side} ownerName="Owner" inboxCount={0} accountFooter={<Button variant="ghost" className="w-full justify-start" onClick={async () => { if (await authStore.getState().logout()) window.location.reload() }}><LogOut />Sign out</Button>} />}>
-    <div className={cn('min-h-0 flex-1', inboxActive ? 'block' : 'hidden')} aria-hidden={!inboxActive}><GatewayOwnerWorkspace client={owner} state={ownerState} active={inboxActive} /></div>
+    <div className={cn('min-h-0 flex-1', inboxActive ? 'block' : 'hidden')} aria-hidden={!inboxActive}><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active={inboxActive} /></div>
     {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
     {systemActive && <GatewaySystemStatus client={control} />}
     {memoryActive && <GatewayMemoryWorkspace client={control} />}

@@ -27,8 +27,10 @@ Forgot it? Reset it on the server: see [4 · Running Conker](4-running.md#reset-
 ### Inbox: things waiting for you · **Live for approvals**
 
 - **Approval requests:** the exact action, its arguments and when it expires. Approve or deny.
-- **Proposals:** things Conker noticed and suggests. *The engine that creates proposals is not
-  built yet.*
+- **Proposals:** things Conker noticed in your messages and offers to take on, with the messages
+  that prompted each one. **Accept**, **Not now** (hidden for 30 days) or **Never suggest this**.
+  Accepting records your choice; nothing runs by itself. Turn it on by assigning a model to the
+  Proposals role in Settings.
 
 ### Home: overview · **Partly live**
 

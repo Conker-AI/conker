@@ -12,8 +12,9 @@ daily, and daily use is what the whole product depends on.
 
 ## Decision
 
-Four conversation writes need only the signed-in browser session: **create a chat, send a message,
-fork a chat, stop a running answer.** The session cookie is `__Host-`, Secure, HttpOnly and
+Five low-risk writes need only the signed-in browser session: **create a chat, send a message,
+fork a chat, stop a running answer, and decide on a proposal** (added with the proposal engine; a
+decision records a preference and grants nothing). The session cookie is `__Host-`, Secure, HttpOnly and
 `SameSite=strict`; the gateway still requires the exact configured Origin and the session's CSRF
 token, and still rejects query strings on writes.
 
