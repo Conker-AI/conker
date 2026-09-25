@@ -94,6 +94,11 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
   return value
 }
 
+const forgetPreview = z.object({ memoryId: identity, revision: z.number().int().min(1), text: z.string().max(16000) })
+const forgetReceipt = z.object({ requestId: z.string(), memoryId: identity, status: z.literal('forgotten'), indexRemoval: z.string().nullable(), cachedPackagesCleared: count, sourceConversationKept: z.literal(true) })
+export type MemoryForgetPreview = z.infer<typeof forgetPreview>
+export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
+
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
@@ -126,6 +131,19 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       // Snapshot only public fields. Neither draft secrets nor unknown metadata can cross this boundary.
       const body = { expected_revision: parse(count, expectedRevision, true), configuration: parse(configuration, value, true) }
       return parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { method: 'POST', body, signal }))
+    },
+    /** The exact current text and revision; forgetting succeeds only if it is still current. */
+    async forgetPreview(id: string, signal?: AbortSignal): Promise<MemoryForgetPreview> {
+      const result = parse(forgetPreview, await auth.request(`/api/control/pi/memory/forget/${parse(identity, id, true)}`, { signal }))
+      if (result.memoryId !== id) throw new GatewayError('invalid-response')
+      return result
+    },
+    /** Removes the memory everywhere it is stored. Asks for the owner password. */
+    async forgetMemory(preview: MemoryForgetPreview): Promise<MemoryForgetReceipt> {
+      const body = { request_id: globalThis.crypto.randomUUID(), memory_id: parse(identity, preview.memoryId, true), expected_revision: parse(z.number().int().min(1), preview.revision, true) }
+      const result = parse(forgetReceipt, await auth.request('/api/control/pi/memory/forget', { method: 'POST', body }))
+      if (result.memoryId !== preview.memoryId) throw new GatewayError('invalid-response')
+      return result
     },
     async library(options: { search?: string; type?: MemoryObjectKind; after?: string; limit?: number; signal?: AbortSignal } = {}): Promise<MemoryLibrary> {
       const query: Record<string, string | number> = { search: parse(z.string().max(200), options.search ?? '', true), limit: parse(z.number().int().min(1).max(50), options.limit ?? 25, true) }

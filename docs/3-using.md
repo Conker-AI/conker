@@ -40,8 +40,9 @@ What needs your attention, recent activity and shortcuts. Sections that aren't c
 
 ### Memory: what it knows about you · **Live**
 
-Search memories and see each one's source conversation. Correcting and forgetting from this screen
-are planned. Search by meaning
+Search memories and see each one's source conversation. **Forget this memory** shows the exact text,
+then removes it everywhere Conker stored it (confirm with your password); the chat it came from
+stays until you forget that chat too. Correcting from this screen is planned. Search by meaning
 needs the Embeddings service. Without it, Conker falls back to word search and tells you.
 
 ### Journal: what happened · **Partly live**
