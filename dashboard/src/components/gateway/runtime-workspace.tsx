@@ -8,7 +8,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evide
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUp, MoreHorizontal, RefreshCw } from 'lucide-react'
+import { ArrowUp, BookOpen, BookmarkPlus, CalendarDays, Lightbulb, MoreHorizontal, PenLine, RefreshCw, Sparkles, Wrench } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import { TaskDispatchReview } from './task-dispatch-review'
 import { readTaskDispatchSources, taskDispatchProblem, visibleTaskDispatchIntent, type PreparedTaskDispatch, type TaskSubmissionBinding } from './task-dispatch-state'
@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
@@ -30,10 +30,19 @@ import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgott
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
 
-/** A friendly greeting for the time of day, like a person would say it. */
-function greeting(now = new Date()) {
-  const hour = now.getHours()
-  return hour < 5 ? 'Hello, night owl' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : hour < 23 ? 'Good evening' : 'Hello, night owl'
+/** Starters fill the composer with the start of a request; nothing is sent until the owner does. */
+const starters = [
+  { label: 'Plan my day', text: 'Help me plan my day: ', icon: CalendarDays },
+  { label: 'Draft a message', text: 'Draft a message to ', icon: PenLine },
+  { label: 'Explain simply', text: 'Explain simply: ', icon: Lightbulb },
+  { label: 'Brainstorm', text: 'Give me ideas for ', icon: Sparkles },
+  { label: 'Remember this', text: 'Remember that ', icon: BookmarkPlus },
+]
+
+/** The sidebar toggle belongs on the canvas only while the sidebar is hidden (always on phones). */
+function CanvasToggle() {
+  const { isMobile, state } = useSidebar()
+  return isMobile || state === 'collapsed' ? <SidebarTrigger className="size-9 text-muted-foreground" aria-label="Open sidebar" /> : null
 }
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
@@ -367,22 +376,29 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     <main className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <>
-          <header className="flex h-14 shrink-0 items-center px-2"><SidebarTrigger className="size-9" /></header>
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-[12vh]">
-            <div className="w-full max-w-2xl space-y-7">
-              <h2 className="flex items-center justify-center gap-3 font-serif text-3xl font-normal tracking-tight sm:text-4xl"><img src="/conker.png" alt="" className="size-9 object-contain sm:size-10" />{greeting()}</h2>
-              <form className="rounded-2xl border border-input bg-card p-3 shadow-sm transition-colors focus-within:border-foreground/20" onSubmit={event => { event.preventDefault(); void startChat() }}>
+          <header className="flex h-14 shrink-0 items-center px-3"><CanvasToggle /></header>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
+            <div className="w-full max-w-[768px]">
+              <h2 className="mb-8 text-center text-5xl font-bold tracking-tighter sm:mb-10 sm:text-6xl">Conker</h2>
+              <form className="relative z-10 rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
                 <Label htmlFor="new-chat-composer" className="sr-only">Message Conker</Label>
-                <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="How can I help you today?" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-48 min-h-14 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
-                <div className="flex justify-end"><Button type="submit" size="icon" className="size-8 rounded-lg" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
+                <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="Ask Conker anything, or give it a task…" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-16 resize-none rounded-3xl border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
+                <div className="flex items-center justify-end gap-2 px-3 pb-3"><Button type="submit" size="icon" className="size-9 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
               </form>
-              {createError && <p role="alert" className="text-center text-sm text-destructive">{createError}</p>}
-              {createUnknown === 'checked' && <div className="flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
+              <div className="mx-4 -mt-5 flex gap-5 rounded-b-2xl bg-muted px-4 pt-7 pb-2.5 text-sm text-muted-foreground sm:mx-6">
+                <Link to="/memory" className="flex items-center gap-1.5 rounded-md hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><BookOpen className="size-4" />Memory</Link>
+                <Link to="/tools" className="flex items-center gap-1.5 rounded-md hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><Wrench className="size-4" />Tools</Link>
+              </div>
+              {createError && <p role="alert" className="mt-4 text-center text-sm text-destructive">{createError}</p>}
+              {createUnknown === 'checked' && <div className="mt-2 flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
+              <div className="mt-7 flex flex-wrap justify-center gap-2">
+                {starters.map(item => <button key={item.label} type="button" className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border bg-background px-3.5 text-sm hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring" onClick={() => { setFirstMessage(item.text); requestAnimationFrame(() => { const field = document.getElementById('new-chat-composer') as HTMLTextAreaElement | null; field?.focus(); field?.setSelectionRange(item.text.length, item.text.length) }) }}><item.icon className="size-4 text-muted-foreground" />{item.label}</button>)}
+              </div>
             </div>
           </div>
         </> : <>
-          <header className="flex h-14 shrink-0 items-center gap-1 px-2">
-            <SidebarTrigger className="size-9" />
+          <header className="flex h-14 shrink-0 items-center gap-1 px-3">
+            <CanvasToggle />
             <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
             {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
             {headerExtra}
