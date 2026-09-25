@@ -1,8 +1,8 @@
 import type { CatalogueModel, ModelsConfiguration } from "./model-catalogue"
 
-export const MODEL_ROLES = ["answer", "routing", "context-selection", "summarization", "memory-ranking"] as const
+export const MODEL_ROLES = ["answer", "routing", "context-selection", "summarization", "memory-ranking", "proposals"] as const
 export type ModelRole = typeof MODEL_ROLES[number]
-export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Answer", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking" }
+export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Answer", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking", proposals: "Proposals (daily pass)" }
 export type ModelRoleAssignment = {
   enabled: boolean
   /** Owner-assigned eligibility, not a verified capability claim. */
@@ -24,7 +24,7 @@ function enabledModels(configuration: ModelsConfiguration): CatalogueModel[] {
 export function createModelRoles(configuration: ModelsConfiguration): ModelRolesConfiguration {
   const defaultId = enabledModels(configuration).find(model => model.id === configuration.defaultModelId)?.id || null
   const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelId: null })
-  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty() } }
+  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty() } }
 }
 
 /** Checks known IDs, owner eligibility and enabled routes; capabilities remain unverified. */

@@ -20,7 +20,7 @@ data. **Planned** means designed, not built.
 | Workflows (editor, publish, run) | **Live** | Branches, loops, nested workflows, replay-safe. Small models need the exact workflow ID |
 | System health | **Live** | Per-service health is live; terminal, files and most telemetry are samples |
 | Home, Journal | **Partly live** | Unconnected sections say so |
-| Proposals (the "it notices" engine) | **Planned** | No nightly analysis yet, so Inbox proposals are samples |
+| Proposals (the "it notices" engine) | **Built, not deployed** | Daily pass over your messages, within your suggestion budget and quiet hours; shown in the live Inbox. Off until a model is assigned to the Proposals role |
 | Agents, Jobs | **Preview** | Need backend contracts |
 | Character Studio | **Preview** | Settings are saved; voice cloning, emotion and 3D are not connected |
 | Calls (voice/video) | **Preview** | Browser mic and camera only; no real-time AI voice |
