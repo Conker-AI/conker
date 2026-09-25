@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { CanvasToggle } from './canvas-toggle'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
@@ -39,11 +39,6 @@ const starters = [
   { label: 'Remember this', text: 'Remember that ', icon: BookmarkPlus },
 ]
 
-/** The sidebar toggle belongs on the canvas only while the sidebar is hidden (always on phones). */
-function CanvasToggle() {
-  const { isMobile, state } = useSidebar()
-  return isMobile || state === 'collapsed' ? <SidebarTrigger className="size-9 text-muted-foreground" aria-label="Open sidebar" /> : null
-}
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   if (message.content.kind !== 'text') return

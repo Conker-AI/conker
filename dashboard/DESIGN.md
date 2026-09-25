@@ -133,11 +133,31 @@ Use the template's semantic pairs directly: background/foreground, card/card-for
 
 Keep standard button, field, menu, tab, tooltip, dialog and selection treatments from the template. Their approved opacity recipes belong to the owning primitive, recorded in `scripts/template-foundation.json`. Do not ban legitimate upstream recipes or recreate them differently in each route. Application code consumes shared components and ordinary semantic utilities; a new visual role requires a documented owner.
 
-Conker's default look is neutral and quiet (owner decision, September 25, modelled on Kimi's layout; palette may change later): the live shell uses the inset sidebar on a soft backdrop with the main area as a white (dark: charcoal) canvas, the system font stack, black (dark: white) for primary actions, a floating composer (`shadow-composer` token, 24px radius, round send), and pill-shaped starters. Use Conker's own name, mark and wording; never another product's logo, assets or copy. Conker keeps compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
+Conker's default look is neutral and quiet (owner decision, September 25, modelled on Kimi's layout; palette may change later). Use Conker's own name, mark and wording; never another product's logo, assets or copy. See **Visual language** below; it overrides older rules where they conflict. Conker keeps compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
 
 Collections own one card container. The composer, plans and requests use card roles. Tool details and reference headings use muted. Appbar, dialogs and the reference rail use background; sidebar navigation keeps sidebar roles. Shared field styling comes from Input/Select/Textarea, including collection searches.
 
 The guard checks direct color mappings and upstream recipe ownership in addition to shared heading, search and navigation rules. Rendered review remains required: preset/import correctness, contrast, focus and component behavior cannot be inferred solely from token names.
+
+## Visual language (live shell, September 25)
+
+One quiet system: hierarchy comes from space and text strength, not boxes, size or bold.
+
+| Role | Rule |
+|---|---|
+| Type | 14px UI, 12px meta, 16px for writing and reading (composer, messages) and page titles. No other sizes except the start-page wordmark. Regular and medium only: the semibold and bold tokens render as medium. |
+| Text strength | `foreground` for content, `muted-foreground` for descriptions and labels, `subtle-foreground` for meta (times, counts, placeholders). |
+| Surfaces | Canvas `background`; sidebar backdrop; `muted` (4%) for fills such as search, strips and your own message; `accent` (5%) for hover and selection. |
+| Elevation | One shadow, `shadow-composer`, for the composer and floating menus. Nothing else floats. |
+| Lines | `border` (6%) only where space cannot separate regions; `input` (13%) outlines controls: chips, outline buttons, fields. |
+| Shape | 10px rows and fields, 8px buttons, 12px cards and menus, pills for chips, tabs and badges, 24px composer. |
+| Size | Controls 36px, small 32px, large 44px. List rows at least 44px. |
+| Page | A 56px top bar (sidebar toggle only while the sidebar is hidden, page search at the right). Content is one column, `max-w-3xl`, opening with `PageHeader` (16px medium title, one-line description); 24px between sections. |
+| Groups | A section is a muted label over rows. Rows separate by space and hover, never boxes or rules. A card (border, 12px) is only for one object the owner acts on, such as an approval or an idea. |
+| Color | Neutral. Primary (black, white in dark) marks the one main action in a view; red only for destructive actions. Status is never color alone. |
+| Icons | Lucide at 16px, stroke 1.75, muted unless active. |
+
+Don't add bold, sizes above 16px, a box around every group, extra shadows, raw colors, page-owned control heights, or opacity on neutral tokens.
 
 ## Intentional exceptions
 
