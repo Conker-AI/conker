@@ -9,6 +9,12 @@ It remembers you, shows its work, and never acts without your say.</p>
   <a href="docs/4-running.md">Running it</a> ·
   <a href="docs/status.md">Status</a>
 </p>
+<p align="center">
+  <a href="https://github.com/Conker-AI/conker/actions/workflows/ci.yml"><img src="https://github.com/Conker-AI/conker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/Conker-AI/conker/actions/workflows/dashboard.yml"><img src="https://github.com/Conker-AI/conker/actions/workflows/dashboard.yml/badge.svg" alt="Dashboard" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
+  <img src="https://img.shields.io/badge/self--hosted-yes-e36b2c" alt="Self-hosted" />
+</p>
 
 ![Conker conversation showing what it read and a suggested plan](docs/images/conversation.png)
 
@@ -70,4 +76,8 @@ More in [2 · How it works](docs/2-how-it-works.md).
 
 The frontend builds on [shadcnstore's dashboard template](https://github.com/shadcnstore/shadcn-dashboard-landing-template)
 ([notice](dashboard/THIRD_PARTY_LICENSES/shadcn-dashboard-template.txt)), React, Vite, Tailwind CSS
-and Radix. MIT licensing is intended; a root `LICENSE` file is still to be added.
+and Radix.
+
+## License and security
+
+[MIT](LICENSE). Found a vulnerability? Please report it privately: [security policy](SECURITY.md).
