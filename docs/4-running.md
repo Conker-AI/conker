@@ -51,9 +51,18 @@ Full guide: [deploy/ubuntu/README.md](../deploy/ubuntu/README.md).
 
 ```sh
 conker status                 # what's running
+conker doctor                 # check files and container state
+conker logs pi                # last 100 log lines
+conker models list            # configured model IDs
+conker models use MODEL_ID    # choose the answer model; keeps other roles
 docker compose -f compose.json logs pi
 docker compose -f compose.json stop
 ```
+
+`conker models --help` describes model commands. These commands use Pi's existing
+catalogue, so the answer selection appears in Settings. A per-chat override still
+wins. `doctor` checks container state; it does not make a paid model request or
+replace an end-to-end acceptance test. Provider credential setup is still separate.
 
 ### Reset the password
 
