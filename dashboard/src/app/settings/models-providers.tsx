@@ -77,7 +77,8 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
         }
       }}>
         <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Saved on this machine. Provider credentials and endpoints are managed by the server; changing eligibility does not grant tool access." : "Preview configuration only. Nothing is sent to a provider. Endpoints and keys stay in memory until reload; use a placeholder key while trying this out."}</p>
-        <div className="grid items-start gap-3 border-y py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        {/* Live Pi answers with the Answer role, so a separate default route would only mislead there. */}
+        {!serverManaged && <div className="grid items-start gap-3 border-y py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="space-y-1">
             <Label htmlFor="default-model-route">Default route</Label>
             <p className="text-sm leading-6 text-muted-foreground">Used when a conversation has no model override.</p>
@@ -91,7 +92,7 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
             </Select>
             {!availableModels.length && <p className="text-sm leading-6 text-muted-foreground">Enable a provider and one of its models to choose a route.</p>}
           </div>
-        </div>
+        </div>}
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="min-w-0 space-y-4" aria-labelledby="model-providers-title">
             <div className="flex flex-wrap items-center justify-between gap-2">
