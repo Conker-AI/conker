@@ -29,9 +29,9 @@ function group(session: RuntimeSession, now: Date): string {
 }
 
 /** The product sidebar: your chats first; everything else is one level away. */
-export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePrivacy, footer }: {
+export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePrivacy, footer, badge }: {
   runtime: GatewayRuntimeClient; owner: GatewayOwnerClient; conversationState: GatewayRuntimeWorkspaceState
-  sourcePrivacy: GatewaySourcePrivacyState; footer?: ReactNode
+  sourcePrivacy: GatewaySourcePrivacyState; footer?: ReactNode; badge?: ReactNode
 }) {
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
   const selected = useStore(conversationState, value => value.selected)
@@ -63,7 +63,8 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
     <SidebarHeader className="gap-2 px-3 pt-3">
       <div className="flex items-center gap-2">
         <CompanionPortrait portrait="/conker.png" name="Conker" className="size-7 rounded-md" />
-        <span className="flex-1 truncate font-semibold">Conker</span>
+        <span className="truncate font-semibold">Conker</span>
+        <span className="flex min-w-0 flex-1">{badge}</span>
         <ModeToggle />
       </div>
       <SidebarMenu>

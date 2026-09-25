@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { GatewayToolDrafts } from "./tool-drafts"
 import { GatewayToolsInventory } from './tools-inventory'
 import { GatewaySystemStatus } from './system-status'
@@ -28,7 +29,9 @@ import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewayActivityWorkspaceState } from './activity-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 
-export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals }: {
+export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {
+  /** A short marker shown beside the name, e.g. that this is a preview with sample data. */
+  badge?: ReactNode
   owner: GatewayOwnerClient; ownerState: GatewayOwnerState; proposals: GatewayProposalClient
   control: GatewayControlClient
   runtime: GatewayRuntimeClient; activity: GatewayActivityClient; authStore: GatewayAuthStore
@@ -53,7 +56,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={async () => { if (await authStore.getState().logout()) window.location.reload() }}><LogOut />Sign out</Button>
   // Chat pages carry their own quiet top bar; other pages keep the page header.
-  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} conversationState={conversationState} sourcePrivacy={sourcePrivacy} footer={signOut} />}>
+  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} conversationState={conversationState} sourcePrivacy={sourcePrivacy} footer={signOut} badge={badge} />}>
     <div className={cn('min-h-0 flex-1', inboxActive ? 'block' : 'hidden')} aria-hidden={!inboxActive}><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active={inboxActive} /></div>
     {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
     {systemActive && <GatewaySystemStatus client={control} />}

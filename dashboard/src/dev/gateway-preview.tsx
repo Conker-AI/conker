@@ -1,7 +1,7 @@
 /**
  * Development-only: the live (gateway) workspace fed by an in-memory fake gateway, so the real
- * live screens can be seen and iterated on without a server or a sign-in. Enable with
- * `?gateway-preview=1` on the dev server; `?gateway-preview=0` returns to the fixture preview.
+ * live screens can be seen and iterated on without a server or a sign-in. It is the default
+ * in dev fixture mode; `?gateway-preview=0` shows the older fixture pages, `=1` brings it back.
  */
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
@@ -43,5 +43,6 @@ function services() {
 
 export default function GatewayPreview() {
   const [value] = useState(services)
-  return <GatewayWorkspace {...value} />
+  // Honest status: this is sample data, not a server.
+  return <GatewayWorkspace {...value} badge={<a href="?gateway-preview=0" title="Sample data, no server. Opens the older design pages." className="truncate rounded-full border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">Demo</a>} />
 }

@@ -28,9 +28,9 @@ It remembers you, shows its work, and never acts without your say.</p>
 > **Status:** early. Chat, memory, approvals and workflows work end to end on a real server. Calls,
 > agents and the proposal engine are still preview or planned. [Full status](docs/status.md)
 
-## Try it in 1 minute
+## Try it locally
 
-Interface preview with sample data, no backend needed (Node.js 22.12+):
+The real interface with demo data, no server needed. Needs Node.js 22.12 or newer:
 
 ```sh
 git clone https://github.com/Conker-AI/conker.git
@@ -39,7 +39,8 @@ npm ci
 npm run dev -- --host localhost --port 5173 --strictPort
 ```
 
-Open http://localhost:5173. To run the real thing on a server, see
+Open http://localhost:5173 and start chatting. Answers, memories and approvals are simulated in the
+browser; ask it to email someone to see an approval. To run the real thing on a server, see
 [4 · Running Conker](docs/4-running.md).
 
 ## How it's built
