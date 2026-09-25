@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Lightbulb, RefreshCw, X } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { RefreshCw } from 'lucide-react'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import type { GatewayProposalClient, Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -37,30 +38,31 @@ export function ProposalsPanel({ client, active }: { client: GatewayProposalClie
     } finally { if (mounted.current) setPending(null) }
   }
 
-  return <section aria-labelledby="proposals-heading" className="space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id="proposals-heading" className="flex items-center gap-2 text-base font-semibold"><Lightbulb className="size-4" />Proposals</h2>
-      <Button size="sm" variant="ghost" onClick={() => void load()}><RefreshCw />Refresh</Button>
+  return <section aria-labelledby="proposals-heading" className="flex flex-col gap-4">
+    <div className="flex items-center justify-between gap-2">
+      <h2 id="proposals-heading" className="text-base font-medium">Ideas from Conker</h2>
+      <Button size="icon" variant="ghost" aria-label="Refresh ideas" title="Refresh ideas" disabled={pending !== null} onClick={() => void load()}><RefreshCw /></Button>
     </div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    {items === null && !error && <p role="status" className="text-sm text-muted-foreground">Loading proposals…</p>}
-    {items?.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm leading-6 text-muted-foreground">Nothing new noticed. Proposals appear after a daily pass once a model is assigned to the Proposals role in Settings.</p>}
-    {items?.map(item => <article key={item.id} className="min-w-0 space-y-3 rounded-lg border p-4" aria-labelledby={`proposal-${item.id}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2"><h3 id={`proposal-${item.id}`} className="font-medium">{item.title}</h3><Badge variant="outline">Proposal</Badge></div>
-      <dl className="space-y-2 text-sm leading-6">
-        <div><dt className="text-xs font-medium text-muted-foreground">Noticed</dt><dd>{item.noticed}</dd></div>
-        <div><dt className="text-xs font-medium text-muted-foreground">Suggestion</dt><dd>{item.suggestion}</dd></div>
-        <div><dt className="text-xs font-medium text-muted-foreground">If you accept</dt><dd>{item.ifApproved}</dd></div>
-      </dl>
-      <details className="text-sm"><summary className="cursor-pointer rounded-sm text-xs font-medium text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Why: {item.evidence.length} of your messages</summary>
-        <ul className="mt-2 space-y-1">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="underline-offset-4 hover:underline" to={`/chats?session=${encodeURIComponent(source.sessionId)}&message=${encodeURIComponent(source.messageId)}`}>“{source.excerpt}”</Link> : <span className="italic">This message was forgotten.</span>}</li>)}</ul>
-      </details>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={pending !== null} onClick={() => void decide(item, 'accept')}><Check />Accept</Button>
-        <Button size="sm" variant="outline" disabled={pending !== null} onClick={() => void decide(item, 'decline')}><X />Not now</Button>
+    {items === null && !error && <p role="status" className="text-sm text-muted-foreground">Loading ideas...</p>}
+    {items?.length === 0 && <p className="text-sm text-muted-foreground">No new ideas for now. Conker looks once a day, after a model is chosen for Proposals in Settings.</p>}
+    {items?.map(item => <Card key={item.id} className="min-w-0" aria-labelledby={`proposal-${item.id}`}>
+      <CardHeader><CardTitle><h3 id={`proposal-${item.id}`} className="break-words [overflow-wrap:anywhere]">{item.title}</h3></CardTitle></CardHeader>
+      <CardContent className="flex flex-col gap-3 text-sm leading-6 [overflow-wrap:anywhere]">
+        <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
+        <p>{item.suggestion}</p>
+        <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
+        <Accordion type="single" collapsible><AccordionItem value="why"><AccordionTrigger>Why</AccordionTrigger><AccordionContent>
+          <ul className="flex flex-col gap-3">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={`/chats?session=${encodeURIComponent(source.sessionId)}&message=${encodeURIComponent(source.messageId)}`}>&ldquo;{source.excerpt}&rdquo;</Link> : <span>This message was forgotten.</span>}</li>)}</ul>
+          {!item.evidence.length && <p className="text-muted-foreground">No cited messages are available.</p>}
+        </AccordionContent></AccordionItem></Accordion>
+      </CardContent>
+      <CardFooter className="flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap">
+        <Button disabled={pending !== null} onClick={() => void decide(item, 'accept')}>Accept</Button>
+        <Button variant="outline" disabled={pending !== null} onClick={() => void decide(item, 'decline')}>Not now</Button>
         <Button size="sm" variant="ghost" disabled={pending !== null} onClick={() => void decide(item, 'never')}>Never suggest this</Button>
-      </div>
-    </article>)}
+      </CardFooter>
+    </Card>)}
   </section>
 }
