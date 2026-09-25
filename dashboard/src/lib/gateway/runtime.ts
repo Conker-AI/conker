@@ -203,11 +203,13 @@ function pendingSubmission(value: unknown, sessionId: string): RuntimePendingSub
 
 export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
-    async resumeTurn(turnId: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+    /** Resumes a parked turn; returns its status afterwards when the server reports one. */
+    async resumeTurn(turnId: string, options: { signal?: AbortSignal } = {}): Promise<string | null> {
       inputId(turnId)
       try {
         const response = await auth.request(`/api/pi/turns/${turnId}/resume`, { method: 'POST', body: {}, signal: options.signal })
         if (id(response.turn_id) !== turnId) return bad()
+        return response.status === undefined ? null : state(response.status)
       } catch (error) { throw new RuntimeMutationError(gatewayError(error)) }
     },
     async listPendingSubmissions(sessionId: string, options: { signal?: AbortSignal; cursor?: string } = {}): Promise<{ results: RuntimePendingSubmission[]; nextCursor: string | null }> {
