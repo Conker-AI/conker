@@ -46,7 +46,10 @@ env = {
         "PI_TOOLGATE_URL": "http://toolgate:8010", "PI_TOOLGATE_KEY": keys["execution"],
         "PI_MEMORYGATE_URL": "http://memorygate:8020", "PI_MEMORYGATE_INGEST_KEY": keys["ingest"],
         "PI_MEMORYGATE_READ_KEY": keys["read"], "PI_MEMORYGATE_AGENT_ID": "conker_companion",
-        "PI_DECISION_URL": "http://127.0.0.1:8060", "PI_DECISION_KEY": keys["decisions"]},
+        "PI_DECISION_URL": "http://127.0.0.1:8060", "PI_DECISION_KEY": keys["decisions"],
+        # Both workers idle until the owner acts: ideas need a Proposals model chosen in
+        # Settings, and the scheduler runs only jobs the owner created.
+        "PI_PROPOSALS_ENABLED": "true", "PI_SCHEDULER_ENABLED": "true"},
     "toolgate": {"TOOLGATE_DATA_DIR": "/data", "TOOLGATE_ADMIN_KEY": keys["toolgate"],
         "TOOLGATE_OWNER_KEY_SHA256": digest("owner"), "TOOLGATE_VAULT_KEY_FILE": "/data/vault.key",
         "TOOLGATE_VAULT_SALT": keys["salt"], "TOOLGATE_CALLBACK_SECRET": keys["callback"],

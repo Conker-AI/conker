@@ -69,7 +69,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       <div className="flex items-start justify-between gap-4 border-t pt-4">
         <div className="min-w-0 space-y-1">
           <Label htmlFor="ideas-switch">Ideas from Conker</Label>
-          <p className="text-sm leading-6 text-muted-foreground">Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. It also needs daily ideas turned on on the server. <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">How</a></p>
+          <p className="text-sm leading-6 text-muted-foreground">Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></p>
         </div>
         <Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />
       </div>
