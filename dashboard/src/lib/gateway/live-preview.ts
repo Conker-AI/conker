@@ -49,7 +49,7 @@ export function applyPreviewEvent(text: string, event: SseEvent): { text: string
 export async function followLivePreview(
   requestId: string,
   onText: (text: string) => void,
-  options: { signal: AbortSignal; fetch?: typeof fetch; origin?: string; retryDelayMs?: number },
+  options: { signal: AbortSignal; fetch?: typeof fetch; origin?: string; retryDelayMs?: number; onReset?: () => void },
 ): Promise<LivePreviewEnd> {
   if (!/^[A-Za-z0-9_-]{1,200}$/.test(requestId)) return 'unavailable'
   const origin = options.origin ?? window.location.origin
@@ -77,6 +77,7 @@ export async function followLivePreview(
           buffer = parsed.rest
           for (const event of parsed.events) {
             if (event.id !== null) after = event.id
+            if (event.event === 'reset') options.onReset?.()
             const next = applyPreviewEvent(text, event)
             if (next.text !== text) { text = next.text; onText(text) }
             if (next.end) return next.end
