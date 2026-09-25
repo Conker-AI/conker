@@ -23,12 +23,12 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   }
   const body = message.content.kind === 'unavailable'
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
-    : message.role === 'assistant' ? <RichAnswer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-sm leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
+    : message.role === 'assistant' ? <RichAnswer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
-  return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
+  return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
     {message.role === 'assistant' && <div className="mb-2 flex items-center gap-2"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" className="size-6 rounded-md" /><span className="text-sm font-medium">Conker</span></div>}
-    <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-xl border bg-card px-4 py-3')}>{body}</div>
-    <div role="group" aria-label="Message actions" className="mt-2 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground">
+    <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
+    <div role="group" aria-label="Message actions" className="mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {moreActions.length > 0 && <DropdownMenu>
         <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="More message actions"><MoreHorizontal /></Button></DropdownMenuTrigger>

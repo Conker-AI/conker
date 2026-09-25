@@ -9,7 +9,6 @@ import type { GatewayOwnerState } from './owner-state'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/design-system/primitives'
 import { BaseLayout } from '@/components/layouts/base-layout'
@@ -54,9 +53,9 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
     if (chatActive && session && /^[A-Za-z0-9_-]{1,128}$/.test(session)) conversationState.setState({ selected: session })
   }, [chatActive, conversationState, session])
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
-  const signOut = <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={async () => { if (await authStore.getState().logout()) window.location.reload() }}><LogOut />Sign out</Button>
+  const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat pages carry their own quiet top bar; other pages keep the page header.
-  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} conversationState={conversationState} sourcePrivacy={sourcePrivacy} footer={signOut} badge={badge} />}>
+  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
     <div className={cn('min-h-0 flex-1', inboxActive ? 'block' : 'hidden')} aria-hidden={!inboxActive}><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active={inboxActive} /></div>
     {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
     {systemActive && <GatewaySystemStatus client={control} />}

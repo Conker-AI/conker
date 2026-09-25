@@ -1,4 +1,4 @@
-.rich-answer { min-width: 0; max-width: 100%; font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
+.rich-answer { min-width: 0; max-width: 100%; font-size: 16px; line-height: 1.7; overflow-wrap: anywhere; }
 .rich-answer > :first-child { margin-top: 0; }
 .rich-answer > :last-child { margin-bottom: 0; }
 .rich-answer p, .rich-answer ul, .rich-answer ol, .rich-answer blockquote { margin-block: .75rem; }

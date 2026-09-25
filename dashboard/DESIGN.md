@@ -111,7 +111,7 @@ Use 4–8px within a label/detail group, 16px between related controls or list r
 
 Review the complete vertical stack, not each component in isolation. Desktop and narrow screenshots must show the leading task, readable supporting content, intact corners and reachable actions. Shared token compliance is a baseline, not a substitute for this review.
 
-Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. The theme control sits beside the Conker label in the sidebar brand row, including the mobile drawer; in icon-collapse mode it stacks below the brand. Conversation appbar controls use the compact 32px control role.
+Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. In the live product shell the theme control lives in the sidebar's account menu (Settings, Light/Dark mode, Sign out), like other chat apps; the fixture workspace keeps it beside the Conker label. Conversation appbar controls use the compact 32px control role.
 
 `BaseLayout` owns a viewport-height frame for every sidebar variant. The appbar stays outside the standard page's keyboard-accessible scroll region; route/section changes reset that region to the top. Inset clips its children to the theme-derived radius and retains its 8px outer frame while content scrolls, on either sidebar side and in expanded/collapsed states. On mobile the frame is edge-to-edge and the sidebar opens as a sheet. Conversations keep their existing transcript and reference-panel scroll regions.
 
@@ -133,7 +133,7 @@ Use the template's semantic pairs directly: background/foreground, card/card-for
 
 Keep standard button, field, menu, tab, tooltip, dialog and selection treatments from the template. Their approved opacity recipes belong to the owning primitive, recorded in `scripts/template-foundation.json`. Do not ban legitimate upstream recipes or recreate them differently in each route. Application code consumes shared components and ordinary semantic utilities; a new visual role requires a documented owner.
 
-Conker keeps its green default accent, compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
+Conker's default palette is warm (owner decision, September 25, replacing the September 16 green): warm paper in light mode, warm charcoal in dark mode, and a chestnut primary that marks actions and selection. Headings and the start-page greeting use the `font-serif` token; body text stays sans. Conker keeps compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
 
 Collections own one card container. The composer, plans and requests use card roles. Tool details and reference headings use muted. Appbar, dialogs and the reference rail use background; sidebar navigation keeps sidebar roles. Shared field styling comes from Input/Select/Textarea, including collection searches.
 
@@ -201,7 +201,7 @@ Companion has its own appbar identity, with no Chats ancestor. Its check-in stay
 
 The ordinary chat's appbar avatar opens the agent picker. Before the first message it selects the agent; afterward it becomes an explicit handoff. Handoffs appear at their message boundary, retain previous authors, preserve Incognito preferences and the separate model selection, and clear execution grants. A fork restores the agent at its selected message boundary rather than inheriting a later handoff. The canonical Companion identity remains fixed; separate chats can still use the companion agent.
 
-Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. The sidebar brand row owns the theme switcher.
+Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. In the fixture workspace the sidebar brand row owns the theme switcher; the live shell uses the account menu.
 
 `BaseLayout` accepts an optional `actions` slot for standard page-header actions. DailyNews owns feed content; its parent owns the section heading. It renders publisher/date/source metadata for ready feeds and a truthful unavailable state otherwise.
 
