@@ -49,6 +49,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [detail, setDetail] = useState<MemoryConnections | null>(null)
   const [content, setContent] = useState<MemoryContent | null>(null)
   const [error, setError] = useState(''), [detailError, setDetailError] = useState('')
+  const [connectionsError, setConnectionsError] = useState(''), [connectionsRevision, setConnectionsRevision] = useState(0)
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
   const workspace = useRef<HTMLDivElement>(null)
   const detailEpoch = useRef(0), libraryEpoch = useRef(0), contentEpoch = useRef(0)
@@ -61,9 +62,9 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   }, [client, query, type, revision])
   useEffect(() => {
     const controller = new AbortController(), epoch = ++detailEpoch.current
-    if (selected) client.connections(selected.type, selected.id, { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setDetail(value) }).catch(error => { if (!controller.signal.aborted) setDetailError(error.message) })
+    if (selected) client.connections(selected.type, selected.id, { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setDetail(value) }).catch(error => { if (!controller.signal.aborted) setConnectionsError(error instanceof Error ? error.message : 'Could not load connections.') })
     return () => { controller.abort(); detailEpoch.current = epoch + 1 }
-  }, [client, selected])
+  }, [client, selected, connectionsRevision])
   useEffect(() => {
     if (!expanded) return
     const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setExpanded(false) }
@@ -76,7 +77,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     edges: (detail?.links ?? []).map(item => ({ id: item.id, source: `${item.source_type}:${item.source_id}`, target: `${item.target_type}:${item.target_id}`, kind: 'source' }) as WorkspaceEdge),
   }), [records, detail])
   function selectRecord(item: MemoryObjectCard | null) {
-    detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setDetailError('')
+    detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setDetailError(''); setConnectionsError('')
   }
   function refresh() {
     libraryEpoch.current++; setBusy(true); setError(''); setPage(null); selectRecord(null); setRevision(value => value + 1)
@@ -113,9 +114,9 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
           {detailError && <p role="alert" className="text-destructive">{detailError}</p>}
-          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={() => { selectRecord(null); setRevision(value => value + 1) }} />}
+          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={refresh} />}
           <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Content</h3><div className="flex flex-wrap gap-1">{selected.available_fields.map(field => <Button key={field} size="sm" variant="outline" onClick={() => void expandField(field)}>{fieldLabel(field)}</Button>)}</div>{content && <><p className="text-xs text-muted-foreground">{fieldLabel(content.field)} · {content.total_characters} characters</p><pre className="whitespace-pre-wrap break-words font-sans text-sm">{content.content}</pre>{content.next_offset !== null && <Button size="sm" variant="outline" onClick={() => void expandField(content.field, content.next_offset!)}>Next part</Button>}</>}</section>
-          <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Connections</h3>{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
+          <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Connections</h3>{connectionsError ? <div className="space-y-2"><p role="alert" className="text-destructive">{connectionsError}</p><Button size="sm" variant="outline" onClick={() => { setConnectionsError(''); setConnectionsRevision(value => value + 1) }}>Retry connections</Button></div> : !detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
             const outgoing = link.source_type === selected.type && link.source_id === selected.id
             const neighbor = detail.nodes.find(item => item.type === (outgoing ? link.target_type : link.source_type) && item.id === (outgoing ? link.target_id : link.source_id))
             return <Button key={link.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal text-left" onClick={() => { if (neighbor) selectRecord(neighbor) }}>{outgoing ? 'To' : 'From'} {link.relationship.replaceAll('_', ' ')} · {neighbor?.title ?? 'Memory'}</Button>
