@@ -46,7 +46,7 @@ change the server status above.
   decided proposals and uncited material from the same input window: 32 focused tests.
 - Ubuntu preparation wires the separate memory-correction capability. Fresh setup,
   repeat preparation and legacy credential preservation tested in temporary folders.
-- CLI adds doctor, logs, model list/use, and private guided provider setup. Five CLI
+- CLI adds doctor, logs, model list/use, and private guided provider setup. Seven CLI
   tests pass; catalogue operations were also checked against an isolated Pi database.
   No real API keys were entered and provider authentication remains user-verified.
 - Gateway, memory, model-role, chat-adapter and tool-workspace contract checks pass.
@@ -58,10 +58,17 @@ draft save, publication, owner verification, both branches, loop/calculation out
 replay identity and removal of temporary access grants. It used fresh local data and
 no model or external connector calls.
 
-Remaining acceptance: browser interaction with that connected workflow editor.
-Chrome requires the owner to handle the localhost certificate warning. The lightweight
-gateway preview does not simulate editor draft persistence. Production deployment
-and real hosted-provider authentication have not been performed.
+Connected-editor browser acceptance also passed after the owner resolved the local
+certificate warning: a step label was saved through owner verification and survived
+reload; both completed runs and their step details were accessible. Desktop and
+390px mobile screenshots were reviewed, including the mobile step-list view and
+scrollable activity dialog. No Conker console errors were captured; one browser
+password-manager extension error was present. Execution itself was verified through
+the HTTPS API, not by clicking Start in the browser; temporary grants remain removed.
+
+Dashboard build, design checks and the full lint command pass (two existing lint
+warnings). Production deployment and real hosted-provider authentication have not
+been performed. The lightweight gateway preview does not simulate editor persistence.
 
 | Item | State |
 |---|---|
