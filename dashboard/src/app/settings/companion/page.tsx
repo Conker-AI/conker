@@ -11,6 +11,7 @@ import { AppearanceEditor } from "@/components/character-studio/appearance-edito
 import { VoiceEditor } from "@/components/character-studio/voice-editor"
 import { ModesEditor } from "@/components/character-studio/modes-editor"
 import { CharacterPreview } from "@/components/character-studio/preview"
+import { usePageSection } from "@/hooks/use-page-navigation"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { useCharacterWorkspace } from "@/lib/character-workspace"
 import { validateImportedMedia } from "@/lib/character-media"
@@ -22,6 +23,8 @@ export default function CharacterStudioPage({ library }: { library?: React.React
   const savedDraft = useMemo(() => characterDraft(savedProfile), [savedProfile])
   const draft = useCharacterWorkspace(state => state.draft)
   const profile = draft ?? savedDraft
+  const section = usePageSection()
+  const hasPreview = section === "appearance" || section === "modes" || (section === "voice" && !!profile.studio.voice.reference)
   const setProfile = (next: CharacterDraft | ((current: CharacterDraft) => CharacterDraft)) => useCharacterWorkspace.setState(state => ({ draft: typeof next === "function" ? next(state.draft ?? savedDraft) : next }))
   const [previewOpen, setPreviewOpen] = useState(false)
   const [error, setError] = useState("")
@@ -57,8 +60,8 @@ export default function CharacterStudioPage({ library }: { library?: React.React
   }
   return <BaseLayout title="Character Studio" description="Shape who your companion is, how it looks, and how it speaks." actions={<><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
     {library}
-    <Button variant="outline" className="lg:hidden" aria-expanded={previewOpen} aria-controls="studio-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? 'Hide preview' : 'Preview character'}</Button>
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+    {hasPreview && <Button variant="outline" className="lg:hidden" aria-expanded={previewOpen} aria-controls="studio-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? 'Hide preview' : 'Preview artwork & media'}</Button>}
+    <div className={`grid items-start gap-6 ${hasPreview ? 'lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]' : ''}`}>
       <form id="character-form" onSubmit={submit} className="min-w-0 rounded-xl border bg-card p-5 sm:p-6">
         <fieldset disabled={pending || uploading} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
           <RouteSection value="identity"><div className="space-y-6">
@@ -80,8 +83,9 @@ export default function CharacterStudioPage({ library }: { library?: React.React
             <StudioSection title="Speaking style" description="Write the way you want your character to communicate."><StudioField label="Speaking instructions" value={profile.speakingStyle} onChange={speakingStyle => change({ speakingStyle })} placeholder="Describe wording, humor, length, vocabulary, and how it handles uncertainty." hint="This controls the writing. Voice defines the sound." /></StudioSection>
             <StudioDisclosure title="Writing examples (optional)">
               <StudioField label="Sample question" maxLength={1000} value={profile.studio.examples.prompt} onChange={prompt => studio({ examples: { ...profile.studio.examples, prompt } })} />
-              <StudioField label="Focus answer" value={profile.studio.examples.focus} onChange={focus => studio({ examples: { ...profile.studio.examples, focus } })} hint="Keep the useful answer and necessary context." />
-              <StudioField label="Character answer" value={profile.studio.examples.character} onChange={character => studio({ examples: { ...profile.studio.examples, character } })} hint="The same substance, expressed in your character's own style. These are editable examples, not generated responses." />
+              <p className="text-sm text-muted-foreground">Write both answers to the same question to define the difference. These are your examples, not generated replies.</p>
+              <div className="grid gap-5 xl:grid-cols-2"><StudioField label="Focus answer" value={profile.studio.examples.focus} onChange={focus => studio({ examples: { ...profile.studio.examples, focus } })} hint="Keep the useful answer and necessary context." />
+              <StudioField label="Character answer" value={profile.studio.examples.character} onChange={character => studio({ examples: { ...profile.studio.examples, character } })} hint="The same substance, expressed in your character's own style." /></div>
             </StudioDisclosure>
           </div></RouteSection>
           <RouteSection value="appearance"><AppearanceEditor profile={profile} update={update} onBusy={setUploading} /></RouteSection>
@@ -89,7 +93,7 @@ export default function CharacterStudioPage({ library }: { library?: React.React
           <RouteSection value="modes"><ModesEditor value={profile.studio.modes} onChange={modes => studio({ modes })} /></RouteSection>
         </fieldset>
       </form>
-      <div id="studio-preview" className={`${previewOpen ? "block" : "hidden"} order-first min-w-0 lg:order-last lg:block lg:sticky lg:top-6`}><CharacterPreview profile={profile} /></div>
+      {hasPreview && <div id="studio-preview" className={`${previewOpen ? "block" : "hidden"} order-first min-w-0 lg:order-last lg:block lg:sticky lg:top-6`}><CharacterPreview profile={profile} /></div>}
     </div>
     <div className="sticky bottom-0 z-10 border-t bg-background py-3">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
