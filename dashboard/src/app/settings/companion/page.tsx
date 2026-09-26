@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Download, Plus, Trash2, Upload } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { FormActions, RouteSection, TaskDialogContent, OverlayBody } from "@/components/design-system"
@@ -18,12 +19,18 @@ import { validateImportedMedia } from "@/lib/character-media"
 import { characterDraft, exportCharacter, importCharacter, validateCharacter, sameCharacterValue, type CharacterDraft, type CharacterStudio } from "@/lib/api/character"
 
 export default function CharacterStudioPage({ library }: { library?: React.ReactNode } = {}) {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const setup = params.get('setup') === '1'
+  const steps = ['identity', 'speaking', 'appearance', 'voice', 'modes']
+  const stepNames = ['Identity', 'Speaking style', 'Appearance', 'Voice', 'Expression & modes']
   const savedProfile = useConker(data => data.profile)
   const { save, pending } = useConkerStore()
   const savedDraft = useMemo(() => characterDraft(savedProfile), [savedProfile])
   const draft = useCharacterWorkspace(state => state.draft)
   const profile = draft ?? savedDraft
   const section = usePageSection()
+  const step = Math.max(0, steps.indexOf(section))
   const hasPreview = section === "appearance" || section === "modes" || (section === "voice" && !!profile.studio.voice.reference)
   const setProfile = (next: CharacterDraft | ((current: CharacterDraft) => CharacterDraft)) => useCharacterWorkspace.setState(state => ({ draft: typeof next === "function" ? next(state.draft ?? savedDraft) : next }))
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -49,6 +56,17 @@ export default function CharacterStudioPage({ library }: { library?: React.React
     try { const valid = validateCharacter(profile); if (await save(valid)) { useCharacterWorkspace.setState({ draft: null }); setNotice(library ? "Character saved in this browser." : "Character saved in this preview.") } }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your character.") }
   }
+  async function advance() {
+    setError('')
+    try {
+      if (dirty && !await save(validateCharacter(profile))) return
+      useCharacterWorkspace.setState({ draft: null })
+      if (step === steps.length - 1) {
+        setNotice('Character setup saved. You can return to any section to edit it.')
+        navigate('/settings/companion')
+      } else navigate(`/settings/companion?setup=1&tab=${steps[step + 1]}`)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save your character.') }
+  }
   function download() {
     try {
       const blob = new Blob([exportCharacter(profile)], { type: "application/json" })
@@ -58,8 +76,9 @@ export default function CharacterStudioPage({ library }: { library?: React.React
       setNotice("Exported your current draft, including embedded artwork and voice reference.")
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not export this character.") }
   }
-  return <BaseLayout title="Character Studio" description="Shape who your companion is, how it looks, and how it speaks." actions={<><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
-    {library}
+  return <BaseLayout title={setup ? `Set up ${profile.name}` : "Character Studio"} description={setup ? undefined : "Shape who your companion is, how it looks, and how it speaks."} actions={setup ? undefined : <><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
+    {!setup && library}
+    {setup && <div className="space-y-2 border-b pb-4" role="status"><p className="text-sm font-semibold">Step {step + 1} of {steps.length} · {stepNames[step]}</p><p className="text-sm text-muted-foreground">{step === 0 ? 'Define who your character is. Only the name is required.' : step === 4 ? 'Choose how this character behaves in each mode, then finish setup.' : 'Add what matters to your character. Optional settings can be left empty and edited later.'}</p></div>}
     {hasPreview && <Button variant="outline" className="lg:hidden" aria-expanded={previewOpen} aria-controls="studio-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? 'Hide preview' : 'Preview artwork & media'}</Button>}
     <div className={`grid items-start gap-6 ${hasPreview ? 'lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]' : ''}`}>
       <form id="character-form" onSubmit={submit} className="min-w-0 rounded-xl border bg-card p-5 sm:p-6">
@@ -98,8 +117,8 @@ export default function CharacterStudioPage({ library }: { library?: React.React
     <div className="sticky bottom-0 z-10 border-t bg-background py-3">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
       <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : (library ? "Saved in this browser - export for backup" : "Saved in memory - export to keep a copy"))}</span>}>
-        <Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>
-        <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button>
+        {setup ? <><Button type="button" variant="outline" disabled={step === 0 || pending || uploading} onClick={() => navigate(`/settings/companion?setup=1&tab=${steps[step - 1]}`)}>Back</Button><Button type="button" disabled={!profile.name.trim() || pending || uploading} onClick={() => void advance()}>{pending ? 'Saving…' : step === steps.length - 1 ? 'Finish setup' : dirty ? 'Save & continue' : 'Continue'}</Button></> : <><Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>
+        <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button></>}
       </FormActions>
     </div>
     <Dialog open={importOpen} onOpenChange={open => { if (!reading) setImportOpen(open) }}><TaskDialogContent title="Import character" description="Bring in a Conker package or the text from a Character Card V2/V3 JSON." onPointerDownOutside={event => event.preventDefault()}>
@@ -112,3 +131,4 @@ export default function CharacterStudioPage({ library }: { library?: React.React
     </TaskDialogContent></Dialog>
   </BaseLayout>
 }
+

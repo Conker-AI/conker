@@ -80,7 +80,7 @@ function CharacterLibrary() {
     }
     const id = crypto.randomUUID()
     if (await mutate(() => applyLibrary({ selected: id, entries: [...library.entries, { id, profile: value }] }))) {
-      useCharacterWorkspace.setState({ draft: null }); setCreating(null); navigate('/settings/companion')
+      useCharacterWorkspace.setState({ draft: null }); setCreating(null); navigate(creating === 'new' ? '/settings/companion?setup=1' : '/settings/companion')
     }
   }
   return <div className="space-y-2 border-b pb-4">

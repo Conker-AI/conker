@@ -70,6 +70,7 @@ const data = {
 }
 
 export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: React.ComponentProps<typeof Sidebar> & { ownerName?: string; inboxCount?: number; accountFooter?: React.ReactNode }) {
+  const profile = useConkerStore(state => state.data?.profile)
   const storedOwner = useConkerStore(state => state.data?.auth.ownerName)
   const storedCount = useConkerStore(state => state.data?.tickets.filter(ticket => ticket.status === "Needs you").length ?? 0)
   const owner = ownerName ?? storedOwner ?? "Owner"
@@ -80,10 +81,10 @@ export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: R
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col">
             <SidebarMenuButton size="lg" asChild tooltip="Open companion" className="min-w-0 flex-1 gap-3 group-data-[collapsible=icon]:flex-none">
-              <Link to="/companion" aria-label="Conker companion screen">
-                <CompanionPortrait portrait="/conker.png" name="Conker" className="size-8 rounded-lg" />
+              <Link to="/companion" aria-label={`${profile?.name ?? 'Conker'} companion screen`}>
+                <CompanionPortrait profile={profile} portrait={profile?.portrait ?? '/conker.png'} name={profile?.name ?? 'Conker'} className="size-8 rounded-lg" />
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-semibold">Conker</span>
+                  <span className="truncate font-semibold">{profile?.name ?? 'Conker'}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     Your companion
                   </span>

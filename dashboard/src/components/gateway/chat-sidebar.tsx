@@ -1,5 +1,6 @@
 import { useSidebarConfig } from '@/hooks/use-sidebar-config'
 import { CompanionPortrait } from '@/components/companion-portrait'
+import { AppSidebar } from '@/components/app-sidebar'
 import { useConker } from '@/lib/api/store'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -8,7 +9,7 @@ import { Bot, Folder, FileBox, Clock, BookOpen, ChevronsUpDown, History, Inbox, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
-  SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar,
+  SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from '@/components/ui/sidebar'
 import { useCircularTransition } from '@/hooks/use-circular-transition'
 import { useTheme } from '@/hooks/use-theme'
@@ -70,12 +71,13 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const onChat = ['/chat', '/chats', '/companion'].includes(location.pathname)
   const onPage = (url: string) => location.pathname === url
 
+  if (!onChat) return <AppSidebar variant={config.variant} collapsible={config.collapsible} side={config.side} ownerName="You" inboxCount={pendingApprovals} accountFooter={<DropdownMenuItem onSelect={onSignOut}><LogOut />Sign out</DropdownMenuItem>} />
+
   return <Sidebar variant={config.variant} collapsible={config.collapsible} side={config.side}>
     <SidebarHeader className="gap-1 px-2 pt-2">
       <div className="flex h-10 items-center gap-2 px-1">
         <Link to="/companion" aria-label={`Talk to ${profile.name}`}><CompanionPortrait profile={profile} className="size-8" /></Link>
         <span className="flex min-w-0 flex-1">{badge}</span>
-        <SidebarTrigger className="size-8 text-muted-foreground" aria-label="Collapse sidebar" />
       </div>
       <SidebarMenu className="mt-1">
         <SidebarMenuItem>
