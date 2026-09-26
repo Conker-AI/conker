@@ -38,7 +38,9 @@ export function NavUser({
   }
   footer?: ReactNode
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile, setOpenMobile } = useSidebar()
+  const initials = user.name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'U'
+  const closeMobile = () => { if (isMobile) setOpenMobile(false) }
 
   return (
     <SidebarMenu>
@@ -50,7 +52,7 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-                <Avatar><AvatarFallback>AL</AvatarFallback></Avatar>
+                <Avatar><AvatarFallback>{initials}</AvatarFallback></Avatar>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -70,7 +72,7 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <div className="h-8 w-8 rounded-lg">
-                  <Avatar><AvatarFallback>AL</AvatarFallback></Avatar>
+                  <Avatar><AvatarFallback>{initials}</AvatarFallback></Avatar>
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -82,21 +84,21 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/settings" onClick={closeMobile}><Settings />Settings</Link></DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/companion">
+                <Link to="/settings/companion" onClick={closeMobile}>
                   <CircleUser />
                   Companion settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/system">
+                <Link to="/system" onClick={closeMobile}>
                   <Server />
                   System
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/inbox">
+                <Link to="/inbox" onClick={closeMobile}>
                   <BellDot />
                   Inbox
                 </Link>

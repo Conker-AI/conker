@@ -30,6 +30,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 const data = {
@@ -69,7 +70,15 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: React.ComponentProps<typeof Sidebar> & { ownerName?: string; inboxCount?: number; accountFooter?: React.ReactNode }) {
+export function AppSidebar({ ownerName, ownerDescription, inboxCount, accountFooter, headerActions, headerBadge, children, ...props }: React.ComponentProps<typeof Sidebar> & {
+  ownerName?: string
+  ownerDescription?: string
+  inboxCount?: number
+  accountFooter?: React.ReactNode
+  headerActions?: React.ReactNode
+  headerBadge?: React.ReactNode
+}) {
+  const { isMobile, setOpenMobile } = useSidebar()
   const profile = useConkerStore(state => state.data?.profile)
   const storedOwner = useConkerStore(state => state.data?.auth.ownerName)
   const storedCount = useConkerStore(state => state.data?.tickets.filter(ticket => ticket.status === "Needs you").length ?? 0)
@@ -81,7 +90,7 @@ export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: R
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col">
             <SidebarMenuButton size="lg" asChild tooltip="Open companion" className="min-w-0 flex-1 gap-3 group-data-[collapsible=icon]:flex-none">
-              <Link to="/companion" aria-label={`${profile?.name ?? 'Conker'} companion screen`}>
+              <Link to="/companion" onClick={() => { if (isMobile) setOpenMobile(false) }} aria-label={`${profile?.name ?? 'Conker'} companion screen`}>
                 <CompanionPortrait profile={profile} portrait={profile?.portrait ?? '/conker.png'} name={profile?.name ?? 'Conker'} className="size-8 rounded-lg" />
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">{profile?.name ?? 'Conker'}</span>
@@ -94,14 +103,17 @@ export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: R
             <ModeToggle />
           </SidebarMenuItem>
         </SidebarMenu>
+        {headerBadge && <div className="group-data-[collapsible=icon]:hidden">{headerBadge}</div>}
+        {headerActions}
       </SidebarHeader>
       <SidebarContent>
         {data.navGroups.map((group) => (
           <NavMain key={group.label} label={group.label} items={group.items.map((item) => item.url === "/inbox" ? { ...item, badge: pendingCount } : item)} />
         ))}
+        {children}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{ ...data.user, name: owner }} footer={accountFooter} />
+        <NavUser user={{ ...data.user, name: owner, email: ownerDescription ?? data.user.email }} footer={accountFooter} />
       </SidebarFooter>
     </Sidebar>
   )

@@ -32,11 +32,3 @@ export function SidebarConfigProvider({ children }: { children: React.ReactNode 
     </SidebarContext.Provider>
   )
 }
-
-export function useSidebarConfig() {
-  const context = React.useContext(SidebarContext)
-  if (!context) {
-    throw new Error("useSidebarConfig must be used within a SidebarConfigProvider")
-  }
-  return context
-}

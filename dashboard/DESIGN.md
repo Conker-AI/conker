@@ -74,6 +74,10 @@ Bounded forms scroll a normal `div` around their fieldset, with `min-height: 0` 
 
 Do not relocate a correctly placed feature just to touch every screen. Home remains an overview; Companion remains the proactive conversation; Chats preserves message/appbar/composer/reference ownership; System keeps Overview, Terminal and Files as separate sections.
 
+## Shared application shell
+
+`AppSidebar` owns the brand, grouped root navigation and `NavUser` account menu for both fixture and gateway workspaces. The gateway supplies live New chat, session search/history, pending approvals, preview marker and account actions through its slots; these remain mounted on every route. Never switch sidebar trees based on whether the current page is a conversation. `AppbarSidebarToggle` owns collapse visibility and sizing for all appbars, including conversations and fixed desktop sidebars. Theme and layout preferences keep their existing settings owners.
+
 ## Density and layout contract
 
 | Role / token | Default contract |
@@ -111,7 +115,7 @@ Use 4–8px within a label/detail group, 16px between related controls or list r
 
 Review the complete vertical stack, not each component in isolation. Desktop and narrow screenshots must show the leading task, readable supporting content, intact corners and reachable actions. Shared token compliance is a baseline, not a substitute for this review.
 
-Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. In the live product shell the theme control lives in the sidebar's account menu (Settings, Light/Dark mode, Sign out), like other chat apps; the fixture workspace keeps it beside the Conker label. Conversation appbar controls use the compact 32px control role.
+Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. The shared sidebar keeps the theme control beside the Conker label in both live and fixture workspaces; the account menu owns settings and sign-out actions. Conversation appbar controls use the compact 32px control role.
 
 `BaseLayout` owns a viewport-height frame for every sidebar variant. The appbar stays outside the standard page's keyboard-accessible scroll region; route/section changes reset that region to the top. Inset clips its children to the theme-derived radius and retains its 8px outer frame while content scrolls, on either sidebar side and in expanded/collapsed states. On mobile the frame is edge-to-edge and the sidebar opens as a sheet. Conversations keep their existing transcript and reference-panel scroll regions.
 

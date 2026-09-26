@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { AppbarSidebarToggle } from '@/components/appbar-sidebar-toggle'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
@@ -40,11 +40,6 @@ const starters = [
   { label: 'Brainstorm', text: 'Give me ideas for ', icon: Sparkles },
   { label: 'Remember this', text: 'Remember that ', icon: BookmarkPlus },
 ]
-
-/** Keep the toggle in the conversation appbar in both sidebar states. */
-function CanvasToggle() {
-  return <SidebarTrigger className="size-9 text-muted-foreground" aria-label="Toggle sidebar" />
-}
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   if (message.content.kind !== 'text') return
@@ -378,7 +373,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     <main className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <>
-          <header className="flex h-14 shrink-0 items-center px-3"><CanvasToggle /></header>
+          <header className="flex h-14 shrink-0 items-center px-3"><AppbarSidebarToggle compact separator={false} /></header>
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
             <div className="w-full max-w-[768px]">
               <h2 className="mb-8 text-center text-5xl font-bold tracking-tighter sm:mb-10 sm:text-6xl">{companionName}</h2>
@@ -400,7 +395,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
           </div>
         </> : <>
           <header className="flex h-14 shrink-0 items-center gap-1 px-3">
-            <CanvasToggle />
+            <AppbarSidebarToggle compact separator={false} />
             <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
             {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
             {headerExtra}
