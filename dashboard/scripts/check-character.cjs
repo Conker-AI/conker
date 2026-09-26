@@ -24,6 +24,18 @@ async function main() {
   const { characterDraft, exportCharacter, importCharacter, removeCharacterAsset, validateCharacter } = load('src/lib/api/character.ts')
   const client = createFixtureClient()
   const original = await client.load()
+  const { readCharacterLibrary, updateCharacterLibrary } = load('src/lib/character-library.ts')
+  const migrated = readCharacterLibrary(JSON.stringify({ selected: 'Conker', profiles: { Conker: original.profile } }), original.profile)
+  const renamed = updateCharacterLibrary(migrated, { ...original.profile, name: 'Renamed' })
+  assert.equal(renamed.entries.length, 1, 'Renaming must not create another character')
+  assert.equal(renamed.selected, migrated.selected, 'Rename preserves stable identity')
+  assert.equal(renamed.entries[0].profile.name, 'Renamed')
+  const duplicated = { ...renamed, selected: 'copy', entries: [...renamed.entries, { id: 'copy', profile: original.profile }] }
+  const editedCopy = updateCharacterLibrary(duplicated, { ...original.profile, name: 'Different' })
+  assert.equal(editedCopy.entries[0].profile.name, 'Renamed', 'Editing copy must preserve original')
+  assert.deepEqual(readCharacterLibrary(JSON.stringify(editedCopy), original.profile), editedCopy)
+  assert.equal(readCharacterLibrary('{broken', original.profile).entries[0].profile.name, original.profile.name)
+  assert.equal(readCharacterLibrary(JSON.stringify({ selected: 'bad', entries: [{ id: 'bad', profile: {} }, ...renamed.entries] }), original.profile).selected, renamed.selected)
   const draft = characterDraft(original.profile)
   draft.name = '  Rowan  '
   draft.studio.soul = 'Think carefully and speak plainly.'

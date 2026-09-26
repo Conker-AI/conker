@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog } from "@/components/ui/dialog"
-import { StudioSection, StudioField } from "@/components/character-studio/fields"
+import { StudioDisclosure, StudioSection, StudioField } from "@/components/character-studio/fields"
 import { AppearanceEditor } from "@/components/character-studio/appearance-editor"
 import { VoiceEditor } from "@/components/character-studio/voice-editor"
 import { ModesEditor } from "@/components/character-studio/modes-editor"
@@ -23,6 +23,7 @@ export default function CharacterStudioPage({ library }: { library?: React.React
   const draft = useCharacterWorkspace(state => state.draft)
   const profile = draft ?? savedDraft
   const setProfile = (next: CharacterDraft | ((current: CharacterDraft) => CharacterDraft)) => useCharacterWorkspace.setState(state => ({ draft: typeof next === "function" ? next(state.draft ?? savedDraft) : next }))
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [importOpen, setImportOpen] = useState(false)
@@ -56,8 +57,9 @@ export default function CharacterStudioPage({ library }: { library?: React.React
   }
   return <BaseLayout title="Character Studio" description="Shape who your companion is, how it looks, and how it speaks." actions={<><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
     {library}
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]">
-      <form id="character-form" onSubmit={submit} className="min-w-0 space-y-6">
+    <Button variant="outline" className="lg:hidden" aria-expanded={previewOpen} aria-controls="studio-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? 'Hide preview' : 'Preview character'}</Button>
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+      <form id="character-form" onSubmit={submit} className="min-w-0 rounded-xl border bg-card p-5 sm:p-6">
         <fieldset disabled={pending || uploading} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
           <RouteSection value="identity"><div className="space-y-6">
             <StudioSection title="Identity" description="Introduce the character in your own words.">
@@ -65,31 +67,31 @@ export default function CharacterStudioPage({ library }: { library?: React.React
               <StudioField label="Personality" value={profile.personality} onChange={personality => change({ personality })} placeholder="Describe the temperament, contradictions, habits, and sense of humor that make this character distinctive." />
               <StudioField label="Soul & values" value={profile.studio.soul} onChange={soul => studio({ soul })} placeholder="What matters to this character? What motivates it, and what principles guide it?" />
             </StudioSection>
-            <StudioSection title="Background & relationship" description="Give the character context that makes its personality coherent.">
+            <StudioDisclosure title="Background & relationship (optional)">
               <StudioField label="Backstory" value={profile.studio.backstory} onChange={backstory => studio({ backstory })} placeholder="Origins, experiences, interests, and the world your character comes from." hint="Character lore is separate from memories of your real conversations." />
               <StudioField label="Relationship with you" value={profile.studio.relationship} onChange={relationship => studio({ relationship })} placeholder="How should it address you, support you, disagree with you, and grow alongside you?" />
-            </StudioSection>
-            <StudioSection title="More about your character" description="Add interests, habits, motivations, or other details that matter to you.">
+            </StudioDisclosure>
+            <StudioDisclosure title="Interests, habits & custom details (optional)">
               {profile.studio.details.map((detail, index) => <div key={detail.id} className="flex items-end gap-2"><div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2"><StudioField label={`Detail ${index + 1} label`} value={detail.label} multiline={false} maxLength={80} placeholder="Interests" onChange={label => studio({ details: profile.studio.details.map(item => item.id === detail.id ? { ...item, label } : item) })} /><StudioField label={`Detail ${index + 1} value`} value={detail.value} multiline={false} maxLength={500} onChange={value => studio({ details: profile.studio.details.map(item => item.id === detail.id ? { ...item, value } : item) })} /></div><Button type="button" variant="ghost" size="icon" aria-label={`Remove detail ${index + 1}`} onClick={() => studio({ details: profile.studio.details.filter(item => item.id !== detail.id) })}><Trash2 /></Button></div>)}
               <Button type="button" variant="outline" disabled={profile.studio.details.length >= 20} onClick={() => studio({ details: [...profile.studio.details, { id: crypto.randomUUID(), label: "", value: "" }] })}><Plus />Add detail</Button>
-            </StudioSection>
+            </StudioDisclosure>
           </div></RouteSection>
           <RouteSection value="speaking"><div className="space-y-6">
             <StudioSection title="Speaking style" description="Write the way you want your character to communicate."><StudioField label="Speaking instructions" value={profile.speakingStyle} onChange={speakingStyle => change({ speakingStyle })} placeholder="Describe wording, humor, length, vocabulary, and how it handles uncertainty." hint="This controls the writing. Voice defines the sound." /></StudioSection>
-            <StudioSection title="Teach by example" description="Write two versions of the same answer and compare them in the preview.">
+            <StudioDisclosure title="Writing examples (optional)">
               <StudioField label="Sample question" maxLength={1000} value={profile.studio.examples.prompt} onChange={prompt => studio({ examples: { ...profile.studio.examples, prompt } })} />
               <StudioField label="Focus answer" value={profile.studio.examples.focus} onChange={focus => studio({ examples: { ...profile.studio.examples, focus } })} hint="Keep the useful answer and necessary context." />
               <StudioField label="Character answer" value={profile.studio.examples.character} onChange={character => studio({ examples: { ...profile.studio.examples, character } })} hint="The same substance, expressed in your character's own style. These are editable examples, not generated responses." />
-            </StudioSection>
+            </StudioDisclosure>
           </div></RouteSection>
           <RouteSection value="appearance"><AppearanceEditor profile={profile} update={update} onBusy={setUploading} /></RouteSection>
           <RouteSection value="voice"><VoiceEditor value={profile.studio.voice} onBusy={setUploading} onChange={voice => update(current => ({ ...current, studio: { ...current.studio, voice: typeof voice === "function" ? voice(current.studio.voice) : voice } }))} /></RouteSection>
           <RouteSection value="modes"><ModesEditor value={profile.studio.modes} onChange={modes => studio({ modes })} /></RouteSection>
         </fieldset>
       </form>
-      <CharacterPreview profile={profile} />
+      <div id="studio-preview" className={`${previewOpen ? "block" : "hidden"} order-first min-w-0 lg:order-last lg:block lg:sticky lg:top-6`}><CharacterPreview profile={profile} /></div>
     </div>
-    <div className="sticky bottom-0 z-10 bg-background py-3">
+    <div className="sticky bottom-0 z-10 border-t bg-background py-3">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
       <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : (library ? "Saved in this browser - export for backup" : "Saved in memory - export to keep a copy"))}</span>}>
         <Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>

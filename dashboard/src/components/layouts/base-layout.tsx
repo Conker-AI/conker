@@ -72,7 +72,7 @@ export function BaseLayout({ children, title, description, actions, status, head
     />
   )
 
-  if (embedded) return <div className="flex min-h-0 flex-1 flex-col overflow-y-auto"><PageContainer className="flex flex-col gap-(--page-section-gap) py-6 pb-8">{title && <PageHeader title={title} description={description} actions={actions} status={status} />}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}{children}</PageContainer></div>
+  if (embedded) return <div ref={pageScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto"><PageContainer className="flex flex-col gap-(--page-section-gap) py-6 pb-8">{title && <PageHeader title={title} description={description} actions={actions} status={status} />}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}{children}</PageContainer></div>
 
   return (
     <SidebarProvider

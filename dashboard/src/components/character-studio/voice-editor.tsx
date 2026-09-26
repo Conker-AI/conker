@@ -20,7 +20,7 @@ export function VoiceEditor({ value, onChange, onBusy }: { value: CharacterStudi
       <div className="space-y-2"><Label htmlFor="voice-language">Speech language</Label><Select value={value.language} onValueChange={language => change({ language: language as typeof value.language })}><SelectTrigger id="voice-language" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{["English", "Chinese", "Japanese", "Korean", "German", "French", "Russian", "Portuguese", "Spanish", "Italian"].map(language => <SelectItem key={language} value={language}>{language}</SelectItem>)}</SelectContent></Select></div>
       {value.source === "design" && <div className="space-y-2"><Button type="button" disabled>Generate voice samples</Button><p className="text-xs leading-5 text-muted-foreground">Available when Qwen3-TTS is connected. Your description can be saved now; no audio is generated in this preview.</p></div>}
     </StudioSection>
-    <StudioSection title="Voice reference" description="Add a recording to audition now and use as a cloning reference later.">
+    {(value.source === "reference" || !!value.reference) && <StudioSection title="Voice reference" description="Add a recording to audition now and use as a cloning reference later.">
       <div className="space-y-2"><Label htmlFor="voice-reference">Upload reference audio</Label><Input id="voice-reference" type="file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/ogg,audio/webm,audio/mp4" disabled={loading} onChange={async event => {
         const file = event.target.files?.[0]; event.target.value = ""; if (!file) return
         setError(""); setLoading(true); onBusy(true)
@@ -29,8 +29,9 @@ export function VoiceEditor({ value, onChange, onBusy }: { value: CharacterStudi
       {loading && <p role="status" className="text-sm text-muted-foreground">Checking recording…</p>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {value.reference && <div className="flex flex-wrap items-center justify-between gap-3"><p className="min-w-0 break-words text-sm">{value.reference.name}</p><Button type="button" size="sm" variant="outline" onClick={() => change({ reference: null, transcript: "" })}>Remove recording</Button></div>}
       <StudioField label="Reference transcript" value={value.transcript} maxLength={3000} onChange={transcript => change({ transcript })} placeholder="The exact words spoken in the recording." />
-      <StudioField label="Pronunciation notes" value={value.pronunciation} onChange={pronunciation => change({ pronunciation })} placeholder="Names, abbreviations, or words with a particular pronunciation." />
+
       <p className="text-xs leading-5 text-muted-foreground">Reference playback works now. Cloning, generated read-aloud and emotion control require a speech connection. Browser read-aloud elsewhere still uses a device voice.</p>
-    </StudioSection>
+    </StudioSection>}
+      <StudioField label="Pronunciation notes" value={value.pronunciation} onChange={pronunciation => change({ pronunciation })} placeholder="Names, abbreviations, or words with a particular pronunciation." />
   </div>
 }
