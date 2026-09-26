@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import { appNavigation, matchAppRoute } from '@/config/navigation'
+import { activePageSection, pageSections, pageSectionHref, appNavigation, matchAppRoute } from '@/config/navigation'
 import { AppbarBreadcrumbs, AppbarSections } from '@/components/appbar-navigation'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -21,7 +21,8 @@ export function GatewayHeader({ children }: { children?: ReactNode }) {
   return <>
     <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background text-foreground">
       <div className="flex h-(--header-height) min-w-0 items-center gap-2 px-2"><SidebarTrigger className="size-(--control-height) shrink-0" /><Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" /><AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} /><Button variant="ghost" size="icon" className="ml-auto" aria-label="Search pages" onClick={() => setSearch(true)}><Search /></Button>{children}</div>
-      {location.pathname === '/activity' && <AppbarSections activeSection={tab} sections={['tasks', 'runs', 'events'].map(value => ({ value, label: value[0].toUpperCase() + value.slice(1), to: `/activity?tab=${value}`, badge: undefined }))} />}
+      {!['settings', 'companionSettings', 'system', 'agents'].includes(page.key) && location.pathname === '/activity' && <AppbarSections activeSection={tab} sections={['tasks', 'runs', 'events'].map(value => ({ value, label: value[0].toUpperCase() + value.slice(1), to: `/activity?tab=${value}`, badge: undefined }))} />}
+      {['settings', 'companionSettings', 'system', 'agents'].includes(page.key) && <AppbarSections activeSection={activePageSection(page.key, location.search)} sections={(pageSections[page.key] ?? []).map(section => ({ ...section, to: pageSectionHref(page.key, location.search, section.value), badge: undefined }))} />}
     </header>
     <CommandDialog open={search} onOpenChange={setSearch} title="Go to a page" description="Jump to any part of Conker"><CommandInput placeholder="Find a page…" /><CommandList><CommandEmpty>No matching pages.</CommandEmpty><CommandGroup heading="Pages">{Object.values(appNavigation).filter(item => !item.path.includes(':') && item.path !== '*').map(item => <CommandItem key={item.path} value={item.title} onSelect={() => { setSearch(false); navigate(item.path) }}>{item.title}</CommandItem>)}</CommandGroup></CommandList></CommandDialog>
   </>

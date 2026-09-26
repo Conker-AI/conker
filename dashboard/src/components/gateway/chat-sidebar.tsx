@@ -1,7 +1,10 @@
+import { useSidebarConfig } from '@/hooks/use-sidebar-config'
+import { CompanionPortrait } from '@/components/companion-portrait'
+import { useConker } from '@/lib/api/store'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { BookOpen, ChevronsUpDown, History, Inbox, LogOut, Moon, Search, Server, Settings, SquarePen, Sun, UserRound, Wrench } from 'lucide-react'
+import { Bot, Folder, FileBox, Clock, BookOpen, ChevronsUpDown, History, Inbox, LogOut, Moon, Search, Server, Settings, SquarePen, Sun, UserRound, Wrench } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
@@ -18,6 +21,10 @@ const destinations = [
   { title: 'Memory', url: '/memory', icon: BookOpen },
   { title: 'Activity', url: '/activity', icon: History },
   { title: 'Tools', url: '/tools', icon: Wrench },
+  { title: 'Agents', url: '/agents', icon: Bot },
+  { title: 'Projects', url: '/projects', icon: Folder },
+  { title: 'Artifacts', url: '/artifacts', icon: FileBox },
+  { title: 'Jobs', url: '/jobs', icon: Clock },
   { title: 'System', url: '/system', icon: Server },
 ]
 
@@ -26,6 +33,8 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   runtime: GatewayRuntimeClient; owner: GatewayOwnerClient; conversationState: GatewayRuntimeWorkspaceState
   sourcePrivacy: GatewaySourcePrivacyState; onSignOut: () => void; badge?: ReactNode
 }) {
+  const { config } = useSidebarConfig()
+  const profile = useConker(data => data.profile)
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
   const { toggleTheme } = useCircularTransition(), { theme } = useTheme()
   const isDark = theme === 'dark' || (theme !== 'light' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -61,10 +70,10 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const onChat = ['/chat', '/chats', '/companion'].includes(location.pathname)
   const onPage = (url: string) => location.pathname === url
 
-  return <Sidebar variant="inset" collapsible="offcanvas">
+  return <Sidebar variant={config.variant} collapsible={config.collapsible} side={config.side}>
     <SidebarHeader className="gap-1 px-2 pt-2">
       <div className="flex h-10 items-center gap-2 px-1">
-        <span className="flex size-8 items-center justify-center rounded-lg border bg-background"><img src="/conker.png" alt="" className="size-6 object-contain" /></span>
+        <Link to="/companion" aria-label={`Talk to ${profile.name}`}><CompanionPortrait profile={profile} className="size-8" /></Link>
         <span className="flex min-w-0 flex-1">{badge}</span>
         <SidebarTrigger className="size-8 text-muted-foreground" aria-label="Collapse sidebar" />
       </div>
@@ -121,6 +130,7 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-52">
               <DropdownMenuItem asChild><Link to="/settings" onClick={() => isMobile && setOpenMobile(false)}><Settings />Settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/settings/companion" onClick={() => isMobile && setOpenMobile(false)}><Bot />Character Studio</Link></DropdownMenuItem>
               <DropdownMenuItem onClick={event => toggleTheme(event)}>{isDark ? <Sun /> : <Moon />}{isDark ? 'Light mode' : 'Dark mode'}</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onSignOut}><LogOut />Sign out</DropdownMenuItem>

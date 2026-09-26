@@ -1,6 +1,6 @@
 import { ModelsProviders } from "./models-providers"
 import { OwnerPreferencesEditor } from "./owner-preferences"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Button } from "@/components/ui/button"
@@ -30,7 +30,7 @@ function ResetLayoutButton() {
   }}>Reset layout</Button>
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({ models }: { models?: ReactNode } = {}) {
   const preferences = useCustomizerPreferences()
   const [importOpen, setImportOpen] = useState(false)
   const currentConnections = useConker(data => data.connections)
@@ -75,7 +75,7 @@ export default function SettingsPage() {
           <CardContent><LayoutTab className="p-0" /></CardContent>
         </Card>
       </RouteSection>
-      <RouteSection value="models"><ModelsProviders configuration={modelsConfiguration} pending={pending} onSave={saveModelsConfiguration} /></RouteSection>
+      <RouteSection value="models">{models ?? <ModelsProviders configuration={modelsConfiguration} pending={pending} onSave={saveModelsConfiguration} />}</RouteSection>
       <RouteSection value="connections">
         <Card>
           <CardHeader><CardTitle><h2>Connections</h2></CardTitle></CardHeader>
@@ -97,13 +97,13 @@ export default function SettingsPage() {
         <Card>
           <CardHeader><CardTitle><h2>Account</h2></CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-6">Owner: {owner}</p>
-            <p className="text-sm leading-6 text-muted-foreground">This is an open fixture preview. Authentication and password changes need a backend; no password is stored.</p>
+            <p className="text-sm leading-6">Owner: {models ? "Signed in to the gateway" : owner}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{models ? "Your gateway handles sign-in and password security. The preferences below are local previews and do not change your server account." : "This is an open fixture preview. Authentication and password changes need a backend; no password is stored."}</p>
             <OwnerPreferencesEditor section="account" />
-            <div className="flex flex-wrap gap-3">
+            {!models && <div className="flex flex-wrap gap-3">
               <Button variant="outline" asChild><Link to="/setup">Preview first-run setup</Link></Button>
               <Button variant="outline" asChild><Link to="/login">Preview login</Link></Button>
-            </div>
+            </div>}
           </CardContent>
         </Card>
       </RouteSection>

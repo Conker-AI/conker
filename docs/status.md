@@ -34,6 +34,16 @@ data. **Planned** means designed, not built.
 
 ### Local polish branch (26 September, not deployed)
 
+The connected shell now also exposes the existing local workspaces: appearance and
+layout settings, Character Studio, call preview, agents/teams/templates, projects,
+artifacts, jobs, and System's processes/ports/containers/terminal/files views.
+These are explicitly labeled previews where server support is absent. Live chat,
+models, memory, approvals and tool workflows still use their gateway clients.
+Character profiles can be saved and switched in a browser-local library; they do
+not yet configure the server's answer persona or a live AI voice. Import/export
+remains available. Appearance and sidebar configuration apply to the connected shell.
+
+
 `fix/product-polish` in Conker and Pi contains the current polish work. It does not
 change the server status above.
 

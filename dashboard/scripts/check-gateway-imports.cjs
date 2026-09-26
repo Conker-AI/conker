@@ -39,15 +39,25 @@ function graph(entry) {
   }
   return chains
 }
-// Shared store/transport are now empty until a composition explicitly installs a
-// client. Follow their imports, but reject actual sample factories and records.
+// Live services must never import fixtures. The explicit local-features boundary
+// restores labeled preview workspaces without replacing any gateway service client.
+// Shared primitives, authentication and other paths still cannot import sample data.
 const forbidden = file => /^(src\/lib\/api\/(fixture-adapter|rich-answer-fixture)\.(ts|tsx)|src\/components\/fixture-workspace\.tsx)$/.test(file) || /(^|\/)fixtures?(\/|\.)/.test(file)
 for (const entry of ['src/components/auth/gateway-entry.tsx', 'src/components/auth/gateway-boundary.tsx', 'src/components/rich-answer.tsx', 'src/components/design-system/primitives.tsx']) {
   const reachable = graph(entry)
   for (const [file, chain] of reachable) {
-    assert.ok(!forbidden(slash(path.relative(root, file))), `Gateway must not initialize preview data:\n${chain.map(item => slash(path.relative(root, item))).join(' → ')}`)
+    const localBoundary = chain.some(part => slash(path.relative(root, part)) === 'src/components/gateway/local-features.tsx')
+    const allowedLocalPreview = entry === 'src/components/auth/gateway-entry.tsx' && localBoundary
+    assert.ok(!forbidden(slash(path.relative(root, file))) || allowedLocalPreview, `Gateway must not initialize preview data:\n${chain.map(item => slash(path.relative(root, item))).join(' → ')}`)
   }
-  console.log(`PASS ${entry}: ${reachable.size} value-dependency modules, no fixture state`)
+  console.log(`PASS ${entry}: ${reachable.size} value-dependency modules, live dependencies isolated from local previews`)
+}
+// No authenticated service client may depend on local preview composition.
+for (const file of ['runtime', 'control', 'owner', 'auth-store', 'activity']) {
+  for (const dependency of graph(`src/lib/gateway/${file}.ts`).keys()) {
+    assert.ok(!forbidden(slash(path.relative(root, dependency))))
+    assert.notEqual(slash(path.relative(root, dependency)), 'src/components/gateway/local-features.tsx')
+  }
 }
 // Prove the traversal recognizes the known boundary and follows barrel reexports.
 const fixtureGraph = graph('src/components/fixture-workspace.tsx')

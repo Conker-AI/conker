@@ -1,3 +1,4 @@
+import { useConkerStore } from '@/lib/api/store'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatHistoryViewport } from '@/components/chat/history-viewport'
 import { ChatComposer } from '@/components/chat/composer'
@@ -56,6 +57,7 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
 export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
+  const companionName = useConkerStore(value => value.data?.profile.name ?? "Conker")
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -380,9 +382,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
           <header className="flex h-14 shrink-0 items-center px-3"><CanvasToggle /></header>
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
             <div className="w-full max-w-[768px]">
-              <h2 className="mb-8 text-center text-5xl font-bold tracking-tighter sm:mb-10 sm:text-6xl">Conker</h2>
+              <h2 className="mb-8 text-center text-5xl font-bold tracking-tighter sm:mb-10 sm:text-6xl">{companionName}</h2>
               <form className="relative z-10 rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
-                <Label htmlFor="new-chat-composer" className="sr-only">Message Conker</Label>
+                <Label htmlFor="new-chat-composer" className="sr-only">Message {companionName}</Label>
                 <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="Ask Conker anything, or give it a task…" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-16 resize-none rounded-3xl border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
                 <div className="flex items-center justify-end gap-2 px-3 pb-3"><Button type="submit" size="icon" className="size-9 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
               </form>

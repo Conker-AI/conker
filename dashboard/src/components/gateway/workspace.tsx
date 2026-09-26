@@ -1,3 +1,6 @@
+import { LocalFeaturesProvider, RetainedWorkspace, CompanionControls } from './local-features'
+import SettingsPage from '@/app/settings/page'
+import { EmbeddedWorkspace } from '@/contexts/embedded-workspace'
 import type { ReactNode } from 'react'
 import { GatewayToolDrafts } from "./tool-drafts"
 import { GatewayToolsInventory } from './tools-inventory'
@@ -28,7 +31,7 @@ import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewayActivityWorkspaceState } from './activity-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 
-export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {
+function GatewayWorkspaceContent({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {
   /** A short marker shown beside the name, e.g. that this is a preview with sample data. */
   badge?: ReactNode
   owner: GatewayOwnerClient; ownerState: GatewayOwnerState; proposals: GatewayProposalClient
@@ -69,7 +72,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
             { to: '/inbox', title: 'Decisions', text: 'Review proposed actions and requests waiting for your approval.' },
             { to: '/memory', title: 'Memory', text: 'Inspect what Conker remembers and trace information to its sources.' },
             { to: '/tools', title: 'Tools', text: 'Explore available capabilities and manage your tool drafts.' },
-            { to: '/settings', title: 'Models', text: 'Choose the model that answers you and check provider availability.' },
+            { to: '/settings?tab=models', title: 'Models', text: 'Choose the model that answers you and check provider availability.' },
           ].map(item => <Link key={item.to} to={item.to} className="space-y-2 rounded-xl border bg-card p-5 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"><h2 className="font-medium">{item.title}</h2><p className="text-sm leading-6 text-muted-foreground">{item.text}</p></Link>)}
         </div>
       </div>
@@ -78,8 +81,9 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
     {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
     {systemActive && <GatewaySystemStatus client={control} />}
     {memoryActive && <GatewayMemoryWorkspace client={control} />}
-    {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto"><GatewayModelsSettings client={control} /></div>}
-    {!supported && <div className="space-y-3 p-6"><PageHeader title="This workspace is not connected yet" density="compact" /><p className="text-sm text-muted-foreground">This page is not available in the connected workspace. Your conversations, activity, approvals, memory, tools and model settings remain available.</p><Button variant="outline" asChild><Link to="/">Return home</Link></Button></div>}
+    {modelsActive && <EmbeddedWorkspace.Provider value={true}><SettingsPage models={<GatewayModelsSettings client={control} />} /></EmbeddedWorkspace.Provider>}
+    {!supported && <RetainedWorkspace />}
+    {chatActive && <CompanionControls />}
     <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></div>
     <div className={cn('min-h-0 flex-1', activityActive ? 'block' : 'hidden')} aria-hidden={!activityActive}><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active={activityActive} dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
       if (conversationState.getState().operation) return
@@ -90,4 +94,8 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       selectSession(intent.sessionId)
     }} /></div>
   </BaseLayout>
+}
+
+export function GatewayWorkspace(props: Parameters<typeof GatewayWorkspaceContent>[0]) {
+  return <LocalFeaturesProvider><GatewayWorkspaceContent {...props} /></LocalFeaturesProvider>
 }

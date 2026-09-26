@@ -16,7 +16,7 @@ import { useCharacterWorkspace } from "@/lib/character-workspace"
 import { validateImportedMedia } from "@/lib/character-media"
 import { characterDraft, exportCharacter, importCharacter, validateCharacter, sameCharacterValue, type CharacterDraft, type CharacterStudio } from "@/lib/api/character"
 
-export default function CharacterStudioPage() {
+export default function CharacterStudioPage({ library }: { library?: React.ReactNode } = {}) {
   const savedProfile = useConker(data => data.profile)
   const { save, pending } = useConkerStore()
   const savedDraft = useMemo(() => characterDraft(savedProfile), [savedProfile])
@@ -42,7 +42,7 @@ export default function CharacterStudioPage() {
   const studio = (patch: Partial<CharacterStudio>) => change({ studio: { ...profile.studio, ...patch } })
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError("")
-    try { const valid = validateCharacter(profile); if (await save(valid)) { useCharacterWorkspace.setState({ draft: null }); setNotice("Character saved in this preview.") } }
+    try { const valid = validateCharacter(profile); if (await save(valid)) { useCharacterWorkspace.setState({ draft: null }); setNotice(library ? "Character saved in this browser." : "Character saved in this preview.") } }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save your character.") }
   }
   function download() {
@@ -55,6 +55,7 @@ export default function CharacterStudioPage() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not export this character.") }
   }
   return <BaseLayout title="Character Studio" description="Shape who your companion is, how it looks, and how it speaks." actions={<><Button variant="outline" disabled={uploading || pending} onClick={() => { setImportOpen(true); setIncoming(null); setImportError("") }}><Upload />Import</Button><Button variant="outline" disabled={uploading || pending} onClick={download}><Download />Export</Button></>}>
+    {library}
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]">
       <form id="character-form" onSubmit={submit} className="min-w-0 space-y-6">
         <fieldset disabled={pending || uploading} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
