@@ -91,7 +91,7 @@ export default function CharacterStudioPage({ library }: { library?: React.React
     </div>
     <div className="sticky bottom-0 z-10 bg-background py-3">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
-      <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : "Saved in memory · export to keep a copy")}</span>}>
+      <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : (library ? "Saved in this browser - export for backup" : "Saved in memory - export to keep a copy"))}</span>}>
         <Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>
         <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button>
       </FormActions>
