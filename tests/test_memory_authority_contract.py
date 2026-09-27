@@ -5,9 +5,9 @@ from contextlib import closing
 import pytest
 
 pytest.importorskip("pi", reason="Add Pi checkout to PYTHONPATH")
-import httpx  # noqa: E402 - Pi's dependencies, present only with the checkout
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import httpx
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 pytest.importorskip(
     "app.routes.runtime", reason="Add MemoryGate services/api to PYTHONPATH"

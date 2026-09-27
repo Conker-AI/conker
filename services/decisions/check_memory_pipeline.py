@@ -6,8 +6,8 @@ check, not an end-to-end MemoryGate retrieval or model-quality benchmark.
 """
 import json
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 from pi.decision_provider import DecisionProvider
 from pi.memory import Memory

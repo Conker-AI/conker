@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 from contextlib import closing
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -75,15 +76,26 @@ def toolgate_store(path: Path) -> None:
 class Engine:
     """A recording transport; all store transformations are the production code."""
 
-    def __init__(self, tmp: Path):
+    def __init__(
+        self,
+        tmp: Path,
+        profile: recovery.LayoutProfile = recovery.REPOSITORY_PROFILE,
+        *,
+        bind_stores: bool = False,
+    ):
         self.tmp = tmp
+        self.profile = profile
+        self.services = set(profile.services)
+        self.stores = profile.stores
+        self.memory_key_name = profile.memory_key_name
         self.calls = []
         self.fail_dump = False
         self.fail_restore = False
         self.containers = {}
         self.volumes = {}
+        self.volume_labels = {}
         self.image = "sha256:" + "a" * 64
-        for service in recovery.SERVICES:
+        for service in self.services:
             container = {
                 "Id": "source-" + service,
                 "Image": self.image,
@@ -92,23 +104,47 @@ class Engine:
                 "Config": {"Image": "example/" + service + ":1", "Env": []},
             }
             self.containers[container["Id"]] = container
-            if service in recovery.STORES:
+            if service in self.stores:
                 volume = "original-" + service
                 path = tmp / volume
                 path.mkdir()
                 self.volumes[volume] = path
-                container["Mounts"].append(
-                    {
-                        "Destination": recovery.STORES[service],
-                        "Type": "volume",
-                        "Name": volume,
-                    }
-                )
-        backups = tmp / "backup-location" / "memorygate"
-        backups.mkdir(parents=True)
-        self.containers["source-memorygate"]["Mounts"] = [
-            {"Destination": "/data/backups", "Type": "bind", "Source": str(backups)}
-        ]
+                mount = {"Destination": self.stores[service]}
+                if bind_stores:
+                    mount.update({"Type": "bind", "Source": str(path)})
+                else:
+                    mount.update({"Type": "volume", "Name": volume})
+                container["Mounts"].append(mount)
+        if profile.name == "ubuntu":
+            runtime = {
+                "gateway": {"GATEWAY_DB_PATH": "/auth/auth.db"},
+                "pi": {"PI_DB_PATH": "/data/pi.db"},
+                "toolgate": {
+                    "TOOLGATE_DATA_DIR": "/data",
+                    "TOOLGATE_VAULT_KEY_FILE": "/data/vault.key",
+                },
+                "memorygate": {
+                    "RUNTIME_SECRET_PATH": "/data/runtime.key",
+                    "BACKUP_DIR": "/data/backups",
+                    "DATABASE_URL": "postgresql+psycopg://conker:secret@postgres:5432/conker",
+                },
+                "systemgate": {"SYSTEMGATE_DATA_DIR": "/data"},
+                "postgres": {"POSTGRES_USER": "conker", "POSTGRES_DB": "conker"},
+            }
+            for service, values in runtime.items():
+                self.containers["source-" + service]["Config"]["Env"] = [
+                    f"{name}={value}" for name, value in values.items()
+                ]
+        if profile.name == "repository":
+            backups = tmp / "backup-location" / "memorygate"
+            backups.mkdir(parents=True)
+            self.containers["source-memorygate"]["Mounts"] = [
+                {
+                    "Destination": "/data/backups",
+                    "Type": "bind",
+                    "Source": str(backups),
+                }
+            ]
         toolgate_store(self.volumes["original-toolgate"])
         if "original-gateway" in self.volumes:
             database(self.volumes["original-gateway"] / "auth.db", """
@@ -136,6 +172,19 @@ class Engine:
         )
         self.memory_key = Fernet.generate_key()
         self.memory_token = Fernet(self.memory_key).encrypt(b"memory-provider-secret")
+        memorygate = self.volumes.get("original-memorygate", tmp / "original-memorygate")
+        if not memorygate.exists():
+            memorygate.mkdir()
+            self.volumes["original-memorygate"] = memorygate
+            self.containers["source-memorygate"]["Mounts"].insert(
+                0,
+                {
+                    "Destination": "/data",
+                    "Type": "volume",
+                    "Name": "original-memorygate",
+                },
+            )
+        (memorygate / self.memory_key_name).write_bytes(self.memory_key)
 
     def json(self, *args):
         return json.loads(self.run(*args).stdout)
@@ -143,15 +192,26 @@ class Engine:
     def run(self, *args, output=None, input=None, check=True):
         self.calls.append(args)
         data = b""
+        returncode = 0
         if args[0] == "compose":
             if "config" in args:
                 data = json.dumps(
-                    {"services": {service: {} for service in recovery.SERVICES}}
+                    {"services": {service: {} for service in self.services}}
                 ).encode()
             else:
                 data = ("source-" + args[-1]).encode()
         elif args[0] == "inspect":
-            data = json.dumps([self.containers[args[1]]]).encode()
+            if args[1] not in self.containers:
+                returncode = 1
+            else:
+                data = json.dumps([self.containers[args[1]]]).encode()
+        elif args[:2] == ("volume", "inspect"):
+            if args[2] not in self.volumes:
+                returncode = 1
+            else:
+                data = json.dumps(
+                    [{"Name": args[2], "Labels": self.volume_labels.get(args[2], {})}]
+                ).encode()
         elif args[:2] == ("image", "inspect"):
             data = json.dumps(
                 [
@@ -171,7 +231,7 @@ class Engine:
         elif args[0] == "cp":
             stream = io.BytesIO()
             with tarfile.open(fileobj=stream, mode="w") as archive:
-                item = tarfile.TarInfo("runtime-fernet.key")
+                item = tarfile.TarInfo(self.memory_key_name)
                 item.size = len(self.memory_key)
                 archive.addfile(item, io.BytesIO(self.memory_key))
             data = stream.getvalue()
@@ -180,6 +240,12 @@ class Engine:
             path = self.tmp / volume
             path.mkdir()
             self.volumes[volume] = path
+            label = args[args.index("--label") + 1]
+            key, value = label.split("=", 1)
+            self.volume_labels[volume] = {key: value}
+        elif args[:2] == ("volume", "rm"):
+            self.volumes.pop(args[2], None)
+            self.volume_labels.pop(args[2], None)
         elif args[0] == "exec":
             if "pg_dump" in args:
                 if self.fail_dump:
@@ -192,6 +258,8 @@ class Engine:
             elif "psql" in args:
                 if "pg_database" in args[-1]:
                     data = b""
+                elif "status NOT IN" in args[-1]:
+                    data = b"0\n"
                 else:
                     data = (
                         self.memory_token if "api_key_encrypted" in args[-1] else b"[]"
@@ -241,11 +309,24 @@ class Engine:
                 if token:
                     Fernet((path / "runtime-fernet.key").read_bytes()).decrypt(token)
                 data = b'{"memory_provider_key_verified":true}'
+        elif args[0] == "run":
+            name = args[args.index("--name") + 1]
+            label = args[args.index("--label") + 1]
+            key, value = label.split("=", 1)
+            self.containers[name] = {
+                "Id": name,
+                "Image": args[-1],
+                "State": {"Running": True, "ExitCode": 0},
+                "Config": {"Labels": {key: value}},
+                "HostConfig": {"NetworkMode": "none", "PortBindings": None},
+            }
+        elif args[:2] == ("rm", "-f"):
+            self.containers.pop(args[2], None)
         elif args[0] != "run":
             raise AssertionError(f"Unimplemented transport operation: {args}")
         if output is not None:
             output.write(data)
-        return subprocess.CompletedProcess(args, 0, data, b"")
+        return subprocess.CompletedProcess(args, returncode, data, b"")
 
 
 @pytest.fixture
@@ -255,6 +336,185 @@ def installed(tmp_path):
     for name in (".env", "versions.env", "docker-compose.yml"):
         (root / name).write_text("test configuration\n")
     return root, Engine(tmp_path)
+
+
+@pytest.fixture
+def ubuntu_installed(tmp_path):
+    root = tmp_path / "ubuntu-install"
+    state = root / "state"
+    source = root / "sources" / "companion"
+    provider = state / "provider-secrets"
+    provider.mkdir(parents=True)
+    source.mkdir(parents=True)
+    (root / "compose.json").write_text('{"name":"conker","services":{}}\n')
+    (source / "versions.env").write_text("CONKER_RELEASE=test\n")
+    (state / "credentials.json").write_text('{"fixture":"secret"}\n')
+    (provider / "state.json").write_text(
+        '{"schemaVersion":1,"providers":{}}\n'
+    )
+    for name in recovery.UBUNTU_ENV_FILES:
+        (state / name).write_text("FIXTURE_VALUE=test\n")
+    engine = Engine(tmp_path, recovery.UBUNTU_PROFILE, bind_stores=True)
+    engine.containers["source-gateway"]["Mounts"].append(
+        {"Type": "bind", "Source": str(source), "Destination": "/dashboard"}
+    )
+    for provider_name in ("openrouter", "openai", "anthropic"):
+        engine.containers["source-pi"]["Mounts"].append(
+            {
+                "Type": "bind",
+                "Source": str(provider / f"{provider_name}.key"),
+                "Destination": f"/run/secrets/provider-{provider_name}",
+            }
+        )
+    engine.containers["source-systemgate"]["Mounts"].extend(
+        [
+            {"Type": "bind", "Source": str(root / "recovery"), "Destination": "/backups"},
+            {"Type": "bind", "Source": "/proc", "Destination": "/host/proc"},
+        ]
+    )
+    (engine.volumes["original-decisions"] / "model.bin").write_bytes(
+        b"owner-selected-decision-model"
+    )
+    return root, engine
+
+
+def test_ubuntu_snapshot_verifies_and_restores_held(ubuntu_installed, tmp_path):
+    root, engine = ubuntu_installed
+    destination = tmp_path / "off-machine"
+
+    snapshot = recovery.backup(root, destination, engine)
+    manifest = recovery.verify_snapshot(snapshot)
+    state = recovery.restore(snapshot, tmp_path / "ubuntu-recovered", engine)
+
+    assert manifest["layout"] == "ubuntu"
+    assert manifest["database"] == {
+        "service": "postgres",
+        "user": "conker",
+        "name": "conker",
+    }
+    assert set(manifest["images"]) == recovery.UBUNTU_SERVICES
+    assert set(manifest["stores"]) == set(recovery.UBUNTU_STORES)
+    assert "memorygate-backups" not in manifest["stores"]
+    assert (snapshot / "config/credentials.json").is_file()
+    assert {path.name for path in (snapshot / "config/env").iterdir()} == (
+        recovery.UBUNTU_ENV_FILES
+    )
+    assert state["status"] == "held"
+    assert state["source_layout"] == "ubuntu"
+    restored_decisions = engine.volumes[state["volumes"]["decisions"]]
+    assert (restored_decisions / "model.bin").read_bytes() == (
+        b"owner-selected-decision-model"
+    )
+    assert "POSTGRES_USER=conker" in (
+        tmp_path / "ubuntu-recovered" / "postgres.env"
+    ).read_text()
+    assert any(
+        call[0] == "exec" and "pg_dump" in call and "conker" in call
+        for call in engine.calls
+    )
+
+
+def test_ubuntu_unknown_bind_fails_before_stopping_writers(ubuntu_installed, tmp_path):
+    root, engine = ubuntu_installed
+    engine.containers["source-decisions"]["Mounts"].append(
+        {"Type": "bind", "Source": str(tmp_path), "Destination": "/unmapped"}
+    )
+
+    with pytest.raises(recovery.RecoveryError, match="Unmapped decisions bind mount"):
+        recovery.backup(root, tmp_path / "off-machine", engine)
+
+    assert not any(call[0] == "stop" for call in engine.calls)
+
+
+def test_optional_owner_terminal_has_no_recovery_store_or_archive(
+    ubuntu_installed, tmp_path
+):
+    root, engine = ubuntu_installed
+    workspace = tmp_path / "owner-workspace"
+    control = tmp_path / "terminal-control"
+    workspace.mkdir()
+    control.mkdir()
+    engine.services.add("owner-terminal")
+    engine.containers["source-owner-terminal"] = {
+        "Id": "source-owner-terminal",
+        "Image": engine.image,
+        "State": {"Running": True, "ExitCode": 0},
+        "Mounts": [
+            {"Type": "bind", "Source": str(control), "Destination": "/run/conker-terminal"},
+            {"Type": "bind", "Source": str(workspace), "Destination": "/workspace"},
+        ],
+        "Config": {
+            "Image": "example/owner-terminal:1",
+            "Env": ["CONKER_TERMINAL_ISOLATED=1"],
+        },
+    }
+    engine.containers["source-gateway"]["Mounts"].append(
+        {"Type": "bind", "Source": str(control), "Destination": "/run/conker-terminal"}
+    )
+
+    snapshot = recovery.backup(root, tmp_path / "off-machine", engine)
+    manifest = recovery.verify_snapshot(snapshot)
+    restored = recovery.restore(snapshot, tmp_path / "held-restore", engine)
+
+    assert "owner-terminal" in manifest["images"]
+    assert "owner-terminal" not in manifest["stores"]
+    assert not any("terminal" in name for name in manifest["files"] if name.endswith(".tar"))
+    assert "owner-terminal" not in restored["volumes"]
+    assert any(
+        call[0] == "stop" and "source-owner-terminal" in call for call in engine.calls
+    )
+
+
+def test_ubuntu_missing_runtime_contract_fails_before_stopping_writers(
+    ubuntu_installed, tmp_path
+):
+    root, engine = ubuntu_installed
+    engine.containers["source-memorygate"]["Config"]["Env"] = [
+        value
+        for value in engine.containers["source-memorygate"]["Config"]["Env"]
+        if not value.startswith("RUNTIME_SECRET_PATH=")
+    ]
+
+    with pytest.raises(recovery.RecoveryError, match="RUNTIME_SECRET_PATH"):
+        recovery.backup(root, tmp_path / "off-machine", engine)
+
+    assert not any(call[0] == "stop" for call in engine.calls)
+
+
+def test_new_manifest_database_identity_cannot_drift(installed):
+    root, engine = installed
+    snapshot = recovery.backup(root, None, engine)
+    manifest_path = snapshot / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["database"]["name"] = "another_database"
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(recovery.RecoveryError, match="database identity"):
+        recovery.verify_snapshot(snapshot)
+
+
+def test_ubuntu_manifest_store_destination_cannot_drift(ubuntu_installed, tmp_path):
+    root, engine = ubuntu_installed
+    snapshot = recovery.backup(root, tmp_path / "off-machine", engine)
+    manifest_path = snapshot / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["stores"]["decisions"]["destination"] = "/another-model-store"
+    manifest_path.write_text(json.dumps(manifest))
+
+    with pytest.raises(recovery.RecoveryError, match="Storage service or destination"):
+        recovery.verify_snapshot(snapshot)
+
+
+def test_pre_layout_repository_manifest_remains_verifiable(installed):
+    root, engine = installed
+    snapshot = recovery.backup(root, None, engine)
+    manifest_path = snapshot / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest.pop("layout")
+    manifest.pop("database")
+    manifest_path.write_text(json.dumps(manifest))
+
+    assert recovery.verify_snapshot(snapshot)["format"] == recovery.FORMAT
 
 
 def test_wal_resident_messages_survive_snapshot(tmp_path):
@@ -331,6 +591,9 @@ def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
     assert state["memory_provider_key_verified"] is True
     assert state["invalidated_requests"] == ["approval"]
     assert state["invalidated_browser_sessions"] == 1
+    provider_state = json.loads((snapshot / "config/provider-state.json").read_text())
+    assert provider_state == {"schemaVersion": 1, "providers": {}}
+    assert not any("provider-secrets" in str(path) for path in snapshot.rglob("*"))
     gateway = engine.volumes[state["volumes"]["gateway"]]
     assert (snapshot / "gateway.tar").is_file()
     assert (gateway / "tls.key").read_text() == "local-tls-private-key"
@@ -366,9 +629,171 @@ def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
             ]
             == "approved"
         )
+
+
+def test_backup_refuses_legacy_plaintext_provider_credentials(installed):
+    root, engine = installed
+    (root / ".env").write_text("OPENROUTER_KEY=legacy-plaintext-provider-key\n")
+
+    with pytest.raises(recovery.RecoveryError, match="rerun install.sh"):
+        recovery.backup(root, None, engine)
+
+    assert not (root / ".conker-backup.lock").exists()
     assert all(
-        container["State"]["Running"] for container in engine.containers.values()
+        container["State"]["Running"]
+        for name, container in engine.containers.items()
+        if name.startswith("source-")
     )
+
+
+def operator_review(state, path, **changes):
+    now = datetime.now(timezone.utc)
+    review = {
+        "format": recovery.REVIEW_FORMAT,
+        "recovery_id": state["recovery_id"],
+        "review_nonce": state["review_nonce"],
+        "snapshot_manifest_sha256": state["snapshot_manifest_sha256"],
+        "operator": "owner@example.invalid",
+        "reviewed_at": now.isoformat(),
+        "expires_at": (now + timedelta(days=1)).isoformat(),
+        "attestations": {
+            name: {"status": status, "evidence_sha256": hashlib.sha256(name.encode()).hexdigest()}
+            for name, status in recovery.REVIEW_CHECKS.items()
+        },
+    }
+    review.update(changes)
+    path.write_text(json.dumps(review), encoding="utf-8")
+    return review
+
+
+def reviewed_restore(installed, tmp_path):
+    root, engine = installed
+    snapshot = recovery.backup(root, None, engine)
+    destination = tmp_path / "reviewed-recovery"
+    state = recovery.restore(snapshot, destination, engine)
+    review_path = tmp_path / "operator-review.json"
+    operator_review(state, review_path)
+    recovery.review_recovery(destination, review_path)
+    return destination, engine
+
+
+def test_reviewed_restore_becomes_service_ready_without_touching_live_install(installed, tmp_path):
+    destination, engine = reviewed_restore(installed, tmp_path)
+
+    state = recovery.prove_service_ready(destination, engine)
+
+    assert state["status"] == "service_ready"
+    assert state["applications_started"] is False
+    assert (destination / recovery.HOLD_FILE).is_file()
+    receipt = json.loads(
+        (destination / recovery.RECEIPTS_DIR / "service-ready.json").read_text()
+    )
+    assert receipt["live_install_modified"] is False
+    assert receipt["review_receipt_sha256"] == state["review_receipt_sha256"]
+    assert all(
+        container["State"]["Running"]
+        for name, container in engine.containers.items()
+        if name.startswith("source-")
+    )
+
+
+def test_review_refuses_missing_or_negative_prerequisites(installed, tmp_path):
+    root, engine = installed
+    snapshot = recovery.backup(root, None, engine)
+    destination = tmp_path / "recovery"
+    state = recovery.restore(snapshot, destination, engine)
+    review_path = tmp_path / "review.json"
+    review = operator_review(state, review_path)
+    del review["attestations"]["external_effects"]
+    review_path.write_text(json.dumps(review), encoding="utf-8")
+
+    with pytest.raises(recovery.RecoveryError, match="every required attestation"):
+        recovery.review_recovery(destination, review_path)
+
+    held = json.loads((destination / recovery.HOLD_FILE).read_text())
+    assert held["status"] == "held"
+    assert not (destination / recovery.RECEIPTS_DIR).exists()
+
+
+def test_readiness_interruption_is_resumable_and_success_is_idempotent(
+    installed, tmp_path, monkeypatch
+):
+    destination, engine = reviewed_restore(installed, tmp_path)
+    real_helper = recovery.helper
+    interrupted = False
+
+    def interrupt_once(*args, **kwargs):
+        nonlocal interrupted
+        if not interrupted and args[2] == "verify-vault":
+            interrupted = True
+            raise KeyboardInterrupt("simulated interruption")
+        return real_helper(*args, **kwargs)
+
+    monkeypatch.setattr(recovery, "helper", interrupt_once)
+    with pytest.raises(KeyboardInterrupt):
+        recovery.prove_service_ready(destination, engine)
+    state = json.loads((destination / recovery.HOLD_FILE).read_text())
+    assert state["status"] == "readiness_interrupted"
+    assert (destination / recovery.HOLD_FILE).is_file()
+
+    first = recovery.prove_service_ready(destination, engine)
+    calls = len(engine.calls)
+    second = recovery.prove_service_ready(destination, engine)
+    assert first["service_ready_receipt_sha256"] == second["service_ready_receipt_sha256"]
+    assert len(engine.calls) == calls
+
+
+def test_stale_and_tampered_review_evidence_are_refused(installed, tmp_path):
+    root, engine = installed
+    snapshot = recovery.backup(root, None, engine)
+    destination = tmp_path / "recovery"
+    state = recovery.restore(snapshot, destination, engine)
+    review_path = tmp_path / "review.json"
+    operator_review(state, review_path, review_nonce="another-restore")
+    with pytest.raises(recovery.RecoveryError, match="stale"):
+        recovery.review_recovery(destination, review_path)
+
+    operator_review(state, review_path)
+    recovery.review_recovery(destination, review_path)
+    stored = destination / recovery.RECEIPTS_DIR / "operator-review.json"
+    review = json.loads(stored.read_text())
+    review["operator"] = "changed@example.invalid"
+    stored.write_text(json.dumps(review), encoding="utf-8")
+    with pytest.raises(recovery.RecoveryError, match="changed"):
+        recovery.prove_service_ready(destination, engine)
+    assert json.loads((destination / recovery.HOLD_FILE).read_text())["status"] == "reviewed"
+
+
+def test_readiness_failure_preserves_hold(installed, tmp_path):
+    destination, engine = reviewed_restore(installed, tmp_path)
+    state = json.loads((destination / recovery.HOLD_FILE).read_text())
+    engine.volume_labels[state["volumes"]["pi"]] = {"conker.recovery": "wrong"}
+
+    with pytest.raises(recovery.RecoveryError, match="ownership label"):
+        recovery.prove_service_ready(destination, engine)
+
+    failed = json.loads((destination / recovery.HOLD_FILE).read_text())
+    assert failed["status"] == "reviewed"
+    assert failed["last_failure"]
+    assert (destination / recovery.HOLD_FILE).is_file()
+    assert not (destination / recovery.RECEIPTS_DIR / "service-ready.json").exists()
+
+
+def test_abort_removes_only_labeled_recovery_resources_and_is_idempotent(installed, tmp_path):
+    destination, engine = reviewed_restore(installed, tmp_path)
+    before = json.loads((destination / recovery.HOLD_FILE).read_text())
+
+    first = recovery.abort_recovery(destination, "operator abandoned candidate", engine)
+    calls = len(engine.calls)
+    second = recovery.abort_recovery(destination, "operator abandoned candidate", engine)
+
+    assert first["status"] == second["status"] == "aborted"
+    assert first["resources_removed"] is True
+    assert len(engine.calls) == calls
+    assert not any(name in engine.volumes for name in before["volumes"].values())
+    assert not any(name in engine.containers for name in before["containers"])
+    assert all(name.startswith("source-") for name in engine.containers)
+    assert (destination / recovery.HOLD_FILE).is_file()
 
 
 @pytest.mark.parametrize("damage", ["missing", "changed", "unlisted", "legacy"])
@@ -577,6 +1002,8 @@ def test_cli_restore_reports_hold_with_nonzero_exit(
 def test_shell_commands_cannot_bypass_recovery_hold(tmp_path, command):
     import shutil
 
+    if os.name == "nt":
+        pytest.skip("Requires a POSIX Bash path namespace")
     bash = shutil.which("bash")
     if not bash:
         pytest.skip("Bash is required for the CLI guard test")
@@ -617,6 +1044,17 @@ def test_image_declared_volume_is_inventoried_and_restored(installed, tmp_path):
     ).read_text() == "owner configured sources"
 
 
+@pytest.mark.parametrize("destination", ["/var/run/docker.sock", "/host/root"])
+def test_removed_systemgate_authority_fails_backup_closed(installed, destination):
+    root, engine = installed
+    engine.containers["source-systemgate"]["Mounts"].append(
+        {"Type": "bind", "Source": destination, "Destination": destination}
+    )
+
+    with pytest.raises(recovery.RecoveryError, match="Unmapped systemgate bind mount"):
+        recovery.backup(root, None, engine)
+
+
 def test_restored_vault_opens_with_actual_toolgate(tmp_path):
     gate = Path(os.environ.get("CONKER_TEST_TOOLGATE", ROOT.parent / "gates/toolgate"))
     if not (gate / "toolgate/core/vault.py").exists():
@@ -651,6 +1089,8 @@ def test_restored_vault_opens_with_actual_toolgate(tmp_path):
 def test_installer_does_not_override_recovery_hold(tmp_path):
     import shutil
 
+    if os.name == "nt":
+        pytest.skip("Requires a POSIX Bash path namespace")
     bash = shutil.which("bash")
     if not bash:
         pytest.skip("Bash is required for the installer guard test")

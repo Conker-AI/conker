@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def compose_config(tmp_path):
     if not shutil.which("docker"):
         pytest.skip("Docker Compose CLI is required (the daemon is not)")
-    names = set(re.findall(r"\$\{([A-Z_]+)", (ROOT / "docker-compose.yml").read_text()))
+    names = set(re.findall(r"\$\{([A-Z0-9_]+)", (ROOT / "docker-compose.yml").read_text()))
     versions = dict(
         line.split("=", 1)
         for line in (ROOT / "versions.env").read_text().splitlines()
@@ -37,6 +37,12 @@ def compose_config(tmp_path):
         CONKER_EMBEDDING_DIMENSION="1024",
         PI_GATEWAY_KEY_SHA256=hashlib.sha256(
             values["PI_GATEWAY_KEY"].encode()
+        ).hexdigest(),
+        PI_OWNER_KEY_SHA256=hashlib.sha256(
+            values["GATEWAY_PI_OWNER_KEY"].encode()
+        ).hexdigest(),
+        TOOLGATE_OWNER_KEY_SHA256=hashlib.sha256(
+            values["GATEWAY_TOOLGATE_OWNER_KEY"].encode()
         ).hexdigest(),
     )
     fixture = tmp_path / "fixture.env"
@@ -81,13 +87,19 @@ def test_compose_cannot_give_worker_owner_credentials_or_auth_storage(tmp_path):
     services = config["services"]
     gateway, pi = services["gateway"], services["pi"]
     owner_key = gateway["environment"]["GATEWAY_TOOLGATE_OWNER_KEY"]
+    pi_owner_key = gateway["environment"]["GATEWAY_PI_OWNER_KEY"]
     runtime_key = gateway["environment"]["PI_GATEWAY_KEY"]
-    assert owner_key != runtime_key
+    assert len({owner_key, pi_owner_key, runtime_key}) == 3
     assert (
         pi["environment"]["PI_GATEWAY_KEY_SHA256"]
         == hashlib.sha256(runtime_key.encode()).hexdigest()
     )
-    assert owner_key not in json.dumps(pi) and runtime_key not in json.dumps(pi)
+    assert (
+        pi["environment"]["PI_OWNER_KEY_SHA256"]
+        == hashlib.sha256(pi_owner_key.encode()).hexdigest()
+    )
+    assert owner_key not in json.dumps(pi) and pi_owner_key not in json.dumps(pi)
+    assert runtime_key not in json.dumps(pi)
     assert not pi.get("ports")
     assert gateway["ports"][0]["host_ip"] == "127.0.0.1"
     assert "gateway" in gateway["command"]
@@ -105,6 +117,25 @@ def test_compose_cannot_give_worker_owner_credentials_or_auth_storage(tmp_path):
     )
     assert (
         "toolgate-owner" in services["toolgate"]["networks"]["owner_control"]["aliases"]
+    )
+    assert (
+        gateway["environment"]["GATEWAY_TOOLGATE_EXECUTION_KEY"]
+        == pi["environment"]["PI_TOOLGATE_KEY"]
+    )
+    assert (
+        services["toolgate"]["environment"]["TOOLGATE_OWNER_KEY_SHA256"]
+        == hashlib.sha256(owner_key.encode()).hexdigest()
+    )
+    assert gateway["environment"]["GATEWAY_DASHBOARD_DIR"] == "/dashboard"
+    assert any(mount["target"] == "/dashboard" and mount["read_only"]
+               for mount in gateway["volumes"])
+    assert (
+        pi["environment"]["PI_MEMORYGATE_INGEST_KEY"]
+        == services["memorygate"]["environment"]["MEMORYGATE_CONVERSATION_KEY"]
+    )
+    assert (
+        pi["environment"]["PI_MEMORYGATE_READ_KEY"]
+        == services["memorygate"]["environment"]["MEMORYGATE_BOOTSTRAP_READ_KEY"]
     )
 
 

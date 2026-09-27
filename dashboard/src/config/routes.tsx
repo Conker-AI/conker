@@ -52,6 +52,7 @@ export const routes: RouteConfig[] = [
   { path: "/agents/:id/edit", element: <EditAgentPage /> },
   { path: appNavigation.tools.path, element: <ToolsPage /> },
   { path: appNavigation.jobs.path, element: <JobsPage /> },
+  { path: appNavigation.job.path, element: <JobsPage /> },
   { path: appNavigation.system.path, element: <SystemPage /> },
   { path: "/terminal", element: <Navigate to={pageSectionHref("system", "", "terminal")} replace /> },
   { path: "/files", element: <Navigate to={pageSectionHref("system", "", "files")} replace /> },

@@ -1,5 +1,14 @@
 import { z } from 'zod'
 import { createGatewayEditorDrafts } from './editor-drafts'
+import { createGatewayProjectsClient } from './projects'
+import { createGatewayArtifactsClient } from './artifacts'
+import { createGatewayJobsClient } from './jobs'
+import { createGatewayCharactersClient } from './characters'
+import { createGatewayHostInventoryClient } from './host-inventory'
+import { createGatewayTeamsClient } from './teams'
+import { createGatewayTerminalClient } from './terminal'
+import { createGatewayFilesystemClient } from './filesystem'
+import { createGatewayCallsClient } from './calls'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -64,6 +73,27 @@ const systemHealth = z.object({ service: z.literal('pi'), version: short, status
     hosted_provider: serviceCheck, action_boundary: serviceCheck }),
 })
 export type SystemHealth = z.infer<typeof systemHealth>
+const gatewayHealth = z.object({
+  service: z.literal('gateway'), version: short, status: short,
+  checked_at: z.string().datetime({ offset: true }), age_seconds: z.number().finite().nonnegative(),
+  checks: z.object({ owner_login: serviceCheck, runtime: serviceCheck, owner_channel: serviceCheck }),
+})
+export type GatewayHealth = z.infer<typeof gatewayHealth>
+const diagnosticRecovery = z.object({
+  label: z.string().min(1).max(120), uiRoute: z.enum(['/system', '/settings', '/memory', '/tools']).nullable(),
+  command: z.string().min(1).max(160).nullable(),
+})
+const diagnostics = z.object({
+  schemaVersion: z.literal(1), status: z.enum(['ok', 'attention']), generatedAt: z.string().datetime({ offset: true }),
+  summary: z.object({ attention: count, ok: count, optional: count }),
+  findings: z.array(z.object({
+    id: z.enum(['owner-login', 'runtime', 'owner-channel', 'store', 'memory', 'local-model', 'hosted-model', 'actions']),
+    area: z.enum(['access', 'services', 'models']), label: z.string().min(1).max(120),
+    status: z.enum(['ok', 'attention', 'optional']), observedStatus: z.string().min(1).max(60),
+    detail: z.string().min(1).max(240), recovery: diagnosticRecovery.nullable(),
+  })).length(8),
+})
+export type GatewayDiagnostics = z.infer<typeof diagnostics>
 const toolInventory = z.object({ status: z.enum(['ok', 'unavailable', 'not_configured']),
   results: z.array(z.object({ id: z.string().min(1).max(200), name: z.string().max(240),
     description: z.string().max(8000), inputs: z.array(z.object({ name: z.string().max(200),
@@ -72,6 +102,107 @@ const toolInventory = z.object({ status: z.enum(['ok', 'unavailable', 'not_confi
   })).max(1000),
 })
 export type ToolInventory = z.infer<typeof toolInventory>
+const setupStepId = z.enum(['security', 'companion', 'model', 'memory', 'capabilities', 'boundaries', 'protection', 'rehearsal'])
+const setupStepState = z.enum(['not_started', 'in_progress', 'blocked', 'skipped', 'complete', 'degraded'])
+const setupBlockingReason = z.enum([
+  'owner_channel_not_configured', 'durable_store_unavailable', 'companion_configuration_unavailable', 'companion_configuration_unreviewed',
+  'model_configuration_missing', 'model_response_unverified', 'model_provider_unavailable', 'memory_choice_unreviewed', 'memory_not_configured', 'memory_unavailable',
+  'capability_choice_unreviewed', 'toolgate_not_configured', 'toolgate_unavailable', 'capability_catalog_empty', 'boundary_receipt_unavailable',
+  'protection_receipt_unavailable', 'rehearsal_receipt_unavailable', 'boundary_receipt_stale',
+  'protection_receipt_stale', 'rehearsal_receipt_stale',
+])
+const setupOperation = z.enum([
+  'configure_owner_channel', 'repair_durable_store', 'repair_companion_configuration', 'configure_companion', 'configure_model', 'test_model',
+  'repair_model_provider', 'configure_memory', 'repair_memory', 'configure_capabilities', 'repair_toolgate',
+  'review_boundaries', 'verify_protection', 'run_rehearsal',
+])
+const setupStatus = z.object({
+  schemaVersion: z.literal(1), workflow: z.literal('first-run'), state: z.enum(['in_progress', 'blocked', 'complete', 'degraded']),
+  currentStep: setupStepId.nullable(), recommendedNextOperation: setupOperation.nullable(), generatedAt: z.string().datetime({ offset: true }),
+  steps: z.array(z.object({
+    id: setupStepId, state: setupStepState, required: z.boolean(), prerequisites: z.array(setupStepId).max(8),
+    blockingReasonCode: setupBlockingReason.nullable(), evidence: z.array(z.object({
+      source: z.string().min(1).max(80), status: z.enum(['ok', 'missing', 'degraded', 'unknown']),
+      revision: z.number().int().nonnegative().nullable(), detail: z.string().min(1).max(160),
+    })).max(16),
+  })).length(8),
+})
+export type SetupStatus = z.infer<typeof setupStatus>
+export type SetupStep = SetupStatus['steps'][number]
+const setupReceiptStep = z.enum(['boundaries', 'protection', 'rehearsal'])
+const setupReceiptWritableStep = z.literal('boundaries')
+const setupReceipt = z.object({
+  step: setupReceiptStep, revision: z.number().int().positive(), receiptId: z.string().min(1).max(128),
+  source: z.string().min(1).max(128), subject: z.string().min(1).max(96), evidenceDigest: z.string().regex(/^[0-9a-f]{64}$/),
+  completedAt: z.string().datetime({ offset: true }), expiresAt: z.string().datetime({ offset: true }),
+  recordedAt: z.string().datetime({ offset: true }), state: z.enum(['valid', 'stale']),
+})
+const setupReceiptInput = setupReceipt.pick({ receiptId: true, source: true, subject: true, evidenceDigest: true, completedAt: true, expiresAt: true })
+  .extend({ expectedRevision: z.number().int().nonnegative() })
+export type SetupReceiptStep = z.infer<typeof setupReceiptStep>
+export type SetupReceipt = z.infer<typeof setupReceipt>
+export type SetupReceiptInput = z.infer<typeof setupReceiptInput>
+const setupHostPath = z.string().min(2).max(1024)
+  .regex(/^\/(?!$)(?!.*(?:^|\/)\.\.(?:\/|$)).*$/)
+  .refine(value => !value.endsWith('/') && !value.includes('//') && [...value].every(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127))
+const setupProtectionPolicy = z.object({
+  schemaVersion: z.literal(1), revision: count, requestId: z.string().min(1).max(128).nullable(),
+  destinationKind: z.literal('mounted_off_machine'),
+  destination: setupHostPath.nullable(),
+  retentionCopies: z.number().int().min(2).max(64).nullable(), policyDigest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+  recordedAt: z.string().datetime({ offset: true }).nullable(),
+})
+const setupProtectionInput = z.object({
+  requestId: z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/),
+  destination: setupHostPath,
+  retentionCopies: z.number().int().min(2).max(64), expectedRevision: count,
+})
+export type SetupProtectionPolicy = z.infer<typeof setupProtectionPolicy>
+export type SetupProtectionInput = z.infer<typeof setupProtectionInput>
+const setupRehearsalPhase = z.object({
+  state: z.enum(['missing', 'complete', 'awaiting_owner', 'outcome_unknown', 'refused', 'invalid_policy']),
+  detail: z.string().min(1).max(240),
+})
+const setupRehearsal = z.object({
+  schemaVersion: z.literal(1), state: z.enum(['in_progress', 'ready', 'complete']),
+  conversation: setupRehearsalPhase, memoryReview: setupRehearsalPhase,
+  approval: setupRehearsalPhase, approvalRequestId: z.string().min(1).max(128).nullable(), canFinalize: z.boolean(),
+})
+export type SetupRehearsal = z.infer<typeof setupRehearsal>
+const setupChoiceStep = z.enum(['companion', 'memory', 'capabilities'])
+const setupChoice = z.object({
+  step: setupChoiceStep, revision: count, requestId: z.string().min(1).max(128).nullable(),
+  choice: z.enum(['undecided', 'accept', 'include', 'skip']), recordedAt: z.string().datetime({ offset: true }).nullable(),
+})
+const setupChoiceInput = z.object({
+  requestId: z.string().min(1).max(128), choice: z.enum(['accept', 'include', 'skip']), expectedRevision: count,
+})
+export type SetupChoiceStep = z.infer<typeof setupChoiceStep>
+export type SetupChoice = z.infer<typeof setupChoice>
+export type SetupChoiceInput = z.infer<typeof setupChoiceInput>
+const setupModelCandidate = z.object({
+  id: z.string().min(1).max(200), providerId: z.string().min(1).max(100), providerName: z.string().min(1).max(160),
+  name: z.string().min(1).max(160), route: z.string().min(1).max(300), status: z.enum(['ready', 'unverified', 'unavailable']), selected: z.boolean(),
+  execution: z.enum(['local', 'hosted']), dataNotice: z.string().min(1).max(240), costNotice: z.string().min(1).max(240),
+})
+const setupModelOptions = z.object({ revision: count, candidates: z.array(setupModelCandidate).max(1000) })
+export type SetupModelOptions = z.infer<typeof setupModelOptions>
+const setupModelProbe = z.object({
+  schemaVersion: z.literal(1), requestId: z.string().min(1).max(128), configurationRevision: z.number().int().positive(),
+  candidateId: z.string().min(1).max(200), providerId: z.string().min(1).max(100), requestedModel: z.string().min(1).max(300),
+  actualModel: z.string().min(1).max(300), execution: z.enum(['local', 'hosted']), responseDigest: z.string().regex(/^[0-9a-f]{64}$/),
+  completedAt: z.string().datetime({ offset: true }), recordedAt: z.string().datetime({ offset: true }),
+})
+const setupModelActivation = z.object({ revision: z.number().int().positive(), candidateId: z.string().min(1).max(200), probe: setupModelProbe })
+const setupBoundaryPolicy = z.object({
+  lockdown: z.boolean(), scopePatterns: z.array(z.string().min(1).max(200)).max(1000),
+  tools: z.array(z.object({
+    id: z.string().min(1).max(200), name: z.string().min(1).max(240), authorization: z.string().min(1).max(80),
+    executionType: z.string().min(1).max(80), usageLimits: z.record(z.string().max(80), z.number().finite().nullable()),
+    definitionDigest: z.string().regex(/^[0-9a-f]{64}$/),
+  })).max(1000), digest: z.string().regex(/^[0-9a-f]{64}$/),
+})
+export type SetupBoundaryPolicy = z.infer<typeof setupBoundaryPolicy>
 export type ProviderStatus = { id: string; status: string; model?: string; busy?: boolean; capabilities: string[] }
 export type MemoryObjectKind = z.infer<typeof kind>
 export type MemoryObjectCard = z.infer<typeof memoryCard>
@@ -80,6 +211,28 @@ export type MemoryConnections = z.infer<typeof connections>
 export type MemoryContent = z.infer<typeof content>
 export type OwnerModelsConfiguration = z.infer<typeof configuration>
 export type OwnerModelSettings = z.infer<typeof modelSettings>
+const agentReference = z.string().min(1).max(200).refine(value => value.trim() === value)
+const agentConfiguration = z.object({
+  name: z.string().trim().min(1).max(80), role: z.string().trim().min(1).max(160),
+  instructions: z.string().trim().min(1).max(8000), modelId: agentReference.nullable(),
+  toolIds: z.array(agentReference).max(1000).refine(values => new Set(values).size === values.length),
+  memory: z.object({
+    scope: z.enum(['none', 'conversation', 'selected']), memoryIds: z.array(agentReference).max(1000),
+  }).superRefine((value, context) => {
+    if ((value.scope === 'selected') !== (value.memoryIds.length > 0)) context.addIssue({ code: 'custom', message: 'Selected memory requires record IDs.' })
+    if (new Set(value.memoryIds).size !== value.memoryIds.length) context.addIssue({ code: 'custom', message: 'Memory IDs must be unique.' })
+  }),
+}).strict()
+const agentProfile = z.object({
+  schemaVersion: z.literal(1), id: z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), kind: z.enum(['companion', 'agent']),
+  revision: z.number().int().positive(), configuration: agentConfiguration,
+  created_at: z.number().finite().nonnegative(), updated_at: z.number().finite().nonnegative(), archived_at: z.number().finite().nonnegative().nullable(),
+  change_kind: z.enum(['created', 'updated', 'archived', 'restored']), authority: z.literal('none'),
+  execution: z.literal('not-integrated'), reference_validation: z.literal('not-performed'),
+}).strict()
+const agentCollection = z.object({ schemaVersion: z.literal(1), results: z.array(agentProfile).max(1000) }).strict()
+export type AgentConfiguration = z.infer<typeof agentConfiguration>
+export type AgentProfile = z.infer<typeof agentProfile>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const result = schema.safeParse(value)
@@ -100,14 +253,141 @@ export type MemoryForgetPreview = z.infer<typeof forgetPreview>
 export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
-export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request'>) {
+export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio'>) {
   return {
     editorDrafts: createGatewayEditorDrafts(auth),
+    projects: createGatewayProjectsClient(auth),
+    artifacts: createGatewayArtifactsClient(auth),
+    jobs: createGatewayJobsClient(auth),
+    characters: createGatewayCharactersClient(auth),
+    hostInventory: createGatewayHostInventoryClient(auth),
+    teams: createGatewayTeamsClient(auth),
+    filesystem: createGatewayFilesystemClient(auth),
+    calls: createGatewayCallsClient(auth),
+    terminal: createGatewayTerminalClient(auth),
+    async diagnostics(signal?: AbortSignal): Promise<GatewayDiagnostics> {
+      return parse(diagnostics, await auth.request('/api/diagnostics', { signal }))
+    },
+    async agents(signal?: AbortSignal): Promise<AgentProfile[]> {
+      return parse(agentCollection, await auth.request('/api/control/pi/agents', { signal })).results
+    },
+    async agent(id: string, signal?: AbortSignal): Promise<AgentProfile> {
+      const selected = parse(z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), id, true)
+      const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}`, { signal }))
+      if (result.id !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async createAgent(value: AgentConfiguration, signal?: AbortSignal): Promise<AgentProfile> {
+      return parse(agentProfile, await auth.request('/api/control/pi/agents', { method: 'POST', body: parse(agentConfiguration, value, true), signal }))
+    },
+    async saveAgent(id: string, value: AgentConfiguration, expectedRevision: number, signal?: AbortSignal): Promise<AgentProfile> {
+      const selected = parse(z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), id, true)
+      const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}/update`, {
+        method: 'POST', body: { expected_revision: parse(z.number().int().positive(), expectedRevision, true), configuration: parse(agentConfiguration, value, true) }, signal,
+      }))
+      if (result.id !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async setAgentArchived(id: string, archived: boolean, expectedRevision: number, signal?: AbortSignal): Promise<AgentProfile> {
+      const selected = parse(z.string().regex(/^agent_[0-9a-f]{32}$/), id, true)
+      const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}/archive`, {
+        method: 'POST', body: { expected_revision: parse(z.number().int().positive(), expectedRevision, true), archived }, signal,
+      }))
+      if (result.id !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
     async tools(signal?: AbortSignal): Promise<ToolInventory> {
       return parse(toolInventory, await auth.request('/api/pi/tools', { signal }))
     },
     async health(signal?: AbortSignal): Promise<SystemHealth> {
       return parse(systemHealth, await auth.request('/api/pi/health', { signal }))
+    },
+    async gatewayHealth(signal?: AbortSignal): Promise<GatewayHealth> {
+      return parse(gatewayHealth, await auth.request('/health', { signal }))
+    },
+    async setupStatus(signal?: AbortSignal): Promise<SetupStatus> {
+      return parse(setupStatus, await auth.request('/api/control/pi/setup/status', { signal }))
+    },
+    async setupBoundaryPolicy(signal?: AbortSignal): Promise<SetupBoundaryPolicy> {
+      return parse(setupBoundaryPolicy, await auth.request('/api/control/pi/setup/boundaries', { signal }))
+    },
+    async setupReceipt(step: SetupReceiptStep, signal?: AbortSignal): Promise<SetupReceipt> {
+      const selected = parse(setupReceiptStep, step, true)
+      const result = parse(setupReceipt, await auth.request(`/api/control/pi/setup/receipts/${selected}`, { signal }))
+      if (result.step !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async recordSetupReceipt(step: 'boundaries', value: SetupReceiptInput, signal?: AbortSignal): Promise<SetupReceipt> {
+      const selected = parse(setupReceiptWritableStep, step, true)
+      const body = parse(setupReceiptInput, value, true)
+      const result = parse(setupReceipt, await auth.request(`/api/control/pi/setup/receipts/${selected}`, { method: 'POST', body, signal }))
+      if (result.step !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async setupProtection(signal?: AbortSignal): Promise<SetupProtectionPolicy> {
+      return parse(setupProtectionPolicy, await auth.request('/api/control/pi/setup/protection', { signal }))
+    },
+    async saveSetupProtection(value: SetupProtectionInput, signal?: AbortSignal): Promise<SetupProtectionPolicy> {
+      const body = parse(setupProtectionInput, value, true)
+      const result = parse(setupProtectionPolicy, await auth.request('/api/control/pi/setup/protection', { method: 'POST', body, signal }))
+      if (result.revision !== body.expectedRevision + 1 || result.requestId !== body.requestId || result.destination !== body.destination || result.retentionCopies !== body.retentionCopies) throw new GatewayError('invalid-response')
+      return result
+    },
+    async setupRehearsal(signal?: AbortSignal): Promise<SetupRehearsal> {
+      return parse(setupRehearsal, await auth.request('/api/control/pi/setup/rehearsal', { signal }))
+    },
+    async reviewSetupMemory(expectedChoiceRevision: number, requestId: string, signal?: AbortSignal): Promise<SetupRehearsal> {
+      const body = {
+        requestId: parse(z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/), requestId, true),
+        expectedChoiceRevision: parse(z.number().int().positive(), expectedChoiceRevision, true),
+      }
+      return parse(setupRehearsal, await auth.request('/api/control/pi/setup/rehearsal/memory-review', { method: 'POST', body, signal }))
+    },
+    async startSetupApproval(requestId: string, signal?: AbortSignal): Promise<SetupRehearsal> {
+      const body = { requestId: parse(z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/), requestId, true) }
+      return parse(setupRehearsal, await auth.request('/api/control/pi/setup/rehearsal/approval/start', { method: 'POST', body, signal }))
+    },
+    async resumeSetupApproval(requestId: string, signal?: AbortSignal): Promise<SetupRehearsal> {
+      const body = { requestId: parse(z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/), requestId, true) }
+      return parse(setupRehearsal, await auth.request('/api/control/pi/setup/rehearsal/approval/resume', { method: 'POST', body, signal }))
+    },
+    async finalizeSetupRehearsal(signal?: AbortSignal): Promise<SetupReceipt> {
+      const result = parse(setupReceipt, await auth.request('/api/control/pi/setup/rehearsal/finalize', { method: 'POST', body: {}, signal }))
+      if (result.step !== 'rehearsal' || result.source !== 'conker.first-run-rehearsal') throw new GatewayError('invalid-response')
+      return result
+    },
+    async setupChoice(step: SetupChoiceStep, signal?: AbortSignal): Promise<SetupChoice> {
+      const selected = parse(setupChoiceStep, step, true)
+      const result = parse(setupChoice, await auth.request(`/api/control/pi/setup/choices/${selected}`, { signal }))
+      if (result.step !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async saveSetupChoice(step: SetupChoiceStep, value: SetupChoiceInput, signal?: AbortSignal): Promise<SetupChoice> {
+      const selected = parse(setupChoiceStep, step, true)
+      const body = parse(setupChoiceInput, value, true)
+      const result = parse(setupChoice, await auth.request(`/api/control/pi/setup/choices/${selected}`, { method: 'POST', body, signal }))
+      if (result.step !== selected || result.choice !== body.choice || result.requestId !== body.requestId || result.revision !== body.expectedRevision + 1) throw new GatewayError('invalid-response')
+      return result
+    },
+    async setupModels(signal?: AbortSignal): Promise<SetupModelOptions> {
+      return parse(setupModelOptions, await auth.request('/api/control/pi/setup/models', { signal }))
+    },
+    async saveSetupModel(candidateId: string, expectedRevision: number, signal?: AbortSignal): Promise<OwnerModelSettings> {
+      const selected = parse(z.string().min(1).max(200).refine(value => value.trim() === value), candidateId, true)
+      const result = parse(modelSettings, await auth.request('/api/control/pi/setup/models', {
+        method: 'POST', body: { candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
+      }))
+      if (result.revision !== expectedRevision + 1 || result.configuration?.defaultModelId !== selected) throw new GatewayError('invalid-response')
+      return result
+    },
+    async activateSetupModel(candidateId: string, expectedRevision: number, requestId: string, signal?: AbortSignal) {
+      const selected = parse(z.string().min(1).max(200).refine(value => value.trim() === value), candidateId, true)
+      const request = parse(z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/), requestId, true)
+      const result = parse(setupModelActivation, await auth.request('/api/control/pi/setup/models/activate', {
+        method: 'POST', body: { requestId: request, candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
+      }))
+      if (result.revision !== expectedRevision + 1 || result.candidateId !== selected || result.probe.requestId !== request || result.probe.configurationRevision !== result.revision || result.probe.candidateId !== selected) throw new GatewayError('invalid-response')
+      return result
     },
     async sessionSettings(id: string, signal?: AbortSignal): Promise<OwnerSessionSettings> {
       return parse(sessionSettings, await auth.request(`/api/control/pi/sessions/${parse(identity, id, true)}/settings`, { signal }))

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
+const workspaceSource = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/runtime-workspace.tsx'), 'utf8')
 const file = path.resolve(__dirname, '../src/components/gateway/runtime-state.ts')
 const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const loaded = { exports: {} }
@@ -51,6 +52,24 @@ assert.equal(workspace.getState().operation, null)
 assert.equal(workspace.getState().title, '')
 assert.equal(workspace.getState().createUnknown, null)
 console.log('Gateway workspace send guards, explicit uncertainty resolution, retained drafts/locks and auth-reset epoch checks passed.')
+
+assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} value=\{firstModel\}/,
+  'The first-message composer must expose the answer model before dispatch')
+assert.match(workspaceSource, /GatewayAgentPicker compact client=\{control\} value=\{firstAgent\}/,
+  'The first-message composer must expose the durable agent before creating the conversation')
+assert.match(workspaceSource, /client\.createSession\([^\n]+\{ signal, agentId: firstAgent,[^\n]+privacy/,
+  'Session creation must atomically bind the selected agent and first-turn privacy restrictions')
+assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} value=\{firstModel\}[^\n]+manualRequired=\{firstPrivacy\.harnessDisabled\}/,
+  'Disabling the harness before creation must require an explicit answer model')
+assert.match(workspaceSource, /firstPrivacy\.harnessDisabled && !firstModel/,
+  'The first message must stay blocked until the required manual model is selected')
+assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,
+  'An open conversation must expose an explicit future-turn agent handoff')
+assert.match(workspaceSource, /dispatchSubmission\(created, text, createTurnRequestId\(\), undefined, undefined, firstModel\)/,
+  'The first-message model choice must cross session creation into the initial submission')
+assert.match(workspaceSource, /const modelId = modelOverride \?\? modelChoices\[id\]/)
+assert.match(workspaceSource, /\.\.\.\(modelId \? \{ modelId \} : \{\}\)/,
+  'The exact resolved model choice must be sent to the runtime')
 
 assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ status: 'interrupted', acted: true, endedAt: '2026-09-20T12:00:00Z' }] }), false)
 assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ status: 'interrupted', acted: false, endedAt: '2026-09-20T12:00:00Z' }] }), true)

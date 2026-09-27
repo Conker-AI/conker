@@ -9,8 +9,8 @@ function load(relative) {
   const code = ts.transpileModule(fs.readFileSync(path.join(root, relative), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText
-  new Function('require', 'module', 'exports', code)(request => request === 'zod' ? require('zod') :
-    load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`), module, module.exports)
+  new Function('require', 'module', 'exports', code)(request => request === 'zod' ? require('zod') : request.startsWith('@/') ?
+    load(`src/${request.slice(2)}.ts`) : load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`), module, module.exports)
   return module.exports
 }
 const { createGatewayControlClient } = load('src/lib/gateway/control.ts')
@@ -28,6 +28,40 @@ async function main() {
   assert.equal(calls.pop()[0], '/api/pi/health')
   result.service = 'wrong-service'
   await assert.rejects(client.health(), error => error.kind === 'invalid-response')
+  calls.pop()
+  result = { service: 'gateway', version: 'test', status: 'ok', checked_at: '2026-09-22T00:00:00Z', age_seconds: 0,
+    checks: { owner_login: { status: 'ok', secret: 'hidden' }, runtime: { status: 'ok' }, owner_channel: { status: 'not_configured' } } }
+  const gatewayHealth = await client.gatewayHealth()
+  assert.equal(gatewayHealth.checks.owner_login.secret, undefined)
+  assert.equal(gatewayHealth.checks.owner_channel.status, 'not_configured')
+  assert.equal(calls.pop()[0], '/health')
+  result = { schemaVersion: 1, status: 'attention', generatedAt: '2026-09-22T00:00:00Z', summary: { attention: 1, ok: 6, optional: 1 }, findings: [
+    { id: 'owner-login', area: 'access', label: 'Owner sign-in', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+    { id: 'runtime', area: 'services', label: 'Conker runtime', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+    { id: 'owner-channel', area: 'access', label: 'Approval control', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+    { id: 'store', area: 'services', label: 'Conversation storage', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+    { id: 'memory', area: 'services', label: 'Memory', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+    { id: 'local-model', area: 'models', label: 'Local answer model', status: 'attention', observedStatus: 'unavailable', detail: 'The service could not be reached.', recovery: { label: 'Check the local answer model', uiRoute: '/settings', command: 'conker logs ollama' } },
+    { id: 'hosted-model', area: 'models', label: 'Hosted answer model', status: 'optional', observedStatus: 'not_configured', detail: 'Not configured; this capability is optional.', recovery: null },
+    { id: 'actions', area: 'services', label: 'Tool approvals', status: 'ok', observedStatus: 'ok', detail: 'Working normally.', recovery: null },
+  ] }
+  const diagnostic = await client.diagnostics()
+  assert.equal(diagnostic.findings[5].recovery.command, 'conker logs ollama')
+  assert.equal(calls.pop()[0], '/api/diagnostics')
+  result.findings[5].id = 'unknown'
+  await assert.rejects(client.diagnostics(), error => error.kind === 'invalid-response')
+  calls.pop()
+  const agentConfiguration = { name: 'Research partner', role: 'Research and synthesis', instructions: 'Separate evidence from inference.', modelId: null, toolIds: ['research.search'], memory: { scope: 'conversation', memoryIds: [] } }
+  const agent = { schemaVersion: 1, id: `agent_${'a'.repeat(32)}`, kind: 'agent', revision: 1, configuration: agentConfiguration, created_at: 1, updated_at: 1, archived_at: null, change_kind: 'created', authority: 'none', execution: 'not-integrated', reference_validation: 'not-performed' }
+  result = { schemaVersion: 1, results: [agent] }
+  assert.deepEqual(await client.agents(), [agent])
+  assert.equal(calls.pop()[0], '/api/control/pi/agents')
+  result = agent
+  await client.saveAgent(agent.id, agentConfiguration, 1)
+  assert.deepEqual(calls.pop(), [`/api/control/pi/agents/${agent.id}/update`, { method: 'POST', body: { expected_revision: 1, configuration: agentConfiguration }, signal: undefined }])
+  await assert.rejects(client.setAgentArchived('companion', true, 1), error => error.kind === 'validation')
+  result = { schemaVersion: 1, results: [{ ...agent, configuration: { ...agentConfiguration, credential: 'must not project' } }] }
+  await assert.rejects(client.agents(), error => error.kind === 'invalid-response')
   calls.pop()
   result = { status: 'ok', results: [{ id: 'conker.echo', name: 'Echo', description: 'Local tool', inputs: [{ name: 'value', type: 'string', default: 'do not expose', secret: 'do not expose' }] }] }
   const inventory = await client.tools()
@@ -70,11 +104,15 @@ async function main() {
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => { requests++; return new Response(JSON.stringify(result), { headers: { 'content-type': 'application/json' } }) } })
   await transport.request('/api/control/pi/models/configuration')
+  await transport.request('/api/diagnostics')
+  await transport.request('/api/control/pi/agents')
+  await transport.request(`/api/control/pi/agents/${agent.id}/update`, { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 1, configuration: agentConfiguration } })
+  await assert.rejects(transport.request('/api/control/pi/agents/companion/archive', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation')
   await transport.request('/api/control/pi/memory/objects', { query: { search: 'hello' } })
   await assert.rejects(transport.request('/api/control/pi/vault'), error => error.kind === 'validation')
   await transport.request('/api/control/pi/sessions/ses_one/settings')
   await assert.rejects(transport.request('/api/control/pi/sessions/ses_one/turns'), error => error.kind === 'validation')
-  assert.equal(requests, 3)
+  assert.equal(requests, 6)
   const definition = load('src/lib/tool-workspace.ts').createToolDefinition('draft-one', 'Draft one')
   result = { id: definition.id, revision: 1, updated_at: '2026-09-22T00:00:00Z', document: definition }
   const draft = await client.editorDrafts.get(definition.id)

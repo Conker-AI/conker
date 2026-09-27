@@ -29,14 +29,15 @@ async function main() {
     const message = { id: 'm1', sessionId: 'a', sequence: 7, role: 'assistant', createdAt: '2026-09-25T10:00:00Z', content: { kind: 'text', text: 'Saved answer' } }
     const base = { sessionId: 'a', epoch: 1, active: true, current: { id: 'a', status: 'open', messages: [message], turns: [], pendingSubmissions: [] }, draft: 'Next', pending: false, sendPending: false, detailPending: false, forgotten: false, reviewed: false, notice: null, error: null, rejected: null, inFlight: null, preview: null }
     let state = { ...base }, calls = []
-    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
+    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'saveArtifact', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
     const project = () => gatewayChatContract(state, () => state, () => handlers)
     const run = async action => { assert.equal(action.availability, 'enabled'); await action.run() }
     let chat = project()
     assert.equal(chat.source, 'gateway'); assert.equal(chat.messages[0].sequence, 7)
     assert.deepEqual(chat.messages[0].content, message.content)
-    for (const name of ['edit', 'retry', 'fork', 'pin', 'rateUp', 'rateDown', 'redact', 'saveArtifact']) assert.equal(chat.messages[0].actions[name].availability, 'unsupported')
+    for (const name of ['edit', 'retry', 'fork', 'pin', 'rateUp', 'rateDown', 'redact']) assert.equal(chat.messages[0].actions[name].availability, 'unsupported')
     await run(chat.messages[0].actions.copy); assert.equal(calls.at(-1)[1].id, 'm1')
+    await run(chat.messages[0].actions.saveArtifact); assert.equal(calls.at(-1)[0], 'saveArtifact')
     await run(chat.send); assert.equal(calls.at(-1)[0], 'send')
     for (const change of [{ epoch: 2 }, { active: false }, { sessionId: 'b' }, { forgotten: true }, { pending: true }]) {
       state = { ...base, ...change }; calls = []; await chat.send.run(); assert.equal(calls.length, 0, 'Stale send must recheck eligibility')

@@ -23,6 +23,7 @@ export const appNavigation = {
   editAgent: { path: "/agents/:id/edit", title: "Edit agent", parent: "agents" },
   tools: { path: "/tools", title: "Tools" },
   jobs: { path: "/jobs", title: "Jobs" },
+  job: { path: "/jobs/:id", title: "Schedule", parent: "jobs" },
   system: { path: "/system", title: "System" },
   settings: { path: "/settings", title: "Settings" },
   companionSettings: { path: "/settings/companion", title: "Character Studio", parent: "settings" },
@@ -40,7 +41,7 @@ export const pageSections: Partial<Record<AppRoute, readonly PageSection[]>> = {
   chats: [{ value: "sessions", label: "Conversations" }, { value: "agents", label: "Agents" }, { value: "archived", label: "Archived" }],
   inbox: [{ value: "pending", label: "Needs you", count: "pending" }, { value: "history", label: "Decision history" }],
   system: [{ value: "overview", label: "Overview" }, { value: "processes", label: "Processes" }, { value: "ports", label: "Ports" }, { value: "containers", label: "Containers" }, { value: "terminal", label: "Terminal" }, { value: "files", label: "Files" }],
-  companionSettings: [{ value: "identity", label: "Identity & soul" }, { value: "speaking", label: "Speaking style" }, { value: "appearance", label: "Appearance" }, { value: "voice", label: "Voice" }, { value: "modes", label: "Expression & modes" }],
+  companionSettings: [{ value: "identity", label: "Identity & soul" }, { value: "speaking", label: "Speaking style" }, { value: "appearance", label: "Appearance" }, { value: "voice", label: "Voice" }, { value: "modes", label: "Expression & modes" }, { value: "harness", label: "Harness" }],
   settings: [
     { value: "appearance", label: "Appearance" },
     { value: "layout", label: "Layout" },

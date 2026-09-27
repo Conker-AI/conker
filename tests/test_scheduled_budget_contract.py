@@ -9,8 +9,8 @@ from contextlib import closing
 import pytest
 
 pytest.importorskip("pi.jobs", reason="Add the Pi checkout to PYTHONPATH")
-import httpx  # noqa: E402 - Pi's dependencies, present only with the checkout
-from fastapi.testclient import TestClient  # noqa: E402
+import httpx
+from fastapi.testclient import TestClient
 
 pytest.importorskip(
     "toolgate.api.server", reason="Add the ToolGate checkout to PYTHONPATH"

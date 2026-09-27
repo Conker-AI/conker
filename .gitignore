@@ -2,6 +2,7 @@
 .env
 .env.local
 *.tmp.*
+/.conker/
 
 # Where the owner's data lands if they accept the defaults.
 /conker-backups/
@@ -12,6 +13,10 @@
 .conker-recovery.json
 .test-gates/
 .local-run/
+
+# Local browser QA recordings and rendered output.
+/dashboard/.playwright-cli/
+/dashboard/output/
 
 # Python
 __pycache__/

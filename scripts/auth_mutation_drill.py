@@ -36,7 +36,17 @@ CASES = [
         RESTORE,
     ),
     (
-        "owner-key-mounted-in-worker",
+        "pi-owner-key-mounted-in-worker",
+        "docker-compose.yml",
+        "      PI_OWNER_KEY_SHA256: ${PI_OWNER_KEY_SHA256:?run ./install.sh}",
+        (
+            "      PI_OWNER_KEY_SHA256: ${PI_OWNER_KEY_SHA256:?run ./install.sh}\n"
+            "      GATEWAY_PI_OWNER_KEY: ${GATEWAY_PI_OWNER_KEY:?run ./install.sh}"
+        ),
+        DEPLOYMENT,
+    ),
+    (
+        "toolgate-owner-key-mounted-in-worker",
         "docker-compose.yml",
         "      PI_GATEWAY_KEY_SHA256: ${PI_GATEWAY_KEY_SHA256:?run ./install.sh}",
         (

@@ -10,11 +10,11 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import secrets
 import socket
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
@@ -114,8 +114,8 @@ def serve(name, config):
     os.chdir(STATE / name)
     import uvicorn
     if name == "gateway":
-        from gateway.api import Config, create_app
         from gateway.__main__ import create_certificate
+        from gateway.api import Config, create_app
         certificate, key = create_certificate(STATE / "gateway", "localhost")
         uvicorn.run(create_app(Config.environment()), host="127.0.0.1", port=SERVICES[name],
                     ssl_certfile=str(certificate), ssl_keyfile=str(key), proxy_headers=False,
@@ -173,7 +173,7 @@ def main():
         with env_path.open("w", encoding="utf-8") as stream:
             stream.write("".join(f"{key}={value}\n" for key, value in config["environments"]["postgres"].items()))
         existing = subprocess.run(["docker", "container", "inspect", "conker-local-integration-postgres"],
-                                  capture_output=True)
+                                  capture_output=True, check=False)
         if existing.returncode == 0:
             details = json.loads(existing.stdout)[0]
             if details["Config"].get("Labels", {}).get("conker.local-integration") != "true":

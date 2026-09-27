@@ -6,7 +6,7 @@ export type Action<Args extends unknown[] = []> =
 export type MessageAction = 'copy' | 'link' | 'edit' | 'retry' | 'fork' | 'pin' | 'rateUp' | 'rateDown' | 'redact' | 'saveArtifact'
 export type ChatMessage = {
   id: string; sessionId: string; sequence: number; role: 'user' | 'assistant' | 'system' | 'tool'
-  createdAt: string; content: Content; actions: Record<MessageAction, Action>
+  createdAt: string; content: Content; agentId: string | null; agentName?: string; actions: Record<MessageAction, Action>
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'
@@ -29,6 +29,7 @@ export type Submission =
     }
 export type ChatContract = {
   source: 'gateway' | 'fixture'; sessionId: string; messages: readonly ChatMessage[]
+  activeAgentName: string
   history: 'loading' | 'ready' | 'error'; notice: string | null; error: string | null
   draft: string; setDraft: Action<[text: string]>; send: Action; checkHistory: Action
   generation: Generation | null; submission: Submission

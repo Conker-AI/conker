@@ -1,0 +1,59 @@
+services:
+  gateway:
+    environment:
+      GATEWAY_TERMINAL_SOCKET: /run/conker-terminal/control.sock
+      GATEWAY_TERMINAL_WORKSPACE_LABEL: ${CONKER_TERMINAL_WORKSPACE_LABEL:?configure the accepted terminal workspace}
+    volumes:
+      - terminal_control:/run/conker-terminal
+    group_add: ["65532"]
+    depends_on:
+      pi:
+        condition: service_started
+      owner-terminal:
+        condition: service_healthy
+
+  owner-terminal:
+    image: ${OWNER_TERMINAL_IMAGE:?active release manifest must pin the owner-terminal image}
+    restart: unless-stopped
+    command:
+      - serve
+      - --socket
+      - /run/conker-terminal/control.sock
+      - --health
+      - /run/conker-terminal/health.json
+      - --shell
+      - /bin/bash
+      - --workspace
+      - /workspace
+      - --gateway-uid
+      - "0"
+    user: "65532:65532"
+    network_mode: none
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1.0
+    stop_grace_period: 10s
+    environment:
+      CONKER_TERMINAL_ISOLATED: "1"
+    volumes:
+      - type: volume
+        source: terminal_control
+        target: /run/conker-terminal
+      - type: bind
+        source: ${CONKER_TERMINAL_WORKSPACE:?select one accepted terminal workspace}
+        target: /workspace
+        read_only: false
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    healthcheck:
+      test: [CMD, conker-terminal, health, --health, /run/conker-terminal/health.json]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+
+volumes:
+  terminal_control:

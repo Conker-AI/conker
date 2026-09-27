@@ -5,9 +5,9 @@ new deletion targets from directory names, and never removes unrelated projects.
 """
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import tarfile
+from pathlib import Path
 
 root = Path.home() / "conker-deploy"
 recovery = root / "recovery/legacy-20260923"

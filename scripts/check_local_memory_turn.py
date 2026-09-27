@@ -6,9 +6,9 @@ isolated launcher workspace. Does not submit turns, seed data, or call a model.
 """
 import argparse
 import json
-from pathlib import Path
 import sqlite3
 import urllib.request
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -82,6 +82,7 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
           const failure = gatewayError(error)
           if (failure.status === 401 || failure.status === 403) {
             try { await readSession() } catch { throw new GatewayError('verification-failed', failure.status) }
+            throw new GatewayError('login-rejected', failure.status)
           }
           throw failure
         }
@@ -100,6 +101,27 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
         const value = await transport.request('/auth/logout', { method: 'POST', csrfToken: previous.csrfToken })
         if (value.authenticated !== false) throw new GatewayError('invalid-response')
       })
+    },
+    async audio(path: string, requestId: string, body: Uint8Array, signal?: AbortSignal): Promise<Record<string, unknown>> {
+      if (signal?.aborted) throw new GatewayError('aborted')
+      const ticket = await serial(async () => {
+        if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) { clear(); await readSession() }
+        if (!unlocked()) throw new GatewayError('browser-expired')
+        return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }
+      })
+      const current = () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
+      if (!current()) throw new GatewayError('session-changed')
+      try {
+        const value = await transport.audio(path, requestId, body, ticket.csrfToken, signal)
+        if (!current()) throw new GatewayError('session-changed')
+        return value
+      } catch (error) {
+        if (!current()) throw new GatewayError('session-changed')
+        return serial(async () => {
+          if (!current()) throw new GatewayError('session-changed')
+          return classifyDenied(error)
+        })
+      }
     },
     async request(path: string, options: GatewayRequest = {}): Promise<Record<string, unknown>> {
       const post = options.method === 'POST'

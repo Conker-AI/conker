@@ -25,6 +25,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   useEffect(() => { selectedId.current = requestId }, [requestId])
   const busy = retained.pendingId !== null
   const current = selected?.id === requestId ? selected : null
+  const invalidateLoad = useCallback(() => { generation.current += 1 }, [])
   const request = useCallback(async <T,>(read: (signal: AbortSignal) => Promise<T>) => {
     const controller = new AbortController(); controllers.current.add(controller)
     try { return await read(controller.signal) } finally { controllers.current.delete(controller) }
@@ -61,8 +62,8 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   useEffect(() => {
     let cancelled = false
     if (active) queueMicrotask(() => { if (!cancelled) void load() })
-    return () => { cancelled = true; generation.current++ }
-  }, [active, load])
+    return () => { cancelled = true; invalidateLoad() }
+  }, [active, invalidateLoad, load])
   useEffect(() => {
     if (!active || !(current?.status === 'pending' || rows.some(row => row.status === 'pending'))) return
     const timer = window.setInterval(() => setNow(Date.now()), 1000)

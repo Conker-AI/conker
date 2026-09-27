@@ -68,9 +68,19 @@ Model providers and which model does what (answering, routing, memory ranking), 
 **Character Studio** (`Settings → Companion`) sets your companion's name, personality, style and
 voice. Voice cloning and 3D appearance are not connected yet.
 
-### Calls · **Preview**
+### Calls · **Connected**
 
-Call screen with microphone, camera, captions and a mini view. Real-time AI voice is not connected.
+The call screen supports durable typed turns and bounded English voice turns when an
+operator has configured a compatible speech service. The browser captures PCM only
+after an explicit click; recordings and generated audio are discarded after the
+request or playback, while the transcript remains in the call conversation. Camera,
+continuous streaming, perception and incoming calls are not connected.
+
+First-run setup reports voice readiness inside **Connect capabilities** without asking
+for a provider key. Run `conker speech configure` on the Conker host for the guided
+URL, model, voice and hidden-key prompts, then refresh setup. `conker speech status`
+reports configuration only and never prints the credential; `conker speech disable`
+removes the host configuration and recreates Pi.
 
 ## Common tasks
 

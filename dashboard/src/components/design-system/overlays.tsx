@@ -77,10 +77,10 @@ export function DetailPanel({ open, onOpenChange, title, description, children, 
   </Sheet>
 }
 
-export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, onCloseAutoFocus }: {
+export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, onCloseAutoFocus, actionVariant = "destructive" }: {
   open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string; children?: ReactNode;
   actionLabel: string; pending: boolean; error?: string | null; onConfirm: () => void | Promise<void>;
-  onCloseAutoFocus?: ComponentProps<typeof DialogContent>["onCloseAutoFocus"]
+  onCloseAutoFocus?: ComponentProps<typeof DialogContent>["onCloseAutoFocus"]; actionVariant?: "default" | "destructive"
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
   return <Dialog open={open} onOpenChange={next => { if (!pending) onOpenChange(next) }}>
@@ -90,7 +90,7 @@ export function ConfirmationDialog({ open, onOpenChange, title, description, chi
       {(children || error) && <OverlayBody>{children}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>}
       <FormActions inset>
         <Button ref={cancel} type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button type="button" variant="destructive" disabled={pending} onClick={() => void onConfirm()}>{pending ? "Working…" : actionLabel}</Button>
+        <Button type="button" variant={actionVariant} disabled={pending} onClick={() => void onConfirm()}>{pending ? "Working…" : actionLabel}</Button>
       </FormActions>
     </TaskDialogContent>
   </Dialog>

@@ -4,6 +4,7 @@ import { canReleaseTaskConflict, canSubmitRuntime, hasActiveRuntimeTurn, type Un
 
 export type GatewayChatState = {
   sessionId: string; epoch: number; active: boolean; current: RuntimeSessionDetail | null
+  activeAgentName: string; agentNames: Record<string, string>
   draft: string; pending: boolean; sendPending: boolean; detailPending: boolean; forgotten: boolean
   attempt?: UncertainTurn; reviewed: boolean; notice: string | null; error: string | null; rejected: string | null
   inFlight: (Attempt & { requestId: string; stopping: boolean }) | null
@@ -13,6 +14,7 @@ export type GatewayChatState = {
 export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
   stop: () => void | Promise<void>; copy: (message: RuntimeMessage, kind: 'copy' | 'link') => Promise<void>
+  saveArtifact: (message: RuntimeMessage) => void | Promise<void>
 } & Record<RecoveryAction, () => void | Promise<void>>
 const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
 
@@ -24,15 +26,21 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   }
   const isForgotten = (value: GatewayChatState) => value.forgotten || value.current?.status === 'forgotten' || value.attempt?.submission?.contentStatus === 'forgotten'
   const messages: ChatMessage[] = (state.current?.messages ?? []).map(message => ({ ...message,
+    ...(message.agentId && state.agentNames[message.agentId] ? { agentName: state.agentNames[message.agentId] } : {}),
     content: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : message.content,
     actions: {
       copy: messageAction(message, 'copy'), link: messageAction(message, 'link'),
-      edit: unsupported, retry: unsupported, fork: unsupported, pin: unsupported, rateUp: unsupported, rateDown: unsupported, redact: unsupported, saveArtifact: unsupported,
+      edit: unsupported, retry: unsupported, fork: unsupported, pin: unsupported, rateUp: unsupported, rateDown: unsupported, redact: unsupported,
+      saveArtifact: saveArtifactAction(message),
     },
   }))
   function messageAction(message: RuntimeMessage, kind: 'copy' | 'link'): Action {
     return action(value => !isForgotten(value) && value.current?.messages.some(item => item.id === message.id && item.content.kind === 'text') === true,
       handler => handler.copy(read().current!.messages.find(item => item.id === message.id)!, kind), 'Message content is unavailable.')
+  }
+  function saveArtifactAction(message: RuntimeMessage): Action {
+    return action(value => !isForgotten(value) && value.current?.status === 'open' && value.current.messages.some(item => item.id === message.id && item.role === 'assistant' && item.content.kind === 'text') === true,
+      handler => handler.saveArtifact(read().current!.messages.find(item => item.id === message.id)!), 'Only a readable assistant response in an open chat can be saved.')
   }
   const saved = state.attempt
   const input = (text: string): Attempt['input'] => isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : { kind: 'text', text }
@@ -66,6 +74,7 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   } : null
   return {
     source: 'gateway', sessionId: state.sessionId, messages, history: state.detailPending ? 'loading' : state.error ? 'error' : 'ready',
+    activeAgentName: state.activeAgentName,
     notice: state.notice, error: state.error, draft: isForgotten(state) ? '' : state.draft, focusedMessageId: state.focusedMessageId,
     setDraft: action(value => !value.sendPending && !isForgotten(value), (handler, text: string) => handler.setDraft(text), 'The composer is unavailable while sending or after forgetting.'),
     send: action(value => !isForgotten(value) && canSubmitRuntime(value.draft, value.pending, value.attempt, value.current), handler => handler.send(), 'Sending requires an open conversation, a valid draft, and no unresolved turn.'),

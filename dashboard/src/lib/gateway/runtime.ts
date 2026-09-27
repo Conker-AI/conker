@@ -10,6 +10,7 @@ export type RuntimeSession = {
 export type RuntimeMessage = {
   id: string; sessionId: string; sequence: number
   role: 'user' | 'assistant' | 'system' | 'tool'; createdAt: string
+  agentId: string | null
   content: { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 }
 export type RuntimeMemory = {
@@ -83,6 +84,10 @@ function inputId(value: string): string {
   if (typeof value !== 'string' || !ID.test(value)) throw new GatewayError('validation')
   return value
 }
+function runtimeAgentId(value: unknown): string {
+  if (typeof value !== 'string' || !/^(?:companion|agent_[0-9a-f]{32})$/.test(value)) return bad()
+  return value
+}
 function nullable<T>(value: unknown, parse: (item: unknown) => T): T | null { return value === null ? null : parse(value) }
 function number(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return bad()
@@ -143,7 +148,9 @@ function message(value: unknown, sessionId: string, forgotten = false): RuntimeM
       : { kind: 'unavailable', reason: 'unsupported' }
   const sequence = count(row.seq)
   if (sequence < 1) return bad()
-  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content }
+  const agentId = row.agent_id === undefined || row.agent_id === null ? null : runtimeAgentId(row.agent_id)
+  if (role !== 'assistant' && agentId !== null) return bad()
+  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId }
 }
 function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn {
   const row = record(value)
@@ -257,10 +264,12 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (new Set(pending.map(row => row.requestId)).size !== pending.length) return bad()
       return { ...parsed, messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
     },
-    async createSession(title = '', options: { signal?: AbortSignal } = {}): Promise<{ sessionId: string }> {
+    async createSession(title = '', options: { signal?: AbortSignal; agentId?: string; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean } } = {}): Promise<{ sessionId: string }> {
       if (typeof title !== 'string' || title.length > 1024) throw new GatewayError('validation')
+      if (options.agentId !== undefined && !/^(?:companion|agent_[0-9a-f]{32})$/.test(options.agentId)) throw new GatewayError('validation')
+      if (options.privacy !== undefined && (options.privacy === null || typeof options.privacy !== 'object' || Array.isArray(options.privacy) || Object.keys(options.privacy).some(key => key !== 'memoryDisabled' && key !== 'harnessDisabled') || Object.values(options.privacy).some(value => typeof value !== 'boolean'))) throw new GatewayError('validation')
       try {
-        const response = await auth.request('/api/pi/sessions', { method: 'POST', body: { title }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request('/api/pi/sessions', { method: 'POST', body: { title, ...(options.agentId ? { agent_id: options.agentId } : {}), ...(options.privacy && Object.keys(options.privacy).length ? { privacy: options.privacy } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         return { sessionId: id(response.session_id) }
       } catch (error) { throw new RuntimeMutationError(gatewayError(error)) }
     },

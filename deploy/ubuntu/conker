@@ -1,29 +1,19 @@
 #!/bin/sh
+# Thin installed entrypoint. Command behavior lives in the exported companion source.
 set -eu
 
 deployment=${CONKER_DEPLOY_DIR:-"$HOME/conker-deploy"}
-usage() {
-    printf '%s\n' 'Usage: conker status | conker auth <command>' \
-        'Auth: setup, reset-password, revoke-all, certificate, renew-certificate, health' \
-        'Password commands prompt privately in your terminal.'
-}
+cli=${CONKER_COMPANION_CLI:-"$deployment/sources/companion/conker"}
 
-case "${1:-help}" in
-    help|-h|--help) usage; exit 0 ;;
-    status)
-        shift
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
-        exec docker compose --project-directory "$deployment" -f "$deployment/compose.json" ps
-        ;;
-    auth)
-        shift
-        case "${1:-}" in
-            setup|reset-password|revoke-all|certificate|renew-certificate|health) ;;
-            *) usage >&2; exit 2 ;;
-        esac
-        [ -f "$deployment/compose.json" ] || { printf '%s\n' "Deployment not found: $deployment" >&2; exit 1; }
-        exec docker compose --project-directory "$deployment" -f "$deployment/compose.json" \
-            run --rm --no-deps gateway python -m gateway "$@"
-        ;;
-    *) usage >&2; exit 2 ;;
-esac
+if [ ! -f "$cli" ]; then
+    printf 'Conker command implementation not found: %s\n' "$cli" >&2
+    printf 'Restore the reviewed companion source export for this deployment.\n' >&2
+    exit 1
+fi
+if ! command -v bash >/dev/null 2>&1; then
+    printf 'Bash is required to run the Conker command contract.\n' >&2
+    exit 1
+fi
+
+export CONKER_LAYOUT=ubuntu CONKER_DEPLOY_DIR="$deployment"
+exec bash "$cli" "$@"

@@ -48,8 +48,8 @@ class LayaBackend:
         # checkpoint is mandatory; serving never downloads arbitrary model IDs.
         if not os.path.isdir(path):
             raise RuntimeError("Configure DECISION_MODEL_PATH with a local checkpoint.")
-        import torch
         import laya
+        import torch
         torch.set_num_threads(threads)
         self.agent = laya.load(path, device="cpu")
         self.agent.model.eval()
@@ -155,7 +155,8 @@ def create_app(backend: Backend | None = None, *, key: str | None = None):
                     "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
         except ContextTooLarge:
             raise HTTPException(422, "decision_context_too_large") from None
-        except Exception:
+        # Provider failures are intentionally collapsed at this public boundary.
+        except Exception:  # noqa: BLE001
             raise HTTPException(503, "decision_unavailable") from None
         finally:
             lock.release()

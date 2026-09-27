@@ -61,6 +61,7 @@ async function main() {
   })
   check('Specific routes, detail routes, trailing slashes, and unknown paths resolve correctly', () => {
     assert.equal(matchAppRoute('/settings/companion').key, 'companionSettings')
+    assert.equal(activePageSection('companionSettings', '?tab=harness'), 'harness')
     assert.equal(matchAppRoute('/settings/').key, 'settings')
     assert.equal(matchAppRoute('/chat/week').params.id, 'week')
     assert.equal(matchAppRoute('/chat/new').key, 'newChat')

@@ -1,9 +1,9 @@
 """Run from a trusted client with httpx; never prints passwords or session tokens."""
 import argparse
 import json
-from pathlib import Path
 import sys
 import uuid
+from pathlib import Path
 
 import httpx
 

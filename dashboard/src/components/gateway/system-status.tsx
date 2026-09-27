@@ -1,50 +1,55 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AlertCircle, Check, CircleMinus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader, CollectionSection } from '@/components/design-system/primitives'
-import type { GatewayControlClient, ProviderStatus, SystemHealth } from '@/lib/gateway/control'
-import { plainStatus } from './plain-status'
+import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/control'
 
-const labels: Record<keyof SystemHealth['checks'], { label: string; service: string }> = {
-  store: { label: 'Conversation storage', service: 'Store' },
-  memory: { label: 'Memory', service: 'MemoryGate' },
-  local_provider: { label: 'Local answer model', service: 'Local provider' },
-  hosted_provider: { label: 'Hosted answer model', service: 'Hosted provider' },
-  action_boundary: { label: 'Tool approvals', service: 'ToolGate' },
+const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
+  access: 'Owner access', services: 'Services', models: 'Answer models',
 }
-const needsAttention = (status: string) => !['ok', 'ready', 'busy', 'not_configured'].includes(status)
+const statusLabels = { ok: 'Working', attention: 'Needs attention', optional: 'Optional' } as const
+
+function StatusIcon({ status }: { status: GatewayDiagnostics['findings'][number]['status'] }) {
+  if (status === 'ok') return <Check aria-hidden="true" />
+  if (status === 'attention') return <AlertCircle aria-hidden="true" />
+  return <CircleMinus aria-hidden="true" />
+}
 
 export function GatewaySystemStatus({ client }: { client: GatewayControlClient }) {
-  const [health, setHealth] = useState<SystemHealth | null>(null)
-  const [providers, setProviders] = useState<ProviderStatus[] | null>(null)
-  const [errors, setErrors] = useState<string[]>([])
+  const [report, setReport] = useState<GatewayDiagnostics | null>(null)
+  const [failed, setFailed] = useState(false)
   const [pending, setPending] = useState(true)
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
-    Promise.allSettled([client.health(controller.signal), client.providers(controller.signal)]).then(([system, models]) => {
-      if (controller.signal.aborted) return
-      setHealth(system.status === 'fulfilled' ? system.value : null)
-      setProviders(models.status === 'fulfilled' ? models.value : null)
-      setErrors([...(system.status === 'rejected' ? ['Service health could not be checked.'] : []), ...(models.status === 'rejected' ? ['Answer model health could not be checked.'] : [])])
-      setPending(false)
+    client.diagnostics(controller.signal).then(value => {
+      if (!controller.signal.aborted) { setReport(value); setFailed(false); setPending(false) }
+    }).catch(() => {
+      if (!controller.signal.aborted) { setReport(null); setFailed(true); setPending(false) }
     })
     return () => controller.abort()
   }, [client, revision])
-  const attentionCount = (health ? Object.values(health.checks).filter(check => needsAttention(check.status)).length : 0) +
-    (providers ? providers.filter(provider => needsAttention(provider.status)).length : 0) + errors.length
-  return <main className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title="System status" description="Health reported by the connected services and answer models." density="compact" /><Button variant="outline" size="sm" disabled={pending} onClick={() => { setPending(true); setHealth(null); setProviders(null); setErrors([]); setRevision(value => value + 1) }}>{pending ? 'Checking…' : 'Refresh status'}</Button></div>
-    {!pending && (health || providers || errors.length > 0) && <p role="status" className="text-sm font-medium">{attentionCount === 0 ? 'Everything is working' : `${attentionCount} ${attentionCount === 1 ? 'thing needs' : 'things need'} attention`}</p>}
-    {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
-    {errors.map(error => <p key={error} role="alert" className="text-sm text-destructive">{error}</p>)}
-    {health && <CollectionSection title="Services" contained><dl className="divide-y">{Object.entries(health.checks).map(([key, check]) => {
-      const item = labels[key as keyof typeof labels]
-      return <div key={key} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"><dt>{item.label}<span className="block text-xs text-muted-foreground">{item.service}</span></dt><dd><Badge variant="outline">{plainStatus(check.status)}</Badge></dd></div>
-    })}</dl><p className="p-3 text-xs text-muted-foreground">Reported {new Date(health.checked_at).toLocaleString()} · checked {Math.round(health.age_seconds) === 1 ? '1 second' : `${Math.round(health.age_seconds)} seconds`} before loading. Not set up is optional and does not mean something failed. A healthy service does not guarantee every action is available.</p></CollectionSection>}
-    {providers && <CollectionSection title="Answer models" contained><dl className="divide-y">{providers.map(provider => <div key={provider.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"><dt>{provider.model || 'Answer model'}<span className="block text-xs text-muted-foreground">{provider.id}</span></dt><dd><Badge variant="outline">{provider.busy ? 'Busy' : plainStatus(provider.status)}</Badge></dd></div>)}</dl></CollectionSection>}
-    <div className="flex flex-wrap gap-2"><Button asChild variant="outline" size="sm"><Link to="/settings">Model settings</Link></Button><Button asChild variant="outline" size="sm"><Link to="/memory">Inspect memory</Link></Button><Button asChild variant="outline" size="sm"><Link to="/activity">View activity</Link></Button></div>
-    <p className="text-xs text-muted-foreground">This view reports service health. Terminal, files, Docker management and port controls are not connected to this workspace yet.</p>
+  const refresh = () => { setPending(true); setFailed(false); setRevision(value => value + 1) }
+  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title="System status" description="The same diagnostic findings and recovery actions shown by conker doctor." density="compact" /><Button variant="outline" size="sm" disabled={pending} onClick={refresh}><RefreshCw />{pending ? 'Checking…' : 'Refresh'}</Button></div>
+      {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
+      {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
+      {report && <>
+        <section aria-labelledby="diagnostic-summary" className="flex flex-wrap items-center justify-between gap-3 border-b pb-5">
+          <div><h2 id="diagnostic-summary" className="text-base font-semibold">{report.status === 'ok' ? 'Everything is working' : `${report.summary.attention} ${report.summary.attention === 1 ? 'thing needs' : 'things need'} attention`}</h2><p className="mt-1 text-sm text-muted-foreground">{report.summary.ok} working · {report.summary.optional} optional</p></div>
+          <Badge variant={report.status === 'ok' ? 'secondary' : 'destructive'}>{report.status === 'ok' ? 'Healthy' : 'Action needed'}</Badge>
+        </section>
+        {(['access', 'services', 'models'] as const).map(area => <CollectionSection key={area} title={areaLabels[area]} contained><dl className="divide-y">{report.findings.filter(item => item.area === area).map(item => <div key={item.id} className="flex min-w-0 flex-wrap items-start gap-3 p-4">
+          <span className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border [&>svg]:size-4 ${item.status === 'attention' ? 'text-destructive' : 'text-muted-foreground'}`}><StatusIcon status={item.status} /></span>
+          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><dt className="text-sm font-medium">{item.label}</dt><Badge variant="outline">{statusLabels[item.status]}</Badge></div><dd className="mt-1 text-sm leading-5 text-muted-foreground">{item.detail}</dd>
+            {item.recovery && <div className="mt-3 flex flex-wrap items-center gap-2">{item.recovery.uiRoute && item.recovery.uiRoute !== '/system' && <Button asChild variant="outline" size="sm"><Link to={item.recovery.uiRoute}>{item.recovery.label}</Link></Button>}{item.recovery.command && <code className="rounded-md border bg-background px-2.5 py-1.5 text-xs">{item.recovery.command}</code>}</div>}
+          </div>
+        </div>)}</dl></CollectionSection>)}
+        <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. Findings contain status only; credentials and service responses are never included.</p>
+      </>}
+    </div>
   </main>
 }
