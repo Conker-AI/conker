@@ -11,7 +11,7 @@ import os
 import uuid
 
 import pytest
-from test_recovery import ROOT, Engine, recovery
+from test_recovery import ROOT, Engine, operator_review, recovery
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("CONKER_RECOVERY_DOCKER") != "1",
@@ -38,8 +38,6 @@ def live_stack(tmp_path):
     root.mkdir()
     (root / ".env").write_text("TEST_INSTALL=1\n")
     (root / "versions.env").write_text("# fixture uses resolved image references\n")
-    runtime_key = tmp_path / "runtime-fernet.key"
-    runtime_key.write_bytes(data.memory_key)
     project = "conker-drill-" + uuid.uuid4().hex[:12]
     services = {}
     for service in recovery.SERVICES:
@@ -67,14 +65,13 @@ def live_stack(tmp_path):
             spec["volumes"] = [
                 {
                     "type": "bind",
-                    "source": str(tmp_path / "backup-location/memorygate"),
-                    "target": "/data/backups",
+                    "source": str(data.volumes["original-memorygate"]),
+                    "target": "/data",
                 },
                 {
                     "type": "bind",
-                    "source": str(runtime_key),
-                    "target": "/data/runtime-fernet.key",
-                    "read_only": True,
+                    "source": str(tmp_path / "backup-location/memorygate"),
+                    "target": "/data/backups",
                 },
             ]
         services[service] = spec
@@ -180,6 +177,7 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
         "SELECT value FROM owner_data; SELECT status FROM processing_jobs",
     ).stdout.decode()
     assert "persisted memory" in rows and "recovery_held" in rows
+    docker.run("stop", postgres)
     check_approval = (
         "import sys; from toolgate.core import control_plane as cp; "
         "allowed,_=cp.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id'); "
@@ -203,6 +201,12 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
         check_approval,
         approval,
     )
+    review_path = tmp_path / "operator-review.json"
+    operator_review(state, review_path)
+    recovery.review_recovery(tmp_path / "recovered-normal", review_path)
+    ready = recovery.prove_service_ready(tmp_path / "recovered-normal", docker)
+    assert ready["status"] == "service_ready"
+    assert (tmp_path / "recovered-normal" / recovery.HOLD_FILE).is_file()
 
     class Interrupted(recovery.Docker):
         def run(self, *args, **kwargs):

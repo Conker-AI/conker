@@ -6,7 +6,6 @@ import statistics
 import time
 
 import psutil
-
 from server import ChoiceRequest, LayaBackend
 
 CASES = [

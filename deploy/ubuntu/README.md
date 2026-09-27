@@ -10,8 +10,9 @@ credentials and databases are not copied. Never run `down -v` as cleanup.
 - `sources/companion/dashboard/dist/`: verified frontend production build.
 - `state/`: private credentials, databases, models and TLS material (mode 0700).
 - `recovery/`: inspection results, build logs and pre-change host configuration.
-- `compose.json`: generated service manifest; runtime images should be pinned to
-  inspected image IDs before starting. Record built image IDs for rollback.
+- `compose.json`: generated service manifest. PostgreSQL, Qdrant and Ollama come
+  directly from the digest-pinned references in the reviewed `versions.env`;
+  record source-built application image IDs for rollback.
 
 Run `python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443` from
 the deployment directory. It generates credentials once and refreshes configuration
@@ -19,13 +20,39 @@ without resetting stores. Back up `state` and `compose.json` before changing ori
 or regenerating a live deployment. It targets owner UID/GID 1000; adapt that user
 mapping before installation on a different account.
 
+`prepare.py` refuses to generate a deployment without
+`sources/companion/dashboard/dist/index.html`. Build that directory from the same
+reviewed Companion revision before preparation. The repository installer performs
+the equivalent `npm ci && npm run build` inside the digest-pinned Node image declared
+in `versions.env`. Preparation also validates that release manifest and refuses
+mutable third-party tags before writing `compose.json`; neither path substitutes
+locally built application service images for the release manifest.
+
+### Owner-terminal activation gate
+
+The current reviewed manifest keeps `owner-terminal` deferred, so preparation ignores
+terminal workspace settings and generates no terminal service, control volume or
+Gateway terminal configuration. Do not hand-edit those resources into `compose.json`.
+
+After ADR-0012 target-Linux acceptance is retained, the release manifest may activate
+the capability with its published image digest and acceptance-bundle hash. That
+accepted manifest additionally requires `CONKER_TERMINAL_WORKSPACE` when running
+`prepare.py`; `CONKER_TERMINAL_WORKSPACE_LABEL` supplies the owner-facing label and
+defaults to the directory name. The selected existing directory must not overlap the
+deployment, state, recovery, credential, backup, filesystem-root or home boundaries,
+must contain no symlink path component, and must already grant UID/GID `65532:65532`
+read, write and traverse access. Preparation records its canonical path, device and
+inode in private `state/terminal-workspace.json`, emits the networkless hardened
+sidecar, and gives Gateway only the ephemeral control volume and control GID.
+
 ## Network boundary
 
 Only the HTTPS gateway publishes a host port: `127.0.0.1:18050`. Databases,
 Ollama, vector indexing and service APIs have no host-published ports. Laya shares
 Pi's network namespace and listens on loopback. Application containers run as
 UID 1000 with capabilities dropped; databases retain their image startup defaults.
-No container receives the Docker socket or the host filesystem.
+No container receives the Docker socket or the host root filesystem. SystemGate receives only
+the host's `/proc` tree and the deployment recovery directory as read-only telemetry mounts.
 
 Tailscale Serve may expose the gateway on a separate tailnet-only HTTPS port,
 preserving an existing port 443 service. Do not enable Funnel. When proxying the
@@ -50,9 +77,16 @@ conker status
 conker auth reset-password
 ```
 
-The launcher targets `~/conker-deploy` (override with `CONKER_DEPLOY_DIR`). Password
-reset prompts privately and uses the same persistent auth database as the gateway.
-It does not depend on Hermes. Direct Compose equivalents:
+The launcher targets `~/conker-deploy` (override with `CONKER_DEPLOY_DIR`) and
+delegates to the authoritative CLI in `sources/companion/conker`. `conker help`
+therefore has the same command names and argument contract as a repository install.
+Status checks each service's health response; it does not treat a running container
+as proof that the service works. Password reset prompts privately and uses the same
+persistent auth database as the gateway. Lifecycle, logs, model downloads and auth
+are supported. Verified backup, snapshot verification, held restore and recovery status use
+the generated layout's strict service and storage profile. Self-update and the repository-wide
+`key` command remain explicitly unavailable. The launcher does not depend on Hermes. Direct
+Compose equivalents:
 
 ```sh
 cd ~/conker-deploy
@@ -62,11 +96,12 @@ docker compose -f compose.json stop
 docker compose -f compose.json run --rm --no-deps gateway python -m gateway reset-password
 ```
 
-After downloading the answer and embedding models, run `bootstrap_models.py`
-inside Pi using `docker compose -f compose.json exec -T pi python <
-sources/companion/deploy/ubuntu/bootstrap_models.py`. It preserves existing
-configuration. The CPU preset keeps two models loaded to avoid repeatedly swapping
-the answer and embedding models, with a five-GiB inference memory ceiling.
+After downloading the answer and embedding models, open Setup in Conker and choose
+and test the answer model. For a headless install, use `conker setup models` followed
+by `conker setup run model CANDIDATE_ID`. Both paths use Pi's same revision-checked
+owner operation, content-free live-probe receipt, and server-derived local route. The CPU preset
+keeps two models loaded to avoid repeatedly swapping the answer and embedding
+models, with a five-GiB inference memory ceiling.
 
 `acceptance.py --origin https://HOST:8443 --password-file PRIVATE_FILE` verifies
 real chat and synthetic memory. Add `--workflows` for nested workflows, both
@@ -84,12 +119,12 @@ OS services, Docker, Tailscale, SSH and remote development access are retained.
 Roll back host binding changes with the recorded systemd configuration,
 and remove only the new Tailscale Serve port if reverting this deployment.
 
-For a consistent cold backup, stop this Compose project, archive `state` and
-`compose.json` with owner-only permissions, then restart it. Downloaded
-`state/ollama` and `state/decisions` models can be excluded if their exact IDs and
-checkpoint revisions are retained. Verify the archive digest. A restore must remain
-isolated until gateway sessions are revoked; a valid archive alone is not a tested
-restore. Keep an off-machine copy before relying on this server for irreplaceable data.
+Configure an already-mounted off-machine destination with `conker setup configure protection`,
+then run `conker setup run protection`. It stops writers for one coordinated capture, includes
+the generated configuration and all authoritative stores, verifies the result, applies retention
+only to independently verified snapshots, and records policy-bound setup evidence. Provider key
+files are deliberately excluded and must be reprovisioned during held recovery. Keep this
+verified snapshot path; an ad hoc archive is not equivalent recovery evidence.
 
 ### Dedicated-server cleanup, 23 September 2026
 

@@ -23,8 +23,17 @@ deploy/ubuntu/      Server deployment scripts and acceptance checks
 scripts/            Local Windows stack, recovery, verification scripts
 tests/              Installer and deployment tests
 docs/               These docs; reference/ for deep dives; archive/ for history
-versions.env        Pinned module versions, the only place pins live
+versions.env        Authoritative release compatibility manifest and image pins
 ```
+
+Validate or consume the normalized release contract with
+`python scripts/release_manifest.py --check` or `--json`. See the
+[release manifest reference](reference/release-manifest.md) for its update rules.
+`scripts/update.py` is the repository-layout update transaction. Keep host effects
+behind its transport boundary so success, preflight refusal, interruption and both
+rollback outcomes remain testable without changing real services. An update must
+validate source and Compose before service mutation, run from resolved image digests,
+and preserve a durable hold whenever exact rollback cannot be demonstrated.
 
 ## Frontend
 
@@ -35,9 +44,10 @@ npm run dev -- --host localhost --port 5173 --strictPort
 ```
 
 The dev server shows the live (gateway) screens against an in-memory fake gateway
-(`src/dev/`, dev builds only), so no server or sign-in is needed. `?gateway-preview=0` switches to
-the older fixture pages and `=1` back. A message mentioning email asks for an approval; a first
-message containing `[fail]` exercises the create-failure path.
+(`src/dev/`, dev builds only), so no server or sign-in is needed. A message mentioning
+email asks for an approval; a first message containing `[fail]` exercises the
+create-failure path. The retired full-fixture shell is isolated behind
+`npm run dev:legacy-fixtures`; it is not selectable from product routes.
 
 Before handing off:
 
@@ -101,3 +111,4 @@ The docs stay small on purpose. If a new document seems necessary, update one of
 | [0008](adr/0008-supply-chain-policy.md) | Own the thin layers; few dependencies |
 | [0009](adr/0009-radix-primitives-for-now.md) | Radix UI primitives for now |
 | [0010](adr/0010-conversation-writes-are-session-bound.md) | Chatting needs the session, not a password per message |
+| [0011](adr/0011-one-control-plane-and-verified-setup.md) | CLI and UI operate one typed control plane with durable, verified setup |

@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Copy, Link, MoreHorizontal } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { MessageActionButton } from '@/components/message-action-button'
-import { RichAnswer } from '@/components/rich-answer'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { Action, ChatContract, ChatMessage, MessageAction } from '@/lib/chat/contract'
 import { cn } from '@/lib/utils'
 
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
+const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
+
+function Answer({ text }: { text: string }) {
+  return <Suspense fallback={<p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{text}</p>}><RichAnswer text={text} /></Suspense>
+}
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const [notice, setNotice] = useState('')
@@ -23,10 +27,10 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   }
   const body = message.content.kind === 'unavailable'
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
-    : message.role === 'assistant' ? <RichAnswer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
+    : message.role === 'assistant' ? <Answer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-2 flex items-center gap-2"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" className="size-6 rounded-md" /><span className="text-sm font-medium">Conker</span></div>}
+    {message.role === 'assistant' && <div className="mb-2 flex items-center gap-2"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-6 rounded-md" /><span className="text-sm font-medium">{message.agentName ?? 'Conker'}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     <div role="group" aria-label="Message actions" className="mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
@@ -55,7 +59,7 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
     {chat.error && <p role="alert" className="text-sm text-destructive">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
     {chat.messages.map(message => <div id={`record-${message.id}`} key={`${message.id}:${message.content.kind}`} className={cn('min-w-0 scroll-mt-4', chat.focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><ChatMessageRecord message={message} /></div>)}
-    {chat.generation && <article aria-label="Conker is writing" aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : 'Conker is writing…'}</p>{chat.generation.previewText && <RichAnswer text={chat.generation.previewText} />}</article>}
+    {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} />}</article>}
     {chat.history === 'ready' && !chat.messages.length && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
   </div>
 }

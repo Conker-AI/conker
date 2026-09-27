@@ -16,4 +16,9 @@ for (const development of [true, false]) {
   assert.equal(resolve('gateway', development), 'gateway')
   for (const invalid of ['production', 'false', ' Gateway ', null, {}, false]) assert.equal(resolve(invalid, development), 'invalid')
 }
+const app = fs.readFileSync(path.join(__dirname, '../src/App.tsx'), 'utf8')
+const preview = fs.readFileSync(path.join(__dirname, '../src/dev/gateway-preview.tsx'), 'utf8')
+assert.match(app, /VITE_CONKER_FIXTURE_SHELL === 'legacy'/)
+assert.doesNotMatch(app + preview, /[?&]gateway-preview=|conker-gateway-preview|sessionStorage/)
+assert.doesNotMatch(preview, /href=.*fixture|href=.*preview/)
 console.log('Runtime mode checks passed: development preview, production gateway, explicit override, invalid values fail closed.')

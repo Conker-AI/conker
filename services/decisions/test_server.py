@@ -1,7 +1,6 @@
 import threading
 
 from fastapi.testclient import TestClient
-
 from server import ContextTooLarge, create_app
 
 KEY = "test-only-decision-key-not-a-secret-12345"
@@ -59,7 +58,7 @@ def test_invalid_choices_and_probabilities_cannot_escape():
             {"choice": "simple", "confidence": 1,
              "probabilities": {"simple": 1, "complex": 1}},
         ]:
-            backend.choose = lambda request: result
+            backend.choose = lambda _request, result=result: result
             assert client.post("/v1/choose", headers=HEADERS, json=BODY).status_code == 503
 
 

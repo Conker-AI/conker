@@ -6,6 +6,31 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Host-only provider credentials:** installer reruns migrate OpenRouter, OpenAI and
+  Anthropic keys out of `.env` into owner-only files. `conker providers` now stages hidden
+  input, assigns opaque revisions, performs fixed-endpoint verification with a 15-minute
+  freshness bound, activates by recreating and health-checking Pi, rolls back interrupted
+  transitions, and records operator-confirmed issuer revocation. Pi receives read-only key
+  files and exposes only configured identities. Backups omit keys, retain bounded metadata
+  and keep restore under credential review; browser key entry remains intentionally absent.
+- **Durable typed calls:** the chat header now reconnects or starts a focused call
+  conversation through strict owner routes. Text turns use retained request identities,
+  bounded transcripts, explicit uncertain-result recovery, pause, interrupt and end
+  controls. The browser contract carries no audio or device authority; live voice remains
+  deferred until media transport and deployment acceptance exist.
+- **Read-only owner files:** connected System file browsing now uses explicit
+  operator-configured ToolGate roots, durable Pi listing requests, strict owner DTOs,
+  and exact browser routes. It exposes relative names and kinds only: no contents,
+  editing, uploads, deletes, recursive crawl, shell access, or hidden redispatch.
+- **Read-only host inventory:** connected System process, port and container views
+  now use durable, explicit ToolGate samples and strict redacted owner DTOs. The
+  browser receives no raw PID, command line, user, container image/ID, host address,
+  terminal, file, secret or mutation authority; every refresh creates a new request.
+- **Connected team definitions:** owners can create, edit, archive, restore and inspect
+  immutable revisions of canonical Pi team configurations. Roles narrow saved agents;
+  no preparation, team execution, credential, grant, or implicit handoff authority is
+  exposed through the browser.
+
 - **Chat completion milestone:** shared Markdown/code/table/math/citation rendering,
   editable paused queues with captured model/privacy, response versions and explicit
   earlier-turn forks. Added inspectable tool/agent/plan/receipt fixtures, bounded

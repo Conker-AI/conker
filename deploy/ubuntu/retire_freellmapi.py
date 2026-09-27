@@ -2,9 +2,9 @@
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import tarfile
+from pathlib import Path
 
 os.umask(0o077)
 home = Path.home()
@@ -37,7 +37,7 @@ if target:
     if not any(c["Image"] == target["Image"] for c in inventory if c != target):
         subprocess.run(["docker", "image", "rm", target["Config"]["Image"]], check=True)
 
-cron = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+cron = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
 if cron.returncode == 0:
     lines = cron.stdout.splitlines(keepends=True)
     obsolete = "0 4 * * * /home/alexeybe1kin/agentgate/legacy/repos/conker/backup/backup.sh >> /home/alexeybe1kin/agentgate/backups/conker-backups/backup-cron.log 2>&1"

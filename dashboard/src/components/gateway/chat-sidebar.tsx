@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { BookOpen, ChevronsUpDown, History, Inbox, LogOut, Moon, Search, Server, Settings, SquarePen, Sun, UserRound, Wrench } from 'lucide-react'
+import { BookOpen, Bot, BriefcaseBusiness, ChevronsUpDown, Files, FolderKanban, History, House, Inbox, ListChecks, LogOut, Moon, Search, Server, Settings, SquarePen, Sun, UserRound, Wrench } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
@@ -11,19 +11,21 @@ import { useCircularTransition } from '@/hooks/use-circular-transition'
 import { useTheme } from '@/hooks/use-theme'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
+import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
+import { useGatewaySetupStatus } from './setup-status-hook'
+import { gatewaySidebarDestinations, resolveGatewayRoute, type GatewayRoute } from './navigation'
 
-const destinations = [
-  { title: 'Memory', url: '/memory', icon: BookOpen },
-  { title: 'Activity', url: '/activity', icon: History },
-  { title: 'Tools', url: '/tools', icon: Wrench },
-  { title: 'System', url: '/system', icon: Server },
-]
+const destinationIcons: Readonly<Record<GatewayRoute, typeof House>> = {
+  today: House, projects: FolderKanban, artifacts: Files, jobs: BriefcaseBusiness, memory: BookOpen,
+  activity: History, agents: Bot, tools: Wrench, system: Server, setup: ListChecks, chat: SquarePen,
+  inbox: Inbox, settings: Settings, 'companion-settings': Bot,
+}
 
 /** The product sidebar: new chat and your chats first; everything else is one level away. */
-export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePrivacy, onSignOut, badge }: {
-  runtime: GatewayRuntimeClient; owner: GatewayOwnerClient; conversationState: GatewayRuntimeWorkspaceState
+export function GatewayChatSidebar({ runtime, owner, control, conversationState, sourcePrivacy, onSignOut, badge }: {
+  runtime: GatewayRuntimeClient; owner: GatewayOwnerClient; control: GatewayControlClient; conversationState: GatewayRuntimeWorkspaceState
   sourcePrivacy: GatewaySourcePrivacyState; onSignOut: () => void; badge?: ReactNode
 }) {
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
@@ -36,6 +38,7 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
   const [pendingApprovals, setPendingApprovals] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const [query, setQuery] = useState('')
+  const setup = useGatewaySetupStatus(control)
   const generation = useRef(0)
 
   const refresh = useCallback(() => {
@@ -58,8 +61,8 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
     .map(session => forgotten.includes(session.id) ? maskForgottenSession(session) : session)
     .filter(session => session.status !== 'forgotten' && (session.title || 'New chat').toLocaleLowerCase().includes(query.toLocaleLowerCase()))
   const go = (to: string) => { navigate(to); if (isMobile) setOpenMobile(false) }
-  const onChat = ['/chat', '/chats', '/companion'].includes(location.pathname)
-  const onPage = (url: string) => location.pathname === url
+  const currentRoute = resolveGatewayRoute(location.pathname)
+  const onChat = currentRoute === 'chat'
 
   return <Sidebar variant="inset" collapsible="offcanvas">
     <SidebarHeader className="gap-1 px-2 pt-2">
@@ -81,17 +84,23 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
         <SidebarInput type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search chats" className="h-9 rounded-[10px] border-transparent bg-transparent pl-8 shadow-none hover:bg-sidebar-accent focus-visible:bg-background" />
       </label>
       <SidebarMenu>
+        {setup.status && setup.status.state !== 'complete' && <SidebarMenuItem>
+          <SidebarMenuButton asChild isActive={currentRoute === 'setup'} className="h-9 rounded-[10px]">
+            <Link to="/setup" onClick={() => isMobile && setOpenMobile(false)}><ListChecks />Finish setup</Link>
+          </SidebarMenuButton>
+          <SidebarMenuBadge className="top-2 tabular-nums">{setup.status.steps.filter(step => step.state === 'complete' || step.state === 'skipped').length}/{setup.status.steps.length}</SidebarMenuBadge>
+        </SidebarMenuItem>}
         <SidebarMenuItem>
-          <SidebarMenuButton asChild isActive={onPage('/inbox')} className="h-9 rounded-[10px]">
+          <SidebarMenuButton asChild isActive={currentRoute === 'inbox'} className="h-9 rounded-[10px]">
             <Link to="/inbox" onClick={() => isMobile && setOpenMobile(false)}><Inbox />Inbox</Link>
           </SidebarMenuButton>
           {pendingApprovals > 0 && <SidebarMenuBadge aria-label={`${pendingApprovals} waiting`} className="top-2 rounded-full bg-primary px-1.5 text-primary-foreground">{pendingApprovals}</SidebarMenuBadge>}
         </SidebarMenuItem>
-        {destinations.map(item => <SidebarMenuItem key={item.url}>
-          <SidebarMenuButton asChild isActive={onPage(item.url)} className="h-9 rounded-[10px]">
-            <Link to={item.url} onClick={() => isMobile && setOpenMobile(false)}><item.icon />{item.title}</Link>
+        {gatewaySidebarDestinations.map(item => { const Icon = destinationIcons[item.route]; return <SidebarMenuItem key={item.path}>
+          <SidebarMenuButton asChild isActive={currentRoute === item.route} className="h-9 rounded-[10px]">
+            <Link to={item.path} onClick={() => isMobile && setOpenMobile(false)}><Icon />{item.title}</Link>
           </SidebarMenuButton>
-        </SidebarMenuItem>)}
+        </SidebarMenuItem> })}
       </SidebarMenu>
     </SidebarHeader>
     <SidebarContent>
@@ -120,6 +129,7 @@ export function GatewayChatSidebar({ runtime, owner, conversationState, sourcePr
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-52">
+              <DropdownMenuItem asChild><Link to="/settings/companion" onClick={() => isMobile && setOpenMobile(false)}><Bot />Companion</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/settings" onClick={() => isMobile && setOpenMobile(false)}><Settings />Settings</Link></DropdownMenuItem>
               <DropdownMenuItem onClick={event => toggleTheme(event)}>{isDark ? <Sun /> : <Moon />}{isDark ? 'Light mode' : 'Dark mode'}</DropdownMenuItem>
               <DropdownMenuSeparator />

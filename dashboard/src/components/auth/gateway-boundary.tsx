@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useStore } from "zustand"
 import { LogOut, RefreshCw } from "lucide-react"
 import { CompanionPortrait } from "@/components/companion-portrait"
@@ -26,9 +26,10 @@ function GatewayFrame({ title, description, children, authenticated = false }: {
 function GatewaySignIn({ store }: { store: GatewayStore }) {
   const { pending, error } = useStore(store)
   const [password, setPassword] = useState("")
+  const passwordInput = useRef<HTMLInputElement>(null)
   return <GatewayFrame title="Sign in to Conker" description="Use the owner password configured on the machine hosting Conker.">
-    <form className="space-y-5" onSubmit={event => { event.preventDefault(); if (!password || pending) return; const submitted = password; setPassword(""); void store.getState().login(submitted) }}>
-      <div className="space-y-2"><Label htmlFor="gateway-password">Owner password</Label><Input id="gateway-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="gateway-password-help" autoFocus /><p id="gateway-password-help" className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is sent only to this gateway.</p></div>
+    <form className="space-y-5" onSubmit={async event => { event.preventDefault(); if (!password || pending) return; if (await store.getState().login(password)) setPassword(""); else { passwordInput.current?.focus(); passwordInput.current?.select() } }}>
+      <div className="space-y-2"><Label htmlFor="gateway-password">Owner password</Label><Input ref={passwordInput} id="gateway-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="gateway-password-help" aria-invalid={error ? true : undefined} autoFocus /><p id="gateway-password-help" className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is sent only to this gateway.</p></div>
       {error && <p role="alert" className="text-sm text-destructive">{error.message}</p>}
       <FormActions><Button type="submit" disabled={pending || !password}>{pending ? "Signing in…" : "Sign in"}</Button></FormActions>
     </form>
@@ -65,7 +66,7 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
   }, [store, state.phase, state.session])
 
   if (state.phase === "authenticated" && gatewaySessionUnlocked(state.session) && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
-  if (state.phase === "checking" || state.pending) return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
+  if (state.phase === "checking") return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
   if (state.logoutUnconfirmed) return <GatewayFrame title="Sign-out was not confirmed" description="This screen is locked. The server session may still be active until sign-out succeeds or the host revokes it.">
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
     <Button onClick={() => void signOut(store, onSignedOut)}><LogOut />Retry sign out</Button>

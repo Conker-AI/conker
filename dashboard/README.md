@@ -1,9 +1,8 @@
 # Conker dashboard
 
 The active Vite + React + TypeScript frontend, built on the shadcn New York shell.
-This is an interactive preview using the existing `ConkerClient` fixture adapter.
-Backend containers are not required to explore it, and starting them does not
-connect the preview automatically.
+Development renders the connected product shell against an in-memory gateway;
+production uses the same shell against Pi's authenticated browser gateway.
 
 [Product overview and screenshots](../README.md) · [Design contract](DESIGN.md) ·
 [Status](../docs/status.md) · [Contributing](../CONTRIBUTING.md)
@@ -26,23 +25,26 @@ with HMR and an ignored cache. Standard development and builds use Vite's config
 runner. Do not change unrelated services or terminate an unknown port owner to
 start the frontend.
 
+The older fixture-rich workspace is available only for component archaeology:
+
+```sh
+npm run dev:legacy-fixtures
+```
+
+It is a separate development build, not a switch exposed in the product UI.
+
 ## Screen map
 
 | Route | Screen |
 | --- | --- |
-| `/` | Home: attention, recent activity and workspace overview. |
-| `/companion` | The main companion conversation. |
-| `/chat` | Conversation collection with Sessions / Agents views. |
-| `/chat/new` | Start a topic conversation. |
-| `/chat/:id` | Conversation, message actions, composer, activity and detail rail. |
-| `/inbox`, `/inbox/:id` | Requests, proposals, decisions and source context. |
-| `/agents` | Agent collection and configuration. |
-| `/tools` | Capability registry and scope inspection. |
-| `/memory` | Sample evidence, provenance and search. |
-| `/journal` | Activity history and source links. |
-| `/jobs` | Local job configuration, controls and simulated receipts. |
-| `/system` | System overview. `?tab=terminal` and `?tab=files` select its other tabs. |
-| `/settings` | Preferences, connections (`?tab=connections`) and models (`?tab=models`). |
+| `/`, `/chat`, `/chats`, `/companion` | Connected conversations and task handoff. |
+| `/setup` | Verified first-run progress and the next available operation. |
+| `/inbox` | Owner approvals and proposals. |
+| `/activity` | Durable task and run activity. |
+| `/tools` | Available capabilities and owner tool drafts. |
+| `/memory` | Connected memory evidence, search and forgetting. |
+| `/system` | Connected service and model health. |
+| `/settings` | Connected answer-model routing. |
 | `/settings/companion` | Character Studio: identity, style, appearance, voice and modes. |
 | `/login`, `/setup` | Frontend authentication/setup previews. |
 

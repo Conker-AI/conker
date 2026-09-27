@@ -14,6 +14,7 @@ def backup(source, target):
 
 
 def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
+    pytest.importorskip("qdrant_client")
     gates = Path(__file__).resolve().parents[2] / "gates"
     for path in (gates / "pi", gates / "toolgate", gates / "memorygate/services/api"):
         if not path.is_dir():
@@ -21,17 +22,19 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
         monkeypatch.syspath_prepend(str(path))
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
-    from pi.store import Store
-    from pi import forgetting, recovery_deletions
-    from toolgate.core import control_plane as cp, execution_journal as journal, recovery_journal
+    import recovery_data
     from app.core.db import Base
-    from app.models.memory import Memory
     from app.models.deletion_receipt import DeletionReceipt
+    from app.models.memory import Memory
     from app.services import deletion_recovery
+    from pi import forgetting, recovery_deletions
+    from pi.store import Store
+    from qdrant_client import QdrantClient, models
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from qdrant_client import QdrantClient, models
-    import recovery_data
+    from toolgate.core import control_plane as cp
+    from toolgate.core import execution_journal as journal
+    from toolgate.core import recovery_journal
 
     current, restored = tmp_path / "current", tmp_path / "restored"
     current.mkdir()

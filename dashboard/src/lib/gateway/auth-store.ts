@@ -30,14 +30,17 @@ export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }
       return flight
     },
     revalidate: () => run(() => client.revalidate()),
-    login: password => run(() => client.login(password)),
+    login: password => run(() => client.login(password), false, true),
     logout: () => run(async () => { await client.logout(); return null }, true),
     lock: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: new GatewayError('browser-expired') }) },
   }))
-  async function run(action: () => Promise<GatewaySession | null>, logout = false): Promise<boolean> {
+  async function run(action: () => Promise<GatewaySession | null>, logout = false, interactiveLogin = false): Promise<boolean> {
     const id = ++latest
     operations++
-    store.setState({ phase: 'checking', session: null, pending: true, error: null })
+    const current = store.getState()
+    store.setState(interactiveLogin && current.phase === 'anonymous'
+      ? { pending: true, error: null }
+      : { phase: 'checking', session: null, pending: true, error: null })
     try {
       const session = await action()
       if (id === latest) store.setState(logout

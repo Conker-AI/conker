@@ -10,9 +10,16 @@ Read in order. About 20 minutes in total.
 
 **[Status](status.md)** is the only place that says what works today.
 
+**[Product direction](product-direction.md)** records the agreed harness, onboarding
+and professional-engagement direction for future work.
+
 ## Deeper
 
 - [adr/](adr/): why the hard-to-reverse decisions were made
 - [reference/](reference/): detailed guides and contracts (auth, recovery, module contract, design
   language, the gateway protocols, the full philosophy)
+- [Capability matrix](reference/capability-matrix.md): executable UI, CLI, gateway and deployment coverage
+- [CLI inspection](reference/cli-inspection.md): bounded headless views of the live control plane
+- [Hosted provider credentials](reference/provider-credentials.md): stage, verify, activate and rotate keys
+- [Owner-terminal sidecar](reference/owner-terminal-sidecar.md): deferred isolation and deployment contract
 - [archive/](archive/): earlier plans, audits, research and concept notes. **Historical, not current.**

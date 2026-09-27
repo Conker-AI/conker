@@ -1,15 +1,17 @@
 # Browser authentication (B4)
 
 This guide describes the B4 browser-authentication boundary. **September 19, 2026
-status:** `versions.env` now pins Pi 0.4.0, and the reviewed Pi source includes the
-gateway package. ToolGate's dedicated owner channel remains an integration
-dependency. This source review did not verify published images or a deployed
-approval round trip. See [current state](../archive/current-state.md).
+status:** the reviewed source includes the gateway package, connected owner UI,
+and separate owner-control channels for Pi configuration and ToolGate approvals.
+The release manifest still points at older published component versions until the
+assembled release gate passes; source review alone does not verify those images.
 
 The browser connects to a separate HTTPS gateway. The Pi execution worker has
-neither the owner's ToolGate approval credential nor access to the gateway volume.
-The gateway sends approval traffic to ToolGate on a separate internal Docker
-network that Pi does not join. Pi and the gateway drop Linux capabilities.
+neither plaintext owner credential nor access to the gateway volume. It receives
+hashes for its bounded owner API and a separate runtime credential hash. The
+gateway holds the Pi owner credential. Its ToolGate approval credential is separate
+again and travels only over an internal Docker network that Pi does not join.
+Pi and the gateway drop Linux capabilities.
 The gateway volume contains the password verifier, sessions and TLS material and
 must be captured by backup. Restore must invalidate sessions before any gateway
 can be started. Existing service admin keys remain host recovery credentials.
@@ -19,10 +21,10 @@ password protects browser access to conversations and owner decisions; only a
 salted password verifier is stored on this machine. Someone controlling the host
 can reset it. A reset cannot recover missing data, vault keys or forgotten content.
 
-B4's backend review surface is backend requests and an executable mutation drill.
-The dashboard now has separate fixture screens; they are not connected to this
-gateway. ToolGate's separate owner endpoint belongs in its repository; there
-will be no admin-key fallback.
+B4's review surface includes backend requests, the connected dashboard, CLI setup
+status and an executable mutation drill. Development fixtures still exist for UI
+work, but production always enters through the authenticated gateway. There is no
+admin-key fallback for either owner channel.
 
 ## Password and recovery, for the owner
 
@@ -71,15 +73,17 @@ remote HTTPS setup and a browser trust wizard are outside this backend patch.
 1. Verify that the Pi image pinned in `versions.env` includes the reviewed gateway
    and worker entry points. The current pin is 0.4.0; a source checkout and a pin
    alone do not prove the published artifact or deployment works.
-2. Re-run `./install.sh`. It preserves the runtime credential and writes its hash
-   for Pi, starts the separate gateway, and reports password setup as degraded
-   until the host setup command is completed. No admin key is placed in the browser.
-3. Have ToolGate issue a credential for `GET /v2/owner/requests` and
-   `POST /v2/owner/requests/{id}/decision`, using `X-ToolGate-Owner-Key`.
-   Set it as `GATEWAY_TOOLGATE_OWNER_KEY` in the host `.env`, then recreate only
-   the gateway. This is an operator provisioning step pending ToolGate's contract;
-   the installer preserves an existing value and never manufactures a replacement.
-4. Complete a real approval round trip and prove that Pi's execution key is denied
+2. Re-run `./install.sh`. It preserves distinct runtime, Pi owner, ToolGate owner,
+   and ToolGate execution credentials. Pi receives only owner-key hashes and its
+   scoped execution credential; the gateway receives the two owner credentials
+   and the separate execution credential needed for owner-started workflow runs.
+   No admin key or service owner key is placed in the browser.
+3. The installer provisions ToolGate with the SHA-256 digest of its generated owner
+   credential. ToolGate verifies `GET /v2/owner/requests` and
+   `POST /v2/owner/requests/{id}/decision` using `X-ToolGate-Owner-Key`; there is
+   no admin-key fallback and rerunning the installer does not rotate the key.
+4. Run `conker setup status` and verify it matches the browser setup screen, then
+   complete a real approval round trip and prove that Pi's execution key is denied
    on the owner endpoint before closing B4. Missing owner configuration returns
    503; there is no admin-key fallback.
 

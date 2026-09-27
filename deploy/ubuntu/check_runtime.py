@@ -1,10 +1,10 @@
 """Read-only deployment check, executed inside Pi with existing scoped credentials."""
 import json
 import os
-import httpx
 
-from pi.memory import MemoryClient
+import httpx
 from pi.decision_provider import configured
+from pi.memory import MemoryClient
 from pi.memory_ranking import ConfiguredMemoryRanker
 from pi.store import Store
 

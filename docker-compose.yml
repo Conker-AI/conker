@@ -44,10 +44,14 @@ services:
       GATEWAY_DB_PATH: /auth/auth.db
       GATEWAY_PI_URL: http://pi:8050
       PI_GATEWAY_KEY: ${PI_GATEWAY_KEY:?run ./install.sh}
+      GATEWAY_PI_OWNER_KEY: ${GATEWAY_PI_OWNER_KEY:?run ./install.sh}
+      GATEWAY_DASHBOARD_DIR: /dashboard
       GATEWAY_TOOLGATE_URL: http://toolgate-owner:8010
-      GATEWAY_TOOLGATE_OWNER_KEY: ${GATEWAY_TOOLGATE_OWNER_KEY:-}
+      GATEWAY_TOOLGATE_OWNER_KEY: ${GATEWAY_TOOLGATE_OWNER_KEY:?run ./install.sh}
+      GATEWAY_TOOLGATE_EXECUTION_KEY: ${PI_TOOLGATE_KEY:?run ./install.sh}
     volumes:
       - gateway_data:/auth
+      - ./dashboard/dist:/dashboard:ro
     depends_on: [pi]
 
   # --- the runtime ----------------------------------------------------------
@@ -62,21 +66,45 @@ services:
     environment:
       PI_ADMIN_KEY: ${CONKER_ADMIN_KEY:?run ./install.sh - .env is missing or incomplete}
       PI_GATEWAY_KEY_SHA256: ${PI_GATEWAY_KEY_SHA256:?run ./install.sh}
+      PI_OWNER_KEY_SHA256: ${PI_OWNER_KEY_SHA256:?run ./install.sh}
       PI_DB_PATH: /data/pi.db
       PI_OLLAMA_URL: http://ollama:11434
       PI_MODEL: ${CONKER_LOCAL_MODEL:-qwen3:4b}
       PI_TOOLGATE_URL: http://toolgate-api:8010
-      # Issued by ToolGate after it is healthy, then written back to .env by the
-      # installer. Empty is a working install, not a broken one: Conker still
-      # talks and still remembers, and /health says `not_configured`.
-      PI_TOOLGATE_KEY: ${PI_TOOLGATE_KEY:-}
-      PI_OPENROUTER_KEY: ${OPENROUTER_KEY:-}
+      # A distinct scoped execution key, seeded into ToolGate on first start.
+      # This is never the admin or owner-approval credential.
+      PI_TOOLGATE_KEY: ${PI_TOOLGATE_KEY:?run ./install.sh}
+      PI_MEMORYGATE_URL: http://memorygate-api:8020
+      PI_MEMORYGATE_INGEST_KEY: ${MEMORYGATE_INGEST_KEY:?run ./install.sh}
+      PI_MEMORYGATE_READ_KEY: ${MEMORYGATE_READ_KEY:?run ./install.sh}
+      PI_MEMORYGATE_AGENT_ID: conker_companion
+      # The typed decision adapter is optional until it has its own published,
+      # pinned image. An operator may supply an authenticated private endpoint.
+      PI_DECISION_URL: ${PI_DECISION_URL:-}
+      PI_DECISION_KEY: ${PI_DECISION_KEY:-}
+      PI_PROPOSALS_ENABLED: "true"
+      PI_SCHEDULER_ENABLED: "true"
+      PI_OPENROUTER_KEY_FILE: /run/secrets/provider-openrouter
+      PI_OPENAI_KEY_FILE: /run/secrets/provider-openai
+      PI_ANTHROPIC_KEY_FILE: /run/secrets/provider-anthropic
+      PI_ALLOW_PAID_MODELS: ${PI_ALLOW_PAID_MODELS:-}
+      PI_SPEECH_URL: ${PI_SPEECH_URL:-}
+      PI_SPEECH_KEY_FILE: /run/secrets/speech
+      PI_STT_MODEL: ${PI_STT_MODEL:-}
+      PI_TTS_MODEL: ${PI_TTS_MODEL:-}
+      PI_TTS_VOICE: ${PI_TTS_VOICE:-}
+      PI_SPEECH_CHARACTER_VOICE: ${PI_SPEECH_CHARACTER_VOICE:-unsupported}
+      PI_SPEECH_TIMEOUT_S: ${PI_SPEECH_TIMEOUT_S:-30}
       PI_SYSTEM_PROMPT: ${CONKER_SYSTEM_PROMPT:-}
     volumes:
       # The transcript. MemoryGate's evidence cites message ids from this
       # database, so losing it orphans every citation.
       - pi_data:/data
-    depends_on: [ollama]
+      - ./.conker/provider-secrets/openrouter.key:/run/secrets/provider-openrouter:ro
+      - ./.conker/provider-secrets/openai.key:/run/secrets/provider-openai:ro
+      - ./.conker/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro
+      - ./.conker/speech/speech.key:/run/secrets/speech:ro
+    depends_on: [ollama, memorygate, toolgate]
 
   # --- the action boundary --------------------------------------------------
   toolgate:
@@ -92,6 +120,7 @@ services:
       - "127.0.0.1:8010:8010"
     environment:
       TOOLGATE_ADMIN_KEY: ${TOOLGATE_ADMIN_KEY:?run ./install.sh}
+      TOOLGATE_OWNER_KEY_SHA256: ${TOOLGATE_OWNER_KEY_SHA256:?run ./install.sh}
       # ToolGate defaults its data directory to its own package directory,
       # which inside an image means the container filesystem - so every tool,
       # secret and audit entry would vanish on the next `docker compose down`.
@@ -145,11 +174,16 @@ services:
       QDRANT_URL: http://qdrant:6333
       EMBEDDINGS_URL: http://embeddings-api:8030
       EMBEDDINGS_KEY: ${EMBEDDINGS_KEY:?run ./install.sh}
-      MEMORYGATE_BOOTSTRAP_AGENT_ID: agent_pi_operator
+      MEMORYGATE_BOOTSTRAP_AGENT_ID: conker_companion
+      MEMORYGATE_CONVERSATION_KEY: ${MEMORYGATE_INGEST_KEY:?run ./install.sh}
+      MEMORYGATE_CONVERSATION_AGENT_ID: conker_companion
       # Never `*`. The dashboard is served by Pi and is the only browser origin
       # that has any business here.
       MEMORYGATE_CORS_ORIGINS: http://127.0.0.1:${CONKER_PORT:-8050}
     volumes:
+      # Holds the runtime encryption key and other service-local durable state.
+      # The owner-visible backup directory remains a nested host bind below.
+      - memorygate_data:/data
       # Bound to a real host directory rather than a named volume, so a backup
       # the owner cannot find is not the kind of backup this ships.
       - ${CONKER_BACKUP_DIR}/memorygate:/data/backups
@@ -254,15 +288,16 @@ services:
       # point, and a good one hidden. It now verifies manifests and hashes.
       SYSTEMGATE_BACKUP_ROOT: /backups
       SYSTEMGATE_PROCFS_PATH: /host/proc
-      SYSTEMGATE_DISK_PATH: /host/root
+      # Host-root access is intentionally unavailable. Disk figures describe
+      # the container filesystem and are labelled with that scope by SystemGate.
+      SYSTEMGATE_DISK_PATH: /
     volumes:
       - systemgate_data:/app/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc:/host/proc:ro
-      - /:/host/root:ro
       - ${CONKER_BACKUP_DIR}:/backups:ro
 
 volumes:
+  memorygate_data:
   gateway_data:
   pi_data:
   toolgate_data:

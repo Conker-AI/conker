@@ -26,7 +26,7 @@ export function OverviewSection({ title, description, action, children, priority
 }) {
   const id = useId()
   return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "rounded-xl border bg-card p-4 text-card-foreground shadow-sm")}>
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className={cn("flex flex-wrap items-start justify-between gap-3", priority && "max-sm:flex-col")}>
       <div className="min-w-0 flex-1">
         <h2 id={id} className={cn("font-semibold", priority ? "text-xl leading-7" : "text-base leading-6")}>{title}</h2>
         {description && <p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}

@@ -10,28 +10,28 @@ const assetIdSchema = z.string().min(1).max(80).regex(/^[a-zA-Z0-9_-]+$/).refine
 const notes = z.string().max(6000)
 const imageSource = z.string().refine(value => value === "/conker.png" || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value), "Use an embedded PNG, JPEG, or WebP image.")
 const mediaSchema = z.discriminatedUnion("kind", [
-  z.object({ id: assetIdSchema, name: z.string().max(120), kind: z.literal("image"), src: imageSource }),
-  z.object({ id: assetIdSchema, name: z.string().max(120), kind: z.literal("video"), src: z.string().regex(/^data:video\/(mp4|webm);base64,[A-Za-z0-9+/=]+$/) }),
+  z.object({ id: assetIdSchema, name: z.string().max(120), kind: z.literal("image"), src: imageSource }).strict(),
+  z.object({ id: assetIdSchema, name: z.string().max(120), kind: z.literal("video"), src: z.string().regex(/^data:video\/(mp4|webm);base64,[A-Za-z0-9+/=]+$/) }).strict(),
 ])
-const modeSchema = z.object({ text: notes, voice: notes, expressiveness: z.number().min(0).max(100), motion: z.boolean() })
+const modeSchema = z.object({ text: notes, voice: notes, expressiveness: z.number().min(0).max(100), motion: z.boolean() }).strict()
 export const characterStudioSchema = z.object({
   soul: notes, backstory: notes, relationship: notes,
-  details: z.array(z.object({ id: assetIdSchema, label: z.string().max(80), value: z.string().max(500) })).max(20),
-  examples: z.object({ prompt: z.string().max(1000), focus: notes, character: notes }),
+  details: z.array(z.object({ id: assetIdSchema, label: z.string().max(80), value: z.string().max(500) }).strict()).max(20),
+  examples: z.object({ prompt: z.string().max(1000), focus: notes, character: notes }).strict(),
   appearance: z.object({
     description: notes, inset: z.number().min(12.5).max(25),
     assets: z.array(mediaSchema).max(16),
-    activities: z.object({ idle: z.string().nullable(), listening: z.string().nullable(), thinking: z.string().nullable(), speaking: z.string().nullable() }),
-    expressions: z.array(z.object({ id: assetIdSchema, name: z.string().min(1).max(60), instruction: z.string().max(500), assetId: z.string().nullable() })).max(16),
-  }),
+    activities: z.object({ idle: z.string().nullable(), listening: z.string().nullable(), thinking: z.string().nullable(), speaking: z.string().nullable() }).strict(),
+    expressions: z.array(z.object({ id: assetIdSchema, name: z.string().min(1).max(60), instruction: z.string().max(500), assetId: z.string().nullable() }).strict()).max(16),
+  }).strict(),
   voice: z.object({
     source: z.enum(["design", "reference"]), engine: z.literal("qwen3-tts"), description: notes,
     language: z.enum(["English", "Chinese", "Japanese", "Korean", "German", "French", "Russian", "Portuguese", "Spanish", "Italian"]),
     pronunciation: notes, transcript: z.string().max(3000),
-    reference: z.object({ name: z.string().max(120), src: z.string().regex(/^data:audio\/(wav|x-wav|mpeg|mp3|ogg|webm|mp4);base64,[A-Za-z0-9+/=]+$/) }).nullable(),
-  }),
-  modes: z.object({ default: z.enum(["focus", "character"]), focus: modeSchema, character: modeSchema }),
-})
+    reference: z.object({ name: z.string().max(120), src: z.string().regex(/^data:audio\/(wav|x-wav|mpeg|mp3|ogg|webm|mp4);base64,[A-Za-z0-9+/=]+$/) }).strict().nullable(),
+  }).strict(),
+  modes: z.object({ default: z.enum(["focus", "character"]), focus: modeSchema, character: modeSchema }).strict(),
+}).strict()
 export type CharacterStudio = z.infer<typeof characterStudioSchema>
 export type CharacterAsset = CharacterStudio["appearance"]["assets"][number]
 export type CharacterDraft = Character & { studio: CharacterStudio }
@@ -39,14 +39,14 @@ export type CharacterDraft = Character & { studio: CharacterStudio }
 export function characterDraft(profile: Character): CharacterDraft {
   return structuredClone({ ...profile, speakingPreset: "custom", studio: profile.studio ?? createCharacterStudio() })
 }
-const characterSchema = z.object({
+export const characterSchema = z.object({
   name: z.string().trim().min(1, "Give your character a name.").max(60), mood: z.string().max(100),
   personality: notes, speakingStyle: notes, speakingPreset: z.enum(["warm", "direct", "curious", "custom"]),
   portrait: z.union([z.literal(""), imageSource]), renderer: z.enum(["static", "live-2d", "live-3d"]),
   face: z.enum(["sprout", "round", "cat"]), tone: z.enum(["green", "soft", "graphite"]),
-  emotions: z.object(Object.fromEntries(["neutral", "happy", "thinking", "concerned", "celebrating"].map(key => [key, z.enum(["default", "sprout", "round", "cat", "portrait"])])) as Record<"neutral" | "happy" | "thinking" | "concerned" | "celebrating", z.ZodEnum<{ default: "default"; sprout: "sprout"; round: "round"; cat: "cat"; portrait: "portrait" }>>),
+  emotions: z.object(Object.fromEntries(["neutral", "happy", "thinking", "concerned", "celebrating"].map(key => [key, z.enum(["default", "sprout", "round", "cat", "portrait"])])) as Record<"neutral" | "happy" | "thinking" | "concerned" | "celebrating", z.ZodEnum<{ default: "default"; sprout: "sprout"; round: "round"; cat: "cat"; portrait: "portrait" }>>).strict(),
   studio: characterStudioSchema,
-})
+}).strict()
 export function validateCharacter(profile: Character): CharacterDraft {
   if (JSON.stringify(profile).length > 32 * 1024 * 1024) throw new Error("Keep the character package under 32 MB. Remove a large asset and try again.")
   const parsed = characterSchema.safeParse(characterDraft(profile))

@@ -37,6 +37,7 @@ async function main() {
   setup = clientReturning(detail())
   const loaded = await setup.client.getSession('s_one')
   assert.deepEqual(loaded.messages[0].content, { kind: 'text', text: 'Owner text' })
+  assert.equal(loaded.messages[0].agentId, null)
   assert.equal(loaded.turns[0].status, 'acted_no_reply')
   assert.equal(loaded.turns[0].acted, true)
   assert.equal(loaded.turns[0].costUsd, null)
@@ -66,6 +67,15 @@ async function main() {
     const value = detail(); value.messages[0].role = role
     assert.equal((await clientReturning(value).client.getSession('s_one')).messages[0].role, role)
   }
+  const attributed = detail(); attributed.messages[0].role = 'assistant'; attributed.messages[0].agent_id = `agent_${'a'.repeat(32)}`
+  assert.equal((await clientReturning(attributed).client.getSession('s_one')).messages[0].agentId, attributed.messages[0].agent_id)
+  for (const mutate of [
+    value => { value.messages[0].agent_id = '../owner' },
+    value => { value.messages[0].role = 'user'; value.messages[0].agent_id = 'companion' },
+  ]) {
+    const value = detail(); mutate(value)
+    await assert.rejects(clientReturning(value).client.getSession('s_one'), error => error.kind === 'invalid-response')
+  }
   for (const replacement of [
     { content_status: 'forgotten', content: 'SECRET STALE TEXT', receipt_id: 'receipt_one', forgotten_at: 100 },
     { content: { toolResult: 'SECRET RAW OBJECT' } }, { content: 'x'.repeat(65_537) },
@@ -91,6 +101,17 @@ async function main() {
   setup = clientReturning({ session_id: 's_new' })
   assert.deepEqual(await setup.client.createSession('Title'), { sessionId: 's_new' })
   assert.deepEqual(setup.calls, [['/api/pi/sessions', { method: 'POST', body: { title: 'Title' } }]])
+  setup = clientReturning({ session_id: 's_agent' })
+  const selectedAgent = `agent_${'a'.repeat(32)}`
+  assert.deepEqual(await setup.client.createSession('Research', { agentId: selectedAgent }), { sessionId: 's_agent' })
+  assert.deepEqual(setup.calls, [['/api/pi/sessions', { method: 'POST', body: { title: 'Research', agent_id: selectedAgent } }]])
+  setup = clientReturning({ session_id: 's_private' })
+  assert.deepEqual(await setup.client.createSession('Private', { privacy: { memoryDisabled: true } }), { sessionId: 's_private' })
+  assert.deepEqual(setup.calls, [['/api/pi/sessions', { method: 'POST', body: { title: 'Private', privacy: { memoryDisabled: true } } }]])
+  setup = clientReturning({})
+  await assert.rejects(setup.client.createSession('Invalid', { agentId: '../owner' }), error => error.kind === 'validation')
+  await assert.rejects(setup.client.createSession('Invalid', { privacy: { memoryDisabled: 'yes' } }), error => error.kind === 'validation')
+  assert.equal(setup.calls.length, 0)
   setup = clientReturning({ session_id: 's_fork', forked_from: 's_one', turn_id: 'trn_new', acted: false, message: { content: 'Response is not canonical history' } })
   assert.deepEqual(await setup.client.submitTurn('s_one', 'Ask'), { requestedSessionId: 's_one', sessionId: 's_fork', forkedFrom: 's_one', turnId: 'trn_new', acted: false, requiresReconciliation: true })
   assert.equal(setup.calls.length, 1, 'Successful receipt causes no implicit read or second mutation')

@@ -3,6 +3,7 @@ import { ChatComposer } from '@/components/chat/composer'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
 import type { Attempt, Generation } from '@/lib/chat/contract'
 import { GatewayModelPicker } from './model-picker'
+import { GatewayAgentPicker } from './agent-picker'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evidence"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -26,6 +27,9 @@ import { followLivePreview } from '@/lib/gateway/live-preview'
 import { gatewayError } from '@/lib/gateway/transport'
 import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, hasActiveRuntimeTurn, recoverSubmissionDraft, resolveAttempt, type GatewayRuntimeWorkspaceState } from './runtime-state'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
+import { GatewayCallLauncher } from './call-workspace'
+import { GatewaySessionAgentControl } from './session-agent-control'
+import { NewChatPrivacyControl, type NewChatPrivacy } from './new-chat-privacy-control'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
@@ -68,6 +72,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const setSelected = (value: string | null) => workspace.setState({ selected: value })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
   const [sessions, setSessions] = useState<RuntimeSession[]>([])
+  const [agentNames, setAgentNames] = useState<Record<string, string>>({ companion: 'Conker' })
+  const [sessionAgents, setSessionAgents] = useState<Record<string, string>>({})
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
   const [modelChoices, setModelChoices] = useState<Record<string, string>>({})
   const [detailPending, setDetailPending] = useState(false)
@@ -79,6 +85,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [taskError, setTaskError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const [firstMessage, setFirstMessage] = useState('')
+  const [firstAgent, setFirstAgent] = useState('companion')
+  const [firstModel, setFirstModel] = useState('')
+  const [firstPrivacy, setFirstPrivacy] = useState<NewChatPrivacy>({ memoryDisabled: false, harnessDisabled: false })
   // Display-only text of the answer being written; the saved turn replaces it.
   const [preview, setPreview] = useState<{ sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null>(null)
   // The request being answered right now, so Stop can name it; cleared when the send settles.
@@ -142,12 +151,41 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     } finally { if (mounted.current && generation === detailGeneration.current) setDetailPending(false) }
   }, [client, privacy, request, workspace])
 
+  async function saveArtifact(message: RuntimeMessage) {
+    if (!control || message.role !== 'assistant' || message.content.kind !== 'text' || !current || current.status !== 'open') return
+    setNotice(null)
+    try {
+      const artifact = await control.artifacts.copyFromMessage({
+        title: `${current.title || 'Saved response'} response`.slice(0, 160),
+        sessionId: message.sessionId,
+        messageId: message.id,
+      })
+      setNotice(`Saved “${artifact.title}” to Artifacts.`)
+    } catch (error) { setNotice(gatewayError(error).message) }
+  }
+
   useEffect(() => {
     mounted.current = true
     const pendingControllers = controllers.current
     return () => { mounted.current = false; for (const controller of pendingControllers) controller.abort(); pendingControllers.clear() }
   }, [])
   useEffect(() => { if (active) void refreshList(); else { for (const controller of controllers.current) controller.abort(); controllers.current.clear() } }, [active, refreshList])
+  useEffect(() => {
+    if (!active || !control) return
+    const controller = new AbortController()
+    control.agents(controller.signal).then(profiles => {
+      if (!controller.signal.aborted) setAgentNames(Object.fromEntries(profiles.map(profile => [profile.id, profile.configuration.name])))
+    }).catch(() => {})
+    return () => controller.abort()
+  }, [active, control])
+  useEffect(() => {
+    if (!active || !control || !selected) return
+    const id = selected, controller = new AbortController()
+    control.sessionSettings(id, controller.signal).then(value => {
+      if (!controller.signal.aborted) setSessionAgents(current => ({ ...current, [id]: value.settings.agentId }))
+    }).catch(() => {})
+    return () => controller.abort()
+  }, [active, control, selected])
   useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
     if (!visible || !focusedMessageId || !current?.messages.some(message => message.id === focusedMessageId)) return
@@ -170,12 +208,13 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   /** A new chat is created by its first message, like any chat app. */
   async function startChat() {
     const text = firstMessage
-    if (!text.trim() || [...text].length > 16_000 || workspace.getState().operation || createUnknown || !activeRef.current) return
+    if (!text.trim() || [...text].length > 16_000 || firstPrivacy.harnessDisabled && !firstModel || workspace.getState().operation || createUnknown || !activeRef.current) return
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'create' }); setCreateError(null)
     let created: string
     try {
-      created = (await request(signal => client.createSession(text.trim().split('\n')[0].slice(0, 60), { signal }))).sessionId
+      const privacy = { ...(firstPrivacy.memoryDisabled ? { memoryDisabled: true } : {}), ...(firstPrivacy.harnessDisabled ? { harnessDisabled: true } : {}) }
+      created = (await request(signal => client.createSession(text.trim().split('\n')[0].slice(0, 60), { signal, agentId: firstAgent, ...(Object.keys(privacy).length ? { privacy } : {}) }))).sessionId
     } catch (error) {
       if (workspace.getState().epoch !== epoch) return
       const rejected = error instanceof RuntimeMutationError && error.outcome === 'rejected'
@@ -187,10 +226,14 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     if (workspace.getState().epoch !== epoch || !mounted.current || !activeRef.current) return
     // Seed the draft so the text survives a failed send, exactly like a message typed in the chat.
     workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text } }))
+    setSessionAgents(current => ({ ...current, [created]: firstAgent }))
+    if (firstModel) setModelChoices(current => ({ ...current, [created]: firstModel }))
     setFirstMessage('')
     openSession(created)
     void refreshList()
-    await dispatchSubmission(created, text, createTurnRequestId())
+    await dispatchSubmission(created, text, createTurnRequestId(), undefined, undefined, firstModel)
+    setFirstModel('')
+    setFirstPrivacy({ memoryDisabled: false, harnessDisabled: false })
   }
   async function submit() {
     const live = workspace.getState(), id = live.selected
@@ -239,9 +282,10 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       }
     }
   }
-  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch) {
+  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string) {
     if (workspace.getState().operation || !activeRef.current) return
-    if (harnessBySession?.[id] && !modelChoices[id]) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
+    const modelId = modelOverride ?? modelChoices[id]
+    if (harnessBySession?.[id] && !modelId) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'send' }); setDetailError(null); setNotice(null); setTaskError(null)
     let dispatched = false
@@ -265,7 +309,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       let resetVersion = 0
       const previewCurrent = () => mounted.current && activeRef.current && workspace.getState().epoch === epoch && !previewStop.signal.aborted && !privacy.getState().sessionIds.includes(id)
       void followLivePreview(requestId, streamed => { if (previewCurrent()) setPreview({ sessionId: id, text: streamed, resetVersion }) }, { signal: previewStop.signal, onReset: () => { resetVersion++; if (previewCurrent()) setPreview({ sessionId: id, text: '', resetVersion }) } }).then(end => { if (previewCurrent()) setPreview(value => ({ sessionId: id, text: value?.text ?? '', resetVersion, end })) })
-      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelChoices[id] ? { modelId: modelChoices[id] } : {}) }))
+      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelId ? { modelId } : {}) }))
       if (workspace.getState().epoch !== epoch) return
       if (prepared) workspace.setState({ taskIntent: null })
       await acceptSubmission(id, text, receipt, taskBinding)
@@ -342,13 +386,16 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     setNotice(decision === 'found' ? 'Marked as found in server history. No text was sent.' : 'Sending is enabled after your review. No text was sent; the earlier operation may still finish.')
   }
 
+  const activeAgentId = selected ? sessionAgents[selected] ?? 'companion' : firstAgent
+  const activeAgentName = agentNames[activeAgentId] ?? (activeAgentId === 'companion' ? 'Conker' : 'Agent')
   const chatSnapshot: GatewayChatState = {
     sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending,
+    activeAgentName, agentNames,
     forgotten: !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten' || !!attempt?.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)),
     attempt, reviewed, notice, error: detailError, rejected, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
   }
   const chatHandlers: GatewayChatHandlers = {
-    copy: copyMessage, setDraft: text => { if (selected) workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: text } })) },
+    copy: copyMessage, saveArtifact, setDraft: text => { if (selected) workspace.setState(values => ({ drafts: { ...values.drafts, [selected]: text } })) },
     send: submit, stop: stopAnswer, checkHistory,
     check: () => attempt?.requestId ? checkSubmission() : checkHistory(),
     retrySameRequest: () => { if (selected && attempt?.requestId) return dispatchSubmission(attempt.requestedSessionId ?? selected, attempt.text, attempt.requestId, attempt.taskBinding) },
@@ -383,11 +430,16 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
               <form className="relative z-10 rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
                 <Label htmlFor="new-chat-composer" className="sr-only">Message Conker</Label>
                 <Textarea id="new-chat-composer" dir="auto" autoFocus rows={2} value={firstMessage} placeholder="Ask Conker anything, or give it a task…" disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-16 resize-none rounded-3xl border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
-                <div className="flex items-center justify-end gap-2 px-3 pb-3"><Button type="submit" size="icon" className="size-9 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || Boolean(createUnknown)}><ArrowUp /></Button></div>
+                <div className="flex min-w-0 items-center gap-2 px-3 pb-3">
+                  {control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}
+                  {control && <GatewayModelPicker compact client={control} value={firstModel} disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
+                  <Button type="submit" size="icon" className="ml-auto size-9 shrink-0 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)}><ArrowUp /></Button>
+                </div>
               </form>
               <div className="mx-4 -mt-5 flex gap-5 rounded-b-2xl bg-muted px-4 pt-7 pb-2.5 text-sm text-muted-foreground sm:mx-6">
                 <Link to="/memory" className="flex items-center gap-1.5 rounded-md hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><BookOpen className="size-4" />Memory</Link>
                 <Link to="/tools" className="flex items-center gap-1.5 rounded-md hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><Wrench className="size-4" />Tools</Link>
+                <NewChatPrivacyControl value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
               </div>
               {createError && <p role="alert" className="mt-4 text-center text-sm text-destructive">{createError}</p>}
               {createUnknown === 'checked' && <div className="mt-2 flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
@@ -400,7 +452,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
           <header className="flex h-14 shrink-0 items-center gap-1 px-3">
             <CanvasToggle />
             <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
-            {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+            {control && current?.status === 'open' && <GatewaySessionAgentControl key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
+            {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+            {control && current?.status !== 'forgotten' && <GatewayCallLauncher client={control.calls} conversationId={selected} disabled={pending || Boolean(attempt)} />}
             {headerExtra}
             <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Chat options"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
               <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onSelect={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>

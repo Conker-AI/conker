@@ -11,6 +11,7 @@ fake would assert nothing.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -34,7 +35,7 @@ pytestmark = pytest.mark.skipif(
 def has_docker() -> bool:
     if not shutil.which("docker"):
         return False
-    return subprocess.run(["docker", "info"], capture_output=True).returncode == 0
+    return subprocess.run(["docker", "info"], capture_output=True, check=False).returncode == 0
 
 
 needs_docker = pytest.mark.skipif(not has_docker(), reason="needs a running Docker")
@@ -63,6 +64,7 @@ def install(tmp_path):
         proc = subprocess.run(
             ["bash", str(work / "install.sh"), *args],
             capture_output=True, text=True, env=env, cwd=str(work), timeout=180,
+            check=False,
         )
         if expect_ok and proc.returncode != 0:
             pytest.fail(f"exit {proc.returncode}\n--- stdout ---\n{proc.stdout}\n"
@@ -133,6 +135,9 @@ SECRETS = [
     "MEMORYGATE_DB_PASSWORD", "SYSTEMGATE_ADMIN_KEY", "EMBEDDINGS_KEY",
     "PI_TOOLGATE_KEY",
     "PI_GATEWAY_KEY",
+    "GATEWAY_PI_OWNER_KEY",
+    "GATEWAY_TOOLGATE_OWNER_KEY",
+    "MEMORYGATE_INGEST_KEY",
 ]
 
 
@@ -245,15 +250,84 @@ def test_gateway_key_and_owner_credential_survive_installer_rerun(install):
     assert first["PI_GATEWAY_KEY_SHA256"] == hashlib.sha256(
         first["PI_GATEWAY_KEY"].encode()
     ).hexdigest()
+    assert first["PI_OWNER_KEY_SHA256"] == hashlib.sha256(
+        first["GATEWAY_PI_OWNER_KEY"].encode()
+    ).hexdigest()
     assert first["GATEWAY_ORIGIN"] == "https://localhost:8050"
-    assert first["GATEWAY_TOOLGATE_OWNER_KEY"] == ""
-    install.env_file.write_text(install.env_file.read_text().replace(
-        "GATEWAY_TOOLGATE_OWNER_KEY=", "GATEWAY_TOOLGATE_OWNER_KEY=owner-issued-scoped-key"
-    ))
+    assert first["TOOLGATE_OWNER_KEY_SHA256"] == hashlib.sha256(
+        first["GATEWAY_TOOLGATE_OWNER_KEY"].encode()
+    ).hexdigest()
     install("--yes", "--dry-run")
     second = env_values(install.env_file)
     assert second["PI_GATEWAY_KEY"] == first["PI_GATEWAY_KEY"]
-    assert second["GATEWAY_TOOLGATE_OWNER_KEY"] == "owner-issued-scoped-key"
+    assert second["GATEWAY_PI_OWNER_KEY"] == first["GATEWAY_PI_OWNER_KEY"]
+    assert second["GATEWAY_TOOLGATE_OWNER_KEY"] == first["GATEWAY_TOOLGATE_OWNER_KEY"]
+
+
+@needs_docker
+def test_optional_decision_adapter_settings_survive_installer_rerun(install):
+    install("--yes", "--dry-run")
+    body = install.env_file.read_text()
+    body = body.replace("PI_DECISION_URL=", "PI_DECISION_URL=https://decisions.test")
+    body = body.replace("PI_DECISION_KEY=", "PI_DECISION_KEY=private-decision-key")
+    install.env_file.write_text(body)
+
+    install("--yes", "--dry-run")
+    values = env_values(install.env_file)
+    assert values["PI_DECISION_URL"] == "https://decisions.test"
+    assert values["PI_DECISION_KEY"] == "private-decision-key"
+
+
+@needs_docker
+def test_hosted_provider_settings_survive_installer_rerun(install):
+    install("--yes", "--dry-run")
+    body = install.env_file.read_text()
+    body = body.replace("PI_ALLOW_PAID_MODELS=", "PI_ALLOW_PAID_MODELS=true")
+    body += (
+        "\nOPENROUTER_KEY=preserved-openrouter-key"
+        "\nPI_OPENAI_KEY=preserved-openai-key"
+        "\nPI_ANTHROPIC_KEY=preserved-anthropic-key\n"
+    )
+    install.env_file.write_text(body)
+
+    install("--yes", "--dry-run")
+    values = env_values(install.env_file)
+    assert values["PI_ALLOW_PAID_MODELS"] == "true"
+    assert "OPENROUTER_KEY" not in values
+    assert "PI_OPENAI_KEY" not in values
+    assert "PI_ANTHROPIC_KEY" not in values
+    directory = install.root / ".conker" / "provider-secrets"
+    assert (directory / "openrouter.key").read_text() == "preserved-openrouter-key"
+    assert (directory / "openai.key").read_text() == "preserved-openai-key"
+    assert (directory / "anthropic.key").read_text() == "preserved-anthropic-key"
+    state = json.loads((directory / "state.json").read_text())
+    assert all(state["providers"][name]["activeRevision"] for name in ("openrouter", "openai", "anthropic"))
+
+
+@needs_docker
+def test_speech_settings_and_mounted_key_survive_installer_rerun(install):
+    install("--yes", "--dry-run")
+    body = install.env_file.read_text()
+    replacements = {
+        "PI_SPEECH_URL=": "PI_SPEECH_URL=https://speech.test/v1",
+        "PI_STT_MODEL=": "PI_STT_MODEL=whisper-1",
+        "PI_TTS_MODEL=": "PI_TTS_MODEL=kokoro",
+        "PI_TTS_VOICE=": "PI_TTS_VOICE=af_heart",
+    }
+    for before, after in replacements.items():
+        body = body.replace(before, after)
+    install.env_file.write_text(body)
+    key = install.root / ".conker/speech/speech.key"
+    key.write_text("preserved-speech-key", encoding="ascii")
+
+    install("--yes", "--dry-run")
+
+    values = env_values(install.env_file)
+    assert values["PI_SPEECH_URL"] == "https://speech.test/v1"
+    assert values["PI_STT_MODEL"] == "whisper-1"
+    assert values["PI_TTS_MODEL"] == "kokoro"
+    assert values["PI_TTS_VOICE"] == "af_heart"
+    assert key.read_text(encoding="ascii") == "preserved-speech-key"
 
 
 @needs_docker
@@ -291,9 +365,10 @@ def test_every_image_is_pinned(install):
          "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
          "config"],
         capture_output=True, text=True, cwd=str(install.dir),
+        check=False,
     ).stdout
 
-    images = re.findall(r"^\s*image:\s*(\S+)", config, re.M)
+    images = re.findall(r"^\s*image:\s*(\S+)", config, re.MULTILINE)
     assert images, "no images found in the resolved config"
     for image in images:
         assert not image.endswith(":latest"), f"{image} is a moving tag"
@@ -306,8 +381,9 @@ def resolved_images(install) -> list[str]:
          "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
          "config"],
         capture_output=True, text=True, cwd=str(install.dir),
+        check=False,
     ).stdout
-    return re.findall(r"^\s*image:\s*(\S+)", config, re.M)
+    return re.findall(r"^\s*image:\s*(\S+)", config, re.MULTILINE)
 
 
 @needs_docker
@@ -331,7 +407,7 @@ def test_every_pinned_image_actually_exists(install):
     missing = [
         image for image in images
         if subprocess.run(["docker", "manifest", "inspect", image],
-                          capture_output=True).returncode != 0
+                          capture_output=True, check=False).returncode != 0
     ]
     assert not missing, (
         "these pinned images do not exist in the registry:\n  "
@@ -351,6 +427,7 @@ def test_nothing_is_exposed_beyond_this_machine(install):
          "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
          "config"],
         capture_output=True, text=True, cwd=str(install.dir),
+        check=False,
     ).stdout
 
     published = re.findall(r"published:\s*\"?(\d+)\"?", config)
@@ -425,6 +502,7 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
             ["bash", "-c", f"top_level_status() {{{helper}}}\nprintf '%s' \"$1\" | top_level_status",
              "_", degraded],
             capture_output=True, text=True,
+            check=False,
         )
         assert result.stdout.strip() == "degraded", (
             f"{script} reported {result.stdout.strip()!r} for a degraded service"

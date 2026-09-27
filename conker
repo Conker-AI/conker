@@ -1,40 +1,16 @@
 #!/usr/bin/env bash
 #
-# conker — everything you do after installing.
-#
-# Deliberately small. Each command is one job, named as the thing you want
-# rather than the mechanism underneath: `conker status` and not
-# `docker compose ps`, because the answer people want is "is it working",
-# not "which containers exist".
+# conker - the authoritative host command contract for every deployment layout.
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$ROOT/.env"
+SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LAYOUT="${CONKER_LAYOUT:-repository}"
 
-# Recovery must work after losing .env. Never source configuration from a
-# backup: it is data to inspect, not shell code to execute.
-case "${1:-status}" in
-    backup|restore|verify-backup|recovery-status)
-        command -v python3 >/dev/null 2>&1 || {
-            printf 'Python 3.11+ is required for recovery. Install python3, then retry.\n' >&2
-            exit 1
-        }
-        exec python3 "$ROOT/scripts/recovery.py" --root "$ROOT" "$@"
-        ;;
-esac
-
-case "${1:-status}" in
-    start|restart|update|model|auth)
-        if [ -f "$ROOT/.conker-recovery.json" ] || [ -f "$PWD/.conker-recovery.json" ]; then
-            printf 'Recovery is held. Run conker recovery-status DIRECTORY and resolve its blockers before deployment.\n' >&2
-            exit 1
-        fi
-        if [ -f "$ROOT/.conker-backup.lock" ]; then
-            printf 'Backup is running or was interrupted. Inspect its partial snapshot and source-state.json before restarting writers.\n' >&2
-            exit 1
-        fi
-        ;;
+case "$LAYOUT" in
+    repository) ROOT="$SOURCE_ROOT"; ENV_FILE="$ROOT/.env" ;;
+    ubuntu) ROOT="${CONKER_DEPLOY_DIR:-$HOME/conker-deploy}"; ENV_FILE="" ;;
+    *) printf 'Unknown Conker deployment layout: %s\n' "$LAYOUT" >&2; exit 2 ;;
 esac
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
@@ -50,110 +26,159 @@ warn() { printf '  %s!%s %s\n' "$YELLOW" "$OFF" "$*"; }
 bad()  { printf '  %s✗%s %s\n' "$RED" "$OFF" "$*"; }
 info() { printf '  %s%s%s\n' "$DIM" "$*" "$OFF"; }
 
-[ -f "$ENV_FILE" ] || {
-    printf '%sConker is not installed here.%s\n\n  Run: ./install.sh\n\n' "$BOLD" "$OFF" >&2
-    exit 1
+layout_label() {
+    case "$LAYOUT" in
+        repository) printf '%s' 'repository installation' ;;
+        ubuntu) printf '%s' 'source-built Ubuntu installation' ;;
+    esac
 }
 
-set -a
-# shellcheck disable=SC1090  # the path is known only at runtime
-. "$ENV_FILE"
-set +a
+unavailable() {
+    local command=$1 reason=$2
+    printf 'conker %s is unavailable for this %s.\n%s\n' \
+        "$command" "$(layout_label)" "$reason" >&2
+    exit 3
+}
+
+require_installation() {
+    case "$LAYOUT" in
+        repository)
+            [ -f "$ENV_FILE" ] || {
+                printf '%sConker is not installed here.%s\n\n  Run: ./install.sh\n\n' "$BOLD" "$OFF" >&2
+                exit 1
+            }
+            ;;
+        ubuntu)
+            [ -f "$ROOT/compose.json" ] || {
+                printf 'Conker deployment not found: %s\n' "$ROOT" >&2
+                exit 1
+            }
+            ;;
+    esac
+}
+
+load_layout() {
+    require_installation
+    if [ "$LAYOUT" = repository ]; then
+        # The Compose environment is data, never shell code. Read only the few
+        # host-display values this command needs; Compose parses the full file itself.
+        CONKER_PORT=$(sed -n 's/^CONKER_PORT=//p' "$ENV_FILE" | head -1)
+        CONKER_BACKUP_DIR=$(sed -n 's/^CONKER_BACKUP_DIR=//p' "$ENV_FILE" | head -1)
+        CONKER_ADMIN_KEY=$(sed -n 's/^CONKER_ADMIN_KEY=//p' "$ENV_FILE" | head -1)
+        GATEWAY_ORIGIN=$(sed -n 's/^GATEWAY_ORIGIN=//p' "$ENV_FILE" | head -1)
+        GATEWAY_DISPLAY_ORIGIN="${GATEWAY_ORIGIN:-https://localhost:${CONKER_PORT:-8050}}"
+    else
+        GATEWAY_DISPLAY_ORIGIN=$(sed -n 's/^GATEWAY_ORIGIN=//p' "$ROOT/state/gateway.env" 2>/dev/null | head -1)
+        GATEWAY_DISPLAY_ORIGIN="${GATEWAY_DISPLAY_ORIGIN:-https://localhost:18050}"
+    fi
+}
+
+owner_terminal_active() {
+    [ "$LAYOUT" = repository ] \
+        && grep -qx 'OWNER_TERMINAL_STATE=active' "$ROOT/versions.env"
+}
 
 compose() {
-    docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
-        -f "$ROOT/docker-compose.yml" "$@"
+    if [ "$LAYOUT" = repository ]; then
+        local files=(-f "$ROOT/docker-compose.yml")
+        if owner_terminal_active; then
+            files+=(-f "$ROOT/docker-compose.terminal.yml")
+        fi
+        docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
+            "${files[@]}" "$@"
+    else
+        docker compose --project-directory "$ROOT" -f "$ROOT/compose.json" "$@"
+    fi
 }
 
-# The top-level status, and never a nested one.
-#
-# `sed 's/.*"status".../'` looks right and is wrong: `.*` is greedy, so it walks
-# to the LAST "status" in the body - whichever check happens to appear last. A
-# Pi reporting `degraded` because its model was unreachable displayed as `ok`,
-# because `action_boundary` came last and said so.
-#
-# The health contract puts the service-level status before `checks`, so the
-# first match is both correct and the honest reading. Getting this wrong in the
-# status command is the worst possible place for it: the owner is told
-# everything is fine at exactly the moment they need to know it is not.
+recovery_guard() {
+    if [ -f "$ROOT/.conker-recovery.json" ] || [ -f "$PWD/.conker-recovery.json" ]; then
+        printf 'Recovery is held. Run conker recovery-status DIRECTORY and resolve its blockers before deployment.\n' >&2
+        exit 1
+    fi
+    if [ -f "$ROOT/.conker-backup.lock" ]; then
+        printf 'Backup is running or was interrupted. Inspect its partial snapshot and source-state.json before restarting writers.\n' >&2
+        exit 1
+    fi
+}
+
 top_level_status() {
     grep -o '"status"[[:space:]]*:[[:space:]]*"[a-z_]*"' \
         | head -1 \
         | sed 's/.*"\([a-z_]*\)"$/\1/'
 }
 
-# --- status -----------------------------------------------------------------
-# Asks each service what it thinks of itself, rather than reporting that a
-# container exists. A running container that cannot reach its database is not
-# a working service, and saying "up" there would be the useful lie.
+health_body() {
+    local service=$1 port=$2
+    if [ "$service" = gateway ]; then
+        compose exec -T gateway python -m gateway health 2>/dev/null || true
+    elif [ "$LAYOUT" = repository ]; then
+        curl -fsS -m 3 "http://127.0.0.1:${port}/health" 2>/dev/null || true
+    else
+        compose exec -T "$service" python -c \
+            'import sys, urllib.request; sys.stdout.write(urllib.request.urlopen(sys.argv[1], timeout=3).read().decode())' \
+            "http://127.0.0.1:${port}/health" 2>/dev/null || true
+    fi
+}
+
 cmd_status() {
     local names=(Conker Tools Memory System Embeddings)
-    local ports=("${CONKER_PORT:-8050}" 8010 8020 8040 8030)
+    local services=(gateway toolgate memorygate systemgate embeddings)
+    local ports=(8050 8010 8020 8040 8030)
     local worst=ok i
 
     say ""
     say "${BOLD}Conker${OFF}"
     say ""
     for i in "${!names[@]}"; do
-        local body status
-        if [ "$i" -eq 0 ]; then
-            body=$(compose exec -T gateway python -m gateway health 2>/dev/null || true)
-        else
-            body=$(curl -fsS -m 3 "http://127.0.0.1:${ports[$i]}/health" 2>/dev/null || true)
-        fi
+        local body status why
+        body=$(health_body "${services[$i]}" "${ports[$i]}")
         if [ -z "$body" ]; then
-            bad "$(printf '%-12s' "${names[$i]}") not answering on ${ports[$i]}"
+            bad "$(printf '%-12s' "${names[$i]}") not answering"
             worst=down
             continue
         fi
-        status=$(printf '%s' "$body" | top_level_status)
+        status=$(printf '%s' "$body" | top_level_status || true)
         case "$status" in
             ok) good "$(printf '%-12s' "${names[$i]}") ok" ;;
             degraded)
-                local why
                 why=$(printf '%s' "$body" | sed -n 's/.*"degraded"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p')
-                warn "$(printf '%-12s' "${names[$i]}") degraded — ${why//\"/}"
-                [ "$worst" = ok ] && worst=degraded ;;
-            *) warn "$(printf '%-12s' "${names[$i]}") $status" ; [ "$worst" = ok ] && worst=degraded ;;
+                warn "$(printf '%-12s' "${names[$i]}") degraded${why:+ - ${why//\"/}}"
+                [ "$worst" = ok ] && worst=degraded
+                ;;
+            *)
+                warn "$(printf '%-12s' "${names[$i]}") invalid health response"
+                [ "$worst" = ok ] && worst=degraded
+                ;;
         esac
     done
     say ""
     case "$worst" in
-        ok)       say "  ${GREEN}Everything is working.${OFF}" ;;
+        ok) say "  ${GREEN}Everything is working.${OFF}" ;;
         degraded) say "  ${YELLOW}Running, with something degraded.${OFF} Details above." ;;
-        down)     say "  ${RED}Something is not running.${OFF}  Try: ./conker restart" ;;
+        down) say "  ${RED}Something is not running.${OFF} Try: conker restart" ;;
     esac
     say ""
-    say "  ${BOLD}Open:${OFF} ${BLUE}${GATEWAY_ORIGIN:-https://localhost:8050}${OFF}"
-    say "  ${DIM}Backups: ${CONKER_BACKUP_DIR}${OFF}"
+    say "  ${BOLD}Open:${OFF} ${BLUE}${GATEWAY_DISPLAY_ORIGIN}${OFF}"
+    if [ "$LAYOUT" = repository ]; then
+        say "  ${DIM}Backups: ${CONKER_BACKUP_DIR}${OFF}"
+    else
+        say "  ${DIM}Layout: source-built Ubuntu installation${OFF}"
+    fi
     say ""
 }
 
-# --- tailscale --------------------------------------------------------------
-# Offered, never assumed. Conker binds to localhost and there is no
-# public-internet path at all; this is how a second device reaches it without
-# creating one.
 cmd_tailscale() {
     say ""
     say "${BOLD}Reaching Conker from your other devices${OFF}"
     say ""
-    info "Conker listens on this machine only. That is deliberate — there is no"
-    info "public-internet path to it, and opening one is not something this"
-    info "installer will do for you."
-    say ""
-    info "Tailscale builds a private network between your own devices instead."
-    info "Your phone and laptop reach Conker; nobody else can, because there is"
-    info "nothing exposed to reach."
+    info "Conker listens on this machine only. Tailscale can provide a private"
+    info "path from your other devices without publishing Conker to the internet."
     say ""
     if command -v tailscale >/dev/null 2>&1; then
         good "Tailscale is installed"
         if tailscale status >/dev/null 2>&1; then
             good "Connected"
-            say ""
-            say "  Remote browser access also needs HTTPS forwarding to the local gateway."
-            say "  Configure its exact HTTPS address as GATEWAY_ORIGIN before signing in."
-            say ""
-            info "See docs/reference/browser-auth.md. Joining Tailscale alone does not expose the localhost listener."
         else
             say "  Not connected yet. Run:"
             say "     ${BOLD}sudo tailscale up${OFF}"
@@ -162,25 +187,61 @@ cmd_tailscale() {
         say "  Tailscale is not installed. To add it:"
         say "     ${BOLD}curl -fsSL https://tailscale.com/install.sh | sh${OFF}"
         say "     ${BOLD}sudo tailscale up${OFF}"
-        say ""
-        info "Then configure HTTPS forwarding as described in docs/reference/browser-auth.md."
     fi
     say ""
-    warn "One thing Conker will not do: bind to 0.0.0.0."
-    info "That would put your companion on the open internet. If you truly want"
-    info "that, it is your own reverse proxy and your own decision."
+    info "Remote browser access also needs HTTPS forwarding and the exact external"
+    info "address configured as GATEWAY_ORIGIN. See docs/reference/browser-auth.md."
+    say ""
+    warn "Conker will not bind itself to 0.0.0.0."
     say ""
 }
 
-# --- the rest ---------------------------------------------------------------
-cmd_model()   { compose exec -T ollama ollama pull "${1:?which model? e.g. ./conker model qwen3:4b}"; }
-cmd_logs()    { compose logs --tail "${2:-100}" ${1:+"$1"}; }
+cmd_model()   { compose exec -T ollama ollama pull "${1:?which model? e.g. conker model qwen3:4b}"; }
+cmd_logs() {
+    local args=(logs --tail "${2:-100}")
+    [ -z "${1:-}" ] || args+=("$1")
+    compose "${args[@]}"
+}
 cmd_start()   { compose up -d && cmd_status; }
 cmd_stop()    { compose stop && say "" && say "  Stopped. Nothing was deleted." && say ""; }
 cmd_restart() { compose restart && cmd_status; }
+cmd_doctor()  { compose exec -T gateway python -m gateway doctor; }
+cmd_inspect() {
+    local resource=${1:-}
+    if [ "$resource" = tool-access ]; then
+        [ "$#" -eq 4 ] || {
+            printf 'Use conker inspect tool-access DRAFT_ID VERSION DIGEST.\n' >&2
+            exit 2
+        }
+        resource="$resource:$2:$3:$4"
+    elif [ "$resource" = session-settings ] || [ "$resource" = approval ] || [ "$resource" = submission ] || [ "$resource" = file-listing ] || [ "$resource" = inventory ] || [ "$resource" = call ] || [ "$resource" = active-call ] || [ "$resource" = tool-draft ] || [ "$resource" = tool-validation ] || [ "$resource" = tool-publications ] || [ "$resource" = tool-runs ]; then
+        [ "$#" -eq 2 ] || {
+            printf 'Use conker inspect %s ID.\n' "$resource" >&2
+            exit 2
+        }
+        resource="$resource:$2"
+    elif [ "$#" -ne 1 ]; then
+        printf 'Use conker inspect RESOURCE, or a supported validated resource identity.\n' >&2
+        exit 2
+    fi
+    compose exec -T gateway python -m gateway inspect "$resource"
+}
+cmd_apply() {
+    local resource=$1 file=$2
+    case "$resource" in
+        agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|sessions|tasks|teams|tools|turns) ;;
+        *) printf 'conker apply supports: agents, approvals, artifacts, calls, character, files, inventory, jobs, memory, models, projects, proposals, sessions, tasks, teams, tools, turns.\n' >&2; exit 2 ;;
+    esac
+    [ -f "$file" ] || {
+        printf 'Configuration file not found: %s\n' "$file" >&2
+        exit 2
+    }
+    compose exec -T gateway python -m gateway apply "$resource" < "$file"
+}
 
-# The admin key is not printed casually. It is the key to everything here.
 cmd_key() {
+    [ "$LAYOUT" = repository ] || unavailable key \
+        'This layout has separate scoped credentials; there is no single admin key to reveal.'
     say ""
     warn "This is the key to everything Conker holds. Do not paste it anywhere."
     say ""
@@ -189,54 +250,580 @@ cmd_key() {
 }
 
 cmd_update() {
+    [ "$LAYOUT" = repository ] || unavailable update \
+        'Source-built deployments require a reviewed source export, image rebuild, and rollback record.'
     say ""
     say "${BOLD}Updating${OFF}"
-    info "Versions are pinned in versions.env. This pulls exactly what is written"
-    info "there — edit that file, or pull the repo, to move to a newer release."
+    info "The candidate is staged and verified before running services change."
     say ""
-    git -C "$ROOT" pull --ff-only 2>/dev/null && good "Repository updated" || info "Not a git checkout; using versions.env as it is"
-    compose pull && compose up -d
-    cmd_status
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for verified updates. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    python3 "$ROOT/scripts/update.py" --root "$ROOT"
+}
+
+setup_status() {
+    compose exec -T gateway python -c '
+import json, os, urllib.request
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
+        return None
+
+url = os.environ["GATEWAY_PI_URL"].rstrip("/") + "/setup/status"
+request = urllib.request.Request(url, headers={
+    "Accept": "application/json",
+    "X-Pi-Owner-Key": os.environ["GATEWAY_PI_OWNER_KEY"],
+})
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+try:
+    with opener.open(request, timeout=10) as response:
+        body = response.read(262145)
+except Exception as error:
+    raise SystemExit(f"setup status unavailable: {type(error).__name__}") from None
+if len(body) > 262144:
+    raise SystemExit("setup status exceeded 256 KiB")
+try:
+    value = json.loads(body)
+except Exception:
+    raise SystemExit("Pi returned invalid setup-status JSON") from None
+if not isinstance(value, dict) or value.get("schemaVersion") != 1:
+    raise SystemExit("Pi returned an unsupported setup-status contract")
+print(json.dumps(value, indent=2, sort_keys=True))
+'
+}
+
+record_setup_receipt() {
+    local step=$1
+    compose exec -T gateway python -m gateway record-setup-receipt "$step"
+}
+
+cmd_setup() {
+    local action=${1:-}
+    shift || true
+    case "$action" in
+        status)
+            [ "$#" -eq 0 ] || { printf 'Use conker setup status.\n' >&2; exit 2; }
+            setup_status
+            ;;
+        models)
+            [ "$#" -eq 0 ] || { printf 'Use conker setup models.\n' >&2; exit 2; }
+            compose exec -T gateway python -m gateway setup-model-options
+            ;;
+        rehearsal)
+            [ "$#" -eq 0 ] || { printf 'Use conker setup rehearsal.\n' >&2; exit 2; }
+            compose exec -T gateway python -m gateway setup-rehearsal status
+            ;;
+        protection)
+            [ "$#" -eq 0 ] || { printf 'Use conker setup protection.\n' >&2; exit 2; }
+            compose exec -T gateway python -m gateway setup-protection
+            ;;
+        configure)
+            local step=${1:-}
+            shift || true
+            case "$step" in
+                protection)
+                    local destination= retention=7
+                    while [ "$#" -gt 0 ]; do
+                        case "$1" in
+                            --destination) [ "$#" -ge 2 ] || exit 2; destination=$2; shift 2 ;;
+                            --retention) [ "$#" -ge 2 ] || exit 2; retention=$2; shift 2 ;;
+                            *) printf 'Use conker setup configure protection --destination /mounted/path [--retention COPIES].\n' >&2; exit 2 ;;
+                        esac
+                    done
+                    [ -n "$destination" ] || { printf 'A mounted off-machine --destination is required.\n' >&2; exit 2; }
+                    [[ "$retention" =~ ^[0-9]+$ ]] && [ "$retention" -ge 2 ] && [ "$retention" -le 64 ] || {
+                        printf 'Retention must be between 2 and 64 verified snapshots.\n' >&2
+                        exit 2
+                    }
+                    DESTINATION="$destination" RETENTION="$retention" python3 -c '
+import json, os
+print(json.dumps({"destination": os.environ["DESTINATION"], "retentionCopies": int(os.environ["RETENTION"])}))
+' | compose exec -T gateway python -m gateway set-setup-protection
+                    ;;
+                *)
+                    printf 'Use conker setup configure protection --destination /mounted/path [--retention COPIES].\n' >&2
+                    exit 2
+                    ;;
+            esac
+            ;;
+        verify-protection)
+            command -v python3 >/dev/null 2>&1 || {
+                printf 'Python 3.11+ is required for setup evidence. Install python3, then retry.\n' >&2
+                exit 1
+            }
+            [ "$#" -eq 0 ] || { printf 'Protection uses the saved policy. Run conker setup configure protection first.\n' >&2; exit 2; }
+            local protection_receipt protection_policy
+            protection_receipt=$(mktemp "${TMPDIR:-/tmp}/conker-setup-protection.XXXXXX")
+            protection_policy=$(mktemp "${TMPDIR:-/tmp}/conker-setup-policy.XXXXXX")
+            trap 'rm -f "$protection_receipt" "$protection_policy"' RETURN
+            compose exec -T gateway python -m gateway setup-protection > "$protection_policy"
+            env -u GATEWAY_PI_OWNER_KEY python3 "$SOURCE_ROOT/scripts/setup.py" \
+                protection --root "$ROOT" \
+                --policy "$protection_policy" --output "$protection_receipt"
+            record_setup_receipt protection < "$protection_receipt"
+            rm -f "$protection_receipt" "$protection_policy"
+            trap - RETURN
+            ;;
+        run)
+            local step=${1:-}
+            shift || true
+            case "$step" in
+                boundaries)
+                    [ "$#" -eq 2 ] && [ "$1" = --confirm-digest ] || {
+                        printf 'First run conker inspect boundaries, review the policy, then use conker setup run boundaries --confirm-digest SHA256.\n' >&2
+                        exit 2
+                    }
+                    compose exec -T gateway python -m gateway review-boundaries "$2"
+                    ;;
+                memory|capabilities)
+                    [ "$#" -eq 1 ] && { [ "$1" = --skip ] || [ "$1" = --include ]; } || {
+                        printf 'Use conker setup run %s --skip|--include.\n' "$step" >&2
+                        exit 2
+                    }
+                    local choice=${1#--}
+                    compose exec -T gateway python -m gateway set-setup-choice "$step:$choice"
+                    ;;
+                companion)
+                    [ "$#" -eq 1 ] && [ "$1" = --accept ] || {
+                        printf 'Use conker setup run companion --accept.\n' >&2
+                        exit 2
+                    }
+                    compose exec -T gateway python -m gateway set-setup-choice companion:accept
+                    ;;
+                model)
+                    [ "$#" -eq 1 ] || {
+                        printf 'First run conker setup models, then use conker setup run model CANDIDATE_ID.\n' >&2
+                        exit 2
+                    }
+                    compose exec -T gateway python -m gateway set-setup-model "$1"
+                    ;;
+                protection)
+                    cmd_setup verify-protection "$@"
+                    ;;
+                rehearsal)
+                    case "${1:-}" in
+                        --review-memory) [ "$#" -eq 1 ] || exit 2; compose exec -T gateway python -m gateway setup-rehearsal review-memory ;;
+                        --start-approval) [ "$#" -eq 1 ] || exit 2; compose exec -T gateway python -m gateway setup-rehearsal start-approval ;;
+                        --finish-approval) [ "$#" -eq 2 ] || { printf 'Use --finish-approval REQUEST_ID.\n' >&2; exit 2; }; compose exec -T gateway python -m gateway setup-rehearsal "resume-approval:$2" ;;
+                        --finalize) [ "$#" -eq 1 ] || exit 2; compose exec -T gateway python -m gateway setup-rehearsal finalize ;;
+                        *) printf 'Use conker setup run rehearsal --review-memory|--start-approval|--finish-approval REQUEST_ID|--finalize.\n' >&2; exit 2 ;;
+                    esac
+                    ;;
+                *)
+                    printf 'Headless setup run supports companion, model, memory, capabilities, boundaries, protection and rehearsal. Use conker setup status for the next verified operation.\n' >&2
+                    exit 2
+                    ;;
+            esac
+            ;;
+        *)
+            printf 'Use conker setup status|models|protection|rehearsal, conker setup configure protection, or conker setup run STEP.\n' >&2
+            exit 2
+            ;;
+    esac
+}
+
+provider_directory() {
+    case "$LAYOUT" in
+        repository) printf '%s' "$ROOT/.conker/provider-secrets" ;;
+        ubuntu) printf '%s' "$ROOT/state/provider-secrets" ;;
+    esac
+}
+
+provider_call() {
+    python3 "$SOURCE_ROOT/scripts/provider_secrets.py" \
+        --directory "$(provider_directory)" "$@"
+}
+
+provider_runtime_configured() {
+    local provider=$1 attempt result
+    for attempt in $(seq 1 30); do
+        result=$(compose exec -T pi python -c '
+import json, sys, urllib.request
+provider = sys.argv[1]
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+try:
+    with opener.open("http://127.0.0.1:8050/health", timeout=3) as response:
+        body = response.read(262145)
+    if len(body) > 262144:
+        raise ValueError()
+    configured = json.loads(body)["checks"]["provider_credentials"]["configured"]
+    print("configured" if provider in configured else "missing")
+except Exception:
+    print("unavailable")
+' "$provider" 2>/dev/null || true)
+        [ "$result" = configured ] && return 0
+        sleep 1
+    done
+    return 1
+}
+
+provider_status_human() {
+    provider_call status | python3 -c '
+import json, sys
+value = json.load(sys.stdin)
+print("\nHosted providers\n")
+for item in value["providers"]:
+    active = item["activeRevision"] or "not configured"
+    staged = item["stagedRevision"] or "none"
+    verification = item["verificationStatus"] or "none"
+    if item["verificationStale"]:
+        verification += ", stale"
+    pending = "; activation recovery required" if item["activationPending"] else ""
+    print(f"  {item['"'"'id'"'"']:<11} active: {active}")
+    print(f"              staged: {staged} ({verification}){pending}")
+print("\n  Secret values are not included.\n")
+'
+}
+
+cmd_providers() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for provider credential management.\n' >&2
+        exit 1
+    }
+    require_installation
+    local action=${1:-status}
+    shift || true
+    case "$action" in
+        status)
+            if [ "${1:-}" = --json ] && [ "$#" -eq 1 ]; then
+                provider_call status
+            elif [ "$#" -eq 0 ]; then
+                provider_status_human
+            else
+                printf 'Use conker providers status [--json].\n' >&2; exit 2
+            fi
+            ;;
+        set)
+            recovery_guard
+            local provider=${1:-} secret=''
+            [ -n "$provider" ] || { printf 'Use conker providers set PROVIDER [--stdin].\n' >&2; exit 2; }
+            if [ "${2:-}" = --stdin ] && [ "$#" -eq 2 ]; then
+                provider_call stage "$provider"
+            elif [ "$#" -eq 1 ] && [ -t 0 ]; then
+                printf 'Provider key (input hidden): '
+                read -r -s secret || secret=''
+                printf '\n'
+                printf '%s' "$secret" | provider_call stage "$provider"
+                unset secret
+            else
+                printf 'Use an interactive terminal or pipe the key to conker providers set PROVIDER --stdin.\n' >&2
+                exit 2
+            fi
+            ;;
+        verify)
+            recovery_guard
+            [ "$#" -eq 1 ] || { printf 'Use conker providers verify PROVIDER.\n' >&2; exit 2; }
+            local verified
+            verified=$(provider_call verify "$1")
+            printf '%s\n' "$verified"
+            printf '%s' "$verified" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin)["verificationStatus"] == "verified" else 1)'
+            ;;
+        activate)
+            recovery_guard
+            [ "$#" -eq 2 ] || { printf 'Use conker providers activate PROVIDER REVISION.\n' >&2; exit 2; }
+            local activate_provider=$1 activate_revision=$2
+            provider_call prepare "$activate_provider" "$activate_revision" >/dev/null
+            if compose up -d --no-deps --force-recreate pi \
+                    && provider_runtime_configured "$activate_provider"; then
+                provider_call commit "$activate_provider" "$activate_revision"
+                good "$activate_provider credential $activate_revision is active"
+            else
+                warn "Pi did not confirm the staged provider; restoring the previous credential"
+                provider_call rollback "$activate_provider" "$activate_revision" >/dev/null || true
+                compose up -d --no-deps --force-recreate pi >/dev/null 2>&1 || true
+                printf 'Provider activation failed and the previous local credential was restored.\n' >&2
+                exit 1
+            fi
+            ;;
+        recover)
+            recovery_guard
+            [ "$#" -eq 2 ] || { printf 'Use conker providers recover PROVIDER REVISION.\n' >&2; exit 2; }
+            provider_call rollback "$1" "$2" >/dev/null
+            compose up -d --no-deps --force-recreate pi
+            good "Restored the credential that preceded $2"
+            ;;
+        record-revoked)
+            recovery_guard
+            [ "$#" -eq 3 ] && [ "$3" = --issuer-confirmed ] || {
+                printf 'Use conker providers record-revoked PROVIDER REVISION --issuer-confirmed.\n' >&2
+                exit 2
+            }
+            provider_call record-revoked "$1" "$2"
+            ;;
+        *)
+            printf 'Use conker providers status, set, verify, activate, recover, or record-revoked.\n' >&2
+            exit 2
+            ;;
+    esac
+}
+
+speech_env_file() {
+    case "$LAYOUT" in
+        repository) printf '%s' "$ROOT/.env" ;;
+        ubuntu) printf '%s' "$ROOT/state/pi.env" ;;
+    esac
+}
+
+speech_key_file() {
+    case "$LAYOUT" in
+        repository) printf '%s' "$ROOT/.conker/speech/speech.key" ;;
+        ubuntu) printf '%s' "$ROOT/state/speech/speech.key" ;;
+    esac
+}
+
+speech_call() {
+    python3 "$SOURCE_ROOT/scripts/speech_config.py" \
+        --env-file "$(speech_env_file)" --key-file "$(speech_key_file)" "$@"
+}
+
+speech_runtime_state() {
+    local expected=$1 attempt result
+    for attempt in $(seq 1 30); do
+        result=$(compose exec -T pi python -c '
+import json, sys, urllib.request
+expected = sys.argv[1]
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+try:
+    with opener.open("http://127.0.0.1:8050/health", timeout=3) as response:
+        body = response.read(262145)
+    if len(body) > 262144:
+        raise ValueError()
+    actual = json.loads(body)["checks"]["speech"]["input"]
+    print("confirmed" if actual == expected else "waiting")
+except Exception:
+    print("unavailable")
+' "$expected" 2>/dev/null || true)
+        [ "$result" = confirmed ] && return 0
+        sleep 1
+    done
+    return 1
+}
+
+speech_status_human() {
+    speech_call status | python3 -c '
+import json, sys
+value = json.load(sys.stdin)
+print("\nSpeech\n")
+print(f"  Input:       {value[\"speechInput\"]}")
+print(f"  Output:      {value[\"speechOutput\"]}")
+print(f"  Credential:  {\"configured\" if value[\"credentialConfigured\"] else \"not configured\"}")
+print(f"  Character:   {value[\"characterVoice\"]}")
+print("\n  Secret values are not included.\n")
+'
+}
+
+speech_apply() {
+    local action=$1 expected=$2 backup result
+    shift 2
+    recovery_guard
+    backup=$(mktemp -d)
+    cp -p "$(speech_env_file)" "$backup/env"
+    if [ -f "$(speech_key_file)" ]; then
+        cp -p "$(speech_key_file)" "$backup/key"
+    else
+        : > "$backup/key"
+    fi
+    if ! result=$(speech_call "$action" "$@"); then
+        rm -rf "$backup"
+        return 1
+    fi
+    if compose up -d --no-deps --force-recreate pi \
+            && speech_runtime_state "$expected"; then
+        rm -rf "$backup"
+        printf '%s\n' "$result"
+        good "Speech configuration is active"
+        return 0
+    fi
+    warn "Pi did not confirm the speech configuration; restoring the previous files"
+    cp -p "$backup/env" "$(speech_env_file)"
+    mkdir -p "$(dirname "$(speech_key_file)")"
+    cp -p "$backup/key" "$(speech_key_file)"
+    rm -rf "$backup"
+    compose up -d --no-deps --force-recreate pi >/dev/null 2>&1 || true
+    printf 'Speech activation failed and the previous host configuration was restored.\n' >&2
+    return 1
+}
+
+cmd_speech() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for speech configuration.\n' >&2
+        exit 1
+    }
+    require_installation
+    local action=${1:-status}
+    shift || true
+    case "$action" in
+        status)
+            if [ "${1:-}" = --json ] && [ "$#" -eq 1 ]; then
+                speech_call status
+            elif [ "$#" -eq 0 ]; then
+                speech_status_human
+            else
+                printf 'Use conker speech status [--json].\n' >&2; exit 2
+            fi
+            ;;
+        configure)
+            if [ "$#" -eq 0 ] && [ -t 0 ]; then
+                local speech_url stt_model tts_model voice speech_key
+                printf 'Speech API base URL: '
+                read -r speech_url
+                printf 'Speech-to-text model: '
+                read -r stt_model
+                printf 'Text-to-speech model (optional): '
+                read -r tts_model
+                voice=''
+                if [ -n "$tts_model" ]; then
+                    printf 'Default voice: '
+                    read -r voice
+                fi
+                printf 'API key (optional, input hidden): '
+                read -r -s speech_key || speech_key=''
+                printf '\n'
+                if [ -n "$speech_key" ]; then
+                    printf '%s' "$speech_key" | speech_apply configure configured \
+                        --url "$speech_url" --stt-model "$stt_model" \
+                        --tts-model "$tts_model" --voice "$voice" --key-stdin
+                    unset speech_key
+                else
+                    speech_apply configure configured --url "$speech_url" \
+                        --stt-model "$stt_model" --tts-model "$tts_model" --voice "$voice"
+                fi
+            elif [ "$#" -gt 0 ]; then
+                speech_apply configure configured "$@"
+            else
+                printf 'Use an interactive terminal, or pass --url URL --stt-model MODEL [--tts-model MODEL --voice VOICE] [--key-stdin].\n' >&2
+                exit 2
+            fi
+            ;;
+        disable)
+            [ "$#" -eq 0 ] || { printf 'Use conker speech disable.\n' >&2; exit 2; }
+            speech_apply disable unconfigured
+            ;;
+        *)
+            printf 'Use conker speech status, configure, or disable.\n' >&2
+            exit 2
+            ;;
+    esac
 }
 
 usage() {
+    local limited=''
+    if [ "$LAYOUT" = ubuntu ]; then
+        limited=' [unavailable in this layout]'
+    fi
     cat <<USAGE
 
-${BOLD}conker${OFF} — your companion, on this machine
+${BOLD}conker${OFF} - your companion, on this machine
 
   ${BOLD}status${OFF}      Is it working, and what is not
+  ${BOLD}doctor${OFF}      Print the same findings and recovery actions as System status
+  ${BOLD}inspect${OFF} RESOURCE
+              Export one live control-plane view as JSON
+  ${BOLD}inspect${OFF} session-settings SESSION_ID
+              Export one conversation's revisioned harness and privacy settings
+  ${BOLD}inspect${OFF} approval REQUEST_ID
+              Export one ToolGate approval request for deliberate review
+  ${BOLD}inspect${OFF} submission REQUEST_ID
+              Reconcile one retained turn submission without repeating it
+  ${BOLD}inspect${OFF} file-listing|inventory REQUEST_ID
+              Reconcile one read-only system observation
+  ${BOLD}inspect${OFF} call CALL_ID | active-call CONVERSATION_ID
+              Export one durable typed-call state
+  ${BOLD}inspect${OFF} tool-draft|tool-validation|tool-publications|tool-runs DRAFT_ID
+              Export one fixed ToolGate editor view
+  ${BOLD}inspect${OFF} tool-access DRAFT_ID VERSION DIGEST
+              Inspect access for one exact immutable publication
+  ${BOLD}apply${OFF} agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|sessions|tasks|teams|tools|turns FILE
+              Apply a typed revision-checked owner-control document
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
-  ${BOLD}backup${OFF} [--destination DIR]  Create a verified snapshot (stops writers during capture)
-  ${BOLD}verify-backup${OFF} SNAPSHOT     Check snapshot files and hashes
-  ${BOLD}restore${OFF} SNAPSHOT --into DIR  Restore into fresh, isolated volumes; remains held
-  ${BOLD}recovery-status${OFF} DIR        Read the recovery hold and unresolved work
-  ${BOLD}logs${OFF} [svc]  What a service has been saying
+  ${BOLD}backup${OFF} [--destination DIR]
+              Create a verified snapshot (stops writers during capture)
+  ${BOLD}verify-backup${OFF} SNAPSHOT
+              Check snapshot files and hashes
+  ${BOLD}restore${OFF} SNAPSHOT --into DIR
+              Restore into fresh, isolated volumes; remains held
+  ${BOLD}recovery-status${OFF} DIR
+              Read the recovery hold and unresolved work
+  ${BOLD}logs${OFF} [service] [lines]
+              Show recent service logs
   ${BOLD}model${OFF} NAME  Fetch another local model
+  ${BOLD}providers${OFF} status|set|verify|activate|recover|record-revoked
+  ${BOLD}speech${OFF}    status|configure|disable
+              Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}
-  ${BOLD}update${OFF}      Pull the pinned versions and restart
-  ${BOLD}key${OFF}         Show the admin key
-  ${BOLD}auth${OFF} setup|reset-password|revoke-all|certificate|renew-certificate
+  ${BOLD}update${OFF}      Stage, verify and roll back a pinned release${limited}
+  ${BOLD}setup${OFF} status
+              Show the same verified first-run state used by the UI
+  ${BOLD}setup${OFF} rehearsal
+              Show conversation, memory-review and harmless-approval proof
+  ${BOLD}setup${OFF} run boundaries --confirm-digest SHA256
+              Record the exact ToolGate policy reviewed with inspect boundaries
+  ${BOLD}setup${OFF} protection
+              Show the saved off-machine backup destination and retention policy
+  ${BOLD}setup${OFF} configure protection --destination DIR [--retention COPIES]
+              Save the policy used by both setup UI and the host verifier
+  ${BOLD}setup${OFF} run protection
+              Create and verify a policy-bound backup, enforce retention, then record evidence
+  ${BOLD}setup${OFF} run rehearsal --review-memory|--start-approval|--finish-approval ID|--finalize
+              Complete the same evidence-backed first-run rehearsal as the UI
+  ${BOLD}key${OFF}         Show the repository admin key${limited}
+  ${BOLD}auth${OFF} setup|reset-password|revoke-all|certificate|renew-certificate|health
               Browser access and TLS, managed from this host
+
+  Layout: $(layout_label)
 
 USAGE
 }
 
-case "${1:-status}" in
+command="${1:-status}"
+
+case "$command" in
+    help|-h|--help) usage; exit 0 ;;
+    providers) shift; cmd_providers "$@"; exit $? ;;
+    speech) shift; cmd_speech "$@"; exit $? ;;
+    backup|restore|verify-backup|recovery-status)
+        command -v python3 >/dev/null 2>&1 || {
+            printf 'Python 3.11+ is required for recovery. Install python3, then retry.\n' >&2
+            exit 1
+        }
+        exec python3 "$SOURCE_ROOT/scripts/recovery.py" --root "$ROOT" "$@"
+        ;;
+esac
+
+case "$command" in
+    start|restart|update|model|auth) recovery_guard ;;
+esac
+
+load_layout
+
+case "$command" in
     auth)
+        [ "$#" -eq 2 ] || { usage >&2; exit 2; }
         case "${2:-}" in
             setup|reset-password) compose run --rm --no-deps gateway python -m gateway "$2" ;;
-            revoke-all|certificate|renew-certificate) compose run --rm --no-deps -T gateway python -m gateway "$2" ;;
-            *) printf 'Use conker auth setup, reset-password, revoke-all, certificate or renew-certificate.\n' >&2; exit 1 ;;
-        esac ;;
-    status)    cmd_status ;;
-    tailscale) cmd_tailscale ;;
-    logs)      shift; cmd_logs "$@" ;;
-    model)     shift; cmd_model "$@" ;;
-    start)     cmd_start ;;
-    stop)      cmd_stop ;;
-    restart)   cmd_restart ;;
-    update)    cmd_update ;;
-    key)       cmd_key ;;
-    -h|--help|help) usage ;;
-    *) printf '\n  No command called %s.\n' "$1"; usage; exit 1 ;;
+            revoke-all|certificate|renew-certificate|health)
+                compose run --rm --no-deps -T gateway python -m gateway "$2"
+                ;;
+            *)
+                printf 'Use conker auth setup, reset-password, revoke-all, certificate, renew-certificate or health.\n' >&2
+                exit 2
+                ;;
+        esac
+        ;;
+    status)    [ "$#" -le 1 ] || { usage >&2; exit 2; }; cmd_status ;;
+    doctor)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_doctor ;;
+    inspect)   [ "$#" -ge 2 ] && [ "$#" -le 5 ] || { usage >&2; exit 2; }; shift; cmd_inspect "$@" ;;
+    apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
+    tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
+    logs)      [ "$#" -le 3 ] || { usage >&2; exit 2; }; shift; cmd_logs "$@" ;;
+    model)     [ "$#" -eq 2 ] || { usage >&2; exit 2; }; shift; cmd_model "$@" ;;
+    start)     [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_start ;;
+    stop)      [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_stop ;;
+    restart)   [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_restart ;;
+    update)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_update ;;
+    setup)     shift; cmd_setup "$@" ;;
+    key)       [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_key ;;
+    *) printf '\n  No command called %s.\n' "$command" >&2; usage >&2; exit 2 ;;
 esac

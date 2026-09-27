@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "id": "browser-authentication", "name": "Browser authentication and owner verification", "authority": "gateway", "state": "active",
+      "gatewayRoutes": ["/auth/login", "/auth/logout", "/auth/session", "/auth/verify"], "uiRoutes": ["/chat"],
+      "cliCommands": ["conker auth setup", "conker auth reset-password"], "deploymentRequirements": ["gateway_data", "GATEWAY_DB_PATH", "GATEWAY_ORIGIN"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/transport.ts", "contains": "login|logout|verify|revoke-all"}, {"path": "conker", "contains": "setup|reset-password|revoke-all|certificate|renew-certificate|health"}, {"path": "docker-compose.yml", "contains": "GATEWAY_DB_PATH: /auth/auth.db"}]
+    },
+    {
+      "id": "browser-session-administration", "name": "Browser session revocation", "authority": "gateway", "state": "active",
+      "gatewayRoutes": ["/auth/sessions", "/auth/sessions/{id}/revoke", "/auth/revoke-all"], "uiRoutes": [], "cliCommands": ["conker auth revoke-all"],
+      "deploymentRequirements": ["gateway_data", "owner password verification"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/transport.ts", "contains": "/auth/sessions/${ids}/revoke"}, {"path": "conker", "contains": "revoke-all|certificate|renew-certificate|health"}]
+    },
+    {
+      "id": "conversations", "name": "Conversation sessions and turns", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/pi/sessions", "/api/pi/sessions/{id}", "/api/pi/sessions/{id}/turns"], "uiRoutes": ["/chat", "/chats", "/companion"], "cliCommands": ["conker inspect sessions"],
+      "deploymentRequirements": ["pi_data", "PI_GATEWAY_KEY_SHA256", "PI_MODEL"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/sessions/${sessionId}/turns"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/chat': 'chat',\n  '/chats': 'chat',\n  '/companion': 'chat'"}, {"path": "docker-compose.yml", "contains": "PI_DB_PATH: /data/pi.db"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "turn-recovery", "name": "Turn cancellation, resume and submission reconciliation", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/pi/turns/{id}/resume", "/api/pi/turn-submissions/{id}", "/api/pi/turn-submissions/{id}/cancel"], "uiRoutes": ["/chat"], "cliCommands": ["conker inspect submission REQUEST_ID", "conker apply turns FILE"], "deploymentRequirements": ["pi_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/turn-submissions/${requestId}/cancel"}, {"path": "docs/reference/gateway-workspace.md", "contains": "Lost or malformed acknowledgements retain the draft"}]
+    },
+    {
+      "id": "tasks-activity", "name": "Tasks, runs and activity events", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/pi/tasks", "/api/pi/runs", "/api/pi/events"], "uiRoutes": ["/activity"], "cliCommands": ["conker inspect tasks", "conker inspect runs", "conker apply tasks FILE"], "deploymentRequirements": ["pi_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/activity.ts", "contains": "auth.request('/api/pi/tasks'"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/activity': 'activity'"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "proposals", "name": "Proactive proposals and decisions", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/pi/proposals", "/api/pi/proposals/{id}/decision"], "uiRoutes": ["/inbox"], "cliCommands": ["conker inspect proposals", "conker apply proposals FILE"], "deploymentRequirements": ["PI_PROPOSALS_ENABLED", "pi_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/proposals.ts", "contains": "/api/pi/proposals/${proposalId}/decision"}, {"path": "docker-compose.yml", "contains": "PI_PROPOSALS_ENABLED: \"true\""}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "owner-approvals", "name": "Tool effect approval inbox", "authority": "toolgate", "state": "active",
+      "gatewayRoutes": ["/api/owner/requests", "/api/owner/requests/{id}/decision"], "uiRoutes": ["/inbox"], "cliCommands": ["conker inspect approvals", "conker inspect approval REQUEST_ID", "conker apply approvals FILE"],
+      "deploymentRequirements": ["GATEWAY_TOOLGATE_OWNER_KEY", "TOOLGATE_OWNER_KEY_SHA256", "owner_control"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/owner.ts", "contains": "/api/owner/requests/${id}/decision"}, {"path": "docker-compose.yml", "contains": "GATEWAY_TOOLGATE_OWNER_KEY:"}]
+    },
+    {
+      "id": "session-privacy", "name": "Per-session harness and privacy settings", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/sessions/{id}/settings"], "uiRoutes": ["/chat"], "cliCommands": ["conker inspect session-settings SESSION_ID", "conker apply sessions FILE"], "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/sessions/${parse(identity, id, true)}/settings"}, {"path": "dashboard/src/components/gateway/workspace.tsx", "contains": "GatewayPrivacyControl"}]
+    },
+    {
+      "id": "model-configuration", "name": "Model catalogue and role configuration", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/pi/models", "/api/control/pi/models/configuration"], "uiRoutes": ["/settings"], "cliCommands": ["conker inspect models", "conker apply models FILE"], "deploymentRequirements": ["PI_MODEL", "PI_OLLAMA_URL", "PI_OWNER_KEY_SHA256"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/models/configuration"}, {"path": "dashboard/src/components/gateway/workspace.tsx", "contains": "modelsActive"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "memory-exploration", "name": "Long-term memory inspection", "authority": "memorygate", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/memory/objects", "/api/control/pi/memory/objects/{type}/{id}"], "uiRoutes": ["/memory"], "cliCommands": ["conker inspect memory"],
+      "deploymentRequirements": ["PI_MEMORYGATE_READ_KEY", "MEMORYGATE_READ_KEY", "postgres_data", "qdrant_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/memory/objects"}, {"path": "docker-compose.yml", "contains": "PI_MEMORYGATE_READ_KEY:"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "memory-forgetting", "name": "Owner-reviewed memory forgetting", "authority": "memorygate", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/memory/forget/{id}", "/api/control/pi/memory/forget"], "uiRoutes": ["/memory"], "cliCommands": ["conker apply memory FILE"],
+      "deploymentRequirements": ["PI_MEMORYGATE_READ_KEY", "PI_OWNER_KEY_SHA256"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/control/pi/memory/forget'"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "/api/control/pi/memory/forget"}]
+    },
+    {
+      "id": "tool-inventory", "name": "Scoped tool inventory", "authority": "toolgate", "state": "active",
+      "gatewayRoutes": ["/api/pi/tools"], "uiRoutes": ["/tools"], "cliCommands": ["conker inspect tools"], "deploymentRequirements": ["PI_TOOLGATE_KEY", "TOOLGATE_BOOTSTRAP_EXECUTION_KEY"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/pi/tools'"}, {"path": "dashboard/src/components/gateway/tools-inventory.tsx", "contains": "Available tools"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "tool-workflow-authoring", "name": "Tool and workflow drafts, publication and runs", "authority": "toolgate", "state": "active",
+      "gatewayRoutes": ["/api/owner/editor-drafts", "/api/owner/editor-drafts/{id}/publish", "/api/owner/editor-drafts/{id}/runs"], "uiRoutes": ["/tools?view=drafts"], "cliCommands": ["conker inspect tool-drafts", "conker inspect tool-draft DRAFT_ID", "conker inspect tool-validation DRAFT_ID", "conker inspect tool-publications DRAFT_ID", "conker inspect tool-runs DRAFT_ID", "conker inspect tool-access DRAFT_ID VERSION DIGEST", "conker apply tools FILE"],
+      "deploymentRequirements": ["GATEWAY_TOOLGATE_OWNER_KEY", "GATEWAY_TOOLGATE_EXECUTION_KEY", "toolgate_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/editor-drafts.ts", "contains": "`${path(id)}/publish`"}, {"path": "dashboard/src/components/gateway/tool-drafts.tsx", "contains": "Saved drafts do not publish or run tools"}]
+    },
+    {
+      "id": "setup-status", "name": "Verified first-run setup projection", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/setup/status", "/api/control/pi/setup/models", "/api/control/pi/setup/models/activate", "/api/control/pi/setup/choices/{companion|memory|capabilities}"], "uiRoutes": ["/setup"], "cliCommands": ["conker setup status", "conker inspect setup", "conker setup models", "conker setup run companion --accept", "conker setup run model CANDIDATE_ID", "conker setup run memory --skip|--include", "conker setup run capabilities --skip|--include"], "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/setup/models/activate"}, {"path": "conker", "contains": "set-setup-model"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "Use and test model"}]
+    },
+    {
+      "id": "setup-evidence-receipts", "name": "Verified setup evidence and owner rehearsal", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/setup/boundaries", "/api/control/pi/setup/protection", "/api/control/pi/setup/receipts/{step}", "/api/control/pi/setup/rehearsal", "/api/control/pi/setup/rehearsal/{operation}"], "uiRoutes": ["/setup"], "cliCommands": ["conker setup run boundaries --confirm-digest SHA256", "conker setup protection", "conker setup configure protection --destination DIR --retention COPIES", "conker setup run protection", "conker setup rehearsal", "conker setup run rehearsal --review-memory|--start-approval|--finish-approval REQUEST_ID|--finalize"], "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "pi_data", "ToolGate approval.test-echo", "supported recovery layout for protection"],
+      "evidence": [{"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "Save backup policy"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "Approve one harmless local check"}, {"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/setup/rehearsal/approval/start"}, {"path": "conker", "contains": "setup-rehearsal start-approval"}]
+    },
+    {
+      "id": "system-status", "name": "Service and system status", "authority": "gateway", "state": "active",
+      "gatewayRoutes": ["/health", "/api/diagnostics"], "uiRoutes": ["/system"], "cliCommands": ["conker status", "conker doctor"], "deploymentRequirements": ["gateway", "pi", "toolgate"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/diagnostics'"}, {"path": "dashboard/src/components/gateway/system-status.tsx", "contains": "client.diagnostics"}, {"path": "conker", "contains": "python -m gateway doctor"}, {"path": "docs/reference/diagnostics.md", "contains": "same JSON"}]
+    },
+    {
+      "id": "service-lifecycle", "name": "Local service lifecycle and logs", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker start", "conker stop", "conker restart", "conker logs"], "deploymentRequirements": ["Docker Compose", "docker-compose.yml"],
+      "evidence": [{"path": "conker", "contains": "start)     [ \"$#\" -eq 1"}, {"path": "conker", "contains": "logs)      [ \"$#\" -le 3"}]
+    },
+    {
+      "id": "local-model-download", "name": "Local model download", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker model NAME"], "deploymentRequirements": ["ollama", "ollama_data"],
+      "evidence": [{"path": "conker", "contains": "model)     [ \"$#\" -eq 2"}, {"path": "docker-compose.yml", "contains": "ollama_data:/root/.ollama"}]
+    },
+    {
+      "id": "verified-backup", "name": "Verified coordinated backup", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker backup", "conker verify-backup"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
+      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}]
+    },
+    {
+      "id": "held-recovery", "name": "Isolated held restore and readiness review", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker restore", "conker recovery-status"], "deploymentRequirements": ["supported snapshot layout", "fresh isolated Docker volumes"],
+      "evidence": [{"path": "conker", "contains": "Restore into fresh, isolated volumes; remains held"}, {"path": "scripts/recovery.py", "contains": "service_ready"}, {"path": "docs/reference/recovery.md", "contains": "held"}]
+    },
+    {
+      "id": "pinned-updates", "name": "Pinned update with acceptance and rollback", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker update"], "deploymentRequirements": ["repository layout", "versions.env", "clean checkout"],
+      "evidence": [{"path": "conker", "contains": "cmd_update"}, {"path": "scripts/update.py", "contains": "verify_candidate"}, {"path": "versions.env", "contains": "RELEASE_MANIFEST_VERSION="}]
+    },
+    {
+      "id": "remote-access-tls", "name": "Remote access and gateway certificates", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker tailscale", "conker auth certificate", "conker auth renew-certificate", "conker auth health"], "deploymentRequirements": ["gateway", "host network configuration"],
+      "evidence": [{"path": "conker", "contains": "tailscale) [ \"$#\" -eq 1"}, {"path": "conker", "contains": "revoke-all|certificate|renew-certificate|health"}]
+    },
+    {
+      "id": "admin-key-recovery", "name": "Repository administration key recovery", "authority": "conker-host", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker key"], "deploymentRequirements": ["repository layout", "host access to .env"],
+      "evidence": [{"path": "conker", "contains": "Show the repository admin key"}, {"path": "conker", "contains": "key)       [ \"$#\" -eq 1"}]
+    },
+    {
+      "id": "agents", "name": "Agent profile management", "authority": "pi", "state": "active", "gatewayRoutes": ["/api/control/pi/agents", "/api/control/pi/agents/{id}", "/api/control/pi/agents/{id}/update", "/api/control/pi/agents/{id}/archive"], "uiRoutes": ["/agents", "/agents/{id}/edit", "/settings/companion"], "cliCommands": ["conker inspect agents", "conker apply agents FILE"],
+      "deploymentRequirements": ["PI_OWNER_CONTROL_KEY", "durable Pi store"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "async agents(signal?: AbortSignal)"}, {"path": "dashboard/src/components/gateway/agents-workspace.tsx", "contains": "Profiles choose models, tools and memory; they never grant authority."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Authored agents are owner-controlled records"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "companion-editing", "name": "Companion character and voice editing", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/characters/companion", "/api/control/pi/characters/companion/history", "/api/control/pi/characters/companion/export", "/api/control/pi/characters/companion/save", "/api/control/pi/characters/companion/import", "/api/control/pi/characters/companion/restore"],
+      "uiRoutes": ["/settings/companion"], "cliCommands": ["conker inspect character", "conker inspect character-history", "conker inspect character-export", "conker apply character FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/characters.ts", "contains": "The Companion changed elsewhere"}, {"path": "dashboard/src/components/gateway/character-workspace.tsx", "contains": "Saved immutable revision"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Only this authenticated owner route gets the larger envelope"}]
+    },
+    {
+      "id": "projects-context", "name": "Projects and project context", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/projects", "/api/control/pi/projects/{id}", "/api/control/pi/projects/{id}/update", "/api/control/pi/projects/{id}/archive", "/api/control/pi/projects/{id}/link", "/api/control/pi/projects/{id}/unlink", "/api/control/pi/sessions/{id}/settings"],
+      "uiRoutes": ["/projects", "/projects/{id}"], "cliCommands": ["conker inspect projects", "conker apply projects FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/projects.ts", "contains": "authority: z.literal('none')"}, {"path": "dashboard/src/components/gateway/projects-workspace.tsx", "contains": "Pi will recheck every source"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "destructive removal stays host-admin only"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "artifacts", "name": "Artifact library and exports", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/artifacts", "/api/control/pi/artifacts/from-message", "/api/control/pi/artifacts/{id}", "/api/control/pi/artifacts/{id}/versions", "/api/control/pi/artifacts/{id}/restore", "/api/control/pi/artifacts/{id}/archive", "/api/control/pi/artifacts/{id}/export"],
+      "uiRoutes": ["/artifacts", "/artifacts/{id}"], "cliCommands": ["conker inspect artifacts", "conker apply artifacts FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/artifacts.ts", "contains": "execution: z.literal('not-wired')"}, {"path": "dashboard/src/components/gateway/artifacts-workspace.tsx", "contains": "Saved a new immutable version"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "content is bounded to explicit detail and inert export routes"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "jobs-schedules", "name": "Job and schedule management", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/jobs", "/api/control/pi/jobs/{id}", "/api/control/pi/jobs/{id}/runs", "/api/control/pi/jobs/{id}/state", "/api/control/pi/jobs/{id}/run", "/api/control/pi/jobs/runs/{id}/provision-budget", "/api/control/pi/jobs/runs/{id}/cancel", "/api/control/pi/jobs/runs/{id}/resume", "/api/control/pi/jobs/runs/{id}/reconcile"],
+      "uiRoutes": ["/jobs", "/jobs/{id}"], "cliCommands": ["conker inspect jobs", "conker apply jobs FILE"],
+      "deploymentRequirements": ["PI_SCHEDULER_ENABLED", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "scoped ToolGate execution credential"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "execution: z.literal('not-triggered')"}, {"path": "dashboard/src/components/gateway/jobs-workspace.tsx", "contains": "A successful admission is not a claim that execution completed"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Job views redact target inputs"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/calls/browser/capabilities", "/api/control/pi/calls/browser/active/{conversation_id}", "/api/control/pi/calls/browser", "/api/control/pi/calls/browser/{id}", "/api/control/pi/calls/browser/{id}/update", "/api/control/pi/calls/browser/{id}/interrupt", "/api/control/pi/calls/browser/{id}/end", "/api/control/pi/calls/browser/{id}/turns"],
+      "uiRoutes": ["/chat"], "cliCommands": ["conker inspect call-capabilities", "conker inspect call CALL_ID", "conker inspect active-call CONVERSATION_ID", "conker apply calls FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store", "configured answer model"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/calls.ts", "contains": "execution: z.literal('typed-turn')"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "Speak or type one thought at a time"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Browser call audio is one bounded transient WAV turn"}]
+    },
+    {
+      "id": "calls-voice", "name": "Voice call turns", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/calls/browser/capabilities", "/api/control/pi/calls/browser/{id}/audio"],
+      "uiRoutes": ["/chat", "/setup"], "cliCommands": ["conker speech status", "conker speech configure", "conker speech disable", "conker inspect call-capabilities", "conker inspect call CALL_ID"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "explicit compatible speech server", "PI_SPEECH_URL", "PI_SPEECH_KEY_FILE", "PI_STT_MODEL", "optional PI_TTS_MODEL and PI_TTS_VOICE", "HTTPS browser origin"],
+      "evidence": [{"path": "dashboard/src/hooks/use-gateway-call-audio.ts", "contains": "Owns ephemeral microphone capture and playback"}, {"path": "dashboard/src/lib/gateway/calls.ts", "contains": "async audioTurn"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "recordings and generated audio are not retained"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "conker speech configure"}, {"path": "scripts/speech_config.py", "contains": "Secret values never enter browser state or argv"}]
+    },
+    {
+      "id": "teams-collaboration", "name": "Agent teams and collaboration", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/collaboration/teams", "/api/control/pi/collaboration/teams/{id}", "/api/control/pi/collaboration/teams/{id}/update", "/api/control/pi/collaboration/teams/{id}/archive", "/api/control/pi/collaboration/teams/{id}/restore", "/api/control/pi/collaboration/teams/{id}/versions", "/api/control/pi/collaboration/teams/{id}/versions/{revision}"],
+      "uiRoutes": ["/agents?tab=teams"], "cliCommands": ["conker inspect teams", "conker apply teams FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store", "saved agent profiles"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/teams.ts", "contains": "execution: z.literal('configuration-only')"}, {"path": "dashboard/src/components/gateway/teams-workspace.tsx", "contains": "No preparation or execution endpoint is exposed here"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "preparation and execution remain outside the browser"}, {"path": "conker", "contains": "cmd_inspect"}]
+    },
+    {
+      "id": "owner-files", "name": "Owner read-only file inventory", "authority": "toolgate", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/system/files/roots", "/api/control/pi/system/files/listings", "/api/control/pi/system/files/listings/{id}", "/api/control/pi/system/files/listings/{id}/resume"],
+      "uiRoutes": ["/system?tab=files"], "cliCommands": ["conker inspect file-roots", "conker inspect file-listing REQUEST_ID", "conker apply files FILE"],
+      "deploymentRequirements": ["toolgate", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "operator-configured read-only roots", "fixed system.files-list ToolGate capability"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/filesystem.ts", "contains": "execution: z.literal('directory-listing-only')"}, {"path": "dashboard/src/components/gateway/filesystem-workspace.tsx", "contains": "No file contents, editing, uploads, deletes, or shell access"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "No content or mutation route is browser reachable"}]
+    },
+    {
+      "id": "owner-terminal", "name": "Owner terminal", "authority": "gateway", "state": "deferred", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
+      "deploymentRequirements": ["operator-selected validated workspace", "digest-pinned owner-terminal registry image", "hashed target-Linux acceptance bundle", "explicit owner terminal transport", "production UI"],
+      "gap": "The constrained gateway PTY is not configured or mounted by the release deployment, and its fixture screen is not a connected product route.",
+      "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/audits/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}, {"path": "dashboard/src/app/system/terminal.tsx", "contains": "No authenticated terminal session"}]
+    },
+    {
+      "id": "host-inventory", "name": "Host services, ports and process inventory", "authority": "systemgate", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/system/inventory", "/api/control/pi/system/inventory/{id}", "/api/control/pi/system/inventory/{id}/resume", "/api/control/pi/system/inventory/configured/services", "/api/control/pi/system/inventory/configured/containers"],
+      "uiRoutes": ["/system?tab=processes", "/system?tab=ports", "/system?tab=containers"], "cliCommands": ["conker inspect inventory-services", "conker inspect inventory-containers", "conker inspect inventory REQUEST_ID", "conker apply inventory FILE"],
+      "deploymentRequirements": ["systemgate", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "fixed system.inventory ToolGate capability"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/host-inventory.ts", "contains": "refreshRequiresNewRequest: z.literal(true)"}, {"path": "dashboard/src/components/gateway/host-inventory-workspace.tsx", "contains": "No host authority"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "fixed read-only ToolGate observation"}]
+    },
+    {
+      "id": "provider-secret-management", "name": "Hosted provider credentials and endpoints", "authority": "conker-host", "state": "active", "gatewayRoutes": ["/api/pi/models"], "uiRoutes": ["/settings"],
+      "cliCommands": ["conker providers status", "conker providers set PROVIDER", "conker providers verify PROVIDER", "conker providers activate PROVIDER REVISION", "conker providers recover PROVIDER REVISION", "conker providers record-revoked PROVIDER REVISION --issuer-confirmed"],
+      "deploymentRequirements": ["Python 3.11+ host credential manager", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi force-recreation during activation", "held recovery credential reconciliation"],
+      "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "Provider activation failed and the previous local credential was restored."}, {"path": "dashboard/src/components/gateway/models-settings.tsx", "contains": "Configured on server"}, {"path": "scripts/recovery.py", "contains": "config/provider-state.json"}]
+    }
+  ]
+}

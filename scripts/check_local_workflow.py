@@ -5,9 +5,9 @@ workflow scopes, and removes those scopes in finally. No external connectors,
 models, vault reads or arbitrary scripts are invoked. Credentials are never printed.
 """
 import json
-from pathlib import Path
 import urllib.request
 import uuid
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -71,7 +71,7 @@ def run(request):
             try:
                 result = request(identity + '/access', {**target, 'enabled': False})
                 assert not result['enabled'], 'Temporary workflow grant was not removed'
-            except Exception:
+            except (AssertionError, OSError, ValueError):
                 failures.append(identity)
         if failures:
             raise RuntimeError('Remove temporary workflow access for: ' + ', '.join(failures))

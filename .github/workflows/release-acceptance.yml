@@ -1,0 +1,85 @@
+name: Assembled release acceptance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-acceptance.yml"
+      - "scripts/release_acceptance.py"
+      - "scripts/release_manifest.py"
+      - "scripts/recovery.py"
+      - "scripts/setup.py"
+      - "conker"
+      - "install.sh"
+      - "docker-compose.yml"
+      - "docker-compose.terminal.yml"
+      - "capabilities.json"
+      - "deploy/ubuntu/prepare.py"
+      - "scripts/terminal_workspace.py"
+      - "tests/test_release_acceptance.py"
+      - "tests/test_recovery.py"
+      - "docs/reference/release-acceptance.md"
+      - "versions.env"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/release-acceptance.yml"
+      - "scripts/release_acceptance.py"
+      - "scripts/release_manifest.py"
+      - "scripts/recovery.py"
+      - "scripts/setup.py"
+      - "conker"
+      - "install.sh"
+      - "docker-compose.yml"
+      - "docker-compose.terminal.yml"
+      - "capabilities.json"
+      - "deploy/ubuntu/prepare.py"
+      - "scripts/terminal_workspace.py"
+      - "tests/test_release_acceptance.py"
+      - "tests/test_recovery.py"
+      - "docs/reference/release-acceptance.md"
+      - "versions.env"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pytest==8.3.5
+      - run: python -m pytest tests/test_release_acceptance.py -q
+      - run: python -m py_compile scripts/release_acceptance.py
+
+  live-matrix:
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: deterministic
+    runs-on: [self-hosted, linux, x64, conker-release-acceptance]
+    timeout-minutes: 120
+    concurrency:
+      group: conker-assembled-release-acceptance
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+      - name: Run exact published image matrix
+        env:
+          CONKER_ACCEPTANCE_PROTECTION_ROOT: ${{ vars.CONKER_ACCEPTANCE_PROTECTION_ROOT }}
+          CONKER_ACCEPTANCE_TERMINAL_WORKSPACE: ${{ vars.CONKER_ACCEPTANCE_TERMINAL_WORKSPACE }}
+        run: python3 scripts/release_acceptance.py --require-conversation
+      - name: Retain acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assembled-release-acceptance-${{ github.run_id }}
+          path: release-acceptance-evidence/
+          if-no-files-found: error
+          retention-days: 30
