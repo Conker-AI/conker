@@ -324,7 +324,7 @@ cmd_setup() {
             shift || true
             case "$step" in
                 protection)
-                    local destination= retention=7
+                    local destination='' retention=7
                     while [ "$#" -gt 0 ]; do
                         case "$1" in
                             --destination) [ "$#" -ge 2 ] || exit 2; destination=$2; shift 2 ;;
@@ -579,8 +579,8 @@ speech_call() {
 }
 
 speech_runtime_state() {
-    local expected=$1 attempt result
-    for attempt in $(seq 1 30); do
+    local expected=$1 result
+    for _ in $(seq 1 30); do
         result=$(compose exec -T pi python -c '
 import json, sys, urllib.request
 expected = sys.argv[1]
