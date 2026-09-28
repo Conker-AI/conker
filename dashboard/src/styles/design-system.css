@@ -71,6 +71,15 @@
   }
 }
 
+/* Section tabs stay swipeable on narrow screens without a decorative scrollbar. */
+[data-slot="appbar-sections"] {
+  scrollbar-width: none;
+}
+
+[data-slot="appbar-sections"]::-webkit-scrollbar {
+  display: none;
+}
+
 /* Shared nonmodal canvas inspector: selected object detail. */
 .workspace-inspector { display:flex; flex-direction:column; width:320px; max-width:40%; min-height:0; flex-shrink:0; border-left:1px solid var(--border); background:var(--card); }
 @media (max-width:767px) {

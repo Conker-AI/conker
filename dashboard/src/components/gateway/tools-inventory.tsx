@@ -1,6 +1,7 @@
 import { DetailPanel, OverlayBody } from '@/components/design-system/overlays'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
@@ -21,8 +22,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const selected = value?.status === 'ok' ? value.results.find(tool => tool.id === params.get('tool')) : undefined
   const rows = value?.results.filter(tool => `${tool.name} ${tool.id} ${tool.description}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
   return <main className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title="Available tools" description="Actions and workflows this workspace can offer right now." density="compact" /><Button size="sm" variant="outline" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}>Refresh tools</Button></div>
-    <Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Open tool drafts</Link></Button>
+    <PageHeader title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Tool drafts</Link></Button></div>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking available tools…</p>}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}

@@ -2,6 +2,7 @@ export type GatewayRoute =
   | 'today'
   | 'setup'
   | 'chat'
+  | 'chats'
   | 'inbox'
   | 'projects'
   | 'artifacts'
@@ -16,6 +17,8 @@ export type GatewayRoute =
 
 export const gatewaySidebarDestinations = [
   { route: 'today', title: 'Today', path: '/' },
+  { route: 'chats', title: 'Chats', path: '/chats' },
+  { route: 'inbox', title: 'Inbox', path: '/inbox' },
   { route: 'projects', title: 'Projects', path: '/projects' },
   { route: 'artifacts', title: 'Artifacts', path: '/artifacts' },
   { route: 'jobs', title: 'Jobs', path: '/jobs' },
@@ -29,18 +32,17 @@ export const gatewaySidebarDestinations = [
 export const gatewayCommandDestinations = [
   { title: 'Today', path: '/' },
   { title: 'New chat', path: '/chat' },
-  { title: 'Inbox', path: '/inbox' },
   ...gatewaySidebarDestinations.filter(item => item.route !== 'today'),
   { title: 'Companion settings', path: '/settings/companion' },
   { title: 'Model settings', path: '/settings' },
-  { title: 'Setup status', path: '/setup' },
+  { title: 'Setup & readiness', path: '/setup' },
 ] as const
 
 const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
   '/': 'today',
   '/setup': 'setup',
   '/chat': 'chat',
-  '/chats': 'chat',
+  '/chats': 'chats',
   '/companion': 'chat',
   '/inbox': 'inbox',
   '/projects': 'projects',

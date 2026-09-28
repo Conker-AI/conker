@@ -18,6 +18,8 @@ const { gatewayCommandDestinations, gatewaySidebarDestinations, resolveGatewayRo
 
 assert.equal(new Set(gatewayCommandDestinations.map(item => item.path)).size, gatewayCommandDestinations.length, 'Command destinations must be unique')
 assert.equal(new Set(gatewaySidebarDestinations.map(item => item.path)).size, gatewaySidebarDestinations.length, 'Sidebar destinations must be unique')
+assert.deepEqual(gatewaySidebarDestinations.slice(0, 3).map(item => item.title), ['Today', 'Chats', 'Inbox'], 'Primary sidebar order must put Today, Chats and Inbox first')
+assert.equal(gatewayCommandDestinations.find(item => item.path === '/setup').title, 'Setup & readiness')
 for (const item of gatewayCommandDestinations) assert.ok(resolveGatewayRoute(item.path), `${item.path} must resolve in the connected workspace`)
 for (const item of gatewaySidebarDestinations) assert.equal(resolveGatewayRoute(item.path), item.route)
 
@@ -38,7 +40,15 @@ const sidebar = fs.readFileSync(path.join(root, 'src/components/gateway/chat-sid
 const workspace = fs.readFileSync(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
 assert.match(header, /gatewayCommandDestinations\.map/)
 assert.doesNotMatch(header, /Object\.values\(appNavigation\)/)
-assert.match(sidebar, /gatewaySidebarDestinations\.map/)
+assert.match(sidebar, /primaryDestinations\.map/)
+assert.match(sidebar, /moreDestinations\.map/)
+assert.match(sidebar, /to="\/chats"/)
+assert.match(sidebar, /Setup &amp; readiness/)
+assert.doesNotMatch(sidebar, /Finish setup/)
 assert.match(workspace, /resolveGatewayRoute\(location\.pathname\)/)
+
+const primitives = fs.readFileSync(path.join(root, 'src/components/design-system/primitives.tsx'), 'utf8')
+assert.doesNotMatch(primitives, /aria-labelledby=\{id\}[\s\S]{0,160}data-slot="collection-row"|data-slot="collection-row"[\s\S]{0,160}aria-labelledby=\{id\}/,
+  'Collection rows must let visible descendant text form their accessible name')
 
 console.log('Connected navigation registry, discoverability, detail routes and safe section fallbacks passed.')

@@ -43,7 +43,7 @@ export function BaseLayout({ children, title, description, actions, status, head
   }, [pathname])
 
   const content = (
-    <SidebarInset key="content" className="min-h-0 overflow-clip">
+    <SidebarInset key="content" className={cn("min-h-0 overflow-clip", conversation && "border border-border")}>
       {header ?? <SiteHeader />}
       {conversation ? <div className="flex min-h-0 flex-1 flex-col">
         {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive">{error}</p>}

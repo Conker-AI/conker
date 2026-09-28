@@ -117,11 +117,21 @@ async function main() {
     const invalid = createGatewayControlClient({ request: async () => ({ ...valid, recommendedNextOperation: 'run_anything' }) })
     await assert.rejects(invalid.setupStatus(), error => error.kind === 'invalid-response')
 
+    const presentationOutput = path.join(temporary, 'setup-presentation.cjs')
+    await build({ entryPoints: [path.join(root, 'src/components/gateway/setup-presentation.ts')], outfile: presentationOutput, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent' })
+    const { summarizeSetup } = require(presentationOutput)
+    assert.deepEqual(summarizeSetup(valid), {
+      current: valid.steps[2], operation: { label: 'Choose an answer model', to: '/settings' }, resolved: 2, remainingRequired: 4, attention: 2,
+    })
+    assert.equal(summarizeSetup({ ...valid, state: 'complete', currentStep: null, recommendedNextOperation: null, steps: valid.steps.map(step => ({ ...step, state: step.required ? 'complete' : 'skipped' })) }).remainingRequired, 0)
+
     const transport = await fs.readFile(path.join(root, 'src/lib/gateway/transport.ts'), 'utf8')
     const workspace = await fs.readFile(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
     const gatewayNavigation = await fs.readFile(path.join(root, 'src/components/gateway/navigation.ts'), 'utf8')
     const sidebar = await fs.readFile(path.join(root, 'src/components/gateway/chat-sidebar.tsx'), 'utf8')
     const progress = await fs.readFile(path.join(root, 'src/components/gateway/setup-progress.tsx'), 'utf8')
+    const presentation = await fs.readFile(path.join(root, 'src/components/gateway/setup-presentation.ts'), 'utf8')
+    const readiness = await fs.readFile(path.join(root, 'src/components/gateway/setup-readiness-prompt.tsx'), 'utf8')
     const preview = await fs.readFile(path.join(root, 'src/dev/fake-gateway.ts'), 'utf8')
     const statusHook = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-hook.ts'), 'utf8')
     assert.ok(transport.includes('/^\\/api\\/control\\/pi\\/setup\\/status$/'),
@@ -139,8 +149,14 @@ async function main() {
       'The connected shell must render setup through the shared route resolver')
     assert.match(workspace, /params\.get\('tab'\) === 'harness'[\s\S]*GatewayAgentsWorkspace/,
       'Companion harness configuration must be reachable from the connected shell')
-    assert.match(sidebar, /setup\.status\.state !== 'complete'/,
-      'Completed setup must leave the persistent sidebar')
+    assert.doesNotMatch(sidebar, /useGatewaySetupStatus|Finish setup/,
+      'Temporary setup progress must not occupy permanent sidebar navigation')
+    assert.match(sidebar, /Setup &amp; readiness/,
+      'Setup must remain discoverable from the account menu')
+    assert.match(readiness, /status\.state === 'complete'\) return null/,
+      'Completed setup must remove the temporary Today prompt')
+    assert.match(readiness, /Finish setting up Conker[\s\S]*Continue setup/,
+      'Incomplete setup must have one clear continuation action on Today')
     assert.match(progress, /Mounted destination[\s\S]*Copies to keep[\s\S]*Save backup policy/,
       'Protection must collect one typed off-machine destination and retention policy')
     assert.match(progress, /conker setup run protection/,
@@ -151,15 +167,15 @@ async function main() {
       'The harmless approval rehearsal must use the real owner decision flow')
     assert.doesNotMatch(progress, /release_acceptance|release-acceptance/,
       'First-run onboarding must not be coupled to assembled Linux release promotion')
-    assert.match(progress, /Your companion is available now/,
-      'Setup must hand off to first value as soon as the secure conversation prerequisites are verified')
+    assert.doesNotMatch(progress, /Your companion is available now/,
+      'Incomplete setup must not compete with a duplicate companion promotion')
     assert.match(progress, /First conversation[\s\S]*Working boundaries[\s\S]*Recovery and proof/,
       'Setup must group the verification ledger into an understandable path')
     assert.match(progress, /This is the last verified result/,
       'A failed refresh must distinguish retained evidence from a current result')
     assert.match(progress, /Keep off for now/,
       'Optional setup steps must expose a durable skip instead of trapping the state machine')
-    assert.match(progress, /skipped: 'Off for now'/,
+    assert.match(presentation, /skipped: 'Off for now'/,
       'An explicit opt-out must not be presented as a verified enabled capability')
     assert.match(preview, /memoryChoice === 'skip' \? 'skipped'/,
       'The preview must preserve memory opt-out semantics')

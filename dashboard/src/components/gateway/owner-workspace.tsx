@@ -108,7 +108,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   return <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6">
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6">
       <div className="flex items-start justify-between gap-3">
-        <PageHeader title="Inbox" description="Things waiting for you." />
+        <PageHeader title="Inbox" description="Review requests before Conker can continue." />
         <Button variant="ghost" size="icon" aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></Button>
       </div>
       {requestId && <Button asChild size="sm" variant="ghost" className="self-start"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>}
@@ -118,7 +118,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
       {requestId ? current && card(current, true) : <>
         {(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
         <section aria-labelledby="approvals-heading" className="flex flex-col gap-4">
-          <h2 id="approvals-heading" className="text-base font-medium">Needs your OK</h2>
+          <h2 id="approvals-heading" className="text-base font-medium">Waiting for your decision</h2>
           {pendingRows.map(row => card(row))}
           {!loading && !error && pendingRows.length === 0 && <p className="text-sm text-muted-foreground">{query ? 'No matching requests.' : "You're all caught up."}</p>}
         </section>

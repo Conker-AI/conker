@@ -46,7 +46,7 @@ export function AppbarSections({ sections, activeSection }: Pick<Navigation, "se
     activeLink.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
   }, [activeSection])
   if (!sections.length) return null
-  return <nav aria-label="Page sections" className="min-w-0 scroll-px-4 overflow-x-auto px-4 pb-2 sm:scroll-px-6 sm:px-6">
+  return <nav data-slot="appbar-sections" aria-label="Page sections" className="min-w-0 scroll-px-4 overflow-x-auto px-4 pb-2 sm:scroll-px-6 sm:px-6">
     <div className="flex w-max min-w-full items-center gap-1">
       {sections.map(section => <Link key={section.value} to={section.to}
         ref={activeSection === section.value ? activeLink : undefined}

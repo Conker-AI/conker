@@ -11,7 +11,7 @@ export function PageHeader({ title, description, actions, status, density = "sta
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className={cn("break-words font-semibold tracking-tight", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
+        <h1 className={cn("break-words font-semibold", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
         {status}
       </div>
       {description && <p className={cn("max-w-prose text-sm text-muted-foreground", density === "compact" ? "mt-1 leading-5" : "mt-2 leading-6")}>{description}</p>}
@@ -60,16 +60,15 @@ export function CollectionSearch({ label, ...props }: Omit<ComponentProps<typeof
 export function CollectionRow({ to, title, description, descriptionTitle, leading, trailing }: {
   to: string; title: string; description: ReactNode; descriptionTitle?: string; leading?: ReactNode; trailing?: ReactNode
 }) {
-  const id = useId()
   return <li>
-    <Link data-slot="collection-row" to={to} aria-labelledby={id} aria-describedby={`${id}-preview${trailing ? ` ${id}-meta` : ""}`}
+    <Link data-slot="collection-row" to={to}
       className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
       {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
-        <h3 id={id} className="truncate text-sm leading-5 font-medium" title={title}>{title}</h3>
-        <p id={`${id}-preview`} className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs leading-5 text-muted-foreground" title={descriptionTitle}>{description}</p>
+        <h3 className="truncate text-sm leading-5 font-medium" title={title}>{title}</h3>
+        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs leading-5 text-muted-foreground" title={descriptionTitle}>{description}</p>
       </div>
-      {trailing && <span id={`${id}-meta`} className="flex shrink-0 flex-col items-end gap-0.5 text-xs leading-5 text-muted-foreground tabular-nums">{trailing}</span>}
+      {trailing && <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs leading-5 text-muted-foreground tabular-nums">{trailing}</span>}
     </Link>
   </li>
 }
@@ -95,7 +94,7 @@ export function RecordItem({ title, lang, description, leading, meta, actions, o
 }
 
 export function CollectionEmpty({ title, description, icon, onClear, clearLabel = "Clear search", action }: { title: string; description: string; icon?: ReactNode; onClear?: () => void; clearLabel?: string; action?: ReactNode }) {
-  return <div data-slot="collection-empty" className="flex flex-col items-center px-4 py-16 text-center">
+  return <div data-slot="collection-empty" className="flex flex-col items-center px-4 py-10 text-center sm:py-16">
     <span className="mb-4 text-muted-foreground [&>svg]:size-7" aria-hidden="true">{icon ?? <SearchX />}</span>
     <h2 className="text-base font-medium">{title}</h2>
     <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>

@@ -10,6 +10,8 @@ import { createCallRequestId, type GatewayCall, type GatewayCallAvailability, ty
 import { gatewayError } from '@/lib/gateway/transport'
 import { useGatewayCallAudio } from '@/hooks/use-gateway-call-audio'
 import { cn } from '@/lib/utils'
+import { OwnerAvatar } from './owner-avatar'
+import { useOwnerProfile } from '@/lib/owner-profile'
 
 type UncertainTurn = { requestId: string; kind: 'text' | 'audio'; text?: string; checked: boolean }
 
@@ -18,6 +20,7 @@ function clock(value: number) {
 }
 
 export function GatewayCallLauncher({ client, conversationId, disabled = false }: { client: GatewayCallsClient; conversationId: string; disabled?: boolean }) {
+  const ownerProfile = useOwnerProfile()
   const [open, setOpen] = useState(false)
   const [call, setCall] = useState<GatewayCall | null>(null)
   const [availability, setAvailability] = useState<GatewayCallAvailability | null>(null)
@@ -140,13 +143,18 @@ export function GatewayCallLauncher({ client, conversationId, disabled = false }
   const voiceOutputReady = availability?.speechOutput === 'configured' || availability?.speechOutput === 'available'
 
   return <>
-    <Button size="icon" variant="ghost" aria-label="Open call mode" title="Open call mode" disabled={disabled} onClick={() => void openCall()}><Phone /></Button>
+    <Button size="sm" variant="ghost" className="gap-1.5 px-2.5" aria-label="Call Conker" title="Call Conker" disabled={disabled} onClick={() => void openCall()}><Phone /><span className="hidden sm:inline">Call</span></Button>
     <Dialog open={open} onOpenChange={next => { setOpen(next); if (!next) { voice.cancel(); voice.stopPlayback() } }}>
       <TaskDialogContent size="wide" className="h-[min(46rem,calc(100dvh-2rem))] sm:max-w-3xl" title={call?.endedAt ? 'Call ended' : 'Call mode'} description="A focused voice or typed conversation. Audio is transient; the transcript is saved.">
         <OverlayBody className="flex min-h-0 flex-1 flex-col overflow-y-hidden p-0">
           <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
             <Badge variant={call?.endedAt ? 'outline' : call?.paused ? 'outline' : 'secondary'}>{call?.endedAt ? 'ended' : call?.paused ? 'paused' : busy ? 'thinking' : 'ready'}</Badge>
-            <Badge variant="outline">{voiceInputReady ? voiceOutputReady ? 'Voice ready' : 'Voice input ready' : 'Text ready'}</Badge>
+            <Badge variant="outline">{voiceInputReady ? voiceOutputReady ? 'Voice ready' : 'Voice input ready' : 'Voice needs setup'}</Badge>
+            <Badge variant="outline" className="hidden sm:inline-flex">Video unavailable</Badge>
+            <div className="ml-auto flex items-center gap-1.5" aria-label="Call participants: Conker and you">
+              <span className="flex size-7 items-center justify-center rounded-full border bg-background" title="Conker"><img src="/conker.png" alt="" width="20" height="20" className="size-5 object-contain" /></span>
+              <OwnerAvatar className="size-7" />
+            </div>
             {call && <div className="ml-auto flex rounded-md border p-0.5" role="group" aria-label="Call style">
               {(['focus', 'character'] as const).map(mode => <Button key={mode} size="sm" variant={call.mode === mode ? 'secondary' : 'ghost'} className="h-7 px-2.5" aria-pressed={call.mode === mode} disabled={!!pending || !!call.endedAt} onClick={() => void change(value => client.update(value.id, value.revision, { mode }))}>{mode === 'focus' ? <Focus /> : <MessageSquareText />}{mode}</Button>)}
             </div>}
@@ -154,7 +162,7 @@ export function GatewayCallLauncher({ client, conversationId, disabled = false }
           <div ref={transcript} className="min-h-0 flex-1 overflow-y-auto px-5 py-5" tabIndex={0} aria-label="Saved call transcript">
             {!call && pending === 'opening' && <p role="status" className="py-16 text-center text-sm text-muted-foreground">Opening the saved call…</p>}
             {!call && !pending && <div className="py-16 text-center"><p className="text-sm font-medium">Call mode is unavailable</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">Check the server connection, then try again. No call was retried automatically.</p><Button className="mt-4" size="sm" variant="outline" onClick={() => void openCall()}><RefreshCw />Check active call</Button></div>}
-            {call && messages.length === 0 && <div className="py-12 text-center"><Phone className="mx-auto size-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium">A quieter place to think together</p><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">Speak or type one thought at a time. The transcript is saved with this call conversation; recordings and generated audio are not retained.</p></div>}
+            {call && messages.length === 0 && <div className="py-12 text-center"><div className="mx-auto flex w-fit items-start gap-6"><div><span className="flex size-16 items-center justify-center rounded-full border bg-background"><img src="/conker.png" alt="" width="44" height="44" className="size-11 object-contain" /></span><p className="mt-2 text-xs font-medium">Conker</p></div><div><OwnerAvatar className="size-16" /><p className="mt-2 max-w-24 truncate text-xs font-medium">{ownerProfile.name}</p></div></div><p className="mt-5 text-sm font-medium">A quieter place to think together</p><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">Type now, or use voice after speech is connected. Video calls are not connected to this gateway yet.</p><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-muted-foreground">The transcript is saved; recordings and generated audio are not retained.</p></div>}
             <ol className="mx-auto max-w-2xl space-y-5">{call?.events.map(item => item.kind === 'event' ? <li key={item.id} className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>{item.text}</span><span className="h-px flex-1 bg-border" /></li> : <li key={item.id} className={cn('flex', item.kind === 'user' ? 'justify-end' : 'justify-start')}><div className={cn('max-w-[85%] rounded-lg px-4 py-3 text-sm leading-6', item.kind === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}><p className="whitespace-pre-wrap break-words">{item.text}</p><time className={cn('mt-1 block text-[11px]', item.kind === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{clock(item.at)}</time></div></li>)}</ol>
             {call?.eventsTruncated && <p className="mt-5 text-center text-xs text-muted-foreground">Earlier call events remain saved but are outside this bounded view.</p>}
           </div>

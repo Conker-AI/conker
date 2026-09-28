@@ -6,6 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/design-system/primitives'
 import { BaseLayout } from '@/components/layouts/base-layout'
 import { GatewayChatSidebar } from './chat-sidebar'
@@ -32,6 +33,7 @@ const GatewaySetupProgress = lazy(() => import('./setup-progress').then(module =
 const GatewayActivityWorkspace = lazy(() => import('./activity-workspace').then(module => ({ default: module.GatewayActivityWorkspace })))
 const GatewayAgentsWorkspace = lazy(() => import('./agents-workspace').then(module => ({ default: module.GatewayAgentsWorkspace })))
 const GatewayTodayWorkspace = lazy(() => import('./today-workspace').then(module => ({ default: module.GatewayTodayWorkspace })))
+const GatewayChatsWorkspace = lazy(() => import('./chats-workspace').then(module => ({ default: module.GatewayChatsWorkspace })))
 const GatewayProjectsWorkspace = lazy(() => import('./projects-workspace').then(module => ({ default: module.GatewayProjectsWorkspace })))
 const GatewayArtifactsWorkspace = lazy(() => import('./artifacts-workspace').then(module => ({ default: module.GatewayArtifactsWorkspace })))
 const GatewayJobsWorkspace = lazy(() => import('./jobs-workspace').then(module => ({ default: module.GatewayJobsWorkspace })))
@@ -41,7 +43,11 @@ const GatewayTeamsWorkspace = lazy(() => import('./teams-workspace').then(module
 const GatewayFilesystemWorkspace = lazy(() => import('./filesystem-workspace').then(module => ({ default: module.GatewayFilesystemWorkspace })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
 
-const workspaceFallback = <div className="p-6 text-sm text-muted-foreground" role="status">Opening workspace…</div>
+const workspaceFallback = <div className="min-h-0 flex-1 space-y-6 p-4 sm:p-6 lg:p-8" role="status" aria-busy="true">
+  <span className="sr-only">Opening workspace…</span>
+  <div className="space-y-2"><Skeleton className="h-8 w-48" /><Skeleton className="h-5 w-full max-w-md" /></div>
+  <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]"><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>
+</div>
 
 export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {
   /** A short marker shown beside the name, e.g. that this is a preview with sample data. */
@@ -57,7 +63,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const savedPrivacy = useCallback((id: string, disabled: boolean) => setHarnessBySession(current => ({ ...current, [id]: disabled })), [])
   const route = resolveGatewayRoute(location.pathname)
   const memoryActive = route === 'memory', modelsActive = route === 'settings'
-  const homeActive = route === 'today', setupActive = route === 'setup', chatActive = route === 'chat'
+  const homeActive = route === 'today', setupActive = route === 'setup', chatActive = route === 'chat', chatsActive = route === 'chats'
   const inboxActive = route === 'inbox', toolsActive = route === 'tools', agentsActive = route === 'agents'
   const companionSettingsActive = route === 'companion-settings', projectsActive = route === 'projects'
   const artifactsActive = route === 'artifacts', jobsActive = route === 'jobs', activityActive = route === 'activity'
@@ -72,9 +78,10 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat pages carry their own quiet top bar; other pages keep the page header.
-  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
+  return <BaseLayout variant="canvas" header={chatActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
     <Suspense fallback={workspaceFallback}>
-      {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} />}
+      {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
+      {chatsActive && <GatewayChatsWorkspace runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active /></div>}
       {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}

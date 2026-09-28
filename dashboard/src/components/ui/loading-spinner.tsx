@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { LoaderCircle } from "lucide-react"
 
 interface LoadingSpinnerProps {
   className?: string
@@ -17,9 +18,10 @@ export function LoadingSpinner({ className, size = "md" }: LoadingSpinnerProps) 
   return (
     <div role="status" aria-label="Loading screen" className="flex items-center justify-center min-h-[200px]">
       <span className="sr-only">Loading screen…</span>
-      <div
+      <LoaderCircle
+        aria-hidden="true"
         className={cn(
-          "animate-spin rounded-full border-b-2 border-primary",
+          "animate-spin text-muted-foreground",
           sizeClasses[size],
           className
         )}

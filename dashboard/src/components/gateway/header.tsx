@@ -12,7 +12,7 @@ import { gatewayCommandDestinations } from './navigation'
 export function GatewayHeader({ children }: { children?: ReactNode }) {
   const location = useLocation(), navigate = useNavigate(), [search, setSearch] = useState(false)
   const page = matchAppRoute(location.pathname)
-  const title = location.pathname === '/chats' ? 'Chats' : location.pathname === '/setup' ? 'Setup'
+  const title = location.pathname === '/' ? 'Today' : location.pathname === '/chats' ? 'Chats' : location.pathname === '/setup' ? 'Setup'
     : location.pathname === '/settings/companion' ? 'Companion'
     : /^\/agents\/agent_[0-9a-f]{32}\/edit$/.test(location.pathname) ? 'Edit agent' : appNavigation[page.key].title
   const params = new URLSearchParams(location.search)

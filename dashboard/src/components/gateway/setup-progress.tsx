@@ -9,24 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { PageHeader } from '@/components/design-system/primitives'
-import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStatus, SetupStep } from '@/lib/gateway/control'
+import { StatusBadge } from '@/components/status-badge'
+import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStep } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { useGatewaySetupStatus } from './setup-status-hook'
-
-const labels: Record<SetupStep['id'], { title: string; description: string }> = {
-  security: { title: 'Secure this Conker', description: 'Owner access and durable storage are verified.' },
-  companion: { title: 'Meet your companion', description: 'Your companion has a durable identity and working defaults.' },
-  model: { title: 'Choose how it thinks', description: 'The selected answer model responds successfully.' },
-  memory: { title: 'Choose what it remembers', description: 'Memory is either verified or intentionally left off.' },
-  capabilities: { title: 'Connect capabilities', description: 'Useful tools are available through the action boundary.' },
-  boundaries: { title: 'Set action boundaries', description: 'Approval and execution policy has been reviewed.' },
-  protection: { title: 'Protect the installation', description: 'A recoverable backup has been created and verified.' },
-  rehearsal: { title: 'Run a real rehearsal', description: 'Conversation, memory, and approval paths work together.' },
-}
-const states: Record<SetupStep['state'], string> = {
-  not_started: 'Not started', in_progress: 'In progress', blocked: 'Blocked', skipped: 'Off for now', complete: 'Verified', degraded: 'Needs attention',
-}
+import { setupLabels, setupStateLabels, summarizeSetup } from './setup-presentation'
 const setupPhases: { title: string; description: string; steps: SetupStep['id'][] }[] = [
   {
     title: 'First conversation',
@@ -44,23 +32,6 @@ const setupPhases: { title: string; description: string; steps: SetupStep['id'][
     steps: ['protection', 'rehearsal'],
   },
 ]
-const operations: Record<NonNullable<SetupStatus['recommendedNextOperation']>, { label: string; to: string }> = {
-  configure_owner_channel: { label: 'Open system status', to: '/system' },
-  repair_durable_store: { label: 'Open system status', to: '/system' },
-  repair_companion_configuration: { label: 'Open system status', to: '/system' },
-  configure_companion: { label: 'Shape your companion', to: '/settings/companion?tab=harness' },
-  configure_model: { label: 'Choose an answer model', to: '/settings' },
-  test_model: { label: 'Test the answer model', to: '/settings' },
-  repair_model_provider: { label: 'Check model settings', to: '/settings' },
-  configure_memory: { label: 'Open memory', to: '/memory' },
-  repair_memory: { label: 'Check memory', to: '/memory' },
-  configure_capabilities: { label: 'Open tools', to: '/tools' },
-  repair_toolgate: { label: 'Open system status', to: '/system' },
-  review_boundaries: { label: 'Review tools', to: '/tools' },
-  verify_protection: { label: 'Open system status', to: '/system' },
-  run_rehearsal: { label: 'Open system status', to: '/system' },
-}
-
 const hostOperations = {
   protection: {
     command: 'conker setup run protection',
@@ -359,16 +330,10 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
   if (!status && !error) return <main className="min-h-0 flex-1 p-4 sm:p-6"><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></main>
   if (!status) return <main className="min-h-0 flex-1 space-y-4 p-4 sm:p-6"><PageHeader title="Setup" description="Conker could not read verified setup progress." density="compact" /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></main>
 
-  const isResolved = (step: SetupStep) => step.state === 'complete' || step.state === 'skipped'
-  const resolved = status.steps.filter(isResolved).length
-  const firstConversationReady = status.steps.filter(step => ['security', 'companion', 'model'].includes(step.id)).every(isResolved)
-  const remainingRequired = status.steps.filter(step => step.required && !isResolved(step)).length
-  const attention = status.steps.filter(step => step.state === 'blocked' || step.state === 'degraded').length
-  const current = status.steps.find(step => step.id === status.currentStep) ?? null
-  const operation = status.recommendedNextOperation ? operations[status.recommendedNextOperation] : null
+  const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
   return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title={status.state === 'complete' ? 'Conker is ready' : 'Finish setting up Conker'} description="Progress comes from live checks and durable receipts, so it stays accurate across browsers and restarts." density="compact" /><Button variant="ghost" size="sm" onClick={refresh}><RefreshCw />Refresh</Button></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title={status.state === 'complete' ? 'Conker is ready' : 'Finish setting up Conker'} description={status.state === 'complete' ? 'The required checks are complete and your choices are saved.' : 'Complete the remaining checks so Conker can act safely and recover if something goes wrong.'} density="compact" /><Button variant="ghost" size="sm" onClick={refresh}><RefreshCw />Refresh</Button></div>
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       <section aria-labelledby="setup-progress-title" className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
@@ -381,7 +346,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
         <section aria-labelledby="next-step-title" className="min-w-0 rounded-lg border bg-card p-5 text-card-foreground sm:p-6">
           {current ? <>
             <div className="flex flex-wrap items-start justify-between gap-5">
-              <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-2"><h2 id="next-step-title" className="text-xl font-semibold">{labels[current.id].title}</h2><Badge variant={current.state === 'blocked' || current.state === 'degraded' ? 'destructive' : 'secondary'}>{states[current.state]}</Badge></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{current.evidence[0]?.detail ?? labels[current.id].description}</p></div>
+              <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-2"><h2 id="next-step-title" className="text-xl font-semibold">{setupLabels[current.id].title}</h2><StatusBadge tone={current.state === 'blocked' || current.state === 'degraded' ? 'warning' : current.state === 'complete' ? 'live' : 'neutral'}>{setupStateLabels[current.state]}</StatusBadge></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{current.evidence[0]?.detail ?? setupLabels[current.id].description}</p></div>
               <div className="flex flex-wrap items-center gap-2">{operation && current.id !== 'model' && current.id !== 'memory' && current.id !== 'capabilities' && current.id !== 'boundaries' && current.id !== 'protection' && current.id !== 'rehearsal' && <Button asChild><Link to={operation.to}>{operation.label}<ArrowRight /></Link></Button>}{current.id === 'companion' && <SetupChoiceControl client={client} step="companion" choice="accept" label="Keep supplied default" onSaved={refresh} />}{current.id === 'memory' && <><SetupChoiceControl client={client} step="memory" choice="include" label="Use memory" onSaved={refresh} /><SetupChoiceControl client={client} step="memory" choice="skip" label="Keep off for now" onSaved={refresh} /></>}{current.id === 'capabilities' && <><SetupChoiceControl client={client} step="capabilities" choice="include" label="Connect available tools" onSaved={refresh} /><SetupChoiceControl client={client} step="capabilities" choice="skip" label="Keep off for now" onSaved={refresh} /></>}</div>
             </div>
             {current.id === 'model' && <ModelSetupControl client={client} onSaved={refresh} />}
@@ -389,11 +354,10 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
             {current.id === 'boundaries' && <BoundaryReview client={client} expectedRevision={current.evidence[0]?.revision ?? 0} onRecorded={refresh} />}
             {current.id === 'protection' && <ProtectionControl client={client} onSaved={refresh} />}
             {current.id === 'rehearsal' && <RehearsalControl client={client} onRecorded={refresh} />}
-            {firstConversationReady && <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4"><div><p className="text-sm font-medium">Your companion is available now</p><p className="mt-1 text-sm text-muted-foreground">Continue hardening setup here, or start a conversation and return later.</p></div><Button variant="outline" asChild><Link to="/chat"><MessageSquare />Open companion</Link></Button></div>}
           </> : <div className="flex flex-wrap items-center justify-between gap-5"><div className="max-w-2xl"><h2 id="next-step-title" className="text-xl font-semibold">Setup is complete</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Required checks have current evidence, and your optional choices are saved.</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
         </section>
         <aside aria-labelledby="setup-steps-title" className="min-w-0 space-y-5 xl:sticky xl:top-6">
-          <div><h2 id="setup-steps-title" className="text-base font-semibold">Setup path</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>
+          <div><h2 id="setup-steps-title" className="text-base font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>
           <div className="divide-y border-y">{setupPhases.map((phase, phaseIndex) => <section key={phase.title} className="py-4" aria-labelledby={`setup-phase-${phaseIndex}`}>
             <div className="mb-2"><h3 id={`setup-phase-${phaseIndex}`} className="text-sm font-semibold">{phase.title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{phase.description}</p></div>
             <ol>{phase.steps.map(id => {
@@ -401,8 +365,8 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
               if (!step) return null
               const active = step.id === status.currentStep
               return <li key={step.id} className={cn('grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3 rounded-md py-2', active && '-mx-2 bg-muted px-2')} aria-current={active ? 'step' : undefined}>
-                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-muted-foreground [&>svg]:size-4', step.state === 'complete' && 'border-primary bg-primary text-primary-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'border-destructive/50 text-destructive')}><StateIcon state={step.state} /></span>
-                <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2"><span className="text-sm font-medium">{labels[step.id].title}</span><span className={cn('text-xs text-muted-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'text-destructive')}>{states[step.state]}{!step.required ? ' · Optional' : ''}</span></div>{active && <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.evidence[0]?.detail ?? labels[step.id].description}</p>}{step.state === 'skipped' && (step.id === 'memory' || step.id === 'capabilities') && <div className="mt-1"><SetupChoiceControl client={client} step={step.id} choice="include" label="Set up now" onSaved={refresh} /></div>}</div>
+                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-muted-foreground [&>svg]:size-4', step.state === 'complete' && 'border-primary bg-primary text-primary-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'border-warning-border text-warning')}><StateIcon state={step.state} /></span>
+                <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2"><span className="text-sm font-medium">{setupLabels[step.id].title}</span><span className={cn('text-xs text-muted-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'text-warning')}>{setupStateLabels[step.state]}{!step.required ? ' · Optional' : ''}</span></div>{active && <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.evidence[0]?.detail ?? setupLabels[step.id].description}</p>}{step.state === 'skipped' && (step.id === 'memory' || step.id === 'capabilities') && <div className="mt-1"><SetupChoiceControl client={client} step={step.id} choice="include" label="Set up now" onSaved={refresh} /></div>}</div>
               </li>
             })}</ol>
           </section>)}</div>
