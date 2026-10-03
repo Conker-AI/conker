@@ -44,7 +44,7 @@ const fieldLabel = (value: string) => fieldLabels[value] ?? value.replaceAll('_'
 
 export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClient }) {
   const [page, setPage] = useState<MemoryLibrary | null>(null)
-  const [search, setSearch] = useState(''), [query, setQuery] = useState('')
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? ''), [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [type, setType] = useState<MemoryObjectKind | 'all'>('all')
   const [params, setParams] = useSearchParams()
   const view = params.get('view') === 'database' ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
@@ -58,6 +58,21 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
   const workspace = useRef<HTMLDivElement>(null)
   const detailEpoch = useRef(0), libraryEpoch = useRef(0), contentEpoch = useRef(0)
+  const targetId = params.get('record'), targetKind = params.get('kind')
+  const targetQuery = params.get('q') ?? ''
+  useEffect(() => {
+    let active = true
+    void Promise.resolve().then(() => { if (active) { setSearch(targetQuery); setQuery(targetQuery) } })
+    return () => { active = false }
+  }, [targetQuery])
+  useEffect(() => {
+    if (!targetId || !targetKind || !kinds.includes(targetKind as MemoryObjectKind)) return
+    const controller = new AbortController()
+    client.connections(targetKind as MemoryObjectKind, targetId, { signal: controller.signal }).then(value => {
+      if (!controller.signal.aborted) { setSelected(value.object); setDetail(value); setContent(null); setDetailError('') }
+    }).catch(() => { if (!controller.signal.aborted) setError('That memory record is no longer available.') })
+    return () => controller.abort()
+  }, [client, targetId, targetKind])
   useEffect(() => {
     if (!page || !isGraph) return
     const controller = new AbortController()

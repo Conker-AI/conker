@@ -92,6 +92,28 @@ Main shells have no elevation. Inner decision surfaces and composers retain
 their semantic shadow tokens; floating overlays retain their stronger depth.
 Today keeps setup progress above the sidebar profile, not in a second banner.
 
+Route commands use `WorkspaceRouteActions`: on phones keep the primary command
+reachable and disclose secondary commands in the named workspace-actions menu.
+Character editor sections are unframed; genuinely framed previews remain raised.
+
+### Universal search contract
+
+The command dialog progressively groups pages, authenticated metadata, retained
+literal text and explicitly enabled semantic retrieval. Match labels survive
+optional AI ranking. Local filters are not universal search. Opening a result
+navigates to its actual source; search never executes work or changes authority.
+Abort obsolete queries, debounce typing and retain literal results when providers
+fail. Expose partial, unavailable and degraded coverage rather than inventing hits.
+
+Settings use verified writes with revision checks. Metadata and literal text need
+no provider; semantic retrieval and bounded `search-ranking` are opt-in. The model
+role owns its model, timeout and fallback. Current source adapters scan at most
+200 records; memory library text is limited to retained previews, and only
+MemoryGate supplies a semantic index. Other sources have no semantic capability
+until their source-owned index adapters exist. Do not describe this as complete
+cross-source indexing. Private and forgotten origins remain excluded. No raw
+activity payloads, protected tool inputs, credentials or filesystem crawling.
+
 | Role / token | Default contract |
 | --- | --- |
 | Default button / input / select: `--control-height` | 40px / `2.5rem` |
@@ -108,7 +130,7 @@ Today keeps setup progress above the sidebar profile, not in a second banner.
 | Page description | 14px type / 24px line height |
 | Collection description | 14px type / 20px line height; 4px after its title |
 | Page top inset | 24px; no extra desktop-only gap before the heading |
-| Page gutters | 16px mobile / 24px small screens / 32px large screens |
+| Page gutters | 16px mobile / 24px desktop |
 | Width | Full available width; no centered route-wide maximum |
 | Corners | Derive from editable `--radius` |
 

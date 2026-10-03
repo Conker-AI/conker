@@ -89,14 +89,23 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
         setRuns(values => more ? uniqueRows(values, page.results) : page.results); setRunCursor(page.nextCursor)
         forgetSources(new Set(page.results.filter(run => run.contentStatus === 'forgotten').map(run => run.sessionId)))
       } else {
-        const page = await request(signal => client.listEvents({ ...options, runId: runFilter, signal }))
+        let page = await request(signal => client.listEvents({ ...options, runId: runFilter, signal }))
+        let found = page.results
+        // Search can select an event beyond the first 50-row page. Resolve its
+        // bounded source window without introducing an unfiltered detail read.
+        for (let reads = 1; !more && eventId && !found.some(event => event.id === eventId) && page.nextCursor && reads < 4; reads++) {
+          if (!mounted.current || generation !== generations.current.list) return
+          const nextCursor = page.nextCursor
+          page = await request(signal => client.listEvents({ ...options, cursor: nextCursor, runId: runFilter, signal }))
+          found = uniqueRows(found, page.results)
+        }
         if (!mounted.current || generation !== generations.current.list) return
-        setEvents(values => more ? uniqueRows(values, page.results) : page.results); setEventCursor(page.nextCursor)
-        forgetSources(new Set(page.results.filter(event => event.contentStatus === 'forgotten').map(event => event.sessionId)))
+        setEvents(values => more ? uniqueRows(values, found) : found); setEventCursor(page.nextCursor)
+        forgetSources(new Set(found.filter(event => event.contentStatus === 'forgotten').map(event => event.sessionId)))
       }
     } catch (failure) { if (mounted.current && generation === generations.current.list) setError(gatewayError(failure).message) }
     finally { if (mounted.current && generation === generations.current.list) setLoading(false) }
-  }, [client, forgetSources, request, runFilter, sessionFilter, sourcePrivacy, tab, taskFilter])
+  }, [client, eventId, forgetSources, request, runFilter, sessionFilter, sourcePrivacy, tab, taskFilter])
   const loadSelection = useCallback(async (id: string, kind: 'task' | 'run') => {
     if (!mounted.current) return
     const generation = (generations.current.selection ?? 0) + 1; generations.current.selection = generation

@@ -13,6 +13,30 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Technical workspace redesign (4 October, development branches)
+
+The dashboard now shares compact workspace chrome, central search entry, quiet
+collection filters and consistent editor insets. Today prioritizes waiting
+decisions; verified setup progress remains above the sidebar profile. The
+pre-redesign checkpoint is `c846bf04ecd715da3c835c38e3d07cbc52f7529a` on
+`checkpoint/conker-ui-before-redesign-2026-10-04`.
+
+The companion dashboard and Pi development branches add authenticated staged
+search with verified revisioned settings, source-owned literal projections,
+privacy invalidation on every query, actual record links and optional bounded
+`search-ranking`. Semantic retrieval currently uses MemoryGate only. Memory exact
+text is limited to library previews; other projections are bounded to 200 records
+and report partial coverage. All-source semantic indexing/rebuild controls and
+complete retained-text adapters remain unfinished. These source changes do not
+upgrade pinned releases or deploy a service.
+
+Desktop baseline/revised route captures and representative search, transcript
+and graph checks, collapsed navigation, light/dark themes and a creation dialog
+were recorded locally. The browser viewport override did not
+apply, so mobile, zoom, reduced-motion and custom-theme visual acceptance remain
+unverified. Build and 28 dashboard check suites passed; focused Pi tests cover
+authentication, privacy, settings persistence, pagination and provider fallback.
+
 ### Connected owner workflows
 
 - Browser authentication, session revocation and operation-bound password checks.

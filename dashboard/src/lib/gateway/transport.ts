@@ -63,6 +63,8 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
+routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$/)
+routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
 routes.GET.unshift(/^\/api\/diagnostics$/)
 // Authored agents are owner-controlled records; every mutation receives operation-bound verification.
 routes.GET.unshift(/^\/api\/control\/pi\/agents(?:\/(?:companion|agent_[0-9a-f]{32})(?:\/versions(?:\/[1-9][0-9]{0,9})?)?)?$/)
