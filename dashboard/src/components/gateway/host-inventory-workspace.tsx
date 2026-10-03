@@ -3,6 +3,7 @@ import { Box, CircleAlert, Clock3, Cpu, Network, RefreshCw, ShieldCheck } from '
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { gatewayError } from '@/lib/gateway/transport'
 import { createHostInventoryRequestId, type GatewayConfiguredTargets, type GatewayHostInventory, type GatewayHostInventoryClient } from '@/lib/gateway/host-inventory'
 
@@ -66,8 +67,8 @@ export function GatewayHostInventoryWorkspace({ client, section }: { client: Gat
   }
   const rows = useMemo(() => sample?.observation?.[section].results ?? [], [sample, section])
   const observed = sample?.observation?.[section]
-  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mx-auto max-w-5xl space-y-6">
-    <PageHeader title={labels[section]} description="A redacted, read-only host observation. Sampling never starts, stops, or changes anything." density="compact" actions={<Button size="sm" disabled={pending} onClick={() => void start()}><RefreshCw />{pending ? 'Checking…' : 'New sample'}</Button>} />
+  return <GatewayPageFrame><div className="max-w-5xl space-y-6">
+    <PageHeader actionsOnly title={labels[section]} description="A redacted, read-only host observation. Sampling never starts, stops, or changes anything." density="compact" actions={<Button size="sm" disabled={pending} onClick={() => void start()}><RefreshCw />{pending ? 'Checking…' : 'New sample'}</Button>} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>No host authority</span><span aria-hidden="true">·</span><span>No command lines, users, raw IDs, images, addresses, terminal, or files</span></div>
     {error && <div className="flex items-start gap-3 text-sm text-destructive" role="alert"><CircleAlert className="mt-0.5 size-4 shrink-0" /><div><p>{error}</p>{sample && <Button className="mt-3" variant="outline" size="sm" onClick={() => void inspect(sample.requestId)}>Check saved request</Button>}</div></div>}
     {!sample && !error && <div className="flex min-h-48 flex-col items-center justify-center gap-3 border-y text-center"><span className="flex size-10 items-center justify-center rounded-full border"><Icon className="size-5 text-muted-foreground" /></span><div><p className="text-sm font-medium">No host sample loaded</p><p className="mt-1 max-w-md text-sm text-muted-foreground">Create one explicit observation. Conker will remember its opaque request ID for this browser session.</p></div></div>}
@@ -87,5 +88,5 @@ export function GatewayHostInventoryWorkspace({ client, section }: { client: Gat
       </>}
     </>}
     {section === 'containers' && configured && <section className="space-y-3 border-t pt-5"><div><h2 className="text-sm font-semibold">Configured container targets</h2><p className="mt-1 text-xs text-muted-foreground">Configuration only; reading this list did not observe or execute a container.</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{configured.status.replaceAll('_', ' ')}</Badge><span className="text-xs text-muted-foreground">{configured.results.length} opaque {configured.results.length === 1 ? 'target' : 'targets'} · approval required for any separate action</span></div></section>}
-  </div></main>
+  </div></GatewayPageFrame>
 }

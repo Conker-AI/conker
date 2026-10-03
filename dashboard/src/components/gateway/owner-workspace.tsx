@@ -4,7 +4,8 @@ import { useStore } from 'zustand'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { ProposalsPanel } from './proposals-panel'
-import { CollectionSearch, CollectionRow, CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { CollectionSearch, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
@@ -105,18 +106,15 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     onNote={note => state.setState(value => ({ notes: { ...value.notes, [row.id]: note } }))}
     onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }} />
-  return <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6">
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <PageHeader title="Inbox" description="Review requests before Conker can continue." />
-        <Button variant="ghost" size="icon" aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></Button>
-      </div>
-      {requestId && <Button asChild size="sm" variant="ghost" className="self-start"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>}
+  const refreshButton = <Button variant="ghost" size="icon" className="shrink-0" aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></Button>
+  return <GatewayPageFrame className="h-full">
+    <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
+      {requestId ? <div className="flex items-center justify-between gap-3"><Button asChild size="sm" variant="ghost"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>{refreshButton}</div>
+        : <div className="flex min-w-0 items-center gap-2">{(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}{refreshButton}</div>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}
       {requestId ? current && card(current, true) : <>
-        {(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
         <section aria-labelledby="approvals-heading" className="flex flex-col gap-4">
           <h2 id="approvals-heading" className="text-base font-medium">Waiting for your decision</h2>
           {pendingRows.map(row => card(row))}
@@ -131,5 +129,5 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
         <p className="text-xs text-muted-foreground">Search covers loaded requests. Decisions do not automatically continue a paused run.</p>
       </>}
     </div>
-  </main>
+  </GatewayPageFrame>
 }

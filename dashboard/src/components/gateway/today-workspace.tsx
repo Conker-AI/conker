@@ -12,6 +12,7 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
 import { buildTodaySnapshot } from './today-model'
 import { SetupReadinessPrompt } from './setup-readiness-prompt'
+import { GatewayPageFrame } from './page-frame'
 import '@/app/home/home.css'
 
 type Props = { runtime: GatewayRuntimeClient; activity: GatewayActivityClient; owner: GatewayOwnerClient; proposals: GatewayProposalClient; control: GatewayControlClient }
@@ -60,9 +61,9 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
     return () => { active = false; controller.abort() }
   }, [load])
   const today = buildTodaySnapshot(data)
-  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+  return <GatewayPageFrame>
     <div className="home-overview flex w-full min-w-0 flex-col gap-6">
-      <PageHeader title="Today" description="Pick up where you left off and handle the few things that need you." actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin' : ''} /></Button><Button asChild><Link to="/chat"><SquarePen />New chat</Link></Button></div>} />
+      <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin' : ''} /></Button><Button asChild><Link to="/chat"><SquarePen />New chat</Link></Button></div>} />
       {error && <p role="alert" className="flex items-start gap-2 rounded-lg border bg-muted p-3 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</p>}
       {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <p role="status" className="text-sm text-muted-foreground">Loading today…</p>}
       <SetupReadinessPrompt client={control} />
@@ -90,5 +91,5 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
         </div>
       </div>
     </div>
-  </main>
+  </GatewayPageFrame>
 }

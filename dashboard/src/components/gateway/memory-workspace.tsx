@@ -4,7 +4,7 @@ import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionEmpty, CollectionSearch } from '@/components/design-system/primitives'
+import { CollectionEmpty, CollectionSearch, PageHeader } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import type { WorkspaceEdge, WorkspaceNode } from '@/lib/memory-layout'
@@ -99,6 +99,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     catch (error) { if (epoch === detailEpoch.current && request === contentEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load field.') }
   }
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
+    <PageHeader title="Memory" actionsOnly />
     <div className="memory-workspace-toolbar">
       <Select value={view} onValueChange={setView}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="database">List</SelectItem><SelectItem value="network">Map</SelectItem></SelectContent></Select>
       <form className="memory-live-search flex min-w-0 flex-1 gap-2" onSubmit={event => { event.preventDefault(); setQuery(search); refresh() }}><CollectionSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" /><Button type="submit" variant="outline" disabled={busy}>Search</Button></form>

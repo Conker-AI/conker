@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { GatewayPageFrame } from './page-frame'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -104,18 +105,18 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   if (!agents && !error) return <LoadingPage />
   if (error) return <div className="space-y-4 p-6" role="alert"><PageHeader title="Agents are unavailable" description={error} density="compact" /><Button variant="outline" onClick={load}>Try again</Button></div>
   if (companion) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <div className="shrink-0 border-b px-4 py-5 sm:px-6"><PageHeader title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<Button variant="outline" asChild><Link to="/companion">Open chat</Link></Button>} /></div>
+    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8"><PageHeader actionsOnly title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<Button variant="outline" asChild><Link to="/companion">Open chat</Link></Button>} /></div>
     {selected ? <AgentEditor key={`${selected.revision}:${resetNonce}`} client={client} profile={selected} companion onSaved={saved} onCancel={() => setResetNonce(value => value + 1)} /> : <div className="p-6 text-sm text-muted-foreground">The canonical Companion profile is missing. Check System before continuing.</div>}
   </div>
   if (editMatch) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <div className="shrink-0 border-b px-4 py-5 sm:px-6"><PageHeader title={selected?.configuration.name ?? 'Agent not found'} description="Edit the durable profile. Existing revisions remain available to the server." density="compact" actions={selected && <Button variant="outline" onClick={() => setArchive(selected)}>{selected.archived_at === null ? <Archive /> : <RotateCcw />}{selected.archived_at === null ? 'Archive' : 'Restore'}</Button>} /></div>
+    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8"><PageHeader title={selected?.configuration.name ?? 'Agent not found'} description="Edit the durable profile. Existing revisions remain available to the server." density="compact" actions={selected && <Button variant="outline" onClick={() => setArchive(selected)}>{selected.archived_at === null ? <Archive /> : <RotateCcw />}{selected.archived_at === null ? 'Archive' : 'Restore'}</Button>} /></div>
     {selected?.archived_at === null ? <AgentEditor client={client} profile={selected} onSaved={saved} onCancel={() => navigate('/agents')} /> : selected ? <div className="space-y-3 p-6"><p className="text-sm text-muted-foreground">Restore this agent before editing its profile.</p><Button variant="outline" onClick={() => setArchive(selected)}><RotateCcw />Restore agent</Button></div> : <div className="p-6 text-sm text-muted-foreground">This agent does not exist.</div>}
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? 'Its immutable history is kept, but the profile moves out of active use.' : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
   </div>
   const active = visible.filter(item => item.archived_at === null), archived = visible.filter(item => item.archived_at !== null)
-  return <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+  return <GatewayPageFrame>
     <div className="space-y-6">
-      <PageHeader title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} />
+      <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} />
       <CollectionPanel query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={visible.length} unit={visible.length === 1 ? 'agent' : 'agents'} emptyTitle="No matching agents" emptyDescription={query ? 'Try a different name or role.' : 'Create an agent for a focused kind of work.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
         <div className="space-y-5">
           <CollectionSection title="Active agents">
@@ -127,5 +128,5 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
     </div>
     <Dialog open={creating} onOpenChange={setCreating}><TaskDialogContent title="New agent" description="Create a durable profile for one focused role." size="wide"><AgentEditor client={client} creating onSaved={saved} onCancel={() => setCreating(false)} /></TaskDialogContent></Dialog>
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? 'Its immutable history is kept, but the profile moves out of active use.' : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
-  </div>
+  </GatewayPageFrame>
 }

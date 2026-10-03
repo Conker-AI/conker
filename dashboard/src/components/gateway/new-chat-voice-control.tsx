@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { Mic, Square } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { browserVoiceInput } from '@/lib/voice/browser-voice-input'
 import { insertTranscript, type DraftAnchor } from '@/lib/voice/draft'
 import type { VoiceInputSession, VoiceTranscript } from '@/lib/voice/types'
+import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
+import { MicIcon } from '@/components/icons/animated/icons'
 
 type Recording = { controller: AbortController; session?: VoiceInputSession; anchor: DraftAnchor; transcript: VoiceTranscript }
 
@@ -52,7 +52,7 @@ export function NewChatVoiceControl({ value, onChange, input, disabled }: { valu
   useEffect(() => () => { const run = recording.current; recording.current = null; run?.controller.abort(); run?.session?.cancel() }, [])
 
   return <Tooltip>
-    <TooltipTrigger asChild><Button type="button" variant={listening ? 'secondary' : 'ghost'} size="icon" className="size-9 shrink-0 rounded-full" aria-label={listening ? 'Stop voice typing' : 'Start voice typing'} aria-pressed={listening} disabled={disabled} onClick={() => void start()}>{listening ? <Square className="size-3.5" /> : <Mic />}</Button></TooltipTrigger>
+    <TooltipTrigger asChild><AnimatedIconButton icon={MicIcon} type="button" variant={listening ? 'secondary' : 'ghost'} size="icon" className="size-9 shrink-0 rounded-full" aria-label={listening ? 'Stop voice typing' : 'Start voice typing'} aria-pressed={listening} disabled={disabled} onClick={() => void start()} /></TooltipTrigger>
     <TooltipContent side="top" className="max-w-72">{error || (listening ? 'Stop voice typing' : 'Voice typing')}</TooltipContent>
   </Tooltip>
 }

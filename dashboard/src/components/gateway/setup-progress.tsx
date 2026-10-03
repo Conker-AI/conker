@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { StatusBadge } from '@/components/status-badge'
 import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStep } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -327,11 +328,11 @@ function BoundaryReview({ client, expectedRevision, onRecorded }: { client: Gate
 
 export function GatewaySetupProgress({ client }: { client: GatewayControlClient }) {
   const { status, error, refresh } = useGatewaySetupStatus(client)
-  if (!status && !error) return <main className="min-h-0 flex-1 p-4 sm:p-6"><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></main>
-  if (!status) return <main className="min-h-0 flex-1 space-y-4 p-4 sm:p-6"><PageHeader title="Setup" description="Conker could not read verified setup progress." density="compact" /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></main>
+  if (!status && !error) return <GatewayPageFrame><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></GatewayPageFrame>
+  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" description="Conker could not read verified setup progress." density="compact" /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></GatewayPageFrame>
 
   const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
-  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+  return <GatewayPageFrame>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title={status.state === 'complete' ? 'Conker is ready' : 'Finish setting up Conker'} description={status.state === 'complete' ? 'The required checks are complete and your choices are saved.' : 'Complete the remaining checks so Conker can act safely and recover if something goes wrong.'} density="compact" /><Button variant="ghost" size="sm" onClick={refresh}><RefreshCw />Refresh</Button></div>
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
@@ -374,5 +375,5 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
       </div>
       <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(status.generatedAt).toLocaleString()}. Secret values are never included in this status.</p>
     </div>
-  </main>
+  </GatewayPageFrame>
 }

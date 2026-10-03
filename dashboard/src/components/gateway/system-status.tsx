@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { AlertCircle, Check, CircleMinus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { PageHeader, CollectionSection } from '@/components/design-system/primitives'
+import { CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/control'
 
 const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
@@ -32,9 +33,10 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
     return () => controller.abort()
   }, [client, revision])
   const refresh = () => { setPending(true); setFailed(false); setRevision(value => value + 1) }
-  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title="System status" description="The same diagnostic findings and recovery actions shown by conker doctor." density="compact" /><Button variant="outline" size="sm" disabled={pending} onClick={refresh}><RefreshCw />{pending ? 'Checking…' : 'Refresh'}</Button></div>
+  return <GatewayPageFrame>
+    <div className="max-w-4xl space-y-6">
+      <PageHeader title="System status" actionsOnly />
+      <div className="flex flex-wrap justify-end gap-3"><Button variant="outline" size="sm" disabled={pending} onClick={refresh}><RefreshCw />{pending ? 'Checking…' : 'Refresh'}</Button></div>
       {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
       {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       {report && <>
@@ -51,5 +53,5 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
         <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. Findings contain status only; credentials and service responses are never included.</p>
       </>}
     </div>
-  </main>
+  </GatewayPageFrame>
 }

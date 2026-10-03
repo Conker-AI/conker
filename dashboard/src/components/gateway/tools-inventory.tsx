@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
 
@@ -21,8 +22,8 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   }, [client, revision])
   const selected = value?.status === 'ok' ? value.results.find(tool => tool.id === params.get('tool')) : undefined
   const rows = value?.results.filter(tool => `${tool.name} ${tool.id} ${tool.description}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
-  return <main className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-    <PageHeader title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Tool drafts</Link></Button></div>} />
+  return <GatewayPageFrame className="space-y-4">
+    <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Tool drafts</Link></Button></div>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking available tools…</p>}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
@@ -41,5 +42,5 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
       </DetailPanel>
     </>}
     <p className="text-xs text-muted-foreground">Anything that sends, spends or changes something still asks for your OK in the Inbox.</p>
-  </main>
+  </GatewayPageFrame>
 }

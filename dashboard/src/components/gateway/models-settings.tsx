@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { withAnswerModel, withIdeas } from '@/lib/api/model-roles'
 import { Switch } from '@/components/ui/switch'
 import { PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { Input } from '@/components/ui/input'
 import { OwnerAvatar } from './owner-avatar'
 import { saveOwnerProfile, useOwnerProfile } from '@/lib/owner-profile'
@@ -42,7 +43,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     client.providers(controller.signal).then(value => { if (!controller.signal.aborted) setProviders(value) }).catch(() => { if (!controller.signal.aborted) setProviderError('Provider health could not be verified.') })
     return () => controller.abort()
   }, [client, reload])
-  if (!value) return <div className="p-4">{error ? <><p role="alert">{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)}>Retry</Button></> : <p role="status">Loading model settings…</p>}</div>
+  if (!value) return <GatewayPageFrame>{error ? <><p role="alert">{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)}>Retry</Button></> : <p role="status">Loading model settings…</p>}</GatewayPageFrame>
   const configuration: ModelsConfiguration = value.configuration ? {
     ...value.configuration, providers: value.configuration.providers.map(provider => ({ ...provider, endpoint: '', apiKeyDraft: '' })),
   } : { providers: [], models: [], defaultModelId: null }
@@ -75,8 +76,8 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     reader.onerror = () => setProfileError('That photo could not be read. Choose another image.')
     reader.readAsDataURL(file)
   }
-  return <main className="mx-auto w-full max-w-3xl space-y-7 p-4 sm:p-6">
-    <PageHeader title="Settings" description="Personalize this device and choose how Conker works for you." density="compact" />
+  return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
+    <PageHeader title="Settings" actionsOnly />
     <section aria-labelledby="profile-heading" className="space-y-4 border-b pb-6">
       <div className="space-y-1"><h2 id="profile-heading" className="text-base font-medium">Profile</h2><p className="text-sm text-muted-foreground">Your local identity in Conker and call mode. It is not an online account.</p></div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -140,5 +141,5 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     }} />
       </div>
     </details>
-  </main>
+  </div></GatewayPageFrame>
 }

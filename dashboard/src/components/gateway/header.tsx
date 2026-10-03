@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { activePageSection, appNavigation, matchAppRoute, pageSectionHref, pageSections } from '@/config/navigation'
 import { AppbarBreadcrumbs, AppbarSections } from '@/components/appbar-navigation'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
@@ -11,6 +11,8 @@ import { gatewayCommandDestinations } from './navigation'
 
 export function GatewayHeader({ children }: { children?: ReactNode }) {
   const location = useLocation(), navigate = useNavigate(), [search, setSearch] = useState(false)
+  const { isMobile, openMobile, state } = useSidebar()
+  const sidebarHidden = isMobile ? !openMobile : state === 'collapsed'
   const page = matchAppRoute(location.pathname)
   const title = location.pathname === '/' ? 'Today' : location.pathname === '/chats' ? 'Chats' : location.pathname === '/setup' ? 'Setup'
     : location.pathname === '/settings/companion' ? 'Companion'
@@ -32,7 +34,11 @@ export function GatewayHeader({ children }: { children?: ReactNode }) {
   }, [])
   return <>
     <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background text-foreground">
-      <div className="flex h-(--header-height) min-w-0 items-center gap-2 px-2"><SidebarTrigger className="size-(--control-height) shrink-0" /><Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" /><AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} /><Button variant="ghost" size="icon" className="ml-auto" aria-label="Search pages" onClick={() => setSearch(true)}><Search /></Button>{children}</div>
+      <div className="flex min-h-(--header-height) min-w-0 items-center gap-2 px-3 py-3">
+        {sidebarHidden && <><SidebarTrigger className="size-(--control-height) shrink-0" aria-label="Expand sidebar" title="Expand sidebar" /><Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" /></>}
+        <AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} className={sidebarHidden ? undefined : 'ml-4'} />
+        <Button variant="ghost" size="icon" className="ml-auto" aria-label="Search pages" onClick={() => setSearch(true)}><Search /></Button>{children}
+      </div>
       {location.pathname === '/activity' && <AppbarSections activeSection={tab} sections={['tasks', 'runs', 'events'].map(value => ({ value, label: value[0].toUpperCase() + value.slice(1), to: `/activity?tab=${value}`, badge: undefined }))} />}
       {studioSections.length > 0 && <AppbarSections activeSection={activePageSection('companionSettings', location.search)} sections={studioSections} />}
       {systemSections.length > 0 && <AppbarSections activeSection={activePageSection('system', location.search)} sections={systemSections} />}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronRight, CircleAlert, File, FileQuestion, Folder, FolderOpen, Link2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -88,8 +89,8 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
     setError(null)
   }
 
-  return <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mx-auto max-w-5xl space-y-6">
-    <PageHeader title="Files" description="Browse names and folders inside roots configured by the server operator." density="compact" actions={root ? <Button size="sm" disabled={pending} onClick={() => void request(root.id, currentPath)}><RefreshCw />{pending ? 'Checking…' : directory ? 'New listing' : 'Open root'}</Button> : undefined} />
+  return <GatewayPageFrame><div className="max-w-5xl space-y-6">
+    <PageHeader actionsOnly title="Files" description="Browse names and folders inside roots configured by the server operator." density="compact" actions={root ? <Button size="sm" disabled={pending} onClick={() => void request(root.id, currentPath)}><RefreshCw />{pending ? 'Checking…' : directory ? 'New listing' : 'Open root'}</Button> : undefined} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>Directory listing only</span><span aria-hidden="true">·</span><span>No file contents, editing, uploads, deletes, or shell access</span></div>
 
     {catalogue?.mode === 'configured' && <section className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-end">
@@ -120,7 +121,7 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground"><span>{rows.length} {rows.length === 1 ? 'entry' : 'entries'}</span><span>Sampled {new Date(directory.listing.sampledAt).toLocaleString()}</span><span>Names and kinds only</span></div>
       </section>}
     </>}
-  </div></main>
+  </div></GatewayPageFrame>
 }
 
 function DirectoryRow({ item, pending, onOpen }: { item: GatewayDirectoryEntry; pending: boolean; onOpen: () => void }) {

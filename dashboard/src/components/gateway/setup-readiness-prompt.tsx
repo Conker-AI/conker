@@ -13,7 +13,7 @@ export function SetupReadinessPrompt({ client }: { client: GatewayControlClient 
   const summary = summarizeSetup(status)
   const next = summary.current ? setupLabels[summary.current.id] : null
   const detail = summary.current?.evidence[0]?.detail ?? next?.description
-  return <section aria-labelledby="setup-readiness-title" className="grid min-w-0 gap-4 rounded-lg border border-warning-border bg-warning-subtle p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+  return <section aria-labelledby="setup-readiness-title" className="elevation-surface grid min-w-0 gap-4 rounded-lg border border-warning-border bg-warning-subtle p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
     <div className="min-w-0 space-y-3">
       <div className="flex min-w-0 items-start gap-3">
         <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />

@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import { PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -165,8 +166,8 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
     if (active && !uncertain) requestAnimationFrame(() => terminal.focus())
   }, [active, uncertain])
 
-  return <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
-    <PageHeader title="Terminal" description="Work directly in one operator-configured workspace through a short-lived isolated shell." density="compact" actions={<div className="flex items-center gap-2">
+  return <GatewayPageFrame className="flex flex-col gap-4 overflow-hidden">
+    <PageHeader actionsOnly title="Terminal" description="Work directly in one operator-configured workspace through a short-lived isolated shell." density="compact" actions={<div className="flex items-center gap-2">
       <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" disabled={phase === 'checking' || phase === 'starting' || phase === 'closing'} onClick={() => void inspect()} aria-label="Check terminal status"><RefreshCw /></Button></TooltipTrigger><TooltipContent>Check status</TooltipContent></Tooltip>
       {lease ? <Button variant="outline" size="sm" disabled={phase === 'closing'} onClick={() => void close()}><Power />{phase === 'closing' ? 'Closing…' : 'Close terminal'}</Button> : <Button size="sm" disabled={phase !== 'idle'} onClick={() => void start()}><TerminalSquare />{phase === 'starting' ? 'Starting…' : 'Start terminal'}</Button>}
     </div>} />
@@ -186,5 +187,5 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
       <div ref={hostRef} className="min-h-0 flex-1 p-2" aria-label="Terminal output and input" />
       {!active && <div className="pointer-events-none absolute sr-only" aria-live="polite">Terminal {status.toLowerCase()}</div>}
     </section>
-  </main>
+  </GatewayPageFrame>
 }

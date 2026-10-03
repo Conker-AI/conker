@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { MessageCircle, SlidersHorizontal, SquarePen } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils"
 
 type Navigation = ReturnType<typeof getPageNavigation>
 
-export function AppbarBreadcrumbs({ crumbs }: Pick<Navigation, "crumbs">) {
-  return <Breadcrumb aria-label="Page path" className="min-w-0 flex-1">
+export function AppbarBreadcrumbs({ crumbs, className }: Pick<Navigation, "crumbs"> & { className?: string }) {
+  return <Breadcrumb aria-label="Page path" className={cn("min-w-0 flex-1", className)}>
     <BreadcrumbList className="flex-nowrap gap-1.5">
       {crumbs.flatMap((crumb, index) => {
         const current = index === crumbs.length - 1
@@ -40,20 +40,23 @@ export function AppbarActions({ actions }: Pick<Navigation, "actions">) {
   </nav>
 }
 
-export function AppbarSections({ sections, activeSection }: Pick<Navigation, "sections" | "activeSection">) {
+export function AppbarSections({ sections, activeSection, trailing }: Pick<Navigation, "sections" | "activeSection"> & { trailing?: ReactNode }) {
   const activeLink = useRef<HTMLAnchorElement>(null)
   useEffect(() => {
     activeLink.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
   }, [activeSection])
   if (!sections.length) return null
-  return <nav data-slot="appbar-sections" aria-label="Page sections" className="min-w-0 scroll-px-4 overflow-x-auto px-4 pb-2 sm:scroll-px-6 sm:px-6">
-    <div className="flex w-max min-w-full items-center gap-1">
-      {sections.map(section => <Link key={section.value} to={section.to}
-        ref={activeSection === section.value ? activeLink : undefined}
-        aria-current={activeSection === section.value ? "page" : undefined}
-        className={cn("inline-flex h-(--control-height) shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", activeSection === section.value ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>
-        {section.label}{section.badge !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{section.badge}</span>}
-      </Link>)}
+  return <nav data-slot="appbar-sections" aria-label="Page sections" className="flex min-w-0 items-center gap-2 px-3 py-2 sm:px-4">
+    <div className="min-w-0 flex-1 scroll-px-1 overflow-x-auto">
+      <div className="flex w-max min-w-full items-center gap-1">
+        {sections.map(section => <Link key={section.value} to={section.to}
+          ref={activeSection === section.value ? activeLink : undefined}
+          aria-current={activeSection === section.value ? "page" : undefined}
+          className={cn("inline-flex h-(--control-height) shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", activeSection === section.value ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>
+          {section.label}{section.badge !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{section.badge}</span>}
+        </Link>)}
+      </div>
     </div>
+    {trailing && <div className="shrink-0">{trailing}</div>}
   </nav>
 }

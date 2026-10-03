@@ -8,6 +8,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollectionPanel, CollectionRow, CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { createToolDefinition, type ToolDefinition } from '@/lib/tool-workspace'
 import type { EditorDraft, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
@@ -52,14 +53,15 @@ export function GatewayToolDrafts({ client }: { client: GatewayEditorDrafts }) {
   }
   if (id && draft) return <LiveDraftEditor key={id} draft={draft} client={client} save={save} onBack={() => setParams({ view: 'drafts' })} />
   const items = page?.items.filter(item => `${item.name} ${item.id}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
-  return <main className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><PageHeader title="Tool drafts" description="Saved drafts do not publish or run tools until you choose to publish them." density="compact" /><div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link to="/tools">Available tools</Link></Button><Button size="sm" onClick={() => setCreating(true)}>New draft</Button></div></div>
+  return <GatewayPageFrame className="space-y-4">
+    <PageHeader title="Tool drafts" actionsOnly />
+    <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" asChild><Link to="/tools">Available tools</Link></Button><Button size="sm" onClick={() => setCreating(true)}>New draft</Button></div>
     {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(''); setDraft(null); setPage(null); setRefresh(value => value + 1) }}>Reload drafts</Button></div>}
     {!page && !error && <p role="status">Loading draft…</p>}
     {page && <CollectionPanel query={query} onQueryChange={setQuery} label="Search loaded drafts" placeholder="Search loaded drafts…" count={items.length} unit="drafts" emptyTitle="No matching drafts" emptyDescription="Create a draft or adjust your search."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
     {page?.next_after && <Button variant="outline" disabled={busy} onClick={() => void more()}>Load more drafts</Button>}
     <Dialog open={creating} onOpenChange={value => { if (!busy) setCreating(value) }}><TaskDialogContent title="New tool draft" description="Creates a saved workflow draft. Nothing runs or becomes available to your agent."><OverlayBody><Label htmlFor="draft-name">Name</Label><Input id="draft-name" value={name} maxLength={100} disabled={busy} onChange={event => setName(event.target.value)} />{error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}</OverlayBody><FormActions inset><Button variant="outline" disabled={busy} onClick={() => setCreating(false)}>Cancel</Button><Button disabled={busy || !name.trim()} onClick={() => void create()}>Create draft</Button></FormActions></TaskDialogContent></Dialog>
-  </main>
+  </GatewayPageFrame>
 }
 
 function LiveDraftEditor({ draft, client, save, onBack }: { draft: EditorDraft; client: GatewayEditorDrafts; save: (document: ToolDefinition) => Promise<void>; onBack: () => void }) {

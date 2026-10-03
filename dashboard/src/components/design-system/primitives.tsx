@@ -7,7 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 
-export function PageHeader({ title, description, actions, status, density = "standard" }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact" }) {
+export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean }) {
+  if (actionsOnly) return <header data-slot="page-header" className="flex min-w-0 justify-end"><h1 className="sr-only">{title}</h1>{actions && <div role="toolbar" aria-label={`${title} actions`} className="flex flex-wrap justify-end gap-2">{actions}</div>}</header>
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
@@ -25,7 +26,7 @@ export function OverviewSection({ title, description, action, children, priority
   title: string; description?: ReactNode; action?: ReactNode; children: ReactNode; priority?: boolean
 }) {
   const id = useId()
-  return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "rounded-xl border bg-card p-4 text-card-foreground shadow-sm")}>
+  return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "elevation-surface rounded-xl border bg-card p-4 text-card-foreground")}>
     <div className={cn("flex flex-wrap items-start justify-between gap-3", priority && "max-sm:flex-col")}>
       <div className="min-w-0 flex-1">
         <h2 id={id} className={cn("font-semibold", priority ? "text-xl leading-7" : "text-base leading-6")}>{title}</h2>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Plus, RefreshCw } from 'lucide-react'
 import { CollectionEmpty, PageHeader } from '@/components/design-system/primitives'
+import { GatewayPageFrame } from './page-frame'
 import { DetailPanel, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -237,8 +238,8 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
   const cursor = tab === 'tasks' ? taskCursor : tab === 'runs' ? runCursor : eventCursor
   const availableDialog = dialog?.kind === 'create' || dialogTask?.contentStatus === 'available'
 
-  return <section className="h-full min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8" tabIndex={0} aria-label="Activity workspace"><div className="space-y-5">
-    <PageHeader density="compact" title="Activity" description="Track tasks and review saved activity." actions={<><Button variant="outline" disabled={loading} onClick={() => void load()}><RefreshCw />Refresh</Button><Button disabled={!!retained.mutation} onClick={openCreate}><Plus />New task</Button></>} />
+  return <GatewayPageFrame className="h-full" tabIndex={0} aria-label="Activity workspace"><div className="space-y-5">
+    <PageHeader actionsOnly density="compact" title="Activity" description="Track tasks and review saved activity." actions={<><Button variant="outline" disabled={loading} onClick={() => void load()}><RefreshCw />Refresh</Button><Button disabled={!!retained.mutation} onClick={openCreate}><Plus />New task</Button></>} />
     <p className="text-xs leading-5 text-muted-foreground">A task is something you want done, linked to a chat. Use Work on this task to have Conker pick it up; only you can mark it done.</p>
     {retained.notice && <p role="status" className="text-sm text-muted-foreground">{retained.notice}</p>}{(retained.error || error) && <p role="alert" className="text-sm text-destructive">{retained.error || error}</p>}{recovery}
     {(taskFilter || runFilter || sessionFilter) && <div className="flex flex-wrap items-center gap-3 text-xs"><span>Showing one source</span><details className="text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><span className="break-all">{taskFilter || runFilter || sessionFilter}</span></details><Button size="sm" variant="outline" onClick={() => setParams({ tab })}>Clear source filter</Button></div>}
@@ -255,5 +256,5 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
     <Dialog open={active && !!dialog} onOpenChange={open => { if (!open && !busy) state.setState({ dialog: null }) }}><TaskDialogContent size="wide" title={dialog?.kind === 'create' ? 'New task' : dialog?.kind === 'review' ? `Review ${taskStatusLabels[dialog.status].toLocaleLowerCase()}` : 'Edit task'} description="Owner-reported tracking. Closing keeps your draft." showCloseButton={!busy} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (busy) event.preventDefault() }}>
       {!availableDialog ? <OverlayBody><p className="text-sm text-muted-foreground">This task is unavailable or its source was forgotten. Authored drafts are hidden.</p></OverlayBody> : <>{recovery && <div className="max-h-56 overflow-y-auto p-5">{recovery}{retained.error && <p role="alert" className="mt-3 text-sm text-destructive">{retained.error}</p>}</div>}{dialog?.kind === 'review' && dialogTask && review ? <GatewayTaskReview task={dialogTask} draft={review} onChange={value => state.setState(current => ({ reviews: { ...current.reviews, [reviewKey]: value } }))} onSave={saveReview} onClose={() => state.setState({ dialog: null })} onDiscard={discardDraft} disabled={!!retained.mutation} error={retained.error} /> : editorDraft && <GatewayTaskEditor draft={editorDraft} task={dialogTask} sessions={safeSessions} tasks={safeTasks} runs={visibleReferences.runs} referencesPending={visibleReferences.pending} referencesError={visibleReferences.error} moreRuns={!!visibleReferences.cursor} onRetryRuns={() => { if (sourceSessionId) void loadReferences(sourceSessionId) }} onMoreRuns={() => { if (sourceSessionId) void loadReferences(sourceSessionId, visibleReferences.cursor) }} onChange={value => state.setState(current => ({ drafts: { ...current.drafts, [editorKey]: value } }))} onSave={saveEditor} onClose={() => state.setState({ dialog: null })} onDiscard={discardDraft} disabled={!!retained.mutation} error={retained.error} />}</>}
     </TaskDialogContent></Dialog>
-  </section>
+  </GatewayPageFrame>
 }

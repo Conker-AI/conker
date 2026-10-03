@@ -9,7 +9,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evide
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUp, BookmarkPlus, Bot, CalendarDays, Lightbulb, MoreHorizontal, PenLine, Phone, RefreshCw, Sparkles, Video } from 'lucide-react'
+import { Bot, MoreHorizontal, RefreshCw } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import { TaskDispatchReview } from './task-dispatch-review'
 import { readTaskDispatchSources, taskDispatchProblem, visibleTaskDispatchIntent, type PreparedTaskDispatch, type TaskSubmissionBinding } from './task-dispatch-state'
@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
@@ -32,24 +31,20 @@ import { GatewaySessionAgentControl } from './session-agent-control'
 import { NewChatPrivacyControl, type NewChatPrivacy } from './new-chat-privacy-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AnimatedIconButton, AnimatedIconGlyph } from '@/components/icons/animated/animated-icon'
+import { BookmarkIcon, BrainIcon, CameraIcon, ClockIcon, LightbulbIcon, PencilIcon, PhoneIcon, SendIcon } from '@/components/icons/animated/icons'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
 
 /** Starters fill the composer with the start of a request; nothing is sent until the owner does. */
 const starters = [
-  { label: 'Plan my day', text: 'Help me plan my day: ', icon: CalendarDays },
-  { label: 'Draft a message', text: 'Draft a message to ', icon: PenLine },
-  { label: 'Explain simply', text: 'Explain simply: ', icon: Lightbulb },
-  { label: 'Brainstorm', text: 'Give me ideas for ', icon: Sparkles },
-  { label: 'Remember this', text: 'Remember that ', icon: BookmarkPlus },
+  { label: 'Plan my day', text: 'Help me plan my day: ', icon: ClockIcon },
+  { label: 'Draft a message', text: 'Draft a message to ', icon: PencilIcon },
+  { label: 'Explain simply', text: 'Explain simply: ', icon: LightbulbIcon },
+  { label: 'Brainstorm', text: 'Give me ideas for ', icon: BrainIcon },
+  { label: 'Remember this', text: 'Remember that ', icon: BookmarkIcon },
 ]
-
-/** The sidebar toggle belongs on the canvas only while the sidebar is hidden (always on phones). */
-function CanvasToggle() {
-  const { isMobile, state } = useSidebar()
-  return isMobile || state === 'collapsed' ? <SidebarTrigger className="size-9 text-muted-foreground" aria-label="Open sidebar" /> : null
-}
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   if (message.content.kind !== 'text') return
@@ -432,38 +427,36 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     <main className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <>
-          <header className="flex h-14 shrink-0 items-center px-3"><CanvasToggle /></header>
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
             <div className="w-full max-w-[768px]">
               <div className="mb-7 flex flex-col items-center gap-3 sm:mb-8">
                 <span className="flex size-20 items-center justify-center overflow-hidden rounded-full border bg-card shadow-sm">{firstAgent === 'companion' ? <img src="/conker.png" alt="" width="60" height="60" className="size-[75%] object-contain" /> : <Bot className="size-8 text-muted-foreground" />}</span>
                 <h2 className="text-center text-3xl font-semibold">{activeAgentName}</h2>
               </div>
-              <form className="relative z-10 overflow-hidden rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
+              <form className="relative z-10 rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
                 <Label htmlFor="new-chat-composer" className="sr-only">Message {activeAgentName}</Label>
-                <Textarea ref={newChatComposer} id="new-chat-composer" dir="auto" rows={3} value={firstMessage} placeholder={`Ask ${activeAgentName} anything, or give it a task…`} disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-24 resize-none rounded-none border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
-                <div className="flex min-w-0 flex-wrap items-center gap-2 border-t bg-muted px-3 py-2.5">
+                <Textarea ref={newChatComposer} id="new-chat-composer" dir="auto" rows={2} value={firstMessage} placeholder={`Ask ${activeAgentName} anything, or give it a task…`} disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-16 resize-none rounded-3xl border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
+                <div className="flex min-w-0 items-center gap-1 px-3 pb-3">
                   {control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}
-                  {control && <GatewayModelPicker compact client={control} value={firstModel} disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
-                  <div className="ml-auto flex w-full items-center justify-end gap-1 sm:w-auto">
+                  {control && <GatewayModelPicker compact client={control} value={firstModel} iconOnlyOnMobile disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
+                  <div className="ml-auto flex shrink-0 items-center justify-end gap-1">
                     <NewChatPrivacyControl value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
-                    <Tooltip><TooltipTrigger asChild><span><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Voice call unavailable before the first message" disabled><Phone /></Button></span></TooltipTrigger><TooltipContent side="top">Send a message first, then call from the chat header.</TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><span><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Video calls unavailable" disabled><Video /></Button></span></TooltipTrigger><TooltipContent side="top">Video calls are not connected yet.</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Voice call unavailable before the first message" disabled><AnimatedIconGlyph icon={PhoneIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Send a message first, then call from the chat header.</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Video calls unavailable" disabled><AnimatedIconGlyph icon={CameraIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Video calls are not connected yet.</TooltipContent></Tooltip>
                     <NewChatVoiceControl value={firstMessage} onChange={setFirstMessage} input={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} />
-                    <Button type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)}><ArrowUp /></Button>
+                    <AnimatedIconButton icon={SendIcon} type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)} />
                   </div>
                 </div>
               </form>
               {createError && <p role="alert" className="mt-4 text-center text-sm text-destructive">{createError}</p>}
               {createUnknown === 'checked' && <div className="mt-2 flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
               <div className="mt-5 flex justify-center gap-1.5" aria-label="Conversation starters">
-                {starters.map(item => <Tooltip key={item.label}><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-10 rounded-full border bg-background text-muted-foreground hover:text-foreground" aria-label={item.label} onClick={() => { setFirstMessage(item.text); requestAnimationFrame(() => { const field = document.getElementById('new-chat-composer') as HTMLTextAreaElement | null; field?.focus(); field?.setSelectionRange(item.text.length, item.text.length) }) }}><item.icon /></Button></TooltipTrigger><TooltipContent side="bottom">{item.label}</TooltipContent></Tooltip>)}
+                {starters.map(item => <Tooltip key={item.label}><TooltipTrigger asChild><AnimatedIconButton icon={item.icon} type="button" variant="ghost" size="icon" className="size-10 rounded-full border bg-background text-muted-foreground hover:text-foreground" aria-label={item.label} onClick={() => { setFirstMessage(item.text); requestAnimationFrame(() => { const field = document.getElementById('new-chat-composer') as HTMLTextAreaElement | null; field?.focus(); field?.setSelectionRange(item.text.length, item.text.length) }) }} /></TooltipTrigger><TooltipContent side="bottom">{item.label}</TooltipContent></Tooltip>)}
               </div>
             </div>
           </div>
         </> : <>
           <header className="flex h-14 shrink-0 items-center gap-1 px-3">
-            <CanvasToggle />
             <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
             {control && current?.status === 'open' && <GatewaySessionAgentControl key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
             {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
