@@ -1,5 +1,7 @@
 import { ChatTranscript } from '@/components/chat/transcript'
-import { ChatComposer } from '@/components/chat/composer'
+import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
+import { ConversationHistory } from '@/components/chat/history'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
 import type { Attempt, Generation } from '@/lib/chat/contract'
 import { GatewayModelPicker } from './model-picker'
@@ -9,7 +11,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evide
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bot, MoreHorizontal, RefreshCw } from 'lucide-react'
+import { Bot, Brain, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import { TaskDispatchReview } from './task-dispatch-review'
 import { readTaskDispatchSources, taskDispatchProblem, visibleTaskDispatchIntent, type PreparedTaskDispatch, type TaskSubmissionBinding } from './task-dispatch-state'
@@ -18,7 +20,6 @@ import { PendingSubmissions } from './pending-submissions'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
@@ -56,6 +57,8 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
 export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
+  const sidebar = useSidebar()
+  const sidebarHidden = sidebar.isMobile ? !sidebar.openMobile : sidebar.state === 'collapsed'
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -86,6 +89,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [firstModel, setFirstModel] = useState('')
   const [firstPrivacy, setFirstPrivacy] = useState<NewChatPrivacy>({ memoryDisabled: false, harnessDisabled: false })
   const newChatComposer = useRef<HTMLTextAreaElement>(null)
+  const replyComposer = useRef<HTMLTextAreaElement>(null)
+  const [dictating, setDictating] = useState(false)
   // Display-only text of the answer being written; the saved turn replaces it.
   const [preview, setPreview] = useState<{ sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null>(null)
   // The request being answered right now, so Stop can name it; cleared when the send settles.
@@ -423,31 +428,27 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const safeSessions = sessions.map(session => forgottenIds.includes(session.id) ? maskForgottenSession(session) : session)
 
   if (!active) return null
-  return <div className="flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
-    <main className="flex min-h-0 flex-1">
+  return <div className="relative flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
+    <div className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <>
+          {sidebarHidden && <SidebarTrigger className="absolute left-4 top-3 z-20 size-8" aria-label="Expand sidebar" title="Expand sidebar" />}
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
             <div className="w-full max-w-[768px]">
               <div className="mb-7 flex flex-col items-center gap-3 sm:mb-8">
                 <span className="flex size-20 items-center justify-center overflow-hidden rounded-full border bg-card shadow-sm">{firstAgent === 'companion' ? <img src="/conker.png" alt="" width="60" height="60" className="size-[75%] object-contain" /> : <Bot className="size-8 text-muted-foreground" />}</span>
                 <h2 className="text-center text-3xl font-semibold">{activeAgentName}</h2>
               </div>
-              <form className="relative z-10 rounded-3xl border bg-card shadow-composer" onSubmit={event => { event.preventDefault(); void startChat() }}>
-                <Label htmlFor="new-chat-composer" className="sr-only">Message {activeAgentName}</Label>
-                <Textarea ref={newChatComposer} id="new-chat-composer" dir="auto" rows={2} value={firstMessage} placeholder={`Ask ${activeAgentName} anything, or give it a task…`} disabled={createPending || sendPending} onChange={event => setFirstMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void startChat() } }} className="max-h-60 min-h-16 resize-none rounded-3xl border-0 bg-transparent px-4 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
-                <div className="flex min-w-0 items-center gap-1 px-3 pb-3">
+              <ChatComposerFrame id="new-chat-composer" label={`Message ${activeAgentName}`} placeholder={`Ask ${activeAgentName} anything, or give it a task...`} value={firstMessage} onChange={setFirstMessage} inputRef={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} onSend={() => { if (!dictating) void startChat() }} controls={<>
                   {control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}
                   {control && <GatewayModelPicker compact client={control} value={firstModel} iconOnlyOnMobile disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
-                  <div className="ml-auto flex shrink-0 items-center justify-end gap-1">
+              </>} actions={<>
                     <NewChatPrivacyControl value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
                     <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Voice call unavailable before the first message" disabled><AnimatedIconGlyph icon={PhoneIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Send a message first, then call from the chat header.</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Video calls unavailable" disabled><AnimatedIconGlyph icon={CameraIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Video calls are not connected yet.</TooltipContent></Tooltip>
-                    <NewChatVoiceControl value={firstMessage} onChange={setFirstMessage} input={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} />
-                    <AnimatedIconButton icon={SendIcon} type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={createPending || sendPending || !firstMessage.trim() || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)} />
-                  </div>
-                </div>
-              </form>
+                    <NewChatVoiceControl value={firstMessage} onChange={setFirstMessage} input={newChatComposer} onRecordingChange={setDictating} disabled={!visible || createPending || sendPending || Boolean(createUnknown)} />
+                    <AnimatedIconButton icon={SendIcon} type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={dictating || createPending || sendPending || !firstMessage.trim() || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)} />
+              </>} />
               {createError && <p role="alert" className="mt-4 text-center text-sm text-destructive">{createError}</p>}
               {createUnknown === 'checked' && <div className="mt-2 flex justify-center"><Button type="button" variant="ghost" size="sm" onClick={() => { setCreateUnknown(null); setCreateError(null) }}>I checked my chats. Start a new one</Button></div>}
               <div className="mt-5 flex justify-center gap-1.5" aria-label="Conversation starters">
@@ -456,17 +457,17 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             </div>
           </div>
         </> : <>
-          <header className="flex h-14 shrink-0 items-center gap-1 px-3">
-            <span className="flex-1 sm:hidden" /><h2 className="sr-only min-w-0 flex-1 truncate px-1 text-sm font-medium sm:not-sr-only">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
-            {control && current?.status === 'open' && <GatewaySessionAgentControl key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
-            {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ""} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
-            {control && current?.status !== 'forgotten' && <GatewayCallLauncher client={control.calls} conversationId={selected} disabled={pending || Boolean(attempt)} />}
-            {headerExtra}
+          <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 border-b px-4 sm:px-6">
+            {sidebarHidden && <SidebarTrigger className="size-8 shrink-0" aria-label="Expand sidebar" title="Expand sidebar" />}
+            <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
+            {control && current?.status !== 'forgotten' && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || Boolean(attempt)} />}
             <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Chat options"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
               <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onSelect={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/memory"><Brain />Open memory</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/tools"><Wrench />Open tools</Link></DropdownMenuItem>
             </DropdownMenuContent></DropdownMenu>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" tabIndex={0} aria-label="Saved conversation history"><div className="mx-auto w-full max-w-3xl space-y-6">
+          <ConversationHistory key={selected} sessionId={selected} focusedMessageId={focusedMessageId}>
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length && !attempt.taskBinding} onRestore={() => recover('restoreDraft')} onCheck={() => recover('check')} onRetry={() => recover('retrySameRequest')} onRelease={() => recover('releaseUnstarted')} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Conker got your message; the reply isn’t saved yet' : 'Not sure your last message went through'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'Sending is paused until the reply shows up, so nothing is done twice.' : 'Your text is kept. Sending is paused because the last message may still be running.'} Check the chat, and your chat list in case it continued in a new chat.</p><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}>Check the chat</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I checked. Sending again might do the same work twice.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeFound.availability !== 'enabled'} onClick={() => recover('acknowledgeFound')}>It’s in the chat</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeUnknown.availability !== 'enabled'} onClick={() => recover('acknowledgeUnknown')}>Let me send again</Button></div></>}</div>)}
             {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !current.turns.some(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply') && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
@@ -482,14 +483,20 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
               </div>
             </div>)}
             {current && current.turns.length > 0 && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Details</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}<TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} /><ModelRoutingEvidence detail={turn.detail} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Memory · {turn.memory.retrieval.status.replaceAll('_', ' ')}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
-          </div></div>
-          <div className="mx-auto w-full max-w-3xl shrink-0 space-y-3 px-3 pb-4 sm:px-6">
+          </ConversationHistory>
+          <div className={`${conversationColumn} shrink-0 space-y-3 pb-4 pt-2`}>
             {safeTaskIntent && !safeTaskIntent.open && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">Task request saved separately from your draft.</span><Button size="sm" variant="outline" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: { ...safeTaskIntent, open: true } })}>Review task request</Button><Button size="sm" variant="ghost" disabled={!!operation} onClick={() => workspace.setState({ taskIntent: null })}>Discard task request</Button></div>}
-            <ChatComposer chat={chat} />
+            <ChatComposer key={selected} chat={chat} inputRef={replyComposer} dictating={dictating} controls={<>
+              {control && current?.status === 'open' && <GatewaySessionAgentControl compact key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
+              {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+            </>} actions={<>
+              {headerExtra}
+              <NewChatVoiceControl value={chat.draft} input={replyComposer} onRecordingChange={setDictating} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation)} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} />
+            </>} />
           </div>
         </>}
       </section>
-    </main>
+    </div>
     {safeTaskIntent && activityClient && <TaskDispatchReview key={safeTaskIntent.taskId} intent={safeTaskIntent} activity={activityClient} runtime={client} visible={visible} busy={!!operation} error={taskError} onForgotten={id => {
       privacy.getState().markForgotten([id])
       workspace.setState(value => ({ taskIntent: visibleTaskDispatchIntent(value.taskIntent, privacy.getState().sessionIds) }))

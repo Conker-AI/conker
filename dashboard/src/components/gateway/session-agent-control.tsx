@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bot, Check } from 'lucide-react'
+import { Bot, Check, ChevronDown } from 'lucide-react'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type { AgentProfile, GatewayControlClient, OwnerSessionSettings } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
 
-export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, activeAgentName, disabled, onSaved }: { client: GatewayControlClient; sessionId: string; activeAgentId: string; activeAgentName: string; disabled: boolean; onSaved: (agentId: string) => void }) {
+export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, activeAgentName, disabled, onSaved, compact = false }: { client: GatewayControlClient; sessionId: string; activeAgentId: string; activeAgentName: string; disabled: boolean; onSaved: (agentId: string) => void; compact?: boolean }) {
   const [open, setOpen] = useState(false)
   const [profiles, setProfiles] = useState<AgentProfile[]>([])
   const [settings, setSettings] = useState<OwnerSessionSettings | null>(null)
@@ -35,7 +35,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
     finally { setPending(false) }
   }
   return <>
-    <Button size="icon" variant="ghost" aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}><Bot /></Button>
+    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? 'h-8 min-w-0 max-w-40 gap-2 px-2 font-normal text-muted-foreground' : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><span className="truncate">{activeAgentName}</span><ChevronDown className="size-4 shrink-0" /></> : <Bot />}</Button>
     <Dialog open={open} onOpenChange={value => { if (!pending) setOpen(value) }}><TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
       <OverlayBody><div className="space-y-4">
         <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">

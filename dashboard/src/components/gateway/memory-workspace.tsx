@@ -1,13 +1,15 @@
 import { ForgetMemory } from './forget-memory'
+import { GatewayHeader } from './header'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionEmpty, CollectionSearch, PageHeader } from '@/components/design-system/primitives'
+import { CollectionEmpty, CollectionSearch } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
-import type { WorkspaceEdge, WorkspaceNode } from '@/lib/memory-layout'
+import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
 
 const kinds: MemoryObjectKind[] = ['memory', 'entity', 'evidence', 'analysis', 'episode', 'observation', 'pattern', 'transcript']
 const key = (value: MemoryObjectCard) => `${value.type}:${value.id}`
@@ -44,7 +46,11 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [page, setPage] = useState<MemoryLibrary | null>(null)
   const [search, setSearch] = useState(''), [query, setQuery] = useState('')
   const [type, setType] = useState<MemoryObjectKind | 'all'>('all')
-  const [view, setView] = useState('database'), [expanded, setExpanded] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const view = params.get('view') === 'database' ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
+  const isGraph = view !== 'database'
+  const [expanded, setExpanded] = useState(false)
+  const [graphRead, setGraphRead] = useState<{ page: MemoryLibrary; result: MemoryGraphRead } | null>(null)
   const [selected, setSelected] = useState<MemoryObjectCard | null>(null)
   const [detail, setDetail] = useState<MemoryConnections | null>(null)
   const [content, setContent] = useState<MemoryContent | null>(null)
@@ -52,6 +58,14 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
   const workspace = useRef<HTMLDivElement>(null)
   const detailEpoch = useRef(0), libraryEpoch = useRef(0), contentEpoch = useRef(0)
+  useEffect(() => {
+    if (!page || !isGraph) return
+    const controller = new AbortController()
+    readMemoryGraph(client, page.objects, controller.signal).then(result => {
+      if (!controller.signal.aborted) setGraphRead({ page, result })
+    }).catch(() => { /* Aborted reads belong to the previous filter or view. */ })
+    return () => controller.abort()
+  }, [client, page, isGraph])
   useEffect(() => {
     const controller = new AbortController(), epoch = ++libraryEpoch.current
     client.library({ search: query, type: type === 'all' ? undefined : type, signal: controller.signal }).then(value => {
@@ -70,12 +84,21 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     document.addEventListener('keydown', close)
     return () => document.removeEventListener('keydown', close)
   }, [expanded])
-  const records = useMemo(() => [...new Map([...(page?.objects ?? []), ...(detail?.nodes ?? []), ...(selected ? [selected] : [])].map(item => [key(item), item])).values()], [page, detail, selected])
-  const graph = useMemo(() => ({
-    nodes: records.map(item => ({ id: key(item), kind: item.type === 'evidence' || item.type === 'transcript' ? 'source' : 'memory', label: `${item.title === item.type ? item.preview.slice(0, 65) || item.type : item.title}`, memoryIds: [item.id], displayKind: item.type, colorIndex: kinds.indexOf(item.type) % 5 }) as WorkspaceNode),
-    edges: (detail?.links ?? []).map(item => ({ id: item.id, source: `${item.source_type}:${item.source_id}`, target: `${item.target_type}:${item.target_id}`, kind: 'source' }) as WorkspaceEdge),
-  }), [records, detail])
+  const snapshot = graphRead?.page === page ? graphRead.result : null
+  const records = useMemo(() => {
+    const unique = [...new Map([...(page?.objects ?? []), ...(snapshot?.nodes ?? []), ...(detail?.nodes ?? [])].map(item => [key(item), item])).values()]
+    return selected ? [...unique.filter(item => key(item) !== key(selected)).slice(0, memoryGraphNodeLimit - 1), selected] : unique.slice(0, memoryGraphNodeLimit)
+  }, [page, snapshot, detail, selected])
+  const graph = useMemo(() => isGraph ? projectMemoryGraph(records, [...(snapshot?.links ?? []), ...(detail?.links ?? [])], view === 'hierarchy') : { nodes: [], edges: [] }, [records, snapshot, detail, view, isGraph])
+  const positions = useMemo(() => layoutMemoryAtlas(graph.nodes, graph.edges, view === 'hierarchy'), [graph, view])
+  const connectionStatus = !snapshot ? 'Loading relationships…' : snapshot.partial ? `Partial graph${snapshot.failures ? ' · Some relationships unavailable' : ''}` : undefined
+  function setView(value: string) {
+    const next = new URLSearchParams(params)
+    next.set('view', value === 'network' ? 'graph' : value)
+    setParams(next)
+  }
   function selectRecord(item: MemoryObjectCard | null) {
+    if (item && selected && key(item) === key(selected)) return
     detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setDetailError('')
   }
   function refresh() {
@@ -99,17 +122,16 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     catch (error) { if (epoch === detailEpoch.current && request === contentEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load field.') }
   }
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
-    <PageHeader title="Memory" actionsOnly />
-    <div className="memory-workspace-toolbar">
-      <Select value={view} onValueChange={setView}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="database">List</SelectItem><SelectItem value="network">Map</SelectItem></SelectContent></Select>
+    <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
+      <Select value={view} onValueChange={setView}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>
       <form className="memory-live-search flex min-w-0 flex-1 gap-2" onSubmit={event => { event.preventDefault(); setQuery(search); refresh() }}><CollectionSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" /><Button type="submit" variant="outline" disabled={busy}>Search</Button></form>
       <Select value={type} onValueChange={value => { setType(value as typeof type); refresh() }}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
       <Button size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
-    </div>
+    </div>} />
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
     <div className="memory-workspace-body">
-      {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : view === 'network' ? <MemoryGraph graph={graph} hierarchy={false} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="sticky top-0 bg-muted"><tr><th className="p-3">Memory</th><th className="p-3">Type</th><th className="p-3">Connections</th></tr></thead><tbody>{page.objects.map(item => <tr key={key(item)} className="border-b"><td className="p-3"><button className="text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{item.title === item.type ? item.preview.slice(0, 100) || item.title : item.title}</button></td><td className="p-3">{kindLabel[item.type]}</td><td className="p-3 tabular-nums">{Object.values(item.connections).reduce((sum, count) => sum + count, 0)}</td></tr>)}</tbody></table></div>}
+      {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="sticky top-0 bg-muted"><tr><th className="p-3">Memory</th><th className="p-3">Type</th><th className="p-3">Connections</th></tr></thead><tbody>{page.objects.map(item => <tr key={key(item)} className="border-b"><td className="p-3"><button className="text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{item.title === item.type ? item.preview.slice(0, 100) || item.title : item.title}</button></td><td className="p-3">{kindLabel[item.type]}</td><td className="p-3 tabular-nums">{Object.values(item.connections).reduce((sum, count) => sum + count, 0)}</td></tr>)}</tbody></table></div>}
       {selected && <WorkspaceInspector title={selected.title} description={kindLabel[selected.type]} onClose={() => selectRecord(null)}>
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
@@ -124,6 +146,6 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
         </div>
       </WorkspaceInspector>}
     </div>
-    <div className="memory-workspace-status"><span role="status">{page ? `${page.objects.length} of ${page.total} memories loaded` : 'Memory'} · Search ready</span>{page?.next_after && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void more()}>Load more</Button>}<span className="hidden md:inline">Select a memory to see its relationships</span></div>
+    <div className="memory-workspace-status"><span role="status">{page ? `${page.objects.length} of ${page.total} records loaded` : 'Memory'}{isGraph && snapshot?.partial ? ' · Partial graph' : ''}</span>{page?.next_after && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void more()}>Load more</Button>}<span className="hidden md:inline">{isGraph ? `${records.length} visible records` : 'Memory library'}</span></div>
   </div>
 }

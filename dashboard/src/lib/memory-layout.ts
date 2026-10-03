@@ -7,7 +7,7 @@ export type WorkspaceNode = Omit<MemoryNode, "kind"> & {
   displayKind?: string
   parentId?: string
 }
-export type WorkspaceEdge = { id: string; source: string; target: string; kind: "topic" | "source" | "parent" }
+export type WorkspaceEdge = { id: string; source: string; target: string; kind: "topic" | "source" | "parent"; relationship?: string }
 type Position = { x: number; y: number }
 const rootId = "folder:root"
 const folderId = (category: string) => `folder:${encodeURIComponent(category)}`

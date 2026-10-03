@@ -18,7 +18,6 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const [notice, setNotice] = useState('')
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const createdAt = new Date(message.createdAt)
-  const isToday = createdAt.toDateString() === new Date().toDateString()
   const shortTime = createdAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   async function invoke(action: Action, kind: MessageAction) {
     if (action.availability !== 'enabled') return
@@ -29,10 +28,10 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
     : message.role === 'assistant' ? <Answer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
-  return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-2 flex items-center gap-2"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-6 rounded-md" /><span className="text-sm font-medium">{message.agentName ?? 'Conker'}</span></div>}
+  return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
+    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="text-sm font-medium">{message.agentName ?? 'Conker'}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
-    <div role="group" aria-label="Message actions" className="mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
+    <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {moreActions.length > 0 && <DropdownMenu>
         <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="More message actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
@@ -46,15 +45,15 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
           </DropdownMenuItem>
         })}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>}
-      <time className="text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()}>{isToday ? shortTime : `${createdAt.toLocaleDateString()} ${shortTime}`}</time>
-      <span role="status" className="basis-full">{notice}</span>
+      <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>
     </div>
+    {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
   </article>
 }
 
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
-  return <div className="flex min-w-0 flex-col gap-5" data-source={chat.source}>
+  return <div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}

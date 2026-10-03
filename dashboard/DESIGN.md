@@ -162,6 +162,14 @@ Dormant template demo routes are outside the guard until imported by the active 
 
 ## Validation and maintenance
 
+### Gateway conversation presentation
+
+The connected/preview gateway chat uses `ChatComposerFrame` for both the initial request and subsequent replies. It owns the input's growing height, focus-within border, unified surface and wrapping toolbar; the gateway owns model/agent/privacy controls and mutation eligibility. `conversationColumn` supplies identical transcript and reply-composer gutters. Do not duplicate those dimensions in the route.
+
+Saved conversation headers keep the compact title, call and secondary menu. Next-turn agent/model selection, privacy and voice typing stay in the composer. When navigation is hidden, the sidebar opener remains visible on both new and saved chat, including mobile. `ConversationHistory` follows changing content only while near the bottom; reading older content exposes a latest-message control and linked-message navigation retains its target.
+
+Message actions reveal on hover/focus for pointer users and remain visible on touch. Keep user-message actions outside the bubble's layout height, avoid empty feedback rows, and retain full timestamps in accessible labels/tooltips. Runtime memory/tool evidence and approval/recovery controls remain sourced from saved turns: never turn prose into executable proposals or imply unsupported attachments/video calls.
+
 Run `npm run design:check` for the TypeScript AST guard. It follows local static imports, exports and literal dynamic imports from `src/config/routes.tsx`. This covers active routes and their dependencies while avoiding unused template demos.
 
 The guard rejects standard raw `h1` headings, direct primitive-tab imports from active route modules, raw `Input`/native search fields, and hard-coded Tailwind palette/literal-color classes in reachable application code. It recognizes aliased inputs and search placeholders such as `searchPlaceholder`. It does not ban arbitrary layout dimensions or normal form fields.
@@ -331,6 +339,18 @@ Focus and Character are delivery modes for one identity, separate from models, t
 This staging handoff records source behavior only. No new Character Studio screenshots, browser-console inspection or rendered interaction verification were available. The existing screenshot reference establishes the incumbent design only; it does not approve the new surface.
 
 ## Memory workspace
+
+### Gateway memory atlas
+
+Gateway Memory owns the shared `GatewayHeader` and supplies its controls through the appbar toolbar slot, rather than stacking a separate toolbar beneath it. On wide screens title, view, record search, type filter and workspace actions share a row; below the wide breakpoint the controls wrap beneath navigation without overflowing or hiding sidebar reopening/page search. The appbar keeps the normal semantic background; only record search has a subtle field fill. Maximize carries the same header with the workspace.
+
+The active gateway workspace defaults to Map; Tree and List use `?view=graph|hierarchy|database`. Tree restores the previously unreachable hierarchy mode. Map uses a bounded, static D3 force layout and Tree uses D3 hierarchy; neither continuously runs a simulation. React Flow owns pan, zoom, dragging, keyboard point selection and one/two-hop focus. Preserve manually dragged positions within a mode, not stale coordinates when switching layouts.
+
+Map and Tree share gateway metadata records, the existing semantic surfaces and bounded chart-category colors. Small type hubs carry record counts; finer curves expose recorded connections. Dashed branches are type organization, never factual relationships. Solid curves represent server-supplied links only. A quiet legend distinguishes them; relation labels appear on edge hover and the inspector retains the exact relationship. Labels stay visible in small graphs, and zoom/selection reveal detail in larger graphs. No fabricated points, embedding similarity, unrelated glows or route-specific palette.
+
+Load relationship metadata for up to 100 loaded records, four requests at a time, one connection page per record, at most 250 distinct records. Cancel on navigation/filter changes and announce loading, incomplete pages or failed reads as a partial graph. Content remains an explicit inspector read; graph exploration cannot write memories. The five-record gateway preview is not the legacy 50-record illustrative dataset below. Keep List as the structured alternative, including search and pagination, and preserve the shared mobile/desktop inspector and revision-bound Forget flow.
+
+### Legacy fixture workspace
 
 Memory uses `BaseLayout variant="canvas"`. The shared appbar remains navigation; a local toolbar owns the Network, Hierarchy and Database dropdown, searchable point picker, dataset choice, filters, folder-browser toggle and Maximize/Restore action. Modes use `?view=graph|hierarchy|database`; legacy `tab` links remain accepted, including `sources` as Hierarchy. Text/category filters stay URL-backed across modes. The point picker searches the currently available points, supports keyboard selection and focuses a chosen point; it is distinct from the shared record-text filter.
 

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { gatewayCommandDestinations } from './navigation'
 
-export function GatewayHeader({ children }: { children?: ReactNode }) {
+export function GatewayHeader({ children, toolbar }: { children?: ReactNode; toolbar?: ReactNode }) {
   const location = useLocation(), navigate = useNavigate(), [search, setSearch] = useState(false)
   const { isMobile, openMobile, state } = useSidebar()
   const sidebarHidden = isMobile ? !openMobile : state === 'collapsed'
@@ -34,10 +34,11 @@ export function GatewayHeader({ children }: { children?: ReactNode }) {
   }, [])
   return <>
     <header data-slot="appbar" className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background text-foreground">
-      <div className="flex min-h-(--header-height) min-w-0 items-center gap-2 px-3 py-3">
+      <div className={`flex min-h-(--header-height) min-w-0 items-center gap-2 px-3 py-3${toolbar ? ' flex-wrap' : ''}`}>
         {sidebarHidden && <><SidebarTrigger className="size-(--control-height) shrink-0" aria-label="Expand sidebar" title="Expand sidebar" /><Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" /></>}
-        <AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} className={sidebarHidden ? undefined : 'ml-4'} />
-        <Button variant="ghost" size="icon" className="ml-auto" aria-label="Search pages" onClick={() => setSearch(true)}><Search /></Button>{children}
+        <AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} className={`${sidebarHidden ? '' : 'ml-4'}${toolbar ? ' xl:flex-none' : ''}`} />
+        {toolbar && <div className="order-3 min-w-0 basis-full xl:order-none xl:ml-3 xl:flex-1 xl:basis-0">{toolbar}</div>}
+        <Button variant="ghost" size="icon" className={toolbar ? 'ml-auto shrink-0 xl:ml-0' : 'ml-auto'} aria-label="Search pages" onClick={() => setSearch(true)}><Search /></Button>{children}
       </div>
       {location.pathname === '/activity' && <AppbarSections activeSection={tab} sections={['tasks', 'runs', 'events'].map(value => ({ value, label: value[0].toUpperCase() + value.slice(1), to: `/activity?tab=${value}`, badge: undefined }))} />}
       {studioSections.length > 0 && <AppbarSections activeSection={activePageSection('companionSettings', location.search)} sections={studioSections} />}

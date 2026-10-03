@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { OverlayBody, TaskDialogContent } from '@/components/design-system'
 import { createCallRequestId, type GatewayCall, type GatewayCallAvailability, type GatewayCallsClient } from '@/lib/gateway/calls'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -19,7 +20,7 @@ function clock(value: number) {
   return new Date(value * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-export function GatewayCallLauncher({ client, conversationId, disabled = false }: { client: GatewayCallsClient; conversationId: string; disabled?: boolean }) {
+export function GatewayCallLauncher({ client, conversationId, disabled = false, compact = false }: { client: GatewayCallsClient; conversationId: string; disabled?: boolean; compact?: boolean }) {
   const ownerProfile = useOwnerProfile()
   const [open, setOpen] = useState(false)
   const [call, setCall] = useState<GatewayCall | null>(null)
@@ -143,7 +144,7 @@ export function GatewayCallLauncher({ client, conversationId, disabled = false }
   const voiceOutputReady = availability?.speechOutput === 'configured' || availability?.speechOutput === 'available'
 
   return <>
-    <Button size="sm" variant="ghost" className="gap-1.5 px-2.5" aria-label="Call Conker" title="Call Conker" disabled={disabled} onClick={() => void openCall()}><Phone /><span className="hidden sm:inline">Call</span></Button>
+    <Tooltip><TooltipTrigger asChild><Button type="button" size={compact ? 'icon' : 'sm'} variant="ghost" className={compact ? 'size-8 shrink-0' : 'gap-1.5 px-2.5'} aria-label="Call Conker" disabled={disabled} onClick={() => void openCall()}><Phone />{!compact && <span className="hidden sm:inline">Call</span>}</Button></TooltipTrigger><TooltipContent>Call Conker</TooltipContent></Tooltip>
     <Dialog open={open} onOpenChange={next => { setOpen(next); if (!next) { voice.cancel(); voice.stopPlayback() } }}>
       <TaskDialogContent size="wide" className="h-[min(46rem,calc(100dvh-2rem))] sm:max-w-3xl" title={call?.endedAt ? 'Call ended' : 'Call mode'} description="A focused voice or typed conversation. Audio is transient; the transcript is saved.">
         <OverlayBody className="flex min-h-0 flex-1 flex-col overflow-y-hidden p-0">
