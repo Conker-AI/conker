@@ -76,6 +76,22 @@ Do not relocate a correctly placed feature just to touch every screen. Home rema
 
 ## Density and layout contract
 
+### Technical workspace chrome
+
+Connected workspaces share `WorkspaceAppbar`: a 56px primary row, 24px desktop and
+16px mobile insets, a bounded 420px central universal-search entry, and right-hand
+route actions. The sidebar opener appears only when navigation is hidden; its
+artwork aligns to the title inset. Chat and Memory retain ownership of their
+stateful controls but use this frame. `PageHeader actionsOnly` portals actions
+into the mounted appbar without leaving an empty content band. Specialized
+editors retain meaningful record names, not repeated route titles.
+
+Local collection filters remain labeled separately from universal search.
+Secondary sections and graph controls occupy a quiet, unfilled secondary row.
+Main shells have no elevation. Inner decision surfaces and composers retain
+their semantic shadow tokens; floating overlays retain their stronger depth.
+Today keeps setup progress above the sidebar profile, not in a second banner.
+
 | Role / token | Default contract |
 | --- | --- |
 | Default button / input / select: `--control-height` | 40px / `2.5rem` |

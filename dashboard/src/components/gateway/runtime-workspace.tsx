@@ -1,7 +1,7 @@
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
 import { ConversationHistory } from '@/components/chat/history'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { GatewayHeader } from './header'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
 import type { Attempt, Generation } from '@/lib/chat/contract'
 import { GatewayModelPicker } from './model-picker'
@@ -57,8 +57,6 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
 export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
-  const sidebar = useSidebar()
-  const sidebarHidden = sidebar.isMobile ? !sidebar.openMobile : sidebar.state === 'collapsed'
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -432,7 +430,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     <div className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <>
-          {sidebarHidden && <SidebarTrigger className="absolute left-4 top-3 z-20 size-8" aria-label="Expand sidebar" title="Expand sidebar" />}
+          {visible && <GatewayHeader context={<span className="truncate text-sm font-medium">New chat</span>} />}
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-[10vh]">
             <div className="w-full max-w-[768px]">
               <div className="mb-7 flex flex-col items-center gap-3 sm:mb-8">
@@ -457,16 +455,14 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             </div>
           </div>
         </> : <>
-          <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 border-b px-4 sm:px-6">
-            {sidebarHidden && <SidebarTrigger className="size-8 shrink-0" aria-label="Expand sidebar" title="Expand sidebar" />}
-            <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>
+          {visible && <GatewayHeader context={<h2 className="min-w-0 truncate text-sm font-medium">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>}>
             {control && current?.status !== 'forgotten' && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || Boolean(attempt)} />}
             <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Chat options"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
               <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onSelect={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/memory"><Brain />Open memory</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/tools"><Wrench />Open tools</Link></DropdownMenuItem>
             </DropdownMenuContent></DropdownMenu>
-          </header>
+          </GatewayHeader>}
           <ConversationHistory key={selected} sessionId={selected} focusedMessageId={focusedMessageId}>
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length && !attempt.taskBinding} onRestore={() => recover('restoreDraft')} onCheck={() => recover('check')} onRetry={() => recover('retrySameRequest')} onRelease={() => recover('releaseUnstarted')} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Conker got your message; the reply isn’t saved yet' : 'Not sure your last message went through'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'Sending is paused until the reply shows up, so nothing is done twice.' : 'Your text is kept. Sending is paused because the last message may still be running.'} Check the chat, and your chat list in case it continued in a new chat.</p><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}>Check the chat</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I checked. Sending again might do the same work twice.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeFound.availability !== 'enabled'} onClick={() => recover('acknowledgeFound')}>It’s in the chat</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeUnknown.availability !== 'enabled'} onClick={() => recover('acknowledgeUnknown')}>Let me send again</Button></div></>}</div>)}

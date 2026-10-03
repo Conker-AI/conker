@@ -12,6 +12,8 @@ import { BaseLayout } from '@/components/layouts/base-layout'
 import { GatewayChatSidebar } from './chat-sidebar'
 import { GatewayPrivacyControl } from './privacy-control'
 import { GatewayHeader } from './header'
+import { WorkspaceChromeProvider } from '@/components/design-system/workspace-chrome'
+import { UniversalSearchProvider } from './universal-search'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayActivityClient } from '@/lib/gateway/activity'
@@ -45,7 +47,7 @@ const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(
 
 const workspaceFallback = <div className="min-h-0 flex-1 space-y-6 p-4 sm:p-6 lg:p-8" role="status" aria-busy="true">
   <span className="sr-only">Opening workspace…</span>
-  <div className="space-y-2"><Skeleton className="h-8 w-48" /><Skeleton className="h-5 w-full max-w-md" /></div>
+  <Skeleton className="h-10 w-full" />
   <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]"><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>
 </div>
 
@@ -78,7 +80,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat and Memory own their header so their controls stay with workspace state.
-  return <BaseLayout variant="canvas" header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
+  return <UniversalSearchProvider><WorkspaceChromeProvider><BaseLayout variant="canvas" header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
     <Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
@@ -104,5 +106,5 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
     }} /></div></Suspense>}
-  </BaseLayout>
+  </BaseLayout></WorkspaceChromeProvider></UniversalSearchProvider>
 }

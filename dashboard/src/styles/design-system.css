@@ -8,10 +8,35 @@
   --collection-portrait-size: 2rem;
   --page-section-gap: 1.5rem;
   --collection-section-gap: 1rem;
+  --appbar-height: 3.5rem;
+  --workspace-gutter: 1.5rem;
   --scrollbar-size: 0.625rem;
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));
   --scrollbar-thumb-active: var(--primary);
+}
+
+.workspace-appbar-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(12rem,420px) minmax(0,1fr); align-items:center; gap:1rem; min-height:var(--appbar-height); padding:0.5rem var(--workspace-gutter); }
+.workspace-appbar-context, .workspace-appbar-actions, .workspace-route-actions { display:flex; min-width:0; align-items:center; gap:0.5rem; }
+.workspace-appbar-actions { justify-content:flex-end; }
+.workspace-route-actions:empty { display:none; }
+.workspace-route-actions > div { display:flex; align-items:center; gap:0.5rem; }
+.workspace-appbar-context .workspace-sidebar-trigger { width:2rem; height:2rem; margin-left:-0.5rem; flex-shrink:0; }
+.workspace-search-trigger { width:100%; justify-content:flex-start; color:var(--muted-foreground); background:var(--background); box-shadow:none; }
+.workspace-search-trigger:hover { color:var(--foreground); }
+.workspace-appbar-toolbar { min-width:0; padding:0.5rem var(--workspace-gutter); border-top:1px solid var(--border); }
+.workspace-search-dialog { max-width:44rem; }
+@media (max-width:1023px) {
+  .workspace-appbar-row { grid-template-columns:minmax(0,1fr) auto auto; gap:0.5rem; }
+  .workspace-search-trigger { width:2rem; padding:0; justify-content:center; border-color:transparent; }
+  .workspace-search-label { display:none; }
+}
+@media (max-width:767px) {
+  :root { --workspace-gutter:1rem; }
+  .workspace-appbar-actions { max-width:50vw; }
+  .workspace-route-actions { flex-wrap:wrap; justify-content:flex-end; }
+  .workspace-route-actions button, .workspace-route-actions a { min-height:2rem; height:auto; white-space:normal; }
+  .workspace-search-dialog { width:calc(100% - 1rem); max-width:none; }
 }
 
 

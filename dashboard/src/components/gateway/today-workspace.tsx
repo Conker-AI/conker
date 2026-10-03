@@ -11,7 +11,6 @@ import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
 import { buildTodaySnapshot } from './today-model'
-import { SetupReadinessPrompt } from './setup-readiness-prompt'
 import { GatewayPageFrame } from './page-frame'
 import '@/app/home/home.css'
 
@@ -35,7 +34,7 @@ function EmptyAction({ icon, title, description, action }: { icon: ReactNode; ti
   </div>
 }
 
-export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, control }: Props) {
+export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: Props) {
   const [data, setData] = useState(empty), [loading, setLoading] = useState(true), [error, setError] = useState<string | null>(null)
   const generation = useRef(0)
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -66,7 +65,6 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
       <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin' : ''} /></Button><Button asChild><Link to="/chat"><SquarePen />New chat</Link></Button></div>} />
       {error && <p role="alert" className="flex items-start gap-2 rounded-lg border bg-muted p-3 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</p>}
       {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <p role="status" className="text-sm text-muted-foreground">Loading today…</p>}
-      <SetupReadinessPrompt client={control} />
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <div className="min-w-0 space-y-6">
           <OverviewSection priority title="Waiting for you" description={today.waiting.length ? `${today.waiting.length} ${today.waiting.length === 1 ? 'decision needs' : 'decisions need'} your review before anything continues.` : 'Nothing needs your decision.'} action={<Button size="sm" variant="outline" asChild><Link to="/inbox">{today.waiting.length === 1 ? 'Review request' : 'Open inbox'}<ArrowUpRight /></Link></Button>}>
