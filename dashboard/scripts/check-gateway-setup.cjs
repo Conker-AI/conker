@@ -131,7 +131,7 @@ async function main() {
     const sidebar = await fs.readFile(path.join(root, 'src/components/gateway/chat-sidebar.tsx'), 'utf8')
     const progress = await fs.readFile(path.join(root, 'src/components/gateway/setup-progress.tsx'), 'utf8')
     const presentation = await fs.readFile(path.join(root, 'src/components/gateway/setup-presentation.ts'), 'utf8')
-    const readiness = await fs.readFile(path.join(root, 'src/components/gateway/setup-readiness-prompt.tsx'), 'utf8')
+    const today = await fs.readFile(path.join(root, 'src/components/gateway/today-workspace.tsx'), 'utf8')
     const preview = await fs.readFile(path.join(root, 'src/dev/fake-gateway.ts'), 'utf8')
     const statusHook = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-hook.ts'), 'utf8')
     assert.ok(transport.includes('/^\\/api\\/control\\/pi\\/setup\\/status$/'),
@@ -149,14 +149,12 @@ async function main() {
       'The connected shell must render setup through the shared route resolver')
     assert.match(workspace, /params\.get\('tab'\) === 'harness'[\s\S]*GatewayAgentsWorkspace/,
       'Companion harness configuration must be reachable from the connected shell')
-    assert.doesNotMatch(sidebar, /useGatewaySetupStatus|Finish setup/,
-      'Temporary setup progress must not occupy permanent sidebar navigation')
-    assert.match(sidebar, /Setup &amp; readiness/,
-      'Setup must remain discoverable from the account menu')
-    assert.match(readiness, /status\.state === 'complete'\) return null/,
-      'Completed setup must remove the temporary Today prompt')
-    assert.match(readiness, /Finish setting up Conker[\s\S]*Continue setup/,
-      'Incomplete setup must have one clear continuation action on Today')
+    assert.match(sidebar, /setupStatus\.state !== 'complete'/,
+      'Completed setup must remove the temporary sidebar prompt')
+    assert.match(sidebar, /to="\/setup"[\s\S]*setupSummary\.resolved/,
+      'Incomplete setup must expose truthful progress and a continuation above the profile')
+    assert.doesNotMatch(today, /SetupReadinessPrompt/,
+      'Today must not duplicate the sidebar setup prompt')
     assert.match(progress, /Mounted destination[\s\S]*Copies to keep[\s\S]*Save backup policy/,
       'Protection must collect one typed off-machine destination and retention policy')
     assert.match(progress, /conker setup run protection/,

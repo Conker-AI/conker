@@ -1,4 +1,4 @@
-import { useId, type ComponentProps, type ReactNode } from "react"
+import { cloneElement, isValidElement, useId, type ComponentProps, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Search, SearchX } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -7,16 +7,17 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { createPortal } from "react-dom"
 import { useWorkspaceChrome } from '@/lib/workspace-chrome'
+import { WorkspaceRouteActions } from './workspace-chrome'
 
 
 export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean }) {
   const chrome = useWorkspaceChrome()
-  if (actionsOnly && chrome) return chrome.actions ? createPortal(<><h1 className="sr-only">{title}</h1>{actions}</>, chrome.actions) : null
+  if (actionsOnly && chrome) return chrome.actions ? createPortal(<><h1 className="sr-only">{title}</h1><WorkspaceRouteActions>{actions}</WorkspaceRouteActions></>, chrome.actions) : null
   if (actionsOnly) return <header data-slot="page-header" className="flex min-w-0 justify-end"><h1 className="sr-only">{title}</h1>{actions && <div role="toolbar" aria-label={`${title} actions`} className="flex flex-wrap justify-end gap-2">{actions}</div>}</header>
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className={cn("break-words font-semibold", density === "compact" ? "text-2xl leading-8" : "text-3xl leading-9")}>{title}</h1>
+        <h1 className={cn("break-words font-semibold", density === "compact" ? "text-xl leading-7" : "text-3xl leading-9")}>{title}</h1>
         {status}
       </div>
       {description && <p className={cn("max-w-prose text-sm text-muted-foreground", density === "compact" ? "mt-1 leading-5" : "mt-2 leading-6")}>{description}</p>}
@@ -80,9 +81,13 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
 
 export function CollectionSection({ title, icon, children, contained = false }: { title: string; icon?: ReactNode; children: ReactNode; contained?: boolean }) {
   const id = useId()
+  const className = cn("divide-y divide-border", !contained && "rounded-lg border bg-card text-card-foreground")
+  const content = isValidElement<{ className?: string }>(children) && ['ul', 'dl'].includes(String(children.type))
+    ? cloneElement(children, { className: cn(className, children.props.className) })
+    : <ul className={className}>{children}</ul>
   return <section aria-labelledby={id} data-slot="collection-section">
     <h2 id={id} className="mb-2 flex items-center gap-2 px-3 text-xs font-medium text-muted-foreground sm:px-4">{icon}{title}</h2>
-    <ul className={cn("divide-y divide-border", !contained && "rounded-lg border bg-card text-card-foreground")}>{children}</ul>
+    {content}
   </section>
 }
 

@@ -2,13 +2,12 @@ import { useId, type ReactNode } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import type { CharacterAsset } from "@/lib/api/character"
 
 export function StudioSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   const id = useId()
-  return <Card role="region" aria-labelledby={id}><CardHeader><CardTitle><h2 id={id}>{title}</h2></CardTitle>{description && <CardDescription>{description}</CardDescription>}</CardHeader><CardContent className="space-y-5">{children}</CardContent></Card>
+  return <section aria-labelledby={id} className="space-y-5 border-b pb-6"><header className="space-y-1"><h2 id={id} className="text-base font-semibold">{title}</h2>{description && <p className="text-sm leading-6 text-muted-foreground">{description}</p>}</header><div className="space-y-5">{children}</div></section>
 }
 export function StudioField({ label, hint, value, onChange, multiline = true, placeholder, maxLength = 6000 }: { label: string; hint?: string; value: string; onChange: (value: string) => void; multiline?: boolean; placeholder?: string; maxLength?: number }) {
   const id = useId()
