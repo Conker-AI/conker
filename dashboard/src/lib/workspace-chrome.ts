@@ -1,6 +1,9 @@
 import { createContext, useContext, type Dispatch, type SetStateAction } from 'react'
 
 type Chrome = {
+  appearance: 'original' | 'technical'
+  documentTitle: string | null; setDocumentTitle: (title: string | null) => void
+  controls: HTMLDivElement | null; setControls: (node: HTMLDivElement | null) => void
   actions: HTMLDivElement | null; setActions: (node: HTMLDivElement | null) => void
   search: HTMLDivElement | null; setSearch: (node: HTMLDivElement | null) => void
   summary: HTMLDivElement | null; setSummary: (node: HTMLDivElement | null) => void

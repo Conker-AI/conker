@@ -38,7 +38,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
   const eligibility = ownerDecisionEligibility(request, now)
   const expired = request.status === 'pending' && (eligibility.expired || request.unavailableReason === 'expired')
   const title = request.title || 'Review this action'
-  return <Card className={detail ? 'min-w-0 py-6' : 'min-w-0'} aria-label={title}>
+  return <Card data-slot="approval-record" className={detail ? 'min-w-0 py-6' : 'min-w-0'} aria-label={title}>
     <CardHeader>
       <CardTitle><h3 className="break-words [overflow-wrap:anywhere]">{detail ? title : <Link className="rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-ring" to={`/inbox?request=${encodeURIComponent(request.id)}`}>{title}</Link>}</h3></CardTitle>
       <CardDescription>{request.actor || 'Conker'} · {relativeTime(request.createdAt, now)}</CardDescription>

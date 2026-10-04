@@ -1,4 +1,4 @@
-import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -17,13 +17,15 @@ export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem
     className={cn(emphasis === 'quiet' && 'shadow-none', !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'), menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none', className)} />
 }
 
-export function WorkspaceChromeProvider({ children }: { children: ReactNode }) {
+export function WorkspaceChromeProvider({ children, appearance = 'original' }: { children: ReactNode; appearance?: 'original' | 'technical' }) {
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [search, setSearch] = useState<HTMLDivElement | null>(null)
   const [summary, setSummary] = useState<HTMLDivElement | null>(null)
   const [searchOwner, setSearchOwner] = useState<string | null>(null)
   const [compactSearch, setCompactSearch] = useState(false)
-  return <WorkspaceChromeContext.Provider value={{ actions, setActions, search, setSearch, summary, setSummary, searchOwner, setSearchOwner, compactSearch, setCompactSearch }}>{children}</WorkspaceChromeContext.Provider>
+  const [documentTitle, setDocumentTitle] = useState<string | null>(null)
+  const [controls, setControls] = useState<HTMLDivElement | null>(null)
+  return <WorkspaceChromeContext.Provider value={{ appearance, documentTitle, setDocumentTitle, controls, setControls, actions, setActions, search, setSearch, summary, setSummary, searchOwner, setSearchOwner, compactSearch, setCompactSearch }}>{children}</WorkspaceChromeContext.Provider>
 }
 
 export type WorkspaceAppbarProps = {
@@ -44,9 +46,10 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
   const items = actionItems(children)
   const group = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState<number | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = group.current?.closest('.workspace-appbar-actions')
     if (!container) return
+    setAvailableWidth(container.getBoundingClientRect().width)
     const observer = new ResizeObserver(([entry]) => setAvailableWidth(entry.contentRect.width))
     observer.observe(container)
     return () => observer.disconnect()
@@ -88,6 +91,7 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
       </div>
     </div>
     {sections}
+    <div ref={chrome?.setControls} className="workspace-document-controls" />
     {toolbar && <div className="workspace-appbar-toolbar">{toolbar}</div>}
   </header>
 }

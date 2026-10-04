@@ -64,6 +64,7 @@
   --warning: oklch(0.48 0.12 75);
   /* Raised content surfaces stay quiet; the composer floats above them. */
   --shadow-surface: 0 1px 2px 0 oklch(0 0 0 / 4%), 0 8px 24px -18px oklch(0 0 0 / 18%);
+  --shadow-overlay: 0 8px 24px -8px oklch(0 0 0 / 12%), 0 24px 64px -16px oklch(0 0 0 / 20%);
   --radius: 0.625rem;
   /* Neutral and quiet: a soft backdrop behind a white canvas, black for actions. */
   --background: oklch(1 0 0);
@@ -104,6 +105,7 @@
   --success: oklch(0.84 0.14 158);
   --warning: oklch(0.79 0.12 75);
   --shadow-surface: 0 2px 4px 0 oklch(0 0 0 / 24%), 0 12px 28px -20px oklch(0 0 0 / 88%);
+  --shadow-overlay: 0 8px 24px -8px oklch(0 0 0 / 40%), 0 24px 64px -16px oklch(0 0 0 / 64%);
   --shadow-composer: 0 4px 12px 0 oklch(0 0 0 / 20%), 0 5px 16px -4px oklch(0 0 0 / 35%);
   /* Neutral dark: a deeper backdrop behind a slightly lighter canvas, white for actions. */
   --background: oklch(0.165 0 0);

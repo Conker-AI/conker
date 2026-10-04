@@ -27,6 +27,37 @@ try {
   const { MemoryRouter } = requireFromRoot('react-router-dom')
   const h = React.createElement
   const render = element => renderToStaticMarkup(h(MemoryRouter, {}, element))
+  check('Routine workspace commands are quiet; explicit commitments can be primary', () => {
+    const quiet = render(h(ui.WorkspaceAction, { disabled: true, 'aria-label': 'New project' }, 'New project'))
+    assert.ok(quiet.includes('data-slot="workspace-action"')); assert.ok(quiet.includes('shadow-none'))
+    assert.ok(quiet.includes('disabled=""')); assert.ok(!quiet.includes('bg-primary'))
+    assert.ok(render(h(ui.WorkspaceAction, { emphasis: 'primary' }, 'Save')).includes('bg-primary'))
+  })
+  check('Workspace actions preserve native links, icon labels and menu anatomy', () => {
+    const link = render(h(ui.WorkspaceAction, { asChild: true }, h('a', { href: '/projects' }, 'Projects')))
+    assert.ok(link.includes('<a ')); assert.ok(link.includes('href="/projects"')); assert.ok(!link.includes('<button'))
+    const icon = render(h(ui.WorkspaceAction, { iconOnly: true, 'aria-label': 'Refresh' }, h('svg')))
+    assert.ok(icon.includes('aria-label="Refresh"')); assert.ok(icon.includes('max-sm:size-(--control-height)'))
+    const menu = render(h(ui.WorkspaceAction, { menuItem: true }, 'Export'))
+    assert.ok(menu.includes('whitespace-normal')); assert.ok(menu.includes('w-full justify-start'))
+  })
+  check('Document and inspector layout preserve reading order and named context', () => {
+    const split = render(h(ui.WorkspaceSplit, { asideLabel: 'Project references', aside: 'Linked work' }, 'Project instructions'))
+    assert.ok(split.includes('data-slot="workspace-split"')); assert.ok(split.includes('<aside'))
+    assert.ok(split.includes('aria-label="Project references"')); assert.ok(split.indexOf('Project instructions') < split.indexOf('Linked work'))
+  })
+  check('Workspace modes use one named horizontal radio group with explicit selection', () => {
+    const modes = render(h(ui.WorkspaceModes, { label: 'Memory view', value: 'tree', onChange() {}, options: [{ value: 'map', label: 'Map', icon: h('svg') }, { value: 'tree', label: 'Tree', icon: h('svg') }] }))
+    assert.ok(modes.includes('role="radiogroup"')); assert.ok(modes.includes('aria-label="Memory view"'))
+    assert.ok(modes.includes('aria-orientation="horizontal"')); assert.equal((modes.match(/role="radio"/g) ?? []).length, 2)
+    assert.equal((modes.match(/aria-checked="true"/g) ?? []).length, 1)
+    assert.ok(modes.includes('aria-label="Tree"')); assert.ok(modes.includes('peer-focus-visible:outline-ring'))
+  })
+  check('Document controls and route context have a standalone fallback', () => {
+    assert.ok(render(h(ui.WorkspaceControls, {}, 'Document modes')).includes('Document modes'))
+    const header = render(h(ui.PageHeader, { actionsOnly: true, document: true, title: 'Saved project', actions: h('button', {}, 'Archive') }))
+    assert.ok(header.includes('<h1 class="sr-only">Saved project</h1>')); assert.ok(header.includes('Archive'))
+  })
   check('Workspace search preserves local query props outside workspace chrome', () => {
     const html = render(h(ui.WorkspaceSearch, { label: 'Find projects', value: 'judo', disabled: true, maxLength: 200, onChange() {} }))
     assert.equal((html.match(/type="search"/g) ?? []).length, 1)
@@ -74,6 +105,16 @@ try {
       emptyState: { title: 'No saved tasks', description: 'Create an outcome', action: h('button', {}, 'Create task') } }))
     assert.ok(html.includes('No saved tasks')); assert.ok(html.includes('Create task'))
     assert.ok(!html.includes('Sort records')); assert.ok(!html.includes('View'))
+    assert.ok(!html.includes('<thead')); assert.ok(!html.includes('<table'))
+  })
+  check('Technical styling is scoped away from the sidebar and empty chat', () => {
+    const css = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/styles/design-system.css'), 'utf8')
+    const workspace = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
+    assert.ok(css.includes('.technical-workspace {')); assert.ok(css.includes('--appbar-height: 3rem'))
+    assert.ok(css.includes('[aria-label="Message composer"] [data-slot="textarea"] { background:transparent; border:0; border-radius:0; }'))
+    assert.ok(!css.includes('.technical-workspace [data-sidebar'))
+    assert.ok(workspace.includes("appearance={chatActive && !session ? 'original' : 'technical'}"))
+    assert.ok(workspace.includes("contentClassName={chatActive && !session ? undefined : 'technical-workspace'}"))
   })
   console.log(checks.map(name => `PASS ${name}`).join('\n'))
 } finally {

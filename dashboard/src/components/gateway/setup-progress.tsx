@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction, WorkspaceSplit } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { StatusBadge } from '@/components/status-badge'
-import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStep } from '@/lib/gateway/control'
+import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStatus, SetupStep } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { useGatewaySetupStatus } from './setup-status-hook'
@@ -326,6 +326,24 @@ function BoundaryReview({ client, expectedRevision, onRecorded }: { client: Gate
   </div>
 }
 
+function SetupChecklist({ status, client, refresh }: { status: SetupStatus; client: GatewayControlClient; refresh: () => void }) {
+  return <div className="min-w-0 space-y-5">
+    <div><h2 className="text-sm font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>
+    <div className="divide-y border-y">{setupPhases.map((phase, phaseIndex) => <section key={phase.title} className="py-4" aria-labelledby={`setup-phase-${phaseIndex}`}>
+      <div className="mb-2"><h3 id={`setup-phase-${phaseIndex}`} className="text-sm font-semibold">{phase.title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{phase.description}</p></div>
+      <ol>{phase.steps.map(id => {
+        const step = status.steps.find(candidate => candidate.id === id)
+        if (!step) return null
+        const active = step.id === status.currentStep
+        return <li key={step.id} className={cn('grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3 rounded-md py-2', active && '-mx-2 bg-muted px-2')} aria-current={active ? 'step' : undefined}>
+          <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-muted-foreground [&>svg]:size-4', step.state === 'complete' && 'bg-muted text-success', (step.state === 'blocked' || step.state === 'degraded') && 'border-warning-border text-warning')}><StateIcon state={step.state} /></span>
+          <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2"><span className="text-sm font-medium">{setupLabels[step.id].title}</span><span className={cn('text-xs text-muted-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'text-warning')}>{setupStateLabels[step.state]}{!step.required ? ' · Optional' : ''}</span></div>{active && <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.evidence[0]?.detail ?? setupLabels[step.id].description}</p>}{step.state === 'skipped' && (step.id === 'memory' || step.id === 'capabilities') && <div className="mt-1"><SetupChoiceControl client={client} step={step.id} choice="include" label="Set up now" onSaved={refresh} /></div>}</div>
+        </li>
+      })}</ol>
+    </section>)}</div>
+  </div>
+}
+
 export function GatewaySetupProgress({ client }: { client: GatewayControlClient }) {
   const { status, error, refresh } = useGatewaySetupStatus(client)
   if (!status && !error) return <GatewayPageFrame><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></GatewayPageFrame>
@@ -341,10 +359,10 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 id="setup-progress-title" className="text-base leading-6 font-semibold">Setup progress</h2><span className="text-muted-foreground">{remainingRequired === 0 ? 'Required checks complete' : `${remainingRequired} required ${remainingRequired === 1 ? 'check' : 'checks'} remaining`}{attention > 0 ? ` · ${attention} ${attention === 1 ? 'item needs' : 'items need'} attention` : ''}</span></div>
           <span className="tabular-nums text-muted-foreground">{resolved} of {status.steps.length} resolved</span>
         </div>
-        <Progress value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
+        <Progress className="h-1" value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
       </section>
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
-        <section aria-labelledby="next-step-title" className="elevation-surface min-w-0 rounded-lg border bg-card p-4 text-card-foreground">
+      <WorkspaceSplit asideLabel="Setup checklist" aside={<SetupChecklist status={status} client={client} refresh={refresh} />}>
+        <section aria-labelledby="next-step-title" className="min-w-0 space-y-5">
           {current ? <>
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-2"><h2 id="next-step-title" className="text-base leading-6 font-semibold">{setupLabels[current.id].title}</h2><StatusBadge tone={current.state === 'blocked' || current.state === 'degraded' ? 'warning' : current.state === 'complete' ? 'live' : 'neutral'}>{setupStateLabels[current.state]}</StatusBadge></div><p className="mt-1 text-sm leading-6 text-muted-foreground">{current.evidence[0]?.detail ?? setupLabels[current.id].description}</p></div>
@@ -357,22 +375,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
             {current.id === 'rehearsal' && <RehearsalControl client={client} onRecorded={refresh} />}
           </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">Setup is complete</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Required checks have current evidence, and your optional choices are saved.</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
         </section>
-        <aside aria-labelledby="setup-steps-title" className="min-w-0 space-y-5 xl:sticky xl:top-6">
-          <div><h2 id="setup-steps-title" className="text-base font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>
-          <div className="divide-y border-y">{setupPhases.map((phase, phaseIndex) => <section key={phase.title} className="py-4" aria-labelledby={`setup-phase-${phaseIndex}`}>
-            <div className="mb-2"><h3 id={`setup-phase-${phaseIndex}`} className="text-sm font-semibold">{phase.title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{phase.description}</p></div>
-            <ol>{phase.steps.map(id => {
-              const step = status.steps.find(candidate => candidate.id === id)
-              if (!step) return null
-              const active = step.id === status.currentStep
-              return <li key={step.id} className={cn('grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3 rounded-md py-2', active && '-mx-2 bg-muted px-2')} aria-current={active ? 'step' : undefined}>
-                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border text-muted-foreground [&>svg]:size-4', step.state === 'complete' && 'border-primary bg-primary text-primary-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'border-warning-border text-warning')}><StateIcon state={step.state} /></span>
-                <div className="min-w-0"><div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2"><span className="text-sm font-medium">{setupLabels[step.id].title}</span><span className={cn('text-xs text-muted-foreground', (step.state === 'blocked' || step.state === 'degraded') && 'text-warning')}>{setupStateLabels[step.state]}{!step.required ? ' · Optional' : ''}</span></div>{active && <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.evidence[0]?.detail ?? setupLabels[step.id].description}</p>}{step.state === 'skipped' && (step.id === 'memory' || step.id === 'capabilities') && <div className="mt-1"><SetupChoiceControl client={client} step={step.id} choice="include" label="Set up now" onSaved={refresh} /></div>}</div>
-              </li>
-            })}</ol>
-          </section>)}</div>
-        </aside>
-      </div>
+      </WorkspaceSplit>
       <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(status.generatedAt).toLocaleString()}. Secret values are never included in this status.</p>
     </div>
   </GatewayPageFrame>

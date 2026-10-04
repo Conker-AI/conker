@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, Download, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Archive, Code2, Download, Eye, FileCode2, Files, History, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ArtifactPreview } from '@/components/artifacts/native-preview'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, WorkspaceControls, WorkspaceModes, RecordItem, TaskDialogContent } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,6 @@ import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import type { GatewayActivityClient, GatewayTask } from '@/lib/gateway/activity'
 import { downloadAnswerFile } from '@/lib/rich-answer'
@@ -93,11 +92,11 @@ function ArtifactEditor({ initial, control, onChanged }: { initial: GatewayArtif
   }
   const unavailable = !artifact.contentIncluded || !selected
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={artifact.title} description="Immutable versions with explicit provenance and inert exports." density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link to="/artifacts"><ArrowLeft />Artifacts</Link></Button><Button variant="outline" disabled={pending || dirty} onClick={() => setArchive(true)}>{artifact.archivedAt ? <RotateCcw /> : <Archive />}{artifact.archivedAt ? 'Restore' : 'Archive'}</Button></div>} /></div>
+    <PageHeader actionsOnly document title={artifact.title} actions={<WorkspaceAction disabled={pending || dirty} onClick={() => setArchive(true)}>{artifact.archivedAt ? <RotateCcw /> : <Archive />}{artifact.archivedAt ? 'Restore' : 'Archive'}</WorkspaceAction>} />
     {unavailable ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="max-w-2xl space-y-4"><Badge variant="outline">{availabilityLabels[artifact.availability]}</Badge><h2 className="text-lg font-medium">Artifact content is unavailable</h2><p className="text-sm leading-6 text-muted-foreground">The source changed, was forgotten or removed, or its privacy could not be verified. History bodies, preview, editing and export are blocked.</p><p className="text-xs text-muted-foreground">The durable tombstone keeps identity and version count without exposing cached content.</p></div></div> : <>
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 sm:px-6"><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="Artifact view"><TabsTrigger value="preview">Preview</TabsTrigger><TabsTrigger value="source">Source</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList></Tabs><div className="ml-auto flex items-center gap-2"><span className="hidden text-xs text-muted-foreground sm:inline">Version {selected.version}{historical ? ' · historical' : ''}</span><Button size="sm" variant="outline" disabled={pending || exporting} onClick={() => void exportVersion()}><Download />{exporting ? 'Exporting…' : 'Export'}</Button></div></div>
+      <WorkspaceControls><WorkspaceModes label="Artifact view" value={tab} onChange={setTab} options={[{ value: 'preview', label: 'Preview', icon: <Eye /> }, { value: 'source', label: 'Source', icon: <Code2 /> }, { value: 'history', label: 'History', icon: <History /> }]} /><div className="flex items-center gap-3"><span className="hidden text-xs text-muted-foreground sm:inline">{artifactKinds[selected.content.kind]} · Version {selected.version}{historical ? ' · historical' : ''}</span><WorkspaceAction disabled={pending || exporting} onClick={() => void exportVersion()}><Download />{exporting ? 'Exporting…' : 'Export'}</WorkspaceAction></div></WorkspaceControls>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === 'preview' && <div className="p-4 sm:p-6">{parsed ? <ArtifactPreview content={parsed} citations={(selected.citations ?? []).map(item => ({ id: item.id, label: item.label, ...(item.href ? { href: item.href } : {}), ...(item.excerpt ? { excerpt: item.excerpt } : {}) }))} /> : <p role="alert" className="text-sm text-destructive">{parseError}</p>}</div>}
+        {tab === 'preview' && <div className={`p-4 sm:p-6${parsed?.kind === 'markdown' ? ' mx-auto w-full max-w-[80ch]' : ''}`}>{parsed ? <ArtifactPreview content={parsed} citations={(selected.citations ?? []).map(item => ({ id: item.id, label: item.label, ...(item.href ? { href: item.href } : {}), ...(item.excerpt ? { excerpt: item.excerpt } : {}) }))} /> : <p role="alert" className="text-sm text-destructive">{parseError}</p>}</div>}
         {tab === 'source' && <div className="space-y-5 p-4 sm:p-6"><p className="text-xs leading-5 text-muted-foreground">{historical ? 'Historical source is read-only. Restore it from History to create a new current version.' : artifact.archivedAt ? 'Restore this artifact before editing.' : 'Saving appends a new immutable version. Existing versions never change.'}</p>
           <div className="space-y-2"><Label htmlFor="artifact-editor-title">Title</Label><Input id="artifact-editor-title" maxLength={160} disabled={pending || historical || !!artifact.archivedAt} value={historical ? selected.title : draft.title} onChange={event => setDraft(value => ({ ...value, title: event.target.value }))} /></div>
           {current.content.kind === 'code' && <div className="space-y-2"><Label htmlFor="artifact-editor-language">Language</Label><Input id="artifact-editor-language" maxLength={40} disabled={pending || historical || !!artifact.archivedAt} value={historical && selected.content.kind === 'code' ? selected.content.language : draft.language} onChange={event => setDraft(value => ({ ...value, language: event.target.value }))} /></div>}

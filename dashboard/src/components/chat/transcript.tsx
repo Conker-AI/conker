@@ -53,7 +53,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
 
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
-  return <div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
+  return <div className="flex min-w-0 flex-col gap-8" data-slot="chat-transcript" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}

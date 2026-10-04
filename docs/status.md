@@ -13,6 +13,33 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### SiYuan / Asri workspace (5 October, development branch)
+
+The technical workspace now uses a compact document frame, integrated section
+controls, source-owned search, quieter collection rows and a shared content/context
+split for editors and overviews. Routine creation commands remain outlined;
+primary contrast belongs to explicit commitments. Semantic theme variables still
+own the palette, fields and overlays. The main shell stays flat; decision surfaces
+use a quiet border, while the unified composer and floating overlays retain depth.
+The existing sidebar and empty new-chat canvas are deliberately outside the new
+technical styling boundary.
+
+The verified GitHub rollback reference is
+`c3c8dfdf2c1765350808f54195633b33c1470a7c` on
+`checkpoint/conker-before-siyuan-asri-2026-10-04`; work continues on
+`design/conker-siyuan-asri-2026-10-04`. No pinned release, production service,
+backend authority or provider configuration was changed by this visual pass.
+
+The explicit fake-gateway development preview was inspected on desktop and
+390 x 844 mobile layouts, including document editors, transcript, Map/Tree/List,
+inspectors and creation dialogs. Expanded/collapsed navigation and light/dark
+surfaces were checked. The shared workspace primitives now have 13 render checks.
+All 29 dashboard check suites, build, lint and the design guard pass. Existing
+dependency-annotation and large-chunk build warnings remain. Live custom-theme,
+zoom and OS reduced-motion visual acceptance are not certified by these captures;
+theme and motion source checks are separate from browser acceptance. The search
+coverage limitations recorded below remain unchanged.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet

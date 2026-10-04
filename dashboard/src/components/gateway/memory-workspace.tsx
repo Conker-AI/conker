@@ -2,13 +2,14 @@ import { ForgetMemory } from './forget-memory'
 import { GatewayHeader } from './header'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Maximize, Minimize, RefreshCw } from 'lucide-react'
+import { GitFork, Maximize, Minimize, Network, RefreshCw, Table2 } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ReferenceSection } from '@/components/reference-section'
-import { CollectionEmpty, WorkspaceSearch, RecordItem } from '@/components/design-system/primitives'
+import { CollectionEmpty, WorkspaceModes, WorkspaceSearch, RecordItem } from '@/components/design-system/primitives'
+import { WorkspaceAction, WorkspaceRouteActions } from '@/components/design-system/workspace-chrome'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
@@ -145,11 +146,12 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
     <WorkspaceSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" onSubmit={() => { setQuery(search); refresh() }} />
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
-      <Select value={view} onValueChange={setView}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>
+      <WorkspaceModes label="Memory view" value={view} onChange={setView} options={[{ value: 'network', label: 'Map', icon: <Network /> }, { value: 'hierarchy', label: 'Tree', icon: <GitFork /> }, { value: 'database', label: 'List', icon: <Table2 /> }]} />
       <Select value={type} onValueChange={value => { setType(value as typeof type); refresh() }}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
-      <Button size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
-      <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
-    </div>} />
+    </div>}><WorkspaceRouteActions>
+      <WorkspaceAction iconOnly aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} title={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</WorkspaceAction>
+      <WorkspaceAction iconOnly aria-label="Refresh memory" title="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
+    </WorkspaceRouteActions></GatewayHeader>
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
     <div className="memory-workspace-body">
       {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
