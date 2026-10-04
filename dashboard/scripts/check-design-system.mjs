@@ -107,6 +107,15 @@ function inspect(file, tree) {
   const visit = node => {
     if (!isFoundation(file) && (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))) {
       const tag = node.tagName.getText(tree)
+      if (file.startsWith('src/components/gateway/') && tag === 'CollectionSearch') {
+        let parent = node.parent
+        let picker = false
+        while (parent) {
+          if (ts.isJsxElement(parent) && ['fieldset', 'OverlayBody'].includes(parent.openingElement.tagName.getText(tree))) picker = true
+          parent = parent.parent
+        }
+        if (!picker) report(node, 'workspace-search', 'Use WorkspaceSearch for the page query; inline CollectionSearch is reserved for task pickers.')
+      }
       if (!isDesignSystem(file)) {
         const ownedSlot = node.attributes.properties.find(attribute => ts.isJsxAttribute(attribute)
           && attribute.name.getText(tree) === 'data-slot' && attribute.initializer && ts.isStringLiteral(attribute.initializer)
@@ -160,6 +169,13 @@ function selfTest() {
       assert.equal(check(`const Copy = () => <div data-slot="${slot}" />`)[0]?.rule, 'workspace-pattern')
       assert.deepEqual(check(`const Shared = () => <div data-slot="${slot}" />`, 'src/components/design-system/primitives.tsx'), [])
     }
+  })
+  test('gateway page search cannot create a second inline field', () => {
+    const file = 'src/components/gateway/projects-workspace.tsx'
+    assert.equal(check('const Page = () => <CollectionSearch label="Search projects" />', file)[0]?.rule, 'workspace-search')
+    assert.deepEqual(check('const Page = () => <WorkspaceSearch label="Search projects" />', file), [])
+    assert.deepEqual(check('const Picker = () => <OverlayBody><CollectionSearch label="Find a reference" /></OverlayBody>', file), [])
+    assert.deepEqual(check('const Picker = () => <fieldset><CollectionSearch label="Find an attempt" /></fieldset>', file), [])
   })
   test("heading and search ownership follows the extracted primitives only", () => {
     const source = 'import { Input } from "@/components/ui/input"; const Primitive = () => <><h1>Title</h1><Input type="search" /></>'

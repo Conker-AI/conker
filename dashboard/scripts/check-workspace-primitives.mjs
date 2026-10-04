@@ -27,6 +27,12 @@ try {
   const { MemoryRouter } = requireFromRoot('react-router-dom')
   const h = React.createElement
   const render = element => renderToStaticMarkup(h(MemoryRouter, {}, element))
+  check('Workspace search preserves local query props outside workspace chrome', () => {
+    const html = render(h(ui.WorkspaceSearch, { label: 'Find projects', value: 'judo', disabled: true, maxLength: 200, onChange() {} }))
+    assert.equal((html.match(/type="search"/g) ?? []).length, 1)
+    assert.ok(html.includes('value="judo"')); assert.ok(html.includes('aria-label="Find projects"'))
+    assert.ok(html.includes('disabled=""')); assert.ok(html.includes('maxLength="200"'))
+  })
   check('Local search, filters, count and actions share one ordered toolbar', () => {
     const html = render(h(ui.CollectionToolbar, { search: 'local-search', filters: 'type-filter', count: 3, unit: 'projects', actions: 'view-action' }))
     assert.ok(html.includes('data-slot="collection-toolbar"'))

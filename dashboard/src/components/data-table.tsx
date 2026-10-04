@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CollectionSearch, CollectionToolbar, CollectionEmpty } from "@/components/design-system/primitives"
+import { WorkspaceSearch, CollectionToolbar, CollectionEmpty } from "@/components/design-system/primitives"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -102,7 +102,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="min-w-0 space-y-(--collection-section-gap)">
-      <CollectionToolbar search={searchColumn && <CollectionSearch
+      <CollectionToolbar search={searchColumn && <WorkspaceSearch
         label={searchPlaceholder.replace(/[…]+$/, "")}
         placeholder={searchPlaceholder}
         value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ReferenceSection } from '@/components/reference-section'
-import { CollectionEmpty, CollectionSearch, RecordItem } from '@/components/design-system/primitives'
+import { CollectionEmpty, WorkspaceSearch, RecordItem } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
@@ -143,9 +143,9 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     finally { if (epoch === detailEpoch.current && request === contentEpoch.current) setReadingField(null) }
   }
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
+    <WorkspaceSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" onSubmit={() => { setQuery(search); refresh() }} />
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
       <Select value={view} onValueChange={setView}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>
-      <form className="memory-live-search flex min-w-0 flex-1 gap-2" onSubmit={event => { event.preventDefault(); setQuery(search); refresh() }}><CollectionSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" /><Button type="submit" variant="outline" disabled={busy}>Search</Button></form>
       <Select value={type} onValueChange={value => { setType(value as typeof type); refresh() }}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
       <Button size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>

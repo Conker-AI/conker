@@ -4,7 +4,7 @@ import { useStore } from 'zustand'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { ProposalsPanel } from './proposals-panel'
-import { CollectionSearch, CollectionToolbar, CollectionRow, CollectionSection, PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
+import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -111,7 +111,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
       {requestId ? <div className="flex items-center justify-between gap-3"><Button asChild size="sm" variant="ghost"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>{refreshButton}</div>
-        : (rows.length > 0 || query) && <CollectionToolbar search={<CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />} />}
+        : (rows.length > 0 || query) && <WorkspaceSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}

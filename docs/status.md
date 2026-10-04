@@ -33,6 +33,16 @@ rules and component ownership are recorded in `dashboard/DESIGN.md`. The checkpo
 before this pass is `536d620bd26445bbe470a9dc6afbae978faec0eb` on
 `checkpoint/conker-ui-before-structural-pass-2026-10-04`.
 
+Page search now has one appbar entry. It filters the current view, with Search all
+Conker in the same control's scope menu carrying that query into authenticated
+global results. Collection, table, Inbox and Memory queries no longer add another
+text field below the appbar. Mobile uses one focused search popover. Local query,
+server-read and privacy ownership are retained; task-specific dialog pickers stay
+local. Browser checks confirmed one active field across all six libraries and
+representative Inbox/Activity/Memory screens, mobile focus/no overflow, literal
+global results, query handoff and local-query retention. The previous milestone
+`f6efcb1e539c82495d1389651debaacb6e776f01` remains the rollback point for this change.
+
 The companion dashboard and Pi development branches add authenticated staged
 search with verified revisioned settings, source-owned literal projections,
 privacy invalidation on every query, actual record links and optional bounded
@@ -50,7 +60,7 @@ page overflow, and Studio appbar actions were checked at 1024 x 768. Collapsed
 navigation and light/dark collection surfaces were inspected; Memory Tree/List
 and an explicit content-field read were exercised. Zoom, reduced-motion and
 custom-theme visual acceptance remain unverified. Build, lint, 29 dashboard check
-suites and 18 design-guard self-tests passed, including six new shared-workspace
+suites and 19 design-guard self-tests passed, including seven shared-workspace
 render checks. Existing build warnings about dependency annotations and large
 chunks remain. Focused Pi tests from the preceding milestone cover authentication,
 privacy, settings persistence, pagination and provider fallback.

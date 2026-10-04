@@ -16,7 +16,7 @@ consequences; and whether it directs the user toward their intended action.
 
 | Component family | Shared rule | Active consumers |
 | --- | --- | --- |
-| Find a record | `CollectionToolbar`: local search first, then filters, count and view actions. Search is bounded to 420px on desktop, full-width on narrow screens; no colored toolbar container. | Chats, Projects, Agents, Jobs, Artifacts, Tools, Activity, Inbox |
+| Find a record | One `WorkspaceSearch` in the appbar: filter the current view, or choose Search all Conker with the same query. `CollectionToolbar` retains filters, count and view actions below; no second page-search field. | Chats, Projects, Agents, Jobs, Artifacts, Tools, Activity, Inbox, Memory |
 | Browse records | `CollectionPanel` + `CollectionSection` + `CollectionRow`; one quiet divided structural surface. 64px minimum row, 16px row inset, 14px title, 12px secondary metadata. | The six record libraries; Today reuses rows inside purpose-specific groups |
 | Compare structured records | `DataTable` uses the same toolbar and `collection-surface`, preserving sorting, columns, keyboard opening and pagination. Native tables use shared shadcn table primitives, not separately styled HTML. | Activity and system inventories; Memory List retains its canvas-owned search and bounded server pagination |
 | Edit related fields | `WorkspaceSection` owns the 16px semibold heading, readable description, 16px within-group gap and 24px separation. `StudioSection` delegates to it. | General/Search Settings, Character Studio; Inbox's waiting group uses the same heading without a divider |
@@ -25,8 +25,9 @@ consequences; and whether it directs the user toward their intended action.
 | Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | System diagnostics, Today, Inbox, Chat |
 
 Keep the main shell flat and the approved appbar geometry unchanged. Meaningful
-record headings remain; duplicate route headings do not. Local retrieval never
-looks like the global search entry. Guidance about permission, expiry, model
+record headings remain; duplicate route headings do not. Search has one visible
+page entry point, with its current scope named by the field and scope menu.
+Guidance about permission, expiry, model
 processing, provenance and recovery stays visible at the relevant action.
 Search/list hints can follow results; they do not compete with the find controls.
 The appbar responds to workspace width, not just viewport width: below 900px of
@@ -46,6 +47,17 @@ tooltips and unclipped/reduced-motion icon behavior already in the system.
 Design guards enforce shared slot ownership and semantic tokens; the workspace
 primitive render checks cover grouping, list semantics and empty/loading states.
 
+`WorkspaceSearch` keeps query/filter state owned by the route and portals only
+the control into the appbar. It replaces the universal-search trigger there;
+routes without a local query keep that universal entry. On narrow workspaces the
+same control opens a focused, viewport-bounded search popover. Typing still filters
+loaded collections without provider calls; Memory submits its bounded server read
+with Enter. Search all Conker opens the existing authenticated search with the
+current query, retaining the local query on return and restoring focus. Exact,
+semantic, coverage and privacy behavior are unchanged. `CollectionSearch` remains
+an inline field only for task-specific pickers inside forms/dialogs, not another
+page query. Review necessity and scope before component styling, not afterward.
+
 ## Ownership and imports
 
 | Need | Use | Owner |
@@ -57,7 +69,9 @@ primitive render checks cover grouping, list semantics and empty/loading states.
 | Canvas-led workspace without a separate page heading | `BaseLayout variant="canvas"`; local workflow toolbar and independent canvas/inspector regions | Same layout module; Memory is the current consumer |
 | Page heading outside that shell | `PageHeader` | `src/components/design-system/index.tsx` |
 | Route sections | `RouteSection`; navigation is rendered by `SiteHeader` | `src/config/navigation.ts`, `src/components/appbar-navigation.tsx` |
-| Collection or table search and filters | `CollectionToolbar` with `CollectionSearch` | Same design-system module |
+| Page search / scope | `WorkspaceSearch`, mounted once into workspace chrome | Same design-system module |
+| Collection or table filters | `CollectionToolbar`; page search moves to the appbar | Same design-system module |
+| Task-specific option search | `CollectionSearch` inside the picker | Same design-system module |
 | Search, results announcement and empty state together | `CollectionPanel` | Same design-system module |
 | Group heading and divided collection | `CollectionSection` | Same design-system module |
 | Compact linked item | `CollectionRow` | Same design-system module |
@@ -86,9 +100,9 @@ Declare the route's sections in `src/config/navigation.ts`. The shared appbar ow
 
 For working collection examples, read `src/app/chat/page.tsx` and `src/app/inbox/page.tsx`. Both routes import the same patterns. Chats shows sessions or each agent's latest session; Inbox shows requests or past decisions. Their content differs while corresponding UI elements match.
 
-`CollectionSearch` takes a required accessible `label` and normal input props (`value`, `onChange`, `placeholder`). Its type, class names and accessible-label implementation belong to the component. `CollectionRow` takes `to`, `title`, `description` and optional `descriptionTitle`, `leading` and `trailing` slots. Use `AgentIdentityPortrait name={agentName}` in the leading slot. `CollectionPanel` owns the shared search, live result count and clearable empty-state composition for list screens.
+`WorkspaceSearch` takes a required accessible `label` and normal input props (`value`, `onChange`, `placeholder`), plus optional `onSubmit` for server retrieval. It owns appbar placement, scope, compact presentation and accessible focus behavior. `CollectionSearch` is its field primitive and the inline task-picker alternative. `CollectionRow` takes `to`, `title`, `description` and optional `descriptionTitle`, `leading` and `trailing` slots. Use `AgentIdentityPortrait name={agentName}` in the leading slot. `CollectionPanel` owns the shared search registration, live result count and clearable empty-state composition for list screens.
 
-`DataTable` uses `CollectionSearch` too. It retains columns, sorting, filters, selection and pagination where structured comparison needs them. Do not replace a useful data table with a collection merely to make every screen identical.
+`DataTable` uses `WorkspaceSearch` too. It retains columns, sorting, filters, selection and pagination where structured comparison needs them. Do not replace a useful data table with a collection merely to make every screen identical.
 
 ## Interaction placement (owner-approved, September 16)
 
@@ -423,7 +437,7 @@ The structural pass inspected Studio's editor layout at desktop and 390 x 844, i
 
 ### Gateway memory atlas
 
-Gateway Memory owns the shared `GatewayHeader` and supplies its controls through the appbar toolbar slot, rather than stacking a separate toolbar beneath it. On wide screens title, view, record search, type filter and workspace actions share a row; below the wide breakpoint the controls wrap beneath navigation without overflowing or hiding sidebar reopening/page search. The appbar keeps the normal semantic background; only record search has a subtle field fill. Maximize carries the same header with the workspace.
+Gateway Memory owns the shared `GatewayHeader`. Its one `WorkspaceSearch` occupies the primary appbar search slot; Map/Tree/List, type and graph commands use the secondary toolbar slot. Never add a second record-search field beside the universal trigger. Controls wrap without overflowing or hiding sidebar reopening. The appbar keeps the normal semantic background; only record search has a subtle field fill. Maximize carries the same header with the workspace.
 
 The active gateway workspace defaults to Map; Tree and List use `?view=graph|hierarchy|database`. Tree restores the previously unreachable hierarchy mode. Map uses a bounded, static D3 force layout and Tree uses D3 hierarchy; neither continuously runs a simulation. React Flow owns pan, zoom, dragging, keyboard point selection and one/two-hop focus. Preserve manually dragged positions within a mode, not stale coordinates when switching layouts.
 

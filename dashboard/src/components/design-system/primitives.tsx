@@ -1,6 +1,6 @@
-import { cloneElement, isValidElement, useId, type ComponentProps, type ReactNode } from "react"
+import { cloneElement, isValidElement, useContext, useId, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Search, SearchX } from "lucide-react"
+import { ChevronDown, Search, SearchX } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils"
 import { createPortal } from "react-dom"
 import { useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { WorkspaceRouteActions } from './workspace-chrome'
+import { UniversalSearchContext } from '@/lib/workspace-chrome'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 
 export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean }) {
@@ -72,14 +75,43 @@ export function PageTabsContent({ className, ...props }: ComponentProps<typeof T
   return <TabsContent className={cn("min-w-0", className)} {...props} />
 }
 
-export function CollectionSearch({ label, ...props }: Omit<ComponentProps<typeof Input>, "className" | "type" | "aria-label"> & { label: string }) {
+type CollectionSearchProps = Omit<ComponentProps<typeof Input>, "className" | "type" | "aria-label"> & { label: string }
+
+export function CollectionSearch({ label, compact = false, trailing, ...props }: CollectionSearchProps & { compact?: boolean; trailing?: ReactNode }) {
   return <div data-slot="collection-search" className="relative w-full min-w-0">
     <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-    <Input {...props} type="search" aria-label={label} autoComplete="off" className="h-(--collection-search-height) rounded-lg pr-4 pl-11 shadow-none" />
+    <Input {...props} type="search" aria-label={label} autoComplete="off" className={cn("rounded-lg pl-11 shadow-none", compact ? "h-(--control-height-sm)" : "h-(--collection-search-height)", trailing ? "pr-10" : "pr-4")} />
+    {trailing && <div className="absolute top-1/2 right-1 -translate-y-1/2">{trailing}</div>}
   </div>
 }
 
-/** Local retrieval controls are one group, distinct from global app search. */
+/** One page-search entry; route state stays with its source, presentation moves to the appbar. */
+export function WorkspaceSearch({ onSubmit, ...props }: Omit<CollectionSearchProps, 'onSubmit'> & { onSubmit?: () => void }) {
+  const chrome = useWorkspaceChrome()
+  const openAll = useContext(UniversalSearchContext)
+  const id = useId()
+  const [expanded, setExpanded] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const setOwner = chrome?.setSearchOwner
+  useLayoutEffect(() => {
+    if (!setOwner) return
+    setOwner(id)
+    return () => setOwner(current => current === id ? null : current)
+  }, [id, setOwner])
+  if (!chrome) return <CollectionSearch {...props} />
+  if (!chrome.search) return null
+  const scope = openAll && <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Search scope" title="Search scope"><ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+    <DropdownMenuLabel>Search scope</DropdownMenuLabel><DropdownMenuItem disabled>{props.label}</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => { const opener = chrome.compactSearch ? trigger.current : input.current; setExpanded(false); openAll(typeof props.value === 'string' ? props.value.slice(0, 200) : '', opener) }}>Search all Conker</DropdownMenuItem>
+  </DropdownMenuContent></DropdownMenu>
+  const field = <form className="min-w-0 w-full" role="search" onSubmit={event => { event.preventDefault(); event.stopPropagation(); onSubmit?.(); setExpanded(false) }}>
+    <CollectionSearch {...props} ref={input} enterKeyHint="search" compact={!chrome.compactSearch} trailing={scope} />
+  </form>
+  return createPortal(chrome.compactSearch ? <Popover open={expanded} onOpenChange={setExpanded}><PopoverTrigger asChild><Button ref={trigger} type="button" variant="ghost" size="icon" className="workspace-search-trigger" aria-label={props.label} title={props.label}><Search /></Button></PopoverTrigger><PopoverContent align="center" className="w-[min(26.25rem,calc(100vw-2rem))] p-2">{field}</PopoverContent></Popover> : field, chrome.search)
+}
+
+/** Filters and results belong together; the page search is owned by workspace chrome. */
 export function CollectionToolbar({ search, filters, actions, count, unit = "records" }: {
   search?: ReactNode; filters?: ReactNode; actions?: ReactNode; count?: number; unit?: string
 }) {
@@ -92,9 +124,10 @@ export function CollectionToolbar({ search, filters, actions, count, unit = "rec
 }
 
 export function CollectionLoading({ label }: { label: string }) {
+  const chrome = useWorkspaceChrome()
   return <div role="status" aria-label={label} className="min-w-0 space-y-4">
     <span className="sr-only">{label}</span>
-    <Skeleton className="h-(--collection-search-height) w-full sm:max-w-[26.25rem]" />
+    {!chrome && <Skeleton className="h-(--collection-search-height) w-full sm:max-w-[26.25rem]" />}
     <div className="divide-y border-y">{[0, 1, 2].map(row => <div key={row} className="flex min-h-(--collection-row-height) items-center gap-3 px-4 py-3"><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-3 w-16" /></div>)}</div>
   </div>
 }
@@ -153,7 +186,7 @@ export function CollectionPanel({ query, onQueryChange, label, placeholder, coun
   emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; filters?: ReactNode; hint?: ReactNode; children: ReactNode
 }) {
   return <div className="min-w-0 space-y-(--collection-section-gap)">
-    <CollectionToolbar search={<CollectionSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />} filters={filters} count={count} unit={unit} />
+    <CollectionToolbar search={<WorkspaceSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />} filters={filters} count={count} unit={unit} />
     {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
     {hint && <p className="max-w-prose text-xs leading-5 text-muted-foreground">{hint}</p>}
   </div>

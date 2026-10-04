@@ -1,18 +1,20 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CommandDialog, CommandInput, CommandList, CommandGroup, CommandItem } from '@/components/ui/command'
 import type { GatewaySearchClient, SearchPage } from '@/lib/gateway/search'
 import { gatewayCommandDestinations } from './navigation'
+import { UniversalSearchContext, useWorkspaceChrome } from '@/lib/workspace-chrome'
 
-const SearchContext = createContext<(() => void) | null>(null)
 const stages = ['metadata', 'text', 'semantic'] as const
 const labels = { metadata: 'Records', text: 'Exact retained text', semantic: 'Semantic matches' }
 type Results = Partial<Record<SearchPage['stage'], SearchPage>>
 
 export function UniversalSearchTrigger() {
-  const open = useContext(SearchContext)
+  const open = useContext(UniversalSearchContext)
+  const chrome = useWorkspaceChrome()
+  if (chrome?.searchOwner) return null
   return <Button type="button" variant="outline" size="sm" className="workspace-search-trigger" aria-label="Search Conker" disabled={!open} onClick={() => open?.()}>
     <Search aria-hidden="true" /><span className="workspace-search-label">Search Conker</span>
   </Button>
@@ -25,11 +27,13 @@ export function UniversalSearchProvider({ children, client }: { children: ReactN
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const request = useRef<AbortController | null>(null)
+  const opener = useRef<HTMLElement | null>(null)
   const navigate = useNavigate()
   const trimmed = query.trim()
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !event.isComposing) {
+        if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('[data-slot="command"]')) opener.current = document.activeElement
         event.preventDefault(); request.current?.abort(); setResults({}); setError(''); setPending(false); setOpen(value => !value)
       }
     }
@@ -84,8 +88,8 @@ export function UniversalSearchProvider({ children, client }: { children: ReactN
   const pages = gatewayCommandDestinations.filter(item => !trimmed || item.title.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase()))
   const gaps = [...new Set(Object.values(results).flatMap(page => page.coverage.filter(item => item.status !== 'searched').map(item => `${item.source}: ${item.status}`)))]
   const exactRecords = new Set(results.text?.results.map(item => `${item.source}:${item.recordId}`))
-  return <SearchContext.Provider value={() => changeOpen(true)}>{children}
-    <CommandDialog open={open} onOpenChange={changeOpen} shouldFilter={false} title="Search Conker" description="Find pages and authorized records" className="workspace-search-dialog">
+  return <UniversalSearchContext.Provider value={(value, returnTo) => { opener.current = returnTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null); changeOpen(true); changeQuery(value ?? '') }}>{children}
+    <CommandDialog open={open} onOpenChange={changeOpen} shouldFilter={false} title="Search Conker" description="Find pages and authorized records" className="workspace-search-dialog" onCloseAutoFocus={event => { if (opener.current?.isConnected) { event.preventDefault(); opener.current.focus() } }}>
       <CommandInput placeholder="Search Conker..." value={query} onValueChange={changeQuery} maxLength={200} />
       <CommandList className="max-h-[60dvh]">
         {pages.length > 0 && <CommandGroup heading="Pages">{pages.map(item => <CommandItem key={item.path} value={`page:${item.path}`} onSelect={() => select(item.path)}>{item.title}</CommandItem>)}</CommandGroup>}
@@ -105,5 +109,5 @@ export function UniversalSearchProvider({ children, client }: { children: ReactN
         <Button variant="ghost" size="sm" onClick={() => select('/settings?tab=search')}><Settings2 />Search settings</Button>
       </div>
     </CommandDialog>
-  </SearchContext.Provider>
+  </UniversalSearchContext.Provider>
 }

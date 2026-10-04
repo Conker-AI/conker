@@ -7,7 +7,10 @@ import { WorkspaceChromeContext, useWorkspaceChrome } from '@/lib/workspace-chro
 
 export function WorkspaceChromeProvider({ children }: { children: ReactNode }) {
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
-  return <WorkspaceChromeContext.Provider value={{ actions, setActions }}>{children}</WorkspaceChromeContext.Provider>
+  const [search, setSearch] = useState<HTMLDivElement | null>(null)
+  const [searchOwner, setSearchOwner] = useState<string | null>(null)
+  const [compactSearch, setCompactSearch] = useState(false)
+  return <WorkspaceChromeContext.Provider value={{ actions, setActions, search, setSearch, searchOwner, setSearchOwner, compactSearch, setCompactSearch }}>{children}</WorkspaceChromeContext.Provider>
 }
 
 export type WorkspaceAppbarProps = {
@@ -46,13 +49,25 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
   const { isMobile, openMobile, state } = useSidebar()
   const hidden = isMobile ? !openMobile : state === 'collapsed'
   const chrome = useWorkspaceChrome()
-  return <header data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
+  const header = useRef<HTMLElement>(null)
+  const setCompactSearch = chrome?.setCompactSearch
+  useEffect(() => {
+    if (!header.current || !setCompactSearch) return
+    const node = header.current
+    const update = () => setCompactSearch(window.innerWidth < 1024 || node.getBoundingClientRect().width <= 900)
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    window.addEventListener('resize', update)
+    update()
+    return () => { observer.disconnect(); window.removeEventListener('resize', update) }
+  }, [setCompactSearch])
+  return <header ref={header} data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
     <div className="workspace-appbar-row">
       <div className="workspace-appbar-context">
         {hidden && <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand sidebar" title="Expand sidebar" />}
         {context}
       </div>
-      <div className="workspace-appbar-search">{search}</div>
+      <div ref={chrome?.setSearch} className="workspace-appbar-search">{search}</div>
       <div className="workspace-appbar-actions" aria-label="Workspace actions" role="toolbar">
         <div ref={chrome?.setActions} className="workspace-route-actions" />
         {actions}
