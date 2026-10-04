@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PageHeader, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { PageHeader, CollectionLoading, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
@@ -25,11 +25,11 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Tool drafts</Link></Button></div>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking available tools…</p>}
+    {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
     {value?.status === 'ok' && <>
       <CollectionPanel query={query} onQueryChange={setQuery} label="Search available tools" placeholder="Search tools…" count={rows.length} unit="tools" emptyTitle={query ? 'No matching tools' : 'No tools available here'} emptyDescription={query ? 'Try a tool name or description.' : 'The tool service is reachable, but this workspace does not currently have tools available.'}>
-        <CollectionSection title="Available" contained><ul>{rows.map(tool => <CollectionRow key={tool.id} to={`/tools?tool=${encodeURIComponent(tool.id)}`} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
+        <CollectionSection title="Available"><ul>{rows.map(tool => <CollectionRow key={tool.id} to={`/tools?tool=${encodeURIComponent(tool.id)}`} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
       </CollectionPanel>
       {params.get('tool') && !selected && <p role="status" className="text-sm text-muted-foreground">This tool is no longer available here.</p>}
       <DetailPanel open={Boolean(selected)} onOpenChange={open => { if (!open) setParams({}) }} title={selected?.name || 'Tool details'} description="Inputs available to this workspace.">

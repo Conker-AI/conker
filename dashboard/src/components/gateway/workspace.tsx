@@ -6,8 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { PageHeader } from '@/components/design-system/primitives'
+import { CollectionLoading, PageHeader } from '@/components/design-system/primitives'
 import { BaseLayout } from '@/components/layouts/base-layout'
 import { GatewayChatSidebar } from './chat-sidebar'
 import { GatewayPrivacyControl } from './privacy-control'
@@ -46,10 +45,8 @@ const GatewayTeamsWorkspace = lazy(() => import('./teams-workspace').then(module
 const GatewayFilesystemWorkspace = lazy(() => import('./filesystem-workspace').then(module => ({ default: module.GatewayFilesystemWorkspace })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
 
-const workspaceFallback = <div className="min-h-0 flex-1 space-y-6 p-4 sm:p-6 lg:p-8" role="status" aria-busy="true">
-  <span className="sr-only">Opening workspace…</span>
-  <Skeleton className="h-10 w-full" />
-  <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]"><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>
+const workspaceFallback = <div className="min-h-0 flex-1 p-4 sm:p-6" aria-busy="true">
+  <CollectionLoading label="Opening workspace…" />
 </div>
 
 export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {

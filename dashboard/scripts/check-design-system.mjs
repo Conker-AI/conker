@@ -107,6 +107,12 @@ function inspect(file, tree) {
   const visit = node => {
     if (!isFoundation(file) && (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))) {
       const tag = node.tagName.getText(tree)
+      if (!isDesignSystem(file)) {
+        const ownedSlot = node.attributes.properties.find(attribute => ts.isJsxAttribute(attribute)
+          && attribute.name.getText(tree) === 'data-slot' && attribute.initializer && ts.isStringLiteral(attribute.initializer)
+          && ['collection-toolbar', 'workspace-section'].includes(attribute.initializer.text))
+        if (ownedSlot) report(node, 'workspace-pattern', 'Use CollectionToolbar or WorkspaceSection; shared pattern slots belong to the design-system owner.')
+      }
       if (tag === "h1" && !headingExceptions.has(file) && !isDesignSystem(file)) {
         report(node, "page-heading", "Use BaseLayout title/description or PageHeader for a standard page heading.")
       }
@@ -149,6 +155,12 @@ function selfTest() {
   const test = (name, run) => { run(); passed++; console.log(`PASS ${name}`) }
   const check = (source, file = "src/app/inbox/page.tsx") => inspect(file, sourceFile(file, source))
   test("standard page heading bypass is rejected", () => assert.equal(check('const Page = () => <h1>Inbox</h1>')[0]?.rule, "page-heading"))
+  test("workspace slots cannot be copied into consumers", () => {
+    for (const slot of ['collection-toolbar', 'workspace-section']) {
+      assert.equal(check(`const Copy = () => <div data-slot="${slot}" />`)[0]?.rule, 'workspace-pattern')
+      assert.deepEqual(check(`const Shared = () => <div data-slot="${slot}" />`, 'src/components/design-system/primitives.tsx'), [])
+    }
+  })
   test("heading and search ownership follows the extracted primitives only", () => {
     const source = 'import { Input } from "@/components/ui/input"; const Primitive = () => <><h1>Title</h1><Input type="search" /></>'
     assert.deepEqual(check(source, "src/components/design-system/primitives.tsx"), [])

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { withAnswerModel, withIdeas } from '@/lib/api/model-roles'
 import { Switch } from '@/components/ui/switch'
-import { PageHeader } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { Input } from '@/components/ui/input'
 import { OwnerAvatar } from './owner-avatar'
@@ -78,8 +78,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
   }
   return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
     <PageHeader title="Settings" actionsOnly />
-    <section aria-labelledby="profile-heading" className="space-y-4 border-b pb-6">
-      <div className="space-y-1"><h2 id="profile-heading" className="text-base font-medium">Profile</h2><p className="text-sm text-muted-foreground">Your local identity in Conker and call mode. It is not an online account.</p></div>
+    <WorkspaceSection title="Profile" description="Your local identity in Conker and call mode. It is not an online account.">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <OwnerAvatar className="size-16" />
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
@@ -93,15 +92,13 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
         <Button type="submit" variant="outline" disabled={!profileName.trim() || profileName.trim() === profile.name}>Save name</Button>
       </form>
       {profileError && <p role="alert" className="text-sm text-destructive">{profileError}</p>}
-    </section>
-    <section aria-labelledby="appearance-heading" className="space-y-4 border-b pb-6">
-      <div className="space-y-1"><h2 id="appearance-heading" className="text-base font-medium">Appearance</h2><p className="text-sm text-muted-foreground">Choose a theme for this browser.</p></div>
+    </WorkspaceSection>
+    <WorkspaceSection title="Appearance" description="Choose a theme for this browser.">
       <div role="radiogroup" aria-label="Color theme" className="grid grid-cols-3 rounded-lg border p-1">
         {([['system', 'System', Monitor], ['light', 'Light', Sun], ['dark', 'Dark', Moon]] as const).map(([value, label, Icon]) => <Button key={value} type="button" variant={theme === value ? 'secondary' : 'ghost'} size="sm" role="radio" aria-checked={theme === value} onClick={() => setTheme(value)}><Icon />{label}{theme === value && <Check className="hidden size-3.5 sm:block" />}</Button>)}
       </div>
-    </section>
-    <section aria-labelledby="answers-heading" className="space-y-4 border-b pb-6">
-      <div className="space-y-1"><h2 id="answers-heading" className="text-base font-medium">Answers</h2><p className="text-sm text-muted-foreground">The model that replies to you in every chat, unless you pick another one in a chat.</p></div>
+    </WorkspaceSection>
+    <WorkspaceSection title="Answers" description="The model that replies to you in every chat, unless you pick another one in a chat.">
       <div className="space-y-2">
         <Label htmlFor="answer-model">Answers come from</Label>
         <Select value={answering ?? ''} disabled={pending || !enabled.length} onValueChange={chooseAnswerModel}>
@@ -112,21 +109,12 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error} Reload the page if settings changed elsewhere.</p>}
       {onlyLocal && <p className="rounded-lg bg-muted p-3 text-sm leading-6">Conker is using a small model on your server. For answers closer to ChatGPT or Claude, add a hosted model on the server. <a className="underline underline-offset-4" href={PROVIDER_DOCS} target="_blank" rel="noreferrer">How to add one</a></p>}
-    </section>
-    <section aria-labelledby="suggestions-heading" className="space-y-4 border-b pb-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <h2 id="suggestions-heading" className="text-base font-medium"><Label htmlFor="ideas-switch">Ideas from Conker</Label></h2>
-          <p className="text-sm leading-6 text-muted-foreground">Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></p>
-        </div>
-        <Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />
-      </div>
-    </section>
-    <section aria-labelledby="providers-heading" className="space-y-3 border-b pb-6">
-        <div className="flex items-center justify-between gap-2"><div className="space-y-1"><h2 id="providers-heading" className="text-base font-medium">Providers</h2><p className="text-sm text-muted-foreground">Connections configured on the Conker server.</p></div><Button size="sm" variant="outline" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button></div>
+    </WorkspaceSection>
+    <WorkspaceSection title={<Label htmlFor="ideas-switch" className="text-base font-semibold">Ideas from Conker</Label>} description={<>Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></>} action={<Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />} />
+    <WorkspaceSection title="Providers" description="Connections configured on the Conker server." action={<Button size="sm" variant="outline" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button>}>
         {providerError && <p role="status" className="text-sm text-muted-foreground">{providerError}</p>}
         <dl className="space-y-2 text-sm">{providers.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2"><dt>{providerName(provider.id)}{provider.model && <span className="text-muted-foreground"> · {provider.model}</span>}</dt><dd className="text-muted-foreground">{providerState(provider)}</dd></div>)}</dl>
-    </section>
+    </WorkspaceSection>
     <details className="group">
       <summary className="cursor-pointer rounded-md py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Advanced model settings</summary>
       <div className="border-t pt-3">

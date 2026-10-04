@@ -11,7 +11,7 @@ const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Cop
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
 
 function Answer({ text }: { text: string }) {
-  return <Suspense fallback={<p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{text}</p>}><RichAnswer text={text} /></Suspense>
+  return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} /></Suspense>
 }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {

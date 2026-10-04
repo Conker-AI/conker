@@ -4,6 +4,48 @@ This is the implementation contract for the active dashboard. The owner's accept
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.
 
+## Structural workspace rules (4 October)
+
+The active gateway workspace translates SiYuan's organization and Asri's quiet
+finish into Conker's existing semantic theme, not their literal styling.
+Corresponding tasks share components; specialized canvases and consequential
+decisions retain their own anatomy. Review each component against the owner's
+six questions: primary task and competition; navigation/toolbar/content/inspector
+placement; duplication and grouping; surface meaning; friction versus visible
+consequences; and whether it directs the user toward their intended action.
+
+| Component family | Shared rule | Active consumers |
+| --- | --- | --- |
+| Find a record | `CollectionToolbar`: local search first, then filters, count and view actions. Search is bounded to 420px on desktop, full-width on narrow screens; no colored toolbar container. | Chats, Projects, Agents, Jobs, Artifacts, Tools, Activity, Inbox |
+| Browse records | `CollectionPanel` + `CollectionSection` + `CollectionRow`; one quiet divided structural surface. 64px minimum row, 16px row inset, 14px title, 12px secondary metadata. | The six record libraries; Today reuses rows inside purpose-specific groups |
+| Compare structured records | `DataTable` uses the same toolbar and `collection-surface`, preserving sorting, columns, keyboard opening and pagination. Native tables use shared shadcn table primitives, not separately styled HTML. | Activity and system inventories; Memory List retains its canvas-owned search and bounded server pagination |
+| Edit related fields | `WorkspaceSection` owns the 16px semibold heading, readable description, 16px within-group gap and 24px separation. `StudioSection` delegates to it. | General/Search Settings, Character Studio; Inbox's waiting group uses the same heading without a divider |
+| Inspect a selection | `ReferenceSection` is a quiet topic divider inside the already framed inspector, never another card or toolbar slab. Option sets use a named select rather than a row of pseudo-command buttons. | Memory content fields and relationships; contextual reference panels |
+| Loading / empty | `CollectionLoading` reflects search and rows, not decorative dashboard cards. Empty feedback names the state and provides the appropriate creation or filter recovery action. | Collection libraries, lazy workspaces, Activity |
+| Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | System diagnostics, Today, Inbox, Chat |
+
+Keep the main shell flat and the approved appbar geometry unchanged. Meaningful
+record headings remain; duplicate route headings do not. Local retrieval never
+looks like the global search entry. Guidance about permission, expiry, model
+processing, provenance and recovery stays visible at the relevant action.
+Search/list hints can follow results; they do not compete with the find controls.
+The appbar responds to workspace width, not just viewport width: below 900px of
+available workspace its search entry becomes an icon. Route actions measure
+their assigned column, keep the primary command visible, and disclose secondary
+commands when narrow or when there are more than two. Mobile result counts stay
+available to assistive technology without consuming a separate visual row.
+Memory List keeps its native comparison table on desktop and uses the same
+`RecordItem` anatomy on mobile. Inspectors present preview, explicitly requested
+content and relationships before destructive commands; the consequence stays
+beside that command. Selection communicates current context, not bulk selection.
+
+Shared UI does not mean shared authority or transport state: keep source-owned
+abort/revision/draft hooks in their existing modules. Centralize presentation
+and composition only. Use the shared tokens, native Radix controls, dark arrowless
+tooltips and unclipped/reduced-motion icon behavior already in the system.
+Design guards enforce shared slot ownership and semantic tokens; the workspace
+primitive render checks cover grouping, list semantics and empty/loading states.
+
 ## Ownership and imports
 
 | Need | Use | Owner |
@@ -15,13 +57,14 @@ The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-temp
 | Canvas-led workspace without a separate page heading | `BaseLayout variant="canvas"`; local workflow toolbar and independent canvas/inspector regions | Same layout module; Memory is the current consumer |
 | Page heading outside that shell | `PageHeader` | `src/components/design-system/index.tsx` |
 | Route sections | `RouteSection`; navigation is rendered by `SiteHeader` | `src/config/navigation.ts`, `src/components/appbar-navigation.tsx` |
-| Collection or table search | `CollectionSearch` | Same design-system module |
+| Collection or table search and filters | `CollectionToolbar` with `CollectionSearch` | Same design-system module |
 | Search, results announcement and empty state together | `CollectionPanel` | Same design-system module |
 | Group heading and divided collection | `CollectionSection` | Same design-system module |
 | Compact linked item | `CollectionRow` | Same design-system module |
 | No results / no items | `CollectionEmpty` | Same design-system module |
 | Agent identity in a collection | `AgentIdentityPortrait` | Same design-system module |
-| Topic within a reference panel | `ReferenceSection` | `src/components/reference-section.tsx` |
+| Related form fields / section heading | `WorkspaceSection`; Studio delegates through `StudioSection` | Shared design-system module |
+| Topic within a reference panel | Quiet `ReferenceSection` divider | `src/components/reference-section.tsx` |
 | Inspect a canvas selection without blocking further selection | `WorkspaceInspector` with `OverlayBody` and `ReferenceSection` | `src/components/design-system/overlays.tsx` |
 | General buttons, fields, cards, badges, dialogs | Existing `@/components/ui/*` and `StatusBadge` | Shadcn primitives plus application status composition |
 | Dimensions and density | CSS tokens | `src/styles/design-system.css` |
@@ -68,7 +111,7 @@ Creation and substantial editing never share a generic details drawer. Completin
 
 Common actions remain visible: Run/Pause for jobs, New chat for agents, source links for evidence. Use named buttons; reserve icon-only controls for familiar actions with accessible labels/tooltips. Secondary actions belong in a menu. Avoid duplicate page-navigation strips: the sidebar chooses roots, the appbar owns route sections and context, and the page header may own creation actions.
 
-Agents, Tools, Memory's Database mode, Journal and Jobs share `DataTable`. Supply `renderItem` using `RecordItem` below 1280px; desktop keeps the table for comparison. System services use the same responsive pattern with read-only summaries and a Connections action. One table instance owns search, filters, sorting and pagination across both representations. Mobile sorting remains available. Row titles open details using real buttons; visible actions remain separate. Keep column definitions stable when selection changes so a closing inspector can restore focus to its initiating control. Tables use wrapping content and a single clipped card container. Collections retain the accepted Chats/Inbox patterns. Empty states explain the next action; filtered empties offer a clear action, and creation empties link to the working creation flow.
+Legacy Agents, Tools, Memory's Database mode, Journal and Jobs share `DataTable`. Supply `renderItem` using `RecordItem` below 1280px; desktop keeps the table for comparison. System services use the same responsive pattern with read-only summaries and a Connections action. One table instance owns search, filters, sorting and pagination across both representations. Mobile sorting remains available. Row titles open details using real buttons; visible actions remain separate. Keep column definitions stable when selection changes so a closing inspector can restore focus to its initiating control. Tables use wrapping content and one quiet structural surface, not an elevated card. Active gateway consumers follow the component-family rules above. Empty states explain the next action; filtered empties offer a clear action, and creation empties link to the working creation flow.
 
 Bounded forms scroll a normal `div` around their fieldset, with `min-height: 0` throughout the flex chain. Do not make the fieldset itself the flex scroll region: browser fieldset sizing can allow its content to overlap the footer on short screens. The action footer stays outside that scroll region. Validate this visually at a short mobile viewport, not only a tall desktop window.
 
@@ -292,7 +335,7 @@ Read aloud uses the browser's speech synthesis with one message playing at a tim
 
 The composer owns the next turn: preserved draft, reply target, Tools menu, direct model/provider picker, voice typing, call entry, send, and stop. Toolbar actions use compact icon buttons with accessible names and tooltips, including Tools and dictation's cancel/return-to-keyboard actions. Model names remain visible because they communicate the selected route. The microphone starts inline voice typing. The separate final phone action starts or returns to the call for an empty/whitespace-only draft, becomes Send once there is text, and Stop while streaming. The conversation title menu also offers Start call / Return to call, including when the composer has a draft. The model chip reads enabled entries from Settings' catalogue; it truncates on narrow screens so the action buttons remain inside the composer. The conversation default remains separate from a one-turn override, which clears after that turn. The quiet provider/cost line clearly labels the fixture. Streaming and thinking are deterministic simulations with abort support; they never run tools.
 
-The reference panel is closed by default and shows one requested topic at a time. It has a context-specific title and conversation name or selected message author/time/excerpt. Each topic uses `ReferenceSection`: a filled panel, a contrasting inset heading with a bottom divider, 16px body padding, and 20px separation between sections. Do not append the entire conversation's metadata beneath a selected source.
+The reference panel is closed by default and shows one requested topic at a time. It has a context-specific title and conversation name or selected message author/time/excerpt. Each topic uses `ReferenceSection`: a quiet top divider with 16px top spacing and 12px internal spacing, inheriting the inspector's inset and surface. Do not nest another filled panel or append the entire conversation's metadata beneath a selected source.
 
 | Entry point | Reference view / content |
 | --- | --- |
@@ -374,7 +417,7 @@ Personality, soul, backstory, relationship and speaking style are user-authored 
 
 Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Keep the conversation menu's preview label and the Studio's authored-example label. Qwen voice design/cloning is not connected; reference playback is an uploaded recording, and existing browser read-aloud still uses a device voice. Show these limitations beside the relevant control. See [CHARACTER_STUDIO.md](CHARACTER_STUDIO.md) for data ownership, import formats and integration boundaries.
 
-This staging handoff records source behavior only. No new Character Studio screenshots, browser-console inspection or rendered interaction verification were available. The existing screenshot reference establishes the incumbent design only; it does not approve the new surface.
+The structural pass inspected Studio's editor layout at desktop and 390 x 844, including the width-aware appbar and its secondary-action menu. This verifies layout and navigation, not newly authored media, voice integration or production save behavior.
 
 ## Memory workspace
 

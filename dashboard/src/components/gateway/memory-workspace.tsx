@@ -6,7 +6,9 @@ import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionEmpty, CollectionSearch } from '@/components/design-system/primitives'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ReferenceSection } from '@/components/reference-section'
+import { CollectionEmpty, CollectionSearch, RecordItem } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
@@ -54,6 +56,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [selected, setSelected] = useState<MemoryObjectCard | null>(null)
   const [detail, setDetail] = useState<MemoryConnections | null>(null)
   const [content, setContent] = useState<MemoryContent | null>(null)
+  const [readingField, setReadingField] = useState<string | null>(null)
   const [error, setError] = useState(''), [detailError, setDetailError] = useState('')
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
   const workspace = useRef<HTMLDivElement>(null)
@@ -69,7 +72,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     if (!targetId || !targetKind || !kinds.includes(targetKind as MemoryObjectKind)) return
     const controller = new AbortController()
     client.connections(targetKind as MemoryObjectKind, targetId, { signal: controller.signal }).then(value => {
-      if (!controller.signal.aborted) { setSelected(value.object); setDetail(value); setContent(null); setDetailError('') }
+      if (!controller.signal.aborted) { setSelected(value.object); setDetail(value); setContent(null); setReadingField(null); setDetailError('') }
     }).catch(() => { if (!controller.signal.aborted) setError('That memory record is no longer available.') })
     return () => controller.abort()
   }, [client, targetId, targetKind])
@@ -107,6 +110,8 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const graph = useMemo(() => isGraph ? projectMemoryGraph(records, [...(snapshot?.links ?? []), ...(detail?.links ?? [])], view === 'hierarchy') : { nodes: [], edges: [] }, [records, snapshot, detail, view, isGraph])
   const positions = useMemo(() => layoutMemoryAtlas(graph.nodes, graph.edges, view === 'hierarchy'), [graph, view])
   const connectionStatus = !snapshot ? 'Loading relationships…' : snapshot.partial ? `Partial graph${snapshot.failures ? ' · Some relationships unavailable' : ''}` : undefined
+  const recordTitle = (item: MemoryObjectCard) => item.title === item.type ? item.preview.slice(0, 100) || item.title : item.title
+  const connectionCount = (item: MemoryLibrary['objects'][number]) => Object.values(item.connections).reduce((sum, count) => sum + count, 0)
   function setView(value: string) {
     const next = new URLSearchParams(params)
     next.set('view', value === 'network' ? 'graph' : value)
@@ -114,7 +119,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   }
   function selectRecord(item: MemoryObjectCard | null) {
     if (item && selected && key(item) === key(selected)) return
-    detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setDetailError('')
+    detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setReadingField(null); setDetailError('')
   }
   function refresh() {
     libraryEpoch.current++; setBusy(true); setError(''); setPage(null); selectRecord(null); setRevision(value => value + 1)
@@ -132,9 +137,10 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   async function expandField(field: string, offset = 0) {
     if (!selected) return
     const epoch = detailEpoch.current, request = ++contentEpoch.current
-    setDetailError('')
+    setDetailError(''); setReadingField(field)
     try { const value = await client.content(selected.type, selected.id, field, offset); if (epoch === detailEpoch.current && request === contentEpoch.current) setContent(value) }
     catch (error) { if (epoch === detailEpoch.current && request === contentEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load field.') }
+    finally { if (epoch === detailEpoch.current && request === contentEpoch.current) setReadingField(null) }
   }
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
@@ -146,18 +152,25 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     </div>} />
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
     <div className="memory-workspace-body">
-      {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto"><table className="w-full text-left text-sm"><thead className="sticky top-0 bg-muted"><tr><th className="p-3">Memory</th><th className="p-3">Type</th><th className="p-3">Connections</th></tr></thead><tbody>{page.objects.map(item => <tr key={key(item)} className="border-b"><td className="p-3"><button className="text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{item.title === item.type ? item.preview.slice(0, 100) || item.title : item.title}</button></td><td className="p-3">{kindLabel[item.type]}</td><td className="p-3 tabular-nums">{Object.values(item.connections).reduce((sum, count) => sum + count, 0)}</td></tr>)}</tbody></table></div>}
+      {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
+        <ul className="divide-y md:hidden">{page.objects.map(item => <li key={key(item)}><RecordItem title={recordTitle(item)} description={`${kindLabel[item.type]} · ${connectionCount(item)} ${connectionCount(item) === 1 ? 'connection' : 'connections'}`} selected={Boolean(selected && key(selected) === key(item))} onOpen={() => selectRecord(item)} /></li>)}</ul>
+        <Table containerClassName="hidden h-full overflow-auto md:block"><TableHeader className="sticky top-0 bg-background"><TableRow className="hover:bg-transparent"><TableHead className="px-4">Memory</TableHead><TableHead className="px-4">Type</TableHead><TableHead className="px-4 text-right">Connections</TableHead></TableRow></TableHeader><TableBody>{page.objects.map(item => <TableRow key={key(item)} data-state={selected && key(selected) === key(item) ? 'selected' : undefined} className="h-(--collection-row-height)"><TableCell className="px-4 py-2.5 whitespace-normal"><button aria-current={selected && key(selected) === key(item) ? true : undefined} className="w-full min-w-40 break-words rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{recordTitle(item)}</button></TableCell><TableCell className="px-4 text-muted-foreground">{kindLabel[item.type]}</TableCell><TableCell className="px-4 text-right text-muted-foreground tabular-nums">{connectionCount(item)}</TableCell></TableRow>)}</TableBody></Table>
+      </div>}
       {selected && <WorkspaceInspector title={selected.title} description={kindLabel[selected.type]} onClose={() => selectRecord(null)}>
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
           {detailError && <p role="alert" className="text-destructive">{detailError}</p>}
-          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={() => { selectRecord(null); setRevision(value => value + 1) }} />}
-          <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Content</h3><div className="flex flex-wrap gap-1">{selected.available_fields.map(field => <Button key={field} size="sm" variant="outline" onClick={() => void expandField(field)}>{fieldLabel(field)}</Button>)}</div>{content && <><p className="text-xs text-muted-foreground">{fieldLabel(content.field)} · {content.total_characters} characters</p><pre className="whitespace-pre-wrap break-words font-sans text-sm">{content.content}</pre>{content.next_offset !== null && <Button size="sm" variant="outline" onClick={() => void expandField(content.field, content.next_offset!)}>Next part</Button>}</>}</section>
-          <section className="space-y-2 border-t pt-3"><h3 className="font-medium">Connections</h3>{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
+          <ReferenceSection title="Content">
+            {selected.available_fields.length ? <Select key={key(selected)} value={readingField ?? content?.field ?? ''} onValueChange={field => void expandField(field)}><SelectTrigger className="w-full" aria-label="Read content field"><SelectValue placeholder="Choose a field to read" /></SelectTrigger><SelectContent>{selected.available_fields.map(field => <SelectItem key={field} value={field}>{fieldLabel(field)}</SelectItem>)}</SelectContent></Select> : <p className="text-muted-foreground">No readable content fields.</p>}
+            {readingField && <p role="status" className="text-xs text-muted-foreground">Reading {fieldLabel(readingField).toLocaleLowerCase()}…</p>}
+            {content && <><p className="text-xs text-muted-foreground">{fieldLabel(content.field)} · {content.total_characters} characters</p><pre className="whitespace-pre-wrap break-words font-sans text-sm">{content.content}</pre>{content.next_offset !== null && <Button size="sm" variant="outline" disabled={readingField !== null} onClick={() => void expandField(content.field, content.next_offset!)}>Next part</Button>}</>}
+          </ReferenceSection>
+          <ReferenceSection title="Connections">{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
             const outgoing = link.source_type === selected.type && link.source_id === selected.id
             const neighbor = detail.nodes.find(item => item.type === (outgoing ? link.target_type : link.source_type) && item.id === (outgoing ? link.target_id : link.source_id))
             return <Button key={link.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal text-left" onClick={() => { if (neighbor) selectRecord(neighbor) }}>{outgoing ? 'To' : 'From'} {link.relationship.replaceAll('_', ' ')} · {neighbor?.title ?? 'Memory'}</Button>
-          })}{detail?.next_after && <Button variant="outline" size="sm" onClick={async () => { const epoch = detailEpoch.current; try { const next = await client.connections(selected.type, selected.id, { after: detail.next_after! }); if (epoch === detailEpoch.current) setDetail({ ...next, links: [...detail.links, ...next.links], nodes: [...new Map([...detail.nodes, ...next.nodes].map(item => [key(item), item])).values()] }) } catch (error) { if (epoch === detailEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load connections.') } }}>More connections</Button>}</section>
+          })}{detail?.next_after && <Button variant="outline" size="sm" onClick={async () => { const epoch = detailEpoch.current; try { const next = await client.connections(selected.type, selected.id, { after: detail.next_after! }); if (epoch === detailEpoch.current) setDetail({ ...next, links: [...detail.links, ...next.links], nodes: [...new Map([...detail.nodes, ...next.nodes].map(item => [key(item), item])).values()] }) } catch (error) { if (epoch === detailEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load connections.') } }}>More connections</Button>}</ReferenceSection>
+          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={() => { selectRecord(null); setRevision(value => value + 1) }} />}
         </div>
       </WorkspaceInspector>}
     </div>

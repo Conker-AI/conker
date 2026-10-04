@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -69,7 +69,7 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel }
 }
 
 function LoadingPage() {
-  return <div className="p-6 text-sm text-muted-foreground" role="status">Loading agents…</div>
+  return <GatewayPageFrame><CollectionLoading label="Loading agents…" /></GatewayPageFrame>
 }
 
 export function GatewayAgentsWorkspace({ client, companion = false }: { client: GatewayControlClient; companion?: boolean }) {

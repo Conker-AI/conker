@@ -329,25 +329,25 @@ function BoundaryReview({ client, expectedRevision, onRecorded }: { client: Gate
 export function GatewaySetupProgress({ client }: { client: GatewayControlClient }) {
   const { status, error, refresh } = useGatewaySetupStatus(client)
   if (!status && !error) return <GatewayPageFrame><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></GatewayPageFrame>
-  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" description="Conker could not read verified setup progress." density="compact" /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></GatewayPageFrame>
+  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" actionsOnly /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></GatewayPageFrame>
 
   const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
   return <GatewayPageFrame>
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3"><PageHeader title={status.state === 'complete' ? 'Conker is ready' : 'Finish setting up Conker'} description={status.state === 'complete' ? 'The required checks are complete and your choices are saved.' : 'Complete the remaining checks so Conker can act safely and recover if something goes wrong.'} density="compact" /><Button variant="ghost" size="sm" onClick={refresh}><RefreshCw />Refresh</Button></div>
+      <PageHeader title="Setup" actionsOnly actions={<Button variant="ghost" size="icon" aria-label="Refresh setup" onClick={refresh}><RefreshCw /></Button>} />
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       <section aria-labelledby="setup-progress-title" className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 id="setup-progress-title" className="font-medium">Setup progress</h2><span className="text-muted-foreground">{remainingRequired === 0 ? 'Required checks complete' : `${remainingRequired} required ${remainingRequired === 1 ? 'check' : 'checks'} remaining`}{attention > 0 ? ` · ${attention} ${attention === 1 ? 'item needs' : 'items need'} attention` : ''}</span></div>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 id="setup-progress-title" className="text-base leading-6 font-semibold">Setup progress</h2><span className="text-muted-foreground">{remainingRequired === 0 ? 'Required checks complete' : `${remainingRequired} required ${remainingRequired === 1 ? 'check' : 'checks'} remaining`}{attention > 0 ? ` · ${attention} ${attention === 1 ? 'item needs' : 'items need'} attention` : ''}</span></div>
           <span className="tabular-nums text-muted-foreground">{resolved} of {status.steps.length} resolved</span>
         </div>
         <Progress value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
       </section>
-      <div className="grid min-w-0 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_23rem]">
-        <section aria-labelledby="next-step-title" className="min-w-0 rounded-lg border bg-card p-5 text-card-foreground sm:p-6">
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
+        <section aria-labelledby="next-step-title" className="elevation-surface min-w-0 rounded-lg border bg-card p-4 text-card-foreground">
           {current ? <>
             <div className="flex flex-wrap items-start justify-between gap-5">
-              <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-2"><h2 id="next-step-title" className="text-xl font-semibold">{setupLabels[current.id].title}</h2><StatusBadge tone={current.state === 'blocked' || current.state === 'degraded' ? 'warning' : current.state === 'complete' ? 'live' : 'neutral'}>{setupStateLabels[current.state]}</StatusBadge></div><p className="mt-2 text-sm leading-6 text-muted-foreground">{current.evidence[0]?.detail ?? setupLabels[current.id].description}</p></div>
+              <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-2"><h2 id="next-step-title" className="text-base leading-6 font-semibold">{setupLabels[current.id].title}</h2><StatusBadge tone={current.state === 'blocked' || current.state === 'degraded' ? 'warning' : current.state === 'complete' ? 'live' : 'neutral'}>{setupStateLabels[current.state]}</StatusBadge></div><p className="mt-1 text-sm leading-6 text-muted-foreground">{current.evidence[0]?.detail ?? setupLabels[current.id].description}</p></div>
               <div className="flex flex-wrap items-center gap-2">{operation && current.id !== 'model' && current.id !== 'memory' && current.id !== 'capabilities' && current.id !== 'boundaries' && current.id !== 'protection' && current.id !== 'rehearsal' && <Button asChild><Link to={operation.to}>{operation.label}<ArrowRight /></Link></Button>}{current.id === 'companion' && <SetupChoiceControl client={client} step="companion" choice="accept" label="Keep supplied default" onSaved={refresh} />}{current.id === 'memory' && <><SetupChoiceControl client={client} step="memory" choice="include" label="Use memory" onSaved={refresh} /><SetupChoiceControl client={client} step="memory" choice="skip" label="Keep off for now" onSaved={refresh} /></>}{current.id === 'capabilities' && <><SetupChoiceControl client={client} step="capabilities" choice="include" label="Connect available tools" onSaved={refresh} /><SetupChoiceControl client={client} step="capabilities" choice="skip" label="Keep off for now" onSaved={refresh} /></>}</div>
             </div>
             {current.id === 'model' && <ModelSetupControl client={client} onSaved={refresh} />}
@@ -355,7 +355,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
             {current.id === 'boundaries' && <BoundaryReview client={client} expectedRevision={current.evidence[0]?.revision ?? 0} onRecorded={refresh} />}
             {current.id === 'protection' && <ProtectionControl client={client} onSaved={refresh} />}
             {current.id === 'rehearsal' && <RehearsalControl client={client} onRecorded={refresh} />}
-          </> : <div className="flex flex-wrap items-center justify-between gap-5"><div className="max-w-2xl"><h2 id="next-step-title" className="text-xl font-semibold">Setup is complete</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Required checks have current evidence, and your optional choices are saved.</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
+          </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">Setup is complete</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Required checks have current evidence, and your optional choices are saved.</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
         </section>
         <aside aria-labelledby="setup-steps-title" className="min-w-0 space-y-5 xl:sticky xl:top-6">
           <div><h2 id="setup-steps-title" className="text-base font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>

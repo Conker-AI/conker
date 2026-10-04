@@ -4,7 +4,7 @@ import { useStore } from 'zustand'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { ProposalsPanel } from './proposals-panel'
-import { CollectionSearch, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { CollectionSearch, CollectionToolbar, CollectionRow, CollectionSection, PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -109,17 +109,17 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   const refreshButton = <Button variant="ghost" size="icon" className="shrink-0" aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></Button>
   return <GatewayPageFrame className="h-full">
     <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
+      {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
       {requestId ? <div className="flex items-center justify-between gap-3"><Button asChild size="sm" variant="ghost"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>{refreshButton}</div>
-        : <div className="flex min-w-0 items-center gap-2">{(rows.length > 0 || query) && <CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}{refreshButton}</div>}
+        : (rows.length > 0 || query) && <CollectionToolbar search={<CollectionSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />} />}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}
       {requestId ? current && card(current, true) : <>
-        <section aria-labelledby="approvals-heading" className="flex flex-col gap-4">
-          <h2 id="approvals-heading" className="text-base font-medium">Waiting for your decision</h2>
+        <WorkspaceSection title="Waiting for your decision" divided={false}>
           {pendingRows.map(row => card(row))}
           {!loading && !error && pendingRows.length === 0 && <p className="text-sm text-muted-foreground">{query ? 'No matching requests.' : "You're all caught up."}</p>}
-        </section>
+        </WorkspaceSection>
         {proposals && <ProposalsPanel client={proposals} active={active} />}
         <Accordion type="single" collapsible><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>

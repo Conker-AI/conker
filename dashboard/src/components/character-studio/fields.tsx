@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import type { CharacterAsset } from "@/lib/api/character"
+import { WorkspaceSection } from "@/components/design-system/primitives"
 
 export function StudioSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  const id = useId()
-  return <section aria-labelledby={id} className="space-y-5 border-b pb-6"><header className="space-y-1"><h2 id={id} className="text-base font-semibold">{title}</h2>{description && <p className="text-sm leading-6 text-muted-foreground">{description}</p>}</header><div className="space-y-5">{children}</div></section>
+  return <WorkspaceSection title={title} description={description}>{children}</WorkspaceSection>
 }
 export function StudioField({ label, hint, value, onChange, multiline = true, placeholder, maxLength = 6000 }: { label: string; hint?: string; value: string; onChange: (value: string) => void; multiline?: boolean; placeholder?: string; maxLength?: number }) {
   const id = useId()

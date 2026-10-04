@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "design:check": "node scripts/check-design-system.mjs",
     "design:check:test": "node scripts/check-design-system.mjs --self-test",
+    "check:workspace-primitives": "node scripts/check-workspace-primitives.mjs",
     "check:daily-overview": "node scripts/check-daily-overview.cjs",
     "check:character": "node scripts/check-character.cjs",
     "check:tools": "node scripts/check-tool-workspace.cjs",

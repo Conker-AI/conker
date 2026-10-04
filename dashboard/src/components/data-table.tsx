@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CollectionSearch, CollectionEmpty } from "@/components/design-system/primitives"
+import { CollectionSearch, CollectionToolbar, CollectionEmpty } from "@/components/design-system/primitives"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -48,6 +48,8 @@ interface DataTableProps<TData, TValue> {
   filters?: DataTableFilter[]
   /** action rendered on the right of the toolbar (e.g. a "New" button) */
   toolbarAction?: React.ReactNode
+  toolbarFilters?: React.ReactNode
+  emptyState?: { title: string; description: string; action?: React.ReactNode }
   /** onRowClick makes rows behave like links into a detail view */
   onRowClick?: (row: TData) => void
   /** hide the pager when a list is short and always fits */
@@ -64,6 +66,8 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Search…",
   filters = [],
   toolbarAction,
+  toolbarFilters,
+  emptyState,
   onRowClick,
   paginate = true,
   renderItem,
@@ -94,17 +98,17 @@ export function DataTable<TData, TValue>({
   })
 
   const isFiltered = table.getState().columnFilters.length > 0
+  const empty = <CollectionEmpty title={isFiltered ? 'No results found' : emptyState?.title ?? 'No results found'} description={isFiltered ? 'Try a different search or clear your filters.' : emptyState?.description ?? 'Try a different search or clear your filters.'} action={emptyState?.action} clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
 
   return (
-    <div className="min-w-0 space-y-7">
-      {searchColumn && <CollectionSearch
+    <div className="min-w-0 space-y-(--collection-section-gap)">
+      <CollectionToolbar search={searchColumn && <CollectionSearch
         label={searchPlaceholder.replace(/[…]+$/, "")}
         placeholder={searchPlaceholder}
         value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
         onChange={event => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
-      />}
-      <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      />} count={table.getFilteredRowModel().rows.length} unit={itemLabel} filters={<>
+        {toolbarFilters}
         {filters.map(
           (f) =>
             table.getColumn(f.column) && (
@@ -126,10 +130,9 @@ export function DataTable<TData, TValue>({
             <X className="ml-2 size-4" />
           </Button>
         )}
-        <span role="status" className="mr-auto text-xs text-muted-foreground">{table.getFilteredRowModel().rows.length} {itemLabel}</span>
-        <div className="flex flex-wrap items-center gap-2">
+        </>} actions={<>
           {toolbarAction}
-          {renderItem && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} onValueChange={value => {
+          {renderItem && data.length > 0 && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} onValueChange={value => {
             if (value === "default") setSorting([])
             else { const [id, direction] = value.split(":"); setSorting([{ id, desc: direction === "desc" }]) }
           }}><SelectTrigger size="sm" aria-label="Sort records"><SelectValue /></SelectTrigger><SelectContent>
@@ -139,18 +142,17 @@ export function DataTable<TData, TValue>({
               <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>{column.id.replace(/([A-Z])/g, " $1")} · descending</SelectItem>,
             ])}
           </SelectContent></Select></div>}
-          <div className={renderItem ? "hidden xl:block" : undefined}><DataTableViewOptions table={table} /></div>
-        </div>
-      </div>
+          {data.length > 0 && <div className={renderItem ? "hidden xl:block" : undefined}><DataTableViewOptions table={table} /></div>}
+        </>} />
 
       {/* Structured data shares collection density and retains table semantics. */}
-      {renderItem && <div className="min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs xl:hidden">
+      {renderItem && <div className="collection-surface xl:hidden">
         {table.getRowModel().rows.length ? <ul className="divide-y">{table.getRowModel().rows.map(row => <li key={row.id}>{renderItem(row.original)}</li>)}</ul>
-          : <CollectionEmpty title="No results found" description="Try a different search or clear your filters." clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />}
+          : empty}
       </div>}
-      <div className={cn("min-w-0 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs", renderItem && "hidden xl:block")}>
+      <div className={cn("collection-surface", renderItem && "hidden xl:block")}>
         <Table>
-          <TableHeader className="bg-muted">
+          <TableHeader className="bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
@@ -192,7 +194,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="p-0">
-                  <CollectionEmpty title="No results found" description="Try a different search or clear your filters." clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
+                  {empty}
                 </TableCell>
               </TableRow>
             )}
@@ -201,7 +203,6 @@ export function DataTable<TData, TValue>({
       </div>
 
       {paginate && data.length > 10 && <DataTablePagination table={table} />}
-      </div>
     </div>
   )
 }

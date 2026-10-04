@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/data-table'
 import { RecordItem } from '@/components/design-system/primitives'
@@ -11,7 +11,7 @@ import { plainStatus } from './plain-status'
 const date = (value: string) => new Date(value).toLocaleString()
 const runTitle = (run: GatewayActivityRun) => `Attempt from ${date(run.startedAt)}`
 
-export function GatewayTasksTable({ tasks, onOpen }: { tasks: GatewayTask[]; onOpen: (task: GatewayTask) => void }) {
+export function GatewayTasksTable({ tasks, onOpen, filters, emptyAction }: { tasks: GatewayTask[]; onOpen: (task: GatewayTask) => void; filters?: ReactNode; emptyAction?: ReactNode }) {
   const rows = tasks.map(task => ({ ...task, search: `${taskTitle(task)} ${task.id} ${taskStatusLabels[task.status]}` }))
   const columns = useMemo<ColumnDef<(typeof rows)[number]>[]>(() => [
     { accessorKey: 'search', header: 'Outcome', cell: ({ row }) => <Button variant="link" className="h-auto max-w-full justify-start whitespace-normal p-0 text-left" onClick={() => onOpen(row.original)}>{taskTitle(row.original)}</Button> },
@@ -19,7 +19,7 @@ export function GatewayTasksTable({ tasks, onOpen }: { tasks: GatewayTask[]; onO
     { accessorKey: 'sessionId', header: 'Source', cell: () => <span className="text-xs text-muted-foreground">Conversation</span> },
     { accessorKey: 'updatedAt', header: 'Updated', cell: ({ row }) => date(row.original.updatedAt) },
   ], [onOpen])
-  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded tasks…" itemLabel="tasks" renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>Owner reviewed</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
+  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded tasks…" itemLabel="tasks" toolbarFilters={filters} emptyState={emptyAction ? { title: 'No recorded tasks', description: 'Create an outcome and completion criteria linked to an open conversation.', action: emptyAction } : undefined} renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>Owner reviewed</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
 }
 
 export function GatewayRunsTable({ runs, onOpen }: { runs: GatewayActivityRun[]; onOpen: (run: GatewayActivityRun) => void }) {

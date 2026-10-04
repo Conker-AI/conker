@@ -1,4 +1,4 @@
-import { Children, Fragment, cloneElement, isValidElement, useState, type ReactNode } from 'react'
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -22,14 +22,23 @@ function actionItems(children: ReactNode): ReactNode[] {
   return Children.toArray(children).flatMap(child => isValidElement<{ children?: ReactNode }>(child) && (child.type === Fragment || child.type === 'div') ? actionItems(child.props.children) : [child])
 }
 
-/** Keep the final primary command reachable; disclose secondary commands on phones. */
+/** Keep primary work reachable even when the sidebar leaves a narrow action column. */
 export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
   const { isMobile } = useSidebar()
   const items = actionItems(children)
-  if (!isMobile || items.length < 2) return children
-  return <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="More workspace actions" title="More workspace actions"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
+  const group = useRef<HTMLDivElement>(null)
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null)
+  useEffect(() => {
+    const container = group.current?.closest('.workspace-appbar-actions')
+    if (!container) return
+    const observer = new ResizeObserver(([entry]) => setAvailableWidth(entry.contentRect.width))
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+  const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
+  return <div ref={group}>{items.length < 2 || !compact ? children : <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="More workspace actions" title="More workspace actions"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
     {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string }>(item) ? <DropdownMenuItem key={index} asChild disabled={item.props.disabled}>{cloneElement(item, { className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })}</DropdownMenuItem> : item)}
-  </DropdownMenuContent></DropdownMenu></>
+  </DropdownMenuContent></DropdownMenu></>}</div>
 }
 
 /** One frame serves collection pages, conversations and graph workspaces. */

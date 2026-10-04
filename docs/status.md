@@ -21,6 +21,18 @@ decisions; verified setup progress remains above the sidebar profile. The
 pre-redesign checkpoint is `c846bf04ecd715da3c835c38e3d07cbc52f7529a` on
 `checkpoint/conker-ui-before-redesign-2026-10-04`.
 
+The structural pass groups recurring UI work into shared collection toolbars,
+divided record surfaces, responsive records, form sections, reference topics and
+loading/empty states. General/Search Settings and Studio share section geometry;
+libraries and Activity share retrieval controls. Appbar actions account for the
+available workspace width and disclose secondary commands without clipping.
+Memory List uses readable records on mobile, and its inspector puts reading and
+relationships before forgetting while retaining the consequence and verification
+flow. Source-owned revision, cancellation and draft state remain separate. These
+rules and component ownership are recorded in `dashboard/DESIGN.md`. The checkpoint
+before this pass is `536d620bd26445bbe470a9dc6afbae978faec0eb` on
+`checkpoint/conker-ui-before-structural-pass-2026-10-04`.
+
 The companion dashboard and Pi development branches add authenticated staged
 search with verified revisioned settings, source-owned literal projections,
 privacy invalidation on every query, actual record links and optional bounded
@@ -30,12 +42,18 @@ and report partial coverage. All-source semantic indexing/rebuild controls and
 complete retained-text adapters remain unfinished. These source changes do not
 upgrade pinned releases or deploy a service.
 
-Desktop baseline/revised route captures and representative search, transcript
-and graph checks, collapsed navigation, light/dark themes and a creation dialog
-were recorded locally. The browser viewport override did not
-apply, so mobile, zoom, reduced-motion and custom-theme visual acceptance remain
-unverified. Build and 28 dashboard check suites passed; focused Pi tests cover
-authentication, privacy, settings persistence, pagination and provider fallback.
+Desktop baseline/revised route captures and representative search, transcript,
+graph, editor, inspector and creation-dialog checks were recorded locally. The
+structural pass successfully applied the browser viewport override: collection
+and representative decision/settings layouts were checked at 390 x 844 without
+page overflow, and Studio appbar actions were checked at 1024 x 768. Collapsed
+navigation and light/dark collection surfaces were inspected; Memory Tree/List
+and an explicit content-field read were exercised. Zoom, reduced-motion and
+custom-theme visual acceptance remain unverified. Build, lint, 29 dashboard check
+suites and 18 design-guard self-tests passed, including six new shared-workspace
+render checks. Existing build warnings about dependency annotations and large
+chunks remain. Focused Pi tests from the preceding milestone cover authentication,
+privacy, settings persistence, pagination and provider fallback.
 
 ### Connected owner workflows
 

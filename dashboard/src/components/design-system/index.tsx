@@ -4,7 +4,7 @@ import { CompanionPortrait } from "@/components/companion-portrait"
 import { useConker } from "@/lib/api/store"
 import { cn } from "@/lib/utils"
 
-export { PageHeader, OverviewSection, PageTabs, PageTabsList, PageTabsTrigger, PageTabsContent, CollectionSearch, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
+export { PageHeader, WorkspaceSection, OverviewSection, PageTabs, PageTabsList, PageTabsTrigger, PageTabsContent, CollectionSearch, CollectionToolbar, CollectionLoading, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
 export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, WorkspaceInspector, ConfirmationDialog } from "./overlays"
 
 /** URL-addressed page content. Navigation is rendered once in SiteHeader. */

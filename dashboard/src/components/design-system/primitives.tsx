@@ -2,6 +2,7 @@ import { cloneElement, isValidElement, useId, type ComponentProps, type ReactNod
 import { Link } from "react-router-dom"
 import { Search, SearchX } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
@@ -26,6 +27,21 @@ export function PageHeader({ title, description, actions, status, density = "sta
   </header>
 }
 
+/** Sections group related work without introducing another surface. */
+export function WorkspaceSection({ title, description, action, children, divided = true }: {
+  title: ReactNode; description?: ReactNode; action?: ReactNode; children?: ReactNode; divided?: boolean
+}) {
+  const id = useId()
+  return <section aria-labelledby={id} data-slot="workspace-section" className={cn("min-w-0 space-y-4", divided && "border-b pb-6")}>
+    <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 flex-1"><h2 id={id} className="text-base leading-6 font-semibold">{title}</h2>
+        {description && <p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}
+      </div>{action}
+    </header>
+    {children && <div className="min-w-0 space-y-4">{children}</div>}
+  </section>
+}
+
 /** Overview composition: one leading decision surface, quieter supporting groups. */
 export function OverviewSection({ title, description, action, children, priority = false }: {
   title: string; description?: ReactNode; action?: ReactNode; children: ReactNode; priority?: boolean
@@ -34,7 +50,7 @@ export function OverviewSection({ title, description, action, children, priority
   return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "elevation-surface rounded-lg border bg-card p-4 text-card-foreground")}>
     <div className={cn("flex flex-wrap items-start justify-between gap-3", priority && "max-sm:flex-col")}>
       <div className="min-w-0 flex-1">
-        <h2 id={id} className={cn("font-semibold", priority ? "text-xl leading-7" : "text-base leading-6")}>{title}</h2>
+        <h2 id={id} className="text-base leading-6 font-semibold">{title}</h2>
         {description && <p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}
       </div>
       {action}
@@ -63,6 +79,26 @@ export function CollectionSearch({ label, ...props }: Omit<ComponentProps<typeof
   </div>
 }
 
+/** Local retrieval controls are one group, distinct from global app search. */
+export function CollectionToolbar({ search, filters, actions, count, unit = "records" }: {
+  search?: ReactNode; filters?: ReactNode; actions?: ReactNode; count?: number; unit?: string
+}) {
+  return <div data-slot="collection-toolbar" className="flex min-w-0 flex-wrap items-center gap-2 [&>div:empty]:hidden">
+    {search && <div className="w-full min-w-0 sm:w-auto sm:min-w-48 sm:max-w-[26.25rem] sm:flex-1">{search}</div>}
+    {filters && <div className="flex min-w-0 flex-wrap items-center gap-2">{filters}</div>}
+    {count !== undefined && <p role="status" className="ml-auto text-xs leading-5 text-muted-foreground tabular-nums max-sm:sr-only">{count} {unit}</p>}
+    {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
+  </div>
+}
+
+export function CollectionLoading({ label }: { label: string }) {
+  return <div role="status" aria-label={label} className="min-w-0 space-y-4">
+    <span className="sr-only">{label}</span>
+    <Skeleton className="h-(--collection-search-height) w-full sm:max-w-[26.25rem]" />
+    <div className="divide-y border-y">{[0, 1, 2].map(row => <div key={row} className="flex min-h-(--collection-row-height) items-center gap-3 px-4 py-3"><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-3 w-16" /></div>)}</div>
+  </div>
+}
+
 export function CollectionRow({ to, title, description, descriptionTitle, leading, trailing }: {
   to: string; title: string; description: ReactNode; descriptionTitle?: string; leading?: ReactNode; trailing?: ReactNode
 }) {
@@ -81,7 +117,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
 
 export function CollectionSection({ title, icon, children, contained = false }: { title: string; icon?: ReactNode; children: ReactNode; contained?: boolean }) {
   const id = useId()
-  const className = cn("divide-y divide-border", !contained && "rounded-lg border bg-card text-card-foreground")
+  const className = cn("divide-y divide-border", !contained && "collection-surface")
   const content = isValidElement<{ className?: string }>(children) && ['ul', 'dl'].includes(String(children.type))
     ? cloneElement(children, { className: cn(className, children.props.className) })
     : <ul className={className}>{children}</ul>
@@ -92,12 +128,12 @@ export function CollectionSection({ title, icon, children, contained = false }: 
 }
 
 /** Compact record for responsive tables. One container owns the divided list. */
-export function RecordItem({ title, lang, description, leading, meta, actions, onOpen }: {
-  title: string; lang?: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen?: () => void
+export function RecordItem({ title, lang, description, leading, meta, actions, onOpen, selected = false }: {
+  title: string; lang?: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen?: () => void; selected?: boolean
 }) {
   const summary = <>{leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}<span className="min-w-0 flex-1"><span lang={lang} className="block text-sm font-medium break-words">{title}</span>{description && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>}</span></>
-  return <div data-pattern="record-item" className="min-w-0 space-y-3 p-4">
-    {onOpen ? <button type="button" onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">{summary}</button> : <div className="flex min-w-0 items-start gap-3">{summary}</div>}
+  return <div data-pattern="record-item" className={cn("min-h-(--collection-row-height) min-w-0 space-y-3 p-4", selected && "bg-accent text-accent-foreground")}>
+    {onOpen ? <button type="button" aria-current={selected ? true : undefined} onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">{summary}</button> : <div className="flex min-w-0 items-start gap-3">{summary}</div>}
     {meta && <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">{meta}</div>}
     {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
   </div>
@@ -112,13 +148,13 @@ export function CollectionEmpty({ title, description, icon, onClear, clearLabel 
   </div>
 }
 
-export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, icon, children }: {
+export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, icon, filters, hint, children }: {
   query: string; onQueryChange: (value: string) => void; label: string; placeholder: string; count: number; unit: string;
-  emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; children: ReactNode
+  emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; filters?: ReactNode; hint?: ReactNode; children: ReactNode
 }) {
   return <div className="min-w-0 space-y-(--collection-section-gap)">
-    <CollectionSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />
-    <p className="sr-only" role="status">{count} {unit} found.</p>
+    <CollectionToolbar search={<CollectionSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />} filters={filters} count={count} unit={unit} />
     {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
+    {hint && <p className="max-w-prose text-xs leading-5 text-muted-foreground">{hint}</p>}
   </div>
 }
