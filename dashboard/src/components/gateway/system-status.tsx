@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AlertCircle, Check, CircleMinus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CollectionSection, PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
+import { CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/control'
 
@@ -35,7 +35,7 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
   const refresh = () => { setPending(true); setFailed(false); setRevision(value => value + 1) }
   return <GatewayPageFrame>
     <div className="max-w-4xl space-y-6">
-      <PageHeader title="System status" actionsOnly actions={<Button variant="ghost" size="icon" aria-label="Refresh system status" disabled={pending} onClick={refresh}><RefreshCw /></Button>} />
+      <PageHeader title="System status" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh system status" title="Refresh system status" disabled={pending} onClick={refresh}><RefreshCw /></WorkspaceAction>} />
       {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
       {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       {report && <>

@@ -1,16 +1,29 @@
-import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { WorkspaceChromeContext, useWorkspaceChrome } from '@/lib/workspace-chrome'
+import { cn } from '@/lib/utils'
+
+type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
+  emphasis?: 'quiet' | 'primary'; iconOnly?: boolean; menuItem?: boolean
+}
+
+/** Routine toolbar commands are quiet; only an explicit commitment earns primary emphasis. */
+export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem = false, className, ...props }: WorkspaceActionProps) {
+  return <Button {...props} data-slot="workspace-action" size={iconOnly && !menuItem ? 'icon' : 'sm'}
+    variant={iconOnly || menuItem ? 'ghost' : emphasis === 'primary' ? 'default' : 'outline'}
+    className={cn(emphasis === 'quiet' && 'shadow-none', !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'), menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none', className)} />
+}
 
 export function WorkspaceChromeProvider({ children }: { children: ReactNode }) {
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [search, setSearch] = useState<HTMLDivElement | null>(null)
+  const [summary, setSummary] = useState<HTMLDivElement | null>(null)
   const [searchOwner, setSearchOwner] = useState<string | null>(null)
   const [compactSearch, setCompactSearch] = useState(false)
-  return <WorkspaceChromeContext.Provider value={{ actions, setActions, search, setSearch, searchOwner, setSearchOwner, compactSearch, setCompactSearch }}>{children}</WorkspaceChromeContext.Provider>
+  return <WorkspaceChromeContext.Provider value={{ actions, setActions, search, setSearch, summary, setSummary, searchOwner, setSearchOwner, compactSearch, setCompactSearch }}>{children}</WorkspaceChromeContext.Provider>
 }
 
 export type WorkspaceAppbarProps = {
@@ -39,8 +52,8 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
     return () => observer.disconnect()
   }, [])
   const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
-  return <div ref={group}>{items.length < 2 || !compact ? children : <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="More workspace actions" title="More workspace actions"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
-    {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string }>(item) ? <DropdownMenuItem key={index} asChild disabled={item.props.disabled}>{cloneElement(item, { className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })}</DropdownMenuItem> : item)}
+  return <div ref={group}>{items.length < 2 || !compact ? children : <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger asChild><WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions"><MoreHorizontal /></WorkspaceAction></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
+    {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean }>(item) ? <DropdownMenuItem key={index} asChild disabled={item.props.disabled}>{cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })}</DropdownMenuItem> : item)}
   </DropdownMenuContent></DropdownMenu></>}</div>
 }
 
@@ -66,6 +79,7 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
       <div className="workspace-appbar-context">
         {hidden && <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand sidebar" title="Expand sidebar" />}
         {context}
+        <div ref={chrome?.setSummary} className="workspace-appbar-summary shrink-0" />
       </div>
       <div ref={chrome?.setSearch} className="workspace-appbar-search">{search}</div>
       <div className="workspace-appbar-actions" aria-label="Workspace actions" role="toolbar">

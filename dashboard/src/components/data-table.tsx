@@ -151,6 +151,7 @@ export function DataTable<TData, TValue>({
           : empty}
       </div>}
       <div className={cn("collection-surface", renderItem && "hidden xl:block")}>
+        {data.length === 0 ? empty :
         <Table>
           <TableHeader className="bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -199,7 +200,7 @@ export function DataTable<TData, TValue>({
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </Table>}
       </div>
 
       {paginate && data.length > 10 && <DataTablePagination table={table} />}

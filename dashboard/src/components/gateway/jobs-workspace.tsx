@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, PageHeader, RecordItem } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { createJobRunRequestId, GatewayJobMutationError, type GatewayJob, type GatewayScheduledRun, type GatewayScheduledRunStatus } from '@/lib/gateway/jobs'
@@ -102,7 +102,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
     return <div className="space-y-4 p-6">{error ? <><PageHeader title="Schedule unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/jobs')}>Back to jobs</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading schedule…</p>}</div>
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.instructions} ${job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  return <GatewayPageFrame><div className="space-y-6"><PageHeader actionsOnly title="Jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<Button variant="ghost" size="icon" aria-label="Refresh jobs" title="Refresh jobs" disabled={loading} onClick={() => void load()}><RefreshCw /></Button>} />
+  return <GatewayPageFrame><div className="space-y-6"><PageHeader actionsOnly title="Jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<WorkspaceAction iconOnly aria-label="Refresh jobs" title="Refresh jobs" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!jobs && !error ? <CollectionLoading label="Loading jobs…" /> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search jobs" placeholder="Search schedules…" count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
       filters={<Select value={filter} onValueChange={value => setFilter(value as typeof filter)}><SelectTrigger className="w-44" aria-label="Filter jobs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All schedules</SelectItem><SelectItem value="enabled">Enabled</SelectItem><SelectItem value="paused">Paused</SelectItem></SelectContent></Select>}

@@ -12,6 +12,7 @@ import { WorkspaceRouteActions } from './workspace-chrome'
 import { UniversalSearchContext } from '@/lib/workspace-chrome'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+export { WorkspaceAction } from './workspace-chrome'
 
 
 export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean }) {
@@ -115,10 +116,12 @@ export function WorkspaceSearch({ onSubmit, ...props }: Omit<CollectionSearchPro
 export function CollectionToolbar({ search, filters, actions, count, unit = "records" }: {
   search?: ReactNode; filters?: ReactNode; actions?: ReactNode; count?: number; unit?: string
 }) {
+  const chrome = useWorkspaceChrome()
+  const summary = count !== undefined && <p role="status" aria-atomic="true" className="text-xs leading-5 text-muted-foreground tabular-nums max-sm:sr-only">{count} {unit}</p>
   return <div data-slot="collection-toolbar" className="flex min-w-0 flex-wrap items-center gap-2 [&>div:empty]:hidden">
     {search && <div className="w-full min-w-0 sm:w-auto sm:min-w-48 sm:max-w-[26.25rem] sm:flex-1">{search}</div>}
     {filters && <div className="flex min-w-0 flex-wrap items-center gap-2">{filters}</div>}
-    {count !== undefined && <p role="status" className="ml-auto text-xs leading-5 text-muted-foreground tabular-nums max-sm:sr-only">{count} {unit}</p>}
+    {chrome ? chrome.summary && createPortal(summary, chrome.summary) : summary && <div className="ml-auto">{summary}</div>}
     {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
   </div>
 }

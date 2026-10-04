@@ -4,7 +4,7 @@ import { useStore } from 'zustand'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { ProposalsPanel } from './proposals-panel'
-import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
+import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -106,7 +106,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     onNote={note => state.setState(value => ({ notes: { ...value.notes, [row.id]: note } }))}
     onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }} />
-  const refreshButton = <Button variant="ghost" size="icon" className="shrink-0" aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></Button>
+  const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></WorkspaceAction>
   return <GatewayPageFrame className="h-full">
     <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}

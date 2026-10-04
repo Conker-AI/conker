@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { PageHeader } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { StatusBadge } from '@/components/status-badge'
 import type { GatewayControlClient, SetupChoiceStep, SetupRehearsal, SetupStep } from '@/lib/gateway/control'
@@ -334,7 +334,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
   const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
   return <GatewayPageFrame>
     <div className="space-y-6">
-      <PageHeader title="Setup" actionsOnly actions={<Button variant="ghost" size="icon" aria-label="Refresh setup" onClick={refresh}><RefreshCw /></Button>} />
+      <PageHeader title="Setup" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh setup" title="Refresh setup" onClick={refresh}><RefreshCw /></WorkspaceAction>} />
       {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       <section aria-labelledby="setup-progress-title" className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">

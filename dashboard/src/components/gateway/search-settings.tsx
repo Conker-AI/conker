@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
 import { searchSources, type GatewaySearchClient, type SearchCapabilities, type SearchSettings } from '@/lib/gateway/search'
 import { GatewayPageFrame } from './page-frame'
 
@@ -39,7 +39,7 @@ export function GatewaySearchSettings({ client }: { client: GatewaySearchClient 
   if (!draft || !capabilities) return <GatewayPageFrame>{error ? <><p role="alert">{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)}>Retry</Button></> : <p role="status">Loading search settings...</p>}</GatewayPageFrame>
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved?.configuration)
   return <GatewayPageFrame><div className="max-w-3xl space-y-6">
-    <PageHeader title="Search" actionsOnly actions={<Button size="sm" disabled={pending || !dirty} onClick={() => void save()}><Save />{pending ? 'Saving...' : 'Save changes'}</Button>} />
+    <PageHeader title="Search" actionsOnly actions={<WorkspaceAction emphasis="primary" disabled={pending || !dirty} onClick={() => void save()}><Save />{pending ? 'Saving...' : 'Save changes'}</WorkspaceAction>} />
     <WorkspaceSection title="Included sources">
       <div className="grid gap-4 sm:grid-cols-3">{searchSources.map(source => <Label key={source} className="flex items-center gap-3"><Checkbox disabled={pending || !capabilities.sources.includes(source)} checked={draft.sources.includes(source)} onCheckedChange={on => { setStatus(''); setDraft(value => value && ({ ...value, sources: on === true ? [...value.sources, source] : value.sources.filter(item => item !== source) })) }} />{source[0].toUpperCase() + source.slice(1)}</Label>)}</div>
       <p className="text-sm text-muted-foreground">Only authorized records are searched. Private and forgotten conversations, credentials and protected inputs are excluded.</p>

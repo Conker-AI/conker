@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronRight, CircleAlert, File, FileQuestion, Folder, FolderOpen, Link2, RefreshCw, ShieldCheck } from 'lucide-react'
-import { PageHeader } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -90,7 +90,7 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
   }
 
   return <GatewayPageFrame><div className="max-w-5xl space-y-6">
-    <PageHeader actionsOnly title="Files" description="Browse names and folders inside roots configured by the server operator." density="compact" actions={root ? <Button size="sm" disabled={pending} onClick={() => void request(root.id, currentPath)}><RefreshCw />{pending ? 'Checking…' : directory ? 'New listing' : 'Open root'}</Button> : undefined} />
+    <PageHeader actionsOnly title="Files" description="Browse names and folders inside roots configured by the server operator." density="compact" actions={root ? <WorkspaceAction disabled={pending} onClick={() => void request(root.id, currentPath)}><RefreshCw />{pending ? 'Checking…' : directory ? 'New listing' : 'Open root'}</WorkspaceAction> : undefined} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>Directory listing only</span><span aria-hidden="true">·</span><span>No file contents, editing, uploads, deletes, or shell access</span></div>
 
     {catalogue?.mode === 'configured' && <section className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-end">

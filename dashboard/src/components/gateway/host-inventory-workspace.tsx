@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, CircleAlert, Clock3, Cpu, Network, RefreshCw, ShieldCheck } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { PageHeader } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { gatewayError } from '@/lib/gateway/transport'
 import { createHostInventoryRequestId, type GatewayConfiguredTargets, type GatewayHostInventory, type GatewayHostInventoryClient } from '@/lib/gateway/host-inventory'
@@ -68,7 +68,7 @@ export function GatewayHostInventoryWorkspace({ client, section }: { client: Gat
   const rows = useMemo(() => sample?.observation?.[section].results ?? [], [sample, section])
   const observed = sample?.observation?.[section]
   return <GatewayPageFrame><div className="max-w-5xl space-y-6">
-    <PageHeader actionsOnly title={labels[section]} description="A redacted, read-only host observation. Sampling never starts, stops, or changes anything." density="compact" actions={<Button size="sm" disabled={pending} onClick={() => void start()}><RefreshCw />{pending ? 'Checking…' : 'New sample'}</Button>} />
+    <PageHeader actionsOnly title={labels[section]} description="A redacted, read-only host observation. Sampling never starts, stops, or changes anything." density="compact" actions={<WorkspaceAction disabled={pending} onClick={() => void start()}><RefreshCw />{pending ? 'Checking…' : 'New sample'}</WorkspaceAction>} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>No host authority</span><span aria-hidden="true">·</span><span>No command lines, users, raw IDs, images, addresses, terminal, or files</span></div>
     {error && <div className="flex items-start gap-3 text-sm text-destructive" role="alert"><CircleAlert className="mt-0.5 size-4 shrink-0" /><div><p>{error}</p>{sample && <Button className="mt-3" variant="outline" size="sm" onClick={() => void inspect(sample.requestId)}>Check saved request</Button>}</div></div>}
     {!sample && !error && <div className="flex min-h-48 flex-col items-center justify-center gap-3 border-y text-center"><span className="flex size-10 items-center justify-center rounded-full border"><Icon className="size-5 text-muted-foreground" /></span><div><p className="text-sm font-medium">No host sample loaded</p><p className="mt-1 max-w-md text-sm text-muted-foreground">Create one explicit observation. Conker will remember its opaque request ID for this browser session.</p></div></div>}

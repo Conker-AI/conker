@@ -3,6 +3,7 @@ import { createContext, useContext, type Dispatch, type SetStateAction } from 'r
 type Chrome = {
   actions: HTMLDivElement | null; setActions: (node: HTMLDivElement | null) => void
   search: HTMLDivElement | null; setSearch: (node: HTMLDivElement | null) => void
+  summary: HTMLDivElement | null; setSummary: (node: HTMLDivElement | null) => void
   searchOwner: string | null; setSearchOwner: Dispatch<SetStateAction<string | null>>
   compactSearch: boolean; setCompactSearch: (compact: boolean) => void
 }

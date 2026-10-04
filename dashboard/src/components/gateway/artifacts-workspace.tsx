@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Archive, ArrowLeft, Download, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArtifactPreview } from '@/components/artifacts/native-preview'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, RecordItem, TaskDialogContent } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -135,7 +135,7 @@ export function GatewayArtifactsWorkspace({ control, activity }: { control: Gate
   }
   const visible = (artifacts ?? []).filter(item => (filter === 'all' || (item.archivedAt !== null) === (filter === 'archived')) && item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw /></Button><Button onClick={() => setCreating(true)}><Plus />New artifact</Button></div>} />
+    <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction><WorkspaceAction onClick={() => setCreating(true)}><Plus />New artifact</WorkspaceAction></>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!artifacts && !error ? <CollectionLoading label="Loading artifacts…" /> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search artifacts" placeholder="Search artifact titles…" count={visible.length} unit={visible.length === 1 ? 'artifact' : 'artifacts'}
       filters={<Select value={filter} onValueChange={value => setFilter(value as typeof filter)}><SelectTrigger className="w-44" aria-label="Filter artifacts"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active artifacts</SelectItem><SelectItem value="archived">Archived artifacts</SelectItem><SelectItem value="all">All artifacts</SelectItem></SelectContent></Select>}

@@ -2,8 +2,7 @@ import { DetailPanel, OverlayBody } from '@/components/design-system/overlays'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { PageHeader, CollectionLoading, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { PageHeader, WorkspaceAction, CollectionLoading, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
@@ -23,7 +22,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const selected = value?.status === 'ok' ? value.results.find(tool => tool.id === params.get('tool')) : undefined
   const rows = value?.results.filter(tool => `${tool.name} ${tool.id} ${tool.description}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
   return <GatewayPageFrame className="space-y-4">
-    <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<div className="flex gap-2"><Button variant="ghost" size="icon" aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" size="sm" asChild><Link to="/tools?view=drafts">Tool drafts</Link></Button></div>} />
+    <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></WorkspaceAction><WorkspaceAction asChild><Link to="/tools?view=drafts">Tool drafts</Link></WorkspaceAction></>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}

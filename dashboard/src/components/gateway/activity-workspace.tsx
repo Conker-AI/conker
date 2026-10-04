@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Plus, RefreshCw } from 'lucide-react'
-import { CollectionEmpty, PageHeader } from '@/components/design-system/primitives'
+import { CollectionEmpty, PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
 import { DetailPanel, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { Button } from '@/components/ui/button'
@@ -248,7 +248,7 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
   const availableDialog = dialog?.kind === 'create' || dialogTask?.contentStatus === 'available'
 
   return <GatewayPageFrame className="h-full" tabIndex={0} aria-label="Activity workspace"><div className="space-y-5">
-    <PageHeader actionsOnly density="compact" title="Activity" description="Track tasks and review saved activity." actions={<><Button variant="outline" disabled={loading} onClick={() => void load()}><RefreshCw />Refresh</Button><Button disabled={!!retained.mutation} onClick={openCreate}><Plus />New task</Button></>} />
+    <PageHeader actionsOnly density="compact" title="Activity" description="Track tasks and review saved activity." actions={<><WorkspaceAction iconOnly aria-label="Refresh activity" title="Refresh activity" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction><WorkspaceAction disabled={!!retained.mutation} onClick={openCreate}><Plus />New task</WorkspaceAction></>} />
     <p className="text-xs leading-5 text-muted-foreground">A task is something you want done, linked to a chat. Use Work on this task to have Conker pick it up; only you can mark it done.</p>
     {retained.notice && <p role="status" className="text-sm text-muted-foreground">{retained.notice}</p>}{(retained.error || error) && <p role="alert" className="text-sm text-destructive">{retained.error || error}</p>}{recovery}
     {(taskFilter || runFilter || sessionFilter) && <div className="flex flex-wrap items-center gap-3 text-xs"><span>Showing one source</span><details className="text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><span className="break-all">{taskFilter || runFilter || sessionFilter}</span></details><Button size="sm" variant="outline" onClick={() => setParams({ tab })}>Clear source filter</Button></div>}

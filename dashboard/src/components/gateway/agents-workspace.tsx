@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -105,7 +105,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   if (!agents && !error) return <LoadingPage />
   if (error) return <div className="space-y-4 p-6" role="alert"><PageHeader title="Agents are unavailable" description={error} density="compact" /><Button variant="outline" onClick={load}>Try again</Button></div>
   if (companion) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <PageHeader actionsOnly title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<Button variant="outline" asChild><Link to="/companion">Open chat</Link></Button>} />
+    <PageHeader actionsOnly title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<WorkspaceAction asChild><Link to="/companion">Open chat</Link></WorkspaceAction>} />
     {selected ? <AgentEditor key={`${selected.revision}:${resetNonce}`} client={client} profile={selected} companion onSaved={saved} onCancel={() => setResetNonce(value => value + 1)} /> : <div className="p-6 text-sm text-muted-foreground">The canonical Companion profile is missing. Check System before continuing.</div>}
   </div>
   if (editMatch) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -116,8 +116,8 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   const active = visible.filter(item => item.archived_at === null), archived = visible.filter(item => item.archived_at !== null)
   return <GatewayPageFrame>
     <div className="space-y-6">
-      <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} />
-      <CollectionPanel query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={visible.length} unit={visible.length === 1 ? 'agent' : 'agents'} emptyTitle="No matching agents" emptyDescription={query ? 'Try a different name or role.' : 'Create an agent for a focused kind of work.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
+      <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<WorkspaceAction onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
+      <CollectionPanel query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={visible.length} unit={visible.length === 1 ? 'agent' : 'agents'} emptyTitle={query ? 'No matching agents' : 'No agents yet'} emptyDescription={query ? 'Try a different name or role.' : 'Create an agent for a focused kind of work.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
         <div className="space-y-5">
           <CollectionSection title="Active agents">
             {active.map(item => <CollectionRow key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} title={item.configuration.name} description={<span className="truncate">{item.configuration.role}</span>} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><Bot className="size-4" /></span>} trailing={<><span>Revision {item.revision}</span>{item.kind === 'companion' && <span>Primary</span>}</>} />)}
