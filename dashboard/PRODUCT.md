@@ -8,11 +8,11 @@ web
 
 ## Users and purpose
 
-The owner wants one personal AI control dashboard: talk to a companion, configure agents, inspect memory and activity, build reusable tools, manage jobs, and inspect the server. Technically curious users need direct manipulation and inspectable behavior without losing the existing compact, coherent application shell.
+The owner wants one personal AI workspace: talk to a companion, configure agents, inspect memory and activity, build reusable tools, manage jobs, and inspect the server. Technically curious users need direct manipulation and inspectable behavior. Existing page geometry is not a product requirement.
 
 ## Confirmed operating context
 
-Vite, React, TypeScript and shadcn. Conker is the owner-facing frontend; ToolGate and MemoryGate remain independent services. Existing ConkerClient fixtures define the current integration boundary. Frontend preview behavior must never imply that external actions, credentials, scheduling, authentication or model inference are connected.
+Vite, React, TypeScript and shadcn. Conker is the owner-facing frontend; Pi, ToolGate, MemoryGate and conker-host retain their own authority. Gateway adapters and capabilities.json define the integration boundary. The local development preview uses a fake gateway; its examples are not proof of production actions, credentials, scheduling, authentication or model inference.
 
 ## Tools direction, approved September 20
 
@@ -20,8 +20,8 @@ One searchable Tools workspace contains connector actions and composed workflows
 
 ## Commitments
 
-Preserve the supplied companion artwork, semantic custom themes, shadcnstore foundations, full-width compact composition and existing navigation/layout variants. DESIGN.md owns visual rules. Controls must work with keyboard and narrow screens; graphs need a usable structured alternative. No fabricated live execution or security guarantees.
+The owner selected SiYuan's structure + Asri's finish for a brand-new interface on October 5. Preserve the existing sidebar and clean empty-chat canvas, supplied companion artwork, semantic custom themes, native shadcn/Radix APIs, and all source-owned product behavior. Other layouts may be replaced completely. Controls must work with keyboard and narrow screens; graphs need a usable structured alternative. No fabricated live execution or security guarantees. The feature-first workflow lives in ../docs/reference/design-language.md; DESIGN.md records the built visual system.
 
 ## Evidence
 
-The owner's conversation supplies product direction and n8n workspace references. Existing contracts: DESIGN.md, ../docs/design-language.md, ../docs/workspace-control-plan.md. Current examples use explicitly identified fixtures; there is no production proof implied by those examples.
+The owner's conversation supplies product direction, n8n workflow references, and the confirmed SiYuan + Asri direction. Product evidence: ../capabilities.json, gateway source adapters and their checks. Design workflow: ../docs/reference/design-language.md. Current preview examples use explicitly identified fixtures; no production proof is implied.

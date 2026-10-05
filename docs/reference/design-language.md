@@ -1,71 +1,115 @@
-# Conker design language
+# Conker: Feature-First Workspace Workflow
 
-> Implementation authority (2026-09-13): [dashboard/DESIGN.md](../../dashboard/DESIGN.md) and the shared code in `dashboard/src/components/design-system` now define exact component, spacing, type and palette contracts. The owner's accepted Chats collection is the reference for Chats, Inbox and other collections. Earlier Framer-source-of-truth language and approximate dimensions below are historical direction; current shared components and the owner's latest instructions take precedence. Standard validation enforces the design contract and rendered review checks visual results.
+Owner-approved direction, 2026-10-05: a new interface using SiYuan's structure
+and Asri's finish, not a recoloring of Conker's incumbent layouts.
+The existing sidebar and clean empty-chat canvas are the two explicit visual anchors.
+Everything else is replaceable. Product behavior is not.
 
-The owner's design direction, captured so any agent (Astra included) builds to the same standard.
-This records the product direction behind the implemented shadcn/React dashboard. Exact implementation rules live in dashboard/DESIGN.md.
+## Crucial Product Truth
 
-## The one-line brief
+Conker is an owner's personal AI workspace. The first useful outcome is to resume
+work, find a source, or make an informed decision. It is not to admire a dashboard
+or increase time spent in the app. Technically curious users need inspectable
+behavior, but should not have to decode implementation details to do ordinary work.
+This is an assumed use scene, not a claim of completed user research.
 
-**A serious, professional tool that reads like shadcn "New York": near-black, tight, defined by thin
-outlines and distinct tonal surfaces — clean and never wasteful — with room for a few genuinely beautiful, animated AI moments
-on top.** The reference the owner pointed to is **[libraries.dev](https://libraries.dev/#components)**
-(dark, outlined, with animated AI components) and **shadcn/ui New York** style.
+`capabilities.json`, source adapters, and their tests are the feature inventory.
+The development preview uses a fake gateway and is not proof of live execution.
 
-## Principles
+| Feature family | Preserve | New presentation family |
+| --- | --- | --- |
+| Conversations, recovery, session privacy, calls, voice | Drafts, stream/cancel/reconcile state, scroll, actual provenance, explicit device consent | Reading canvas and unified composer; empty chat remains unchanged |
+| Tasks/activity, proposals, owner approvals | Completion criteria, source links, scope, expiry, uncertain outcomes, no automatic execution | Work queue, then focused review document |
+| Projects/context | Revision conflicts, instructions, live references, source-owned privacy | Record library and working document with context |
+| Agents, companion editing, teams | Published roles, portraits, draft/import/export/history, collaboration boundaries | Record library and chapter-based configuration |
+| Tools, workflow authoring | Inventory, draft/source/configure, validation/publication, immutable receipts | Record library and specialized editor |
+| Artifacts | Sanitized preview, source, versions, export, tombstones | Record library and document modes |
+| Jobs | Pinned target/version, schedules, run history, pause/resume, explicit run confirmation | Record library and schedule document |
+| Memory exploration/forgetting | Real relationships, Map/Tree/List, inspection, provenance, privacy invalidation | Unframed canvas with contextual inspector; structured alternative |
+| Models, provider secrets, search | Distinct model roles, credential references only, honest search coverage and opt-in AI stages | Section-indexed settings document |
+| Setup/status/evidence | Server-owned progress, current evidence, verification/recovery, optional choices | Current task with checklist; truthful sidebar progress |
+| Authentication/session administration | Auth lifecycle, owner-channel proof, revocation, protected data | Existing authenticated boundary; no cosmetic safety claims |
+| System, owner files, host inventory | Redacted observations, root restrictions, actual timestamps, read-only distinction | Operational document, table, and specialized file browser |
+| Host lifecycle, local downloads, backup/recovery, updates, TLS, admin recovery | CLI-owned controls and verified receipts | Remain operator CLI capabilities; no invented browser controls |
+| Owner terminal | Deferred production capability | Preserve explicit preview/unavailable boundary; do not promote it as active |
 
-1. **Depth makes hierarchy readable.** Keep **1px outlines** on a near-black ground, with
-   distinct graphite panels, brighter active work surfaces, and quieter inset details. The owner's
-   September 14 refinement replaces outline-only separation with shared tonal depth and subtle
-   shadows. Light mode uses a softly toned canvas beneath white panels. Cards, collections, fields
-   and menus inherit the documented surface roles in dashboard/DESIGN.md; avoid independent page
-   palettes, heavy shadows or decorative colored boxes. Preserve the compact shadcn New York feel.
-2. **Purposeful spacing.** Related controls sit close; different topics have room to separate.
-   Judge the complete screen, not just individual component padding. Preserve full-width gutters,
-   usable targets and readable rows; remove redundant framing and oversized heading/search stacks
-   before making useful content smaller. Shared controls can serve different screen compositions.
-3. **Productive vs beautiful — decide per screen.** Some screens exist to *do a job fast*; some exist
-   to *feel good*; some are both. Design each to its purpose:
-   - **Productive** (e.g. the **session list**): its only job is to *find the session you need*, so
-     it must be **super clean** — dense, outlined, scannable, one row per item (title + agent · time),
-     hairline dividers, no wasted height.
-   - **Beautiful** (e.g. AI thinking states): the *thinking bubbles / orbs* and animated borders from
-     libraries.dev — Thinking Orbs, Border Beam. These are the moments allowed to be lush.
-   - **Combined**: the conversation (productive thread + a beautiful companion presence).
-4. **Calm, not busy.** Restraint. One accent, used sparingly. Quiet by default.
+Cross-cutting invariants: keyboard access, responsive layouts, custom theme pairs,
+reduced motion, source authorization, loading/error/empty states, cancellation,
+draft ownership, return paths, and mutation eligibility. Search opens records;
+it never executes tools or grants permission. Approval records permission, not execution.
 
-## Color and component authority
+## Workflow Before Styling
 
-The owner explicitly selected the shadcnstore dashboard template on September 16 as the authority for shared styling. [template-reference.md](template-reference.md) records the pinned source, feature map and permitted Conker adaptations. Use its direct semantic color variables and real component treatments. The previous custom surface-mixing layer is retired.
+1. **Inventory.** Trace each route to its source, capabilities, mutations, and tests.
+   Record what is real, preview-only, unavailable, or deferred. Do not use current
+   card placement as a product requirement.
+2. **Task.** Name the primary user outcome and why it matters. Classify controls
+   as navigation, local tools, content, or contextual inspection. Rank by frequency
+   and consequence, not by visual habit.
+3. **State.** Map initial/loading/working/waiting/blocked/error/unknown/recovery/
+   cancelled/completed states. Preserve drafts and source authority across transitions.
+4. **Topology.** Assign a screen family. Libraries find records; documents edit or
+   review one thing; queues prioritize attention; canvases expose relationships.
+   Do not give each route an unrelated visual solution.
+5. **Reference translation.** Study the reference's structure, not just its colors.
+   Build from native React/Radix controls and Conker's semantic themes; do not install
+   SiYuan-specific CSS or copy its implementation. References are
+   [SiYuan](https://github.com/siyuan-note/siyuan) and
+   [Asri](https://github.com/mustakshif/Asri).
+6. **Shared implementation.** Establish the frame, section index, record anatomy,
+   surfaces, command hierarchy, modes, and overlay behavior before composing routes.
+   Change shared owners rather than appending per-screen overrides.
+7. **Validation.** Exercise real task paths and source-owned state, inspect desktop
+   and mobile together, check themes/focus/overflow, run guards and behavioral checks,
+   then document the built system. A screenshot alone cannot certify safety.
 
-Conker keeps its content, features, compact composition, custom appbar/sidebar controls, green default accent and complete photo portraits. Presets/imports retain their exact palette values. [dashboard/DESIGN.md](../../dashboard/DESIGN.md) governs density and composition; [color-system.md](color-system.md) governs color use.
+## Questions For Every Component
 
-## What "get shadcn" means for the build
+- What outcome does this advance, and what currently competes with it?
+- Is it navigation, a command, content, status, or evidence? Is it in that location?
+- Is the same information or search entry repeated elsewhere?
+- Does grouping make the next action apparent without extra instructional copy?
+- Does a surface mean a working plane, selection, or elevation, rather than decoration?
+- Is the frequent action easy to reach, and is the consequential action deliberate?
+- What happens when this is empty, stale, denied, interrupted, long, or unavailable?
+- Can the user defer, return, undo where supported, and recover without losing work?
+- Is this a shared problem with a shared solution, or a genuinely specialized tool?
 
-- The **shadcn MCP** is wired to Astra (`codex mcp add shadcn -- npx shadcn@latest mcp`): use it to
-  browse/pull real shadcn components and match their standards when building the React app.
-- Build in **New York style**. Semantic `background`/`foreground` token pairs; the outline everywhere.
-- The accepted live dashboard and shared components are the implementation source of truth. Framer files are design references and must follow the same documented component contracts.
+These questions are hypotheses to test, not a universal formula for attention.
+Use progress only for actual incomplete work. No fake urgency, guilt, compulsory
+engagement, invented statistics, or guarantees that model output is safe.
 
-## Screen intents (quick reference)
+## Direction Contract
 
-Interaction placement follows the owner-approved September 16 contract in [dashboard/DESIGN.md](../../dashboard/DESIGN.md#interaction-placement-owner-approved-september-16). Focused creation and multi-field edits use centered task dialogs; contextual evidence and history use a right panel; complex configuration stays on dedicated pages. Confirmations name their target and consequences. Save/discard ordering, feedback, responsive record lists, and overlay geometry are shared components, not route-specific decisions. Preserve Conker's current visual identity while making equivalent actions behave consistently.
+**THESIS:** A personal working environment, not a dashboard of cards. Documents
+have an index and body; libraries have records; decisions have focused review.
 
-- **Session list / Chats** — productive. Dense outlined list, find-fast.
-- **Inbox list** — productive. Outlined rows, effect badges, glance meta.
-- **Inbox detail (approval)** — combined. Serious, structured; the delta and provenance are the point.
-- **System / Agents / Tools / Memory / Journal / Jobs** — productive. Outlined cards, tight.
-- **Home** — combined. A compact, visually composed workspace overview with linked resource counts, pending requests, agent status, recent activity and conversations, service status, and restrained motion.
-- **Companion / conversation** — combined. Productive thread + beautiful companion presence and AI states.
-- **Character Studio** — beautiful-leaning. The companion should feel alive (static now, animated later).
-- **System** — productive. One sidebar destination with the shared appbar tabs: Overview for machine stats and services, Terminal for the viewport-filling black console and fullscreen, and Files for the directory tree and path copying. Keep Terminal and Files in separate tab bodies, with the offline and sample-data labels intact. Terminal uses graphite chrome; Files uses the shared card palette.
+**OWN-WORLD:** System typography, neutral semantic theme pairs, softly separated
+working planes, sparse dividers, compact command chrome, deliberate selection.
+Depth belongs to floating overlays and the composer, not the main shell.
 
-Home summarizes Conker's internal screens using the shared page shell, `OverviewSection`, collection rows and complete padded portraits. Pending decisions lead in a defined card surface; activity and supporting groups have quieter headings/dividers. Resource values are distinct from their labels. New chat and Open companion provide the primary next steps; Connections and System expose service details. One subtle arrival animation gives the overview a quiet entrance and respects reduced motion. Existing theme and inset-frame contracts continue to apply. Collection routes use the compact heading/search rhythm documented in DESIGN.md; settings, forms, conversations and tools retain layouts suited to their tasks.
+**STORY:** Find the relevant work, inspect it in its own context, then choose an
+explicit action. Navigation and status do not masquerade as authority.
 
-The separate productivity app owns tasks and calendars and may later connect to Conker through MCP/ToolGate. Home does not duplicate a daily briefing, agenda, news feed or planning starters. Recorded calendar-tool actions can appear in Journal summaries as audit history. Companion keeps its dedicated conversation, voice behavior, daily context and sourced-news status; the Home restructuring does not remove these capabilities.
+**FIRST VIEWPORT:** Existing sidebar at left; one 56px command row and slim scoped
+search; a section index on long documents beside the content plane. Record libraries
+use shared name/context/metadata columns. Mobile removes the persistent index and
+uses a contents disclosure; it does not shrink the desktop layout.
 
-## Reference
+**FORM:** Owner-pinned SiYuan + Asri, replacing the incumbent world. Prior concept
+seed `7cdf9281` remains subordinate to that explicit choice. Implementation is
+code-led and uses the references as grammar, not a pixel-copy promise.
 
-- [libraries.dev](https://libraries.dev/#components) — the target look: dark, outlined, animated AI
-  components (Border Beam, Thinking Orbs, Gooey, Liquid Metal). Colours and outlines especially.
-- shadcn/ui New York style + theming (`ui.shadcn.com/docs/theming`, `ui.shadcn.com/docs/mcp`).
+**SIGNATURE:** Section navigation moves to and focuses the actual section without
+resetting form state. Motion is brief and reduced-motion aware; no entrance parade.
+
+**FINISH:** unreviewed and undocumented is unfinished; this build ends with the
+finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+
+## Delivery Boundaries
+
+Checkpoint before implementation: `checkpoint/conker-before-new-workspace-2026-10-05`,
+commit `43a028fa0e8ff7d756178bd7d51133b2f1b001dd`, verified against GitHub.
+No force push, implicit dependency upgrades, production deployment, new permission,
+or fabricated backend capability. Exact built values belong in `dashboard/DESIGN.md`;
+that file must describe the new implementation, not constrain it to the discarded UI.

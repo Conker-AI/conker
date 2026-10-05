@@ -1,6 +1,6 @@
 # Dashboard UI work
 
-Read [DESIGN.md](DESIGN.md) before changing visible Conker UI. It is the design contract for this dashboard; Chats is the approved collection reference.
+Read [PRODUCT.md](PRODUCT.md), [the feature-first workflow](../docs/reference/design-language.md), and [DESIGN.md](DESIGN.md) before changing visible Conker UI. For refinements, DESIGN.md is the built contract. For the owner's approved SiYuan + Asri replacement, incumbent layout is evidence, not a constraint: preserve behavior and the explicit sidebar/empty-chat anchors, then replace the visual world. Chats is not a privileged layout to preserve.
 
 - Compose standard pages with `BaseLayout` and patterns from `@/components/design-system`. Reuse the actual components for search, tabs, list rows, empty states, and collection portraits.
 - Change shared patterns or add a documented semantic variant when a repeated role needs new styling. Do not copy markup into a route or override its dimensions to create a second implementation.
@@ -11,4 +11,4 @@ Read [DESIGN.md](DESIGN.md) before changing visible Conker UI. It is the design 
 
 - Follow the interaction-placement rules in DESIGN.md for every new or changed screen. Short creation/configuration uses `TaskDialogContent`; reference uses `DetailPanel`; destructive actions use `ConfirmationDialog`; form footers use `FormActions`. Multi-section editors stay on dedicated pages. Responsive record tables use `DataTable` with `renderItem`/`RecordItem`, preserving one search/filter/sort state. Do not rebuild these patterns locally or turn every action into a drawer.
 
-- The owner's shared styling authority is the pinned shadcnstore template. Read [template-reference.md](../docs/reference/template-reference.md) before changing colors or primitives. Preserve direct theme mappings, valid upstream recipes, Conker's compact composition and custom navigation.
+- The owner's visual direction is SiYuan + Asri. The pinned [template-reference.md](../docs/reference/template-reference.md) remains foundation evidence for native component APIs and theme semantics, not authority over replacement geometry. Preserve direct theme mappings, valid upstream recipes and the protected navigation. Never solve a redesign by accumulating route-specific CSS patches.
