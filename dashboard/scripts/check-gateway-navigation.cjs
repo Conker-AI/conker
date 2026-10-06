@@ -59,6 +59,11 @@ const tools = fs.readFileSync(path.join(root, 'src/components/gateway/tools-inve
 assert.match(tools, /Actions follow your saved permissions and approval rules/)
 assert.doesNotMatch(tools, /Anything that sends, spends or changes something still asks/,
   'The UI must not promise per-run confirmation for workflows configured to allow automatic runs')
+const systemStatus = fs.readFileSync(path.join(root, 'src/components/gateway/system-status.tsx'), 'utf8')
+assert.match(systemStatus, /Core checks passed/)
+assert.match(systemStatus, /not every tool, schedule or host capability/)
+assert.doesNotMatch(systemStatus, /Everything is working/,
+  'Passing core diagnostics must not imply untested capabilities are ready')
 assert.match(workspace, /resolveGatewayRoute\(location\.pathname\)/)
 
 const primitives = fs.readFileSync(path.join(root, 'src/components/design-system/primitives.tsx'), 'utf8')

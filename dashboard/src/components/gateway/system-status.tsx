@@ -39,14 +39,14 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
       {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
       {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       {report && <>
-        <WorkspaceSection title={report.status === 'ok' ? 'Everything is working' : `${report.summary.attention} ${report.summary.attention === 1 ? 'thing needs' : 'things need'} attention`} description={`${report.summary.ok} working · ${report.summary.optional} optional`} />
+        <WorkspaceSection title={report.status === 'ok' ? 'Core checks passed' : `${report.summary.attention} ${report.summary.attention === 1 ? 'check needs' : 'checks need'} attention`} description={`${report.summary.ok} passed · ${report.summary.optional} optional`} />
         {(['access', 'services', 'models'] as const).map(area => <CollectionSection key={area} title={areaLabels[area]}><dl>{report.findings.filter(item => item.area === area).map(item => <div key={item.id} className="flex min-h-(--collection-row-height) min-w-0 items-start gap-3 px-4 py-3">
           <div className="min-w-0 flex-1"><dt className="text-sm font-medium">{item.label}</dt><dd className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</dd>
             {item.recovery && <div className="mt-3 flex flex-wrap items-center gap-2">{item.recovery.uiRoute && item.recovery.uiRoute !== '/system' && <Button asChild variant="outline" size="sm"><Link to={item.recovery.uiRoute}>{item.recovery.label}</Link></Button>}{item.recovery.command && <code className="rounded-md border bg-background px-2.5 py-1.5 text-xs">{item.recovery.command}</code>}</div>}
           </div>
           <Badge variant={item.status === 'attention' ? 'destructive' : 'outline'} className="shrink-0"><StatusIcon status={item.status} />{statusLabels[item.status]}</Badge>
         </div>)}</dl></CollectionSection>)}
-        <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. Findings contain status only; credentials and service responses are never included.</p>
+        <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.</p>
       </>}
     </div>
   </GatewayPageFrame>

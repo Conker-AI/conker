@@ -30,6 +30,9 @@ Signed-in testing found that expanded More navigation could reduce the recent
 lists to zero height in a short window. Its scroll region now reserves space
 for those lists and fixed controls. Tool availability copy follows saved
 approval rules rather than promising per-run approval for automatic workflows.
+System readiness describes core checks rather than claiming every capability
+works. Live UI changes require a gateway restart: its dashboard assets are
+validated and snapshotted into memory at startup, not read from disk per request.
 
 ### Technical workspace redesign (4 October, development branches)
 
