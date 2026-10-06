@@ -72,7 +72,23 @@ Service health is live. Terminal, files and some telemetry are samples.
 
 ### Settings · **Live for models**
 
-Model providers and which model does what (answering, routing, memory ranking), theme and layout.
+General contains profile, appearance, answers and ideas. **Providers** is its own
+Settings tab for connections, the model catalogue and role assignments. **Search**
+has its own tab too.
+
+In **Settings > Providers > ChatGPT**, choose **Sign in with ChatGPT** and confirm
+the exact operation with your Conker owner password. Open the provided OpenAI link
+and enter the private one-time code there. This uses your ChatGPT/Codex subscription,
+not an OpenAI API key. OpenAI plan limits and model availability still apply.
+Device-code sign-in may need to be enabled in your ChatGPT security settings.
+Then read the available models, add your selected model to the catalogue, save,
+and choose it under General > Answers or in a chat. Connecting never changes
+defaults or background-role eligibility automatically.
+
+Credentials and automatic refresh stay in a separate private Codex home on this
+server. Conker's tools still go through Pi and ToolGate; no Codex agent is started.
+Disconnect stops this connection without revoking other OpenAI sessions. API-key
+providers remain an optional, separate disclosure with their own spending switch.
 **Character Studio** (`Settings → Companion`) sets your companion's name, personality, style and
 voice. Voice cloning and 3D appearance are not connected yet.
 

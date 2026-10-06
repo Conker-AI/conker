@@ -24,7 +24,7 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
   })) : []
   return <WorkspaceAppbar context={context ?? <AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} />} search={<UniversalSearchTrigger />} actions={children} toolbar={toolbar} sections={<>
       {sections}
-      {location.pathname === '/settings' && <AppbarSections activeSection={params.get('tab') === 'search' ? 'search' : 'general'} sections={[{ value: 'general', label: 'General', to: '/settings', badge: undefined }, { value: 'search', label: 'Search', to: '/settings?tab=search', badge: undefined }]} />}
+      {location.pathname === '/settings' && <AppbarSections activeSection={['providers', 'search'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'general'} sections={[{ value: 'general', label: 'General', to: '/settings', badge: undefined }, { value: 'providers', label: 'Providers', to: '/settings?tab=providers', badge: undefined }, { value: 'search', label: 'Search', to: '/settings?tab=search', badge: undefined }]} />}
       {location.pathname === '/activity' && <AppbarSections activeSection={tab} sections={['tasks', 'runs', 'events'].map(value => ({ value, label: value[0].toUpperCase() + value.slice(1), to: `/activity?tab=${value}`, badge: undefined }))} />}
       {studioSections.length > 0 && <AppbarSections activeSection={activePageSection('companionSettings', location.search)} sections={studioSections} />}
       {systemSections.length > 0 && <AppbarSections activeSection={activePageSection('system', location.search)} sections={systemSections} />}

@@ -17,7 +17,13 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push('Revokes browser access only. Models, jobs and services keep running. Revoking this browser signs you out.')
     return { title, path, target, details }
   }
-  if (path === '/api/host/providers') {
+  if (path === '/api/host/chatgpt') {
+    target = 'ChatGPT subscription on this Conker server'
+    title = body.operation === 'login' ? 'Sign in with ChatGPT' : body.operation === 'logout' ? 'Disconnect ChatGPT' : body.operation === 'cancel' ? 'Cancel ChatGPT sign-in' : 'Read ChatGPT models'
+    details.push(body.operation === 'login' ? 'Starts OpenAI device-code sign-in. You authorize it on OpenAI, not by entering an API key. Credentials stay private on this server.' : body.operation === 'logout' ? 'Removes this server connection. Models using it stop answering until you reconnect; this does not revoke all OpenAI sessions.' : body.operation === 'cancel' ? 'Cancels this exact pending sign-in attempt.' : 'Reads the signed-in provider catalogue. It does not select a model or run inference.')
+    details.push('Your Conker tool permissions and API-key spending policy are unchanged. ChatGPT plan limits still apply.')
+  }
+  else if (path === '/api/host/providers') {
     if (body.operation === 'paid-policy' || body.operation === 'recover-paid-policy') {
       title = body.operation === 'recover-paid-policy' ? 'Recover provider spending policy' : body.enabled ? 'Allow paid model requests' : 'Block paid model requests'
       target = 'Hosted model spending policy'

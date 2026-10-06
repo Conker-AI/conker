@@ -47,6 +47,15 @@ Shared UI does not mean shared authority or transport state: keep source-owned
 abort/revision/draft hooks in their existing modules. Centralize presentation
 and composition only. Use the shared tokens, native Radix controls, dark arrowless
 tooltips and unclipped/reduced-motion icon behavior already in the system.
+
+Active Settings separates General, Providers and Search. General retains personal
+preferences and answer/idea choices; Providers owns authentication, runtime status,
+catalogue and role assignments. ChatGPT subscription sign-in precedes the optional
+API-key disclosure. Reuse `WorkspaceSection` and native controls; don't invent a
+new provider palette or card grid. Show pending authorization, cancel, failure and
+disconnect consequences in place. Never retain OAuth codes in browser storage or
+present connection as proof of model access. A sign-in grant cannot change model
+choices or tool permissions.
 Design guards enforce shared slot ownership and semantic tokens; the workspace
 primitive render checks cover grouping, list semantics and empty/loading states.
 

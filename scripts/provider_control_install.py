@@ -37,6 +37,9 @@ def install(root: Path, source: Path, layout: str):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     directory.chmod(0o700)
     socket = directory / "control.sock"
+    inference = state / "chatgpt-inference"
+    inference.mkdir(parents=True, exist_ok=True, mode=0o700)
+    inference.chmod(0o700)
     name = (
         "conker-providers-"
         + hashlib.sha256(str(root).encode()).hexdigest()[:12]

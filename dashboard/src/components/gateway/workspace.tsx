@@ -30,6 +30,7 @@ const GatewaySystemStatus = lazy(() => import('./system-status').then(module => 
 const GatewayOwnerWorkspace = lazy(() => import('./owner-workspace').then(module => ({ default: module.GatewayOwnerWorkspace })))
 const GatewayMemoryWorkspace = lazy(() => import('./memory-workspace').then(module => ({ default: module.GatewayMemoryWorkspace })))
 const GatewayModelsSettings = lazy(() => import('./models-settings').then(module => ({ default: module.GatewayModelsSettings })))
+const GatewayProvidersSettings = lazy(() => import('./providers-settings').then(module => ({ default: module.GatewayProvidersSettings })))
 const GatewaySearchSettings = lazy(() => import('./search-settings').then(module => ({ default: module.GatewaySearchSettings })))
 const GatewaySetupProgress = lazy(() => import('./setup-progress').then(module => ({ default: module.GatewaySetupProgress })))
 const GatewayActivityWorkspace = lazy(() => import('./activity-workspace').then(module => ({ default: module.GatewayActivityWorkspace })))
@@ -87,7 +88,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} />}
-      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : <GatewayModelsSettings client={control} />}</div>}
+      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} /> : <GatewayModelsSettings client={control} />}</div>}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}

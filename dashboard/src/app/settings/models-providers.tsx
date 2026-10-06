@@ -20,6 +20,7 @@ import {
 type ModelsProvidersProps = {
   configuration: ModelsConfiguration
   serverManaged?: boolean
+  subscriptionModels?: { id: string; name: string }[]
   pending: boolean
   onSave: (configuration: ModelsConfiguration) => Promise<boolean>
 }
@@ -28,10 +29,11 @@ type ModelsProvidersProps = {
 let retainedDraft: ModelsConfiguration | null = null
 const supportedProviders = [
   { id: 'ollama', name: 'Local Ollama' }, { id: 'decisions', name: 'Decisions (Laya)' },
+  { id: 'chatgpt', name: 'ChatGPT subscription' },
   { id: 'openrouter', name: 'OpenRouter' }, { id: 'openai', name: 'OpenAI API' }, { id: 'anthropic', name: 'Anthropic' },
 ]
 
-export function ModelsProviders({ configuration, pending, onSave, serverManaged = false }: ModelsProvidersProps) {
+export function ModelsProviders({ configuration, pending, onSave, serverManaged = false, subscriptionModels = [] }: ModelsProvidersProps) {
   const [draft, setDraft] = useState<ModelsConfiguration>(() => (!serverManaged && retainedDraft) || structuredClone(configuration))
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -201,8 +203,8 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
           setAdding(null)
         }}>
           <OverlayBody><div className="space-y-2"><Label htmlFor="catalogue-provider">Provider</Label><Select value={providerId} onValueChange={setProviderId}><SelectTrigger id="catalogue-provider"><SelectValue /></SelectTrigger><SelectContent>{(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map(provider => <SelectItem key={provider.id} value={provider.id}>{provider.name}</SelectItem>)}</SelectContent></Select></div>
-            {adding === 'model' && <><div className="space-y-2"><Label htmlFor="catalogue-model-name">Display name</Label><Input id="catalogue-model-name" required maxLength={160} value={modelName} onChange={event => setModelName(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="catalogue-model-route">Request model ID</Label><Input id="catalogue-model-route" required maxLength={300} autoComplete="off" spellCheck={false} value={modelRoute} onChange={event => setModelRoute(event.target.value)} /></div></>}
-          </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => setAdding(null)}>Cancel</Button><Button type="submit" disabled={!providerId || adding === 'model' && (!modelName.trim() || !modelRoute.trim())}>Add to draft</Button></FormActions>
+            {adding === 'model' && <><div className="space-y-2"><Label htmlFor="catalogue-model-name">Display name</Label><Input id="catalogue-model-name" required maxLength={160} value={modelName} onChange={event => setModelName(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="catalogue-model-route">Request model ID</Label>{providerId === 'chatgpt' && serverManaged ? <><Select value={subscriptionModels.some(model => model.id === modelRoute) ? modelRoute : ''} onValueChange={route => { setModelRoute(route); setModelName(subscriptionModels.find(model => model.id === route)?.name ?? route) }} disabled={!subscriptionModels.length}><SelectTrigger id="catalogue-model-route"><SelectValue placeholder="No subscription catalogue loaded" /></SelectTrigger><SelectContent>{subscriptionModels.map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Server-discovered catalogue. Availability depends on your plan; a successful answer verifies access.</p></> : <Input id="catalogue-model-route" required maxLength={300} autoComplete="off" spellCheck={false} value={modelRoute} onChange={event => setModelRoute(event.target.value)} />}</div></>}
+          </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => setAdding(null)}>Cancel</Button><Button type="submit" disabled={!providerId || adding === 'model' && (!modelName.trim() || !modelRoute.trim() || serverManaged && providerId === 'chatgpt' && !subscriptionModels.some(model => model.id === modelRoute))}>Add to draft</Button></FormActions>
         </form>
       </TaskDialogContent>
     </Dialog>

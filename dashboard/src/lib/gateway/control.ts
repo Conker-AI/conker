@@ -12,6 +12,7 @@ import { createGatewayCallsClient } from './calls'
 import { createGatewaySearchClient } from './search'
 import { createProviderControlClient } from './provider-control'
 import { createBrowserSessionsClient } from './browser-sessions'
+import { createChatGPTClient } from './chatgpt'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -262,6 +263,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
   return {
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
+    chatgpt: createChatGPTClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),

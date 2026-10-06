@@ -89,6 +89,7 @@ services:
       PI_OPENROUTER_KEY_FILE: /run/secrets/provider-openrouter
       PI_OPENAI_KEY_FILE: /run/secrets/provider-openai
       PI_ANTHROPIC_KEY_FILE: /run/secrets/provider-anthropic
+      PI_CHATGPT_SOCKET: /run/conker-chatgpt/inference.sock
       PI_ALLOW_PAID_MODELS: ${PI_ALLOW_PAID_MODELS:-}
       PI_SPEECH_URL: ${PI_SPEECH_URL:-}
       PI_SPEECH_KEY_FILE: /run/secrets/speech
@@ -105,6 +106,7 @@ services:
       - ./.conker/provider-secrets/openrouter.key:/run/secrets/provider-openrouter:ro
       - ./.conker/provider-secrets/openai.key:/run/secrets/provider-openai:ro
       - ./.conker/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro
+      - ./.conker/chatgpt-inference:/run/conker-chatgpt:ro
       - ./.conker/speech/speech.key:/run/secrets/speech:ro
     depends_on: [ollama, memorygate, toolgate]
 

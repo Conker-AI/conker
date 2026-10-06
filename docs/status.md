@@ -160,7 +160,17 @@ the CLI's credential store and fixed host operations; only Gateway mounts its
 private socket. Catalogue providers/models can be added, renamed and removed;
 active role/default references must be reassigned before removal. Browser session
 inspection and password-confirmed revocation are also exposed in Settings.
-ChatGPT/Codex subscription sign-in is not implemented by this API-key flow.
+Providers now has a separate Settings tab and ChatGPT/Codex subscription sign-in,
+distinct from API-key providers. Official Codex CLI 0.160.1 manages device-code
+authorization and refresh in a private per-installation home. A separate Pi-only
+inference socket preserves Conker's tools and owner authority; no Codex agent
+runtime is started. Only the exact authenticated login response contains the
+one-time code. Catalogue reads and disconnects are explicit verified operations;
+connecting never changes answer defaults or background roles. Text streaming and
+Stop retain Pi's existing controls; subscription image input is not yet supported.
+Real device-code start/cancel was verified on Linux without authorizing an account.
+Subscription inference, model entitlement and refresh with a real authorized
+account still require the owner's OpenAI consent; unit tests are not that proof.
 
 Pi/Gateway 0.5.5 and the pinned dashboard tree
 `f84dafadfff9345dfe8d93afa083f1eb280d2052` are installed on the main and isolated

@@ -503,6 +503,9 @@ cmd_providers() {
     local action=${1:-status}
     shift || true
     case "$action" in
+        chatgpt)
+            PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m scripts.chatgpt_cli --root "$ROOT" --layout "$LAYOUT" "$@"
+            ;;
         install-ui-control)
             [ "$#" -eq 0 ] || { printf 'Use conker providers install-ui-control.\n' >&2; exit 2; }
             python3 "$SOURCE_ROOT/scripts/provider_control_install.py" --root "$ROOT" --source "$SOURCE_ROOT" --layout "$LAYOUT"
@@ -781,6 +784,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Show recent service logs
   ${BOLD}model${OFF} NAME  Fetch another local model
   ${BOLD}providers${OFF} status|set|verify|discard|activate|recover|record-revoked|spending|install-ui-control
+  ${BOLD}providers chatgpt${OFF} status|login|models|cancel ID|logout ID
   ${BOLD}speech${OFF}    status|configure|disable
               Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}
