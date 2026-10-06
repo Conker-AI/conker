@@ -81,6 +81,7 @@ def install(tmp_path):
     work.mkdir()
     for name in ("install.sh", "conker", "docker-compose.yml", "versions.env"):
         shutil.copy(ROOT / name, work / name)
+    shutil.copytree(ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     (work / "install.sh").chmod(0o755)
 
     def run(*args, expect_ok=True, path=None):
