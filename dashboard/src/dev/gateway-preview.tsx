@@ -23,15 +23,15 @@ function services() {
   const requestedSetup = new URLSearchParams(window.location.search).get('preview-setup')
   const setupStep = requestedSetup === 'model' || requestedSetup === 'memory' || requestedSetup === 'capabilities' || requestedSetup === 'protection' || requestedSetup === 'rehearsal' ? requestedSetup : undefined
   const fake = createFakeGateway({ setupStep })
-  const auth = { request: fake.request, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio'>
+  const auth = { request: fake.request, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
     session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: null, setupRequired: false },
-    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined,
+    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
   })), { dispose: () => undefined })
   return { fake, workspace: {
     authStore, runtime: createGatewayRuntimeClient(auth), activity: createGatewayActivityClient(auth), owner: createGatewayOwnerClient(auth),
-    proposals: createGatewayProposalClient(auth), control: createGatewayControlClient(auth),
+    proposals: createGatewayProposalClient(auth), control: createGatewayControlClient(auth, () => undefined),
     conversationState: createGatewayRuntimeWorkspaceState(), activityState: createGatewayActivityWorkspaceState(),
     ownerState: createGatewayOwnerState(), sourcePrivacy: createGatewaySourcePrivacyState(),
   } }

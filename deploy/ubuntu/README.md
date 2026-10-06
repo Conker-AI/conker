@@ -107,6 +107,7 @@ mkdir -p ~/.local/bin
 # If ~/.local/bin/conker exists, save it under your private recovery directory first.
 install -m 755 ~/conker-deploy/sources/companion/deploy/ubuntu/conker ~/.local/bin/conker
 conker status
+conker providers install-ui-control
 conker auth reset-password
 ```
 

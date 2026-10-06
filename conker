@@ -437,7 +437,7 @@ provider_call() {
 }
 
 provider_runtime_configured() {
-    local provider=$1 _attempt result
+    local provider=$1 expected=${2:-configured} _attempt result
     for _attempt in $(seq 1 30); do
         result=$(compose exec -T pi python -c '
 import json, sys, urllib.request
@@ -453,10 +453,27 @@ try:
 except Exception:
     print("unavailable")
 ' "$provider" 2>/dev/null || true)
-        [ "$result" = configured ] && return 0
+        [ "$result" = "$expected" ] && return 0
         sleep 1
     done
     return 1
+}
+
+provider_restart_runtime() {
+    compose up -d --no-deps --force-recreate pi || return 1
+    local services
+    services=$(compose config --services) || return 1
+    if printf '%s\n' "$services" | grep -qx decisions; then
+        compose up -d --no-deps --force-recreate decisions || return 1
+    fi
+}
+
+provider_restore_runtime() {
+    local provider=$1 revision=$2 expected
+    expected=$(provider_call status | python3 -c 'import json,sys; row=next(item for item in json.load(sys.stdin)["providers"] if item["id"] == sys.argv[1]); print("configured" if row["configured"] else "missing")' "$provider") || return 1
+    provider_call rollback "$provider" "$revision" --hold >/dev/null || return 1
+    provider_restart_runtime && provider_runtime_configured "$provider" "$expected" || return 1
+    provider_call complete-rollback "$provider" "$revision" >/dev/null
 }
 
 provider_status_human() {
@@ -486,6 +503,14 @@ cmd_providers() {
     local action=${1:-status}
     shift || true
     case "$action" in
+        install-ui-control)
+            [ "$#" -eq 0 ] || { printf 'Use conker providers install-ui-control.\n' >&2; exit 2; }
+            python3 "$SOURCE_ROOT/scripts/provider_control_install.py" --root "$ROOT" --source "$SOURCE_ROOT" --layout "$LAYOUT"
+            ;;
+        spending)
+            [ "$#" -eq 1 ] || { printf 'Use conker providers spending status|on|off|recover.\n' >&2; exit 2; }
+            PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m scripts.provider_paid_policy --root "$ROOT" --layout "$LAYOUT" "$1"
+            ;;
         status)
             if [ "${1:-}" = --json ] && [ "$#" -eq 1 ]; then
                 provider_call status
@@ -520,28 +545,34 @@ cmd_providers() {
             printf '%s\n' "$verified"
             printf '%s' "$verified" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin)["verificationStatus"] == "verified" else 1)'
             ;;
+        discard)
+            recovery_guard
+            [ "$#" -eq 2 ] || { printf 'Use conker providers discard PROVIDER REVISION.\n' >&2; exit 2; }
+            provider_call discard "$1" "$2"
+            ;;
         activate)
             recovery_guard
             [ "$#" -eq 2 ] || { printf 'Use conker providers activate PROVIDER REVISION.\n' >&2; exit 2; }
             local activate_provider=$1 activate_revision=$2
             provider_call prepare "$activate_provider" "$activate_revision" >/dev/null
-            if compose up -d --no-deps --force-recreate pi \
+            if provider_restart_runtime \
                     && provider_runtime_configured "$activate_provider"; then
                 provider_call commit "$activate_provider" "$activate_revision"
                 good "$activate_provider credential $activate_revision is active"
             else
                 warn "Pi did not confirm the staged provider; restoring the previous credential"
-                provider_call rollback "$activate_provider" "$activate_revision" >/dev/null || true
-                compose up -d --no-deps --force-recreate pi >/dev/null 2>&1 || true
-                printf 'Provider activation failed and the previous local credential was restored.\n' >&2
+                if provider_restore_runtime "$activate_provider" "$activate_revision"; then
+                    printf 'Provider activation failed; the previous credential and runtime were restored.\n' >&2
+                else
+                    printf 'Provider activation recovery is pending. Inspect status and use providers recover before changing keys.\n' >&2
+                fi
                 exit 1
             fi
             ;;
         recover)
             recovery_guard
             [ "$#" -eq 2 ] || { printf 'Use conker providers recover PROVIDER REVISION.\n' >&2; exit 2; }
-            provider_call rollback "$1" "$2" >/dev/null
-            compose up -d --no-deps --force-recreate pi
+            provider_restore_runtime "$1" "$2"
             good "Restored the credential that preceded $2"
             ;;
         record-revoked)
@@ -553,7 +584,7 @@ cmd_providers() {
             provider_call record-revoked "$1" "$2"
             ;;
         *)
-            printf 'Use conker providers status, set, verify, activate, recover, or record-revoked.\n' >&2
+            printf 'Use conker providers status, set, verify, discard, activate, recover, record-revoked, spending, or install-ui-control.\n' >&2
             exit 2
             ;;
     esac
@@ -749,7 +780,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
   ${BOLD}logs${OFF} [service] [lines]
               Show recent service logs
   ${BOLD}model${OFF} NAME  Fetch another local model
-  ${BOLD}providers${OFF} status|set|verify|activate|recover|record-revoked
+  ${BOLD}providers${OFF} status|set|verify|discard|activate|recover|record-revoked|spending|install-ui-control
   ${BOLD}speech${OFF}    status|configure|disable
               Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}

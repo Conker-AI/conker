@@ -14,11 +14,12 @@ import { Input } from '@/components/ui/input'
 import { OwnerAvatar } from './owner-avatar'
 import { saveOwnerProfile, useOwnerProfile } from '@/lib/owner-profile'
 import { useTheme } from '@/hooks/use-theme'
+import { ProviderCredentials } from './provider-credentials'
+import { BrowserSessions } from './browser-sessions'
 
 const providerNames: Record<string, string> = { ollama: 'Local model', openrouter: 'OpenRouter', anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Google Gemini' }
 const providerName = (id: string) => providerNames[id] ?? id.charAt(0).toUpperCase() + id.slice(1)
 const providerState = (provider: ProviderStatus) => provider.busy ? 'Busy' : provider.status === 'ok' ? 'Ready' : provider.status === 'unverified' ? 'Configured on server' : provider.status === 'not_configured' ? 'Not set up' : 'Unavailable'
-const PROVIDER_DOCS = 'https://github.com/Conker-AI/conker/blob/main/docs/reference/provider-credentials.md'
 const IDEAS_DOCS = 'https://github.com/Conker-AI/pi/blob/main/docs/proposals.md#turning-it-on'
 
 export function GatewayModelsSettings({ client }: { client: GatewayControlClient }) {
@@ -108,10 +109,11 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
         {pending && <p role="status" className="text-xs text-muted-foreground">Saving…</p>}
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error} Reload the page if settings changed elsewhere.</p>}
-      {onlyLocal && <p className="rounded-lg bg-muted p-3 text-sm leading-6">Conker is using a small model on your server. For answers closer to ChatGPT or Claude, add a hosted model on the server. <a className="underline underline-offset-4" href={PROVIDER_DOCS} target="_blank" rel="noreferrer">How to add one</a></p>}
+      {onlyLocal && <p className="text-sm leading-6 text-muted-foreground">Conker is using a model on your server. Connect a provider below and add its model in Advanced model settings to use hosted answers.</p>}
     </WorkspaceSection>
     <WorkspaceSection title={<Label htmlFor="ideas-switch" className="text-base font-semibold">Ideas from Conker</Label>} description={<>Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></>} action={<Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />} />
-    <WorkspaceSection title="Providers" description="Connections configured on the Conker server." action={<Button size="sm" variant="outline" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button>}>
+    <ProviderCredentials client={client} onChanged={() => { setReload(value => value + 1); setRetry(value => value + 1) }} />
+    <WorkspaceSection title="Runtime readiness" description="Current provider readiness. Saving a key or catalogue entry is not proof of model availability." action={<Button size="sm" variant="outline" disabled={pending} onClick={() => { setProviderError(''); setReload(value => value + 1) }}>Refresh</Button>}>
         {providerError && <p role="status" className="text-sm text-muted-foreground">{providerError}</p>}
         <dl className="space-y-2 text-sm">{providers.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2"><dt>{providerName(provider.id)}{provider.model && <span className="text-muted-foreground"> · {provider.model}</span>}</dt><dd className="text-muted-foreground">{providerState(provider)}</dd></div>)}</dl>
     </WorkspaceSection>
@@ -129,5 +131,6 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     }} />
       </div>
     </details>
+    <BrowserSessions client={client} />
   </div></GatewayPageFrame>
 }

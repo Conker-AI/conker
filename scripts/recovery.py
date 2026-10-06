@@ -133,7 +133,7 @@ REPOSITORY_PROFILE = LayoutProfile(
         "searxng", "ollama", "qdrant", "owner-terminal",
     ),
     excluded_mounts={
-        "gateway": frozenset({"/run/conker-terminal"}),
+        "gateway": frozenset({"/run/conker-terminal", "/run/conker-providers"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
         "pi": frozenset({
             "/run/secrets/provider-openrouter",
@@ -158,7 +158,7 @@ UBUNTU_PROFILE = LayoutProfile(
         "decisions", "ollama", "qdrant", "owner-terminal",
     ),
     excluded_mounts={
-        "gateway": frozenset({"/dashboard", "/run/conker-terminal"}),
+        "gateway": frozenset({"/dashboard", "/run/conker-terminal", "/run/conker-providers"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
         "pi": frozenset({
             "/run/secrets/provider-openrouter",
@@ -268,6 +268,9 @@ def compose_command(root: Path, profile: LayoutProfile) -> list[str]:
 
 
 def provider_state_for_backup(root: Path, profile: LayoutProfile) -> dict[str, Any]:
+    state_directory = root / (".conker" if profile.name == "repository" else "state")
+    if (state_directory / "provider-control/paid-transition.json").exists():
+        raise RecoveryError("Recover the interrupted spending-policy change before backup.")
     if profile.name == "repository":
         environments = [root / ".env"]
         path = root / ".conker" / "provider-secrets" / "state.json"
@@ -313,6 +316,8 @@ def provider_state_for_backup(root: Path, profile: LayoutProfile) -> dict[str, A
         )
     ):
         raise RecoveryError("Provider credential metadata has an unsupported shape.")
+    if any(record.get("pendingActivation") is not None for record in value["providers"].values()):
+        raise RecoveryError("Recover the interrupted provider activation before backup.")
     return value
 
 

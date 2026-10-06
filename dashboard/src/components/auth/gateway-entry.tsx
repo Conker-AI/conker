@@ -24,7 +24,7 @@ const services = (() => {
     const ownerState = createGatewayOwnerState()
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy, ownerState])
-    return { value: { ...value, ownerState, owner: createGatewayOwnerClient(value.auth), proposals: createGatewayProposalClient(value.auth), control: createGatewayControlClient(value.auth), workspace, activityState, sourcePrivacy, activity: createGatewayActivityClient(value.auth), runtime: createGatewayRuntimeClient(value.auth) }, error: null }
+    return { value: { ...value, ownerState, owner: createGatewayOwnerClient(value.auth), proposals: createGatewayProposalClient(value.auth), control: createGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked()), workspace, activityState, sourcePrivacy, activity: createGatewayActivityClient(value.auth), runtime: createGatewayRuntimeClient(value.auth) }, error: null }
   } catch (error) { return { value: null, error: error instanceof GatewayError ? error.message : "Gateway configuration could not be loaded." } }
 })()
 

@@ -1,4 +1,4 @@
-import { GatewayError, gatewayError, isConversationWrite, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport } from './transport'
+import { GatewayError, gatewayError, isConversationWrite, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport } from './transport'
 import { describeGatewayOperation, type GatewayVerificationPrompt } from './verification'
 
 export type GatewaySession = { authenticated: boolean; sessionId: string; expiresAt: number; unlockExpiresAt: number | null; setupRequired: boolean }
@@ -131,7 +131,7 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
       if (post && signal?.aborted) throw new GatewayError('verification-cancelled')
       const ticket = await serial(async () => {
         // Authentication endpoints belong to the methods above; callers cannot bypass rotation handling.
-        if (!path.startsWith('/api/') && path !== '/health') throw new GatewayError('validation')
+        if (!path.startsWith('/api/') && path !== '/health' && !isBrowserSessionRoute(path)) throw new GatewayError('validation')
         if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) { clear(); await readSession() }
         if (!unlocked()) throw new GatewayError('browser-expired')
         return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }

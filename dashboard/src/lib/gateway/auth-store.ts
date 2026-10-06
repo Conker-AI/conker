@@ -13,6 +13,7 @@ export type GatewayAuthState = {
   login: (password: string) => Promise<boolean>
   logout: () => Promise<boolean>
   lock: () => void
+  confirmSessionRevoked: () => void
 }
 export type GatewayAuthStore = ReturnType<typeof createGatewayAuthStore>
 export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }) {
@@ -33,6 +34,7 @@ export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }
     login: password => run(() => client.login(password), false, true),
     logout: () => run(async () => { await client.logout(); return null }, true),
     lock: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: new GatewayError('browser-expired') }) },
+    confirmSessionRevoked: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: null, logoutUnconfirmed: false }) },
   }))
   async function run(action: () => Promise<GatewaySession | null>, logout = false, interactiveLogin = false): Promise<boolean> {
     const id = ++latest

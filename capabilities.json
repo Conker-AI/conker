@@ -9,7 +9,7 @@
     },
     {
       "id": "browser-session-administration", "name": "Browser session revocation", "authority": "gateway", "state": "active",
-      "gatewayRoutes": ["/auth/sessions", "/auth/sessions/{id}/revoke", "/auth/revoke-all"], "uiRoutes": [], "cliCommands": ["conker auth revoke-all"],
+      "gatewayRoutes": ["/auth/sessions", "/auth/sessions/{id}/revoke", "/auth/revoke-all"], "uiRoutes": ["/settings"], "cliCommands": ["conker auth revoke-all"],
       "deploymentRequirements": ["gateway_data", "owner password verification"],
       "evidence": [{"path": "dashboard/src/lib/gateway/transport.ts", "contains": "/auth/sessions/${ids}/revoke"}, {"path": "conker", "contains": "revoke-all|certificate|renew-certificate|health"}]
     },
@@ -198,10 +198,10 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/host-inventory.ts", "contains": "refreshRequiresNewRequest: z.literal(true)"}, {"path": "dashboard/src/components/gateway/host-inventory-workspace.tsx", "contains": "No host authority"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "fixed read-only ToolGate observation"}]
     },
     {
-      "id": "provider-secret-management", "name": "Hosted provider credentials and endpoints", "authority": "conker-host", "state": "active", "gatewayRoutes": ["/api/pi/models"], "uiRoutes": ["/settings"],
-      "cliCommands": ["conker providers status", "conker providers set PROVIDER", "conker providers verify PROVIDER", "conker providers activate PROVIDER REVISION", "conker providers recover PROVIDER REVISION", "conker providers record-revoked PROVIDER REVISION --issuer-confirmed"],
-      "deploymentRequirements": ["Python 3.11+ host credential manager", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi force-recreation during activation", "held recovery credential reconciliation"],
-      "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "Provider activation failed and the previous local credential was restored."}, {"path": "dashboard/src/components/gateway/models-settings.tsx", "contains": "Configured on server"}, {"path": "scripts/recovery.py", "contains": "config/provider-state.json"}]
+      "id": "provider-secret-management", "name": "Write-only hosted provider credentials and paid-request policy", "authority": "conker-host", "state": "active", "gatewayRoutes": ["/api/host/providers"], "uiRoutes": ["/settings"],
+      "cliCommands": ["conker providers status", "conker providers set PROVIDER", "conker providers verify PROVIDER", "conker providers discard PROVIDER REVISION", "conker providers activate PROVIDER REVISION", "conker providers recover PROVIDER REVISION", "conker providers record-revoked PROVIDER REVISION --issuer-confirmed", "conker providers spending status|on|off|recover", "conker providers install-ui-control"],
+      "deploymentRequirements": ["Linux systemd user provider-control worker", "private Gateway-only Unix socket", "operation-bound password proof", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi and decision sidecar recreation", "held recovery credential reconciliation"],
+      "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "provider_restart_runtime"}, {"path": "dashboard/src/components/gateway/provider-credentials.tsx", "contains": "Save key"}, {"path": "scripts/recovery.py", "contains": "config/provider-state.json"}]
     }
   ]
 }

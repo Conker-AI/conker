@@ -14,6 +14,7 @@ function load(file) {
 const { createGatewayTransport, GatewayError } = load('transport.ts')
 const { createGatewayAuthClient } = load('auth.ts')
 const { createGatewayAuthStore } = load('auth-store.ts')
+const { createBrowserSessionsClient } = load('browser-sessions.ts')
 const origin = 'https://conker.example'
 const now = 10_000
 const password = 'A real long passphrase 🔐'
@@ -201,6 +202,19 @@ async function main() {
   assert.equal(f.calls.filter(call => call.url.endsWith('/auth/logout')).length, 1)
   lostAck.dispose()
   console.log('PASS anonymous cookie recheck resolves lost logout acknowledgement without an unsafe retry')
+  f = fixture([json(wire(true, 'b')), json({ revoked: true }), json(wire()), json(wire(true, 'c'))])
+  const revokedStore = createGatewayAuthStore({ client: f.client }); await revokedStore.getState().bootstrap()
+  const browserSessions = createBrowserSessionsClient(f.client, () => revokedStore.getState().confirmSessionRevoked())
+  await browserSessions.revoke('b'.repeat(24))
+  assert.equal(revokedStore.getState().phase, 'anonymous')
+  assert.equal(revokedStore.getState().error, null)
+  assert.equal(revokedStore.getState().logoutUnconfirmed, false)
+  assert.equal(f.client.getSession(), null)
+  assert.equal(await revokedStore.getState().login(password), true)
+  assert.equal(f.calls[2].url, `${origin}/auth/session`)
+  assert.equal(revokedStore.getState().phase, 'authenticated')
+  revokedStore.dispose()
+  console.log('PASS confirmed self-revocation opens sign-in, clears workspace access and safely obtains fresh CSRF on login')
   console.log('All gateway authentication checks passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

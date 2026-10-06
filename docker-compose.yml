@@ -46,12 +46,14 @@ services:
       PI_GATEWAY_KEY: ${PI_GATEWAY_KEY:?run ./install.sh}
       GATEWAY_PI_OWNER_KEY: ${GATEWAY_PI_OWNER_KEY:?run ./install.sh}
       GATEWAY_DASHBOARD_DIR: /dashboard
+      GATEWAY_PROVIDER_CONTROL_SOCKET: /run/conker-providers/control.sock
       GATEWAY_TOOLGATE_URL: http://toolgate-owner:8010
       GATEWAY_TOOLGATE_OWNER_KEY: ${GATEWAY_TOOLGATE_OWNER_KEY:?run ./install.sh}
       GATEWAY_TOOLGATE_EXECUTION_KEY: ${PI_TOOLGATE_KEY:?run ./install.sh}
     volumes:
       - gateway_data:/auth
       - ./dashboard/dist:/dashboard:ro
+      - ./.conker/provider-control:/run/conker-providers:ro
     depends_on: [pi]
 
   # --- the runtime ----------------------------------------------------------

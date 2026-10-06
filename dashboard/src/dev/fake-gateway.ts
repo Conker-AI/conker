@@ -317,6 +317,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
 
   async function request(path: string, options: Request = {}): Promise<Json> {
+    if (path === '/auth/sessions') return { results: [] }
+    if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, 120))
     let match: RegExpMatchArray | null
@@ -720,6 +722,10 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         providerId: 'ollama', requestedModel: 'qwen2.5:3b', actualModel: 'qwen2.5:3b', execution: 'local',
         responseDigest: 'a'.repeat(64), completedAt: iso(now()), recordedAt: iso(now()),
       } }
+    }
+    if (path === '/api/host/providers') {
+      if (method !== 'GET') throw new GatewayError('dependency', 503)
+      return { schemaVersion: 1, available: false, secretsIncluded: false, paidAllowed: null, policyRecoveryRequired: false, providers: [] }
     }
     if (path === '/api/pi/models') return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
     if (path === '/health') return { service: 'gateway', version: '0.1.0', status: 'ok', checked_at: iso(now()), age_seconds: 0,

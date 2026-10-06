@@ -382,13 +382,22 @@ class SecretStore:
             "secretIncluded": False,
         }
 
-    def stage(self, provider: str, secret: bytes) -> dict:
+    def stage(
+        self, provider: str, secret: bytes, *, expected: tuple | None = None
+    ) -> dict:
         self.initialize()
         text = self._validate_secret(secret)
         secret = text.encode("ascii")
         with self.locked():
             state = self._load()
             record = self._provider(state, provider)
+            if expected is not None and expected != (
+                record["activeRevision"],
+                record["stagedRevision"],
+            ):
+                raise ProviderSecretError(
+                    "Provider credentials changed; refresh before continuing."
+                )
             if record["pendingActivation"] is not None:
                 raise ProviderSecretError(
                     "Resolve the pending activation before staging another key."
@@ -446,12 +455,24 @@ class SecretStore:
             return self._view(provider, record)
 
     def verify(
-        self, provider: str, verifier: Callable[[Provider, bytes], tuple[str, str]]
+        self,
+        provider: str,
+        verifier: Callable[[Provider, bytes], tuple[str, str]],
+        *,
+        revision: str | None = None,
     ) -> dict:
         self.initialize()
         with self.locked():
             state = self._load()
             record = self._provider(state, provider)
+            if record["pendingActivation"] is not None:
+                raise ProviderSecretError(
+                    "Recover the pending activation before verification."
+                )
+            if revision is not None and record["stagedRevision"] != revision:
+                raise ProviderSecretError(
+                    "The staged credential changed; refresh before verification."
+                )
             if not record["stagedRevision"] or not self.staged_path(provider).is_file():
                 raise ProviderSecretError("Stage a credential before verification.")
             secret = self._read_secret(self.staged_path(provider))
@@ -528,7 +549,9 @@ class SecretStore:
             self._save(state)
             return self._view(provider, record)
 
-    def rollback_activation(self, provider: str, revision: str) -> dict:
+    def rollback_activation(
+        self, provider: str, revision: str, *, hold: bool = False
+    ) -> dict:
         self.initialize()
         with self.locked():
             state = self._load()
@@ -541,8 +564,58 @@ class SecretStore:
                 self._write(self.active_path(provider), self._read_secret(previous))
             else:
                 self._write(self.active_path(provider), b"")
+            if not hold:
+                record["pendingActivation"] = None
+                previous.unlink(missing_ok=True)
+            self._save(state)
+            return self._view(provider, record)
+
+    def finish_rollback(self, provider: str, revision: str) -> dict:
+        self.initialize()
+        with self.locked():
+            state = self._load()
+            record = self._provider(state, provider)
+            pending = record["pendingActivation"]
+            if not isinstance(pending, dict) or pending.get("revision") != revision:
+                raise ProviderSecretError("No matching activation is pending.")
+            previous = self.previous_path(provider)
+            expected = (
+                self._read_secret(previous) if pending["previousRevision"] else b""
+            )
+            if (
+                self._read_secret(self.active_path(provider), allow_empty=True)
+                != expected
+            ):
+                raise ProviderSecretError(
+                    "The previous credential has not been restored."
+                )
             record["pendingActivation"] = None
             previous.unlink(missing_ok=True)
+            self._save(state)
+            return self._view(provider, record)
+
+    def discard(self, provider: str, revision: str) -> dict:
+        self.initialize()
+        with self.locked():
+            state = self._load()
+            record = self._provider(state, provider)
+            if (
+                record["pendingActivation"] is not None
+                or record["stagedRevision"] != revision
+            ):
+                raise ProviderSecretError(
+                    "Discard only the exact staged key with no pending activation."
+                )
+            self.staged_path(provider).unlink(missing_ok=True)
+            record.update(
+                {
+                    "stagedRevision": None,
+                    "stagedAt": None,
+                    "verificationStatus": None,
+                    "verificationBasis": None,
+                    "verifiedAt": None,
+                }
+            )
             self._save(state)
             return self._view(provider, record)
 
@@ -615,12 +688,23 @@ def parser() -> argparse.ArgumentParser:
         "prepare",
         "commit",
         "rollback",
+        "complete-rollback",
+        "discard",
         "record-revoked",
     ):
         command = commands.add_parser(name)
         command.add_argument("provider", choices=sorted(PROVIDERS))
-        if name in {"prepare", "commit", "rollback", "record-revoked"}:
+        if name in {
+            "prepare",
+            "commit",
+            "rollback",
+            "complete-rollback",
+            "discard",
+            "record-revoked",
+        }:
             command.add_argument("revision")
+        if name == "rollback":
+            command.add_argument("--hold", action="store_true")
     return result
 
 
@@ -644,7 +728,13 @@ def main(argv: list[str] | None = None) -> int:
         elif arguments.command == "commit":
             value = store.commit_activation(arguments.provider, arguments.revision)
         elif arguments.command == "rollback":
-            value = store.rollback_activation(arguments.provider, arguments.revision)
+            value = store.rollback_activation(
+                arguments.provider, arguments.revision, hold=arguments.hold
+            )
+        elif arguments.command == "complete-rollback":
+            value = store.finish_rollback(arguments.provider, arguments.revision)
+        elif arguments.command == "discard":
+            value = store.discard(arguments.provider, arguments.revision)
         else:
             value = store.record_revoked(arguments.provider, arguments.revision)
     except ProviderSecretError as exc:
