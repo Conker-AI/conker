@@ -36,6 +36,8 @@ validated and snapshotted into memory at startup, not read from disk per request
 Activity sources, task-dispatch review and proposal evidence use the transcript
 route rather than the Chats collection. Conversation and message identities are
 preserved through the shared navigation helper.
+Task review closes when dispatch begins so streaming and Stop remain reachable;
+a rejected submission reopens the retained review without an automatic retry.
 
 ### Technical workspace redesign (4 October, development branches)
 

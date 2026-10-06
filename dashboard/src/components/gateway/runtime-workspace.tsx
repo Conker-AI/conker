@@ -311,6 +311,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
       }
       dispatched = true
+      if (prepared) workspace.setState(value => value.taskIntent?.taskId === prepared.taskId ? { taskIntent: { ...value.taskIntent, open: false } } : {})
       setRejected(null)
       setInFlight({ requestId, requestedSessionId: id, input: { kind: 'text', text }, stopping: false, epoch })
       let resetVersion = 0
@@ -323,6 +324,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     } catch (error) {
       if (workspace.getState().epoch !== epoch) return
       if (!dispatched || error instanceof RuntimeMutationError && error.outcome === 'rejected') {
+        if (prepared) workspace.setState(value => value.taskIntent?.taskId === prepared.taskId ? { taskIntent: { ...value.taskIntent, open: true } } : {})
         if (mounted.current) { const message = error instanceof Error ? error.message : gatewayError(error).message; if (prepared) setTaskError(message); else { setRejected(message); setDetailError(message) } }
       }
       else {
