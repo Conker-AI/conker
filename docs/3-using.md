@@ -46,8 +46,8 @@ stays until you forget that chat too. Correcting from this screen is planned. Se
 needs the Embeddings service; unavailability is reported rather than silently treated as a
 successful semantic match. Literal library search is a separate inspection path.
 
-For automatic recall across new chats, open **Agents**, edit the supplied **Companion**
-profile, and choose **Memory access -> Across my chats**. Saving requires owner verification
+For automatic recall across new chats, open **Agents**, open the supplied **Companion**,
+select **Harness**, and choose **Memory access -> Across my chats**. Saving requires owner verification
 and applies to future turns. This explicit choice does not change tool permissions or grant
 other agents/team roles access. Memory-disabled chats remain excluded. The default remains
 **Current conversation**; a saved memory appearing in the library alone does not prove that

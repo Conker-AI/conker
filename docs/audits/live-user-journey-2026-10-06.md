@@ -280,7 +280,8 @@ make those gates appear passed.
   unchanged; private messages, custom agents, team roles, namespace credentials
   and immutable snapshots retain their boundaries. It has not been silently
   enabled on either installation. The targeted agent/session/team/context suite
-  passed 69 tests; final Linux CI remains the release gate.
+  passed 69 tests. Linux CI passed on `67dbc67`, including the authority and audit
+  mutation drills; immutable tag `v0.5.1` published successfully.
 - The dashboard exposes that Companion-only choice and explains the scope in the
   password confirmation without echoing instructions or selected record content.
 - The transcript displays submitted input as pending, never as a fabricated saved
@@ -289,8 +290,57 @@ make those gates appear passed.
 - Workflow access and confirmation use the same published-version/nested-workflow
   scope. Project and artifact confirmations describe authoring rather than just
   API endpoints; content remains inert and password requirements are unchanged.
-- These are source and regression-test results until deployed and exercised in
-  the live QA account. Restored UI styling is preserved; this is not a redesign.
+- Restored UI styling is preserved; this is not a redesign. Live verification
+  below is separate from the source/regression evidence above.
+
+## Installed Patch Verification
+
+- Both `/home/alexeybe1kin/conker-deploy` and the isolated QA deployment now run
+  published Pi 0.5.1, ToolGate 0.4.0, MemoryGate 0.4.1, SystemGate 0.3.0 and
+  Embeddings 0.1.3. Each image was pulled with an empty Docker client config and
+  its OCI source revision checked against the corresponding immutable Git tag.
+- The connected dashboard was built on Linux with the digest-pinned Node image
+  from Conker source `786f1d0d33d7dac5825b342461d1a249e22de895`; its exact dashboard
+  tree is `5916b1b0415f0b44ab96cc831f1a018b7d3e849d`. GitHub main was updated by
+  fast-forward, with no force push or unrelated worktree changes.
+- Application replacements retained the existing compose configuration except
+  first-party image references. Credential-file hashes remained identical;
+  PostgreSQL, Qdrant, Ollama and decision-sidecar image identities were checked
+  unchanged. Private stores were not removed or copied into the QA account.
+  Previous source exports, launcher and compose are retained under each
+  deployment's `recovery/before-registry-release-20261006`.
+- Main and QA doctor reports settled to 7 `ok`, 0 `attention`, 1 optional hosted
+  provider. This does not mean every optional dependency is present: Tools still
+  reports missing SearXNG and System reports unavailable Docker observation.
+  No Docker socket or authority expansion was added to hide those limits.
+- Tailscale Serve reports both 8443 and 8444 as **tailnet only**. Backend ports,
+  grants and production proposal/model settings were not expanded.
+- The private cancellation regression returned only `4`, completed as
+  `trn_82b62e04136248d5`, and retained `Memory: disabled`. Both earlier cancelled
+  input records remain inspectable. Capture: `cancelled-context-fixed-live.png`.
+- Fresh chat `ses_19c8074059f84f2d` immediately showed its submitted input while
+  generating, with an empty composer and no false empty-transcript claim. It then
+  saved one user record and one four-bullet answer. Capture:
+  `first-message-pending-fixed-live.png`. The earlier file
+  `pending-input-fixed-live.png` captures the final saved `4` answer, not streaming.
+- The real patched transcript fits at 390 x 844: document scroll width 390 and
+  composer bounds x17..373, y713..827. The page-sized screenshot was inspected;
+  the browser viewport override was reset. Capture: `patched-chat-mobile-page.png`.
+- The Companion scope confirmation correctly names admitted cross-chat retrieval,
+  private-message exclusions and unchanged tool/team access. It was cancelled
+  without submission while awaiting explicit QA-only permission. Cross-chat
+  behavior is not claimed verified. Capture: `qa-cross-chat-scope-confirmation.png`.
+- Dashboard lint, build and all 29 check suites passed. Main's latest Dashboard
+  and installer/recovery CI passed. The assembled-release workflow's deterministic
+  checks passed, but its self-hosted live matrix was skipped; do not claim that
+  matrix ran. The actual Docker recovery drill is separate and did run successfully.
+
+Remaining end-to-end gates are explicit: main-account browser sign-in; QA-only
+cross-chat scope consent; the previously requested inert workflow grant; automatic
+recall/correction/forgetting together; skills/tool runs; real schedule creation and
+completed scheduled work; spontaneous suggestions; and optional provider/voice
+coverage. The local 3B model's conflicting scheduling answer remains an observed
+quality issue. Installation health is not proof of those behaviors.
 
 ## Next Fix Order
 
