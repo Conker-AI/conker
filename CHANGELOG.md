@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Live-journey patch release:** pin Pi 0.5.1 and MemoryGate 0.4.1, and bind the
+  dashboard build to its exact tree. Cancelled requests are annotated in replayable
+  model context; Companion can explicitly opt into admitted cross-chat memory
+  without widening other agents or private-chat scope. Repair pending-message
+  rendering and operation confirmations without changing the restored visual UI.
+
 - **Host-only provider credentials:** installer reruns migrate OpenRouter, OpenAI and
   Anthropic keys out of `.env` into owner-only files. `conker providers` now stages hidden
   input, assigns opaque revisions, performs fixed-endpoint verification with a 15-minute
