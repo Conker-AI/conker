@@ -10,43 +10,53 @@ import { ProviderCredentials } from './provider-credentials'
 
 const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic' }
 const readiness = (value: ProviderStatus) => value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Configured, inference not verified' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
+type SubscriptionConnection = 'checking' | 'connected' | 'disconnected' | 'unavailable'
+const subscriptionConnection = (value: ChatGPTStatus): SubscriptionConnection => !value.available ? 'unavailable' : value.connected ? 'connected' : 'disconnected'
+const subscriptionReadiness: Record<SubscriptionConnection, string> = { checking: 'Checking connection', connected: 'Connected, inference not verified', disconnected: 'Not connected', unavailable: 'Unavailable' }
 
-function ChatGPTConnection({ client, onModels }: { client: GatewayControlClient; onModels: (models: ChatGPTStatus['models']) => void }) {
+export function ChatGPTConnection({ client, onModels, onConnection }: { client: GatewayControlClient; onModels: (models: ChatGPTStatus['models']) => void; onConnection: (connection: SubscriptionConnection) => void }) {
   const [value, setValue] = useState<ChatGPTStatus | null>(null)
   const [device, setDevice] = useState<NonNullable<ChatGPTStatus['deviceCode']> | null>(null)
   const [error, setError] = useState(''), [pending, setPending] = useState(false), [reload, setReload] = useState(0)
   const lifetime = useRef<AbortController | null>(null)
+  const readEpoch = useRef(0), mutating = useRef(false)
   useEffect(() => {
     const controller = new AbortController()
     lifetime.current = controller
     return () => { controller.abort(); lifetime.current = null }
   }, [])
   useEffect(() => {
+    if (mutating.current) return
+    const epoch = ++readEpoch.current
     const controller = new AbortController()
     client.chatgpt.status(controller.signal).then(result => {
-      if (!controller.signal.aborted) { setValue(result); onModels(result.models); if (result.loginState !== 'pending') setDevice(null) }
-    }).catch(error => { if (!controller.signal.aborted) setError(error.message) })
+      if (!controller.signal.aborted && epoch === readEpoch.current) { setValue(result); onModels(result.models); onConnection(subscriptionConnection(result)); if (result.loginState !== 'pending') setDevice(null) }
+    }).catch(error => {
+      if (!controller.signal.aborted && epoch === readEpoch.current) { setValue(null); onModels([]); onConnection('unavailable'); setError(error.message) }
+    })
     return () => controller.abort()
-  }, [client, reload, onModels])
+  }, [client, reload, onModels, onConnection, pending])
   useEffect(() => {
-    if (!value?.loginId) return
+    if (!value?.loginId || pending) return
     const interval = window.setInterval(() => setReload(number => number + 1), 3000)
     return () => window.clearInterval(interval)
-  }, [value?.loginId])
+  }, [value?.loginId, pending])
   async function apply(operation: ChatGPTOperation) {
     const signal = lifetime.current?.signal
-    if (pending || !signal || signal.aborted) return
+    if (mutating.current || !signal || signal.aborted) return
+    mutating.current = true
+    ++readEpoch.current
     setPending(true); setError('')
     try {
       const result = await client.chatgpt.apply(operation, signal)
-      if (!signal.aborted) { setValue(result); setDevice(result.deviceCode ?? null); onModels(result.models) }
+      if (!signal.aborted) { setValue(result); setDevice(result.deviceCode ?? null); onModels(result.models); onConnection(subscriptionConnection(result)) }
     } catch (error) { if (!signal.aborted) { setError(error instanceof Error ? error.message : 'ChatGPT operation was not confirmed. Refresh status before retrying.'); setReload(number => number + 1) } }
-    finally { if (!signal.aborted) setPending(false) }
+    finally { mutating.current = false; if (!signal.aborted) setPending(false) }
   }
   return <WorkspaceSection title="ChatGPT" description="Use your ChatGPT subscription through Codex sign-in. No OpenAI API key or separate API billing; your plan’s usage limits still apply." action={<Button size="sm" variant="ghost" disabled={pending} onClick={() => { setError(''); setReload(number => number + 1) }}><RefreshCw />Refresh</Button>}>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking subscription connection...</p>}
-    {value && !value.available && <p role="status" className="text-sm leading-6 text-muted-foreground">Subscription sign-in is unavailable. This installation needs the private provider service and its pinned Codex runtime. No credentials can be sent.</p>}
+    {value && !value.available && <p role="status" className="text-sm leading-6 text-muted-foreground">{value.problem === 'provider_operation_failed' || value.problem === 'runtime_unavailable' ? 'The subscription connection cannot be checked right now. Refresh before continuing; existing authorization has not been removed.' : 'Subscription sign-in is unavailable. This installation needs the private provider service and its pinned Codex runtime. No credentials can be sent.'}</p>}
     {value?.available && <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p role="status" className="text-sm">{value.connected ? `Connected${value.plan && value.plan !== 'unknown' ? ` · ${value.plan}` : ''}` : value.loginId ? 'Waiting for OpenAI authorization' : 'Not connected'}</p>
@@ -73,6 +83,7 @@ export function GatewayProvidersSettings({ client }: { client: GatewayControlCli
   const [value, setValue] = useState<OwnerModelSettings | null>(null)
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [models, setModels] = useState<ChatGPTStatus['models']>([])
+  const [connection, setConnection] = useState<SubscriptionConnection>('checking')
   const [error, setError] = useState(''), [healthError, setHealthError] = useState('')
   const [pending, setPending] = useState(false), [reload, setReload] = useState(0)
   useEffect(() => {
@@ -82,11 +93,11 @@ export function GatewayProvidersSettings({ client }: { client: GatewayControlCli
     return () => controller.abort()
   }, [client, reload])
   return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
-    <ChatGPTConnection client={client} onModels={setModels} />
+    <ChatGPTConnection client={client} onModels={setModels} onConnection={setConnection} />
     <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} onChanged={() => setReload(number => number + 1)} /></details>
     <WorkspaceSection title="Runtime readiness" description="Connection and catalogue entries do not prove a model can answer." action={<Button variant="ghost" size="sm" onClick={() => { setHealthError(''); setReload(number => number + 1) }}><RefreshCw />Refresh</Button>}>
       {healthError && <p role="status" className="text-sm text-muted-foreground">{healthError}</p>}
-      <dl className="divide-y text-sm">{providers.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2 py-3"><dt>{names[provider.id] ?? provider.id}{provider.model && <span className="text-muted-foreground"> · {provider.model}</span>}</dt><dd className="text-muted-foreground">{readiness(provider)}</dd></div>)}</dl>
+      <dl className="divide-y text-sm">{providers.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2 py-3"><dt>{names[provider.id] ?? provider.id}{provider.model && <span className="text-muted-foreground"> · {provider.model}</span>}</dt><dd className="text-muted-foreground">{provider.id === 'chatgpt' ? subscriptionReadiness[connection] : readiness(provider)}</dd></div>)}</dl>
     </WorkspaceSection>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {value ? <ModelsProviders key={value.revision} serverManaged pending={pending} subscriptionModels={models} configuration={value.configuration ? { ...value.configuration, providers: value.configuration.providers.map(provider => ({ ...provider, endpoint: '', apiKeyDraft: '' })) } : { providers: [], models: [], defaultModelId: null }} onSave={async next => {
