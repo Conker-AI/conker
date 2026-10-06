@@ -7,7 +7,7 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **27 September 2026**. The current tree has **35 tracked
+Last source verification: **6 October 2026**. The current tree has **35 tracked
 capability families: 34 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
@@ -161,6 +161,24 @@ private socket. Catalogue providers/models can be added, renamed and removed;
 active role/default references must be reassigned before removal. Browser session
 inspection and password-confirmed revocation are also exposed in Settings.
 ChatGPT/Codex subscription sign-in is not implemented by this API-key flow.
+
+Pi/Gateway 0.5.5 and the pinned dashboard tree
+`f84dafadfff9345dfe8d93afa083f1eb280d2052` are installed on the main and isolated
+QA instances. Private socket reachability, health, Laya reconnection, paid-policy
+off and unchanged unrelated container identities were verified. Existing data,
+model choices and tool permissions were preserved. QA browser acceptance saved
+an inert invalid key, verified its rejection, discarded the stage, cancelled
+spending enablement, persisted and removed temporary catalogue entries, and
+revoked its own session before signing back in. Desktop and 390px mobile dark/
+light dialogs were checked; temporary viewport/theme overrides were restored.
+No real provider credential or chargeable model request was used in these drills.
+
+Live testing corrected the Linux systemd working-directory syntax and the UI's
+confirmed self-revocation transition. Dashboard lint, build, design guards and
+31 check suites pass. Linux CI passed 279 host tests with five platform skips,
+the Docker recovery drill and assembled release acceptance. Pi passed 1,412
+tests with 11 skips locally and its release CI passed. Full owner-authorized
+cross-chat/workflow acceptance remains outstanding.
 
 This is not total host-CLI parity. Model downloads, speech-server configuration,
 backup capture/verification, held restoration, TLS/password bootstrap, pinned
