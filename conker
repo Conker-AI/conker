@@ -437,7 +437,7 @@ provider_call() {
 }
 
 provider_runtime_configured() {
-    local provider=$1 attempt result
+    local provider=$1 _attempt result
     for _attempt in $(seq 1 30); do
         result=$(compose exec -T pi python -c '
 import json, sys, urllib.request
