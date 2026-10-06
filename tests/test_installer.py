@@ -25,6 +25,37 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "install.sh"
 
+
+def test_installer_fetches_the_canonical_repository():
+    assert 'readonly REPO_URL="https://github.com/Conker-AI/conker.git"' in INSTALL.read_text()
+
+
+@pytest.mark.parametrize("dirty", [True, False])
+def test_failed_checkout_update_never_reports_success(tmp_path, dirty):
+    checkout = tmp_path / "conker"
+    (checkout / ".git").mkdir(parents=True)
+    commands = tmp_path / "bin"
+    commands.mkdir()
+    git = commands / "git"
+    git.write_text(
+        "#!/bin/sh\n"
+        'case "$3" in\n'
+        + ('status) printf " M local.txt\\n"; exit 0 ;;\n' if dirty else 'status) exit 0 ;;\n')
+        + "pull) exit 1 ;;\n"
+        + "esac\nexit 1\n"
+    )
+    git.chmod(0o755)
+    result = subprocess.run(
+        ["bash", "-s", "--", "--yes"],
+        input=INSTALL.read_text(), text=True, capture_output=True, timeout=15,
+        env={**os.environ, "CONKER_HOME": str(checkout), "NO_COLOR": "1",
+             "PATH": str(commands) + os.pathsep + os.environ.get("PATH", "")},
+        cwd=tmp_path, check=False,
+    )
+    assert result.returncode != 0
+    assert "Updated " not in result.stdout
+    assert ("local changes" if dirty else "Could not update") in result.stderr
+
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32",
     reason="the installer is a POSIX shell script for Linux and macOS servers; "

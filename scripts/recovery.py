@@ -129,7 +129,7 @@ REPOSITORY_PROFILE = LayoutProfile(
     database_name="memorygate",
     memory_key_name="runtime-fernet.key",
     writers=(
-        "pi", "toolgate", "memorygate", "embeddings", "systemgate",
+        "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "searxng", "ollama", "qdrant", "owner-terminal",
     ),
     excluded_mounts={
@@ -154,7 +154,7 @@ UBUNTU_PROFILE = LayoutProfile(
     database_name="conker",
     memory_key_name="runtime.key",
     writers=(
-        "pi", "toolgate", "memorygate", "embeddings", "systemgate",
+        "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "decisions", "ollama", "qdrant", "owner-terminal",
     ),
     excluded_mounts={

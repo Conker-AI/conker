@@ -24,7 +24,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_SCHEMA = "conker-release-acceptance-evidence-2"
-OWN_IMAGE_REPOSITORY = "ghcr.io/alexeybe1kin"
+OWN_IMAGE_REPOSITORY = "ghcr.io/conker-ai"
 OWN_COMPONENTS = ("pi", "toolgate", "memorygate", "systemgate", "embeddings")
 SERVICE_IMAGES = {
     "gateway": "pi",

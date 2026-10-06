@@ -22,6 +22,21 @@ Open http://localhost:5173.
 
 ## B · Server (Ubuntu)
 
+For a fresh repository installation, use the canonical repository and its
+installer. It builds the connected dashboard with the pinned Node image and
+pulls the application versions declared in `versions.env`:
+
+```sh
+git clone https://github.com/Conker-AI/conker.git
+cd conker
+./install.sh
+```
+
+Review the installer prompts and private-network configuration. Keep the owner
+password private. A browser preview is not a connected installation and cannot
+prove memory, tools or scheduled work. The source-built layout below is an
+alternative; do not mix the two layouts over the same stores.
+
 This runs ten containers: gateway, Pi, ToolGate, MemoryGate, PostgreSQL, Qdrant, embeddings,
 SystemGate, Ollama and Laya decisions. Only the gateway gets a port, on `127.0.0.1`. Share it on
 your private network with Tailscale Serve.
@@ -118,8 +133,8 @@ conker update                 # staged, health-checked, rollback-capable
 `conker help` is the authoritative command list in both installation layouts.
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
-the source-built Ubuntu layout currently cannot provide the repository install's
-verified recovery, self-update, or single admin-key commands.
+the source-built Ubuntu layout supports verified backup and held recovery, but
+cannot provide the repository install's self-update or single admin-key commands.
 
 `conker inspect RESOURCE` reads one fixed, bounded control-plane resource through
 the gateway container and prints the service's JSON unchanged. Supported resources

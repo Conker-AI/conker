@@ -45,6 +45,34 @@ read, write and traverse access. Preparation records its canonical path, device 
 inode in private `state/terminal-workspace.json`, emits the networkless hardened
 sidecar, and gives Gateway only the ephemeral control volume and control GID.
 
+## Updating an existing deployment
+
+1. Run `conker backup --destination PRIVATE_DIRECTORY`, then
+   `conker verify-backup SNAPSHOT_DIRECTORY`. Capture must finish and restart
+   the previously running services before proceeding. A failed or partial
+   snapshot is not rollback evidence.
+2. Preserve `sources/`, `compose.json`, the launcher and application image IDs
+   in the private recovery directory. Keep credentials and state out of Git.
+3. Export the reviewed Conker commit and each module tag from `versions.env`.
+   Build the dashboard from that exact Conker revision. Do not substitute
+   uncommitted development branches for the released modules.
+4. Run `prepare.py` with the existing exact origin. Review the generated diff
+   before applying it. This command regenerates infrastructure references from
+   the reviewed manifest; retain the installed PostgreSQL, Qdrant and Ollama
+   image identities unless their upgrade was separately intended and reviewed.
+5. Build or pull the matching application images, start the existing Compose
+   project, and install the refreshed launcher. Never remove state volumes or
+   reset the owner password as part of an ordinary update.
+6. Verify gateway sign-in, service health, real chat, memory, cancellation and
+   existing records through the tailnet URL. Keep the verified snapshot and
+   previous images until the user journey succeeds. Rollback after a database
+   migration requires held recovery, not merely an older application image.
+
+Coordinated backups capture SQLite through a private writable copy with its
+committed WAL, leaving read-only source mounts unchanged. Regular model-cache
+links are flattened only when they resolve inside their own store. External,
+dangling and directory links remain rejected; recovery archives contain no links.
+
 ## Network boundary
 
 Only the HTTPS gateway publishes a host port: `127.0.0.1:18050`. Databases,

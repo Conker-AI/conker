@@ -30,7 +30,7 @@ services:
   # Release prerequisite: PI_VERSION must contain the gateway package (see docs/reference/browser-auth.md).
   gateway:
     <<: *service
-    image: ghcr.io/alexeybe1kin/pi:${PI_VERSION}
+    image: ghcr.io/conker-ai/pi:${PI_VERSION}
     container_name: conker-gateway
     mem_limit: 512m
     cap_drop: [ALL]
@@ -58,7 +58,7 @@ services:
   # No published port or owner credentials. Only the gateway serves browsers.
   pi:
     <<: *service
-    image: ghcr.io/alexeybe1kin/pi:${PI_VERSION}
+    image: ghcr.io/conker-ai/pi:${PI_VERSION}
     container_name: conker-pi
     mem_limit: 768m
     cap_drop: [ALL]
@@ -109,7 +109,7 @@ services:
   # --- the action boundary --------------------------------------------------
   toolgate:
     <<: *service
-    image: ghcr.io/alexeybe1kin/toolgate:${TOOLGATE_VERSION}
+    image: ghcr.io/conker-ai/toolgate:${TOOLGATE_VERSION}
     container_name: toolgate-api
     mem_limit: 512m
     networks:
@@ -160,7 +160,7 @@ services:
   # --- the memory boundary --------------------------------------------------
   memorygate:
     <<: *service
-    image: ghcr.io/alexeybe1kin/memorygate:${MEMORYGATE_VERSION}
+    image: ghcr.io/conker-ai/memorygate:${MEMORYGATE_VERSION}
     container_name: memorygate-api
     mem_limit: 1g
     ports:
@@ -223,7 +223,7 @@ services:
   # --- embeddings -----------------------------------------------------------
   embeddings:
     <<: *service
-    image: ghcr.io/alexeybe1kin/embeddings:${EMBEDDINGS_VERSION}
+    image: ghcr.io/conker-ai/embeddings:${EMBEDDINGS_VERSION}
     container_name: embeddings-api
     mem_limit: 512m
     ports:
@@ -268,7 +268,7 @@ services:
   # is no write path here to reach for.
   systemgate:
     <<: *service
-    image: ghcr.io/alexeybe1kin/systemgate:${SYSTEMGATE_VERSION}
+    image: ghcr.io/conker-ai/systemgate:${SYSTEMGATE_VERSION}
     container_name: systemgate-api
     mem_limit: 512m
     # Share the host's UTS namespace so /vitals reports the host's name rather

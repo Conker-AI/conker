@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import tarfile
@@ -26,19 +27,21 @@ class RecoveryError(RuntimeError):
 
 
 def sqlite_backup(source: Path, destination: Path) -> None:
-    # Opening read-only still reads committed pages in WAL; copying the main
-    # file alone loses precisely the newest messages we are trying to protect.
-    with (
-        closing(
-            sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True)
-        ) as src,
-        closing(sqlite3.connect(destination)) as dst,
-    ):
-        src.backup(dst)
-        if dst.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
-            raise RecoveryError(
-                "SQLite integrity check failed; retain the source store."
-            )
+    # Coordinated capture has stopped every writer. SQLite may still need to
+    # create WAL sidecars, so recover a private copy instead of opening the RO mount.
+    with tempfile.TemporaryDirectory() as scratch:
+        copied = Path(scratch) / source.name
+        shutil.copyfile(source, copied)
+        for suffix in ("-wal", "-journal"):
+            sidecar = Path(str(source) + suffix)
+            if sidecar.exists():
+                shutil.copyfile(sidecar, Path(str(copied) + suffix))
+        with closing(sqlite3.connect(copied)) as src, closing(sqlite3.connect(destination)) as dst:
+            src.backup(dst)
+            if dst.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+                raise RecoveryError(
+                    "SQLite integrity check failed; retain the source store."
+                )
 
 
 def safe_member(member: tarfile.TarInfo) -> Path:
@@ -89,9 +92,19 @@ def snapshot_tree(
     source: Path, output: BinaryIO, required_database: str | None = None
 ) -> None:
     files = sorted(source.rglob("*"))
+    resolved_files: dict[Path, Path] = {}
     databases: set[Path] = set()
     for path in files:
-        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+        if path.is_symlink():
+            try:
+                target = path.resolve(strict=True)
+                target.relative_to(source.resolve())
+            except (OSError, RuntimeError, ValueError):
+                raise RecoveryError("Store link must resolve inside its own store.") from None
+            if not target.is_file():
+                raise RecoveryError("Only links to regular files inside the store can be captured.")
+            resolved_files[path] = target
+        elif not (path.is_file() or path.is_dir()):
             raise RecoveryError(
                 "Unsupported special file in store; inventory it before backup."
             )
@@ -110,12 +123,16 @@ def snapshot_tree(
     }
     with (
         tempfile.TemporaryDirectory() as scratch,
-        tarfile.open(fileobj=output, mode="w|") as archive,
+        tarfile.open(fileobj=output, mode="w|", dereference=True) as archive,
     ):
         for path in files:
             if path in sidecars:
                 continue
-            member = archive.gettarinfo(str(path), path.relative_to(source).as_posix())
+            # Flatten validated in-store model-cache links into regular files;
+            # recovery archives never contain link targets or escape the store.
+            member = archive.gettarinfo(
+                str(resolved_files.get(path, path)), path.relative_to(source).as_posix()
+            )
             member.mode &= 0o777
             if path in databases:
                 copy = Path(scratch) / "database.sqlite"

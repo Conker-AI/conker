@@ -542,6 +542,64 @@ def test_wal_resident_messages_survive_snapshot(tmp_path):
         connection.close()
 
 
+def test_sqlite_snapshot_opens_only_a_private_copy(tmp_path, monkeypatch):
+    source, destination = tmp_path / "auth.db", tmp_path / "snapshot.db"
+    database(source, "CREATE TABLE owner(value TEXT); INSERT INTO owner VALUES('retained');")
+    before = source.read_bytes()
+    connect = sqlite3.connect
+    opened = []
+
+    def guarded(path, *args, **kwargs):
+        assert str(path) != str(source) and str(source) not in str(path)
+        opened.append(str(path))
+        return connect(path, *args, **kwargs)
+
+    monkeypatch.setattr(recovery_data.sqlite3, "connect", guarded)
+    recovery_data.sqlite_backup(source, destination)
+    assert source.read_bytes() == before
+    assert opened and all(str(source) != path for path in opened)
+    with connect(destination) as restored:
+        assert restored.execute("SELECT value FROM owner").fetchone() == ("retained",)
+
+
+def test_authentication_gateway_is_a_coordinated_writer():
+    assert "gateway" in recovery.REPOSITORY_PROFILE.writers
+    assert "gateway" in recovery.UBUNTU_PROFILE.writers
+
+
+def test_model_cache_links_are_flattened_without_archive_links(tmp_path):
+    source, restored = tmp_path / "source", tmp_path / "restored"
+    source.mkdir()
+    restored.mkdir()
+    (source / "blob").write_bytes(b"model data")
+    try:
+        (source / "model").symlink_to("blob")
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    archive = io.BytesIO()
+    recovery_data.snapshot_tree(source, archive)
+    archive.seek(0)
+    with tarfile.open(fileobj=archive) as contents:
+        assert all(member.isfile() for member in contents)
+    archive.seek(0)
+    recovery_data.restore_tree(archive, restored)
+    assert (restored / "model").read_bytes() == b"model data"
+    assert not (restored / "model").is_symlink()
+
+
+@pytest.mark.parametrize("target", ["../outside", "missing", "."])
+def test_backup_rejects_external_dangling_and_directory_links(tmp_path, target):
+    source = tmp_path / "source"
+    source.mkdir()
+    (tmp_path / "outside").write_bytes(b"private data")
+    try:
+        (source / "model").symlink_to(target, target_is_directory=target == ".")
+    except OSError:
+        pytest.skip("Creating symlinks is unavailable")
+    with pytest.raises(recovery_data.RecoveryError, match="link"):
+        recovery_data.snapshot_tree(source, io.BytesIO())
+
+
 def test_restored_execution_keys_and_spending_authority_are_revoked(tmp_path):
     toolgate_store(tmp_path)
     path = tmp_path / "toolgate.db"

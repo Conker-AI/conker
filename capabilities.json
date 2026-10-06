@@ -17,7 +17,7 @@
       "id": "conversations", "name": "Conversation sessions and turns", "authority": "pi", "state": "active",
       "gatewayRoutes": ["/api/pi/sessions", "/api/pi/sessions/{id}", "/api/pi/sessions/{id}/turns"], "uiRoutes": ["/chat", "/chats", "/companion"], "cliCommands": ["conker inspect sessions"],
       "deploymentRequirements": ["pi_data", "PI_GATEWAY_KEY_SHA256", "PI_MODEL"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/sessions/${sessionId}/turns"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/chat': 'chat',\n  '/chats': 'chat',\n  '/companion': 'chat'"}, {"path": "docker-compose.yml", "contains": "PI_DB_PATH: /data/pi.db"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/sessions/${sessionId}/turns"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/chat': 'chat',\n  '/chats': 'chats',\n  '/companion': 'chat'"}, {"path": "docker-compose.yml", "contains": "PI_DB_PATH: /data/pi.db"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "turn-recovery", "name": "Turn cancellation, resume and submission reconciliation", "authority": "pi", "state": "active",
@@ -65,13 +65,13 @@
     {
       "id": "tool-inventory", "name": "Scoped tool inventory", "authority": "toolgate", "state": "active",
       "gatewayRoutes": ["/api/pi/tools"], "uiRoutes": ["/tools"], "cliCommands": ["conker inspect tools"], "deploymentRequirements": ["PI_TOOLGATE_KEY", "TOOLGATE_BOOTSTRAP_EXECUTION_KEY"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/pi/tools'"}, {"path": "dashboard/src/components/gateway/tools-inventory.tsx", "contains": "Available tools"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/pi/tools'"}, {"path": "dashboard/src/components/gateway/tools-inventory.tsx", "contains": "client.tools(controller.signal)"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "tool-workflow-authoring", "name": "Tool and workflow drafts, publication and runs", "authority": "toolgate", "state": "active",
       "gatewayRoutes": ["/api/owner/editor-drafts", "/api/owner/editor-drafts/{id}/publish", "/api/owner/editor-drafts/{id}/runs"], "uiRoutes": ["/tools?view=drafts"], "cliCommands": ["conker inspect tool-drafts", "conker inspect tool-draft DRAFT_ID", "conker inspect tool-validation DRAFT_ID", "conker inspect tool-publications DRAFT_ID", "conker inspect tool-runs DRAFT_ID", "conker inspect tool-access DRAFT_ID VERSION DIGEST", "conker apply tools FILE"],
       "deploymentRequirements": ["GATEWAY_TOOLGATE_OWNER_KEY", "GATEWAY_TOOLGATE_EXECUTION_KEY", "toolgate_data"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/editor-drafts.ts", "contains": "`${path(id)}/publish`"}, {"path": "dashboard/src/components/gateway/tool-drafts.tsx", "contains": "Saved drafts do not publish or run tools"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/editor-drafts.ts", "contains": "`${path(id)}/publish`"}, {"path": "dashboard/src/components/gateway/tool-drafts.tsx", "contains": "Agent access is unchanged."}]
     },
     {
       "id": "setup-status", "name": "Verified first-run setup projection", "authority": "pi", "state": "active",
@@ -161,7 +161,7 @@
       "gatewayRoutes": ["/api/control/pi/calls/browser/capabilities", "/api/control/pi/calls/browser/active/{conversation_id}", "/api/control/pi/calls/browser", "/api/control/pi/calls/browser/{id}", "/api/control/pi/calls/browser/{id}/update", "/api/control/pi/calls/browser/{id}/interrupt", "/api/control/pi/calls/browser/{id}/end", "/api/control/pi/calls/browser/{id}/turns"],
       "uiRoutes": ["/chat"], "cliCommands": ["conker inspect call-capabilities", "conker inspect call CALL_ID", "conker inspect active-call CONVERSATION_ID", "conker apply calls FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store", "configured answer model"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/calls.ts", "contains": "execution: z.literal('typed-turn')"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "Speak or type one thought at a time"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Browser call audio is one bounded transient WAV turn"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/calls.ts", "contains": "execution: z.literal('typed-turn')"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "client.interrupt(call.id, call.revision)"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Browser call audio is one bounded transient WAV turn"}]
     },
     {
       "id": "calls-voice", "name": "Voice call turns", "authority": "pi", "state": "active",

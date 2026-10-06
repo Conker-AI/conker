@@ -51,7 +51,7 @@ def test_planner_uses_every_normalized_version_and_maps_pi_to_both_services():
     assert plan["build_only_references"] == [
         "example/node_build@sha256:" + "5".zfill(64)
     ]
-    assert plan["services"]["gateway"] == "ghcr.io/alexeybe1kin/pi:1.2.3"
+    assert plan["services"]["gateway"] == "ghcr.io/conker-ai/pi:1.2.3"
     assert plan["services"]["pi"] == plan["services"]["gateway"]
     assert plan["components"]["postgres"].endswith("@sha256:" + "1".zfill(64))
     assert all("latest" not in reference for reference in plan["pull_references"])
@@ -184,7 +184,7 @@ def test_compose_matrix_requires_exact_set_without_substitutes():
     assert_compose_matrix(plan, plan["runtime_references"])
 
     changed = list(plan["runtime_references"])
-    changed[0] = "ghcr.io/alexeybe1kin/pi:latest"
+    changed[0] = "ghcr.io/conker-ai/pi:latest"
     with pytest.raises(AcceptanceError, match="missing=.*unexpected="):
         assert_compose_matrix(plan, changed)
 

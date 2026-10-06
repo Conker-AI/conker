@@ -27,7 +27,7 @@ def live_stack(tmp_path):
         for line in (ROOT / "versions.env").read_text().splitlines()
         if line and not line.startswith("#")
     )
-    gate_image = "ghcr.io/alexeybe1kin/toolgate:" + versions["TOOLGATE_VERSION"]
+    gate_image = "ghcr.io/conker-ai/toolgate:" + versions["TOOLGATE_VERSION"]
     postgres_image = versions["POSTGRES_IMAGE"]
     # Pull only before creating a recovery environment. Recovery itself always
     # uses the captured image IDs with --pull never.

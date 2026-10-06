@@ -26,7 +26,7 @@
 
 set -euo pipefail
 
-readonly REPO_URL="https://github.com/alexeybe1kin/conker.git"
+readonly REPO_URL="https://github.com/Conker-AI/conker.git"
 readonly REQUIRED_GB=20
 readonly LOW_MEMORY_GB=6
 
@@ -816,7 +816,12 @@ main() {
         command -v git >/dev/null 2>&1 || die "git is needed to fetch Conker, and is not installed." \
             "Install it:  sudo apt-get install -y git"
         if [ -d "$ROOT/.git" ]; then
-            git -C "$ROOT" pull --ff-only >/dev/null 2>&1 || true
+            [ -z "$(git -C "$ROOT" status --porcelain)" ] \
+                || die "The existing checkout has local changes; it was not updated." \
+                    "Save or commit those changes in $ROOT, then run the installer again."
+            git -C "$ROOT" pull --ff-only >/dev/null 2>&1 \
+                || die "Could not update $ROOT; no services were changed." \
+                    "Run 'git -C $ROOT pull --ff-only' to inspect the failure, then try again."
             good "Updated $ROOT"
         else
             git clone --depth 1 "$REPO_URL" "$ROOT" >/dev/null 2>&1 \
