@@ -59,7 +59,7 @@ without configuration remain unchanged. Live QA confirmed the instructions,
 corrected schedule and two memory records reached a new turn. The CPU-only
 Qwen 2.5 3B model still scheduled rehearsal at the climbing-class time; context
 delivery is not a guarantee of reasoning or recall quality. This remains tracked
-in issue 38. Both instances run the published, revision-verified 0.5.3 image.
+in issue 38. The current running image is recorded below.
 
 Message links now position their matching record inside the shared transcript
 viewport. Automatic following cannot pull a linked message back under the appbar;
@@ -84,6 +84,15 @@ explicit manual answer choice recovered without substituting a model or granting
 tools. The dashboard now accepts and names both current-request and recent-exchange
 routing receipts, including the known search-ranking role, while still rejecting
 malformed evidence and withholding arbitrary provider fields.
+
+Pi 0.5.4 also preserves that recent-exchange scope when sanitizing the saved
+receipt; older turn history is not rewritten. Both instances run the published,
+revision-verified image, with Laya reconnected during the upgrade. Live QA showed
+the recent-exchange label, 380 ms classifier timing and the actual 3B answer route.
+Its temporary routing test was restored to manual mode; memory/search ranking
+remain disabled in QA. The dashboard's 30 suites, build and lint passed, and Pi
+passed 1,399 tests with four platform skips. Complete assembled release acceptance
+and owner-authorized cross-chat/workflow drills remain outstanding.
 
 Official Codex CLI 0.160.1 is prepared in a separate private server runtime, not
 signed in or exposed as a Conker provider. No desktop credentials were copied.
