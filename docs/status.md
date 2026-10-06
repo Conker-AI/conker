@@ -45,6 +45,14 @@ failed reads offer an explicit retry. Chat memory evidence reports the number
 of records supplied, including zero, rather than treating retrieval success as
 proof of recall. These changes do not widen memory scope or tool grants.
 
+Pi 0.5.2 adds an explicit gateway cookie namespace for trusted instances sharing
+a hostname. Browser cookies ignore ports; signing into the isolated QA instance
+previously displaced the main instance's cookie. QA now uses its own namespace,
+while the main cookie name and credential remain unchanged. This is session
+collision prevention, not isolation against an untrusted co-hosted service;
+that requires separate hostnames. Both live instances were updated from the
+published, revision-verified image without replacing persistent volumes.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet
