@@ -180,7 +180,7 @@ contradictory signed-out status after an outage or successful authorization.
 
 Pi/Gateway 0.5.6 (`777666b004175d1b3650ccc23538e6c68d5aaae5`, image digest
 `sha256:71f161fa2a303cf9a74c7813c3e808e27747b70c63eac35a1d0e67cfcf4411ae`)
-and dashboard tree `a3455eaa19434f3a71ca01522eaf051839732cc8` are now on main
+and dashboard tree `3ac21151f8cf98776b03c5eb5a1a39498919a974` are now on main
 and QA, with private rollback snapshots. Private control/inference socket
 reachability, health, Laya namespace reconnection, paid API policy off and unchanged
 unrelated container identities were verified without resetting data or model choices.
@@ -188,6 +188,11 @@ QA browser acceptance exercised owner-verified device sign-in, pending authoriza
 reload with no retained device code, exact cancellation, and General/Providers
 separation. Desktop and 390px mobile dark/light screens and the owner dialog were
 visually checked; theme/viewport changes were restored. No account was authorized.
+The recovery patch was checked against an actual stopped QA provider worker:
+commands disappeared, readiness reported unavailable, and an explicit refresh
+restored coherent signed-out status after restart. Desktop and 390px mobile
+captures confirmed the error and recovery layouts. Both instances retain private
+rollback snapshots; no pending OpenAI authorization was interrupted.
 The Windows Pi suite passed 1430 tests (4 skips); Linux CI passed its container,
 authority and audit checks. Conker Linux CI passed 291 tests (5 skips), recovery
 drill, dashboard lint/build and all 31 dashboard suites. Optional assembled
