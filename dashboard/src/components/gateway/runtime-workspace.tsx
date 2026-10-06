@@ -196,10 +196,6 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   }, [active, control, selected])
   useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
-    if (!visible || !focusedMessageId || !current?.messages.some(message => message.id === focusedMessageId)) return
-    document.getElementById(`record-${focusedMessageId}`)?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
-  }, [visible, focusedMessageId, current])
-  useEffect(() => {
     if (!forgottenIds.length) return
     workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', submission: attempt.submission ? { ...attempt.submission, pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
     setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)

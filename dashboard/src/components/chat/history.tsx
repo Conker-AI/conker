@@ -14,8 +14,18 @@ export function ConversationHistory({ sessionId, focusedMessageId, children }: {
     const body = content.current
     if (!scroller || !body) return
     following.current = !focusedMessageId
+    let positioned = false
     // Observe content as well as the viewport: markdown and streaming can change its height.
-    const follow = () => { if (following.current) scroller.scrollTop = scroller.scrollHeight }
+    const follow = () => {
+      if (following.current) scroller.scrollTop = scroller.scrollHeight
+      else if (focusedMessageId && !positioned && scroller.clientHeight) {
+        const target = body.ownerDocument.getElementById(`record-${focusedMessageId}`)
+        if (!target || !body.contains(target)) return
+        scroller.scrollTop += target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 16
+        positioned = true
+        setShowLatest(true)
+      }
+    }
     follow()
     const observer = new ResizeObserver(follow)
     observer.observe(body)
@@ -25,7 +35,8 @@ export function ConversationHistory({ sessionId, focusedMessageId, children }: {
   return <div className="relative min-h-0 flex-1">
     <div ref={viewport} tabIndex={0} aria-label="Saved conversation history" className="h-full overflow-y-auto focus-visible:outline-2 focus-visible:outline-ring" onScroll={event => {
       const scroller = event.currentTarget
-      following.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80
+      // Programmatic focus can emit a stale bottom scroll event; only Latest releases a deep link.
+      if (!focusedMessageId || following.current) following.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80
       setShowLatest(!following.current)
     }}>
       <div ref={content} className={`${conversationColumn} space-y-6 py-6`}>{children}</div>
