@@ -153,6 +153,20 @@ privacy, settings persistence, pagination and provider fallback.
 
 ### Connected owner workflows
 
+Settings now has write-only OpenRouter, OpenAI API and Anthropic credential
+management, separate verify/activate/discard/recover operations, issuer-revocation
+attestation, and explicit paid-request policy. A Linux user-service worker shares
+the CLI's credential store and fixed host operations; only Gateway mounts its
+private socket. Catalogue providers/models can be added, renamed and removed;
+active role/default references must be reassigned before removal. Browser session
+inspection and password-confirmed revocation are also exposed in Settings.
+ChatGPT/Codex subscription sign-in is not implemented by this API-key flow.
+
+This is not total host-CLI parity. Model downloads, speech-server configuration,
+backup capture/verification, held restoration, TLS/password bootstrap, pinned
+updates and service lifecycle still have host-only paths. The UI must not claim
+those actions work through a generic terminal or a cosmetic button.
+
 - Browser authentication, session revocation and operation-bound password checks.
 - Conversation sessions, streaming turns, cancellation, resume and reconciliation.
 - Tasks, run activity, proactive proposals and owner approval decisions.

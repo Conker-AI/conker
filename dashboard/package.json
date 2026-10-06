@@ -31,6 +31,7 @@
     "check:context-policy": "node scripts/check-context-policy.cjs",
     "check:conversation-context": "node scripts/check-conversation-context.cjs",
     "check:model-roles": "node scripts/check-model-roles.cjs",
+    "check:provider-control": "node scripts/check-provider-control.cjs",
     "check:navigation": "node scripts/check-navigation.cjs",
     "check:memory": "node scripts/check-memory.cjs && node scripts/check-memory-layout.cjs && node scripts/check-memory-forget.cjs && node scripts/check-gateway-memory-graph.cjs",
     "check:conversation": "node scripts/check-conversation.cjs",

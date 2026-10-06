@@ -10,6 +10,8 @@ import { createGatewayTerminalClient } from './terminal'
 import { createGatewayFilesystemClient } from './filesystem'
 import { createGatewayCallsClient } from './calls'
 import { createGatewaySearchClient } from './search'
+import { createProviderControlClient } from './provider-control'
+import { createBrowserSessionsClient } from './browser-sessions'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -256,9 +258,11 @@ export type MemoryForgetPreview = z.infer<typeof forgetPreview>
 export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
-export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio'>) {
+export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>) {
   return {
     editorDrafts: createGatewayEditorDrafts(auth),
+    providerCredentials: createProviderControlClient(auth),
+    browserSessions: createBrowserSessionsClient(auth),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),

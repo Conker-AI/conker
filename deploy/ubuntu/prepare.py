@@ -101,6 +101,7 @@ env = {
     "gateway": {"GATEWAY_ORIGIN": origin, "GATEWAY_DB_PATH": "/auth/auth.db",
         "GATEWAY_PI_URL": "http://pi:8050", "PI_GATEWAY_KEY": keys["gateway"],
         "GATEWAY_PI_OWNER_KEY": keys["pi_owner"], "GATEWAY_DASHBOARD_DIR": "/dashboard",
+        "GATEWAY_PROVIDER_CONTROL_SOCKET": "/run/conker-providers/control.sock",
         "GATEWAY_TOOLGATE_URL": "http://toolgate:8010", "GATEWAY_TOOLGATE_OWNER_KEY": keys["owner"],
         "GATEWAY_TOOLGATE_EXECUTION_KEY": keys["execution"]},
     "pi": {"PI_ADMIN_KEY": keys["pi"], "PI_GATEWAY_KEY_SHA256": digest("gateway"),
@@ -212,7 +213,8 @@ services["pi"]["volumes"] = [
 ]
 services["pi"]["depends_on"] = ["memorygate", "toolgate", "ollama"]
 services["gateway"].update(command=["python", "-m", "gateway", "serve"], ports=["127.0.0.1:18050:8050"],
-    volumes=["./state/gateway:/auth", "./sources/companion/dashboard/dist:/dashboard:ro"], depends_on=["pi"])
+    volumes=["./state/gateway:/auth", "./sources/companion/dashboard/dist:/dashboard:ro", "./state/provider-control:/run/conker-providers:ro"], depends_on=["pi"])
+(state / "provider-control").mkdir(exist_ok=True, mode=0o700)
 if terminal_workspace is not None:
     services["gateway"]["volumes"].append(
         "terminal_control:/run/conker-terminal"

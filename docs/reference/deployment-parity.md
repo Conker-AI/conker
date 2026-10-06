@@ -36,6 +36,12 @@ generated ten-service manifest, captures every authoritative host-backed store i
 model directory, uses the generated `conker` PostgreSQL identity and `/data/runtime.key`, and
 excludes only the known read-only dashboard, provider-secret, telemetry and backup-observation
 mounts. Any additional service, bind, database or changed runtime path fails before capture.
+
+The private `/run/conker-providers` Gateway socket mount is also excluded from
+snapshots. It contains no application store and is recreated by the Linux user
+provider-control service. Its CLI installer is shared across repository and
+generated Ubuntu layouts; browser credential setup reports unavailable until
+that service is installed and reachable.
 Snapshots carry their layout and database identity; older repository snapshots without those
 fields retain the original repository defaults.
 

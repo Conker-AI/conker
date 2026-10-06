@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronDown, Eye, EyeOff } from "lucide-react"
+import { ChevronDown, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { CollectionEmpty, FormActions } from "@/components/design-system"
+import { CollectionEmpty, FormActions, OverlayBody, TaskDialogContent } from "@/components/design-system"
+import { Dialog } from "@/components/ui/dialog"
 import { ModelRolesEditor } from "./model-roles-editor"
 import {
   getAvailableModels,
@@ -25,12 +26,19 @@ type ModelsProvidersProps = {
 
 // Retain an unfinished in-memory form across Settings navigation, like other editors.
 let retainedDraft: ModelsConfiguration | null = null
+const supportedProviders = [
+  { id: 'ollama', name: 'Local Ollama' }, { id: 'decisions', name: 'Decisions (Laya)' },
+  { id: 'openrouter', name: 'OpenRouter' }, { id: 'openai', name: 'OpenAI API' }, { id: 'anthropic', name: 'Anthropic' },
+]
 
 export function ModelsProviders({ configuration, pending, onSave, serverManaged = false }: ModelsProvidersProps) {
   const [draft, setDraft] = useState<ModelsConfiguration>(() => (!serverManaged && retainedDraft) || structuredClone(configuration))
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [adding, setAdding] = useState<'provider' | 'model' | null>(null)
+  const [providerId, setProviderId] = useState('')
+  const [modelName, setModelName] = useState(''), [modelRoute, setModelRoute] = useState('')
   const availableModels = getAvailableModels(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(configuration)
   useEffect(() => { if (!serverManaged) retainedDraft = dirty ? draft : null }, [dirty, draft, serverManaged])
@@ -51,6 +59,15 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
 
   function updateProvider(id: ModelProvider["id"], patch: Partial<ModelProvider>) {
     updateDraft({ ...draft, providers: draft.providers.map(provider => provider.id === id ? { ...provider, ...patch } : provider) })
+  }
+
+  function removeModel(id: string) {
+    if (draft.defaultModelId === id || Object.values(draft.roleSettings?.roles ?? {}).some(role => role.modelId === id || role.fallbackModelId === id)) {
+      setError('Choose another default, primary, or fallback model before removing this entry.')
+      return
+    }
+    const roleSettings = draft.roleSettings && { ...draft.roleSettings, roles: Object.fromEntries(Object.entries(draft.roleSettings.roles).map(([role, value]) => [role, { ...value, eligibleModelIds: value.eligibleModelIds.filter(modelId => modelId !== id) }])) as typeof draft.roleSettings.roles }
+    updateDraft({ ...draft, models: draft.models.filter(model => model.id !== id), roleSettings })
   }
 
   return <Card>
@@ -97,7 +114,7 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
           <section className="min-w-0 space-y-4" aria-labelledby="model-providers-title">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 id="model-providers-title" className="font-medium">Providers</h3>
-              {!serverManaged && <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
+              {serverManaged ? <Button type="button" size="sm" variant="outline" disabled={pending || supportedProviders.every(provider => draft.providers.some(item => item.id === provider.id))} onClick={() => { setProviderId(supportedProviders.find(provider => !draft.providers.some(item => item.id === provider.id))?.id ?? ''); setAdding('provider') }}><Plus />Add provider</Button> : <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
                 {showKeys ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}{showKeys ? "Hide keys" : "Show keys"}
               </Button>}
             </div>
@@ -109,8 +126,9 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
                   <span className="text-sm font-medium">{provider.name}</span>
                   <Badge variant="outline" className="text-muted-foreground">{serverManaged ? "Server managed" : "Not connected"}</Badge>
                 </div>
-                <Switch aria-label={`Enable ${provider.name}`} checked={provider.enabled} onCheckedChange={enabled => updateProvider(provider.id, { enabled })} />
+                <div className="flex items-center gap-2"><Switch aria-label={`Enable ${provider.name}`} checked={provider.enabled} onCheckedChange={enabled => updateProvider(provider.id, { enabled })} />{serverManaged && <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${provider.name} from catalogue`} disabled={draft.models.some(model => model.providerId === provider.id)} onClick={() => updateDraft({ ...draft, providers: draft.providers.filter(item => item.id !== provider.id) })}><Trash2 /></Button>}</div>
               </div>
+              {serverManaged && <div className="space-y-2"><Label htmlFor={`provider-name-${provider.id}`}>Display name</Label><Input id={`provider-name-${provider.id}`} maxLength={160} value={provider.name} onChange={event => updateProvider(provider.id, { name: event.target.value })} /></div>}
               {!serverManaged && <div className="grid gap-3 sm:grid-cols-2">
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor={`model-${provider.id}-endpoint`}>Endpoint</Label>
@@ -126,7 +144,7 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
           <section className="min-w-0 space-y-4" aria-labelledby="model-catalogue-title">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 id="model-catalogue-title" className="font-medium">Model catalogue</h3>
-              <span className="text-xs text-muted-foreground">{availableModels.length} enabled</span>
+              <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{availableModels.length} enabled</span>{serverManaged && <Button type="button" size="sm" variant="outline" disabled={pending || !draft.providers.length} onClick={() => { setProviderId(draft.providers[0]?.id ?? ''); setModelName(''); setModelRoute(''); setAdding('model') }}><Plus />Add model</Button>}</div>
             </div>
             <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Configured routes. Availability depends on the running provider, not this enabled switch." : "Sample model names and routes. Availability, capabilities, and pricing have not been checked."}</p>
             <div className="divide-y border-y">
@@ -139,11 +157,12 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
                       <p className="flex flex-wrap items-center gap-2 text-sm font-medium">{model.name}{draft.defaultModelId === model.id && <Badge variant="secondary">Default</Badge>}</p>
                       <p className="text-xs text-muted-foreground">{provider?.name ?? "Unknown provider"}{!provider?.enabled && " · Provider disabled"}</p>
                     </div>
-                    <Switch disabled={pending} aria-label={`Enable ${model.name} through ${provider?.name ?? "unknown provider"}`} checked={model.enabled} onCheckedChange={enabled => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, enabled } : item) })} />
+                    <div className="flex items-center gap-2"><Switch disabled={pending} aria-label={`Enable ${model.name} through ${provider?.name ?? "unknown provider"}`} checked={model.enabled} onCheckedChange={enabled => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, enabled } : item) })} />{serverManaged && <Button type="button" size="icon" variant="ghost" disabled={pending} aria-label={`Remove ${model.name} from catalogue`} onClick={() => removeModel(model.id)}><Trash2 /></Button>}</div>
                   </div>
                   <details className="group">
                     <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"><ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />Model route</summary>
                     <div className="mt-2 space-y-2">
+                      {serverManaged && <><Label htmlFor={`model-name-${model.id}`}>Display name</Label><Input id={`model-name-${model.id}`} value={model.name} maxLength={160} disabled={pending} onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, name: event.target.value } : item) })} /></>}
                       <Label htmlFor={`model-route-${model.id}`}>Request model ID</Label>
                       <Input id={`model-route-${model.id}`} value={model.route} disabled={pending} autoComplete="off" spellCheck={false} onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, route: event.target.value } : item) })} />
                       {serverManaged && <><Label htmlFor={`model-purpose-${model.id}`}>Routing guidance</Label><Input id={`model-purpose-${model.id}`} value={model.routingDescription ?? ""} maxLength={240} disabled={pending} placeholder="Which tasks suit this model?" onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, routingDescription: event.target.value } : item) })} /></>}
@@ -167,5 +186,25 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
         </FormActions>
       </form>
     </CardContent>
+    <Dialog open={adding !== null} onOpenChange={open => { if (!open) setAdding(null) }}>
+      <TaskDialogContent title={adding === 'provider' ? 'Add provider' : 'Add model'} description="Adds a catalogue entry to this draft. Save model settings to apply it; this does not connect credentials or download a model.">
+        <form className="flex min-h-0 flex-col" onSubmit={event => {
+          event.preventDefault()
+          if (adding === 'provider') {
+            const provider = supportedProviders.find(item => item.id === providerId)
+            if (!provider || draft.providers.some(item => item.id === providerId)) return
+            updateDraft({ ...draft, providers: [...draft.providers, { ...provider, endpoint: '', apiKeyDraft: '', enabled: true }] })
+          } else {
+            if (!modelName.trim() || !modelRoute.trim() || !draft.providers.some(item => item.id === providerId)) return
+            updateDraft({ ...draft, models: [...draft.models, { id: `model_${crypto.randomUUID().replaceAll('-', '')}`, name: modelName.trim(), route: modelRoute.trim(), providerId, enabled: true, routingDescription: '' }] })
+          }
+          setAdding(null)
+        }}>
+          <OverlayBody><div className="space-y-2"><Label htmlFor="catalogue-provider">Provider</Label><Select value={providerId} onValueChange={setProviderId}><SelectTrigger id="catalogue-provider"><SelectValue /></SelectTrigger><SelectContent>{(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map(provider => <SelectItem key={provider.id} value={provider.id}>{provider.name}</SelectItem>)}</SelectContent></Select></div>
+            {adding === 'model' && <><div className="space-y-2"><Label htmlFor="catalogue-model-name">Display name</Label><Input id="catalogue-model-name" required maxLength={160} value={modelName} onChange={event => setModelName(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="catalogue-model-route">Request model ID</Label><Input id="catalogue-model-route" required maxLength={300} autoComplete="off" spellCheck={false} value={modelRoute} onChange={event => setModelRoute(event.target.value)} /></div></>}
+          </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => setAdding(null)}>Cancel</Button><Button type="submit" disabled={!providerId || adding === 'model' && (!modelName.trim() || !modelRoute.trim())}>Add to draft</Button></FormActions>
+        </form>
+      </TaskDialogContent>
+    </Dialog>
   </Card>
 }

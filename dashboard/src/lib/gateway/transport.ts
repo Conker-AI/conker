@@ -63,6 +63,8 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
+routes.GET.unshift(/^\/api\/host\/providers$/)
+routes.POST.unshift(/^\/api\/host\/providers$/)
 routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
 routes.GET.unshift(/^\/api\/diagnostics$/)
@@ -129,9 +131,12 @@ function characterOperation(value: unknown): boolean {
   return operation.method === 'POST' && typeof operation.path === 'string' && /^\/api\/control\/pi\/characters\/companion\/(?:save|import|restore)$/.test(operation.path)
 }
 export type GatewayVerifiedOperation = { method: 'POST'; path: string; body: Record<string, unknown> }
+export function isBrowserSessionRoute(path: string): boolean {
+  return path === '/auth/sessions' || path === '/auth/revoke-all' || /^\/auth\/sessions\/[A-Za-z0-9_-]{16,128}\/revoke$/.test(path)
+}
 /** Capture the exact validated JSON before a password prompt can yield to other edits. */
 export function snapshotGatewayOperation(path: string, body: unknown): GatewayVerifiedOperation {
-  if (!path.startsWith('/api/') || !routes.POST.some(route => route.test(path))) throw new GatewayError('validation')
+  if ((!path.startsWith('/api/') && !isBrowserSessionRoute(path)) || !routes.POST.some(route => route.test(path))) throw new GatewayError('validation')
   return { method: 'POST', path, body: JSON.parse(jsonBody(body, characterOperation({ method: 'POST', path, body }) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_JSON_LIMIT)) as Record<string, unknown> }
 }
 async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
@@ -205,7 +210,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
-      if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
+      if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()
       if (options.query) {
         const entries = Object.entries(options.query)

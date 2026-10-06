@@ -436,6 +436,8 @@ write_env() {
 
     local provider_dir="$ROOT/.conker/provider-secrets"
     python3 "$ROOT/scripts/provider_secrets.py" --directory "$provider_dir" initialize >/dev/null
+    mkdir -p "$ROOT/.conker/provider-control"
+    chmod 700 "$ROOT/.conker/provider-control"
     if [ -n "$OPENROUTER_KEY" ]; then
         printf '%s' "$OPENROUTER_KEY" | python3 "$ROOT/scripts/provider_secrets.py" \
             --directory "$provider_dir" import-active openrouter >/dev/null
@@ -856,6 +858,13 @@ main() {
     prepare_dashboard
     pull_and_start
     wait_for_health
+    if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+        if ! python3 "$ROOT/scripts/provider_control_install.py" --root "$ROOT" --source "$ROOT" --layout repository >/dev/null; then
+            warn "Provider UI control could not start. Retry with: conker providers install-ui-control"
+        fi
+    else
+        warn "Provider key entry in Settings requires a Linux systemd user session. CLI provider management remains available."
+    fi
     finish
 }
 
