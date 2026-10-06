@@ -176,7 +176,8 @@ No real provider credential or chargeable model request was used in these drills
 Live testing corrected the Linux systemd working-directory syntax and the UI's
 confirmed self-revocation transition. Dashboard lint, build, design guards and
 31 check suites pass. Linux CI passed 279 host tests with five platform skips,
-the Docker recovery drill and assembled release acceptance. Pi passed 1,412
+the Docker recovery drill and deterministic release-acceptance checks. The
+optional assembled live matrix was not run. Pi passed 1,412
 tests with 11 skips locally and its release CI passed. Full owner-authorized
 cross-chat/workflow acceptance remains outstanding.
 
