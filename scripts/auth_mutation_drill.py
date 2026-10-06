@@ -24,8 +24,8 @@ CASES = [
     (
         "gateway-store-omitted",
         "scripts/recovery.py",
-        '    "gateway": "/auth",\n',
-        "",
+        'REPOSITORY_STORES = {\n    "gateway": "/auth",\n',
+        "REPOSITORY_STORES = {\n",
         RESTORE,
     ),
     (
