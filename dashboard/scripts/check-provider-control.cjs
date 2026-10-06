@@ -57,13 +57,13 @@ async function connectionRecoveryChecks(subscription) {
     assert.ok(parts[name], `Unexpected Providers dependency ${name}`)
     return parts[name]
   }, component, component.exports)
-  const reads = [], writes = [], catalogues = []
+  const reads = [], writes = [], catalogues = [], connections = []
   const defer = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
   const client = { chatgpt: {
     status(signal) { const request = { ...defer(), signal }; reads.push(request); return request.promise },
     apply(operation, signal) { const request = { ...defer(), operation, signal }; writes.push(request); return request.promise },
   } }
-  const props = { client, onModels: models => catalogues.push(models) }
+  const props = { client, onModels: models => catalogues.push(models), onConnection: connection => connections.push(connection) }
   let tree
   const render = () => { cursor = 0; dirty = false; tree = component.exports.ChatGPTConnection(props); while (effects.length) effects.shift()(); return tree }
   const settle = async () => { await new Promise(resolve => setImmediate(resolve)); if (dirty) render() }
@@ -99,14 +99,17 @@ async function connectionRecoveryChecks(subscription) {
     const connected = { ...subscription, connected: true, connectionId: 'connection_' + 'b'.repeat(32), plan: 'plus', models: [{ id: 'test-model', name: 'Test' }] }
     reads.at(-1).resolve(connected); await settle()
     assert.ok(button('Disconnect'))
+    assert.equal(connections.at(-1), 'connected')
     button('Refresh').props.onClick(); render(); reads.at(-1).reject(new Error('Connection unavailable')); await settle()
     assert.ok(!button('Disconnect') && !button('Sign in with ChatGPT'), 'A failed read hides stale auth commands until recovery')
     assert.deepEqual(catalogues.at(-1), [], 'Stale model discovery cannot survive a failed connection read')
+    assert.equal(connections.at(-1), 'unavailable', 'Runtime readiness follows the same failed read, not old provider health')
     button('Refresh').props.onClick(); render(); reads.at(-1).resolve({ ...subscription, available: false, problem: 'provider_operation_failed' }); await settle()
     assert.ok(text(tree).includes('existing authorization has not been removed'))
     assert.ok(!button('Sign in with ChatGPT'))
     button('Refresh').props.onClick(); render(); reads.at(-1).resolve(connected); await settle()
     assert.ok(button('Disconnect'), 'Explicit read recovery restores the authoritative connection')
+    assert.equal(connections.at(-1), 'connected')
     button('Read available models').props.onClick(); render()
     for (const slot of slots) slot?.cleanup?.()
     writes.at(-1).resolve(connected); await settle()

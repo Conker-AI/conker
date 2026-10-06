@@ -175,6 +175,8 @@ Connection-read failures now hide stale account identities and discovered models
 without erasing managed authorization. Providers pauses status polling during an
 owner operation, rejects pre-operation late reads and duplicate clicks, and hides
 stale auth commands after failed reads until an explicit refresh succeeds.
+Subscription readiness follows that same current read, rather than retaining a
+contradictory signed-out status after an outage or successful authorization.
 
 Pi/Gateway 0.5.6 (`777666b004175d1b3650ccc23538e6c68d5aaae5`, image digest
 `sha256:71f161fa2a303cf9a74c7813c3e808e27747b70c63eac35a1d0e67cfcf4411ae`)
