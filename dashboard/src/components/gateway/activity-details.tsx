@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { allowedGatewayTaskTransitions, type GatewayActivityEvent, type GatewayActivityRun, type GatewayTask, type GatewayTaskStatus } from '@/lib/gateway/activity'
 import { isTerminalTask, taskStatusLabels } from './activity-state'
 import { plainStatus } from './plain-status'
+import { gatewayConversationLink as conversationLink } from './navigation'
 
-const conversationLink = (id: string) => `/chats?session=${encodeURIComponent(id)}`
 const taskLink = (id: string) => `/activity?tab=tasks&task=${encodeURIComponent(id)}`
 const runLink = (id: string) => `/activity?tab=runs&run=${encodeURIComponent(id)}`
 

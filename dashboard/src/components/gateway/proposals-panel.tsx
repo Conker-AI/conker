@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button'
 import type { GatewayProposalClient, Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayError } from '@/lib/gateway/transport'
+import { gatewayConversationLink } from './navigation'
 
 const decided: Record<ProposalDecision, string> = { accept: 'Accepted. Nothing runs until you set it up or approve an action.', decline: 'Declined. Conker will hold this idea back for 30 days.', never: 'Got it. Conker will not suggest this idea again; if a reworded version appears, decline it too.' }
 
@@ -54,7 +55,7 @@ export function ProposalsPanel({ client, active }: { client: GatewayProposalClie
         <p>{item.suggestion}</p>
         <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
         <Accordion type="single" collapsible><AccordionItem value="why"><AccordionTrigger>Why</AccordionTrigger><AccordionContent>
-          <ul className="flex flex-col gap-3">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={`/chats?session=${encodeURIComponent(source.sessionId)}&message=${encodeURIComponent(source.messageId)}`}>&ldquo;{source.excerpt}&rdquo;</Link> : <span>This message was forgotten.</span>}</li>)}</ul>
+          <ul className="flex flex-col gap-3">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link> : <span>This message was forgotten.</span>}</li>)}</ul>
           {!item.evidence.length && <p className="text-muted-foreground">No cited messages are available.</p>}
         </AccordionContent></AccordionItem></Accordion>
       </CardContent>

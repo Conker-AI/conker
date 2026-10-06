@@ -33,6 +33,9 @@ approval rules rather than promising per-run approval for automatic workflows.
 System readiness describes core checks rather than claiming every capability
 works. Live UI changes require a gateway restart: its dashboard assets are
 validated and snapshotted into memory at startup, not read from disk per request.
+Activity sources, task-dispatch review and proposal evidence use the transcript
+route rather than the Chats collection. Conversation and message identities are
+preserved through the shared navigation helper.
 
 ### Technical workspace redesign (4 October, development branches)
 

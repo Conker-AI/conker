@@ -14,7 +14,7 @@ const compiled = ts.transpileModule(source, {
 assert.equal((compiled.diagnostics || []).length, 0, 'Connected navigation source must compile')
 const loaded = { exports: {} }
 new Function('module', 'exports', compiled.outputText)(loaded, loaded.exports)
-const { gatewayCommandDestinations, gatewaySidebarDestinations, resolveGatewayRoute, gatewaySystemSection, gatewayAgentSection } = loaded.exports
+const { gatewayCommandDestinations, gatewaySidebarDestinations, resolveGatewayRoute, gatewaySystemSection, gatewayAgentSection, gatewayConversationLink } = loaded.exports
 
 assert.equal(new Set(gatewayCommandDestinations.map(item => item.path)).size, gatewayCommandDestinations.length, 'Command destinations must be unique')
 assert.equal(new Set(gatewaySidebarDestinations.map(item => item.path)).size, gatewaySidebarDestinations.length, 'Sidebar destinations must be unique')
@@ -29,6 +29,18 @@ assert.equal(resolveGatewayRoute('/artifacts/artifact_0123456789abcdef0123456789
 assert.equal(resolveGatewayRoute('/agents/agent_0123456789abcdef0123456789abcdef/edit'), 'agents')
 assert.equal(resolveGatewayRoute('/projects/not-an-id'), null)
 assert.equal(resolveGatewayRoute('/system/'), 'system')
+assert.equal(gatewayConversationLink('ses_a'), '/chat?session=ses_a')
+assert.equal(gatewayConversationLink('ses_a', 'msg_b'), '/chat?session=ses_a&message=msg_b')
+const encodedConversation = new URL(gatewayConversationLink('session &/\u05d0', 'message ?#\u05d1'), 'https://conker.test')
+assert.equal(resolveGatewayRoute(encodedConversation.pathname), 'chat')
+assert.equal(encodedConversation.searchParams.get('session'), 'session &/\u05d0')
+assert.equal(encodedConversation.searchParams.get('message'), 'message ?#\u05d1')
+for (const component of ['activity-details', 'task-dispatch-review', 'proposals-panel']) {
+  const componentSource = fs.readFileSync(path.join(root, `src/components/gateway/${component}.tsx`), 'utf8')
+  assert.match(componentSource, /gatewayConversationLink/)
+  assert.doesNotMatch(componentSource, /\/chats\?session=/,
+    `${component} must open the transcript, not the conversation collection`)
+}
 
 assert.equal(gatewaySystemSection('?tab=terminal'), 'terminal')
 assert.equal(gatewaySystemSection('?tab=unknown'), 'overview')

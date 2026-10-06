@@ -73,6 +73,11 @@ export function resolveGatewayRoute(pathname: string): GatewayRoute | null {
   return exactRoutes[path] ?? detailRoutes.find(([pattern]) => pattern.test(path))?.[1] ?? null
 }
 
+export function gatewayConversationLink(sessionId: string, messageId?: string): string {
+  const conversation = `/chat?session=${encodeURIComponent(sessionId)}`
+  return messageId ? `${conversation}&message=${encodeURIComponent(messageId)}` : conversation
+}
+
 export const gatewaySystemSections = ['overview', 'processes', 'ports', 'containers', 'terminal', 'files'] as const
 export type GatewaySystemSection = typeof gatewaySystemSections[number]
 
