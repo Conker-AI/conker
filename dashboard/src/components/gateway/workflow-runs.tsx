@@ -9,6 +9,7 @@ import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design
 import type { EditorRun, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import { GatewayError } from '@/lib/gateway/transport'
 import { plainStatus } from './plain-status'
+import { WORKFLOW_ACCESS_SCOPE } from '@/lib/gateway/workflow-access'
 
 export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: string; name: string; client: GatewayEditorDrafts; open: boolean; onClose: () => void }) {
   const [versions, setVersions] = useState<Awaited<ReturnType<GatewayEditorDrafts['publications']>>>([])
@@ -94,7 +95,7 @@ export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: s
       {!loading && !versions.length && <p className="text-sm">Publish a saved version before running this workflow.</p>}
       {!!versions.length && <>
         <div className="space-y-2"><Label htmlFor="run-version">Published version</Label><Select value={version} disabled={busy} onValueChange={value => { setAccess(null); setVersion(value) }}><SelectTrigger id="run-version"><SelectValue /></SelectTrigger><SelectContent>{versions.map(item => <SelectItem key={item.version} value={String(item.version)}>Version {item.version}{!item.available ? ' · unavailable' : ''}</SelectItem>)}</SelectContent></Select></div>
-        {access && <div className="space-y-2 rounded-lg border p-3"><p className="text-sm">{access.actor_name}: {access.enabled ? 'workflow access enabled' : 'no workflow access'}</p><p className="text-xs text-muted-foreground">This covers every published version of this workflow. Workflows it calls need their own access. Approval rules still apply.</p><Button size="sm" variant="outline" disabled={busy} onClick={() => void changeAccess()}>{access.enabled ? 'Remove workflow access' : 'Allow workflow access'}</Button></div>}
+        {access && <div className="space-y-2 rounded-lg border p-3"><p className="text-sm">{access.actor_name}: {access.enabled ? 'workflow access enabled' : 'no workflow access'}</p><p className="text-xs text-muted-foreground">{WORKFLOW_ACCESS_SCOPE}</p><Button size="sm" variant="outline" disabled={busy} onClick={() => void changeAccess()}>{access.enabled ? 'Remove workflow access' : 'Allow workflow access'}</Button></div>}
         <div className="space-y-2"><Label htmlFor="run-args">Inputs</Label><p className="text-xs text-muted-foreground">Written as JSON, for example {`{"query": "judo clubs"}`}.</p><Textarea id="run-args" value={args} disabled={busy} onChange={event => setArgs(event.target.value)} className="min-h-24 font-mono text-xs" spellCheck={false} /></div>
       </>}
       <section aria-label="Recent workflow activity" className="space-y-2"><h3 className="text-sm font-medium">Recent activity</h3>{!runs.length && !loading && <p className="text-xs text-muted-foreground">No recorded activity.</p>}{runs.map(run => <details key={run.action_id} className="rounded-lg border p-3"><summary className="cursor-pointer text-sm">Version {run.version} · {plainStatus(run.response.code)}<span className="ml-2 text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</span></summary><div className="mt-3 space-y-3">

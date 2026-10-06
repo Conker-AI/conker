@@ -15,6 +15,7 @@ const { createGatewayTransport, GatewayError } = load('transport.ts')
 const { createGatewayAuthClient } = load('auth.ts')
 const { createGatewayAuthStore } = load('auth-store.ts')
 const { createGatewayVerificationStore, describeGatewayOperation } = load('verification.ts')
+const { WORKFLOW_ACCESS_SCOPE } = load('workflow-access.ts')
 const { gatewaySessionUnlocked } = load('session-policy.ts')
 const { bindGatewayWorkspaceReset } = load(path.resolve(__dirname, '../src/components/gateway/auth-workspace-reset.ts'))
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -45,6 +46,13 @@ async function prompt(f, body = { text: 'Private draft never shown in the verifi
   return { result }
 }
 async function main() {
+  const grantReview = describeGatewayOperation({ method: 'POST', path: '/api/owner/editor-drafts/qa_workflow/access', body: { enabled: true } })
+  assert.match(grantReview.details.join(' '), /pinned nested workflows/)
+  assert.ok(grantReview.details.some(detail => detail.includes(WORKFLOW_ACCESS_SCOPE)))
+  const workflowScreen = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/workflow-runs.tsx'), 'utf8')
+  assert.match(workflowScreen, /\{WORKFLOW_ACCESS_SCOPE\}/)
+  assert.doesNotMatch(workflowScreen, /Workflows it calls need their own access/)
+  console.log('PASS workflow activity and owner confirmation share the same access scope')
   const short = fixture(); await short.client.bootstrap()
   const shortRequest = await prompt(short)
   assert.equal(await short.verification.getState().submit('1234'), true)
