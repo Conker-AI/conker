@@ -53,6 +53,21 @@ collision prevention, not isolation against an untrusted co-hosted service;
 that requires separate hostnames. Both live instances were updated from the
 published, revision-verified image without replacing persistent volumes.
 
+Pi 0.5.3 supplies saved Companion instructions to the model, using the immutable
+configuration captured at submission just as custom agents do. Older snapshots
+without configuration remain unchanged. Live QA confirmed the instructions,
+corrected schedule and two memory records reached a new turn. The CPU-only
+Qwen 2.5 3B model still scheduled rehearsal at the climbing-class time; context
+delivery is not a guarantee of reasoning or recall quality. This remains tracked
+in issue 38. Both instances run the published, revision-verified 0.5.3 image.
+
+Message links now position their matching record inside the shared transcript
+viewport. Automatic following cannot pull a linked message back under the appbar;
+Latest explicitly resumes following. Checks cover delayed history, hidden
+workspaces, streaming, manual scrolling and session changes. Cross-chat memory
+and workflow execution acceptance still require the owner's specific QA grants;
+no access was expanded during these fixes.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet
