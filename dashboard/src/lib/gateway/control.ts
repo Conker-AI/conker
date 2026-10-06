@@ -258,11 +258,11 @@ export type MemoryForgetPreview = z.infer<typeof forgetPreview>
 export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
-export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>) {
+export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession'>, onCurrentSessionRevoked: () => void) {
   return {
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
-    browserSessions: createBrowserSessionsClient(auth),
+    browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),

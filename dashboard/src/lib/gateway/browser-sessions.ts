@@ -6,7 +6,7 @@ const identity = z.string().regex(/^[A-Za-z0-9_-]{16,128}$/)
 const timestamp = z.number().finite().nonnegative()
 const result = z.object({ results: z.array(z.object({ id: identity, created: timestamp, touched: timestamp, expires: timestamp }).strict()).max(1000) }).strict()
 
-export function createBrowserSessionsClient(auth: Pick<GatewayAuthClient, 'request' | 'getSession' | 'lock'>) {
+export function createBrowserSessionsClient(auth: Pick<GatewayAuthClient, 'request' | 'getSession'>, onCurrentRevoked: () => void) {
   return {
     async list(signal?: AbortSignal) {
       const parsed = result.safeParse(await auth.request('/auth/sessions', { signal }))
@@ -18,7 +18,7 @@ export function createBrowserSessionsClient(auth: Pick<GatewayAuthClient, 'reque
       const current = id === null || id === auth.getSession()?.sessionId
       const parsed = z.object({ revoked: z.literal(true) }).strict().safeParse(await auth.request(id === null ? '/auth/revoke-all' : `/auth/sessions/${id}/revoke`, { method: 'POST', body: {}, signal }))
       if (!parsed.success) throw new GatewayError('invalid-response')
-      if (current) auth.lock()
+      if (current) onCurrentRevoked()
     },
   }
 }

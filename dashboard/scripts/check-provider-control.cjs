@@ -54,7 +54,7 @@ async function main() {
   assert.ok(paid.details.some(text => text.includes('not a budget')))
   const adminCalls = []; let locked = false
   const id = 'browser_session_' + 'a'.repeat(20)
-  const sessions = createBrowserSessionsClient({ request: async (...args) => { adminCalls.push(args); return args[1]?.method === 'POST' ? { revoked: true } : { results: [{ id, created: 10, touched: 12, expires: 100 }] } }, getSession: () => ({ sessionId: id }), lock: () => { locked = true } })
+  const sessions = createBrowserSessionsClient({ request: async (...args) => { adminCalls.push(args); return args[1]?.method === 'POST' ? { revoked: true } : { results: [{ id, created: 10, touched: 12, expires: 100 }] } }, getSession: () => ({ sessionId: id }) }, () => { locked = true })
   assert.equal((await sessions.list())[0].current, true)
   assert.equal(describeGatewayOperation(snapshotGatewayOperation('/auth/revoke-all', {})).title, 'Sign out all browser sessions')
   await assert.rejects(sessions.revoke('bad/id'), error => error.kind === 'validation')

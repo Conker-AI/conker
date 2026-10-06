@@ -27,11 +27,11 @@ function services() {
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
     session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: null, setupRequired: false },
-    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined,
+    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
   })), { dispose: () => undefined })
   return { fake, workspace: {
     authStore, runtime: createGatewayRuntimeClient(auth), activity: createGatewayActivityClient(auth), owner: createGatewayOwnerClient(auth),
-    proposals: createGatewayProposalClient(auth), control: createGatewayControlClient(auth),
+    proposals: createGatewayProposalClient(auth), control: createGatewayControlClient(auth, () => undefined),
     conversationState: createGatewayRuntimeWorkspaceState(), activityState: createGatewayActivityWorkspaceState(),
     ownerState: createGatewayOwnerState(), sourcePrivacy: createGatewaySourcePrivacyState(),
   } }
