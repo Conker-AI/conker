@@ -56,6 +56,11 @@ sidecar, and gives Gateway only the ephemeral control volume and control GID.
 3. Export the reviewed Conker commit and each module tag from `versions.env`.
    Build the dashboard from that exact Conker revision. Do not substitute
    uncommitted development branches for the released modules.
+   Public source files and dashboard assets must remain readable to the
+   non-root container UID. Do not clone or build public application contexts
+   with `umask 077`; Docker preserves those modes during `COPY`. Keep private
+   state, credentials, recovery archives and credential-bearing logs restricted.
+   Verify imports with the actual runtime UID before recreating live services.
 4. Run `prepare.py` with the existing exact origin. Review the generated diff
    before applying it. This command regenerates infrastructure references from
    the reviewed manifest; retain the installed PostgreSQL, Qdrant and Ollama
