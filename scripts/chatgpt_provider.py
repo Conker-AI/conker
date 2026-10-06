@@ -231,18 +231,21 @@ class ChatGPTControl:
                 except ChatGPTError as error:
                     problem = str(error)
             return {
-                "available": self.rpc is not None
-                and problem not in {"runtime_unavailable", "runtime_version_mismatch"},
-                "connected": account is not None,
-                "connectionId": self.connection_id,
+                "available": self.rpc is not None and problem is None,
+                "connected": account is not None and problem is None,
+                "connectionId": self.connection_id
+                if account is not None and problem is None
+                else None,
                 "plan": str(account.get("planType", "unknown"))[:80]
-                if account
+                if account and problem is None
                 else None,
                 "loginId": self.login_id,
                 "loginState": self.login_state,
                 "problem": problem,
-                "models": self.models,
-                "catalogueComplete": self.catalogue_complete,
+                "models": self.models if account and problem is None else [],
+                "catalogueComplete": self.catalogue_complete
+                if account and problem is None
+                else False,
                 "credentialsIncluded": False,
             }
 

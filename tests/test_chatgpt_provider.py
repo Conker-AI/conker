@@ -96,6 +96,38 @@ def test_unavailable_runtime_cannot_accept_auth(tmp_path):
         control.apply({"operation": "login"})
 
 
+@pytest.mark.parametrize(
+    "problem", ["runtime_unavailable", "provider_operation_failed"]
+)
+def test_failed_account_read_hides_stale_identity_without_erasing_auth(
+    tmp_path, problem
+):
+    accounts = Accounts()
+    accounts.account = {"type": "chatgpt", "planType": "plus"}
+    control = ChatGPTControl(tmp_path, None, rpc=accounts)
+    connected = control.apply({"operation": "models"})
+    original_call = accounts.call
+
+    def failed(*_args, **_kwargs):
+        raise ChatGPTError(problem)
+
+    accounts.call = failed
+    unavailable = control.status()
+    assert not unavailable["available"] and not unavailable["connected"]
+    assert unavailable["connectionId"] is None and unavailable["plan"] is None
+    assert unavailable["models"] == [] and not unavailable["catalogueComplete"]
+    assert unavailable["problem"] == problem
+    with pytest.raises(ChatGPTError, match="runtime_unavailable"):
+        control.apply({"operation": "login"})
+    assert accounts.account is not None
+    accounts.call = original_call
+    recovered = control.status()
+    assert recovered["connected"] and recovered["problem"] is None
+    assert recovered["connectionId"] == connected["connectionId"]
+    assert recovered["models"] == connected["models"]
+    assert not any(method == "account/logout" for method, _params in accounts.calls)
+
+
 def test_codex_cannot_run_agent_or_tools(tmp_path):
     rpc = CodexAccounts(tmp_path / "missing", tmp_path / "private")
     assert not METHODS & {"thread/start", "turn/start", "command/exec", "config/write"}

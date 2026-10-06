@@ -11,42 +11,49 @@ import { ProviderCredentials } from './provider-credentials'
 const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic' }
 const readiness = (value: ProviderStatus) => value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Configured, inference not verified' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
 
-function ChatGPTConnection({ client, onModels }: { client: GatewayControlClient; onModels: (models: ChatGPTStatus['models']) => void }) {
+export function ChatGPTConnection({ client, onModels }: { client: GatewayControlClient; onModels: (models: ChatGPTStatus['models']) => void }) {
   const [value, setValue] = useState<ChatGPTStatus | null>(null)
   const [device, setDevice] = useState<NonNullable<ChatGPTStatus['deviceCode']> | null>(null)
   const [error, setError] = useState(''), [pending, setPending] = useState(false), [reload, setReload] = useState(0)
   const lifetime = useRef<AbortController | null>(null)
+  const readEpoch = useRef(0), mutating = useRef(false)
   useEffect(() => {
     const controller = new AbortController()
     lifetime.current = controller
     return () => { controller.abort(); lifetime.current = null }
   }, [])
   useEffect(() => {
+    if (mutating.current) return
+    const epoch = ++readEpoch.current
     const controller = new AbortController()
     client.chatgpt.status(controller.signal).then(result => {
-      if (!controller.signal.aborted) { setValue(result); onModels(result.models); if (result.loginState !== 'pending') setDevice(null) }
-    }).catch(error => { if (!controller.signal.aborted) setError(error.message) })
+      if (!controller.signal.aborted && epoch === readEpoch.current) { setValue(result); onModels(result.models); if (result.loginState !== 'pending') setDevice(null) }
+    }).catch(error => {
+      if (!controller.signal.aborted && epoch === readEpoch.current) { setValue(null); onModels([]); setError(error.message) }
+    })
     return () => controller.abort()
-  }, [client, reload, onModels])
+  }, [client, reload, onModels, pending])
   useEffect(() => {
-    if (!value?.loginId) return
+    if (!value?.loginId || pending) return
     const interval = window.setInterval(() => setReload(number => number + 1), 3000)
     return () => window.clearInterval(interval)
-  }, [value?.loginId])
+  }, [value?.loginId, pending])
   async function apply(operation: ChatGPTOperation) {
     const signal = lifetime.current?.signal
-    if (pending || !signal || signal.aborted) return
+    if (mutating.current || !signal || signal.aborted) return
+    mutating.current = true
+    ++readEpoch.current
     setPending(true); setError('')
     try {
       const result = await client.chatgpt.apply(operation, signal)
       if (!signal.aborted) { setValue(result); setDevice(result.deviceCode ?? null); onModels(result.models) }
     } catch (error) { if (!signal.aborted) { setError(error instanceof Error ? error.message : 'ChatGPT operation was not confirmed. Refresh status before retrying.'); setReload(number => number + 1) } }
-    finally { if (!signal.aborted) setPending(false) }
+    finally { mutating.current = false; if (!signal.aborted) setPending(false) }
   }
   return <WorkspaceSection title="ChatGPT" description="Use your ChatGPT subscription through Codex sign-in. No OpenAI API key or separate API billing; your plan’s usage limits still apply." action={<Button size="sm" variant="ghost" disabled={pending} onClick={() => { setError(''); setReload(number => number + 1) }}><RefreshCw />Refresh</Button>}>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Checking subscription connection...</p>}
-    {value && !value.available && <p role="status" className="text-sm leading-6 text-muted-foreground">Subscription sign-in is unavailable. This installation needs the private provider service and its pinned Codex runtime. No credentials can be sent.</p>}
+    {value && !value.available && <p role="status" className="text-sm leading-6 text-muted-foreground">{value.problem === 'provider_operation_failed' || value.problem === 'runtime_unavailable' ? 'The subscription connection cannot be checked right now. Refresh before continuing; existing authorization has not been removed.' : 'Subscription sign-in is unavailable. This installation needs the private provider service and its pinned Codex runtime. No credentials can be sent.'}</p>}
     {value?.available && <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p role="status" className="text-sm">{value.connected ? `Connected${value.plan && value.plan !== 'unknown' ? ` · ${value.plan}` : ''}` : value.loginId ? 'Waiting for OpenAI authorization' : 'Not connected'}</p>
