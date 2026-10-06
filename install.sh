@@ -82,8 +82,9 @@ done
 # --- where we are -----------------------------------------------------------
 # Piped from curl there is no repository yet, so fetch one. Run from a checkout,
 # use it as it is: a clone on top would throw away local edits.
-if [ -f "${BASH_SOURCE[0]}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/docker-compose.yml" ]; then
-    ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_SOURCE="${BASH_SOURCE[0]:-}"
+if [ -f "$INSTALL_SOURCE" ] && [ -f "$(dirname "$INSTALL_SOURCE")/docker-compose.yml" ]; then
+    ROOT="$(cd "$(dirname "$INSTALL_SOURCE")" && pwd)"
 else
     ROOT="${CONKER_HOME:-$HOME/conker}"
     NEEDS_CLONE=1

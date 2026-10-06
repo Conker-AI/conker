@@ -328,7 +328,7 @@ def test_hosted_provider_settings_survive_installer_rerun(install):
     assert "OPENROUTER_KEY" not in values
     assert "PI_OPENAI_KEY" not in values
     assert "PI_ANTHROPIC_KEY" not in values
-    directory = install.root / ".conker" / "provider-secrets"
+    directory = install.dir / ".conker" / "provider-secrets"
     assert (directory / "openrouter.key").read_text() == "preserved-openrouter-key"
     assert (directory / "openai.key").read_text() == "preserved-openai-key"
     assert (directory / "anthropic.key").read_text() == "preserved-anthropic-key"
@@ -349,7 +349,7 @@ def test_speech_settings_and_mounted_key_survive_installer_rerun(install):
     for before, after in replacements.items():
         body = body.replace(before, after)
     install.env_file.write_text(body)
-    key = install.root / ".conker/speech/speech.key"
+    key = install.dir / ".conker/speech/speech.key"
     key.write_text("preserved-speech-key", encoding="ascii")
 
     install("--yes", "--dry-run")
