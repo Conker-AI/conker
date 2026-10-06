@@ -110,6 +110,7 @@ env = {
         "PI_OPENROUTER_KEY_FILE": "/run/secrets/provider-openrouter",
         "PI_OPENAI_KEY_FILE": "/run/secrets/provider-openai",
         "PI_ANTHROPIC_KEY_FILE": "/run/secrets/provider-anthropic",
+        "PI_CHATGPT_SOCKET": "/run/conker-chatgpt/inference.sock",
         "PI_SPEECH_KEY_FILE": "/run/secrets/speech",
         "PI_TOOLGATE_URL": "http://toolgate:8010", "PI_TOOLGATE_KEY": keys["execution"],
         "PI_MEMORYGATE_URL": "http://memorygate:8020", "PI_MEMORYGATE_INGEST_KEY": keys["ingest"],
@@ -209,12 +210,14 @@ services["pi"]["volumes"] = [
     "./state/provider-secrets/openrouter.key:/run/secrets/provider-openrouter:ro",
     "./state/provider-secrets/openai.key:/run/secrets/provider-openai:ro",
     "./state/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro",
+    "./state/chatgpt-inference:/run/conker-chatgpt:ro",
     "./state/speech/speech.key:/run/secrets/speech:ro",
 ]
 services["pi"]["depends_on"] = ["memorygate", "toolgate", "ollama"]
 services["gateway"].update(command=["python", "-m", "gateway", "serve"], ports=["127.0.0.1:18050:8050"],
     volumes=["./state/gateway:/auth", "./sources/companion/dashboard/dist:/dashboard:ro", "./state/provider-control:/run/conker-providers:ro"], depends_on=["pi"])
 (state / "provider-control").mkdir(exist_ok=True, mode=0o700)
+(state / "chatgpt-inference").mkdir(exist_ok=True, mode=0o700)
 if terminal_workspace is not None:
     services["gateway"]["volumes"].append(
         "terminal_control:/run/conker-terminal"

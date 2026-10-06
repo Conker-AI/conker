@@ -160,7 +160,32 @@ the CLI's credential store and fixed host operations; only Gateway mounts its
 private socket. Catalogue providers/models can be added, renamed and removed;
 active role/default references must be reassigned before removal. Browser session
 inspection and password-confirmed revocation are also exposed in Settings.
-ChatGPT/Codex subscription sign-in is not implemented by this API-key flow.
+Providers now has a separate Settings tab and ChatGPT/Codex subscription sign-in,
+distinct from API-key providers. Official Codex CLI 0.160.1 manages device-code
+authorization and refresh in a private per-installation home. A separate Pi-only
+inference socket preserves Conker's tools and owner authority; no Codex agent
+runtime is started. Only the exact authenticated login response contains the
+one-time code. Catalogue reads and disconnects are explicit verified operations;
+connecting never changes answer defaults or background roles. Text streaming and
+Stop retain Pi's existing controls; subscription image input is not yet supported.
+Real device-code start/cancel was verified on Linux without authorizing an account.
+Subscription inference, model entitlement and refresh with a real authorized
+account still require the owner's OpenAI consent; unit tests are not that proof.
+
+Pi/Gateway 0.5.6 (`777666b004175d1b3650ccc23538e6c68d5aaae5`, image digest
+`sha256:71f161fa2a303cf9a74c7813c3e808e27747b70c63eac35a1d0e67cfcf4411ae`)
+and dashboard tree `a3455eaa19434f3a71ca01522eaf051839732cc8` are now on main
+and QA, with private rollback snapshots. Private control/inference socket
+reachability, health, Laya namespace reconnection, paid API policy off and unchanged
+unrelated container identities were verified without resetting data or model choices.
+QA browser acceptance exercised owner-verified device sign-in, pending authorization,
+reload with no retained device code, exact cancellation, and General/Providers
+separation. Desktop and 390px mobile dark/light screens and the owner dialog were
+visually checked; theme/viewport changes were restored. No account was authorized.
+The Windows Pi suite passed 1430 tests (4 skips); Linux CI passed its container,
+authority and audit checks. Conker Linux CI passed 291 tests (5 skips), recovery
+drill, dashboard lint/build and all 31 dashboard suites. Optional assembled
+live-matrix acceptance remains skipped, not claimed as passing.
 
 Pi/Gateway 0.5.5 and the pinned dashboard tree
 `f84dafadfff9345dfe8d93afa083f1eb280d2052` are installed on the main and isolated

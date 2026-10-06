@@ -438,6 +438,8 @@ write_env() {
     python3 "$ROOT/scripts/provider_secrets.py" --directory "$provider_dir" initialize >/dev/null
     mkdir -p "$ROOT/.conker/provider-control"
     chmod 700 "$ROOT/.conker/provider-control"
+    mkdir -p "$ROOT/.conker/chatgpt-inference"
+    chmod 700 "$ROOT/.conker/chatgpt-inference"
     if [ -n "$OPENROUTER_KEY" ]; then
         printf '%s' "$OPENROUTER_KEY" | python3 "$ROOT/scripts/provider_secrets.py" \
             --directory "$provider_dir" import-active openrouter >/dev/null

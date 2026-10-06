@@ -13,9 +13,16 @@ import socket
 import socketserver
 import stat
 import subprocess
+import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
+from scripts.chatgpt_provider import (
+    ChatGPTControl,
+    ChatGPTError,
+    inference_events,
+    responses_payload,
+)
 from scripts.provider_paid_policy import PaidPolicy
 from scripts.provider_secrets import (
     PROVIDERS,
@@ -200,7 +207,7 @@ class ProviderControl:
         return self.status()
 
 
-def handler(control: ProviderControl):
+def handler(control: ProviderControl, chatgpt=None):
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -219,6 +226,8 @@ def handler(control: ProviderControl):
             self.wfile.write(content)
 
         def do_GET(self):
+            if self.path == "/chatgpt" and chatgpt:
+                return self.respond(200, chatgpt.status())
             if self.path != "/providers":
                 return self.respond(404, {"error": "unsupported_operation"})
             try:
@@ -227,7 +236,9 @@ def handler(control: ProviderControl):
                 self.respond(503, {"error": "provider_control_unavailable"})
 
         def do_POST(self):
-            if self.path != "/providers":
+            if self.path not in {"/providers", "/chatgpt"} or (
+                self.path == "/chatgpt" and not chatgpt
+            ):
                 return self.respond(404, {"error": "unsupported_operation"})
             length = self.headers.get("Content-Length", "")
             if (
@@ -240,14 +251,104 @@ def handler(control: ProviderControl):
             self.connection.settimeout(10)
             try:
                 value = json.loads(self.rfile.read(int(length)).decode("utf-8"))
-                result = control.apply(value)
+                result = (
+                    chatgpt.apply(value)
+                    if self.path == "/chatgpt"
+                    else control.apply(value)
+                )
                 self.respond(200, result)
-            except (UnicodeError, ValueError, ProviderSecretError):
+            except (UnicodeError, ValueError, ProviderSecretError, ChatGPTError):
                 self.respond(409, {"error": "provider_operation_rejected"})
             except (OSError, subprocess.SubprocessError):
                 self.respond(503, {"error": "provider_control_unavailable"})
 
     return Handler
+
+
+def inference_handler(control):
+    slots = threading.BoundedSemaphore(2)
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def do_GET(self):
+            if self.path != "/status":
+                self.send_error(404)
+                return
+            value = control.status()
+            content = json.dumps(
+                {"connected": value["connected"], "available": value["available"]}
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+
+        def do_POST(self):
+            length = self.headers.get("Content-Length", "")
+            if (
+                self.path != "/responses"
+                or not length.isdigit()
+                or not 0 < int(length) <= 8_000_000
+                or self.headers.get("Transfer-Encoding")
+                or self.headers.get("Content-Type") != "application/json"
+            ):
+                self.send_error(422)
+                return
+            if not slots.acquire(blocking=False):
+                self.send_error(503)
+                return
+            try:
+                self.connection.settimeout(10)
+                value = json.loads(self.rfile.read(int(length)))
+                responses_payload(value)
+                self.connection.settimeout(180)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson")
+                self.end_headers()
+                events = inference_events(control, value)
+                try:
+                    for event in events:
+                        self.wfile.write(json.dumps(event).encode() + b"\n")
+                        self.wfile.flush()
+                except ChatGPTError as error:
+                    self.wfile.write(
+                        json.dumps({"type": "error", "code": str(error)}).encode()
+                        + b"\n"
+                    )
+                finally:
+                    events.close()
+            except (OSError, ValueError):
+                pass
+            finally:
+                slots.release()
+
+    return Handler
+
+
+class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    address_family = getattr(socket, "AF_UNIX", socket.AF_INET)
+    daemon_threads = True
+
+
+def private_socket(path):
+    if not path.is_absolute() or path.parent.is_symlink() or path.is_symlink():
+        raise ValueError("Socket must be an absolute private non-symlink path.")
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path.parent.chmod(0o700)
+    if path.exists():
+        if not stat.S_ISSOCK(path.lstat().st_mode):
+            raise ValueError("Existing path is not a socket.")
+        with socket.socket(socket.AF_UNIX) as probe:
+            probe.settimeout(1)
+            try:
+                probe.connect(str(path))
+            except ConnectionRefusedError:
+                path.unlink()
+            else:
+                raise ValueError("Provider socket is already running.")
 
 
 def main():
@@ -256,6 +357,7 @@ def main():
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--layout", required=True, choices=("ubuntu", "repository"))
     parser.add_argument("--socket", required=True, type=Path)
+    parser.add_argument("--codex", type=Path)
     args = parser.parse_args()
     if os.name != "posix" or not args.socket.is_absolute():
         parser.error(
@@ -279,11 +381,29 @@ def main():
                 parser.error("Provider control is already running.")
     control = ProviderControl(args.root, args.source, args.layout)
     control.status()
-    with socketserver.UnixStreamServer(str(args.socket), handler(control)) as server:
+    state = args.root / ("state" if args.layout == "ubuntu" else ".conker")
+    chatgpt = ChatGPTControl(
+        state, args.codex or Path.home() / "conker-model-runtime/bin/codex"
+    )
+    inference_socket = state / "chatgpt-inference/inference.sock"
+    private_socket(inference_socket)
+    inference_server = ThreadedUnixServer(
+        str(inference_socket), inference_handler(chatgpt)
+    )
+    inference_socket.chmod(0o600)
+    threading.Thread(target=inference_server.serve_forever, daemon=True).start()
+    with socketserver.UnixStreamServer(
+        str(args.socket), handler(control, chatgpt)
+    ) as server:
         args.socket.chmod(0o600)
         try:
             server.serve_forever()
         finally:
+            inference_server.shutdown()
+            inference_server.server_close()
+            inference_socket.unlink(missing_ok=True)
+            if chatgpt.rpc:
+                chatgpt.rpc.close()
             if args.socket.exists() and stat.S_ISSOCK(args.socket.lstat().st_mode):
                 args.socket.unlink()
 

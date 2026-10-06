@@ -723,6 +723,10 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         responseDigest: 'a'.repeat(64), completedAt: iso(now()), recordedAt: iso(now()),
       } }
     }
+    if (path === '/api/host/chatgpt') {
+      if (method !== 'GET') throw new GatewayError('dependency', 503)
+      return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
+    }
     if (path === '/api/host/providers') {
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { schemaVersion: 1, available: false, secretsIncluded: false, paidAllowed: null, policyRecoveryRequired: false, providers: [] }

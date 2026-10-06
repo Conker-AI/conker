@@ -15,6 +15,7 @@ const { createProviderControlClient } = load('provider-control.ts')
 const { snapshotGatewayOperation, isConversationWrite } = load('transport.ts')
 const { describeGatewayOperation } = load('verification.ts')
 const { createBrowserSessionsClient } = load('browser-sessions.ts')
+const { createChatGPTClient } = load('chatgpt.ts')
 const route = '/api/host/providers'
 const revision = 'credential_' + 'a'.repeat(32)
 function status() {
@@ -61,6 +62,25 @@ async function main() {
   await sessions.revoke(id)
   assert.equal(locked, true)
   assert.deepEqual(adminCalls.at(-1), [`/auth/sessions/${id}/revoke`, { method: 'POST', body: {}, signal: undefined }])
-  console.log('Provider control passed: one typed API, exact verification, secret-free review, no arbitrary endpoint, honest unavailable state.')
+  const subscription = { available: true, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: null, models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
+  let chatgptResponse = subscription
+  const chatgptCalls = []
+  const chatgpt = createChatGPTClient({ request: async (...args) => { chatgptCalls.push(args); return chatgptResponse } })
+  assert.equal((await chatgpt.status()).connected, false)
+  const authPath = '/api/host/chatgpt'
+  assert.equal(chatgptCalls[0][0], authPath)
+  assert.equal(isConversationWrite(authPath), false)
+  assert.equal(describeGatewayOperation(snapshotGatewayOperation(authPath, { operation: 'login' })).title, 'Sign in with ChatGPT')
+  chatgptResponse = { ...subscription, loginId: 'test-login', loginState: 'pending', deviceCode: { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } }
+  assert.equal((await chatgpt.apply({ operation: 'login' })).deviceCode.userCode, 'TEST-1234')
+  await assert.rejects(chatgpt.status(), error => error.kind === 'invalid-response')
+  for (const invalid of [{ operation: 'login', apiKey: 'PRIVATE' }, { operation: 'logout', connectionId: 'stale' }, { operation: 'command/exec' }]) await assert.rejects(chatgpt.apply(invalid), error => error.kind === 'validation')
+  chatgptResponse = { ...subscription, accessToken: 'PRIVATE' }
+  await assert.rejects(chatgpt.status(), error => error.kind === 'invalid-response')
+  const general = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/models-settings.tsx'), 'utf8')
+  assert.ok(!general.includes('<ProviderCredentials') && !general.includes('<ModelsProviders'), 'provider management is not General')
+  const header = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/header.tsx'), 'utf8')
+  assert.ok(header.includes("label: 'Providers'") && header.includes('/settings?tab=providers'))
+  console.log('Provider control passed: separate subscription and API-key flows, exact verification, strict secret-free projections, dedicated Providers settings.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

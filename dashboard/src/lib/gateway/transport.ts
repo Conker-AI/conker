@@ -65,6 +65,8 @@ const routes: Record<GatewayMethod, RegExp[]> = {
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
 routes.GET.unshift(/^\/api\/host\/providers$/)
 routes.POST.unshift(/^\/api\/host\/providers$/)
+routes.GET.unshift(/^\/api\/host\/chatgpt$/)
+routes.POST.unshift(/^\/api\/host\/chatgpt$/)
 routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
 routes.GET.unshift(/^\/api\/diagnostics$/)

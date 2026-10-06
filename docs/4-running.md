@@ -131,6 +131,22 @@ conker update                 # staged, health-checked, rollback-capable
 ```
 
 `conker help` is the authoritative command list in both installation layouts.
+
+ChatGPT subscription sign-in needs the private provider service and official
+Codex CLI **0.160.1** at `~/conker-model-runtime/bin/codex` (isolated from any personal
+desktop Codex login). With Node.js/npm installed, install the pinned runtime using
+`npm install --prefix "$HOME/conker-model-runtime" --no-audit --no-fund --ignore-scripts @openai/codex@0.160.1`,
+then `conker providers install-ui-control`. The UI reports unavailable when that
+runtime is absent or the version differs; it never silently upgrades it.
+The CLI equivalents are `conker providers chatgpt status|login|models`,
+`conker providers chatgpt cancel LOGIN_ID` and
+`conker providers chatgpt logout CONNECTION_ID`. They use the same private worker
+and revision-bound targets as the UI, not a second credential store.
+OAuth credentials in `state/chatgpt-auth` (Ubuntu) or `.conker/chatgpt-auth`
+(repository layout) are private and not mounted into Pi/Gateway or included in
+normal Conker snapshots. Reconnect after restoring onto another host; never copy
+desktop credentials into this store. Only Pi mounts `chatgpt-inference`; only
+Gateway mounts `provider-control`. The main shell and tool permissions are unchanged.
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
 the source-built Ubuntu layout supports verified backup and held recovery, but
