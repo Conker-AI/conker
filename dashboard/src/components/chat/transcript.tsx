@@ -53,12 +53,17 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
 
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
+  const pendingInput = chat.submission.kind === 'sending' && !chat.submission.inputSaved && chat.submission.attempt.input.kind === 'text' ? chat.submission.attempt.input.text : null
   return <div className="flex min-w-0 flex-col gap-8" data-slot="chat-transcript" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
     {chat.messages.map(message => <div id={`record-${message.id}`} key={`${message.id}:${message.content.kind}`} className={cn('min-w-0 scroll-mt-4', chat.focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><ChatMessageRecord message={message} /></div>)}
+    {pendingInput !== null && <article aria-label="Submitted message awaiting saved history" className="ml-auto flex min-w-0 max-w-[92%] flex-col items-end sm:max-w-[85%]">
+      <p dir="auto" className="min-w-0 max-w-full whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-base leading-7 [overflow-wrap:anywhere]">{pendingInput}</p>
+      <p role="status" className="mt-1.5 text-xs text-muted-foreground">Waiting for saved history</p>
+    </article>}
     {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} />}</article>}
-    {chat.history === 'ready' && !chat.messages.length && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
+    {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
   </div>
 }

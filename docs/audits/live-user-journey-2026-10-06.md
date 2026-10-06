@@ -212,6 +212,16 @@ claimed as tested. Privileged diagnostics are not presented as user interactions
   Together with the disabled receipt, this supports correct exclusion in the
   tested path; it is not a claim to have inspected every log, cache or backup.
   Capture: `private-marker-excluded.png`.
+- Artifact `artifact_0a44d3c1784b47339ac664e1cb7c0b7e` was created through owner
+  verification, edited in Source, and saved as immutable version 2. Reload showed
+  the authored checklist and revision 2; History retained both versions. This
+  verifies creation, versioning and readback, not export or restoration.
+  Capture: `artifact-version-persisted.png`.
+- A natural profile correction moved climbing to Wednesday at 19:00 and changed
+  rehearsal preference to afternoons. The completed local-model answer scheduled
+  rehearsal at Wednesday 19:00, directly conflicting with the updated class.
+  Receipt completion is not planning correctness. Cross-chat correction conflict
+  resolution remains unverified. Capture: `profile-correction-scheduling-conflict.png`.
 
 ### Supporting Runtime Evidence
 
@@ -221,7 +231,9 @@ claimed as tested. Privileged diagnostics are not presented as user interactions
 - QA MemoryGate logged a `KeyError: reason` from `embedding_health()` during
   fluctuating embedding availability. The helper returns a shared mutable cached
   dictionary and assumes its `reason` key still exists. A concurrent cache clear
-  is a plausible cause from source inspection, not yet an isolated reproducer.
+  was reproduced in isolated concurrency tests and repaired in MemoryGate 0.4.1.
+  Six new regression cases failed against the old code and all passed after the
+  fix; the full 122-test suite, Linux CI, and release publication passed.
   Later health/context and conversation-ingest requests succeeded, so this is
   intermittent degradation rather than proof that every memory write failed.
 - Existing main-server proposals remain disabled and its job list is empty.
@@ -244,10 +256,14 @@ claimed as tested. Privileged diagnostics are not presented as user interactions
 
 ## Remaining Gates
 
-The owner approved public visibility for the five code-only application packages
-(`pi`, `toolgate`, `memorygate`, `systemgate`, `embeddings`). GitHub browser sign-in
-is still needed to apply that change. Afterward verify anonymous pulls and rerun
-the required release/recovery checks before promoting the candidate to `main`.
+The five approved code-only packages (`pi`, `toolgate`, `memorygate`, `systemgate`,
+`embeddings`) are public. The temporary organization public-publishing permission
+was restored to disabled; `pi-owner-terminal` remains private. Anonymous registry
+access succeeded for all five pinned images and for the MemoryGate 0.4.1 patch.
+Conker Linux CI on `2b5480a0` passed both installer checks and the actual recovery
+drill after the auth-mutation targeting fix. A coordinated writer-stopped backup
+including auth was created at `snapshot-20261006T090958Z-83f0b3f6` and its integrity
+verified. Latest-candidate checks and post-installation testing are still required.
 
 Main Conker sign-in is still required to inspect the existing owner's environment.
 The isolated journey does not validate existing records, grants or credentials.
@@ -255,6 +271,26 @@ Correction resolution, spontaneous proposals, completed scheduled runs, broad
 skill coverage, real communications and a full restore drill remain unverified.
 Do not silently configure paid models, widen authority or reset credentials to
 make those gates appear passed.
+
+## Patch Candidate
+
+- Pi cancellation context annotates retained cancelled input as history, not
+  pending instructions, and freezes the annotation for exact turn replay.
+- Pi adds an explicit owner-saved Companion `owner` memory scope. Defaults remain
+  unchanged; private messages, custom agents, team roles, namespace credentials
+  and immutable snapshots retain their boundaries. It has not been silently
+  enabled on either installation. The targeted agent/session/team/context suite
+  passed 69 tests; final Linux CI remains the release gate.
+- The dashboard exposes that Companion-only choice and explains the scope in the
+  password confirmation without echoing instructions or selected record content.
+- The transcript displays submitted input as pending, never as a fabricated saved
+  record. It retires by exact saved input identity, excludes forgotten content,
+  suppresses the empty-history claim during generation, and retains failed drafts.
+- Workflow access and confirmation use the same published-version/nested-workflow
+  scope. Project and artifact confirmations describe authoring rather than just
+  API endpoints; content remains inert and password requirements are unchanged.
+- These are source and regression-test results until deployed and exercised in
+  the live QA account. Restored UI styling is preserved; this is not a redesign.
 
 ## Next Fix Order
 

@@ -218,7 +218,7 @@ const agentConfiguration = z.object({
   instructions: z.string().trim().min(1).max(8000), modelId: agentReference.nullable(),
   toolIds: z.array(agentReference).max(1000).refine(values => new Set(values).size === values.length),
   memory: z.object({
-    scope: z.enum(['none', 'conversation', 'selected']), memoryIds: z.array(agentReference).max(1000),
+    scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(agentReference).max(1000),
   }).superRefine((value, context) => {
     if ((value.scope === 'selected') !== (value.memoryIds.length > 0)) context.addIssue({ code: 'custom', message: 'Selected memory requires record IDs.' })
     if (new Set(value.memoryIds).size !== value.memoryIds.length) context.addIssue({ code: 'custom', message: 'Memory IDs must be unique.' })
@@ -230,7 +230,9 @@ const agentProfile = z.object({
   created_at: z.number().finite().nonnegative(), updated_at: z.number().finite().nonnegative(), archived_at: z.number().finite().nonnegative().nullable(),
   change_kind: z.enum(['created', 'updated', 'archived', 'restored']), authority: z.literal('none'),
   execution: z.literal('not-integrated'), reference_validation: z.literal('not-performed'),
-}).strict()
+}).strict().superRefine((value, context) => {
+  if (value.configuration.memory.scope === 'owner' && (value.id !== 'companion' || value.kind !== 'companion')) context.addIssue({ code: 'custom', message: 'Across-chat owner memory is restricted to Companion.' })
+})
 const agentCollection = z.object({ schemaVersion: z.literal(1), results: z.array(agentProfile).max(1000) }).strict()
 export type AgentConfiguration = z.infer<typeof agentConfiguration>
 export type AgentProfile = z.infer<typeof agentProfile>
@@ -280,10 +282,12 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return result
     },
     async createAgent(value: AgentConfiguration, signal?: AbortSignal): Promise<AgentProfile> {
+      if (value.memory.scope === 'owner') throw new GatewayError('validation')
       return parse(agentProfile, await auth.request('/api/control/pi/agents', { method: 'POST', body: parse(agentConfiguration, value, true), signal }))
     },
     async saveAgent(id: string, value: AgentConfiguration, expectedRevision: number, signal?: AbortSignal): Promise<AgentProfile> {
       const selected = parse(z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), id, true)
+      if (value.memory.scope === 'owner' && selected !== 'companion') throw new GatewayError('validation')
       const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}/update`, {
         method: 'POST', body: { expected_revision: parse(z.number().int().positive(), expectedRevision, true), configuration: parse(agentConfiguration, value, true) }, signal,
       }))

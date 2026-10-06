@@ -59,6 +59,15 @@ async function main() {
   result = agent
   await client.saveAgent(agent.id, agentConfiguration, 1)
   assert.deepEqual(calls.pop(), [`/api/control/pi/agents/${agent.id}/update`, { method: 'POST', body: { expected_revision: 1, configuration: agentConfiguration }, signal: undefined }])
+  const ownerMemory = { ...agentConfiguration, memory: { scope: 'owner', memoryIds: [] } }
+  const callsBeforeOwner = calls.length
+  await assert.rejects(client.createAgent(ownerMemory), error => error.kind === 'validation')
+  await assert.rejects(client.saveAgent(agent.id, ownerMemory, 1), error => error.kind === 'validation')
+  assert.equal(calls.length, callsBeforeOwner, 'custom agents cannot dispatch owner-wide memory changes')
+  result = { ...agent, id: 'companion', kind: 'companion', configuration: ownerMemory }
+  const ownerProfile = await client.saveAgent('companion', ownerMemory, 1)
+  assert.equal(ownerProfile.configuration.memory.scope, 'owner')
+  assert.equal(calls.pop()[1].body.configuration.memory.scope, 'owner')
   await assert.rejects(client.setAgentArchived('companion', true, 1), error => error.kind === 'validation')
   result = { schemaVersion: 1, results: [{ ...agent, configuration: { ...agentConfiguration, credential: 'must not project' } }] }
   await assert.rejects(client.agents(), error => error.kind === 'invalid-response')

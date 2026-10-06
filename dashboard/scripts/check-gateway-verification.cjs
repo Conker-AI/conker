@@ -53,6 +53,28 @@ async function main() {
   assert.match(workflowScreen, /\{WORKFLOW_ACCESS_SCOPE\}/)
   assert.doesNotMatch(workflowScreen, /Workflows it calls need their own access/)
   console.log('PASS workflow activity and owner confirmation share the same access scope')
+  for (const scope of ['owner', 'conversation', 'selected', 'none']) {
+    const review = describeGatewayOperation({ method: 'POST', path: '/api/control/pi/agents/companion/update', body: { configuration: { name: 'Private name', instructions: 'Private instructions', memory: { scope, memoryIds: ['private_record'] } }, expected_revision: 2 } })
+    assert.equal(review.title, 'Update Companion')
+    assert.match(review.details.join(' '), /future turns/)
+    assert.doesNotMatch(JSON.stringify(review), /Private name|Private instructions|private_record/)
+    if (scope === 'owner') assert.match(review.details.join(' '), /across your chats.*Private messages remain excluded.*team roles/)
+    else assert.doesNotMatch(review.details.join(' '), /Allows Companion/)
+  }
+  console.log('PASS Companion owner-memory confirmation explains exact scope without echoing private configuration')
+  for (const [path, body, title, target] of [
+    ['/api/control/pi/projects', { name: 'Northstar', instructions: 'hidden instructions' }, 'Create project', 'Northstar'],
+    ['/api/control/pi/projects/project_' + 'a'.repeat(32) + '/link', { reference: { sessionId: 'ses_' + 'b'.repeat(16) } }, 'Link record to project', 'Project project_' + 'a'.repeat(32)],
+    ['/api/control/pi/artifacts', { title: 'Checklist', content: { text: 'hidden content' } }, 'Create artifact', 'Checklist'],
+    ['/api/control/pi/artifacts/artifact_' + 'a'.repeat(32) + '/versions', { title: 'Checklist', content: { text: 'hidden content' }, note: 'hidden note' }, 'Save artifact version', 'Checklist'],
+  ]) {
+    const review = describeGatewayOperation({ method: 'POST', path, body })
+    assert.equal(review.title, title); assert.equal(review.target, target)
+    assert.ok(review.details.length > 0)
+    assert.doesNotMatch(JSON.stringify(review), /hidden instructions|hidden content|hidden note/)
+  }
+  assert.equal(describeGatewayOperation({ method: 'POST', path: '/api/control/pi/artifacts', body: { title: 'unsafe\nlabel' } }).target, 'New artifact')
+  console.log('PASS routine authoring confirmations name their purpose and preserve inert-content boundaries')
   const short = fixture(); await short.client.bootstrap()
   const shortRequest = await prompt(short)
   assert.equal(await short.verification.getState().submit('1234'), true)

@@ -25,7 +25,7 @@ function changedMessage(error: unknown) {
   return parsed.status === 409 ? 'This profile changed elsewhere. Reload it before saving your edits.' : parsed.message
 }
 
-function AgentFields({ value, onChange, disabled }: { value: AgentConfiguration; onChange: (value: AgentConfiguration) => void; disabled: boolean }) {
+function AgentFields({ value, onChange, disabled, companion = false }: { value: AgentConfiguration; onChange: (value: AgentConfiguration) => void; disabled: boolean; companion?: boolean }) {
   const [toolText, setToolText] = useState(value.toolIds.join(', '))
   const [memoryText, setMemoryText] = useState(value.memory.memoryIds.join(', '))
   const field = (key: 'name' | 'role' | 'instructions', next: string) => onChange({ ...value, [key]: next })
@@ -40,7 +40,7 @@ function AgentFields({ value, onChange, disabled }: { value: AgentConfiguration;
       <div className="space-y-2"><Label htmlFor="agent-tools">Tool IDs</Label><Input id="agent-tools" disabled={disabled} value={toolText} onChange={event => { setToolText(event.target.value); onChange({ ...value, toolIds: references(event.target.value) }) }} placeholder="calendar.read, web.lookup" /><p className="text-xs leading-5 text-muted-foreground">Selections do not grant execution authority.</p></div>
     </div>
     <div className="grid gap-5 sm:grid-cols-2">
-      <div className="space-y-2"><Label htmlFor="agent-memory">Memory access</Label><Select disabled={disabled} value={value.memory.scope} onValueChange={(scope: AgentConfiguration['memory']['scope']) => { if (scope !== 'selected') setMemoryText(''); onChange({ ...value, memory: { scope, memoryIds: scope === 'selected' ? value.memory.memoryIds : [] } }) }}><SelectTrigger id="agent-memory"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No memory</SelectItem><SelectItem value="conversation">Current conversation</SelectItem><SelectItem value="selected">Selected records</SelectItem></SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="agent-memory">Memory access</Label><Select disabled={disabled} value={value.memory.scope} onValueChange={(scope: AgentConfiguration['memory']['scope']) => { if (scope !== 'selected') setMemoryText(''); onChange({ ...value, memory: { scope, memoryIds: scope === 'selected' ? value.memory.memoryIds : [] } }) }}><SelectTrigger id="agent-memory"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No memory</SelectItem><SelectItem value="conversation">Current conversation</SelectItem><SelectItem value="selected">Selected records</SelectItem>{companion && <SelectItem value="owner">Across my chats</SelectItem>}</SelectContent></Select>{value.memory.scope === 'owner' && <p className="text-xs leading-5 text-muted-foreground">Companion can use admitted memory across your chats. Private messages remain excluded. Other agents and tool permissions are unchanged.</p>}</div>
       {value.memory.scope === 'selected' && <div className="space-y-2"><Label htmlFor="agent-memory-ids">Memory record IDs</Label><Input id="agent-memory-ids" required disabled={disabled} value={memoryText} onChange={event => { setMemoryText(event.target.value); onChange({ ...value, memory: { ...value.memory, memoryIds: references(event.target.value) } }) }} placeholder="mem_project, mem_preferences" /></div>}
     </div>
   </div>
@@ -60,7 +60,7 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel }
     } catch (cause) { setError(changedMessage(cause)) } finally { setPending(false) }
   }
   return <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-    <OverlayBody><AgentFields value={value} onChange={setValue} disabled={pending} /></OverlayBody>
+    <OverlayBody><AgentFields value={value} onChange={setValue} disabled={pending} companion={profile?.kind === 'companion'} /></OverlayBody>
     <FormActions inset description={error ? <span role="alert" className="text-destructive">{error}</span> : companion ? `Durable profile, revision ${profile?.revision ?? 1}.` : 'Saving creates an immutable revision.'}>
       <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>Cancel</Button>
       <Button type="submit" disabled={pending || !value.name.trim() || !value.role.trim() || !value.instructions.trim() || (value.memory.scope === 'selected' && !value.memory.memoryIds.length)}><Save />{pending ? 'Saving…' : 'Save'}</Button>

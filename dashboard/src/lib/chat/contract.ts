@@ -19,7 +19,7 @@ export type Attempt = {
 export type RecoveryAction = 'check' | 'retrySameRequest' | 'restoreDraft' | 'releaseUnstarted' | 'acknowledgeFound' | 'acknowledgeUnknown'
 export type Submission =
   | { kind: 'idle' }
-  | { kind: 'sending'; attempt: Attempt }
+  | { kind: 'sending'; attempt: Attempt; inputSaved?: boolean }
   | { kind: 'rejected'; message: string }
   | {
       kind: 'uncertain' | 'accepted-awaiting-history' | 'recovery'; attempt: Attempt

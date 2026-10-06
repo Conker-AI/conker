@@ -11,7 +11,7 @@ async function main() {
   const temporary = await fs.mkdtemp(path.join(cache, 'chat-adapter-'))
   try {
     const output = path.join(temporary, 'adapter.cjs')
-    await build({ absWorkingDir: root, entryPoints: ['./src/lib/chat/gateway-adapter.ts'], tsconfigRaw: { compilerOptions: { baseUrl: '.', paths: { '@/*': ['./src/*'] } } }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent', plugins: [{
+    await build({ absWorkingDir: root, stdin: { contents: 'export { gatewayChatContract } from "./src/lib/chat/gateway-adapter"; export { ChatTranscript } from "./src/components/chat/transcript";', resolveDir: root }, jsx: 'automatic', tsconfigRaw: { compilerOptions: { baseUrl: '.', paths: { '@/*': ['./src/*'] } } }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent', plugins: [{
       // Node can read workspace files even when esbuild cannot enumerate a Windows ancestor.
       name: 'workspace-files', setup(bundle) {
         bundle.onResolve({ filter: /.*/ }, async args => {
@@ -25,7 +25,9 @@ async function main() {
         bundle.onLoad({ filter: /\.tsx?$/ }, async args => ({ contents: await fs.readFile(args.path, 'utf8'), loader: args.path.endsWith('.tsx') ? 'tsx' : 'ts', resolveDir: path.dirname(args.path) }))
       },
     }] })
-    const { gatewayChatContract } = require(output)
+    const { gatewayChatContract, ChatTranscript } = require(output)
+    const { createElement } = require('react')
+    const { renderToStaticMarkup } = require('react-dom/server')
     const message = { id: 'm1', sessionId: 'a', sequence: 7, role: 'assistant', createdAt: '2026-09-25T10:00:00Z', content: { kind: 'text', text: 'Saved answer' } }
     const base = { sessionId: 'a', epoch: 1, active: true, current: { id: 'a', status: 'open', messages: [message], turns: [], pendingSubmissions: [] }, draft: 'Next', pending: false, sendPending: false, detailPending: false, forgotten: false, reviewed: false, notice: null, error: null, rejected: null, inFlight: null, preview: null }
     let state = { ...base }, calls = []
@@ -71,11 +73,27 @@ async function main() {
     state = { ...state, reviewed: true }; assert.equal(project().submission.actions.acknowledgeFound.availability, 'enabled')
     state = { ...base, sendPending: true, inFlight: { requestId: 'request_1', requestedSessionId: 'a', input: { kind: 'text', text: 'sent' }, stopping: false }, preview: { sessionId: 'a', text: 'partial', resetVersion: 0 } }; chat = project()
     assert.equal(chat.submission.kind, 'sending'); assert.equal(chat.generation.phase, 'streaming'); await run(chat.generation.stop)
+    assert.equal(chat.draft, '')
+    assert.equal(state.draft, 'Next', 'Presentation must not discard the retained draft')
+    const waiting = { ...chat, messages: [], generation: { ...chat.generation, previewText: '' } }
+    const pendingMarkup = renderToStaticMarkup(createElement(ChatTranscript, { chat: waiting }))
+    assert.match(pendingMarkup, /Submitted message awaiting saved history/)
+    assert.match(pendingMarkup, /Waiting for saved history/)
+    assert.doesNotMatch(pendingMarkup, /No saved messages/)
+    const persistedMarkup = renderToStaticMarkup(createElement(ChatTranscript, { chat: { ...waiting, submission: { ...waiting.submission, inputSaved: true } } }))
+    assert.doesNotMatch(persistedMarkup, /Submitted message awaiting saved history/)
+    state = { ...state, forgotten: true }
+    assert.deepEqual(project().submission.attempt.input, { kind: 'unavailable', reason: 'forgotten' })
+    assert.doesNotMatch(renderToStaticMarkup(createElement(ChatTranscript, { chat: { ...project(), messages: [] } })), /Submitted message awaiting saved history/)
+    state = { ...state, forgotten: false, attempt: { ...attempt, submission: { ...receipt, inputMessageId: message.id } } }
+    assert.equal(project().submission.inputSaved, true, 'Only an exact saved input ID retires the pending message')
+    state = { ...state, attempt: undefined }
     state = { ...state, preview: { sessionId: 'a', text: '', resetVersion: 2, end: 'done' } }; chat = project()
     assert.equal(chat.generation.previewText, ''); assert.equal(chat.generation.resetVersion, 2); assert.equal(chat.generation.phase, 'ended'); assert.equal(chat.submission.kind, 'sending', 'Preview completion never proves persisted completion')
     state = { ...state, inFlight: { ...state.inFlight, stopping: true } }; assert.equal(project().generation.stop.availability, 'disabled')
     state = { ...state, sessionId: 'b' }; assert.equal(project().generation, null); assert.equal(project().submission.kind, 'idle', 'Another session must not inherit the sending input')
     state = { ...base, rejected: 'Request rejected' }; assert.deepEqual(project().submission, { kind: 'rejected', message: 'Request rejected' })
+    assert.equal(project().draft, 'Next', 'A failed send restores the retained draft')
     console.log('Chat adapter: mapping, stale callbacks, privacy, parked locks, recovery, task separation, forks and preview lifecycle passed.')
   } finally { await fs.rm(temporary, { recursive: true, force: true }) }
 }

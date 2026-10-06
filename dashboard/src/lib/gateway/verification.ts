@@ -10,11 +10,30 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   let title = 'Confirm gateway operation', target = path
   const details: string[] = []
   const safeId = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null
+  const safeName = (value: unknown) => typeof value === 'string' && value.trim().length > 0 && value.length <= 160 && [...value].every(character => character.codePointAt(0)! >= 32 && character.codePointAt(0) !== 127) ? value.trim() : null
   if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(path)) { title = 'Save tool draft'; target = `Draft ${parts[4]}`; details.push('Saves the editor document only. Does not publish, execute or grant access.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/publish$/.test(path)) { title = 'Publish workflow version'; target = `Draft ${parts[4]}`; details.push('Creates an immutable version with pinned dependencies. Does not run it or grant agent access.'); details.push(body.authorization === 'auto' ? 'Scoped callers may run this version without per-run approval.' : 'Each run requires owner confirmation.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/access$/.test(path)) { title = body.enabled ? 'Allow workflow access' : 'Remove workflow access'; target = `Workflow ${parts[4]}`; details.push(body.enabled ? 'Grants access to this host\'s configured caller. ' + WORKFLOW_ACCESS_SCOPE : 'Removes this workflow’s root grant. Other independently granted workflows keep their access.'); details.push('Workflow grants apply to its published versions; publishing remains owner-controlled.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/runs$/.test(path)) { title = body.approval_request_id ? 'Resume approved workflow' : 'Run published workflow'; target = `Workflow ${parts[4]}`; details.push(`Published version ${body.version}. May invoke its registered tools with the submitted arguments.`); details.push('Uses the recorded run identity; uncertain actions are not automatically repeated.') }
   else if (path === '/api/control/pi/models/configuration') { title = 'Save model configuration'; target = 'Models and decision roles'; details.push('Changes model eligibility, defaults and routing roles. Provider credentials stay on the server.') }
+  else if (path === '/api/control/pi/agents/companion/update') {
+    title = 'Update Companion'; target = 'Companion configuration'
+    const configuration = body.configuration
+    const memory = configuration && typeof configuration === 'object' && !Array.isArray(configuration) ? (configuration as Record<string, unknown>).memory : null
+    const scope = memory && typeof memory === 'object' && !Array.isArray(memory) ? (memory as Record<string, unknown>).scope : null
+    if (scope === 'owner') details.push('Allows Companion to retrieve admitted memory across your chats. Private messages remain excluded; other agents and team roles do not receive this access.')
+    else if (scope === 'conversation') details.push('Limits Companion memory retrieval to the current conversation.')
+    else if (scope === 'selected') details.push('Limits Companion memory retrieval to the explicitly selected records.')
+    else if (scope === 'none') details.push('Disables Companion memory retrieval.')
+    details.push('Applies to future turns. Existing turn snapshots and tool permissions are unchanged.')
+  }
+  else if (path === '/api/control/pi/projects') { title = 'Create project'; target = safeName(body.name) ?? 'New project'; details.push('Creates project organization only. Does not copy conversations, run work or grant access.') }
+  else if (/^\/api\/control\/pi\/projects\/project_[0-9a-f]{32}\/(link|unlink)$/.test(path)) {
+    title = path.endsWith('/unlink') ? 'Remove project reference' : 'Link record to project'; target = `Project ${parts[5]}`
+    details.push('Changes a live reference only. The source record and its privacy settings remain unchanged; no access is granted.')
+  }
+  else if (path === '/api/control/pi/artifacts' || path === '/api/control/pi/artifacts/from-message') { title = 'Create artifact'; target = safeName(body.title) ?? 'New artifact'; details.push(path.endsWith('/from-message') ? 'Copies the selected retained response into a separate artifact with provenance. Does not execute its content.' : 'Creates one versioned artifact. Content remains inert; no tools are run.') }
+  else if (/^\/api\/control\/pi\/artifacts\/artifact_[0-9a-f]{32}\/versions$/.test(path)) { title = 'Save artifact version'; target = safeName(body.title) ?? `Artifact ${parts[5]}`; details.push('Appends an immutable version. Existing versions remain available, and saving does not execute the content.') }
   else if (path === '/api/control/pi/setup/models') { title = 'Choose answer model'; target = safeId(body.candidateId) ?? 'Answer model'; details.push('Makes this server-discovered, currently ready model the default for Companion answers. Existing advanced role settings are preserved.') }
   else if (path === '/api/control/pi/setup/models/activate') { title = 'Use and test answer model'; target = safeId(body.candidateId) ?? 'Answer model'; details.push('Makes this server-discovered model the default, then sends one short setup prompt to verify that it can answer. The resulting receipt contains no prompt or response text.') }
   else if (path === '/api/control/pi/setup/protection') { title = 'Save backup policy'; target = typeof body.destination === 'string' ? body.destination : 'Off-machine destination'; details.push(`Keeps ${typeof body.retentionCopies === 'number' ? body.retentionCopies : 'the selected number of'} verified snapshots at the mounted destination.`); details.push('This saves policy only. The host verifier must still create and verify a backup before setup can complete.') }

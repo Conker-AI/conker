@@ -45,7 +45,10 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   const saved = state.attempt
   const input = (text: string): Attempt['input'] => isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : { kind: 'text', text }
   let submission: Submission = state.rejected ? { kind: 'rejected', message: state.rejected } : { kind: 'idle' }
-  if (state.sendPending && state.inFlight?.requestedSessionId === state.sessionId) submission = { kind: 'sending', attempt: { requestId: state.inFlight.requestId, requestedSessionId: state.inFlight.requestedSessionId, input: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : state.inFlight.input } }
+  if (state.sendPending && state.inFlight?.requestedSessionId === state.sessionId) submission = {
+    kind: 'sending', inputSaved: !!saved?.submission?.inputMessageId && messages.some(message => message.id === saved.submission!.inputMessageId),
+    attempt: { requestId: state.inFlight.requestId, requestedSessionId: state.inFlight.requestedSessionId, input: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : state.inFlight.input },
+  }
   else if (saved) {
     const recovery = (name: RecoveryAction, eligible: (value: GatewayChatState, attempt: UncertainTurn) => boolean) => action(
       value => !!value.attempt && value.attempt === saved && !value.detailPending && !value.sendPending && eligible(value, value.attempt),
@@ -75,7 +78,7 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   return {
     source: 'gateway', sessionId: state.sessionId, messages, history: state.detailPending ? 'loading' : state.error ? 'error' : 'ready',
     activeAgentName: state.activeAgentName,
-    notice: state.notice, error: state.error, draft: isForgotten(state) ? '' : state.draft, focusedMessageId: state.focusedMessageId,
+    notice: state.notice, error: state.error, draft: isForgotten(state) || submission.kind === 'sending' ? '' : state.draft, focusedMessageId: state.focusedMessageId,
     setDraft: action(value => !value.sendPending && !isForgotten(value), (handler, text: string) => handler.setDraft(text), 'The composer is unavailable while sending or after forgetting.'),
     send: action(value => !isForgotten(value) && canSubmitRuntime(value.draft, value.pending, value.attempt, value.current), handler => handler.send(), 'Sending requires an open conversation, a valid draft, and no unresolved turn.'),
     checkHistory: action(value => !value.detailPending && !value.sendPending, handler => handler.checkHistory(), 'A request is in progress.'), generation, submission,
