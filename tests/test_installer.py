@@ -363,6 +363,14 @@ def test_speech_settings_and_mounted_key_survive_installer_rerun(install):
 
 
 @needs_docker
+def test_subscription_socket_directory_is_private_before_docker_mount(install):
+    install("--yes", "--dry-run")
+    directory = install.dir / ".conker/chatgpt-inference"
+    assert directory.is_dir() and not directory.is_symlink()
+    assert directory.stat().st_mode & 0o777 == 0o700
+
+
+@needs_docker
 def test_a_damaged_env_is_repaired_without_losing_what_survived(install):
     install("--yes", "--dry-run")
     kept = env_values(install.env_file)["CONKER_ADMIN_KEY"]
