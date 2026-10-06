@@ -68,6 +68,28 @@ workspaces, streaming, manual scrolling and session changes. Cross-chat memory
 and workflow execution acceptance still require the owner's specific QA grants;
 no access was expanded during these fixes.
 
+Qwen 2.5 7B is installed and selectable on both live instances; the 3B default
+and paid-provider restrictions are unchanged. A real QA planning turn took about
+two and a half minutes and still described 15:30 as after a 19:00 class, with more
+than the requested two bullets. A larger model is not accepted as a reasoning fix.
+
+The existing Laya service was attached to the previous Pi container's network
+namespace after the image-only upgrade. Both sidecars were reconnected to their
+current Pi container and checked live; unrelated container identities stayed the
+same. The private rollout helper now reconnects this existing dependent service
+on roll-forward and recovery. Main's existing memory-ranking assignment was not
+changed. QA routing answered a short acknowledgment, but refused a follow-up
+below the configured confidence threshold; saved-request reconciliation and an
+explicit manual answer choice recovered without substituting a model or granting
+tools. The dashboard now accepts and names both current-request and recent-exchange
+routing receipts, including the known search-ranking role, while still rejecting
+malformed evidence and withholding arbitrary provider fields.
+
+Official Codex CLI 0.160.1 is prepared in a separate private server runtime, not
+signed in or exposed as a Conker provider. No desktop credentials were copied.
+Owner sign-in and a provider integration that preserves ToolGate authority remain
+required; installing the CLI does not establish a usable chat model connection.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet
@@ -214,8 +236,9 @@ then-connected chat, memory, approval, workflow, authentication, private HTTPS a
 cold-backup subset. It does **not** prove the current source tree, current dashboard
 revision, setup flow, provider lifecycle, terminal work or new owner workspaces.
 
-The Ubuntu deployment host is currently off at the owner's request. No Linux-only
-check is being simulated locally. Promotion of a new release remains pending until
+The Ubuntu host is online for the 6 October owner rehearsal, with a separate QA
+instance. Its live checks do not substitute for complete assembled acceptance.
+Promotion of a new release remains pending until
 the exact manifest is assembled on a clean Linux host and produces passing install,
 image-identity, TLS/auth, setup, conversation, backup/held-restore and teardown
 evidence.

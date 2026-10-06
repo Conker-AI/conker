@@ -17,7 +17,7 @@ const checks = []
 const check = (name, run) => { run(); checks.push(name) }
 try {
   await build({
-    entryPoints: [path.join(root, "src/lib/rich-answer.ts"), path.join(root, "src/components/rich-answer.tsx"), path.join(root, "src/lib/api/rich-answer-fixture.ts")],
+    entryPoints: [path.join(root, "src/lib/rich-answer.ts"), path.join(root, "src/components/rich-answer.tsx"), path.join(root, "src/lib/api/rich-answer-fixture.ts"), path.join(root, "src/components/gateway/model-routing-evidence.tsx")],
     outdir: temporary, outbase: path.join(root, "src"), bundle: true, platform: "node", format: "cjs", jsx: "automatic", logLevel: "silent", loader: { ".css": "empty" },
     tsconfig: path.join(root, "tsconfig.app.json"), define: { "import.meta.env": "{}" },
     plugins: [{ name: "one-react-runtime", setup(builder) {
@@ -27,7 +27,26 @@ try {
   const helpers = await import(pathToFileURL(path.join(temporary, "lib/rich-answer.js")))
   const { RichAnswer } = await import(pathToFileURL(path.join(temporary, "components/rich-answer.js")))
   const { richAnswerFixture } = await import(pathToFileURL(path.join(temporary, "lib/api/rich-answer-fixture.js")))
+  const { ModelRoutingEvidence } = await import(pathToFileURL(path.join(temporary, "components/gateway/model-routing-evidence.js")))
   const render = text => renderToStaticMarkup(React.createElement(RichAnswer, { text }))
+  const evidence = value => renderToStaticMarkup(React.createElement(ModelRoutingEvidence, { detail: typeof value === 'string' ? value : JSON.stringify(value) }))
+
+  check("Routing receipts distinguish current-only and recent-exchange scope without exposing raw provider fields", () => {
+    for (const [inputScope, label] of [['latest-user-request', 'Current request only'], ['recent-exchange', 'Current request and recent exchange']]) {
+      const html = evidence({ modelConfigurationRevision: 5, attempts: [
+        { role: 'routing', modelId: 'laya-router', actualModel: 'laya-english@1c5edc17', status: 'completed', decision: { inputScope, elapsed_ms: 18.2, confidence: 0.75, raw: 'PRIVATE_SENTINEL' }, raw: 'PRIVATE_SENTINEL' },
+        { role: 'answer', modelId: 'local-answer', actualModel: 'qwen2.5:3b', status: 'completed' },
+      ], raw: 'PRIVATE_SENTINEL' })
+      for (const value of ['configuration 5', label, '18 ms', 'Decision confidence 75%', 'qwen2.5:3b']) assert.ok(html.includes(value), value)
+      assert.ok(!html.includes('PRIVATE_SENTINEL'))
+    }
+    assert.ok(evidence({ modelConfigurationRevision: 1, attempts: [{ role: 'answer', modelId: 'local-answer', status: 'completed' }] }).includes('configuration 1'), 'Historical receipts remain visible')
+    assert.ok(evidence({ modelConfigurationRevision: 5, attempts: [{ role: 'search-ranking', modelId: 'laya-search', status: 'unavailable' }] }).includes('search-ranking'), 'Known search-role failures remain visible')
+  })
+  check("Malformed or unsupported model evidence fails closed", () => {
+    const attempt = { role: 'routing', modelId: 'laya-router', status: 'completed' }
+    for (const value of ['not json', ' '.repeat(16001), { modelConfigurationRevision: -1, attempts: [] }, { modelConfigurationRevision: 1, attempts: Array(21).fill(attempt) }, { modelConfigurationRevision: 1, attempts: [{ ...attempt, decision: { inputScope: 'arbitrary-filesystem' } }] }, { modelConfigurationRevision: 1, attempts: [{ ...attempt, decision: { confidence: 1.1 } }] }]) assert.equal(evidence(value), '')
+  })
 
   check("Unsafe protocols, control characters, credentials and protocol-relative URLs are rejected", () => {
     for (const value of ["javascript:alert(1)", "data:text/html,x", "vbscript:x", "//outside.test", "/\\outside.test", "https://user:password@example.com", "java\nscript:alert(1)", "https://example.com\u0000"]) assert.equal(helpers.safeAnswerUrl(value), undefined, value)
