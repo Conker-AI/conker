@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CircleAlert, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { ProposalsPanel } from './proposals-panel'
-import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
+import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceAction, OverviewSection } from '@/components/design-system/primitives'
+import { StatusBadge } from '@/components/status-badge'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -108,18 +109,18 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }} />
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></WorkspaceAction>
   return <GatewayPageFrame className="h-full">
-    <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
+    <div className="workspace-queue flex w-full min-w-0 flex-col gap-6">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
-      {requestId ? <div className="flex items-center justify-between gap-3"><Button asChild size="sm" variant="ghost"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>{refreshButton}</div>
+      {requestId ? <PageHeader actionsOnly document title={current?.title || 'Review request'} actions={<><WorkspaceAction asChild><Link to="/inbox"><ArrowLeft />Inbox</Link></WorkspaceAction>{refreshButton}</>}/>
         : (rows.length > 0 || query) && <WorkspaceSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}
       {requestId ? current && card(current, true) : <>
-        <WorkspaceSection title="Waiting for your decision" divided={false}>
-          {pendingRows.map(row => card(row))}
+        <OverviewSection title="Waiting for your decision" description="Review the exact scope before choosing. Permission does not execute an action." priority={pendingRows.length > 0}>
+          <ul>{pendingRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} leading={<CircleAlert className="size-4 text-warning" />} description={retained.attempts[row.id] ? 'Decision outcome unknown. Inspect the saved request before retrying.' : row.details || `${row.actor} is waiting for your decision.`} trailing={<StatusBadge tone="warning">{retained.attempts[row.id] ? 'Check outcome' : row.approval.expiresAt ? `Expires ${new Date(row.approval.expiresAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : 'Review required'}</StatusBadge>} />)}</ul>
           {!loading && !error && pendingRows.length === 0 && <p className="text-sm text-muted-foreground">{query ? 'No matching requests.' : "You're all caught up."}</p>}
-        </WorkspaceSection>
+        </OverviewSection>
         {proposals && <ProposalsPanel client={proposals} active={active} />}
         <Accordion type="single" collapsible><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>

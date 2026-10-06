@@ -29,7 +29,11 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
     : message.role === 'assistant' ? <Answer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="text-sm font-medium">{message.agentName ?? 'Conker'}</span></div>}
+    <header className={cn('mb-3 flex items-center gap-2', message.role === 'user' && 'justify-end')}>
+      {message.role === 'assistant' && <CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" />}
+      <span className="text-sm font-medium">{message.role === 'assistant' ? message.agentName ?? 'Conker' : 'You'}</span>
+      <time className="text-xs text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>
+    </header>
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
@@ -45,7 +49,6 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
           </DropdownMenuItem>
         })}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>}
-      <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>
     </div>
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
   </article>

@@ -11,13 +11,14 @@ function load(relative) {
   const module = { exports: {} }
   cache.set(relative, module)
   new Function('require', 'module', 'exports', compiled.outputText)(request => {
+    if (request === 'd3-hierarchy') return require(request)
     assert.ok(request.startsWith('.'), `Unexpected runtime dependency: ${request}`)
     return load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`)
   }, module, module.exports)
   return module.exports
 }
 const { memoryDemo } = load('src/lib/memory-demo.ts')
-const { workspaceGraph, layoutMemoryGraph } = load('src/lib/memory-layout.ts')
+const { workspaceGraph, layoutMemoryGraph, layoutCompactMemoryGraph } = load('src/lib/memory-layout.ts')
 assert.equal(memoryDemo.length, 50)
 assert.equal(new Set(memoryDemo.map(memory => memory.category)).size, 5)
 assert.equal(new Set(memoryDemo.map(memory => memory.id)).size, memoryDemo.length)
@@ -36,6 +37,12 @@ for (const hierarchy of [false, true]) {
   assert.ok(graph.nodes.every(node => Number.isInteger(node.colorIndex) && node.colorIndex >= 0 && node.colorIndex < 5))
   for (const edge of graph.edges) assert.ok(ids.has(edge.source) && ids.has(edge.target), 'No dangling links')
   const positions = layoutMemoryGraph(graph.nodes, graph.edges, hierarchy)
+  const compact = layoutCompactMemoryGraph(graph.nodes, hierarchy)
+  assert.equal(compact.size, graph.nodes.length, 'Portrait view retains all real nodes')
+  assert.deepEqual(compact, layoutCompactMemoryGraph([...graph.nodes].reverse(), hierarchy), 'Portrait positions are order independent')
+  assert.ok([...compact.values()].every(point => Number.isFinite(point.x) && Number.isFinite(point.y)))
+  assert.ok(Math.max(...[...compact.values()].map(point => point.x)) <= 176, 'Portrait layout preserves readable label space')
+  if (hierarchy) graph.nodes.filter(node => node.parentId).forEach(node => assert.ok(compact.get(node.id).y > compact.get(node.parentId).y))
   assert.equal(positions.size, graph.nodes.length)
   assert.deepEqual(positions, layoutMemoryGraph(graph.nodes, graph.edges, hierarchy), 'Layout must be repeatable')
   assert.ok([...positions.values()].every(point => Number.isFinite(point.x) && Number.isFinite(point.y)))
@@ -53,6 +60,7 @@ for (const hierarchy of [false, true]) {
 assert.equal(JSON.stringify(memoryDemo), original, 'Projection and layout do not mutate memories')
 assert.deepEqual(workspaceGraph([], false), { nodes: [], edges: [] })
 assert.equal(layoutMemoryGraph([], [], true).size, 0)
+assert.equal(layoutCompactMemoryGraph([], true).size, 0)
 const tiny = workspaceGraph(memoryDemo.slice(0, 1), false)
 assert.equal(layoutMemoryGraph(tiny.nodes, tiny.edges, false).size, tiny.nodes.length)
 console.log('Memory demo and layouts passed: isolated fictional data, valid links, stable positions and parent-child structure.')

@@ -33,6 +33,9 @@ async function main() {
     await assert.rejects(client.decide('bad id', 'accept'))
     const stale = createGatewayProposalClient({ request: async () => valid })
     await assert.rejects(stale.decide('prp_1', 'accept'), error => error.kind === 'invalid-response')
+    const panel = await fs.readFile(path.join(root, 'src/components/gateway/proposals-panel.tsx'), 'utf8')
+    assert.ok(panel.includes('/chat?session=${encodeURIComponent(source.sessionId)}&message=${encodeURIComponent(source.messageId)}'), 'Evidence opens the cited transcript and message')
+    assert.ok(panel.includes('source.available ? <Link'), 'Forgotten sources cannot expose navigation links')
     console.log('Proposals passed: strict parsing, no execution authority, decision validation and stale-response refusal.')
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })

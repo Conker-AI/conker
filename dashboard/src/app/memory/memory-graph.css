@@ -39,6 +39,9 @@
 .memory-point.is-tree .memory-point-symbol { margin-top:0; margin-left:6px; }
 .memory-point.is-tree .memory-point-label { position:static; max-width:220px; text-align:left; }
 .memory-point.is-tree .react-flow__handle { left:12px; }
+.memory-point.is-compact:not(.is-tree) { width:160px; height:112px; }
+.memory-point.is-compact:not(.is-tree) .react-flow__handle { left:80px; }
+.memory-point.is-compact:not(.is-tree) .memory-point-label { max-width:156px; -webkit-line-clamp:3; }
 .memory-point.is-emphasized .memory-point-symbol { outline:1px solid var(--point-color); outline-offset:5px; }
 .memory-graph-shell .selected .memory-point-symbol { outline:2px solid var(--foreground); outline-offset:5px; }
 .memory-point.is-dimmed { opacity:.24; }
@@ -48,6 +51,7 @@
 .memory-canvas-legend i { width:18px; height:0; border-top:1px solid var(--muted-foreground); }
 .memory-canvas-legend i.is-organization { border-top-style:dashed; }
 .memory-canvas-controls { position:absolute; bottom:26px; left:16px; display:flex; flex-wrap:wrap; gap:8px; }
+.memory-graph-shell[data-compact] .memory-canvas-controls { position:static; flex-shrink:0; order:2; padding:8px; }
 .memory-zoom { position:absolute; right:16px; bottom:30px; font-size:11px; color:var(--muted-foreground); }
 @media (max-width:767px) {
  .memory-workspace-toolbar { padding:8px; gap:6px; }

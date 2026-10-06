@@ -1,5 +1,6 @@
 import type { Memory } from "./api/models"
 import { memoryGraph, type MemoryNode } from "./memory-explorer"
+import { hierarchy as d3Hierarchy } from 'd3-hierarchy'
 
 export type WorkspaceNode = Omit<MemoryNode, "kind"> & {
   kind: MemoryNode["kind"] | "folder"
@@ -12,6 +13,35 @@ type Position = { x: number; y: number }
 const rootId = "folder:root"
 const folderId = (category: string) => `folder:${encodeURIComponent(category)}`
 const stableSort = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0
+
+/** Portrait layouts reserve readable label space; large graphs remain pannable. */
+export function layoutCompactMemoryGraph(nodes: WorkspaceNode[], hierarchical: boolean): Map<string, Position> {
+  const positions = new Map<string, Position>()
+  const ordered = [...nodes].sort((a, b) => stableSort(a.id, b.id))
+  const ids = new Set(nodes.map(node => node.id))
+  if (hierarchical) {
+    type Branch = { record: WorkspaceNode | null; children: Branch[] }
+    const branch = (record: WorkspaceNode, ancestors = new Set<string>()): Branch => ({
+      record,
+      children: ancestors.has(record.id) ? [] : ordered.filter(node => node.parentId === record.id).map(node => branch(node, new Set([...ancestors, record.id]))),
+    })
+    const roots = ordered.filter(node => !node.parentId || !ids.has(node.parentId))
+    let row = 0
+    d3Hierarchy<Branch>({ record: null, children: roots.map(node => branch(node)) }).eachBefore(node => {
+      if (node.data.record) positions.set(node.data.record.id, { x: (node.depth - 1) * 24, y: row++ * 84 })
+    })
+  } else {
+    let row = 0
+    ordered.filter(node => node.kind === 'folder').forEach(group => {
+      const children = ordered.filter(node => node.kind !== 'folder' && node.parentId === group.id)
+      positions.set(group.id, { x: 0, y: row + Math.max(0, children.length - 1) * 54 })
+      children.forEach((node, index) => positions.set(node.id, { x: 176, y: row + index * 108 }))
+      row += Math.max(1, children.length) * 108 + 8
+    })
+  }
+  ordered.filter(node => !positions.has(node.id)).forEach(node => positions.set(node.id, { x: 0, y: positions.size * 116 }))
+  return positions
+}
 
 /** Folders are explicit category organization. They do not claim inferred semantic relationships. */
 export function workspaceGraph(memories: Memory[], hierarchy: boolean): { nodes: WorkspaceNode[]; edges: WorkspaceEdge[] } {

@@ -83,11 +83,11 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
-      {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active /></div>}
+      {inboxActive && <div className="flex min-h-0 flex-1 flex-col overflow-hidden"><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active /></div>}
       {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} />}
-      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : <GatewayModelsSettings client={control} />}</div>}
+      {modelsActive && <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : <GatewayModelsSettings client={control} />}</div>}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
@@ -96,7 +96,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
     </Suspense>
     {!supported && <div className="space-y-3 p-6"><PageHeader title="This workspace is not connected yet" density="compact" /><p className="text-sm text-muted-foreground">The live gateway currently connects today, conversations, projects, artifacts, jobs, activity, approvals, agents, memory, tools, models and diagnostics.</p><Button variant="outline" asChild><Link to="/chat">Open live conversations</Link></Button></div>}
     <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></div>
-    {activityActive && <Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
+    {activityActive && <Suspense fallback={workspaceFallback}><div className="flex min-h-0 flex-1 flex-col overflow-hidden"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
       if (conversationState.getState().operation) return
       activityState.setState({ notice: null })
       const prior = conversationState.getState().taskIntent

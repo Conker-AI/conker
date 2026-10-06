@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, WorkspaceAction, WorkspaceDocument, WorkspaceSection, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -30,19 +30,19 @@ function AgentFields({ value, onChange, disabled }: { value: AgentConfiguration;
   const [memoryText, setMemoryText] = useState(value.memory.memoryIds.join(', '))
   const field = (key: 'name' | 'role' | 'instructions', next: string) => onChange({ ...value, [key]: next })
   return <div className="space-y-5">
-    <div className="grid gap-5 sm:grid-cols-2">
+    <WorkspaceSection title="Identity"><div className="grid gap-5 sm:grid-cols-2">
       <div className="space-y-2"><Label htmlFor="agent-name">Name</Label><Input id="agent-name" required maxLength={80} disabled={disabled} value={value.name} onChange={event => field('name', event.target.value)} /></div>
       <div className="space-y-2"><Label htmlFor="agent-role">Role</Label><Input id="agent-role" required maxLength={160} disabled={disabled} value={value.role} onChange={event => field('role', event.target.value)} placeholder="Analysis and planning" /></div>
-    </div>
-    <div className="space-y-2"><Label htmlFor="agent-instructions">Instructions</Label><Textarea id="agent-instructions" required maxLength={8000} disabled={disabled} value={value.instructions} onChange={event => field('instructions', event.target.value)} className="min-h-40 resize-y" placeholder="Describe how this agent should approach its work." /><p className="text-xs text-muted-foreground tabular-nums">{value.instructions.length}/8,000</p></div>
-    <div className="grid gap-5 sm:grid-cols-2">
+    </div></WorkspaceSection>
+    <WorkspaceSection title="Working instructions"><div className="space-y-2"><Label htmlFor="agent-instructions">Instructions</Label><Textarea id="agent-instructions" required maxLength={8000} disabled={disabled} value={value.instructions} onChange={event => field('instructions', event.target.value)} className="min-h-40 resize-y" placeholder="Describe how this agent should approach its work." /><p className="text-xs text-muted-foreground tabular-nums">{value.instructions.length}/8,000</p></div></WorkspaceSection>
+    <WorkspaceSection title="Model and tools" description="Profile selections never grant execution authority."><div className="grid gap-5 sm:grid-cols-2">
       <div className="space-y-2"><Label htmlFor="agent-model">Model ID</Label><Input id="agent-model" maxLength={200} disabled={disabled} value={value.modelId ?? ''} onChange={event => onChange({ ...value, modelId: event.target.value.trim() || null })} placeholder="Use the default model" /><p className="text-xs leading-5 text-muted-foreground">Leave empty to follow the system default.</p></div>
       <div className="space-y-2"><Label htmlFor="agent-tools">Tool IDs</Label><Input id="agent-tools" disabled={disabled} value={toolText} onChange={event => { setToolText(event.target.value); onChange({ ...value, toolIds: references(event.target.value) }) }} placeholder="calendar.read, web.lookup" /><p className="text-xs leading-5 text-muted-foreground">Selections do not grant execution authority.</p></div>
-    </div>
-    <div className="grid gap-5 sm:grid-cols-2">
+    </div></WorkspaceSection>
+    <WorkspaceSection title="Memory" divided={false}><div className="grid gap-5 sm:grid-cols-2">
       <div className="space-y-2"><Label htmlFor="agent-memory">Memory access</Label><Select disabled={disabled} value={value.memory.scope} onValueChange={(scope: AgentConfiguration['memory']['scope']) => { if (scope !== 'selected') setMemoryText(''); onChange({ ...value, memory: { scope, memoryIds: scope === 'selected' ? value.memory.memoryIds : [] } }) }}><SelectTrigger id="agent-memory"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No memory</SelectItem><SelectItem value="conversation">Current conversation</SelectItem><SelectItem value="selected">Selected records</SelectItem></SelectContent></Select></div>
       {value.memory.scope === 'selected' && <div className="space-y-2"><Label htmlFor="agent-memory-ids">Memory record IDs</Label><Input id="agent-memory-ids" required disabled={disabled} value={memoryText} onChange={event => { setMemoryText(event.target.value); onChange({ ...value, memory: { ...value.memory, memoryIds: references(event.target.value) } }) }} placeholder="mem_project, mem_preferences" /></div>}
-    </div>
+    </div></WorkspaceSection>
   </div>
 }
 
@@ -60,7 +60,7 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel }
     } catch (cause) { setError(changedMessage(cause)) } finally { setPending(false) }
   }
   return <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-    <OverlayBody><AgentFields value={value} onChange={setValue} disabled={pending} /></OverlayBody>
+    {creating ? <OverlayBody><AgentFields value={value} onChange={setValue} disabled={pending} /></OverlayBody> : <WorkspaceDocument><AgentFields value={value} onChange={setValue} disabled={pending} /></WorkspaceDocument>}
     <FormActions inset description={error ? <span role="alert" className="text-destructive">{error}</span> : companion ? `Durable profile, revision ${profile?.revision ?? 1}.` : 'Saving creates an immutable revision.'}>
       <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>Cancel</Button>
       <Button type="submit" disabled={pending || !value.name.trim() || !value.role.trim() || !value.instructions.trim() || (value.memory.scope === 'selected' && !value.memory.memoryIds.length)}><Save />{pending ? 'Saving…' : 'Save'}</Button>

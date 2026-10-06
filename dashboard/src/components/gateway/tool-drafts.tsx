@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionPanel, CollectionRow, CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { CollectionPanel, CollectionRow, CollectionSection, PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
+import { Plus } from 'lucide-react'
 import { GatewayPageFrame } from './page-frame'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { createToolDefinition, type ToolDefinition } from '@/lib/tool-workspace'
@@ -54,8 +55,7 @@ export function GatewayToolDrafts({ client }: { client: GatewayEditorDrafts }) {
   if (id && draft) return <LiveDraftEditor key={id} draft={draft} client={client} save={save} onBack={() => setParams({ view: 'drafts' })} />
   const items = page?.items.filter(item => `${item.name} ${item.id}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
   return <GatewayPageFrame className="space-y-4">
-    <PageHeader title="Tool drafts" actionsOnly />
-    <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" asChild><Link to="/tools">Available tools</Link></Button><Button size="sm" onClick={() => setCreating(true)}>New draft</Button></div>
+    <PageHeader title="Tool drafts" actionsOnly actions={<><WorkspaceAction asChild><Link to="/tools">Available tools</Link></WorkspaceAction><WorkspaceAction onClick={() => setCreating(true)}><Plus />New draft</WorkspaceAction></>} />
     {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(''); setDraft(null); setPage(null); setRefresh(value => value + 1) }}>Reload drafts</Button></div>}
     {!page && !error && <p role="status">Loading draft…</p>}
     {page && <CollectionPanel query={query} onQueryChange={setQuery} label="Search loaded drafts" placeholder="Search loaded drafts…" count={items.length} unit="drafts" emptyTitle="No matching drafts" emptyDescription="Create a draft or adjust your search."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}

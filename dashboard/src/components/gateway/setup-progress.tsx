@@ -361,7 +361,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
         </div>
         <Progress className="h-1" value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
       </section>
-      <WorkspaceSplit asideLabel="Setup checklist" aside={<SetupChecklist status={status} client={client} refresh={refresh} />}>
+      <WorkspaceSplit contextSide="start" asideLabel="Setup checklist" aside={<SetupChecklist status={status} client={client} refresh={refresh} />}>
         <section aria-labelledby="next-step-title" className="min-w-0 space-y-5">
           {current ? <>
             <div className="flex flex-wrap items-start justify-between gap-5">

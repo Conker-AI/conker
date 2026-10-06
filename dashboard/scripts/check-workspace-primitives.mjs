@@ -46,6 +46,23 @@ try {
     assert.ok(split.includes('data-slot="workspace-split"')); assert.ok(split.includes('<aside'))
     assert.ok(split.includes('aria-label="Project references"')); assert.ok(split.indexOf('Project instructions') < split.indexOf('Linked work'))
   })
+  check('A document owns one scrolling body and native focusable sections', () => {
+    const html = render(h(ui.WorkspaceDocument, { tabIndex: 0, 'aria-label': 'Working document' }, h(ui.WorkspaceSection, { title: 'Guidance' }, h('input', { 'aria-label': 'Instructions', value: 'Keep this draft', readOnly: true }))))
+    assert.equal((html.match(/data-slot="gateway-page"/g) ?? []).length, 1)
+    assert.ok(html.includes('data-slot="workspace-document"')); assert.ok(html.includes('aria-label="Working document"'))
+    assert.ok(html.includes('tabindex="-1"')); assert.ok(html.includes('Keep this draft'))
+  })
+  check('Attention queues are sections, not nested or elevated cards', () => {
+    const html = render(h(ui.OverviewSection, { title: 'Waiting for you', priority: true }, 'One real decision'))
+    assert.ok(html.includes('data-priority="true"')); assert.ok(html.includes('One real decision'))
+    assert.ok(!html.includes('bg-card')); assert.ok(!html.includes('shadow')); assert.ok(!html.includes('rounded-lg border'))
+  })
+  check('Record anatomy separates identity, context and metadata inside one link', () => {
+    const html = render(h(ui.CollectionRow, { to: '/projects/project_1', title: 'School', description: 'Instructions and references', trailing: 'Revision 2' }))
+    assert.equal((html.match(/<a /g) ?? []).length, 1)
+    assert.ok(html.includes('collection-record-content')); assert.ok(html.includes('collection-record-meta'))
+    assert.ok(html.includes('Instructions and references')); assert.ok(html.includes('Revision 2'))
+  })
   check('Workspace modes use one named horizontal radio group with explicit selection', () => {
     const modes = render(h(ui.WorkspaceModes, { label: 'Memory view', value: 'tree', onChange() {}, options: [{ value: 'map', label: 'Map', icon: h('svg') }, { value: 'tree', label: 'Tree', icon: h('svg') }] }))
     assert.ok(modes.includes('role="radiogroup"')); assert.ok(modes.includes('aria-label="Memory view"'))
@@ -110,11 +127,33 @@ try {
   check('Technical styling is scoped away from the sidebar and empty chat', () => {
     const css = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/styles/design-system.css'), 'utf8')
     const workspace = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
-    assert.ok(css.includes('.technical-workspace {')); assert.ok(css.includes('--appbar-height: 3rem'))
+    assert.ok(css.includes('.technical-workspace {')); assert.ok(css.includes('--appbar-height: 3.5rem'))
     assert.ok(css.includes('[aria-label="Message composer"] [data-slot="textarea"] { background:transparent; border:0; border-radius:0; }'))
     assert.ok(!css.includes('.technical-workspace [data-sidebar'))
     assert.ok(workspace.includes("appearance={chatActive && !session ? 'original' : 'technical'}"))
     assert.ok(workspace.includes("contentClassName={chatActive && !session ? undefined : 'technical-workspace'}"))
+  })
+  check('Section navigation is state-preserving, reduced-motion aware and excludes dialogs', () => {
+    const document = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/components/design-system/workspace-document.tsx'), 'utf8')
+    const index = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/lib/workspace-document.ts'), 'utf8')
+    assert.ok(document.includes('preventScroll: true')); assert.ok(document.includes('prefers-reduced-motion: reduce'))
+    assert.ok(index.includes("closest('[role=\"dialog\"], [role=\"alertdialog\"]')"))
+    assert.ok(document.includes('Document contents')); assert.ok(document.includes('IntersectionObserver'))
+    assert.ok(document.includes('intersecting.set(entry.target.id, entry.target)'))
+    assert.ok(document.includes('intersecting.delete(entry.target.id)'))
+    assert.ok(document.includes('[...intersecting.values()]'))
+    assert.ok(!document.includes('innerHTML')); assert.ok(!document.includes('location.href'))
+  })
+  check('Retained route wrappers delegate scrolling to the document body', () => {
+    const workspace = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
+    for (const route of ['inboxActive', 'modelsActive', 'activityActive']) {
+      const declaration = workspace.slice(workspace.indexOf(`{${route} &&`), workspace.indexOf(`{${route} &&`) + 220)
+      assert.ok(declaration.includes('flex min-h-0 flex-1 flex-col overflow-hidden'), route)
+      assert.ok(!declaration.includes('overflow-y-auto'), route)
+    }
+    const graph = requireFromRoot('node:fs').readFileSync(path.join(root, 'src/app/memory/memory-graph.tsx'), 'utf8')
+    assert.ok(graph.includes('const resize = new ResizeObserver(fit)'))
+    assert.ok(graph.includes('resize.observe(canvas.current)'))
   })
   console.log(checks.map(name => `PASS ${name}`).join('\n'))
 } finally {

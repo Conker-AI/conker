@@ -5,7 +5,7 @@ import { StudioField, StudioSection } from '@/components/character-studio/fields
 import { ModesEditor } from '@/components/character-studio/modes-editor'
 import { CharacterPreview } from '@/components/character-studio/preview'
 import { VoiceEditor } from '@/components/character-studio/voice-editor'
-import { ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, WorkspaceSplit, RouteSection, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, WorkspaceSplit, WorkspaceDocument, RouteSection, TaskDialogContent } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -99,7 +99,7 @@ export function GatewayCharacterWorkspace({ client }: { client: GatewayControlCl
   if (!profile) return <div className="space-y-4 p-6" role="alert"><PageHeader title="Character Studio is unavailable" description={error || 'The Companion profile could not be opened.'} density="compact" /><Button variant="outline" onClick={() => void load()}>Try again</Button></div>
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <PageHeader actionsOnly title="Character Studio" description="Shape who your Companion is, how it looks, and how it speaks." density="compact" actions={<><WorkspaceAction disabled={busy || mediaBusy} onClick={() => { setImportOpen(true); setIncoming(null); setError('') }}><Upload />Import</WorkspaceAction><WorkspaceAction disabled={busy || mediaBusy || revision === 0} onClick={() => void exportCurrent()}><Download />Export</WorkspaceAction><WorkspaceAction disabled={busy || !history.length} onClick={() => setHistoryOpen(true)}><History />History</WorkspaceAction></>} />
-    <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+    <WorkspaceDocument>
       <WorkspaceSplit aside={<CharacterPreview profile={profile} />} asideLabel="Character preview">
         <form id="gateway-character-form" onSubmit={save} className="min-w-0 space-y-6">
           <fieldset disabled={busy || mediaBusy} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
@@ -115,7 +115,7 @@ export function GatewayCharacterWorkspace({ client }: { client: GatewayControlCl
           </fieldset>
         </form>
       </WorkspaceSplit>
-    </div>
+    </WorkspaceDocument>
     <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-6">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
       <FormActions description={<span role="status">{mediaBusy ? 'Checking media…' : notice || (dirty ? 'Unsaved changes' : revision ? `Durable revision ${revision}` : 'Ready to create the first durable revision')}</span>}><Button type="button" variant="outline" disabled={!dirty || busy || mediaBusy} onClick={() => { setDraft(null); setError(''); setNotice('Changes discarded.') }}>Discard</Button><Button type="submit" form="gateway-character-form" disabled={!dirty || !profile.name.trim() || busy || mediaBusy}><Save />{busy ? 'Saving…' : 'Save character'}</Button></FormActions>
