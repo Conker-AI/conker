@@ -183,38 +183,47 @@ def test_failed_runtime_recovery_keeps_transition_and_blocks_verification(tmp_pa
     __import__("os").name != "posix", reason="Unix socket requires Linux"
 )
 def test_private_unix_socket_roundtrip(tmp_path):
+    import http.client
+    import socket
     import socketserver
     import threading
-
-    import httpx
 
     from scripts.provider_control import handler
 
     control = bridge(tmp_path)
+
+    class Connection(http.client.HTTPConnection):
+        def connect(self):
+            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect(str(tmp_path / "control.sock"))
+
+    def request(method, path, body=None):
+        connection = Connection("conker-host")
+        try:
+            connection.request(
+                method,
+                path,
+                body=json.dumps(body) if body is not None else None,
+                headers={"Content-Type": "application/json"}
+                if body is not None
+                else {},
+            )
+            response = connection.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            connection.close()
+
     with socketserver.UnixStreamServer(
         str(tmp_path / "control.sock"), handler(control)
     ) as server:
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         worker.start()
         try:
-            with httpx.Client(
-                transport=httpx.HTTPTransport(uds=str(tmp_path / "control.sock"))
-            ) as client:
-                status = client.get("http://conker-host/providers")
-                assert (
-                    status.status_code == 200
-                    and status.json()["secretsIncluded"] is False
-                )
-                assert (
-                    client.post(
-                        "http://conker-host/providers", json={"operation": "shell"}
-                    ).status_code
-                    == 409
-                )
-                assert (
-                    client.get("http://conker-host/providers?secret=test").status_code
-                    == 404
-                )
+            code, value = request("GET", "/providers")
+            assert code == 200 and value["secretsIncluded"] is False
+            assert request("POST", "/providers", {"operation": "shell"})[0] == 409
+            assert request("GET", "/providers?secret=test")[0] == 404
         finally:
             server.shutdown()
             worker.join(timeout=5)
