@@ -13,32 +13,18 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
-### SiYuan / Asri workspace (5 October, development branch)
+### Owner UI rollback (6 October)
 
-The technical workspace now uses a compact document frame, integrated section
-controls, source-owned search, quieter collection rows and a shared content/context
-split for editors and overviews. Routine creation commands remain outlined;
-primary contrast belongs to explicit commitments. Semantic theme variables still
-own the palette, fields and overlays. The main shell stays flat; decision surfaces
-use a quiet border, while the unified composer and floating overlays retain depth.
-The existing sidebar and empty new-chat canvas are deliberately outside the new
-technical styling boundary.
+The SiYuan/Asri visual pass is reverted to the pre-redesign checkpoint
+`c3c8dfdf2c1765350808f54195633b33c1470a7c`. The earlier rollback incorrectly
+targeted a commit that already contained that pass. The sidebar, empty-chat
+canvas, existing search, and source-owned controls remain. Later pending-input,
+explicit Companion memory-scope and confirmation fixes are retained; backend
+release pins and persistent installation data are not rolled back.
 
-The verified GitHub rollback reference is
-`c3c8dfdf2c1765350808f54195633b33c1470a7c` on
-`checkpoint/conker-before-siyuan-asri-2026-10-04`; work continues on
-`design/conker-siyuan-asri-2026-10-04`. No pinned release, production service,
-backend authority or provider configuration was changed by this visual pass.
-
-The explicit fake-gateway development preview was inspected on desktop and
-390 x 844 mobile layouts, including document editors, transcript, Map/Tree/List,
-inspectors and creation dialogs. Expanded/collapsed navigation and light/dark
-surfaces were checked. The shared workspace primitives now have 13 render checks.
-All 29 dashboard check suites, build, lint and the design guard pass. Existing
-dependency-annotation and large-chunk build warnings remain. Live custom-theme,
-zoom and OS reduced-motion visual acceptance are not certified by these captures;
-theme and motion source checks are separate from browser acceptance. The search
-coverage limitations recorded below remain unchanged.
+The state before this correction is recoverable on
+`checkpoint/conker-before-correct-ui-rollback-2026-10-06` at
+`a6b7877c23c5d201d956d396d95cbc425be53db9`.
 
 ### Technical workspace redesign (4 October, development branches)
 

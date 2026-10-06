@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUpRight, Bot, CheckCheck, CircleAlert, Clock3, Lightbulb, MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CollectionRow, OverviewSection, PageHeader, WorkspaceAction, WorkspaceSplit } from '@/components/design-system'
+import { CollectionRow, OverviewSection, PageHeader, WorkspaceAction } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import type { GatewayActivityClient, GatewayTask } from '@/lib/gateway/activity'
@@ -65,15 +65,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: P
       <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction asChild><Link to="/chat"><SquarePen />New chat</Link></WorkspaceAction></>} />
       {error && <p role="alert" className="flex items-start gap-2 rounded-lg border bg-muted p-3 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</p>}
       {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <p role="status" className="text-sm text-muted-foreground">Loading today…</p>}
-      <WorkspaceSplit asideLabel="Suggestions and completed work" aside={<div className="min-w-0 space-y-7">
-          <OverviewSection title="Suggested" description="Ideas from your conversations. Nothing runs until you choose." action={<Button size="sm" variant="ghost" asChild><Link to="/inbox">Review all<ArrowUpRight /></Link></Button>}>
-            {today.suggestions.length ? <ul className="divide-y divide-border">{today.suggestions.map(item => <CollectionRow key={item.id} to="/inbox" title={item.title} leading={<Lightbulb className="size-4 text-muted-foreground" />} description={<span className="line-clamp-2">{item.suggestion}</span>} trailing={<span>{when(item.createdAt)}</span>} />)}</ul> : !loading && <EmptyLine>Nothing useful to suggest right now.</EmptyLine>}
-          </OverviewSection>
-          <OverviewSection title="Completed" action={<Button size="sm" variant="ghost" asChild><Link to="/activity?tab=tasks">Task history<ArrowUpRight /></Link></Button>}>
-            {today.completedTasks.length ? <ul className="divide-y divide-border">{today.completedTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<CheckCheck className="size-4 text-success" />} description={<span>{task.completedCriterionIds.length}/{task.criteria.length} checks recorded</span>} trailing={<span>{when(task.updatedAt)}</span>} />)}</ul> : !loading && <EmptyLine>No completed tasks yet.</EmptyLine>}
-          </OverviewSection>
-          <div className="border-t pt-5"><Button variant="ghost" size="sm" asChild className="justify-start"><Link to="/agents"><Bot />Manage agents<ArrowUpRight /></Link></Button></div>
-        </div>}>
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <div className="min-w-0 space-y-6">
           <OverviewSection priority={today.waiting.length > 0} title="Waiting for you" description={today.waiting.length ? `${today.waiting.length} ${today.waiting.length === 1 ? 'decision needs' : 'decisions need'} your review before anything continues.` : 'Nothing needs your decision.'} action={<Button size="sm" variant="outline" asChild><Link to="/inbox">{today.waiting.length === 1 ? 'Review request' : 'Open inbox'}<ArrowUpRight /></Link></Button>}>
             {today.waiting.length ? <ul className="divide-y divide-border">{today.waiting.map(item => <CollectionRow key={item.id} to={`/inbox?request=${encodeURIComponent(item.id)}`} title={item.title || 'Review this action'} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><CircleAlert className="size-4 text-warning" /></span>} descriptionTitle={item.details} description={<span className="line-clamp-2">{item.details || `${item.actor} is waiting for your decision.`}</span>} trailing={<span>{when(item.updatedAt)}</span>} />)}</ul>
@@ -86,7 +78,16 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: P
             {today.conversations.length ? <ul className="divide-y divide-border">{today.conversations.map(session => <CollectionRow key={session.id} to={`/chat?session=${encodeURIComponent(session.id)}`} title={session.title || 'New chat'} leading={<MessageSquare className="size-4 text-muted-foreground" />} description={<span className="min-w-0 truncate">{session.summary || 'Continue this conversation'}</span>} trailing={<span>{when(session.createdAt)}</span>} />)}</ul> : !loading && <EmptyAction icon={<MessageSquare className="size-4" />} title="No conversations yet" description="Your recent conversations will stay within reach here." action={<Button size="sm" variant="outline" asChild><Link to="/chat">New chat</Link></Button>} />}
           </OverviewSection>
         </div>
-      </WorkspaceSplit>
+        <div className="min-w-0 space-y-6">
+          <OverviewSection title="Suggested" description="Ideas from your conversations. Nothing runs until you choose." action={<Button size="sm" variant="ghost" asChild><Link to="/inbox">Review all<ArrowUpRight /></Link></Button>}>
+            {today.suggestions.length ? <ul className="divide-y divide-border">{today.suggestions.map(item => <CollectionRow key={item.id} to="/inbox" title={item.title} leading={<Lightbulb className="size-4 text-muted-foreground" />} description={<span className="line-clamp-2">{item.suggestion}</span>} trailing={<span>{when(item.createdAt)}</span>} />)}</ul> : !loading && <EmptyLine>Nothing useful to suggest right now.</EmptyLine>}
+          </OverviewSection>
+          <OverviewSection title="Completed" action={<Button size="sm" variant="ghost" asChild><Link to="/activity?tab=tasks">Task history<ArrowUpRight /></Link></Button>}>
+            {today.completedTasks.length ? <ul className="divide-y divide-border">{today.completedTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<CheckCheck className="size-4 text-success" />} description={<span>{task.completedCriterionIds.length}/{task.criteria.length} checks recorded</span>} trailing={<span>{when(task.updatedAt)}</span>} />)}</ul> : !loading && <EmptyLine>No completed tasks yet.</EmptyLine>}
+          </OverviewSection>
+          <div className="border-t pt-5"><Button variant="ghost" asChild className="justify-start"><Link to="/agents"><Bot />Manage agents<ArrowUpRight /></Link></Button></div>
+        </div>
+      </div>
     </div>
   </GatewayPageFrame>
 }

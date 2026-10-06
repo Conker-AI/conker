@@ -4,7 +4,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
-import { useWorkspaceChrome } from '@/lib/workspace-chrome'
 
 /** Canvas inspection stays nonmodal so the user can select another point. */
 export function WorkspaceInspector({ title, description, onClose, children, label = "Memory inspector" }: { title: ReactNode; description: ReactNode; onClose: () => void; children: ReactNode; label?: string }) {
@@ -38,8 +37,7 @@ export function TaskDialogContent({ title, description, size = "default", classN
   title: ReactNode; description: ReactNode; size?: "default" | "wide"
 }) {
   const focus = useOverlayFocus()
-  const chrome = useWorkspaceChrome()
-  return <DialogContent {...props} onOpenAutoFocus={event => { focus.onOpenAutoFocus(); onOpenAutoFocus?.(event) }} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="task-dialog" className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", chrome?.appearance === 'technical' && 'technical-overlay', size === "wide" && "sm:max-w-2xl", className)}>
+  return <DialogContent {...props} onOpenAutoFocus={event => { focus.onOpenAutoFocus(); onOpenAutoFocus?.(event) }} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="task-dialog" className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", size === "wide" && "sm:max-w-2xl", className)}>
     <DialogHeader className="shrink-0 border-b p-5 pr-14 text-left">
       <DialogTitle className="break-words leading-6">{title}</DialogTitle>
       <DialogDescription className="leading-5">{description}</DialogDescription>
@@ -68,9 +66,8 @@ export function DetailPanel({ open, onOpenChange, title, description, children, 
   children: ReactNode; onCloseAutoFocus?: ComponentProps<typeof SheetContent>["onCloseAutoFocus"]; busy?: boolean
 }) {
   const focus = useOverlayFocus()
-  const chrome = useWorkspaceChrome()
   return <Sheet open={open} onOpenChange={next => { if (!busy) onOpenChange(next) }}>
-    <SheetContent {...focus} closeButtonDisabled={busy} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="detail-panel" className={cn('w-full gap-0 overflow-hidden sm:max-w-xl', chrome?.appearance === 'technical' && 'technical-overlay')}>
+    <SheetContent {...focus} closeButtonDisabled={busy} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="detail-panel" className="w-full gap-0 overflow-hidden sm:max-w-xl">
       <SheetHeader className="shrink-0 border-b p-5 pr-14">
         <SheetTitle className="break-words leading-6">{title}</SheetTitle>
         <SheetDescription className="leading-5">{description}</SheetDescription>

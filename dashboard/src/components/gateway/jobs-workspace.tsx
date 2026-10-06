@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ban, CalendarClock, CirclePause, CirclePlay, History, Play, RefreshCw, RotateCcw } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, History, Play, RefreshCw, RotateCcw } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -71,7 +71,7 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
     finally { setPending(false) }
   }
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <PageHeader actionsOnly document title={job.definition.name} actions={<><WorkspaceAction disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</WorkspaceAction><WorkspaceAction disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</WorkspaceAction></>} />
+    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={job.definition.name} description="A pinned schedule definition with redacted run evidence." density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link to="/jobs"><ArrowLeft />Jobs</Link></Button><Button variant="outline" disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</Button><Button disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</Button></div>} /></div>
     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="max-w-4xl space-y-8">
       <section className="space-y-4" aria-labelledby="job-definition-heading"><div className="flex flex-wrap items-center gap-2"><h2 id="job-definition-heading" className="text-lg font-semibold">Schedule</h2><Badge variant={job.definition.enabled ? 'default' : 'secondary'}>{job.definition.state === 'enabled' ? 'Enabled' : 'Paused'}</Badge></div>
         <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Timing</dt><dd className="mt-1">{describeTiming(job)} · {job.definition.timeZone}</dd></div><div><dt className="text-xs text-muted-foreground">Next slot</dt><dd className="mt-1">{job.definition.enabled ? when(job.nextAt, job.definition.timeZone) : 'Paused; no automatic run will be admitted'}</dd></div><div><dt className="text-xs text-muted-foreground">Agent reference</dt><dd className="mt-1 break-all">{job.definition.agentId}</dd></div><div><dt className="text-xs text-muted-foreground">Overlap policy</dt><dd className="mt-1">Skip while an earlier run is unresolved</dd></div></dl>

@@ -5,7 +5,7 @@ import { StudioField, StudioSection } from '@/components/character-studio/fields
 import { ModesEditor } from '@/components/character-studio/modes-editor'
 import { CharacterPreview } from '@/components/character-studio/preview'
 import { VoiceEditor } from '@/components/character-studio/voice-editor'
-import { ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, WorkspaceSplit, RouteSection, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, RouteSection, TaskDialogContent } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -100,7 +100,7 @@ export function GatewayCharacterWorkspace({ client }: { client: GatewayControlCl
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <PageHeader actionsOnly title="Character Studio" description="Shape who your Companion is, how it looks, and how it speaks." density="compact" actions={<><WorkspaceAction disabled={busy || mediaBusy} onClick={() => { setImportOpen(true); setIncoming(null); setError('') }}><Upload />Import</WorkspaceAction><WorkspaceAction disabled={busy || mediaBusy || revision === 0} onClick={() => void exportCurrent()}><Download />Export</WorkspaceAction><WorkspaceAction disabled={busy || !history.length} onClick={() => setHistoryOpen(true)}><History />History</WorkspaceAction></>} />
     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-      <WorkspaceSplit aside={<CharacterPreview profile={profile} />} asideLabel="Character preview">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]">
         <form id="gateway-character-form" onSubmit={save} className="min-w-0 space-y-6">
           <fieldset disabled={busy || mediaBusy} className="min-w-0 space-y-6"><legend className="sr-only">Character configuration</legend>
             <RouteSection value="identity"><div className="space-y-6">
@@ -114,7 +114,8 @@ export function GatewayCharacterWorkspace({ client }: { client: GatewayControlCl
             <RouteSection value="modes"><ModesEditor value={profile.studio.modes} onChange={modes => studio({ modes })} /></RouteSection>
           </fieldset>
         </form>
-      </WorkspaceSplit>
+        <CharacterPreview profile={profile} />
+      </div>
     </div>
     <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-6">
       {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}

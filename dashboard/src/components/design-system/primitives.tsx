@@ -12,18 +12,11 @@ import { WorkspaceRouteActions } from './workspace-chrome'
 import { UniversalSearchContext } from '@/lib/workspace-chrome'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 export { WorkspaceAction } from './workspace-chrome'
 
 
-export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false, document = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean; document?: boolean }) {
+export function PageHeader({ title, description, actions, status, density = "standard", actionsOnly = false }: { title: string; description?: string; actions?: ReactNode; status?: ReactNode; density?: "standard" | "compact"; actionsOnly?: boolean }) {
   const chrome = useWorkspaceChrome()
-  const setTitle = chrome?.setDocumentTitle
-  useLayoutEffect(() => {
-    if (!document || !setTitle) return
-    setTitle(title)
-    return () => setTitle(null)
-  }, [document, setTitle, title])
   if (actionsOnly && chrome) return chrome.actions ? createPortal(<><h1 className="sr-only">{title}</h1><WorkspaceRouteActions>{actions}</WorkspaceRouteActions></>, chrome.actions) : null
   if (actionsOnly) return <header data-slot="page-header" className="flex min-w-0 justify-end"><h1 className="sr-only">{title}</h1>{actions && <div role="toolbar" aria-label={`${title} actions`} className="flex flex-wrap justify-end gap-2">{actions}</div>}</header>
   return <header data-slot="page-header" className="flex min-w-0 flex-wrap items-start justify-between gap-4">
@@ -36,31 +29,6 @@ export function PageHeader({ title, description, actions, status, density = "sta
     </div>
     {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
   </header>
-}
-
-/** A working document and its context share a frame, not two unrelated cards. */
-export function WorkspaceSplit({ children, aside, asideLabel, className }: { children: ReactNode; aside: ReactNode; asideLabel: string; className?: string }) {
-  return <div data-slot="workspace-split" className={cn('workspace-split', className)}>
-    <div className="workspace-split-primary min-w-0">{children}</div>
-    <aside className="workspace-split-aside min-w-0" aria-label={asideLabel}>{aside}</aside>
-  </div>
-}
-
-export function WorkspaceControls({ children }: { children: ReactNode }) {
-  const chrome = useWorkspaceChrome()
-  return chrome ? chrome.controls && createPortal(children, chrome.controls) : <div className="workspace-document-controls">{children}</div>
-}
-
-export function WorkspaceModes({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string; icon: ReactNode }[] }) {
-  const id = useId()
-  return <RadioGroup aria-label={label} orientation="horizontal" value={value} onValueChange={onChange} className="workspace-modes flex gap-1">
-    {options.map(option => <label key={option.value} htmlFor={`${id}-${option.value}`} className="cursor-pointer">
-      <RadioGroupItem id={`${id}-${option.value}`} value={option.value} aria-label={option.label} className="peer sr-only" />
-      <span className={cn('flex h-8 items-center justify-center gap-2 rounded-md px-3 text-sm text-muted-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring max-sm:size-10 max-sm:p-0 [&>svg]:size-4', value === option.value ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-foreground')}>
-        {option.icon}<span className="max-sm:sr-only">{option.label}</span>
-      </span>
-    </label>)}
-  </RadioGroup>
 }
 
 /** Sections group related work without introducing another surface. */
@@ -83,7 +51,7 @@ export function OverviewSection({ title, description, action, children, priority
   title: string; description?: ReactNode; action?: ReactNode; children: ReactNode; priority?: boolean
 }) {
   const id = useId()
-  return <section aria-labelledby={id} data-slot="overview-section" data-priority={priority || undefined} className={cn("min-w-0 space-y-4", priority && "rounded-lg border bg-card p-4 text-card-foreground")}>
+  return <section aria-labelledby={id} data-slot="overview-section" className={cn("min-w-0 space-y-4", priority && "elevation-surface rounded-lg border bg-card p-4 text-card-foreground")}>
     <div className={cn("flex flex-wrap items-start justify-between gap-3", priority && "max-sm:flex-col")}>
       <div className="min-w-0 flex-1">
         <h2 id={id} className="text-base leading-6 font-semibold">{title}</h2>
@@ -173,7 +141,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
   return <li>
     <Link data-slot="collection-row" to={to}
       className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
-      {leading && <span className="collection-row-glyph shrink-0" aria-hidden="true">{leading}</span>}
+      {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
         <h3 className="break-words text-sm leading-5 font-medium" title={title}>{title}</h3>
         <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs leading-5 text-muted-foreground" title={descriptionTitle}>{description}</p>
