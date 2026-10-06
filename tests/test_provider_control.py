@@ -4,6 +4,7 @@ import subprocess
 import pytest
 
 from scripts.provider_control import ProviderControl
+from scripts.provider_control_install import working_directory
 from scripts.provider_secrets import ProviderSecretError
 
 
@@ -22,6 +23,11 @@ def stage(control, **kwargs):
             **kwargs,
         }
     )
+
+
+def test_systemd_working_directory_is_not_shell_quoted(tmp_path):
+    assert working_directory(tmp_path) == str(tmp_path).replace("%", "%%")
+    assert not working_directory(tmp_path).startswith('"')
 
 
 def test_ui_and_cli_share_redacted_revisioned_state(tmp_path):

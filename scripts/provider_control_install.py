@@ -18,6 +18,14 @@ def quoted(value: str) -> str:
     )
 
 
+def working_directory(source: Path) -> str:
+    value = str(source)
+    if not source.is_absolute() or any(char in value for char in "\x00\r\n"):
+        raise ValueError("Service working directory must be an absolute one-line path.")
+    # Unlike ExecStart arguments, quotes here become literal path characters.
+    return value.replace("%", "%%")
+
+
 def install(root: Path, source: Path, layout: str):
     if os.name != "posix" or layout not in {"ubuntu", "repository"}:
         raise ValueError("A Linux systemd user session is required.")
@@ -51,7 +59,7 @@ def install(root: Path, source: Path, layout: str):
     ]
     unit = (
         "[Unit]\nDescription=Conker private provider control\n\n[Service]\n"
-        f"WorkingDirectory={quoted(str(source))}\nExecStart={' '.join(map(quoted, arguments))}\n"
+        f"WorkingDirectory={working_directory(source)}\nExecStart={' '.join(map(quoted, arguments))}\n"
         "Restart=on-failure\nRestartSec=2\nUMask=0077\nNoNewPrivileges=true\n"
         "PrivateTmp=true\nStandardOutput=null\nStandardError=null\n\n[Install]\nWantedBy=default.target\n"
     )
