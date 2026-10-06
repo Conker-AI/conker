@@ -28,3 +28,9 @@ export const plainStatus = (value: string) => ({
   IN_PROGRESS: 'In progress',
   OK: 'Completed',
 } as Record<string, string>)[value] ?? value.replaceAll('_', ' ').replaceAll('-', ' ')
+
+export function memoryRetrievalSummary(retrieval: NonNullable<RuntimeMemory['retrieval']>): string {
+  const count = `${retrieval.records} ${retrieval.records === 1 ? 'record' : 'records'} supplied`
+  return retrieval.status === 'ok' ? `Memory · ${count}` : `Memory · ${plainStatus(retrieval.status)} · ${count}`
+}
+import type { RuntimeMemory } from '@/lib/gateway/runtime'

@@ -18,6 +18,11 @@ function load(relative) {
 }
 const { createGatewayRuntimeClient, RuntimeMutationError } = load('src/lib/gateway/runtime.ts')
 const { GatewayError, createGatewayTransport } = load('src/lib/gateway/transport.ts')
+const { memoryRetrievalSummary } = load('src/components/gateway/plain-status.ts')
+assert.equal(memoryRetrievalSummary({ status: 'ok', records: 0 }), 'Memory · 0 records supplied')
+assert.equal(memoryRetrievalSummary({ status: 'ok', records: 1 }), 'Memory · 1 record supplied')
+assert.equal(memoryRetrievalSummary({ status: 'degraded', records: 2 }), 'Memory · Needs attention · 2 records supplied')
+assert.equal(memoryRetrievalSummary({ status: 'unavailable', records: 0 }), 'Memory · Unavailable · 0 records supplied')
 const session = { id: 's_one', parent_id: null, title: 'A real session', status: 'open', created_at: 1_700_000_000, closed_at: null, summary: null }
 const memory = { configured: false, pending_ingestion: 2, blocked_delivery: 0, pending_deletion: 0, notices: ['Memory delivery pending.'], retrieval: { status: 'degraded', package: { memories: [{ id: 'memory_one', text: 'Do not expose raw retrieval' }], retrieval: { mode: 'lexical', reranking: { status: 'fallback', provider: 'decisions', secret: 'Do not expose raw retrieval' } } } } }
 const message = { id: 'msg_one', session_id: session.id, seq: 1, role: 'user', content: 'Owner text', created_at: session.created_at }

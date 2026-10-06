@@ -39,6 +39,12 @@ preserved through the shared navigation helper.
 Task review closes when dispatch begins so streaming and Stop remain reachable;
 a rejected submission reopens the retained review without an automatic retry.
 
+Activity does not show empty results or a zero count until its current source
+has loaded successfully. Source/tab changes hide previous rows immediately;
+failed reads offer an explicit retry. Chat memory evidence reports the number
+of records supplied, including zero, rather than treating retrieval success as
+proof of recall. These changes do not widen memory scope or tool grants.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet

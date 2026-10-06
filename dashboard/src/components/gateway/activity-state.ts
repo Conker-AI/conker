@@ -6,6 +6,8 @@ export type ReviewDraft = { taskId: string; sessionId: string; status: GatewayTa
 export type ActivityMutation = { key: string; kind: 'create' | 'edit' | 'review' | 'archive'; phase: 'pending' | 'unknown' | 'conflict'; taskId?: string; requestId?: string; revision?: number; input?: GatewayTaskCreate; checked?: boolean; notFound?: boolean }
 export type ActivityDialog = { kind: 'create' } | { kind: 'edit'; taskId: string } | { kind: 'review'; taskId: string; status: GatewayTaskStatus }
 export type ReferenceRunsState = { sessionId: string | null; runs: GatewayActivityRun[]; cursor: string | null; pending: boolean; error: string | null }
+export type ActivityListRead = { key: string; status: 'ready' | 'failed' }
+export const activityListReadStatus = (read: ActivityListRead | null, key: string) => read?.key === key ? read.status : 'loading'
 /** Rows, pagination and errors all belong to one source; changing source hides the old response immediately. */
 export function visibleReferenceRuns(state: ReferenceRunsState, sessionId: string | undefined): ReferenceRunsState {
   return sessionId && state.sessionId === sessionId ? state : { sessionId: sessionId ?? null, runs: [], cursor: null, pending: !!sessionId, error: null }

@@ -14,7 +14,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { GatewayTaskEditor, GatewayTaskReview } from './activity-forms'
 import { GatewayEventDetails, GatewayRunDetails, GatewayTaskDetails } from './activity-details'
 import { GatewayEventsTable, GatewayRunsTable, GatewayTasksTable } from './activity-tables'
-import { draftFromTask, forgetActivityDrafts, isTerminalTask, maskForgottenTask, reviewDraftKey, taskDraftKey, taskStatusLabels, taskTitle, visibleReferenceRuns, type ActivityMutation, type GatewayActivityWorkspaceState, type ReferenceRunsState } from './activity-state'
+import { activityListReadStatus, draftFromTask, forgetActivityDrafts, isTerminalTask, maskForgottenTask, reviewDraftKey, taskDraftKey, taskStatusLabels, taskTitle, visibleReferenceRuns, type ActivityListRead, type ActivityMutation, type GatewayActivityWorkspaceState, type ReferenceRunsState } from './activity-state'
 import { maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
 type Props = { client: GatewayActivityClient; runtime: GatewayRuntimeClient; state: GatewayActivityWorkspaceState; sourcePrivacy: GatewaySourcePrivacyState; active: boolean; dispatchBlocked?: boolean; retainedTaskId?: string; onWork: (task: GatewayTask) => void }
@@ -26,6 +26,9 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
   const tab = params.get('tab') === 'runs' ? 'runs' : params.get('tab') === 'events' ? 'events' : 'tasks'
   const taskId = params.get('task'), runId = params.get('run'), eventId = params.get('event')
   const taskFilter = params.get('taskId') ?? undefined, runFilter = params.get('runId') ?? undefined, sessionFilter = params.get('sessionId') ?? undefined
+  const listKey = JSON.stringify([tab, sessionFilter, taskFilter, runFilter, tab === 'events' ? eventId : null])
+  const [listRead, setListRead] = useState<ActivityListRead | null>(null)
+  const listStatus = activityListReadStatus(listRead, listKey)
   const [tasks, setTasks] = useState<GatewayTask[]>([]), [runs, setRuns] = useState<GatewayActivityRun[]>([]), [events, setEvents] = useState<GatewayActivityEvent[]>([])
   const [sessions, setSessions] = useState<RuntimeSession[]>([])
   const [taskCursor, setTaskCursor] = useState<string | null>(null), [runCursor, setRunCursor] = useState<string | null>(null), [eventCursor, setEventCursor] = useState<string | null>(null)
@@ -103,9 +106,10 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
         setEvents(values => more ? uniqueRows(values, found) : found); setEventCursor(page.nextCursor)
         forgetSources(new Set(found.filter(event => event.contentStatus === 'forgotten').map(event => event.sessionId)))
       }
-    } catch (failure) { if (mounted.current && generation === generations.current.list) setError(gatewayError(failure).message) }
+      setListRead({ key: listKey, status: 'ready' })
+    } catch (failure) { if (mounted.current && generation === generations.current.list) { setError(gatewayError(failure).message); setListRead({ key: listKey, status: 'failed' }) } }
     finally { if (mounted.current && generation === generations.current.list) setLoading(false) }
-  }, [client, eventId, forgetSources, request, runFilter, sessionFilter, sourcePrivacy, tab, taskFilter])
+  }, [client, eventId, forgetSources, listKey, request, runFilter, sessionFilter, sourcePrivacy, tab, taskFilter])
   const loadSelection = useCallback(async (id: string, kind: 'task' | 'run') => {
     if (!mounted.current) return
     const generation = (generations.current.selection ?? 0) + 1; generations.current.selection = generation
@@ -252,12 +256,15 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
     <p className="text-xs leading-5 text-muted-foreground">A task is something you want done, linked to a chat. Use Work on this task to have Conker pick it up; only you can mark it done.</p>
     {retained.notice && <p role="status" className="text-sm text-muted-foreground">{retained.notice}</p>}{(retained.error || error) && <p role="alert" className="text-sm text-destructive">{retained.error || error}</p>}{recovery}
     {(taskFilter || runFilter || sessionFilter) && <div className="flex flex-wrap items-center gap-3 text-xs"><span>Showing one source</span><details className="text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><span className="break-all">{taskFilter || runFilter || sessionFilter}</span></details><Button size="sm" variant="outline" onClick={() => setParams({ tab })}>Clear source filter</Button></div>}
-    {loading && <p role="status" className="text-xs text-muted-foreground">Loading {tab === 'runs' ? 'attempts' : tab}...</p>}
-    {tab === 'tasks' && <GatewayTasksTable tasks={filteredTasks} onOpen={openTask} filters={<Select value={filter} onValueChange={setFilter}><SelectTrigger aria-label="Task lifecycle filter" className="w-52"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active tasks</SelectItem><SelectItem value="history">Completed / cancelled</SelectItem><SelectItem value="archived">Archived tasks</SelectItem><SelectItem value="all">All loaded tasks</SelectItem></SelectContent></Select>} emptyAction={!tasks.length && !loading ? <Button disabled={!!retained.mutation} onClick={openCreate}>Create a task</Button> : undefined} />}
-    {tab === 'runs' && (runs.length ? <GatewayRunsTable runs={runs} onOpen={openRun} /> : !loading && <CollectionEmpty title="No saved attempts" description="Attempts appear here when the connected service supplies a saved activity record. Creating a task does not create an attempt." action={<Button asChild variant="outline"><Link to="/chats">Open conversations</Link></Button>} />)}
-    {tab === 'events' && (events.length ? <GatewayEventsTable events={events} onOpen={openEvent} /> : !loading && <CollectionEmpty title="No saved activity" description="Task changes and supplied activity appear here without authored content." />)}
-    {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(true, cursor)}>Load more {tab === 'runs' ? 'attempts' : tab}</Button>}
-    {(tasks.length > 0 || runs.length > 0 || events.length > 0) && <p className="text-xs text-muted-foreground">Search and sorting apply to loaded records. Use Load more to include earlier records.</p>}
+    {(loading || listStatus === 'loading') && <p role="status" className="text-xs text-muted-foreground">Loading {tab === 'runs' ? 'attempts' : tab}...</p>}
+    {listStatus === 'failed' && <Button variant="outline" disabled={loading} onClick={() => void load()}>Retry read</Button>}
+    {listStatus === 'ready' && <>
+      {tab === 'tasks' && <GatewayTasksTable tasks={filteredTasks} onOpen={openTask} filters={<Select value={filter} onValueChange={setFilter}><SelectTrigger aria-label="Task lifecycle filter" className="w-52"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active tasks</SelectItem><SelectItem value="history">Completed / cancelled</SelectItem><SelectItem value="archived">Archived tasks</SelectItem><SelectItem value="all">All loaded tasks</SelectItem></SelectContent></Select>} emptyAction={!tasks.length && !loading ? <Button disabled={!!retained.mutation} onClick={openCreate}>Create a task</Button> : undefined} />}
+      {tab === 'runs' && (runs.length ? <GatewayRunsTable runs={runs} onOpen={openRun} /> : !loading && <CollectionEmpty title="No saved attempts" description="Attempts appear here when the connected service supplies a saved activity record. Creating a task does not create an attempt." action={<Button asChild variant="outline"><Link to="/chats">Open conversations</Link></Button>} />)}
+      {tab === 'events' && (events.length ? <GatewayEventsTable events={events} onOpen={openEvent} /> : !loading && <CollectionEmpty title="No saved activity" description="Task changes and supplied activity appear here without authored content." />)}
+      {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(true, cursor)}>Load more {tab === 'runs' ? 'attempts' : tab}</Button>}
+      {(tasks.length > 0 || runs.length > 0 || events.length > 0) && <p className="text-xs text-muted-foreground">Search and sorting apply to loaded records. Use Load more to include earlier records.</p>}
+    </>}
   </div>
     <DetailPanel open={active && !!(taskId || runId || eventId) && !dialog} onOpenChange={open => { if (!open) closeDetails() }} title={safeSelectedTask?.id === taskId ? taskTitle(safeSelectedTask) : taskId ? 'Task' : runId ? 'Attempt' : 'Activity'} description="Saved details" busy={busy}>
       {selectionPending ? <OverlayBody><p role="status">Loading details…</p></OverlayBody> : selectionError ? <OverlayBody><p role="alert" className="text-sm text-destructive">{selectionError}</p><Button variant="outline" onClick={() => { if (taskId) void loadSelection(taskId, 'task'); else if (runId) void loadSelection(runId, 'run') }}>Retry read</Button></OverlayBody> : taskId && safeSelectedTask?.id === taskId ? <GatewayTaskDetails task={safeSelectedTask} workDisabled={dispatchBlocked || !!retainedTaskId && retainedTaskId !== safeSelectedTask.id} workNotice={retainedTaskId && retainedTaskId !== safeSelectedTask.id ? 'Another task request is saved. Open Conversations to review or discard it first.' : undefined} onWork={() => onWork(safeSelectedTask)} feedback={<>{retained.error && <p role="alert" className="text-sm text-destructive">{retained.error}</p>}{recovery}</>} disabled={!!retained.mutation} onEdit={() => openEdit(safeSelectedTask)} onReview={status => openReview(safeSelectedTask, status)} onArchive={() => void mutate({ key: `archive:${safeSelectedTask.id}`, taskId: safeSelectedTask.id, revision: safeSelectedTask.revision, kind: 'archive', phase: 'pending' }, signal => client.archiveTask(safeSelectedTask.id, { expectedRevision: safeSelectedTask.revision, archived: !safeSelectedTask.archivedAt }, { signal }))} /> : runId && selectedRun?.id === runId ? <GatewayRunDetails run={selectedRun} /> : selectedEvent ? <GatewayEventDetails event={selectedEvent} /> : <OverlayBody><p className="text-sm text-muted-foreground">These details are not available in the loaded page. Load more or clear the selection.</p></OverlayBody>}

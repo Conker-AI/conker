@@ -17,11 +17,20 @@ function load(relative) {
   }, result, result.exports)
   return result.exports
 }
-const { createGatewayActivityWorkspaceState, draftFromTask, validateTaskDraft, eligibleTaskParents, forgetActivityDrafts, maskForgottenTask, visibleReferenceRuns } = load('src/components/gateway/activity-state.ts')
+const { activityListReadStatus, createGatewayActivityWorkspaceState, draftFromTask, validateTaskDraft, eligibleTaskParents, forgetActivityDrafts, maskForgottenTask, visibleReferenceRuns } = load('src/components/gateway/activity-state.ts')
 const { createGatewayRuntimeWorkspaceState } = load('src/components/gateway/runtime-state.ts')
 const { createGatewaySourcePrivacyState, maskForgottenConversation } = load('src/components/gateway/source-privacy.ts')
 const { bindGatewayWorkspaceReset } = load('src/components/gateway/auth-workspace-reset.ts')
 const { createGatewayAuthStore } = load('src/lib/gateway/auth-store.ts')
+
+assert.equal(activityListReadStatus(null, 'tasks/source-a'), 'loading', 'No empty-result claim before the first successful read')
+assert.equal(activityListReadStatus({ key: 'tasks/source-a', status: 'ready' }, 'tasks/source-a'), 'ready')
+assert.equal(activityListReadStatus({ key: 'tasks/source-a', status: 'ready' }, 'tasks/source-b'), 'loading', 'Previous source rows and counts cannot represent a new filter')
+assert.equal(activityListReadStatus({ key: 'tasks/source-a', status: 'failed' }, 'tasks/source-a'), 'failed', 'Read failure is not an empty result')
+assert.equal(activityListReadStatus({ key: 'tasks/source-a', status: 'failed' }, 'runs/source-a'), 'loading', 'Old errors cannot replace the new tab read state')
+const activitySource = fs.readFileSync(path.join(root, 'src/components/gateway/activity-workspace.tsx'), 'utf8')
+assert.match(activitySource, /listStatus === 'ready' && <>/, 'Tables and counts render only for their successfully loaded source')
+assert.match(activitySource, /listStatus === 'failed'.*Retry read/, 'Failed reads have an explicit non-mutating recovery')
 
 const task = { id: 'task_a', sessionId: 'session_a', agentId: 'companion', outcome: 'Private outcome', criteria: [{ id: 'criterion_a', text: 'Private criterion' }], parentTaskId: null, runIds: ['turn_a'], status: 'planned', statusSource: 'owner', provenance: 'recorded', revision: 3, createdAt: '2026-09-20T00:00:00Z', updatedAt: '2026-09-20T00:00:00Z', archivedAt: null, statusNote: 'Private review', completedCriterionIds: [], contentStatus: 'available', changes: [], changesTruncated: false }
 const draft = draftFromTask(task)
