@@ -179,7 +179,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
   }
 
   return <Sidebar variant="inset" collapsible="offcanvas">
-    <SidebarHeader className="gap-1 px-2 pt-2">
+    <SidebarHeader className="shrink-0 gap-1 px-2 pt-2">
       <div className="flex h-10 items-center gap-2 px-1">
         <Link to="/chat" aria-label="Open Conker chat" onClick={() => isMobile && setOpenMobile(false)} className="flex size-8 items-center justify-center rounded-lg border bg-background hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-ring"><img src="/conker.png" alt="" width="24" height="24" className="size-6 object-contain" /></Link>
         <span className="flex min-w-0 flex-1">{badge}</span>
@@ -197,7 +197,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
           {moreMenuOpen && !moreExpanded && <div ref={moreContent} role="navigation" aria-label="More destinations" className="absolute top-0 left-[calc(100%+0.5rem)] z-50 max-h-[60dvh] w-56 overflow-y-auto rounded-md border bg-popover p-2 text-popover-foreground shadow-md" onMouseEnter={keepMoreOpen} onMouseLeave={closeMoreSoon} onFocus={keepMoreOpen} onBlur={closeMoreSoon}>
             {moreDestinations.map(item => <AnimatedMoreDestination key={item.path} item={item} active={currentRoute === item.route} onNavigate={() => { setMoreMenuOpen(false); if (isMobile) setOpenMobile(false) }} />)}
           </div>}
-          <CollapsibleContent className="max-h-[40dvh] overflow-y-auto"><SidebarMenu className="mt-1">{moreDestinations.map(item => <AnimatedSidebarDestination key={item.path} item={item} active={currentRoute === item.route} onNavigate={() => isMobile && setOpenMobile(false)} />)}</SidebarMenu></CollapsibleContent>
+          <CollapsibleContent className="sidebar-more-destinations overflow-y-auto"><SidebarMenu className="mt-1">{moreDestinations.map(item => <AnimatedSidebarDestination key={item.path} item={item} active={currentRoute === item.route} onNavigate={() => isMobile && setOpenMobile(false)} />)}</SidebarMenu></CollapsibleContent>
         </SidebarMenuItem></Collapsible>
       </SidebarMenu>
     </SidebarHeader>
@@ -237,7 +237,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
       {loadFailed ? <div role="alert" className="space-y-2 px-4 py-2 text-sm text-muted-foreground"><p>Couldn’t load your chats.</p><button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={refresh}>Try again</button></div>
         : null}
     </SidebarContent>
-    <SidebarFooter className="p-2">
+    <SidebarFooter className="shrink-0 p-2">
       <SidebarMenu>
         {(setupSummary || (setupError && !setupStatus)) && <SidebarMenuItem>
           <SidebarMenuButton asChild isActive={currentRoute === 'setup'} className="h-auto min-h-14 rounded-[10px] border border-sidebar-border bg-sidebar-accent/60 py-2.5 hover:bg-sidebar-accent">

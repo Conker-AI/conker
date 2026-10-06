@@ -10,11 +10,15 @@
   --collection-section-gap: 1rem;
   --appbar-height: 3.5rem;
   --workspace-gutter: 1.5rem;
+  --sidebar-more-reserve: 32rem;
   --scrollbar-size: 0.625rem;
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));
   --scrollbar-thumb-active: var(--primary);
 }
+
+/* Keep fixed navigation/profile and recent lists reachable on short windows. */
+.sidebar-more-destinations { max-height:clamp(var(--control-height),calc(100dvh - var(--sidebar-more-reserve)),40dvh); }
 
 .workspace-appbar { container-type:inline-size; container-name:workspace-appbar; }
 .workspace-appbar-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(12rem,420px) minmax(0,1fr); align-items:center; gap:1rem; min-height:var(--appbar-height); padding:0.5rem var(--workspace-gutter); }

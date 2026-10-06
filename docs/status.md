@@ -26,6 +26,11 @@ The state before this correction is recoverable on
 `checkpoint/conker-before-correct-ui-rollback-2026-10-06` at
 `a6b7877c23c5d201d956d396d95cbc425be53db9`.
 
+Signed-in testing found that expanded More navigation could reduce the recent
+lists to zero height in a short window. Its scroll region now reserves space
+for those lists and fixed controls. Tool availability copy follows saved
+approval rules rather than promising per-run approval for automatic workflows.
+
 ### Technical workspace redesign (4 October, development branches)
 
 The dashboard now shares compact workspace chrome, central search entry, quiet

@@ -27,6 +27,9 @@ consequences; and whether it directs the user toward their intended action.
 Keep the main shell flat and the approved appbar geometry unchanged. Meaningful
 record headings remain; duplicate route headings do not. Search has one visible
 page entry point, with its current scope named by the field and scope menu.
+Expanded sidebar destinations have their own height-bounded scroll region;
+fixed navigation and profile do not shrink away, and recent lists retain room
+even in short desktop windows. This preserves the sidebar's existing appearance.
 Guidance about permission, expiry, model
 processing, provenance and recovery stays visible at the relevant action.
 Search/list hints can follow results; they do not compete with the find controls.

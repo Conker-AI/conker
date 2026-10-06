@@ -40,6 +40,6 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
         </div></OverlayBody>}
       </DetailPanel>
     </>}
-    <p className="text-xs text-muted-foreground">Anything that sends, spends or changes something still asks for your OK in the Inbox.</p>
+    <p className="text-xs text-muted-foreground">Actions follow your saved permissions and approval rules. Requests that need your decision appear in the Inbox.</p>
   </GatewayPageFrame>
 }

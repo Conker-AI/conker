@@ -50,6 +50,15 @@ assert.doesNotMatch(sidebar, /item\.route !== 'projects'/, 'Projects must remain
 assert.match(sidebar, /to="\/setup"/)
 assert.match(sidebar, /setupSummary\.resolved/)
 assert.match(sidebar, /setupStatus\.state !== 'complete'/, 'The setup prompt must disappear when verified setup is complete')
+assert.match(sidebar, /CollapsibleContent className="sidebar-more-destinations overflow-y-auto"/,
+  'Expanded destinations must use the height-bounded scroll region rather than consuming the recent lists')
+const styles = fs.readFileSync(path.join(root, 'src/styles/design-system.css'), 'utf8')
+assert.match(styles, /\.sidebar-more-destinations\s*\{\s*max-height:clamp\(var\(--control-height\),calc\(100dvh - var\(--sidebar-more-reserve\)\),40dvh\)/,
+  'Short windows must reserve space for fixed navigation, profile and recent lists')
+const tools = fs.readFileSync(path.join(root, 'src/components/gateway/tools-inventory.tsx'), 'utf8')
+assert.match(tools, /Actions follow your saved permissions and approval rules/)
+assert.doesNotMatch(tools, /Anything that sends, spends or changes something still asks/,
+  'The UI must not promise per-run confirmation for workflows configured to allow automatic runs')
 assert.match(workspace, /resolveGatewayRoute\(location\.pathname\)/)
 
 const primitives = fs.readFileSync(path.join(root, 'src/components/design-system/primitives.tsx'), 'utf8')
