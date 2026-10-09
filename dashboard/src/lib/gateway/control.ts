@@ -4,7 +4,7 @@ import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
 import { createGatewayCharactersClient } from './characters'
-import { createGatewayHostInventoryClient } from './host-inventory'
+import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayTeamsClient } from './teams'
 import { createGatewayTerminalClient } from './terminal'
 import { createGatewayFilesystemClient } from './filesystem'
@@ -14,6 +14,8 @@ import { createProviderControlClient } from './provider-control'
 import { createBrowserSessionsClient } from './browser-sessions'
 import { createNativeClaudeClient } from './native-claude'
 import { createChatGPTClient } from './chatgpt'
+import { createGatewaySkillsClient } from './skills'
+import type { GatewayMcpClient } from './mcp'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -265,13 +267,27 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
     chatgpt: createChatGPTClient(auth),
+    skills: createGatewaySkillsClient(auth),
+    mcp: {
+      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await import('./mcp')).createGatewayMcpClient(auth).list(...args) },
+      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await import('./mcp')).createGatewayMcpClient(auth).discover(...args) },
+      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await import('./mcp')).createGatewayMcpClient(auth).import(...args) },
+      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setEnabled(...args) },
+      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await import('./mcp')).createGatewayMcpClient(auth).access(...args) },
+      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setAccess(...args) },
+    },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),
     characters: createGatewayCharactersClient(auth),
-    hostInventory: createGatewayHostInventoryClient(auth),
+    hostInventory: {
+      async request(...args: Parameters<GatewayHostInventoryClient['request']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).request(...args) },
+      async inspect(...args: Parameters<GatewayHostInventoryClient['inspect']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).inspect(...args) },
+      async resume(...args: Parameters<GatewayHostInventoryClient['resume']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).resume(...args) },
+      async configured(...args: Parameters<GatewayHostInventoryClient['configured']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).configured(...args) },
+    },
     teams: createGatewayTeamsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),

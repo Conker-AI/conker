@@ -9,30 +9,36 @@ from pathlib import Path
 from workspace import CONFIG, PORTS, ROOT, STATE, interpreter, owned_listener, run
 
 
-def enhance(config, pi_source):
+def enhance(config, pi_source, toolgate_source=None):
     if any(
         owned_listener(config, service)
-        for service in ("pi", "gateway", "providers", "decisions")
+        for service in ("pi", "gateway", "toolgate", "providers", "decisions")
     ):
         raise SystemExit(
             "Stop this workspace before changing its runtimes: python scripts/workspace.py down"
         )
     source = (pi_source or Path(config["repositories"]["pi"])).resolve()
-    if pi_source is None and not (source / "pi/background_thinking.py").is_file():
-        pins = json.loads((ROOT / "scripts/workspace-sources.json").read_text())
-        if run("git", "rev-parse", "HEAD", cwd=source, capture=True) != pins[
-            "pi"
-        ] or run("git", "status", "--porcelain", cwd=source, capture=True):
-            raise SystemExit(
-                "Pi sources differ from the pinned base. Select a reviewed checkout with --pi-source."
-            )
-        patch = ROOT / "scripts/patches/pi-model-roles.patch"
-        run("git", "apply", "--check", patch, cwd=source)
-        run("git", "apply", patch, cwd=source)
-    if not (source / "pi/background_thinking.py").is_file():
-        raise SystemExit(
-            "Select the Conker Pi checkout containing background thinking with --pi-source."
+    from workspace_patches import apply_bundle
+
+    if pi_source is None:
+        apply_bundle(source, "pi")
+    if not all(
+        (source / filename).is_file()
+        for filename in (
+            "pi/background_thinking.py",
+            "pi/skills.py",
+            "gateway/mcp_control.py",
         )
+    ):
+        raise SystemExit(
+            "Select the Conker Pi checkout containing skills and MCP gateway support with --pi-source."
+        )
+    toolgate = (toolgate_source or Path(config["repositories"]["toolgate"])).resolve()
+    if toolgate_source is None:
+        apply_bundle(toolgate, "toolgate")
+    if not (toolgate / "toolgate/executors/mcp_http.py").is_file():
+        raise SystemExit("Select the ToolGate MCP checkout with --toolgate-source.")
+    run(config["python"], "-m", "pip", "install", "-r", source / "requirements.txt")
     decisions = STATE / "runtimes/decisions"
     if not interpreter(decisions).exists():
         run(config["python"], "-m", "venv", decisions)
@@ -118,6 +124,7 @@ def enhance(config, pi_source):
     ) or secrets.token_urlsafe(36)
     config.update(native_providers=private, ports=PORTS)
     config["repositories"]["pi"] = str(source)
+    config["repositories"]["toolgate"] = str(toolgate)
     config["python_by_service"].update(
         decisions=str(interpreter(decisions)), providers=config["python"]
     )

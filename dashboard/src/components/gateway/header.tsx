@@ -19,7 +19,7 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
   const systemSections = page.key === 'system' ? (pageSections.system ?? []).filter(section => ['overview', 'processes', 'ports', 'containers', 'terminal', 'files'].includes(section.value)).map(section => ({
     ...section, to: pageSectionHref('system', location.search, section.value), badge: undefined,
   })) : []
-  const agentSections = page.key === 'agents' ? (pageSections.agents ?? []).filter(section => ['agents', 'teams'].includes(section.value)).map(section => ({
+  const agentSections = page.key === 'agents' ? (pageSections.agents ?? []).filter(section => ['agents', 'teams', 'skills'].includes(section.value)).map(section => ({
     ...section, to: pageSectionHref('agents', location.search, section.value), badge: undefined,
   })) : []
   return <WorkspaceAppbar context={context ?? <AppbarBreadcrumbs crumbs={[{ title, to: location.pathname }]} />} search={<UniversalSearchTrigger />} actions={children} toolbar={toolbar} sections={<>

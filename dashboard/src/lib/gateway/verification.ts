@@ -17,7 +17,21 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push('Revokes browser access only. Models, jobs and services keep running. Revoking this browser signs you out.')
     return { title, path, target, details }
   }
-  if (path === '/api/host/chatgpt') {
+  if (path.startsWith('/api/owner/mcp/')) {
+    let endpoint = 'Saved MCP server'
+    try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }
+    target = parts[4] === 'tools' ? parts[5] : endpoint
+    const operation = parts.at(-1)
+    title = operation === 'discover' ? 'Discover MCP tools' : operation === 'import' ? 'Import MCP tool' : operation === 'access' ? (body.enabled ? 'Make MCP tool available in chats' : 'Remove MCP tool from chats') : (body.enabled ? 'Enable MCP tool' : 'Disable MCP tool')
+    details.push(operation === 'discover' ? 'Contacts this server to read its tool catalogue.' : operation === 'import' ? 'Saves the reviewed tool and input schema. Chat access is granted separately.' : operation === 'access' ? 'Changes access for this Conker chat runtime. Other callers keep their existing permissions.' : 'Changes availability for new tool calls.')
+    if (operation !== 'discover') details.push('Each execution still requires approval in the Inbox.')
+  }
+  else if (path === '/api/control/pi/skills/import' || /^\/api\/control\/pi\/skills\/.+\/state$/.test(path)) {
+    title = path.endsWith('/import') ? 'Import skill instructions' : body.enabled ? 'Enable skill' : 'Disable skill'
+    target = path.endsWith('/import') ? 'Reviewed SKILL.md source' : parts[5]
+    details.push('Skills apply only when selected for a message. They do not execute scripts or grant tool access. Earlier turns keep their saved instructions.')
+  }
+  else if (path === '/api/host/chatgpt') {
     target = 'ChatGPT subscription on this Conker server'
     title = body.operation === 'login' ? 'Sign in with ChatGPT' : body.operation === 'logout' ? 'Disconnect ChatGPT' : body.operation === 'cancel' ? 'Cancel ChatGPT sign-in' : 'Read ChatGPT models'
     details.push(body.operation === 'login' ? 'Starts OpenAI device-code sign-in. You authorize it on OpenAI, not by entering an API key. Credentials stay private on this server.' : body.operation === 'logout' ? 'Removes this server connection. Models using it stop answering until you reconnect; this does not revoke all OpenAI sessions.' : body.operation === 'cancel' ? 'Cancels this exact pending sign-in attempt.' : 'Reads the signed-in provider catalogue. It does not select a model or run inference.')

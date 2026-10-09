@@ -26,6 +26,7 @@ import { ConnectedWorkspaceShell } from './workspace-shell'
 
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
+const GatewayMcpWorkspace = lazy(() => import('./mcp-workspace').then(module => ({ default: module.GatewayMcpWorkspace })))
 const GatewaySystemStatus = lazy(() => import('./system-status').then(module => ({ default: module.GatewaySystemStatus })))
 const GatewayOwnerWorkspace = lazy(() => import('./owner-workspace').then(module => ({ default: module.GatewayOwnerWorkspace })))
 const GatewayMemoryWorkspace = lazy(() => import('./memory-workspace').then(module => ({ default: module.GatewayMemoryWorkspace })))
@@ -43,6 +44,7 @@ const GatewayJobsWorkspace = lazy(() => import('./jobs-workspace').then(module =
 const GatewayCharacterWorkspace = lazy(() => import('./character-workspace').then(module => ({ default: module.GatewayCharacterWorkspace })))
 const GatewayHostInventoryWorkspace = lazy(() => import('./host-inventory-workspace').then(module => ({ default: module.GatewayHostInventoryWorkspace })))
 const GatewayTeamsWorkspace = lazy(() => import('./teams-workspace').then(module => ({ default: module.GatewayTeamsWorkspace })))
+const GatewaySkillsWorkspace = lazy(() => import('./skills-workspace').then(module => ({ default: module.GatewaySkillsWorkspace })))
 const GatewayFilesystemWorkspace = lazy(() => import('./filesystem-workspace').then(module => ({ default: module.GatewayFilesystemWorkspace })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
 
@@ -85,11 +87,11 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active /></div>}
-      {toolsActive && (params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
+      {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} />}
       {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} /> : <GatewayModelsSettings client={control} />}</div>}
-      {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
+      {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
       {artifactsActive && <GatewayArtifactsWorkspace control={control} activity={activity} />}

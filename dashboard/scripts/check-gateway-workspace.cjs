@@ -75,10 +75,10 @@ assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyCo
   'Global Memory and Tools destinations must not masquerade as per-chat composer controls')
 assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,
   'An open conversation must expose an explicit future-turn agent handoff')
-assert.match(workspaceSource, /dispatchSubmission\(created, text, createTurnRequestId\(\), undefined, undefined, firstModel\)/,
+assert.match(workspaceSource, /dispatchSubmission\(created, text, createTurnRequestId\(\), undefined, undefined, firstModel, skills\)/,
   'The first-message model choice must cross session creation into the initial submission')
-assert.match(workspaceSource, /const modelId = modelOverride \?\? modelChoices\[id\]/)
-assert.match(workspaceSource, /\.\.\.\(modelId \? \{ modelId \} : \{\}\)/,
+assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? modelChoices\[id\]/)
+assert.match(workspaceSource, /client.submitRequest\([^\n]+\.\.\.requestOptions/,
   'The exact resolved model choice must be sent to the runtime')
 
 assert.equal(canSubmitRuntime('next', false, undefined, { ...detail, turns: [{ status: 'interrupted', acted: true, endedAt: '2026-09-20T12:00:00Z' }] }), false)

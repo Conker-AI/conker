@@ -64,11 +64,17 @@ def install(model):
         fresh = not source.exists()
         if fresh:
             run("git", "clone", "--no-checkout", f"https://github.com/Conker-AI/{name}.git", source)
-        if not fresh and run("git", "status", "--porcelain", cwd=source, capture=True):
-            raise SystemExit(f"Pinned source {name} has local changes; refusing to replace it.")
-        run("git", "checkout", "--detach", revision, cwd=source)
+        bundled = name in {"pi", "toolgate"}
+        at_pin = not fresh and run("git", "rev-parse", "HEAD", cwd=source, capture=True) == revision
+        if not (bundled and at_pin):
+            if not fresh and run("git", "status", "--porcelain", cwd=source, capture=True):
+                raise SystemExit(f"Pinned source {name} has local changes; refusing to replace it.")
+            run("git", "checkout", "--detach", revision, cwd=source)
         if run("git", "rev-parse", "HEAD", cwd=source, capture=True) != revision:
             raise SystemExit(f"Source identity check failed for {name}.")
+        if bundled:
+            from workspace_patches import apply_bundle
+            apply_bundle(source, name)
         env = STATE / "runtimes" / name
         if not interpreter(env).exists():
             run(sys.executable, "-m", "venv", env)
@@ -221,6 +227,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["install", "enhance", "up", "down", "status", "build", "password"])
     parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
+    parser.add_argument("--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development")
     parser.add_argument("--model", default="qwen2.5:3b", help="Installed local Ollama answer model; install only")
     args = parser.parse_args()
     if args.command == "install":
@@ -232,7 +239,7 @@ def main():
     config = read_config()
     if args.command == "enhance":
         from workspace_setup import enhance
-        enhance(config, args.pi_source)
+        enhance(config, args.pi_source, args.toolgate_source)
         return
     if config.get("native_providers"):
         ORDER = ("postgres", "memorygate", "toolgate", "decisions", "providers", "pi", "gateway")

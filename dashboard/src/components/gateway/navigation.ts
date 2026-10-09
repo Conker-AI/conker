@@ -86,6 +86,7 @@ export function gatewaySystemSection(search: string): GatewaySystemSection {
   return gatewaySystemSections.find(section => section === requested) ?? 'overview'
 }
 
-export function gatewayAgentSection(search: string): 'agents' | 'teams' {
-  return new URLSearchParams(search).get('tab') === 'teams' ? 'teams' : 'agents'
+export function gatewayAgentSection(search: string): 'agents' | 'teams' | 'skills' {
+  const tab = new URLSearchParams(search).get('tab')
+  return tab === 'teams' || tab === 'skills' ? tab : 'agents'
 }

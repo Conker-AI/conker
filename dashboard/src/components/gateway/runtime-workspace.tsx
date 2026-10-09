@@ -7,6 +7,7 @@ import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } 
 import type { Attempt, Generation } from '@/lib/chat/contract'
 import { GatewayModelPicker } from './model-picker'
 import { GatewayAgentPicker } from './agent-picker'
+import { GatewaySkillPicker } from './skill-picker'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evidence"
 import { memoryRetrievalSummary } from './plain-status'
@@ -26,8 +27,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
 import { followLivePreview } from '@/lib/gateway/live-preview'
-import { gatewayError } from '@/lib/gateway/transport'
-import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, hasActiveRuntimeTurn, recoverSubmissionDraft, resolveAttempt, type GatewayRuntimeWorkspaceState } from './runtime-state'
+import { GatewayError, gatewayError } from '@/lib/gateway/transport'
+import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 import { GatewayCallLauncher } from './call-workspace'
 import { GatewaySessionAgentControl } from './session-agent-control'
@@ -67,7 +68,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [localPrivacy] = useState(createGatewaySourcePrivacyState)
   const privacy = sourcePrivacy ?? localPrivacy
   const forgottenIds = useStore(privacy, value => value.sessionIds)
-  const { selected, drafts, uncertain, title, createUnknown, operation, taskIntent } = useStore(workspace)
+  const { selected, drafts, skillChoices, uncertain, title, createUnknown, operation, taskIntent } = useStore(workspace)
+  const firstSkills = skillChoices.__new__ ?? []
+  const setSkillChoices = (id: string, ids: string[]) => workspace.setState(value => ({ skillChoices: { ...value.skillChoices, [id]: ids } }))
   const safeTaskIntent = visibleTaskDispatchIntent(taskIntent, forgottenIds)
   const setSelected = (value: string | null) => workspace.setState({ selected: value })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
@@ -222,7 +225,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
     if (!forgottenIds.length) return
-    workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', submission: attempt.submission ? { ...attempt.submission, pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
+    workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
     setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)
     setSessions(values => values.map(value => forgottenIds.includes(value.id) ? maskForgottenSession(value) : value))
   }, [forgottenIds, workspace])
@@ -237,6 +240,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   /** A new chat is created by its first message, like any chat app. */
   async function startChat() {
     const text = firstMessage
+    const skills = firstPrivacy.harnessDisabled ? [] : [...firstSkills]
     if (!text.trim() || [...text].length > 16_000 || firstPrivacy.harnessDisabled && !firstModel || workspace.getState().operation || createUnknown || !activeRef.current) return
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'create' }); setCreateError(null)
@@ -254,13 +258,13 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
     if (workspace.getState().epoch !== epoch || !mounted.current || !activeRef.current) return
     // Seed the draft so the text survives a failed send, exactly like a message typed in the chat.
-    workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text } }))
+    workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text }, skillChoices: { ...values.skillChoices, [created]: skills, __new__: [] } }))
     setSessionAgents(current => ({ ...current, [created]: firstAgent }))
     if (firstModel) setModelChoices(current => ({ ...current, [created]: firstModel }))
     setFirstMessage('')
     openSession(created)
     void refreshList()
-    await dispatchSubmission(created, text, createTurnRequestId(), undefined, undefined, firstModel)
+    await dispatchSubmission(created, text, createTurnRequestId(), undefined, undefined, firstModel, skills)
     setFirstModel('')
     setFirstPrivacy({ memoryDisabled: false, harnessDisabled: false })
   }
@@ -270,10 +274,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     if (live.operation || !id || id !== current?.id || !canSubmitRuntime(text, pending, live.uncertain[id], current)) return
     await dispatchSubmission(id, text, createTurnRequestId())
   }
-  async function acceptSubmission(id: string, text: string, receipt: RuntimeSubmission, taskBinding?: TaskSubmissionBinding) {
+  async function acceptSubmission(id: string, text: string, receipt: RuntimeSubmission, taskBinding?: TaskSubmissionBinding, requestOptions?: RequestModelOptions) {
+    const frozenOptions = requestOptions ?? retainedRequestOptions({ text, checked: true, submission: receipt })
     if (receipt.contentStatus === 'forgotten') privacy.getState().markForgotten([id, ...(receipt.sessionId ? [receipt.sessionId] : [])])
     if (!receipt.turnId || !receipt.sessionId || receipt.state === 'forgotten') {
-      workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { text: privacy.getState().sessionIds.includes(id) ? '' : text, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, submission: receipt, checked: true } } }))
+      workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { text: privacy.getState().sessionIds.includes(id) ? '' : text, requestOptions: frozenOptions, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, submission: receipt, checked: true } } }))
       if (mounted.current) setNotice(`Submission is ${receipt.state.replaceAll('_', ' ')}. No request was repeated.`)
       if (mounted.current && selectedRef.current === id) await refreshDetail(id)
       return
@@ -281,8 +286,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     const destination = receipt.sessionId
     workspace.setState(values => {
       const uncertain = { ...values.uncertain }; delete uncertain[id]
-      uncertain[destination] = { text: privacy.getState().sessionIds.includes(destination) ? '' : text, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, turnId: receipt.turnId!, checked: false, accepted: true, submission: receipt }
-      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] ?? '' }, uncertain, selected: destination }
+      uncertain[destination] = { text: privacy.getState().sessionIds.includes(destination) ? '' : text, requestOptions: frozenOptions, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, turnId: receipt.turnId!, checked: false, accepted: true, submission: receipt }
+      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] ?? '' }, skillChoices: { ...values.skillChoices, [id]: [] }, uncertain, selected: destination }
     })
     if (!mounted.current || !activeRef.current) return
     if (selectedRef.current !== destination) openSession(destination)
@@ -311,9 +316,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       }
     }
   }
-  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string) {
+  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string, skillOverride?: string[]) {
     if (workspace.getState().operation || !activeRef.current) return
-    const modelId = modelOverride ?? modelChoices[id]
+    const prior = Object.values(workspace.getState().uncertain).find(attempt => attempt.requestId === requestId)
+    const requestOptions = prior ? retainedRequestOptions(prior) : createRequestOptions(modelOverride ?? modelChoices[id], skillOverride ?? (taskBinding || harnessBySession?.[id] ? [] : workspace.getState().skillChoices[id] ?? []))
+    const { modelId } = requestOptions
     if (harnessBySession?.[id] && !modelId) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'send' }); setDetailError(null); setNotice(null); setTaskError(null)
@@ -339,18 +346,18 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       let resetVersion = 0
       const previewCurrent = () => mounted.current && activeRef.current && workspace.getState().epoch === epoch && !previewStop.signal.aborted && !privacy.getState().sessionIds.includes(id)
       void followLivePreview(requestId, streamed => { if (previewCurrent()) setPreview({ sessionId: id, text: streamed, resetVersion }) }, { signal: previewStop.signal, onReset: () => { resetVersion++; if (previewCurrent()) setPreview({ sessionId: id, text: '', resetVersion }) } }).then(end => { if (previewCurrent()) setPreview(value => ({ sessionId: id, text: value?.text ?? '', resetVersion, end })) })
-      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...(modelId ? { modelId } : {}) }))
+      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...requestOptions }))
       if (workspace.getState().epoch !== epoch) return
       if (prepared) workspace.setState({ taskIntent: null })
-      await acceptSubmission(id, text, receipt, taskBinding)
+      await acceptSubmission(id, text, receipt, taskBinding, requestOptions)
     } catch (error) {
       if (workspace.getState().epoch !== epoch) return
-      if (!dispatched || error instanceof RuntimeMutationError && error.outcome === 'rejected') {
+      if (!dispatched || error instanceof RuntimeMutationError && error.outcome === 'rejected' || error instanceof GatewayError && ['validation', 'configuration', 'too-large'].includes(error.kind)) {
         if (prepared) workspace.setState(value => value.taskIntent?.taskId === prepared.taskId ? { taskIntent: { ...value.taskIntent, open: true } } : {})
         if (mounted.current) { const message = error instanceof Error ? error.message : gatewayError(error).message; if (prepared) setTaskError(message); else { setRejected(message); setDetailError(message) } }
       }
       else {
-        workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { taskBinding, rejectionStatus: error instanceof RuntimeMutationError && error.status === 409 ? 409 : undefined, text: privacy.getState().sessionIds.includes(id) ? '' : text, requestId, requestedSessionId: id, turnId: error instanceof RuntimeMutationError ? error.turnId : undefined, checked: false } } }))
+        workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { requestOptions, taskBinding, rejectionStatus: error instanceof RuntimeMutationError && error.status === 409 ? 409 : undefined, text: privacy.getState().sessionIds.includes(id) ? '' : text, requestId, requestedSessionId: id, turnId: error instanceof RuntimeMutationError ? error.turnId : undefined, checked: false } } }))
         if (prepared) workspace.setState({ taskIntent: null })
         if (mounted.current) { setReviewed(false); setDetailError('Send outcome unknown. Check the saved request identity before continuing.') }
       }
@@ -376,7 +383,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     try {
       const receipt = await request(signal => client.getSubmission(saved.requestId!, saved.requestedSessionId ?? id, { signal }))
       if (workspace.getState().epoch !== epoch) return
-      await acceptSubmission(id, saved.text, receipt, saved.taskBinding)
+      await acceptSubmission(id, saved.text, receipt, saved.taskBinding, retainedRequestOptions(saved))
     } catch (failure) {
       if (workspace.getState().epoch !== epoch) return
       const safe = gatewayError(failure)
@@ -464,6 +471,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
               <ChatComposerFrame id="new-chat-composer" label={`Message ${activeAgentName}`} placeholder={`Ask ${activeAgentName} anything, or give it a task...`} value={firstMessage} onChange={setFirstMessage} inputRef={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} onSend={() => { if (!dictating) void startChat() }} controls={<>
                   {control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}
                   {control && <GatewayModelPicker compact client={control} value={firstModel} iconOnlyOnMobile disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
+                  <GatewaySkillPicker client={client} value={firstSkills} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={ids => setSkillChoices('__new__', ids)} />
               </>} actions={<>
                     <NewChatPrivacyControl value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
                     <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Voice call unavailable before the first message" disabled><AnimatedIconGlyph icon={PhoneIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Send a message first, then call from the chat header.</TooltipContent></Tooltip>
@@ -510,6 +518,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             <ChatComposer key={selected} chat={chat} inputRef={replyComposer} dictating={dictating} controls={<>
               {control && current?.status === 'open' && <GatewaySessionAgentControl compact key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
               {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
+              <GatewaySkillPicker key={`skills:${selected}`} client={client} value={skillChoices[selected] ?? []} disabled={pending || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={ids => setSkillChoices(selected, ids)} />
             </>} actions={<>
               {headerExtra}
               <NewChatVoiceControl value={chat.draft} input={replyComposer} onRecordingChange={setDictating} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation)} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} />

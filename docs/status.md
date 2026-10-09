@@ -7,11 +7,52 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **6 October 2026**. The current tree has **35 tracked
-capability families: 34 active and 1 deferred**. Active means at least one real
+Last source verification: **9 October 2026**. The current tree has **37 tracked
+capability families: 36 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### Reusable skills and external MCP tools (9 October)
+
+The local Conker workspace now imports instruction-only `SKILL.md` files in
+Agents → Skills and through `python scripts/conker.py skills`. Each message can
+explicitly select up to three skills. Pi freezes their exact revisions and text
+at admission; retries retain that selection even if the registry changes. Skill
+source replacement checks both identity and revision. Disabled, unknown,
+duplicate and No-harness selections are rejected before inference. Imports do
+not execute accompanying scripts or grant tools. A reusable code-review skill is
+included at `examples/skills/code-review/SKILL.md`.
+
+Tools → MCP servers and `python scripts/conker.py mcp` discover public HTTPS
+Streamable HTTP servers, review/import an exact tool schema, enable or disable
+tools, and explicitly grant chat access. ToolGate keeps execution behind its
+existing owner approvals, immutable definitions and action journal. The client
+supports MCP 2026-07-28 and the 2025-03-26, 2025-06-18 and 2025-11-25 protocols,
+JSON and POST SSE, schema-drift checks, and uncertain outcomes without automatic
+replay. Vault references supply a server Bearer token without exposing it to the
+browser. Local stdio, MCP OAuth, sampling and deferred completion remain absent;
+schema references, regex and format constraints are rejected explicitly.
+Unsupported catalogue entries are listed separately so compatible tools remain
+usable. Nullable types, scalar constants and bounded `anyOf`/`oneOf` schemas are
+validated without dropping constraints. Complete accepted input schemas reach
+the model, and returned credential echoes are withheld.
+
+Live verification imported and selected the code-review skill, completed its
+local-model answer, discovered/imported DeepWiki tools through both surfaces,
+enabled one exact chat capability, and completed an approved read of the public
+Hermes repository documentation. An explicit final-answer retry recovered a
+local-model timeout without repeating the recorded tool action. Stale skill
+revision updates were rejected with the saved version unchanged. Automated
+coverage includes CLI and installation recovery, browser authority, skill
+snapshot/replay, mixed MCP catalogues, approvals, schema drift, and uncertain
+execution. Dashboard build, lint and affected contract checks pass.
+
+These service changes ship as ordered patches against the pinned local workspace
+sources. Fresh `workspace.py install` applies them before dependency installation;
+`workspace.py enhance` updates an existing stopped workspace. Explicit reviewed
+development checkouts use `--pi-source` and `--toolgate-source`. Release deployment
+pins in `versions.env` are unchanged.
 
 ### Owner UI rollback (6 October)
 

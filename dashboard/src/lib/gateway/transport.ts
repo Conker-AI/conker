@@ -63,6 +63,8 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
+routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/, /^\/api\/owner\/mcp\/tools(?:\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/access)?$/)
+routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
 routes.GET.unshift(/^\/api\/host\/providers$/)
 routes.GET.unshift(/^\/api\/host\/claude$/)
 routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
@@ -212,7 +214,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
     },
     async request(path: string, options: GatewayRequest & { csrfToken?: string; verificationToken?: string } = {}): Promise<Record<string, unknown>> {
       const method = options.method ?? 'GET'
-      if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
+      if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_.-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
       if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')

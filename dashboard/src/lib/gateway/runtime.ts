@@ -1,5 +1,6 @@
 import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
+import { parseSkills, validateSkillIds } from './skills'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -40,6 +41,7 @@ export type RuntimeTurnReceipt = {
 }
 export type RuntimeMessageRef = { messageId: string; purpose: 'input' | 'intermediate' | 'tool_result' | 'final'; actionId: string | null; sequence: number }
 export type RuntimeSubmission = {
+  skillIds?: string[]; modelId?: string | null
   requestId: string; requestedSessionId: string; sessionId: string | null; turnId: string | null; taskId: string | null
   inputMessageId: string | null; finalMessageId: string | null; messageRefs: RuntimeMessageRef[]
   state: 'preparing' | 'bound' | 'preparation_failed' | 'preparation_interrupted' | 'forgotten'
@@ -55,7 +57,7 @@ export class RuntimeMutationError extends Error {
   readonly sessionId?: string
   readonly gatewayKind: GatewayError['kind']
   constructor(error: GatewayError, sessionId?: string) {
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(error.kind) ||
+    const rejected = ['configuration', 'validation', 'too-large', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(error.kind) ||
       (error.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(error.status))
     super(rejected ? error.message : 'The operation outcome is uncertain. Refresh the conversation before deciding whether to try again.')
     this.name = 'RuntimeMutationError'
@@ -202,7 +204,10 @@ export function parseRuntimeSubmission(value: unknown, requestId?: string, sessi
   if (failureCode !== null && !['preparation_failed', 'preparation_interrupted', 'task_fork_required', 'source_changed'].includes(String(failureCode))) return bad()
   const pendingText = contentStatus === 'forgotten' ? null : nullable(row.pending_text, value => text(value, 32_000))
   if (pendingText !== null && ([...pendingText].length > 16_000 || preparation === 'bound')) return bad()
-  return { requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
+  let skillIds: string[] = []
+  try { skillIds = contentStatus === 'forgotten' ? [] : validateSkillIds(row.skill_ids === undefined ? [] : array(row.skill_ids, 3).map(item => text(item, 64))) } catch { return bad() }
+  const modelId = contentStatus === 'forgotten' || row.model_id == null ? null : text(row.model_id, 200)
+  return { skillIds, modelId, requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
     messageRefs: refs, state: contentStatus === 'forgotten' ? 'forgotten' : preparation, status: state(row.status), acted: bool(row.acted), contentStatus,
     createdAt: date(row.created_at), updatedAt: date(row.updated_at) }
 }
@@ -216,6 +221,7 @@ function pendingSubmission(value: unknown, sessionId: string): RuntimePendingSub
 
 export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
+    async listSkills(options: { signal?: AbortSignal } = {}) { return parseSkills(await auth.request('/api/pi/skills', options)) },
     /** Resumes a parked turn; returns its status afterwards when the server reports one. */
     async resumeTurn(turnId: string, options: { signal?: AbortSignal } = {}): Promise<string | null> {
       inputId(turnId)
@@ -237,13 +243,14 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (requestId.length < 16) throw new GatewayError('validation')
       return parseRuntimeSubmission(await auth.request(`/api/pi/turn-submissions/${requestId}`, options), requestId, requestedSessionId)
     },
-    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string } = {}): Promise<RuntimeSubmission> {
+    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[] } = {}): Promise<RuntimeSubmission> {
       inputId(sessionId); inputId(requestId)
       if (requestId.length < 16 || typeof userText !== 'string' || !userText.trim() || [...userText].length > 16_000 || (options.taskId === undefined) !== (options.taskExpectedRevision === undefined)) throw new GatewayError('validation')
       if (options.taskId !== undefined && (!inputId(options.taskId) || !Number.isSafeInteger(options.taskExpectedRevision) || options.taskExpectedRevision! < 1)) throw new GatewayError('validation')
       if (options.modelId !== undefined && (typeof options.modelId !== 'string' || !options.modelId.length || options.modelId.length > 200)) throw new GatewayError('validation')
+      const skillIds = validateSkillIds(options.skillIds ?? [])
       try {
-        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         const receipt = parseRuntimeSubmission(response.submission, requestId, sessionId)
         if (receipt.taskId !== (options.taskId ?? null)) return bad()
         return receipt
