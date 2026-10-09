@@ -13,9 +13,10 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { closeTab, moveTab, visitTab, workspaceTab, type WorkspaceTab } from './workspace-tabs'
 import { ConnectedShellContext } from './workspace-shell-context'
 import { resolveGatewayRoute } from './navigation'
+import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import '@/styles/connected-workspace.css'
 
-function ConversationReference({ detail, error, loading, onRetry }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void }) {
+function ConversationReference({ detail, error, loading, onRetry, runtime, sourcePrivacy, active }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void; runtime: GatewayRuntimeClient; sourcePrivacy: GatewaySourcePrivacyState; active: boolean }) {
   return <div className="conker-reference-content" id="conker-conversation-context">
       {loading ? <p role="status">Loading saved context…</p> : error ? <div role="alert"><p>{error}</p><Button variant="outline" size="sm" onClick={onRetry}>Try again</Button></div> : !detail ? <p>Start a conversation to see its model, memory, and recorded work here.</p> : <>
         <h2>{detail.title || 'Untitled conversation'}</h2>
@@ -29,7 +30,8 @@ function ConversationReference({ detail, error, loading, onRetry }: { detail: Ru
         {detail.turns.slice(-8).reverse().map(turn => <section key={turn.id} className="conker-receipt">
           <strong>{turn.model || 'Model not recorded'}</strong>
           <p>{turn.status.replaceAll('_', ' ')}{turn.acted ? ' · action recorded' : ''}</p>
-          <p>{turn.provider ?? 'Provider unknown'} · {turn.costUsd === null ? 'Cost unknown' : `$${turn.costUsd.toFixed(4)}`}</p>
+          <p>{turn.provider ?? 'Provider unknown'}</p>
+          {detail.status !== 'forgotten' && <TurnUsageDisclosure client={runtime} turnId={turn.id} sessionId={detail.id} sourcePrivacy={sourcePrivacy} active={active} refreshKey={`${turn.status}:${turn.endedAt}:${detail.thinking?.find(row => row.turnId === turn.id)?.status ?? ''}`} />}
           {turn.detail && <p>{turn.detail}</p>}
         </section>)}
         <Link to="/memory">Explore memory and sources</Link>
@@ -105,7 +107,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     setTabs(result.tabs)
     if (result.next) go(result.next)
   }
-  const reference = <ConversationReference detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
+  const reference = <ConversationReference runtime={runtime} sourcePrivacy={sourcePrivacy} active={contextOpen} detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
   const closeReference = () => { setReferenceOpen(false); document.querySelector<HTMLButtonElement>('[aria-label="Conversation context"]')?.focus() }
   return <ConnectedShellContext.Provider value={{ tabsOpen, toggleTabs: () => setTabsOpen(value => !value), openViewCount: visibleTabs.length, contextOpen, toggleContext: () => setReferenceOpen(value => !value), showContext: onChat }}>
   <BaseLayout variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}

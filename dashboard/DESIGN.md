@@ -75,6 +75,22 @@ Chat code loads in its own module while the workspace remains mounted across
 navigation, retaining streams and recovery state. The production entry-size
 guard remains unchanged.
 
+Calls & usage is a shared, initially closed disclosure in chat Details,
+conversation context and recorded run details. Its component and authenticated
+read load only while opened on a visible surface. Closing, changing routes or
+forgetting the source cancels the read; authenticated session changes reject
+old responses. Usage is never retained in browser storage.
+
+Conversation and Background thinking have separate call lists and summaries.
+Complete metrics use the server's totals; incomplete metrics show a labeled
+known subtotal only when some calls reported that field. Otherwise they say
+Not reported. Empty lanes say No recorded calls. Older partial coverage and
+truncated call lists are explicit. Configured model, requested adapter route and
+provider-reported identity are distinct. Summed call time can include overlapping
+work and is never presented as elapsed turn time. Costs come only from reported
+measurements; the UI neither estimates subscription costs nor treats missing
+cost as zero. Model-selection reasons keep their existing separate disclosure.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.
@@ -545,6 +561,18 @@ Selecting a graph point, folder-browser record or database record immediately up
 The default illustrative dataset contains 50 fictional, read-only records across five categories in `src/lib/memory-demo.ts`. Keep it isolated from the memory store and explicitly labeled as illustrative, not the user's data. Sample records selects the original four claims and preserved source URLs; only that fixture dataset supports create/edit/delete through `ConkerClient`. Source-hash links open the sample dataset. Edits retain original source/text for review, new notes are unreviewed, and fixture changes reset on reload. JSON inspection/export reports the selected dataset with its preview/demo boundary. There is no live vector search, media upload/transcription, physical file editing or production MemoryGate write.
 
 Research and integration boundaries are in [memory-workspace-research.md](../docs/archive/memory-workspace-research.md). The canvas revision was reviewed in desktop dark/light and 390×844 mobile captures, including searchable selection, dock geometry, hierarchy and maximize/restore. The review found stale layout zoom and mobile point occlusion; both were corrected and visually rechecked. Build, design guard, affected lint, memory/layout, navigation and daily-overview checks passed. This verifies the frontend preview, not a production memory connection.
+
+## Memory forgetting and recovery
+
+Forgetting a live memory uses the shared `ConfirmationDialog`, showing the exact
+reviewed text and version before the owner confirms. Source conversations are
+kept. After an uncertain response, keep the same request identity and offer
+"Check same request"; do not silently generate a replacement deletion. Recovery
+reads content-free metadata from Pi on reload and requires an explicit confirmation
+before checking or completing the saved deletion. Keep metadata reads and mutation
+pending states distinct, and exclude one while the other is active. Successful
+forgetting clears the inspector and record deep link; late reads cannot restore
+either. No memory text or deletion intent is stored in browser storage.
 
 ## Tools workspace
 

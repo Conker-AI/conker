@@ -7,11 +7,50 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **9 October 2026**. The current tree has **37 tracked
+Last source verification: **10 October 2026**. The current tree has **37 tracked
 capability families: 36 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### Recorded model calls and recoverable memory forgetting (10 October)
+
+Every new turn records actual provider attempts, including model selection,
+fallback, memory ranking and resumed answers. Talking and background thinking
+have separate totals. The UI reads these records on demand in Calls & usage;
+`conker.py usage TURN_ID` reads the same receipt. Missing provider counters stay
+unknown, known subtotals are identified, and older turns disclose incomplete
+coverage. Costs are reported values, never estimates. Summed call time can include
+overlapping requests and is not the time the user waited for a reply. Duplicate
+submission recovery does not create another provider call.
+Preparation before turn admission, including context selection and automatic fork
+summaries, and independent search/proposal work are outside this receipt's scope.
+
+Memory forgetting now has a durable, content-free request journal. An uncertain
+response holds recall until the owner confirms that same request; reload can
+recover its exact identity without storing memory text in the browser. Request
+identity is bound to the original memory, revision, namespace and service
+destination. Deletion invalidates derived recall packages and saved replay
+prefixes, including retry copies and older briefings without individual IDs.
+An atomic admission check prevents a retry from copying a prefix concurrently
+with forgetting. Source conversations remain available until separately forgotten.
+
+The Memory UI uses the shared destructive confirmation, preserves the reviewed
+identity after a lost response, and offers explicit recovery from server metadata.
+Late reads cannot restore a forgotten record or its deep link. A recovery status
+refresh cannot close an active deletion check. These behaviors are tested with
+isolated data; live user memories are not used for deletion tests.
+
+Validation: the Gateway and memory checks, TypeScript, affected lint, and
+production build pass (594,244-byte Gateway entry; no fixtures). The final
+deadline/usage run passed 25 tests, forgetting recall passed 26, and the combined
+CLI/installer run passed 35. The installer bundle reproduces all 62 reviewed Pi
+files on a fresh pinned checkout and is unchanged by repeat application.
+Pi and Gateway were restarted after consistent database checkpoints; both passed
+health checks. A live local-model turn recorded one foreground call, 371 input
+and 15 output tokens, no thinking call, and unknown cost/cache counters. Older
+turns correctly return incomplete coverage. The call took 33 seconds and the turn
+44 seconds; local inference and preparation latency remain follow-up work.
 
 ### Private drafts, bounded thinking and memory recall (9 October)
 
@@ -59,8 +98,12 @@ with the existing 700,000-byte guard); 64 CLI/installer tests, 46 thinking and
 cancellation tests, and 101 memory/prompt/tool/context regressions pass. Fresh and
 repeat Pi bundle checks reproduce all 52 reviewed files. Local Pi and Gateway
 health checks passed after the rollout, with consistent database checkpoints
-retained privately. Browser live acceptance remains a separate check from these
-source and installation results.
+retained privately. Live browser acceptance restored a new draft and Think choice
+after reload, sent it once, recovered an existing-chat draft, and resolved a real
+two-client revision conflict without sending either competing draft. Desktop and
+390-pixel mobile views were inspected. The ordinary local reply completed in
+29 seconds and created no thinking job; this single measurement does not establish
+a general latency improvement.
 
 ### Chat-first companion and explicit thinking (9 October)
 

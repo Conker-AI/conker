@@ -2,6 +2,7 @@ import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
 import { parseSkills, validateSkillIds } from './skills'
 import type { GatewayDraftClient } from './drafts'
+import type { GatewayTurnUsageClient } from './turn-usage'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -228,7 +229,10 @@ function pendingSubmission(value: unknown, sessionId: string): RuntimePendingSub
 export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'request'>) {
   let draftClient: Promise<GatewayDraftClient> | undefined
   const drafts = () => draftClient ??= import('./drafts').then(module => module.createGatewayDraftClient(auth))
+  let usageClient: Promise<GatewayTurnUsageClient> | undefined
+  const usage = () => usageClient ??= import('./turn-usage').then(module => module.createGatewayTurnUsageClient(auth))
   return {
+    getTurnUsage: async (...args: Parameters<GatewayTurnUsageClient['get']>) => (await usage()).get(...args),
     drafts: {
       load: async (...args: Parameters<GatewayDraftClient['load']>) => (await drafts()).load(...args),
       save: async (...args: Parameters<GatewayDraftClient['save']>) => (await drafts()).save(...args),

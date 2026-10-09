@@ -1,4 +1,5 @@
 import { ForgetMemory } from './forget-memory'
+import { ForgetMemoryRecovery } from './forget-memory-recovery'
 import { GatewayHeader } from './header'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -43,6 +44,8 @@ const fieldLabels: Record<string, string> = {
   observation: 'Observation',
 }
 const fieldLabel = (value: string) => fieldLabels[value] ?? value.replaceAll('_', ' ')
+// These refs are generation counters, not DOM nodes; cleanup must retire the latest generation.
+const invalidateRead = (epoch: { current: number }) => { epoch.current++ }
 
 export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClient }) {
   const [page, setPage] = useState<MemoryLibrary | null>(null)
@@ -59,8 +62,10 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   const [readingField, setReadingField] = useState<string | null>(null)
   const [error, setError] = useState(''), [detailError, setDetailError] = useState('')
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
+  const [forgetRevision, setForgetRevision] = useState(0)
   const workspace = useRef<HTMLDivElement>(null)
   const detailEpoch = useRef(0), libraryEpoch = useRef(0), contentEpoch = useRef(0)
+  const routeEpoch = useRef(0), routeRead = useRef<AbortController | null>(null)
   const targetId = params.get('record'), targetKind = params.get('kind')
   const targetQuery = params.get('q') ?? ''
   useEffect(() => {
@@ -70,11 +75,12 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
   }, [targetQuery])
   useEffect(() => {
     if (!targetId || !targetKind || !kinds.includes(targetKind as MemoryObjectKind)) return
-    const controller = new AbortController()
+    const controller = new AbortController(), epoch = ++routeEpoch.current
+    routeRead.current = controller
     client.connections(targetKind as MemoryObjectKind, targetId, { signal: controller.signal }).then(value => {
-      if (!controller.signal.aborted) { setSelected(value.object); setDetail(value); setContent(null); setReadingField(null); setDetailError('') }
-    }).catch(() => { if (!controller.signal.aborted) setError('That memory record is no longer available.') })
-    return () => controller.abort()
+      if (!controller.signal.aborted && routeEpoch.current === epoch) { detailEpoch.current++; contentEpoch.current++; setSelected(value.object); setDetail(value); setContent(null); setReadingField(null); setDetailError('') }
+    }).catch(() => { if (!controller.signal.aborted && routeEpoch.current === epoch) setError('That memory record is no longer available.') })
+    return () => { invalidateRead(routeEpoch); controller.abort(); if (routeRead.current === controller) routeRead.current = null }
   }, [client, targetId, targetKind])
   useEffect(() => {
     if (!page || !isGraph) return
@@ -89,12 +95,12 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     client.library({ search: query, type: type === 'all' ? undefined : type, signal: controller.signal }).then(value => {
       if (epoch === libraryEpoch.current && !controller.signal.aborted) setPage(value)
     }).catch(error => { if (!controller.signal.aborted) setError(error.message) }).finally(() => { if (!controller.signal.aborted) setBusy(false) })
-    return () => { controller.abort(); libraryEpoch.current = epoch + 1 }
+    return () => { controller.abort(); invalidateRead(libraryEpoch) }
   }, [client, query, type, revision])
   useEffect(() => {
     const controller = new AbortController(), epoch = ++detailEpoch.current
-    if (selected) client.connections(selected.type, selected.id, { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setDetail(value) }).catch(error => { if (!controller.signal.aborted) setDetailError(error.message) })
-    return () => { controller.abort(); detailEpoch.current = epoch + 1 }
+    if (selected) client.connections(selected.type, selected.id, { signal: controller.signal }).then(value => { if (!controller.signal.aborted && detailEpoch.current === epoch) setDetail(value) }).catch(error => { if (!controller.signal.aborted && detailEpoch.current === epoch) setDetailError(error.message) })
+    return () => { controller.abort(); invalidateRead(detailEpoch) }
   }, [client, selected])
   useEffect(() => {
     if (!expanded) return
@@ -118,11 +124,19 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
     setParams(next)
   }
   function selectRecord(item: MemoryObjectCard | null) {
+    routeEpoch.current++; routeRead.current?.abort(); routeRead.current = null
     if (item && selected && key(item) === key(selected)) return
     detailEpoch.current++; contentEpoch.current++; setSelected(item); setDetail(null); setContent(null); setReadingField(null); setDetailError('')
   }
   function refresh() {
     libraryEpoch.current++; setBusy(true); setError(''); setPage(null); selectRecord(null); setRevision(value => value + 1)
+  }
+  function forgetResolved() {
+    // Invalidate every read synchronously, before a late response or router effect can restore content.
+    refresh()
+    const next = new URLSearchParams(params)
+    next.delete('record'); next.delete('kind')
+    setParams(next, { replace: true })
   }
   async function more() {
     if (!page?.next_after || busy) return
@@ -150,6 +164,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
       <Button size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
     </div>} />
+    <ForgetMemoryRecovery client={client} revision={`${revision}:${forgetRevision}`} onResolved={forgetResolved} />
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
     <div className="memory-workspace-body">
       {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
@@ -170,7 +185,7 @@ export function GatewayMemoryWorkspace({ client }: { client: GatewayControlClien
             const neighbor = detail.nodes.find(item => item.type === (outgoing ? link.target_type : link.source_type) && item.id === (outgoing ? link.target_id : link.source_id))
             return <Button key={link.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal text-left" onClick={() => { if (neighbor) selectRecord(neighbor) }}>{outgoing ? 'To' : 'From'} {link.relationship.replaceAll('_', ' ')} · {neighbor?.title ?? 'Memory'}</Button>
           })}{detail?.next_after && <Button variant="outline" size="sm" onClick={async () => { const epoch = detailEpoch.current; try { const next = await client.connections(selected.type, selected.id, { after: detail.next_after! }); if (epoch === detailEpoch.current) setDetail({ ...next, links: [...detail.links, ...next.links], nodes: [...new Map([...detail.nodes, ...next.nodes].map(item => [key(item), item])).values()] }) } catch (error) { if (epoch === detailEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load connections.') } }}>More connections</Button>}</ReferenceSection>
-          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onForgotten={() => { selectRecord(null); setRevision(value => value + 1) }} />}
+          {selected.type === 'memory' && <ForgetMemory key={selected.id} client={client} memoryId={selected.id} onChanged={() => setForgetRevision(value => value + 1)} onForgotten={forgetResolved} />}
         </div>
       </WorkspaceInspector>}
     </div>

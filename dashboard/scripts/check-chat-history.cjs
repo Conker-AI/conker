@@ -80,7 +80,11 @@ function historyHarness() {
   const target = (id, offset) => targets.set(`record-${id}`, {
     getBoundingClientRect: () => ({ top: 64 + offset - scroller.scrollTop }),
   })
-  return { render, resize, scroll, jump, target, scroller, observers }
+  const inspectDisclosure = () => {
+    global.Element = class { closest(selector) { return selector === 'summary' ? this : null } }
+    visit(tree, node => { if (node.props?.onClickCapture) node.props.onClickCapture({ target: new global.Element() }) })
+  }
+  return { render, resize, scroll, jump, target, inspectDisclosure, scroller, observers }
 }
 
 // The linked message must win over an already queued bottom-of-history scroll event.
@@ -131,5 +135,21 @@ test.scroll(1370)
 test.scroller.scrollHeight = 2000
 test.resize()
 assert.equal(test.scroller.scrollTop, 2000, 'Returning near the bottom resumes ordinary auto-follow')
+test = historyHarness()
+test.render({ sessionId: 'usage', children: null })
+test.scroll(1200)
+test.inspectDisclosure()
+test.scroller.scrollHeight = 2300
+test.resize()
+assert.equal(test.scroller.scrollTop, 1200, 'Opening reference details preserves their heading instead of following their expanded bottom')
+test.scroller.scrollHeight = 2400
+test.resize()
+assert.equal(test.scroller.scrollTop, 1200, 'The asynchronous usage read also preserves the reading position')
+test.jump()
+test.scroller.scrollHeight = 2500
+test.resize()
+assert.equal(test.scroller.scrollTop, 2500, 'Latest explicitly restores normal stream following after inspection')
+
 delete global.ResizeObserver
+delete global.Element
 console.log('Chat history: linked-message focus, delayed loading, hidden workspace, streaming and manual scroll passed.')

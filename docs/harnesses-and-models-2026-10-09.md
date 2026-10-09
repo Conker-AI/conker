@@ -132,6 +132,8 @@ python scripts/conker.py thinking SESSION_ID --cancel TURN_ID
 python scripts/conker.py submission REQUEST_ID
 python scripts/conker.py stop REQUEST_ID
 python scripts/conker.py resume TURN_ID
+python scripts/conker.py usage TURN_ID
+python scripts/conker.py memory-forget-pending
 python scripts/conker.py draft show new
 python scripts/conker.py draft save new draft.json --expected-revision 0
 python scripts/conker.py draft start --request-id MY_UNIQUE_REQUEST_ID --expected-revision 1
@@ -166,6 +168,16 @@ uncertain response, or inspect it with `start-status`; a successful recovery doe
 not send the message. For an existing chat, `chat --draft-revision N` submits the
 exact saved text and options and consumes that revision only when the user
 message is recorded. Task drafts use `--task TASK_ID` with show/save/clear.
+
+`usage` lists actual provider attempts after turn admission, with separate
+conversation and thinking totals, provider-reported counters, and explicit
+unknown values. It does not include pre-admission preparation or independent jobs.
+The same receipt appears in the UI's Calls & usage disclosure. Older turns have
+partial records; summed provider time can overlap and is not reply latency.
+`memory-forget-pending` reads only the saved request identity and revision. After
+an uncertain deletion, use Memory's recovery notice or resend the exact original
+owner request described in [CLI inspection](reference/cli-inspection.md); do not
+create a new request ID. Source conversations are kept.
 
 ## Capability coverage and remaining work
 

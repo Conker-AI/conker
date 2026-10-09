@@ -64,3 +64,9 @@ This is inspection and export coverage, not write parity. Mutations continue to
 use their typed owner operations, concurrency checks, approvals, and recovery
 contracts. Adding a write command requires using that same service operation; it
 must not create a second host-only implementation.
+
+In the local workspace, `python scripts/conker.py memory-forget-pending` reads
+Pi's owner-only `/memory/forget-pending` route directly. It reports the saved
+request ID, memory ID and revision of an unresolved forget operation, or `null`
+when none is pending. The response contains no memory text. This command only
+checks recovery status; it does not delete anything or retry a previous deletion.

@@ -34,7 +34,11 @@ const replies = [
 function seed(): Session[] {
   const start = now() - 86400
   const session = (id: string, title: string, turns: [string, string][], offset: number): Session => ({
-    id, title, created_at: start + offset, turns: [],
+    id, title, created_at: start + offset, turns: turns.map((_, index) => ({
+      id: `trn_${offset}_${index}`, session_id: id, status: 'completed', acted: 0, started_at: start + offset + index * 120, ended_at: start + offset + index * 120 + 8,
+      provider: 'ollama', model: 'qwen2.5:3b', input_tokens: null, output_tokens: null, cost_usd: null, detail: null, action: null,
+      memory: { configured: false, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] },
+    })),
     messages: turns.flatMap(([ask, answer], index) => [
       { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120 },
       { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8 },
@@ -95,6 +99,19 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     card('entity', 'ent_coach', 'Coach', 'Judo coach at the club; contacted by email about open mat.'),
     card('evidence', 'evi_week', 'Chat: Plan my week', 'Help me plan this week around school and judo.'),
   ]
+  // Synthetic metadata only: lets a lost-response recovery survive a preview reload.
+  // No memory text or real server state enters this development-only storage.
+  const forgetKey = 'conker-preview-forget'
+  type ForgetIntent = { requestId: string; memoryId: string; revision: number }
+  let pendingForget: ForgetIntent | null = null
+  const forgetReceipts = new Map<string, { intent: ForgetIntent; receipt: Json }>()
+  try {
+    const saved = JSON.parse(globalThis.sessionStorage?.getItem(forgetKey) ?? 'null') as ForgetIntent | null
+    if (saved && /^[A-Za-z0-9_-]{16,128}$/.test(saved.requestId) && saved.revision === 1 && memories.some(row => row.type === 'memory' && row.id === saved.memoryId)) {
+      pendingForget = { requestId: saved.requestId, memoryId: saved.memoryId, revision: 1 }
+      memories.splice(memories.findIndex(row => row.id === saved.memoryId), 1)
+    }
+  } catch { /* An isolated preview can run without session storage. */ }
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
     { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
@@ -455,6 +472,26 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { request_id: match[1], state: 'bound' }
     }
     if ((match = path.match(/^\/api\/pi\/turn-submissions\/([^/]+)$/))) return submissions.get(match[1]) ?? fail(404)
+    if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/usage$/)) && method === 'GET') {
+      const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
+      const turn = owner.turns.find(item => item.id === match![1])!
+      const legacy = owner.id === previewSessions.sky
+      const attempts = [
+        { id: 'usage_01', lane: 'foreground', role: 'routing', provider_id: 'ollama-local', model_id: 'router', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at), ended_at: Number(turn.started_at) + 0.2, elapsed_ms: 200, input_tokens: 48, output_tokens: 8, cached_tokens: null, cost_usd: null },
+        { id: 'usage_02', lane: 'foreground', role: 'answer', provider_id: 'ollama-local', model_id: 'talking', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at) + 0.2, ended_at: Number(turn.started_at) + 2.4, elapsed_ms: 2200, input_tokens: 230, output_tokens: 80, cached_tokens: 0, cost_usd: null },
+        { id: 'usage_03', lane: 'thinking', role: 'thinking', provider_id: 'ollama-local', model_id: 'thinking', provider: 'ollama', model: 'qwen2.5:7b', actual_provider: null, actual_model: null, status: 'failed', failure_kind: 'preempted', started_at: Number(turn.started_at) + 0.4, ended_at: Number(turn.started_at) + 3, elapsed_ms: 2600, input_tokens: null, output_tokens: null, cached_tokens: null, cost_usd: null },
+      ]
+      const lane = (name: string) => {
+        const rows = attempts.filter(row => row.lane === name), fields = ['input_tokens', 'output_tokens', 'cached_tokens', 'cost_usd', 'summed_call_ms'] as const
+        const entries = fields.map(field => {
+          const values = rows.map(row => field === 'summed_call_ms' ? row.elapsed_ms : row[field]), missing = values.filter(value => value === null).length
+          return { field, known: values.reduce<number>((sum, value) => sum + (value ?? 0), 0), missing, complete: !legacy && missing === 0 }
+        })
+        return { attempt_count: rows.length, pending_count: 0, reported_count: rows.filter(row => row.status === 'reported').length, failed_count: rows.filter(row => row.status === 'failed').length,
+          totals: Object.fromEntries(entries.map(row => [row.field, row.complete ? row.known : null])), known_subtotal: Object.fromEntries(entries.map(row => [row.field, row.known])), complete: Object.fromEntries(entries.map(row => [row.field, row.complete])), unknown_counts: Object.fromEntries(entries.map(row => [row.field, row.missing])) }
+      }
+      return { schemaVersion: 1, turn_id: turn.id, session_id: owner.id, content_status: 'available', scope: 'turn_provider_attempts', coverage: legacy ? 'legacy_partial' : 'complete', foreground: lane('foreground'), thinking: lane('thinking'), attempts, attempts_truncated: false }
+    }
     if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/resume$/))) {
       const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
       const turn = owner.turns.find(item => item.id === match![1])!
@@ -882,6 +919,35 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
           ...(id === 'capabilities' ? [{ source: 'speech', status: 'missing', revision: null, detail: 'Voice is optional and not configured. Use conker speech configure on the host to enable it.' }] : []),
         ] })),
       }
+    }
+    if (path === '/api/control/pi/memory/forget-pending' && method === 'GET') return { schemaVersion: 1, pending: pendingForget ? { ...pendingForget } : null }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/forget\/([^/]+)$/)) && method === 'GET') {
+      const item = memories.find(row => row.type === 'memory' && row.id === match![1])
+      if (!item) throw new GatewayError('http', 404, undefined, 'not_found')
+      return { memoryId: item.id, revision: 1, text: item.preview }
+    }
+    if (path === '/api/control/pi/memory/forget' && method === 'POST') {
+      const body = options.body ?? {}, requestId = String(body.request_id ?? ''), memoryId = String(body.memory_id ?? ''), revision = Number(body.expected_revision)
+      if (!/^[A-Za-z0-9_-]{16,128}$/.test(requestId) || !memoryId || !Number.isSafeInteger(revision)) fail(422)
+      const intent = { requestId, memoryId, revision }, previous = forgetReceipts.get(requestId)
+      if (previous) {
+        if (previous.intent.memoryId !== memoryId || previous.intent.revision !== revision) throw new GatewayError('http', 409, undefined, 'request_conflict')
+        return previous.receipt
+      }
+      if (pendingForget && (pendingForget.requestId !== requestId || pendingForget.memoryId !== memoryId || pendingForget.revision !== revision)) throw new GatewayError('http', 409, undefined, 'forget_pending')
+      const index = memories.findIndex(row => row.type === 'memory' && row.id === memoryId)
+      if (!pendingForget && index < 0) throw new GatewayError('http', 404, undefined, 'not_found')
+      if (revision !== 1) throw new GatewayError('http', 409, undefined, 'revision_conflict')
+      if (index >= 0) memories.splice(index, 1)
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'forget-response') {
+        pendingForget = intent
+        try { globalThis.sessionStorage.setItem(forgetKey, JSON.stringify(intent)); globalThis.sessionStorage.removeItem('conker-fake-fail') } catch { /* In-memory recovery still works. */ }
+        throw new GatewayError('network')
+      }
+      const receipt = { requestId, memoryId, status: 'forgotten', indexRemoval: 'removed', cachedPackagesCleared: 1, sourceConversationKept: true }
+      forgetReceipts.set(requestId, { intent, receipt }); pendingForget = null
+      try { globalThis.sessionStorage?.removeItem(forgetKey) } catch { /* Preview storage is optional. */ }
+      return receipt
     }
     if (path === '/api/control/pi/memory/objects') {
       const search = String(options.query?.search ?? '').toLocaleLowerCase(), type = options.query?.object_type

@@ -33,7 +33,14 @@ export function ConversationHistory({ sessionId, focusedMessageId, children }: {
     return () => observer.disconnect()
   }, [sessionId, focusedMessageId])
   return <div className="relative min-h-0 flex-1">
-    <div ref={viewport} tabIndex={0} aria-label="Saved conversation history" className="h-full overflow-y-auto focus-visible:outline-2 focus-visible:outline-ring" onScroll={event => {
+    <div ref={viewport} tabIndex={0} aria-label="Saved conversation history" className="h-full overflow-y-auto focus-visible:outline-2 focus-visible:outline-ring" onClickCapture={event => {
+      // Inspecting a disclosure is an explicit reading action, including keyboard activation.
+      // Pause before its default toggle resizes content so following cannot hide the heading.
+      if (event.target instanceof Element && event.target.closest('summary')) {
+        following.current = false
+        setShowLatest(true)
+      }
+    }} onScroll={event => {
       const scroller = event.currentTarget
       // Programmatic focus can emit a stale bottom scroll event; only Latest releases a deep link.
       if (!focusedMessageId || following.current) following.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80

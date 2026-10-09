@@ -310,6 +310,14 @@ def main():
         "resume", help="Resume the saved turn without replaying completed actions"
     )
     resume.add_argument("turn")
+    usage = commands.add_parser(
+        "usage", help="Inspect recorded model calls, reported usage and missing totals"
+    )
+    usage.add_argument("turn")
+    commands.add_parser(
+        "memory-forget-pending",
+        help="Inspect the saved identity of an unresolved memory forget request",
+    )
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )
@@ -438,7 +446,7 @@ def main():
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "thinking" and args.cancel:
         identity(args.cancel, r"[A-Za-z0-9_-]{1,128}", "turn ID")
-    if args.command == "resume":
+    if args.command in {"resume", "usage"}:
         identity(args.turn, r"[A-Za-z0-9_-]{1,128}", "turn ID")
     if args.command in {"stop", "submission"}:
         identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
@@ -546,6 +554,10 @@ def main():
             )
     elif args.command == "resume":
         value = request(config, "pi", f"/turns/{args.turn}/resume", {})
+    elif args.command == "usage":
+        value = request(config, "pi", f"/turns/{args.turn}/usage")
+    elif args.command == "memory-forget-pending":
+        value = request(config, "pi-owner", "/memory/forget-pending")
     elif args.command == "stop":
         value = request(config, "pi", f"/turn-submissions/{args.request_id}/cancel", {})
     elif args.command == "submission":

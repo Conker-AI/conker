@@ -58,6 +58,12 @@ def discovery(tmp_path, **overrides):
     return path, value
 
 
+def test_memory_forget_pending_reads_owner_status_without_replaying_deletion(invoke):
+    run, calls = invoke
+    assert run("memory-forget-pending") == 0
+    assert calls == [("pi-owner", "/memory/forget-pending", None)]
+
+
 def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):
     run, calls = invoke
     request_id = "request_recovery_0001"
@@ -73,11 +79,18 @@ def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):
     assert calls[-1] == ("pi", f"/turn-submissions/{request_id}/cancel", {})
     assert run("resume", "turn_saved") == 0
     assert calls[-1] == ("pi", "/turns/turn_saved/resume", {})
+    assert run("usage", "turn_saved") == 0
+    assert calls[-1] == ("pi", "/turns/turn_saved/usage", None)
 
 
 @pytest.mark.parametrize(
     "arguments",
-    [("stop", "short"), ("submission", "../outside"), ("resume", "turn/other")],
+    [
+        ("stop", "short"),
+        ("submission", "../outside"),
+        ("resume", "turn/other"),
+        ("usage", "turn/other"),
+    ],
 )
 def test_recovery_rejects_invalid_identity_before_network(invoke, arguments):
     run, calls = invoke

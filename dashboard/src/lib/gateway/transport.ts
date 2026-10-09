@@ -5,6 +5,9 @@ export const GATEWAY_RESPONSE_LIMIT = 8 * 1024 * 1024
 export const GATEWAY_CHARACTER_LIMIT = 66 * 1024 * 1024
 export const GATEWAY_AUDIO_LIMIT = 10 * 1024 * 1024
 export const GATEWAY_AUDIO_RESPONSE_LIMIT = 32 * 1024 * 1024
+export const memoryForgetErrorCodes = ['revision_conflict', 'work_active', 'forget_in_progress', 'forget_pending', 'request_conflict', 'not_found', 'not_configured', 'outcome_unknown', 'invalid_receipt', 'unavailable'] as const
+export type MemoryForgetErrorCode = typeof memoryForgetErrorCodes[number]
+type GatewayErrorCode = 'draft_changed' | MemoryForgetErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -30,8 +33,8 @@ export class GatewayError extends Error {
   readonly kind: GatewayErrorKind
   readonly status?: number
   readonly turnId?: string
-  readonly code?: 'draft_changed'
-  constructor(kind: GatewayErrorKind, status?: number, turnId?: string, code?: 'draft_changed') {
+  readonly code?: GatewayErrorCode
+  constructor(kind: GatewayErrorKind, status?: number, turnId?: string, code?: GatewayErrorCode) {
     super(messages[kind])
     this.name = 'GatewayError'
     this.kind = kind
@@ -68,11 +71,14 @@ const routes: Record<GatewayMethod, RegExp[]> = {
 const draftRoute = /^\/api\/control\/pi\/drafts\/[A-Za-z0-9_-]{1,128}(?:\/tasks\/[A-Za-z0-9_-]{1,128})?$/
 const draftStartRoute = /^\/api\/control\/pi\/drafts\/new\/start$/
 routes.GET.unshift(draftRoute, /^\/api\/control\/pi\/drafts\/new\/start\/[A-Za-z0-9_-]{16,128}$/)
+routes.GET.unshift(/^\/api\/control\/pi\/memory\/forget-pending$/)
 routes.POST.unshift(draftRoute, draftStartRoute)
 routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/, /^\/api\/owner\/mcp\/tools(?:\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/access)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
 routes.GET.unshift(/^\/api\/host\/providers$/)
 routes.GET.unshift(new RegExp(`^/api/pi/sessions/${ids}/thinking$`))
+const turnUsageRoute = /^\/api\/pi\/turns\/[A-Za-z0-9_-]{1,128}\/usage$/
+routes.GET.unshift(turnUsageRoute)
 routes.GET.unshift(/^\/api\/host\/claude$/)
 routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 routes.POST.unshift(/^\/api\/host\/providers$/)
@@ -224,6 +230,8 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       const method = options.method ?? 'GET'
       if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_.-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
+      if (turnUsageRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
+      if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
       if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()
@@ -251,13 +259,18 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         if (response.url && new URL(response.url).origin !== origin) throw new GatewayError('invalid-response')
         if (!response.ok) {
           let turnId: string | undefined
-          let code: 'draft_changed' | undefined
+          let code: GatewayErrorCode | undefined
           if ([409, 503].includes(response.status) && /^\/api\/pi\/(sessions\/[A-Za-z0-9_-]+\/turns|turns\/[A-Za-z0-9_-]+\/resume)$/.test(path)) {
             try {
               const value = await responseObject(response)
               if (object(value.detail) && typeof value.detail.turn_id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value.detail.turn_id)) turnId = value.detail.turn_id
               if (response.status === 409 && object(value.detail) && value.detail.code === 'draft_changed') code = 'draft_changed'
             } catch { /* Error bodies are never displayed; only a bounded turn identity can be retained. */ }
+          } else if (method === 'POST' && path === '/api/control/pi/memory/forget' && [404, 409, 422, 502, 503].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && memoryForgetErrorCodes.includes(value.detail.code as MemoryForgetErrorCode)) code = value.detail.code as MemoryForgetErrorCode
+            } catch { /* Retain only a known operation code, never upstream text. */ }
           } else await response.body?.cancel().catch(() => undefined)
           throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code)
         }
