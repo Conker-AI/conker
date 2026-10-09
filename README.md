@@ -25,13 +25,30 @@ It remembers you, shows its work, and never acts without your say.</p>
 - **Asks before acting.** Actions go through one controlled gate. You approve the exact action, once.
 - **Stays yours.** Runs on your hardware, on your private network, with local models by default.
 
-> **Status:** early. The current source has 33 of 35 tracked capability families active;
-> live voice and the production owner terminal remain deferred. The current tree still needs
+> **Status:** early. The current source has 34 of 35 tracked capability families active;
+> the production owner terminal remains deferred. The current tree still needs
 > assembled Linux release acceptance before rollout. [Full status](docs/status.md)
 
 ## Try it locally
 
-The real interface with demo data, no server needed. Needs Node.js 22.12 or newer:
+For the connected SiYuan-style workspace in this branch, with real local
+conversations, memory and workflow services, follow
+[Connected workspace](docs/connected-workspace.md). Research and reconciled
+requirements are recorded in [the source review](docs/conker-research-2026-10-09.md).
+
+With Python 3.12, Node.js 22.12+, Docker and Ollama running:
+
+```sh
+ollama pull qwen2.5:3b
+python scripts/workspace.py install --model qwen2.5:3b
+python scripts/workspace.py up
+```
+
+Open https://localhost:18550. The private initial password is in
+`.local-run/gateway/initial-owner-password.txt`. The [run guide](docs/connected-workspace.md)
+describes stopping, rebuilding, password recovery and local-profile limitations.
+
+For a separate interface preview with demo data and no server, use Node.js 22.12 or newer:
 
 ```sh
 git clone https://github.com/Conker-AI/conker.git

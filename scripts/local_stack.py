@@ -21,6 +21,8 @@ STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
 SERVICES = {"memorygate": 8020, "toolgate": 8010, "pi": 8051,
             "gateway": 8050, "decisions": 8060, "postgres": 55432}
+if CONFIG.is_file():
+    SERVICES.update(json.loads(CONFIG.read_text(encoding="utf-8")).get("ports", {}))
 
 
 def initialize():
@@ -143,12 +145,14 @@ def main():
     if not args.service:
         parser.error("Select a service.")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    postgres_name = config.get("postgres_container", "conker-local-integration-postgres")
+    postgres_volume = config.get("postgres_volume", postgres_name)
     if args.command == "stop":
         if args.service == "postgres":
-            inspect = subprocess.run(["docker", "inspect", "conker-local-integration-postgres"], capture_output=True, check=True)
+            inspect = subprocess.run(["docker", "inspect", postgres_name], capture_output=True, check=True)
             if json.loads(inspect.stdout)[0]["Config"].get("Labels", {}).get("conker.local-integration") != "true":
                 raise SystemExit("Container ownership did not match.")
-            subprocess.run(["docker", "stop", "conker-local-integration-postgres"], check=True)
+            subprocess.run(["docker", "stop", postgres_name], check=True)
             return
         import psutil
         identity = int((STATE / args.service / "pid").read_text())
@@ -172,20 +176,24 @@ def main():
         env_path = STATE / "postgres/environment"
         with env_path.open("w", encoding="utf-8") as stream:
             stream.write("".join(f"{key}={value}\n" for key, value in config["environments"]["postgres"].items()))
-        existing = subprocess.run(["docker", "container", "inspect", "conker-local-integration-postgres"],
+        existing = subprocess.run(["docker", "container", "inspect", postgres_name],
                                   capture_output=True, check=False)
         if existing.returncode == 0:
             details = json.loads(existing.stdout)[0]
             if details["Config"].get("Labels", {}).get("conker.local-integration") != "true":
                 raise SystemExit("Container name is owned by another setup; refusing to change it.")
-            subprocess.run(["docker", "start", "conker-local-integration-postgres"], check=True)
+            configured_port = details.get("HostConfig", {}).get("PortBindings", {}).get("5432/tcp", [])
+            mounts = [mount.get("Name") for mount in details.get("Mounts", []) if mount.get("Destination") == "/var/lib/postgresql/data"]
+            if configured_port != [{"HostIp": "127.0.0.1", "HostPort": str(SERVICES["postgres"])}] or mounts != [postgres_volume]:
+                raise SystemExit("Existing PostgreSQL instance differs from this configuration; nothing changed.")
+            subprocess.run(["docker", "start", postgres_name], check=True)
         else:
             if listening(SERVICES["postgres"]):
                 raise SystemExit("PostgreSQL development port is already occupied.")
-            subprocess.run(["docker", "run", "--detach", "--name", "conker-local-integration-postgres",
+            subprocess.run(["docker", "run", "--detach", "--name", postgres_name,
                             "--label", "conker.local-integration=true", "--env-file", str(env_path),
-                            "--publish", "127.0.0.1:55432:5432", "--memory", "512m",
-                            "--volume", "conker-local-integration-postgres:/var/lib/postgresql/data",
+                            "--publish", f"127.0.0.1:{SERVICES['postgres']}:5432", "--memory", "512m",
+                            "--volume", f"{postgres_volume}:/var/lib/postgresql/data",
                             "postgres:16"], check=True)
         return
     if args.command == "serve":
@@ -193,7 +201,7 @@ def main():
     else:
         if listening(SERVICES[args.service]):
             raise SystemExit("Port already in use; no existing process was replaced.")
-        executable = config["decision_python"] if args.service == "decisions" else config["python"]
+        executable = config.get("python_by_service", {}).get(args.service) or (config["decision_python"] if args.service == "decisions" else config["python"])
         with (STATE / args.service / "service.log").open("ab") as log:
             process = subprocess.Popen([executable, str(Path(__file__).resolve()), "serve", args.service],
                 stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,

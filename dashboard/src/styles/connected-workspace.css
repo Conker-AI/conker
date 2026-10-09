@@ -1,0 +1,52 @@
+/* SiYuan's compact workspace composition; existing semantic theme remains authoritative. */
+.conker-workspace{--sidebar-width:240px!important;position:relative;background:var(--sidebar);font-size:13px}
+.conker-workspace [data-slot="sidebar-inset"]{margin:0;border:0;border-radius:0;box-shadow:none;min-width:0}
+.conker-workspace [data-slot="sidebar-container"]{left:38px;padding:0;border-right:1px solid var(--border)}
+.conker-workspace [data-slot="sidebar"][data-collapsible="offcanvas"] [data-slot="sidebar-container"]{left:calc(38px - var(--sidebar-width))}
+.conker-workspace [data-slot="sidebar-inner"]{border-radius:0;background:var(--sidebar)}
+.conker-workspace [data-sidebar="menu-button"]{height:30px;min-height:30px;border-radius:3px;font-size:12px;box-shadow:none}
+.conker-workspace [data-slot="sidebar-header"]{padding:6px 8px;gap:0}
+.conker-workspace [data-slot="sidebar-footer"]{border-top:1px solid var(--border)}
+.conker-workspace [data-slot="sidebar-menu-badge"]{font-size:10px}
+.conker-workspace .sidebar-more-destinations{max-height:38dvh}
+.conker-wordmark{font-size:14px;font-weight:650;letter-spacing:-.3px;padding:4px 6px}
+.conker-mode-rail{width:38px;flex:0 0 38px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-right:1px solid var(--border);background:var(--sidebar);z-index:31}
+.conker-mode-rail>a{display:grid;place-items:center;width:30px;height:32px;border-radius:3px;color:var(--muted-foreground)}
+.conker-mode-rail>a:hover,.conker-mode-rail>a[aria-current]{background:var(--sidebar-accent);color:var(--foreground)}
+.conker-mode-rail>a:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.conker-mode-rail>.conker-monogram{font-size:17px;font-weight:700;color:var(--foreground);margin-bottom:12px}
+.conker-rail-space{flex:1}
+.conker-tabbar{height:38px;min-height:38px;display:flex;align-items:center;gap:2px;background:var(--sidebar);border-bottom:1px solid var(--border)}
+.conker-tabbar>[data-slot="button"],.conker-history>[data-slot="button"]{width:28px;height:28px;border-radius:3px;flex-shrink:0}
+.conker-history{display:flex;padding:0 4px}
+.conker-tabs{display:flex;align-self:stretch;min-width:0;flex:1;overflow:auto;scrollbar-width:thin}
+.conker-tab{display:flex;align-items:center;flex:0 0 auto;max-width:250px;border-right:1px solid var(--border);position:relative;padding:0 4px;background:var(--sidebar)}
+.conker-tab[data-active="true"]{background:var(--background);box-shadow:inset 0 2px var(--ring)}
+.conker-tab>button[role="tab"]{display:flex;align-items:center;gap:7px;min-width:0;max-width:190px;height:100%;padding:0 7px;font-size:12px;white-space:nowrap;color:var(--muted-foreground)}
+.conker-tab[data-active="true"]>button[role="tab"]{color:var(--foreground)}
+.conker-tab>button>span{overflow:hidden;text-overflow:ellipsis}
+.conker-tab>button>svg{flex-shrink:0}
+.conker-tab-pin,.conker-tab-close{width:23px;height:26px;display:grid;place-items:center;color:var(--muted-foreground);border-radius:3px;flex-shrink:0}
+.conker-tab-pin{opacity:0}
+.conker-tab:hover .conker-tab-pin,.conker-tab:focus-within .conker-tab-pin,.conker-tab-pin[aria-pressed="true"]{opacity:1}
+.conker-tab button:hover{background:var(--accent)}
+.conker-tab button:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.conker-workspace .workspace-appbar-row{min-height:44px;height:44px;padding-inline:16px}
+.conker-statusbar{height:25px;min-height:25px;display:flex;align-items:center;gap:22px;padding:0 12px;border-top:1px solid var(--border);background:var(--sidebar);font-size:10px;color:var(--muted-foreground)}
+.conker-statusbar>span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.conker-shortcuts{margin-left:auto}
+.conker-local-dot{width:5px;height:5px;background:var(--muted-foreground);border-radius:50%}
+.conker-reference{width:280px;flex:0 0 280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--background)}
+.conker-reference-heading{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:550;background:var(--sidebar)}
+.conker-reference-heading button{width:26px;height:26px}
+.conker-reference-content{overflow:auto;padding:20px 16px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.conker-reference-content h2{font-size:15px;font-weight:600;margin-bottom:7px}
+.conker-reference-content h3{font-size:11px;font-weight:600;margin-top:25px;margin-bottom:8px}
+.conker-reference-content p{color:var(--muted-foreground);margin-bottom:7px}
+.conker-receipt{padding:10px 0;border-bottom:1px solid var(--border)}
+.conker-reference-content a{text-decoration:underline;display:block;margin-top:20px}
+@media(max-width:1000px){.conker-reference{position:absolute;z-index:35;right:0;top:38px;bottom:25px;box-shadow:var(--shadow-surface)}.conker-shortcuts{display:none!important}}
+@media(max-width:767px){.conker-mode-rail{display:none}.conker-history{display:none}.conker-tabbar{height:42px;min-height:42px}.conker-tab-pin{opacity:1}.conker-tab>button[role="tab"]{max-width:125px}.conker-tab-close,.conker-tab-pin{width:28px;height:32px}.conker-statusbar{gap:12px;font-size:10px;padding:0 8px}.conker-reference{width:min(100%,320px);top:42px}.conker-workspace .workspace-appbar-row{height:auto;min-height:48px}.conker-workspace [data-sidebar="menu-button"]{min-height:38px}}
+
+.conker-workspace [data-slot="sidebar-footer"] [data-sidebar="menu-button"]{height:auto;min-height:44px;padding-block:6px}
+.conker-workspace .sidebar-more-destinations{margin-left:12px;border-left:1px solid var(--border);padding-left:5px}

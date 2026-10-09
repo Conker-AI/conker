@@ -7,7 +7,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
 import { CollectionLoading, PageHeader } from '@/components/design-system/primitives'
-import { BaseLayout } from '@/components/layouts/base-layout'
 import { GatewayChatSidebar } from './chat-sidebar'
 import { GatewayPrivacyControl } from './privacy-control'
 import { GatewayHeader } from './header'
@@ -23,6 +22,7 @@ import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewayActivityWorkspaceState } from './activity-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayAgentSection, gatewaySystemSection, resolveGatewayRoute } from './navigation'
+import { ConnectedWorkspaceShell } from './workspace-shell'
 
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
@@ -79,7 +79,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat and Memory own their header so their controls stay with workspace state.
-  return <UniversalSearchProvider client={control.search}><WorkspaceChromeProvider><BaseLayout variant="canvas" header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
+  return <UniversalSearchProvider client={control.search}><WorkspaceChromeProvider><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar runtime={runtime} owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
     <Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
@@ -105,5 +105,5 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
     }} /></div></Suspense>}
-  </BaseLayout></WorkspaceChromeProvider></UniversalSearchProvider>
+  </ConnectedWorkspaceShell></WorkspaceChromeProvider></UniversalSearchProvider>
 }

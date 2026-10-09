@@ -1,5 +1,15 @@
 # Conker dashboard design system
 
+## Connected workspace update — 9 October
+
+The owner's subsequent SiYuan direction adds compact document tabs, a mode rail,
+and an optional conversation context pane in `ConnectedWorkspaceShell`.
+`connected-workspace.css` owns this shell composition; shared semantic theme
+variables and native controls remain authoritative. Existing domain pages and
+their asynchronous/verification contracts remain intact. Tab navigation does not
+duplicate domain state or imply a running action stopped when its tab closed.
+See [connected-workspace.md](../docs/connected-workspace.md) for behavior and current limits.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.

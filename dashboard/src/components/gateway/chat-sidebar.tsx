@@ -122,7 +122,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
   const [pendingApprovals, setPendingApprovals] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
-  const [moreExpanded, setMoreExpanded] = useState(false)
+  const [moreExpanded, setMoreExpanded] = useState(true)
   const [projectsExpanded, setProjectsExpanded] = useState(true)
   const [chatsExpanded, setChatsExpanded] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -181,8 +181,8 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
   return <Sidebar variant="inset" collapsible="offcanvas">
     <SidebarHeader className="shrink-0 gap-1 px-2 pt-2">
       <div className="flex h-10 items-center gap-2 px-1">
-        <Link to="/chat" aria-label="Open Conker chat" onClick={() => isMobile && setOpenMobile(false)} className="flex size-8 items-center justify-center rounded-lg border bg-background hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-ring"><img src="/conker.png" alt="" width="24" height="24" className="size-6 object-contain" /></Link>
-        <span className="flex min-w-0 flex-1">{badge}</span>
+        <Link to="/chat" aria-label="Open Conker chat" onClick={() => isMobile && setOpenMobile(false)} className="conker-wordmark">Conker</Link>
+        <span className="flex min-w-0 flex-1 justify-end">{badge}</span>
         <CollapseSidebarButton />
       </div>
       <SidebarMenu className="mt-1">
@@ -193,7 +193,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
       <SidebarMenu>
         {primaryDestinations.map(item => <AnimatedSidebarDestination key={item.path} item={item} active={currentRoute === item.route} onNavigate={() => isMobile && setOpenMobile(false)} badge={item.route === 'inbox' ? pendingApprovals : undefined} />)}
         <Collapsible asChild open={moreExpanded}><SidebarMenuItem onKeyDown={event => { if (event.key === 'Escape' && moreMenuOpen) { event.preventDefault(); moreTrigger.current?.focus(); setMoreMenuOpen(false) } }}>
-          <SidebarMenuButton ref={moreTrigger} className="group/more h-[38px] rounded-[10px]" aria-expanded={moreExpanded} onMouseEnter={() => { moreIcon.animationProps.onMouseEnter(); keepMoreOpen() }} onMouseLeave={() => { moreIcon.animationProps.onMouseLeave(); closeMoreSoon() }} onFocus={() => { moreIcon.animationProps.onFocus(); keepMoreOpen() }} onBlur={() => { moreIcon.animationProps.onBlur(); closeMoreSoon() }} onClick={() => { setMoreExpanded(value => !value); setMoreMenuOpen(false) }}><AnimatedIconGlyph icon={EllipsisIcon} iconRef={moreIcon.iconRef} />More<ChevronUp className={`ml-auto size-4 transition-transform duration-200 ${moreExpanded ? 'rotate-180' : 'group-hover/more:rotate-90'}`} /></SidebarMenuButton>
+          <SidebarMenuButton ref={moreTrigger} className="group/more h-[38px] rounded-[10px]" aria-expanded={moreExpanded} onMouseEnter={() => { moreIcon.animationProps.onMouseEnter(); keepMoreOpen() }} onMouseLeave={() => { moreIcon.animationProps.onMouseLeave(); closeMoreSoon() }} onFocus={() => { moreIcon.animationProps.onFocus(); keepMoreOpen() }} onBlur={() => { moreIcon.animationProps.onBlur(); closeMoreSoon() }} onClick={() => { setMoreExpanded(value => !value); setMoreMenuOpen(false) }}><AnimatedIconGlyph icon={EllipsisIcon} iconRef={moreIcon.iconRef} />Workspace<ChevronUp className={`ml-auto size-4 transition-transform duration-200 ${moreExpanded ? 'rotate-180' : 'group-hover/more:rotate-90'}`} /></SidebarMenuButton>
           {moreMenuOpen && !moreExpanded && <div ref={moreContent} role="navigation" aria-label="More destinations" className="absolute top-0 left-[calc(100%+0.5rem)] z-50 max-h-[60dvh] w-56 overflow-y-auto rounded-md border bg-popover p-2 text-popover-foreground shadow-md" onMouseEnter={keepMoreOpen} onMouseLeave={closeMoreSoon} onFocus={keepMoreOpen} onBlur={closeMoreSoon}>
             {moreDestinations.map(item => <AnimatedMoreDestination key={item.path} item={item} active={currentRoute === item.route} onNavigate={() => { setMoreMenuOpen(false); if (isMobile) setOpenMobile(false) }} />)}
           </div>}
