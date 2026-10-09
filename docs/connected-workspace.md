@@ -64,6 +64,16 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   disappear from the tab strip and context pane.
 - Use the single sidebar or Ctrl/Cmd+K search to move through Conker.
 - The optional context pane reads actual saved model, turn and memory receipts.
+- Saved user messages show a separate memory delivery status. “Added to memory”
+  requires a valid MemoryGate acknowledgement; a saved chat or an assistant saying
+  “I remember” is not that acknowledgement. Pending delivery can be checked again
+  without resending the message.
+- With memory enabled, start a direct request with “Remember that…” or
+  “Запомни, что…”. MemoryGate admits the exact statement as an owner request,
+  separate from its ordinary signal score. Quoted examples and questions do not
+  force admission. “Don't remember…” excludes that statement from active memory;
+  it does not delete the conversation or an earlier memory. Use Memory's Forget
+  action for an existing record.
 - Themes, narrow layouts, owner verification, Stop and uncertain-outcome
   recovery retain their existing behavior. Closing a tab does not stop a turn.
 

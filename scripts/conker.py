@@ -318,6 +318,13 @@ def main():
         "memory-forget-pending",
         help="Inspect the saved identity of an unresolved memory forget request",
     )
+    delivery = commands.add_parser(
+        "memory-delivery", help="Read acknowledged memory delivery for saved messages"
+    )
+    delivery.add_argument("session")
+    delivery.add_argument(
+        "--message", help="Read one saved user message, including older history"
+    )
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )
@@ -442,8 +449,10 @@ def main():
     api.add_argument("path")
     api.add_argument("--body", type=Path)
     args = parser.parse_args()
-    if args.command in {"chat", "show", "thinking"}:
+    if args.command in {"chat", "show", "thinking", "memory-delivery"}:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
+    if args.command == "memory-delivery" and args.message is not None:
+        identity(args.message, r"[A-Za-z0-9_-]{1,128}", "message ID")
     if args.command == "thinking" and args.cancel:
         identity(args.cancel, r"[A-Za-z0-9_-]{1,128}", "turn ID")
     if args.command in {"resume", "usage"}:
@@ -558,6 +567,11 @@ def main():
         value = request(config, "pi", f"/turns/{args.turn}/usage")
     elif args.command == "memory-forget-pending":
         value = request(config, "pi-owner", "/memory/forget-pending")
+    elif args.command == "memory-delivery":
+        path = f"/sessions/{args.session}"
+        if args.message is not None:
+            path += f"/messages/{args.message}"
+        value = request(config, "pi", path + "/memory-delivery")
     elif args.command == "stop":
         value = request(config, "pi", f"/turn-submissions/{args.request_id}/cancel", {})
     elif args.command == "submission":

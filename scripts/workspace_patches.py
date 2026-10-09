@@ -16,7 +16,10 @@ BUNDLES = {
         "pi-companion-reliability.patch",
     ),
     "toolgate": ("toolgate-mcp.patch",),
-    "memorygate": ("memorygate-lexical-recall.patch",),
+    "memorygate": (
+        "memorygate-lexical-recall.patch",
+        "memorygate-owner-retention.patch",
+    ),
 }
 
 

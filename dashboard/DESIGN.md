@@ -91,6 +91,22 @@ work and is never presented as elapsed turn time. Costs come only from reported
 measurements; the UI neither estimates subscription costs nor treats missing
 cost as zero. Model-selection reasons keep their existing separate disclosure.
 
+Saved user messages have a quiet, persistent memory receipt beneath their text,
+separate from hover-only message actions. Added to memory means a verified
+MemoryGate acknowledgement; chat persistence, model prose and scoring never
+create that claim. Filtered and excluded outcomes explicitly keep the chat.
+Original message privacy governs exclusion, and later forgetting masks earlier
+admission. The Remember starter only fills a request and never enables memory.
+
+Receipt reads are separate from transcript and submission recovery. Only the
+visible authenticated chat checks recent metadata, at most six reads in a
+bounded backoff cycle. Hidden pages, route changes, logout and forgetting cancel
+that cycle. Pending checks then pause with an explicit Check memory status
+action. Older messages use that action to read one exact receipt, without a
+request per historical message or reloading the transcript. Receipt state stays
+in memory; no text or receipts enter browser storage. Errors and explanations
+use fixed copy, with no delivery exception text or admission scores.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.

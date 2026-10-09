@@ -4,9 +4,11 @@ export type Action<Args extends unknown[] = []> =
   | { availability: 'unsupported' | 'disabled'; reason: string }
   | { availability: 'enabled'; run: (...args: Args) => void | Promise<void> }
 export type MessageAction = 'copy' | 'link' | 'edit' | 'retry' | 'fork' | 'pin' | 'rateUp' | 'rateDown' | 'redact' | 'saveArtifact'
+export type MessageMemoryFeedback = { label: string; description: string; checking: boolean; refresh: Action }
 export type ChatMessage = {
   id: string; sessionId: string; sequence: number; role: 'user' | 'assistant' | 'system' | 'tool'
   createdAt: string; content: Content; agentId: string | null; agentName?: string; actions: Record<MessageAction, Action>
+  memory?: MessageMemoryFeedback
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'

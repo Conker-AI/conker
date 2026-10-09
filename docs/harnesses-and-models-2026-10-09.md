@@ -133,6 +133,8 @@ python scripts/conker.py submission REQUEST_ID
 python scripts/conker.py stop REQUEST_ID
 python scripts/conker.py resume TURN_ID
 python scripts/conker.py usage TURN_ID
+python scripts/conker.py memory-delivery SESSION_ID
+python scripts/conker.py memory-delivery SESSION_ID --message MESSAGE_ID
 python scripts/conker.py memory-forget-pending
 python scripts/conker.py draft show new
 python scripts/conker.py draft save new draft.json --expected-revision 0
@@ -174,6 +176,12 @@ conversation and thinking totals, provider-reported counters, and explicit
 unknown values. It does not include pre-admission preparation or independent jobs.
 The same receipt appears in the UI's Calls & usage disclosure. Older turns have
 partial records; summed provider time can overlap and is not reply latency.
+`memory-delivery` reads admission acknowledgements for the latest 100 user
+messages, or one exact older message. It never resends, ingests, or changes
+privacy settings. The UI shows the same saved, filtered, pending, excluded,
+unavailable and removed states below each saved user message. Original message
+privacy applies even if the current chat settings have changed. A successful
+acknowledgement records a past save; later forgetting updates its displayed state.
 `memory-forget-pending` reads only the saved request identity and revision. After
 an uncertain deletion, use Memory's recovery notice or resend the exact original
 owner request described in [CLI inspection](reference/cli-inspection.md); do not

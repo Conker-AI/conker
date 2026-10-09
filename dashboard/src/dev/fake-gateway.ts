@@ -22,7 +22,7 @@ const previewSessions = {
   coach: `ses_${'3'.repeat(16)}`,
 }
 
-type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string }
+type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json }
 type Session = { id: string; title: string; created_at: number; messages: Message[]; turns: Json[] }
 
 const replies = [
@@ -40,7 +40,8 @@ function seed(): Session[] {
       memory: { configured: false, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] },
     })),
     messages: turns.flatMap(([ask, answer], index) => [
-      { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120 },
+      { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120,
+        memory_delivery: { state: id === previewSessions.week ? 'saved' : id === previewSessions.sky ? 'filtered' : 'excluded', reason_code: id === previewSessions.coach ? 'privacy_disabled' : null, admission_method: id === previewSessions.week ? 'signal' : id === previewSessions.sky ? 'filtered' : null, memory_id: id === previewSessions.week ? 'mem_judo' : null } },
       { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8 },
     ]),
   })
@@ -105,6 +106,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   type ForgetIntent = { requestId: string; memoryId: string; revision: number }
   let pendingForget: ForgetIntent | null = null
   const forgetReceipts = new Map<string, { intent: ForgetIntent; receipt: Json }>()
+  const deliveryReads = new Map<string, number>()
   try {
     const saved = JSON.parse(globalThis.sessionStorage?.getItem(forgetKey) ?? 'null') as ForgetIntent | null
     if (saved && /^[A-Za-z0-9_-]{16,128}$/.test(saved.requestId) && saved.revision === 1 && memories.some(row => row.type === 'memory' && row.id === saved.memoryId)) {
@@ -112,6 +114,19 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       memories.splice(memories.findIndex(row => row.id === saved.memoryId), 1)
     }
   } catch { /* An isolated preview can run without session storage. */ }
+  function deliveryFor(message: Message, checking = false): Json {
+    const receipt = message.memory_delivery ?? { state: 'unavailable', reason_code: 'legacy_unknown', admission_method: null, memory_id: null }
+    const mode = globalThis.sessionStorage?.getItem('conker-fake-fail')
+    if (mode === 'memory-pending') return { state: 'pending', reason_code: 'retry_scheduled', admission_method: null, memory_id: null }
+    if (mode === 'memory-removed') return { state: 'removed', reason_code: 'forgotten', admission_method: null, memory_id: null }
+    if (mode === 'memory-unavailable') return { state: 'unavailable', reason_code: 'blocked', admission_method: null, memory_id: null }
+    if (receipt.memory_id === 'mem_judo' && !memories.some(row => row.id === 'mem_judo')) return { state: pendingForget ? 'pending' : 'removed', reason_code: pendingForget ? 'forget_pending' : 'forgotten', admission_method: null, memory_id: null }
+    if (checking && receipt.state === 'pending') {
+      const reads = (deliveryReads.get(message.id) ?? 0) + 1; deliveryReads.set(message.id, reads)
+      if (reads >= 2) message.memory_delivery = { state: 'saved', reason_code: null, admission_method: 'owner_requested', memory_id: `memory_${message.id}` }
+    }
+    return message.memory_delivery ?? receipt
+  }
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
     { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
@@ -297,6 +312,12 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   async function sendTurn(session: Session, body: Json): Promise<Json> {
     const requestId = String(body.request_id), text = String(body.text)
     const input: Message = { id: nextId('msg'), session_id: session.id, seq: session.messages.length + 1, role: 'user', content: text, created_at: now() }
+    const inputSettings = sessionSettings.get(session.id)?.settings as Json | undefined
+    const inputPrivacy = inputSettings?.privacy as Json | undefined
+    input.memory_delivery = inputPrivacy?.memoryDisabled ? { state: 'excluded', reason_code: 'privacy_disabled', admission_method: null, memory_id: null }
+      : inputSettings?.agentId && inputSettings.agentId !== 'companion' ? { state: 'excluded', reason_code: 'agent_excluded', admission_method: null, memory_id: null }
+      : /^remember\b/i.test(text) ? { state: 'pending', reason_code: 'queued', admission_method: null, memory_id: null }
+      : { state: 'filtered', reason_code: null, admission_method: 'filtered', memory_id: null }
     session.messages.push(input)
     if (session.messages.length === 1) session.title = text.slice(0, 48)
     // A message about email parks the turn on the owner, like a real email.send tool call.
@@ -454,7 +475,12 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)$/)) && method === 'GET') {
       const item = find(match[1])
-      return { ...sessionRow(item), messages: item.messages, turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+      return { ...sessionRow(item), messages: item.messages.map(message => message.role === 'user' ? { ...message, memory_delivery: deliveryFor(message) } : message), turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)(?:\/messages\/([^/]+))?\/memory-delivery$/)) && method === 'GET') {
+      const rows = find(match[1]).messages.filter(message => message.role === 'user' && (!match![2] || message.id === match![2]))
+      if (match[2] && !rows.length) fail(404)
+      return { schemaVersion: 1, session_id: match[1], content_status: 'available', results: rows.slice(-100).map(message => ({ message_id: message.id, ...deliveryFor(message, true) })), truncated: rows.length > 100 }
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/submissions$/))) return { results: [], next_cursor: null }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') {

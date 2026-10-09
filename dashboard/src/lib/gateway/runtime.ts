@@ -3,6 +3,7 @@ import { GatewayError, gatewayError } from './transport'
 import { parseSkills, validateSkillIds } from './skills'
 import type { GatewayDraftClient } from './drafts'
 import type { GatewayTurnUsageClient } from './turn-usage'
+import type { MemoryDelivery } from './memory-delivery'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -14,6 +15,7 @@ export type RuntimeMessage = {
   id: string; sessionId: string; sequence: number
   role: 'user' | 'assistant' | 'system' | 'tool'; createdAt: string
   agentId: string | null
+  memoryDelivery?: MemoryDelivery
   content: { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 }
 export type RuntimeMemory = {
@@ -140,7 +142,7 @@ function memory(value: unknown): RuntimeMemory {
     blockedDelivery: count(row.blocked_delivery), pendingDeletion: count(row.pending_deletion),
     notices: array(row.notices, 32).map(item => text(item, 4096)), ...(retrieval ? { retrieval } : {}) }
 }
-function message(value: unknown, sessionId: string, forgotten = false): RuntimeMessage {
+function message(value: unknown, sessionId: string, forgotten: boolean, parseDelivery: (value: unknown) => MemoryDelivery): RuntimeMessage {
   const row = record(value)
   if (id(row.session_id) !== sessionId) return bad()
   const role = row.role
@@ -155,7 +157,12 @@ function message(value: unknown, sessionId: string, forgotten = false): RuntimeM
   if (sequence < 1) return bad()
   const agentId = row.agent_id === undefined || row.agent_id === null ? null : runtimeAgentId(row.agent_id)
   if (role !== 'assistant' && agentId !== null) return bad()
-  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId }
+  let memoryDelivery: MemoryDelivery | undefined
+  if (role === 'user' && content.kind === 'text' && row.memory_delivery != null) {
+    try { memoryDelivery = parseDelivery(row.memory_delivery) }
+    catch { memoryDelivery = { state: 'unavailable', reasonCode: 'invalid_receipt', admissionMethod: null, memoryId: null } }
+  }
+  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(memoryDelivery ? { memoryDelivery } : {}) }
 }
 function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn {
   const row = record(value)
@@ -291,7 +298,8 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       const parsed = session(response)
       if (parsed.id !== sessionId) return bad()
       const forgotten = parsed.status === 'forgotten'
-      const messages = unique(array(response.messages).map(item => message(item, sessionId, forgotten)))
+      const { parseMemoryDelivery } = await import('./memory-delivery')
+      const messages = unique(array(response.messages).map(item => message(item, sessionId, forgotten, parseMemoryDelivery)))
       if (messages.some((item, index) => index > 0 && item.sequence <= messages[index - 1].sequence)) return bad()
       const pending = response.pending_submissions === undefined ? [] : array(response.pending_submissions, 100).map(value => pendingSubmission(value, sessionId))
       if (new Set(pending.map(row => row.requestId)).size !== pending.length) return bad()
@@ -306,6 +314,10 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       const response = await auth.request(`/api/pi/sessions/${sessionId}/thinking`, options)
       if (response.schemaVersion !== 1 || response.session_id !== sessionId || !['available', 'forgotten'].includes(String(response.content_status))) return bad()
       return { forgotten: response.content_status === 'forgotten', results: response.content_status === 'forgotten' ? [] : array(response.results, 50).map(row => thinking(row, sessionId)) }
+    },
+    async getMemoryDelivery(sessionId: string, options: { signal?: AbortSignal; messageId?: string } = {}) {
+      const { createMemoryDeliveryClient } = await import('./memory-delivery')
+      return createMemoryDeliveryClient(auth)(sessionId, options)
     },
     async createSession(title = '', options: { signal?: AbortSignal; agentId?: string; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean } } = {}): Promise<{ sessionId: string }> {
       if (typeof title !== 'string' || title.length > 1024) throw new GatewayError('validation')

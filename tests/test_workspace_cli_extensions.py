@@ -64,6 +64,16 @@ def test_memory_forget_pending_reads_owner_status_without_replaying_deletion(inv
     assert calls == [("pi-owner", "/memory/forget-pending", None)]
 
 
+def test_memory_delivery_reads_runtime_metadata_without_ingestion(invoke):
+    run, calls = invoke
+    assert run("memory-delivery", "ses_one") == 0
+    assert run("memory-delivery", "ses_one", "--message", "msg_older") == 0
+    assert calls == [
+        ("pi", "/sessions/ses_one/memory-delivery", None),
+        ("pi", "/sessions/ses_one/messages/msg_older/memory-delivery", None),
+    ]
+
+
 def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):
     run, calls = invoke
     request_id = "request_recovery_0001"
@@ -90,6 +100,9 @@ def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):
         ("submission", "../outside"),
         ("resume", "turn/other"),
         ("usage", "turn/other"),
+        ("memory-delivery", "../outside"),
+        ("memory-delivery", "ses_one", "--message", "../outside"),
+        ("memory-delivery", "ses_one", "--message", ""),
     ],
 )
 def test_recovery_rejects_invalid_identity_before_network(invoke, arguments):

@@ -13,6 +13,47 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Explicit memory requests and delivery acknowledgements (10 October)
+
+Direct “Remember that…” and “Запомни, что…” statements have a distinct owner
+admission path in MemoryGate. The exact statement and its source are retained
+without inventing a high signal score. Quoted examples, questions and empty
+directives do not force admission; direct negative instructions suppress active
+memory admission for that statement. Conversation storage and existing memories
+are separate. Historical receipts and deletion tombstones are not reprocessed.
+
+Saved user messages expose a source-bound delivery receipt in chat and through
+`conker.py memory-delivery SESSION_ID [--message MESSAGE_ID]`. Positive status
+requires a validated MemoryGate acknowledgement, not a model's promise. Pending
+checks are bounded and read-only, with explicit retry after uncertainty. Privacy
+at the time of the original message governs exclusions. Forgotten records mask
+earlier positive receipts, and auth, route and privacy changes fence late reads.
+For explicit requests, the talking model receives the already-known delivery
+state without waiting for ingestion. Normal delivery progress preserves the
+prepared prompt; forgetting invalidates saved acknowledgement context and retries.
+
+Numeric loopback HTTP calls to Ollama, ToolGate and the decision service avoid
+repeated CA-bundle loading. HTTPS and other destinations retain default certificate
+verification; proxy, redirect and cancellation behavior remains explicit. Synthetic
+transport timings improve substantially, but they do not establish faster model
+generation or a general response-time guarantee.
+
+Validation: the final memory delivery, audit, forgetting and prompt run passed
+119 tests, including 49 new delivery cases. The transport and inference slices
+passed 108 relevant tests; CLI and installer checks passed 39. Gateway and memory
+UI checks, TypeScript, affected lint and the production build pass (595,095-byte
+entry; no fixture chunk). Desktop and 320/390-pixel layouts were reviewed in light
+and dark themes. Fresh and repeated installation reproduce 69 reviewed Pi files
+and nine MemoryGate files without changes on repeat application.
+
+Local rollout retained SQLite and verified PostgreSQL dump checkpoints; MemoryGate,
+Pi and Gateway passed health checks. A synthetic live request returned the exact
+`owner_requested` acknowledgement in CLI and chat. Its local model reply failed
+after requesting an unavailable tool (nothing executed). Individual forget preview
+also revealed that this installation lacks `PI_MEMORY_CORRECTION_*` configuration.
+The synthetic test memory remains pending that setup repair. Those are follow-up
+gaps, not successful end-to-end reply or deletion acceptance.
+
 ### Recorded model calls and recoverable memory forgetting (10 October)
 
 Every new turn records actual provider attempts, including model selection,

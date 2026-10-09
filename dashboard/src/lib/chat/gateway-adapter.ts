@@ -1,6 +1,8 @@
 import type { Action, Attempt, ChatContract, ChatMessage, Generation, RecoveryAction, Submission } from './contract'
 import type { RuntimeMessage, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { canReleaseTaskConflict, canSubmitRuntime, hasActiveRuntimeTurn, type UncertainTurn } from '@/components/gateway/runtime-state'
+import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
+import { memoryFeedback } from './memory-feedback'
 
 export type GatewayChatState = {
   sessionId: string; epoch: number; active: boolean; current: RuntimeSessionDetail | null
@@ -10,11 +12,13 @@ export type GatewayChatState = {
   inFlight: (Attempt & { requestId: string; stopping: boolean }) | null
   preview: { sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null
   focusedMessageId?: string | null
+  memoryRead?: MemoryDeliveryWatchState | null
 }
 export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
   stop: () => void | Promise<void>; copy: (message: RuntimeMessage, kind: 'copy' | 'link') => Promise<void>
   saveArtifact: (message: RuntimeMessage) => void | Promise<void>
+  refreshMemory?: (messageId: string) => void
 } & Record<RecoveryAction, () => void | Promise<void>>
 const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
 
@@ -26,6 +30,9 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   }
   const isForgotten = (value: GatewayChatState) => value.forgotten || value.current?.status === 'forgotten' || value.attempt?.submission?.contentStatus === 'forgotten'
   const messages: ChatMessage[] = (state.current?.messages ?? []).map(message => ({ ...message,
+    memoryDelivery: undefined,
+    memory: !isForgotten(state) && message.role === 'user' && message.content.kind === 'text' && state.memoryRead !== undefined
+      ? memoryFeedback(message.id, state.memoryRead, action(value => !isForgotten(value) && value.memoryRead?.phase !== 'checking' && value.current?.messages.some(row => row.id === message.id && row.role === 'user' && row.content.kind === 'text') === true, handler => handler.refreshMemory?.(message.id), 'A memory status check is already in progress.')) : undefined,
     ...(message.agentId && state.agentNames[message.agentId] ? { agentName: state.agentNames[message.agentId] } : {}),
     content: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : message.content,
     actions: {

@@ -70,3 +70,16 @@ Pi's owner-only `/memory/forget-pending` route directly. It reports the saved
 request ID, memory ID and revision of an unresolved forget operation, or `null`
 when none is pending. The response contains no memory text. This command only
 checks recovery status; it does not delete anything or retry a previous deletion.
+
+For programmatic deletion recovery, Pi's owner-authenticated `POST /memory/forget`
+accepts the original JSON body with `request_id`, `memory_id` and
+`expected_revision`. Do not replace any of those three fields after an uncertain
+outcome. Before a new deletion, the owner-authenticated
+`GET /memory/forget/MEMORY_ID` supplies the exact record and revision for review.
+The local CLI's generic `api pi` command uses the runtime credential and cannot
+perform these owner operations; use Memory's confirmation and recovery controls.
+The server rejects identity conflicts and preserves the source conversation.
+
+`python scripts/conker.py memory-delivery SESSION_ID` reads acknowledgements for
+the latest 100 saved user messages. Add `--message MESSAGE_ID` to inspect one older
+message. This is a content-free status read, with no ingestion or privacy change.

@@ -4,6 +4,7 @@ import { emptyDraft, mergeDraftPrivacy, type DraftStart, type SavedDraft } from 
 import { readDraftStart, rememberDraftStart, clearDraftStart, type PendingDraftStart } from './draft-start-recovery'
 import { ThinkingStatus } from './thinking-status'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
+import { useMemoryDelivery } from './use-memory-delivery'
 import { ThinkControl } from './think-control'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
@@ -53,7 +54,7 @@ const starters = [
   { label: 'Draft a message', text: 'Draft a message to ', icon: PencilIcon },
   { label: 'Explain simply', text: 'Explain simply: ', icon: LightbulbIcon },
   { label: 'Brainstorm', text: 'Give me ideas for ', icon: BrainIcon },
-  { label: 'Remember this', text: 'Remember that ', icon: BookmarkIcon },
+  { label: 'Ask Conker to remember', text: 'Remember that ', icon: BookmarkIcon },
 ]
 
 async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
@@ -132,6 +133,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const activeRef = useRef(active)
   activeRef.current = active
   const current = detail?.id === selected ? forgottenIds.includes(detail.id) ? maskForgottenConversation(detail) : detail : null
+  const selectedForMemory = useCallback(() => workspace.getState().selected, [workspace])
+  const memoryRead = useMemoryDelivery({ client, authStore, privacy, sessionId: current?.id ?? null, messageKey: current?.messages.filter(message => message.role === 'user').at(-1)?.id ?? '',
+    active: Boolean(active && visible && current?.status !== 'forgotten'), identity: auth.session?.sessionId ?? '', epoch: workspaceEpoch, selected: selectedForMemory })
   const draft = selected && !forgottenIds.includes(selected) ? selectedValue.text : ''
   const attempt = selected ? uncertain[selected] : undefined
   const manualRequired = Boolean(selected && harnessBySession?.[selected] && !selectedValue.modelId)
@@ -518,12 +522,14 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const activeAgentId = selected ? sessionAgents[selected] ?? 'companion' : firstAgent
   const activeAgentName = agentNames[activeAgentId] ?? (activeAgentId === 'companion' ? 'Conker' : 'Agent')
   const chatSnapshot: GatewayChatState = {
+    memoryRead: memoryRead.state,
     sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending,
     activeAgentName, agentNames,
     forgotten: !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten' || !!attempt?.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)),
     attempt, reviewed, notice, error: detailError, rejected, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
   }
   const chatHandlers: GatewayChatHandlers = {
+    refreshMemory: memoryRead.refresh,
     copy: copyMessage, saveArtifact, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
     send: submit, stop: stopAnswer, checkHistory,
     check: () => attempt?.requestId ? checkSubmission() : checkHistory(),
