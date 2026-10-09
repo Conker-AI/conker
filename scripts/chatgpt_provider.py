@@ -67,6 +67,8 @@ class CodexAccounts:
             "CODEX_HOME": str(self.home),
             "NO_COLOR": "1",
         }
+        if os.name == "nt":
+            environment.update({key: os.environ[key] for key in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "LOCALAPPDATA", "APPDATA", "PATH") if key in os.environ})
         try:
             version = (
                 subprocess.run(
@@ -95,8 +97,7 @@ class CodexAccounts:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True,
-                umask=0o077,
+                **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {"start_new_session": True, "umask": 0o077}),
             )
             threading.Thread(
                 target=self._read, args=(self.process,), daemon=True
@@ -170,6 +171,15 @@ class CodexAccounts:
 
     def close(self):
         if self.process:
+            if os.name == "nt":
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=3)
+                self.process = None
+                return
             try:
                 os.killpg(self.process.pid, signal.SIGTERM)
             except ProcessLookupError:

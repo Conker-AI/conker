@@ -46,7 +46,7 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
       const current = await client.current(signal)
       setDetails(current); setLease(current.lease); setExitCode(null); setDroppedBytes(0)
       setPhase(current.lease ? 'active' : 'idle')
-      if (current.lease) terminalRef.current?.writeln('\r\n\x1b[2mReconnected to the active browser lease.\x1b[0m')
+      if (current.lease) terminalRef.current?.reset()
     } catch (cause) {
       if (!signal?.aborted) { setPhase('idle'); setError(gatewayError(cause).message) }
     }
@@ -69,7 +69,7 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
     const fit = new FitAddon()
     terminal.loadAddon(fit); terminal.open(host)
     terminal.writeln('\x1b[1mConker owner terminal\x1b[0m')
-    terminal.writeln('\x1b[2mShort-lived, isolated, and not written to Conker history.\x1b[0m\r\n')
+    terminal.writeln('\x1b[2mShort-lived owner access; not written to Conker history.\x1b[0m\r\n')
     terminalRef.current = terminal; fitRef.current = fit; setReady(true)
 
     const input = terminal.onData(value => {
@@ -135,8 +135,9 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
     terminalRef.current?.writeln('\x1b[2mWaiting for owner verification…\x1b[0m')
     try {
       const created = await client.create(createTerminalRequestId())
+      // Native full-screen shells use absolute cursor positions from a clean screen.
+      terminalRef.current?.reset()
       setLease(created.id); setPhase(created.closed ? 'exited' : 'active')
-      terminalRef.current?.writeln(created.replayed ? '\x1b[2mAttached to the existing lease.\x1b[0m\r\n' : '\x1b[2mTerminal ready.\x1b[0m\r\n')
       requestAnimationFrame(() => { fitRef.current?.fit(); terminalRef.current?.focus() })
     } catch (cause) {
       setPhase('idle'); setError(gatewayError(cause).message)
@@ -167,7 +168,7 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
   }, [active, uncertain])
 
   return <GatewayPageFrame className="flex flex-col gap-4 overflow-hidden">
-    <PageHeader actionsOnly title="Terminal" description="Work directly in one operator-configured workspace through a short-lived isolated shell." density="compact" actions={<div className="flex items-center gap-2">
+    <PageHeader actionsOnly title="Terminal" description="Work directly in one operator-configured workspace through a short-lived owner shell." density="compact" actions={<div className="flex items-center gap-2">
       <Tooltip><TooltipTrigger asChild><WorkspaceAction iconOnly disabled={phase === 'checking' || phase === 'starting' || phase === 'closing'} onClick={() => void inspect()} aria-label="Check terminal status"><RefreshCw /></WorkspaceAction></TooltipTrigger><TooltipContent>Check status</TooltipContent></Tooltip>
       {lease ? <WorkspaceAction disabled={phase === 'closing'} onClick={() => void close()}><Power />{phase === 'closing' ? 'Closing…' : 'Close terminal'}</WorkspaceAction> : <WorkspaceAction disabled={phase !== 'idle'} onClick={() => void start()}><TerminalSquare />{phase === 'starting' ? 'Starting…' : 'Start terminal'}</WorkspaceAction>}
     </div>} />
@@ -176,14 +177,14 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
       <StatusBadge tone={active ? 'live' : phase === 'exited' || error ? 'warning' : 'neutral'}>{status}</StatusBadge>
       <span className="min-w-0 truncate font-mono text-foreground" title={details?.workspace}>{details?.workspace ?? 'Workspace unavailable'}</span>
       {details && <><span>Maximum {lifetime(details.maximumLifetimeSeconds)}</span><span>Not saved to history or backups</span></>}
-      <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="ml-auto size-8" aria-label="Terminal isolation details"><Info /></Button></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] text-sm"><p className="font-medium">Ephemeral owner shell</p><p className="mt-2 leading-6 text-muted-foreground">The server operator chooses the workspace. Conker does not persist commands, output, or the lease. Closing the shell or losing its isolated sidecar ends the session.</p></PopoverContent></Popover>
+      <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="ml-auto size-8" aria-label="Terminal access details"><Info /></Button></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] text-sm"><p className="font-medium">Ephemeral owner shell</p><p className="mt-2 leading-6 text-muted-foreground">The server operator chooses the workspace. Conker does not persist commands, output, or the lease. This is host-account access, not a filesystem sandbox. Closing the shell ends its processes. Run codex or claude to use their native prompts and tools.</p></PopoverContent></Popover>
     </div>
 
     {error && <div className="flex shrink-0 items-start gap-3 border-y py-3 text-sm text-destructive" role="alert"><CircleAlert className="mt-0.5 size-4 shrink-0" /><div className="min-w-0 flex-1"><p>{error}</p>{uncertain && <Button className="mt-3" variant="outline" size="sm" onClick={() => { uncertainRef.current = false; setUncertain(false); setError(null); terminalRef.current?.focus() }}>Resume input without replay</Button>}</div></div>}
     {droppedBytes > 0 && <div className="flex shrink-0 items-start gap-3 border-y py-3 text-sm text-warning" role="status"><CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{droppedBytes.toLocaleString()} earlier output bytes were no longer available. The live tail continues below.</p></div>}
 
     <section className="terminal-surface flex min-h-[20rem] min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card text-card-foreground" aria-label="Owner terminal">
-      <div className="flex min-h-10 shrink-0 items-center gap-2 border-b px-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" aria-hidden="true" /><span>Isolated sidecar</span><span aria-hidden="true">·</span><span>One browser lease</span>{exitCode !== null && <span className="ml-auto tabular-nums">Exit {exitCode}</span>}{(phase === 'checking' || phase === 'starting' || phase === 'closing') && <LoaderCircle className="ml-auto size-4 animate-spin" aria-hidden="true" />}</div>
+      <div className="flex min-h-10 shrink-0 items-center gap-2 border-b px-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" aria-hidden="true" /><span>Owner command access</span><span aria-hidden="true">·</span><span>One browser lease</span>{exitCode !== null && <span className="ml-auto tabular-nums">Exit {exitCode}</span>}{(phase === 'checking' || phase === 'starting' || phase === 'closing') && <LoaderCircle className="ml-auto size-4 animate-spin" aria-hidden="true" />}</div>
       <div ref={hostRef} className="min-h-0 flex-1 p-2" aria-label="Terminal output and input" />
       {!active && <div className="pointer-events-none absolute sr-only" aria-live="polite">Terminal {status.toLowerCase()}</div>}
     </section>

@@ -6,9 +6,10 @@ import { ModelsProviders } from '@/app/settings/models-providers'
 import { Button } from '@/components/ui/button'
 import { WorkspaceSection } from '@/components/design-system'
 import { GatewayPageFrame } from './page-frame'
+import { NativeClaudeConnection } from './native-claude-connection'
 import { ProviderCredentials } from './provider-credentials'
 
-const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic' }
+const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', 'claude-code': 'Claude Code subscription', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic' }
 const readiness = (value: ProviderStatus) => value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Configured, inference not verified' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
 type SubscriptionConnection = 'checking' | 'connected' | 'disconnected' | 'unavailable'
 const subscriptionConnection = (value: ChatGPTStatus): SubscriptionConnection => !value.available ? 'unavailable' : value.connected ? 'connected' : 'disconnected'
@@ -94,6 +95,7 @@ export function GatewayProvidersSettings({ client }: { client: GatewayControlCli
   }, [client, reload])
   return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
     <ChatGPTConnection client={client} onModels={setModels} onConnection={setConnection} />
+    <NativeClaudeConnection client={client} />
     <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} onChanged={() => setReload(number => number + 1)} /></details>
     <WorkspaceSection title="Runtime readiness" description="Connection and catalogue entries do not prove a model can answer." action={<Button variant="ghost" size="sm" onClick={() => { setHealthError(''); setReload(number => number + 1) }}><RefreshCw />Refresh</Button>}>
       {healthError && <p role="status" className="text-sm text-muted-foreground">{healthError}</p>}

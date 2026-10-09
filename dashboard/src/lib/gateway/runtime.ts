@@ -27,8 +27,9 @@ export type RuntimeTurn = {
   approvalRequestId?: string | null; detail: string | null; action: { id: string; state: string; jobId: string | null } | null
   memory: RuntimeMemory
 }
+export type RuntimeThinking = { turnId: string; status: 'running' | 'completed' | 'canceled' | 'superseded' | 'failed' | 'interrupted' | 'skipped'; model: string | null; provider: string | null; result: string | null; detail: string | null }
 export type RuntimeSessionDetail = RuntimeSession & {
-  messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
+  thinking?: RuntimeThinking[]; messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
   pendingSubmissions: RuntimePendingSubmission[]; pendingSubmissionsTruncated: boolean
 }
 export type RuntimeTurnReceipt = {
@@ -163,6 +164,11 @@ function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn
     costUsd: nullable(row.cost_usd, number), detail: forgotten ? null : nullable(row.detail, text),
     action: action && { id: id(action.id), state: state(action.state), jobId: nullable(action.job_id, id) }, memory: memory(row.memory) }
 }
+function thinking(value: unknown, sessionId: string): RuntimeThinking {
+  const row = record(value)
+  if (id(row.session_id) !== sessionId || !['running', 'completed', 'canceled', 'superseded', 'failed', 'interrupted', 'skipped'].includes(String(row.status))) return bad()
+  return { turnId: id(row.turn_id), status: row.status as RuntimeThinking['status'], model: nullable(row.model, text), provider: nullable(row.provider, text), result: row.status === 'completed' ? nullable(row.result, text) : null, detail: nullable(row.detail, text) }
+}
 function unique<T extends { id: string }>(rows: T[]): T[] {
   if (new Set(rows.map(row => row.id)).size !== rows.length) return bad()
   return rows
@@ -262,7 +268,11 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (messages.some((item, index) => index > 0 && item.sequence <= messages[index - 1].sequence)) return bad()
       const pending = response.pending_submissions === undefined ? [] : array(response.pending_submissions, 100).map(value => pendingSubmission(value, sessionId))
       if (new Set(pending.map(row => row.requestId)).size !== pending.length) return bad()
-      return { ...parsed, messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
+      return { ...parsed, thinking: forgotten ? [] : array(response.thinking ?? [], 50).map(row => thinking(row, sessionId)), messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
+    },
+    async cancelThinking(sessionId: string, turnId: string) {
+      inputId(sessionId); inputId(turnId)
+      await auth.request(`/api/pi/sessions/${sessionId}/thinking/${turnId}/cancel`, { method: 'POST', body: {} })
     },
     async createSession(title = '', options: { signal?: AbortSignal; agentId?: string; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean } } = {}): Promise<{ sessionId: string }> {
       if (typeof title !== 'string' || title.length > 1024) throw new GatewayError('validation')

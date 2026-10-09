@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
-SERVICES = {"memorygate": 8020, "toolgate": 8010, "pi": 8051,
+SERVICES = {"providers": 18570, "memorygate": 8020, "toolgate": 8010, "pi": 8051,
             "gateway": 8050, "decisions": 8060, "postgres": 55432}
 if CONFIG.is_file():
     SERVICES.update(json.loads(CONFIG.read_text(encoding="utf-8")).get("ports", {}))
@@ -119,9 +119,16 @@ def serve(name, config):
         from gateway.__main__ import create_certificate
         from gateway.api import Config, create_app
         certificate, key = create_certificate(STATE / "gateway", "localhost")
-        uvicorn.run(create_app(Config.environment()), host="127.0.0.1", port=SERVICES[name],
+        terminal_factory = None
+        if os.name == "nt" and config.get("native_terminal"):
+            from windows_terminal import WindowsTerminal
+            terminal_factory = lambda _shell, _label, _identity: WindowsTerminal(ROOT, config)
+        uvicorn.run(create_app(Config.environment(), terminal_factory=terminal_factory), host="127.0.0.1", port=SERVICES[name],
                     ssl_certfile=str(certificate), ssl_keyfile=str(key), proxy_headers=False,
                     access_log=False)
+    elif name == "providers":
+        from workspace_providers import create_app
+        uvicorn.run(create_app(config), host="127.0.0.1", port=SERVICES[name], proxy_headers=False, access_log=False)
     else:
         module = {"pi": "pi.api:app", "memorygate": "app.main:app",
                   "toolgate": "toolgate.api.server:app", "decisions": "server:create_app"}[name]

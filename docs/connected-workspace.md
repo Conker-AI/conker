@@ -70,6 +70,11 @@ grants. Memory uses its explicit lexical fallback. The UI reports those optional
 dependencies as unavailable or unconfigured. Their configuration in another
 deployment is not inherited here.
 
+The optional `enhance` profile now installs Laya, native subscription sign-in,
+independent background thinking, and a Windows owner terminal. See
+[harnesses and model roles](harnesses-and-models-2026-10-09.md) for setup, CLI
+commands, current validation and remaining parity work.
+
 ChatGPT subscription connection still needs the official provider runtime and
 owner sign-in. Hermes-style unified onboarding remains issue #71. Full media
 replay, video perception, independent split editors, organizational groups,

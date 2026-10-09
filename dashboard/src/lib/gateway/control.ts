@@ -12,6 +12,7 @@ import { createGatewayCallsClient } from './calls'
 import { createGatewaySearchClient } from './search'
 import { createProviderControlClient } from './provider-control'
 import { createBrowserSessionsClient } from './browser-sessions'
+import { createNativeClaudeClient } from './native-claude'
 import { createChatGPTClient } from './chatgpt'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
@@ -50,7 +51,7 @@ const configuration = z.object({
   models: z.array(z.object({ id: z.string().min(1).max(200), providerId: z.string().min(1).max(100), name: z.string().min(1).max(160),
     route: z.string().min(1).max(300), enabled: z.boolean(), routingDescription: short.default('') })).max(1000),
   defaultModelId: z.string().max(200).nullable(),
-  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }) }) }),
+  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ thinking: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }) }) }),
 })
 const projectSource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('conversation'), sessionId: identity }),
@@ -264,6 +265,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
     chatgpt: createChatGPTClient(auth),
+    claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),

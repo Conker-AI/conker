@@ -37,7 +37,7 @@ try {
         { role: 'routing', modelId: 'laya-router', actualModel: 'laya-english@1c5edc17', status: 'completed', decision: { inputScope, elapsed_ms: 18.2, confidence: 0.75, raw: 'PRIVATE_SENTINEL' }, raw: 'PRIVATE_SENTINEL' },
         { role: 'answer', modelId: 'local-answer', actualModel: 'qwen2.5:3b', status: 'completed' },
       ], raw: 'PRIVATE_SENTINEL' })
-      for (const value of ['configuration 5', label, '18 ms', 'Decision confidence 75%', 'qwen2.5:3b']) assert.ok(html.includes(value), value)
+      for (const value of ['configuration 5', label, '18 ms', 'Routing separation 75% (not correctness probability)', 'qwen2.5:3b']) assert.ok(html.includes(value), value)
       assert.ok(!html.includes('PRIVATE_SENTINEL'))
     }
     assert.ok(evidence({ modelConfigurationRevision: 1, attempts: [{ role: 'answer', modelId: 'local-answer', status: 'completed' }] }).includes('configuration 1'), 'Historical receipts remain visible')

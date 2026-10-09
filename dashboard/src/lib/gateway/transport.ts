@@ -64,6 +64,8 @@ const routes: Record<GatewayMethod, RegExp[]> = {
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
 routes.GET.unshift(/^\/api\/host\/providers$/)
+routes.GET.unshift(/^\/api\/host\/claude$/)
+routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 routes.POST.unshift(/^\/api\/host\/providers$/)
 routes.GET.unshift(/^\/api\/host\/chatgpt$/)
 routes.POST.unshift(/^\/api\/host\/chatgpt$/)
@@ -104,6 +106,7 @@ routes.GET.unshift(/^\/api\/terminal\/current$/, /^\/api\/terminal\/[A-Za-z0-9_-
 routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/)
 /** Routine session writes need the signed-in session only (ADR-0010); every other write asks for the password. */
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
+conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)

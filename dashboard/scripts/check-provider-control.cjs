@@ -53,6 +53,7 @@ async function connectionRecoveryChecks(subscription) {
     const parts = {
       '@/components/ui/button': { Button: 'button' }, '@/components/design-system': { WorkspaceSection: 'section' },
       '@/app/settings/models-providers': { ModelsProviders: 'div' }, './page-frame': { GatewayPageFrame: 'main' }, './provider-credentials': { ProviderCredentials: 'div' },
+      './native-claude-connection': { NativeClaudeConnection: 'section' },
     }
     assert.ok(parts[name], `Unexpected Providers dependency ${name}`)
     return parts[name]

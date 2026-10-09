@@ -14,5 +14,5 @@ export function maskForgottenSession<T extends RuntimeSession>(session: T): T {
   return { ...session, status: 'forgotten', title: '', summary: null }
 }
 export function maskForgottenConversation(detail: RuntimeSessionDetail): RuntimeSessionDetail {
-  return { ...maskForgottenSession(detail), messages: detail.messages.map(message => ({ ...message, content: { kind: 'unavailable', reason: 'forgotten' } })), turns: detail.turns.map(turn => ({ ...turn, detail: null })) }
+  return { ...maskForgottenSession(detail), thinking: [], messages: detail.messages.map(message => ({ ...message, content: { kind: 'unavailable', reason: 'forgotten' } })), turns: detail.turns.map(turn => ({ ...turn, detail: null })) }
 }

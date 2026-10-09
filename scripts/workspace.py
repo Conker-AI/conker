@@ -22,7 +22,7 @@ STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
 ORDER = ("postgres", "memorygate", "toolgate", "pi", "gateway")
 PORTS = {"memorygate": 18520, "toolgate": 18510, "pi": 18551,
-         "gateway": 18550, "decisions": 18560, "postgres": 55542}
+         "gateway": 18550, "decisions": 18560, "providers": 18570, "postgres": 55542}
 ORIGIN = "https://localhost:18550"
 
 
@@ -165,7 +165,8 @@ def wait_health(service, seconds=50):
                     urllib.request.HTTPSHandler(context=context), NoRedirect())
         for _ in range(seconds):
             try:
-                with opener.open(url, timeout=4) as response:
+                headers = {"X-Decision-Key": read_config()["environments"]["decisions"]["DECISION_API_KEY"]} if service == "decisions" else {}
+                with opener.open(urllib.request.Request(url, headers=headers), timeout=4) as response:
                     if response.status == 200:
                         return
             except (OSError, urllib.error.URLError):
@@ -216,8 +217,10 @@ sys.exit(0 if listening else 1)
 
 
 def main():
+    global ORDER
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "up", "down", "status", "build", "password"])
+    parser.add_argument("command", choices=["install", "enhance", "up", "down", "status", "build", "password"])
+    parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
     parser.add_argument("--model", default="qwen2.5:3b", help="Installed local Ollama answer model; install only")
     args = parser.parse_args()
     if args.command == "install":
@@ -227,6 +230,12 @@ def main():
         build()
         return
     config = read_config()
+    if args.command == "enhance":
+        from workspace_setup import enhance
+        enhance(config, args.pi_source)
+        return
+    if config.get("native_providers"):
+        ORDER = ("postgres", "memorygate", "toolgate", "decisions", "providers", "pi", "gateway")
     if args.command == "password":
         # Owner-interactive recovery; no password travels in process arguments.
         env = {**os.environ, "PYTHONPATH": config["repositories"]["pi"]}

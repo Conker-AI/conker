@@ -45,7 +45,18 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save settings.') }
     finally { setPending(false) }
   }
-  const chooseAnswerModel = (modelId: string) => { if (saved && modelId !== answering) void save(withAnswerModel(saved, modelId)) }
+  const chooseAnswerModel = (modelId: string) => {
+    if (!saved) return
+    if (modelId === '__auto__') void save({ ...saved, roleSettings: { ...saved.roleSettings, answerMode: 'router' } })
+    else if (modelId !== answering) void save(withAnswerModel(saved, modelId))
+  }
+  const thinker = saved?.roleSettings.roles.thinking
+  const setThinker = (modelId: string) => {
+    if (!saved || !thinker) return
+    const enabled = modelId !== '__off__'
+    void save({ ...saved, roleSettings: { ...saved.roleSettings, roles: { ...saved.roleSettings.roles, thinking: { ...thinker, enabled,
+      ...(enabled ? { modelId, eligibleModelIds: [...new Set([...thinker.eligibleModelIds, modelId])], failure: 'stop' as const, fallbackModelId: null } : {}) } } } })
+  }
   // Ideas use the answering model; off keeps the role's other settings for next time.
   const setIdeas = (on: boolean) => { if (saved) void save(withIdeas(saved, on ? answering ?? enabled[0]?.id ?? null : null)) }
   const saveProfileName = () => { saveOwnerProfile({ ...profile, name: profileName }); setProfileError('') }
@@ -82,12 +93,12 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
         {([['system', 'System', Monitor], ['light', 'Light', Sun], ['dark', 'Dark', Moon]] as const).map(([value, label, Icon]) => <Button key={value} type="button" variant={theme === value ? 'secondary' : 'ghost'} size="sm" role="radio" aria-checked={theme === value} onClick={() => setTheme(value)}><Icon />{label}{theme === value && <Check className="hidden size-3.5 sm:block" />}</Button>)}
       </div>
     </WorkspaceSection>
-    <WorkspaceSection title="Answers" description="The model that replies to you in every chat, unless you pick another one in a chat.">
+    <WorkspaceSection title="Talking model" description="Replies to you while the thinking model works independently. Auto lets your configured router choose from eligible models for each request.">
       <div className="space-y-2">
         <Label htmlFor="answer-model">Answers come from</Label>
-        <Select value={answering ?? ''} disabled={pending || !enabled.length} onValueChange={chooseAnswerModel}>
+        <Select value={saved?.roleSettings.answerMode === 'router' ? '__auto__' : answering ?? ''} disabled={pending || !enabled.length} onValueChange={chooseAnswerModel}>
           <SelectTrigger id="answer-model" className="w-full min-w-0"><SelectValue placeholder={saved?.roleSettings.answerMode === 'router' ? 'Chosen automatically for each message' : enabled.length ? 'Choose a model' : 'No models set up yet'} /></SelectTrigger>
-          <SelectContent>{enabled.map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {saved?.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent>
+          <SelectContent><SelectItem value="__auto__" disabled={!saved?.roleSettings.roles.routing.enabled}>Auto · choose for each request</SelectItem>{enabled.filter(model => model.providerId !== 'decisions').map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {saved?.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent>
         </Select>
         {pending && <p role="status" className="text-xs text-muted-foreground">Saving…</p>}
       </div>
@@ -95,6 +106,14 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       <p className="text-sm text-muted-foreground"><Link className="underline underline-offset-4" to="/settings?tab=providers">Manage providers and models</Link></p>
     </WorkspaceSection>
     <WorkspaceSection title={<Label htmlFor="ideas-switch" className="text-base font-semibold">Ideas from Conker</Label>} description={<>Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></>} action={<Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />} />
+    <WorkspaceSection title="Thinking model" description="Analyzes the conversation in the background. Keep talking, cancel it, or bring its findings back into the chat. No tools run in this lane.">
+      <Label htmlFor="thinking-model">Background analysis comes from</Label>
+      <Select value={thinker?.enabled ? thinker.modelId ?? '__off__' : '__off__'} disabled={pending} onValueChange={setThinker}>
+        <SelectTrigger id="thinking-model" className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent><SelectItem value="__off__">Off</SelectItem>{enabled.filter(model => model.providerId !== 'decisions').map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">Uses the selected provider’s allowance independently of replies. New messages supersede unfinished findings.</p>
+    </WorkspaceSection>
     <BrowserSessions client={client} />
   </div></GatewayPageFrame>
 }

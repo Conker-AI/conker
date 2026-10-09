@@ -1,3 +1,4 @@
+import { ThinkingStatus } from './thinking-status'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
 import { ConversationHistory } from '@/components/chat/history'
@@ -158,6 +159,30 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       return false
     } finally { if (mounted.current && generation === detailGeneration.current) setDetailPending(false) }
   }, [client, privacy, request, workspace])
+
+  const refreshThinking = useCallback(async (id: string, signal: AbortSignal) => {
+    const generation = detailGeneration.current
+    const result = await client.getSession(id, { signal })
+    if (signal.aborted || !mounted.current || !activeRef.current || selectedRef.current !== id || generation !== detailGeneration.current) return
+    if (result.status === 'forgotten') privacy.getState().markForgotten([id])
+    // The submission receipt owns transcript reconciliation; polling only updates analysis.
+    setDetail(previous => previous?.id !== id ? previous : privacy.getState().sessionIds.includes(id)
+      ? maskForgottenConversation(result) : { ...previous, thinking: result.thinking })
+  }, [client, privacy])
+  const thinkingActive = current?.thinking?.some(row => row.status === 'running') ?? false
+  useEffect(() => {
+    if (!selected || !active || (!thinkingActive && !sendPending)) return
+    const id = selected, controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const poll = async () => {
+      try {
+        await refreshThinking(id, controller.signal)
+      } catch { /* Explicit history refresh remains available; never repeat a mutation. */ }
+      if (!controller.signal.aborted) timer = setTimeout(poll, 2000)
+    }
+    timer = setTimeout(poll, 1000)
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [selected, active, thinkingActive, sendPending, refreshThinking])
 
   async function saveArtifact(message: RuntimeMessage) {
     if (!control || message.role !== 'assistant' || message.content.kind !== 'text' || !current || current.status !== 'open') return
@@ -466,6 +491,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length && !attempt.taskBinding} onRestore={() => recover('restoreDraft')} onCheck={() => recover('check')} onRetry={() => recover('retrySameRequest')} onRelease={() => recover('releaseUnstarted')} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Conker got your message; the reply isn’t saved yet' : 'Not sure your last message went through'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'Sending is paused until the reply shows up, so nothing is done twice.' : 'Your text is kept. Sending is paused because the last message may still be running.'} Check the chat, and your chat list in case it continued in a new chat.</p><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}>Check the chat</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I checked. Sending again might do the same work twice.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeFound.availability !== 'enabled'} onClick={() => recover('acknowledgeFound')}>It’s in the chat</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeUnknown.availability !== 'enabled'} onClick={() => recover('acknowledgeUnknown')}>Let me send again</Button></div></>}</div>)}
             {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !current.turns.some(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply') && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
+            {current && <ThinkingStatus rows={current.thinking ?? []} disabled={!active} onCancel={async turnId => { await client.cancelThinking(current.id, turnId); await request(signal => refreshThinking(current.id, signal)) }} onDiscuss={result => { workspace.setState(state => ({ drafts: { ...state.drafts, [current.id]: [state.drafts[current.id]?.trimEnd(), `Discuss these background findings and check their conclusions:\n\n${result}`].filter(Boolean).join('\n\n') } })); replyComposer.current?.focus() }} />}
             {/* Waiting on the owner is the main loop, so it is shown in the chat, not under Details. */}
             {current && current.status !== 'forgotten' && current.turns.filter(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply').map(turn => <div key={`waiting:${turn.id}`} role="status" className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1 space-y-1">
