@@ -9,8 +9,14 @@ from pathlib import Path
 from workspace import ROOT
 
 BUNDLES = {
-    "pi": ("pi-model-roles.patch", "pi-skills.patch", "pi-daily-companion.patch"),
+    "pi": (
+        "pi-model-roles.patch",
+        "pi-skills.patch",
+        "pi-daily-companion.patch",
+        "pi-companion-reliability.patch",
+    ),
     "toolgate": ("toolgate-mcp.patch",),
+    "memorygate": ("memorygate-lexical-recall.patch",),
 }
 
 

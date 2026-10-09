@@ -1,9 +1,9 @@
 """Local startup must not take ownership of another checkout or listener."""
 import importlib.util
 import json
-from pathlib import Path
 import socket
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -32,6 +32,23 @@ def test_existing_install_does_not_rotate_credentials(tmp_path, monkeypatch):
     monkeypatch.setattr(workspace, "run", lambda *a, **kw: pytest.fail("Existing install must not execute setup commands"))
     workspace.install("another-model")
     assert configuration.read_text() == original
+
+
+def test_enhancement_refuses_a_running_memorygate_before_source_changes(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    import workspace_setup
+
+    inspected = []
+
+    def owned(config, service):
+        inspected.append(service)
+        return service == "memorygate"
+
+    monkeypatch.setattr(workspace_setup, "owned_listener", owned)
+    monkeypatch.setattr(workspace_setup, "run", lambda *args, **kwargs: pytest.fail("Active runtimes must not be enhanced"))
+    with pytest.raises(SystemExit, match="Stop this workspace"):
+        workspace_setup.enhance({}, None)
+    assert "memorygate" in inspected
 
 
 def test_unrelated_listener_is_never_adopted(tmp_path, monkeypatch):

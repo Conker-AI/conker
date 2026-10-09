@@ -9,10 +9,17 @@ from pathlib import Path
 from workspace import CONFIG, PORTS, ROOT, STATE, interpreter, owned_listener, run
 
 
-def enhance(config, pi_source, toolgate_source=None):
+def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     if any(
         owned_listener(config, service)
-        for service in ("pi", "gateway", "toolgate", "providers", "decisions")
+        for service in (
+            "pi",
+            "gateway",
+            "toolgate",
+            "memorygate",
+            "providers",
+            "decisions",
+        )
     ):
         raise SystemExit(
             "Stop this workspace before changing its runtimes: python scripts/workspace.py down"
@@ -38,6 +45,15 @@ def enhance(config, pi_source, toolgate_source=None):
         apply_bundle(toolgate, "toolgate")
     if not (toolgate / "toolgate/executors/mcp_http.py").is_file():
         raise SystemExit("Select the ToolGate MCP checkout with --toolgate-source.")
+    memorygate = (
+        memorygate_source or Path(config["repositories"]["memorygate"])
+    ).resolve()
+    if memorygate_source is None:
+        apply_bundle(memorygate, "memorygate")
+    if not (memorygate / "services/api/app/services/lexical_retrieval.py").is_file():
+        raise SystemExit(
+            "Select the MemoryGate recall checkout with --memorygate-source."
+        )
     run(config["python"], "-m", "pip", "install", "-r", source / "requirements.txt")
     decisions = STATE / "runtimes/decisions"
     if not interpreter(decisions).exists():
@@ -125,6 +141,7 @@ def enhance(config, pi_source, toolgate_source=None):
     config.update(native_providers=private, ports=PORTS)
     config["repositories"]["pi"] = str(source)
     config["repositories"]["toolgate"] = str(toolgate)
+    config["repositories"]["memorygate"] = str(memorygate)
     config["python_by_service"].update(
         decisions=str(interpreter(decisions)), providers=config["python"]
     )

@@ -2,18 +2,18 @@ import type { RuntimeSessionDetail, RuntimeSubmission } from '@/lib/gateway/runt
 import type { TaskDispatchIntent, TaskSubmissionBinding } from './task-dispatch-state'
 import { createStore } from 'zustand/vanilla'
 
-export type RequestModelOptions = { modelId?: string; skillIds?: string[]; think?: boolean }
+export type RequestModelOptions = { modelId?: string; skillIds?: string[]; think?: boolean; draftRevision?: number; researchMode?: 'off' | 'web' | 'deep' }
 export type UncertainTurn = { requestOptions?: RequestModelOptions; taskBinding?: TaskSubmissionBinding; rejectionStatus?: 409; text: string; turnId?: string; checked: boolean; accepted?: boolean; requestId?: string; requestedSessionId?: string; submission?: RuntimeSubmission; notFound?: boolean }
 
 /** The composer's empty selection means Automatic, so no model override is sent. */
-export function createRequestOptions(modelId?: string | null, skillIds: string[] = [], think = false): RequestModelOptions {
-  return { ...(modelId ? { modelId } : {}), skillIds: [...skillIds], ...(think ? { think: true } : {}) }
+export function createRequestOptions(modelId?: string | null, skillIds: string[] = [], think = false, draftRevision?: number | null, researchMode?: 'off' | 'web' | 'deep'): RequestModelOptions {
+  return { ...(modelId ? { modelId } : {}), skillIds: [...skillIds], ...(think ? { think: true } : {}), ...(draftRevision ? { draftRevision } : {}), ...(researchMode && researchMode !== 'off' ? { researchMode } : {}) }
 }
 
 /** A same-request retry must replay the options frozen at the original send. */
 export function retainedRequestOptions(attempt: UncertainTurn): RequestModelOptions {
   const options = attempt.requestOptions
-  return options ? createRequestOptions(options.modelId, options.skillIds, options.think) : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds, attempt.submission?.think)
+  return options ? createRequestOptions(options.modelId, options.skillIds, options.think, options.draftRevision, options.researchMode) : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds, attempt.submission?.think, attempt.submission?.draftRevision, attempt.submission?.researchMode)
 }
 
 export function createGatewayRuntimeWorkspaceState() {

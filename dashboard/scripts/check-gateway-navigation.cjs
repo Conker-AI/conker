@@ -102,6 +102,63 @@ assert.doesNotMatch(systemStatus, /Everything is working/,
   'Passing core diagnostics must not imply untested capabilities are ready')
 assert.match(workspace, /resolveGatewayRoute\(location\.pathname\)/)
 
+// Execute the workspace's real route-selection effect, independently of visual children.
+// Browser Back/Forward and the brand link only change the URL; neither calls New chat.
+let currentUrl = new URL('https://conker.test/chat'), layoutEffects = []
+const runtimeModule = { exports: {} }
+const noView = () => null
+const mockedReact = {
+  lazy: () => function LazyWorkspace() { return null }, Suspense: noView,
+  useCallback: value => value, useState: value => [value, () => {}],
+  useLayoutEffect: effect => layoutEffects.push(effect),
+}
+new Function('require', 'module', 'exports', ts.transpileModule(workspace, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+}).outputText)(request => {
+  if (request === 'react') return mockedReact
+  if (request === 'react/jsx-runtime') return require(request)
+  if (request === 'zustand') return { useStore: (store, select) => select(store.getState()) }
+  if (request === 'react-router-dom') return { Link: noView, useLocation: () => currentUrl, useNavigate: () => () => {}, useSearchParams: () => [currentUrl.searchParams] }
+  if (request === './navigation') return loaded.exports
+  if (request === '@/lib/utils') return { cn: (...values) => values.filter(Boolean).join(' ') }
+  return new Proxy({}, { get: () => noView })
+}, runtimeModule, runtimeModule.exports)
+let selectionState = { selected: 'ses_before', operation: 'send', taskIntent: null, uncertain: { ses_before: { requestId: 'retained_request_identity' } } }
+let selectionWrites = 0
+const conversationState = { getState: () => selectionState, setState: patch => { selectionWrites++; selectionState = { ...selectionState, ...patch } } }
+const workspaceProps = { conversationState, control: { search: {} }, sourcePrivacy: {}, runtime: {}, activity: {}, authStore: {}, owner: {}, proposals: {}, ownerState: {}, activityState: {} }
+function runtimeChild(node) {
+  if (!node || typeof node !== 'object') return null
+  if (node.props?.onSelectSession) return node
+  const children = Array.isArray(node.props?.children) ? node.props.children : [node.props?.children]
+  return children.map(runtimeChild).find(Boolean) ?? null
+}
+function visit(href, expected, reason) {
+  currentUrl = new URL(href, 'https://conker.test'); layoutEffects = []
+  const tree = runtimeModule.exports.GatewayWorkspace(workspaceProps)
+  layoutEffects.forEach(effect => effect())
+  assert.equal(selectionState.selected, expected, reason)
+  assert.equal(selectionState.operation, 'send', 'Navigation never cancels an in-flight operation')
+  assert.equal(selectionState.uncertain.ses_before.requestId, 'retained_request_identity', 'Navigation retains recovery identities')
+  return runtimeChild(tree)
+}
+const initialRuntime = visit('/chat', null, 'Brand /chat link selects the unsent new-chat draft')
+visit('/chat?session=ses_a&message=msg_a', 'ses_a', 'Direct conversation/message links select their chat')
+visit('/chat?session=ses_b', 'ses_b', 'A second history entry selects its own chat')
+visit('/chat?session=ses_a&message=msg_a', 'ses_a', 'Browser Back restores the preceding chat')
+visit('/chat', null, 'Browser Back to the new-chat entry clears the previous selection')
+visit('/chat?session=ses_a&message=msg_a', 'ses_a', 'Browser Forward restores the session')
+const writesBeforeHidden = selectionWrites
+const hiddenRuntime = visit('/memory?session=unrelated', 'ses_a', 'Other routes preserve the hidden conversation')
+assert.equal(selectionWrites, writesBeforeHidden)
+assert.equal(hiddenRuntime.type, initialRuntime.type, 'Chat remains the same mounted component across routes')
+assert.equal(hiddenRuntime.key, initialRuntime.key, 'A route switch cannot remount chat via a new key')
+assert.equal(hiddenRuntime.props.visible, false)
+visit('/chat?message=msg_orphan', null, 'A message-only URL must not reuse a previous conversation')
+visit('/chat?session=ses_b', 'ses_b', 'Selection can recover after returning from another workspace')
+visit('/', null, 'The root chat entry opens the new-chat draft')
+visit('/chat?session=../invalid', null, 'Malformed session parameters cannot leave a prior chat visible')
+
 const primitives = fs.readFileSync(path.join(root, 'src/components/design-system/primitives.tsx'), 'utf8')
 assert.doesNotMatch(primitives, /aria-labelledby=\{id\}[\s\S]{0,160}data-slot="collection-row"|data-slot="collection-row"[\s\S]{0,160}aria-labelledby=\{id\}/,
   'Collection rows must let visible descendant text form their accessible name')

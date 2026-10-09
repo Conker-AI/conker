@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import type { GatewayOwnerState } from './owner-state'
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useLayoutEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayActivityClient } from '@/lib/gateway/activity'
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import { cn } from '@/lib/utils'
-import { GatewayRuntimeWorkspace } from './runtime-workspace'
+const GatewayRuntimeWorkspace = lazy(() => import('./runtime-workspace').then(module => ({ default: module.GatewayRuntimeWorkspace })))
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewayActivityWorkspaceState } from './activity-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
@@ -74,9 +74,11 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const supported = route !== null
   const retainedTaskId = useStore(conversationState, value => value.taskIntent?.taskId)
   const dispatchBlocked = useStore(conversationState, value => !!value.operation)
-  const session = params.get('session')
-  useEffect(() => {
-    if (chatActive && session && /^[A-Za-z0-9_-]{1,128}$/.test(session)) conversationState.setState({ selected: session })
+  const requestedSession = params.get('session')
+  const session = requestedSession && /^[A-Za-z0-9_-]{1,128}$/.test(requestedSession) ? requestedSession : null
+  useLayoutEffect(() => {
+    // The chat URL owns selection. Other routes retain the mounted conversation and its work.
+    if (chatActive && conversationState.getState().selected !== session) conversationState.setState({ selected: session })
   }, [chatActive, conversationState, session])
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
@@ -98,7 +100,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {jobsActive && <GatewayJobsWorkspace control={control} />}
     </Suspense>
     {!supported && <div className="space-y-3 p-6"><PageHeader title="This workspace is not connected yet" density="compact" /><p className="text-sm text-muted-foreground">The live gateway currently connects today, conversations, projects, artifacts, jobs, activity, approvals, agents, memory, tools, models and diagnostics.</p><Button variant="outline" asChild><Link to="/chat">Open live conversations</Link></Button></div>}
-    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></div>
+    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><Suspense fallback={chatActive ? workspaceFallback : null}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></div>
     {activityActive && <Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
       if (conversationState.getState().operation) return
       activityState.setState({ notice: null })

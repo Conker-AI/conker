@@ -9,13 +9,13 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
@@ -64,7 +64,8 @@ def install(model):
         fresh = not source.exists()
         if fresh:
             run("git", "clone", "--no-checkout", f"https://github.com/Conker-AI/{name}.git", source)
-        bundled = name in {"pi", "toolgate"}
+        from workspace_patches import BUNDLES, apply_bundle
+        bundled = name in BUNDLES
         at_pin = not fresh and run("git", "rev-parse", "HEAD", cwd=source, capture=True) == revision
         if not (bundled and at_pin):
             if not fresh and run("git", "status", "--porcelain", cwd=source, capture=True):
@@ -73,7 +74,6 @@ def install(model):
         if run("git", "rev-parse", "HEAD", cwd=source, capture=True) != revision:
             raise SystemExit(f"Source identity check failed for {name}.")
         if bundled:
-            from workspace_patches import apply_bundle
             apply_bundle(source, name)
         env = STATE / "runtimes" / name
         if not interpreter(env).exists():
@@ -156,7 +156,7 @@ def wait_health(service, seconds=50):
     if service == "postgres":
         config = read_config()
         for _ in range(seconds):
-            result = subprocess.run(["docker", "exec", config["postgres_container"], "pg_isready", "-U", "conker_local"], capture_output=True)
+            result = subprocess.run(["docker", "exec", config["postgres_container"], "pg_isready", "-U", "conker_local"], capture_output=True, check=False)
             if result.returncode == 0:
                 return
             time.sleep(1)
@@ -228,6 +228,7 @@ def main():
     parser.add_argument("command", choices=["install", "enhance", "up", "down", "status", "build", "password"])
     parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
     parser.add_argument("--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development")
+    parser.add_argument("--memorygate-source", type=Path, help="Explicit MemoryGate checkout for local development")
     parser.add_argument("--model", default="qwen2.5:3b", help="Installed local Ollama answer model; install only")
     args = parser.parse_args()
     if args.command == "install":
@@ -239,7 +240,7 @@ def main():
     config = read_config()
     if args.command == "enhance":
         from workspace_setup import enhance
-        enhance(config, args.pi_source, args.toolgate_source)
+        enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
         return
     if config.get("native_providers"):
         ORDER = ("postgres", "memorygate", "toolgate", "decisions", "providers", "pi", "gateway")

@@ -98,6 +98,63 @@ def secret_reference(value):
     return value
 
 
+def draft_path(target, task=None):
+    identity(target, r"[A-Za-z0-9_-]{1,128}", "conversation ID or new")
+    if task is not None:
+        if target == "new":
+            raise ValueError("A task draft requires an existing conversation.")
+        identity(task, r"[A-Za-z0-9_-]{1,128}", "task ID")
+    return f"/drafts/{target}" + (f"/tasks/{task}" if task else "")
+
+
+def draft_payload(path, target, revision):
+    value = read_json(path, 65536)
+    allowed = {"text", "model_id", "skill_ids", "think", "research_mode"}
+    if target == "new":
+        allowed.update({"title", "agent_id", "privacy"})
+    if set(value) - allowed or not isinstance(value.get("text"), str):
+        raise ValueError(
+            "Draft JSON must contain text and only supported composer fields."
+        )
+    if len(value["text"]) > 16000:
+        raise ValueError("Draft text exceeds 16,000 characters.")
+    model = value.get("model_id")
+    if model is not None and (not isinstance(model, str) or not 1 <= len(model) <= 200):
+        raise ValueError(
+            "Use a model ID of 1 to 200 characters, or null for Automatic."
+        )
+    skills = value.get("skill_ids", [])
+    if not isinstance(skills, list) or len(skills) > 3:
+        raise ValueError("Select at most three distinct skills.")
+    for selected in skills:
+        identity(selected, SKILL_ID, "skill ID", 64)
+    if len(set(skills)) != len(skills):
+        raise ValueError("Select at most three distinct skills.")
+    if "think" in value and type(value["think"]) is not bool:
+        raise ValueError("Draft think must be true or false.")
+    if value.get("research_mode", "off") not in ("off", "web", "deep"):
+        raise ValueError("Draft research_mode must be off, web, or deep.")
+    if target == "new":
+        title = value.get("title", "")
+        if not isinstance(title, str) or len(title) > 1024:
+            raise ValueError("Draft title must contain at most 1,024 characters.")
+        if value.get("agent_id") is not None:
+            identity(value["agent_id"], r"(?:companion|agent_[0-9a-f]{32})", "agent ID")
+        privacy = value.get("privacy", {})
+        if (
+            not isinstance(privacy, dict)
+            or set(privacy) - {"memoryDisabled", "harnessDisabled"}
+            or any(type(flag) is not bool for flag in privacy.values())
+        ):
+            raise ValueError(
+                "Draft privacy must contain only memoryDisabled and harnessDisabled booleans."
+            )
+    payload = {**value, "expected_revision": revision}
+    if len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) > 65536:
+        raise ValueError("Draft exceeds the 64 KiB request limit.")
+    return payload
+
+
 def imported_mcp(args):
     identity(args.id, MCP_ID, "MCP capability ID")
     discovery = read_json(args.file)
@@ -216,7 +273,11 @@ def request(config, service, path, body=None):
             {"X-Pi-Key": config["environments"]["pi"]["PI_ADMIN_KEY"]},
         )
     headers["Content-Type"] = "application/json"
-    data = json.dumps(body).encode() if body is not None else None
+    data = (
+        json.dumps(body, ensure_ascii=False).encode("utf-8")
+        if body is not None
+        else None
+    )
     with build_opener(ProxyHandler({}), NoRedirect()).open(
         Request(origin + path, data=data, headers=headers), timeout=660
     ) as response:
@@ -235,6 +296,12 @@ def main():
     chat.add_argument("--model")
     chat.add_argument("--request-id")
     chat.add_argument(
+        "--draft-revision",
+        type=int,
+        help="Consume exactly this saved draft revision when the message binds",
+    )
+    chat.add_argument("--research-mode", choices=["off", "web", "deep"], default="off")
+    chat.add_argument(
         "--think",
         action="store_true",
         help="Request background analysis for this message",
@@ -251,6 +318,39 @@ def main():
         "submission", help="Inspect a durable submission before deciding how to recover"
     )
     submission.add_argument("request_id")
+    draft = commands.add_parser(
+        "draft", help="Read or save private composer drafts without sending a message"
+    )
+    draft_commands = draft.add_subparsers(dest="operation", required=True)
+    for operation in ("show", "save", "clear"):
+        item = draft_commands.add_parser(operation)
+        item.add_argument(
+            "target", help="Conversation ID, or new for the unsent first message"
+        )
+        item.add_argument("--task", help="Separate task draft within this conversation")
+        if operation == "save":
+            item.add_argument(
+                "file",
+                type=Path,
+                help="JSON with text and optional model_id, skill_ids, think, research_mode; new also accepts title, agent_id, privacy",
+            )
+        if operation in {"save", "clear"}:
+            item.add_argument("--expected-revision", type=int, required=True)
+    draft_start = draft_commands.add_parser(
+        "start",
+        help="Create a conversation from the saved new draft without running a model",
+    )
+    draft_start.add_argument("--expected-revision", type=int, required=True)
+    draft_start.add_argument(
+        "--request-id",
+        required=True,
+        help="Keep this identity for inspection or an exact retry after an uncertain result",
+    )
+    draft_status = draft_commands.add_parser(
+        "start-status",
+        help="Inspect a saved new-chat start request without repeating it",
+    )
+    draft_status.add_argument("request_id")
     chat.add_argument(
         "--skill",
         action="append",
@@ -343,12 +443,28 @@ def main():
     if args.command in {"stop", "submission"}:
         identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
     if args.command == "chat":
+        if args.draft_revision is not None and args.draft_revision < 1:
+            raise ValueError("Use a saved draft revision of 1 or higher.")
         if len(args.skill) > 3 or len(set(args.skill)) != len(args.skill):
             raise ValueError("Select at most three distinct skills.")
         for selected in args.skill:
             identity(selected, SKILL_ID, "skill ID", 64)
         if args.request_id:
             identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
+    draft_body = None
+    if args.command == "draft":
+        if args.operation in {"start", "start-status"}:
+            identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
+        else:
+            draft_path(args.target, args.task)
+        if hasattr(args, "expected_revision") and args.expected_revision < (
+            1 if args.operation == "start" else 0
+        ):
+            raise ValueError(
+                "Use a current nonnegative revision; starting requires a saved draft."
+            )
+        if args.operation == "save":
+            draft_body = draft_payload(args.file, args.target, args.expected_revision)
     if args.command == "skills":
         if hasattr(args, "id"):
             identity(args.id, SKILL_ID, "skill ID", 64)
@@ -397,8 +513,37 @@ def main():
                 **({"model_id": args.model} if args.model else {}),
                 **({"skill_ids": args.skill} if args.skill else {}),
                 **({"think": True} if args.think else {}),
+                **(
+                    {"draft_revision": args.draft_revision}
+                    if args.draft_revision is not None
+                    else {}
+                ),
+                **(
+                    {"research_mode": args.research_mode}
+                    if args.research_mode != "off"
+                    else {}
+                ),
             },
         )
+    elif args.command == "draft":
+        if args.operation == "start":
+            value = request(
+                config,
+                "pi-owner",
+                "/drafts/new/start",
+                {
+                    "request_id": args.request_id,
+                    "expected_revision": args.expected_revision,
+                },
+            )
+        elif args.operation == "start-status":
+            value = request(config, "pi-owner", f"/drafts/new/start/{args.request_id}")
+        else:
+            if args.operation == "clear":
+                draft_body = {"text": "", "expected_revision": args.expected_revision}
+            value = request(
+                config, "pi-owner", draft_path(args.target, args.task), draft_body
+            )
     elif args.command == "resume":
         value = request(config, "pi", f"/turns/{args.turn}/resume", {})
     elif args.command == "stop":

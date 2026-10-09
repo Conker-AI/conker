@@ -57,8 +57,8 @@ assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} val
   'The first-message composer must expose the answer model before dispatch')
 assert.match(workspaceSource, /GatewayAgentPicker compact client=\{control\} value=\{firstAgent\}/,
   'The first-message composer must expose the durable agent before creating the conversation')
-assert.match(workspaceSource, /client\.createSession\([^\n]+\{ signal, agentId: firstAgent,[^\n]+privacy/,
-  'Session creation must atomically bind the selected agent and first-turn privacy restrictions')
+assert.match(workspaceSource, /client\.drafts\.start\(savedStart!\.requestId, savedStart!\.revision, signal\)/,
+  'Session creation atomically promotes the exact saved intent, including agent and privacy')
 assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} value=\{firstModel\}[^\n]+manualRequired=\{firstPrivacy\.harnessDisabled\}/,
   'Disabling the harness before creation must require an explicit answer model')
 assert.match(workspaceSource, /firstPrivacy\.harnessDisabled && !firstModel/,
@@ -75,9 +75,9 @@ assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyCo
   'Global Memory and Tools destinations must not masquerade as per-chat composer controls')
 assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,
   'An open conversation must expose an explicit future-turn agent handoff')
-assert.match(workspaceSource, /dispatchSubmission\(created, text, createTurnRequestId\(\), undefined, undefined, firstModel, skills, think\)/,
-  'First-message model, skills, and explicit thinking cross session creation into the initial submission')
-assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? modelChoices\[id\]/)
+assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode\)/,
+  'First-message options and exact draft revision cross atomic session promotion')
+assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? composer\?\.modelId/)
 assert.match(workspaceSource, /client.submitRequest\([^\n]+\.\.\.requestOptions/,
   'The exact resolved model choice must be sent to the runtime')
 

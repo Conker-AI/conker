@@ -56,6 +56,9 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
     if (value && Number.isInteger(value.revision) && value.revision >= 0 && Array.isArray(value.configuration?.sources) && value.configuration.sources.every(source => searchSources.includes(source)) && typeof value.configuration.exactText === 'boolean') searchSettings = { revision: value.revision, configuration: { ...value.configuration, semantic: false, reranking: false } }
   } catch { /* Preview preferences are optional; malformed storage uses safe defaults. */ }
+  const composerDrafts = new Map<string, Json>()
+  const draftStarts = new Map<string, Json>()
+  const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
   const submissions = new Map<string, Json>()
   const streams = new Map<string, { text: string; stopped: boolean }>()
   let boundaryReceipt: Json | null = preview.setupStep === 'protection' || preview.setupStep === 'rehearsal' ? { step: 'boundaries', revision: 1, receiptId: 'preview-boundaries', source: 'conker.dashboard', subject: 'toolgate.policy', evidenceDigest: 'b'.repeat(64), completedAt: iso(now()), expiresAt: iso(now() + 86400), recordedAt: iso(now()), state: 'valid' } : null
@@ -322,6 +325,40 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, 120))
     let match: RegExpMatchArray | null
+    if ((match = path.match(/^\/api\/control\/pi\/drafts\/new\/start\/([A-Za-z0-9_-]+)$/)) && method === 'GET') return structuredClone(draftStarts.get(match[1]) ?? fail(404))
+    if (path === '/api/control/pi/drafts/new/start' && method === 'POST') {
+      const body = options.body ?? {}, requestId = String(body.request_id)
+      const prior = draftStarts.get(requestId)
+      if (prior) { if (prior.source_revision !== body.expected_revision) fail(409); return structuredClone(prior) }
+      const saved = composerDrafts.get('new') ?? emptyComposerDraft('new')
+      if (saved.revision !== body.expected_revision) fail(409)
+      if (!String(saved.text).trim()) fail(422)
+      const id = nextId('ses')
+      sessions.push({ id, title: String(saved.title || 'New chat'), created_at: now(), messages: [], turns: [] })
+      sessionSettings.set(id, { revision: 1, settings: { agentId: saved.agent_id || 'companion', privacy: { memoryDisabled: false, harnessDisabled: false, ...(saved.privacy as Json) } } })
+      composerDrafts.set(id, { ...saved, session_id: id, revision: 1 })
+      const receipt = { schemaVersion: 1, request_id: requestId, session_id: id, content_status: 'available', source_revision: saved.revision, draft_revision: 1 }
+      draftStarts.set(requestId, receipt)
+      composerDrafts.set('new', { ...emptyComposerDraft('new'), revision: Number(saved.revision) + 1, updated_at: now() })
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'draft-start') { globalThis.sessionStorage.removeItem('conker-fake-fail'); fail(503) }
+      return structuredClone(receipt)
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/drafts\/([A-Za-z0-9_-]+)(?:\/tasks\/([A-Za-z0-9_-]+))?$/))) {
+      const key = match[1] + (match[2] ? '/' + match[2] : '')
+      if (key !== 'new') find(match[1])
+      const mode = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (mode === 'drafts') fail(503)
+      let saved = composerDrafts.get(key) ?? emptyComposerDraft(key)
+      if (method === 'POST') {
+        if (mode === 'draft-conflict') { saved = { ...saved, text: 'Draft changed in another tab. Keep the revised meeting agenda.', revision: Number(saved.revision) + 1 }; composerDrafts.set(key, saved); globalThis.sessionStorage.removeItem('conker-fake-fail') }
+        const body = options.body ?? {}
+        if (body.expected_revision !== saved.revision) fail(409)
+        saved = { ...saved, ...body, revision: Number(saved.revision) + 1, updated_at: now() }
+        delete saved.expected_revision
+        composerDrafts.set(key, saved)
+      }
+      return structuredClone(saved)
+    }
     if (path === '/api/control/pi/search/settings') {
       if (method === 'POST') {
         if (options.body?.expected_revision !== searchSettings.revision) fail(409)
@@ -403,7 +440,16 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { ...sessionRow(item), messages: item.messages, turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/submissions$/))) return { results: [], next_cursor: null }
-    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') return sendTurn(find(match[1]), options.body ?? {})
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') {
+      const body = options.body ?? {}, key = match[1], prior = submissions.get(String(body.request_id))
+      if (prior) return { submission: prior }
+      const saved = composerDrafts.get(key)
+      if (body.draft_revision !== undefined && (!saved || saved.revision !== body.draft_revision || saved.text !== body.text)) throw new GatewayError('http', 409, undefined, 'draft_changed')
+      const result = await sendTurn(find(key), body), receipt = result.submission as Json
+      Object.assign(receipt, { draft_revision: body.draft_revision ?? null, model_id: body.model_id ?? null, skill_ids: body.skill_ids ?? [], think: body.think ?? false, research_mode: body.research_mode ?? 'off' })
+      if (saved && composerDrafts.get(key)?.revision === body.draft_revision) composerDrafts.set(key, { ...emptyComposerDraft(key), revision: Number(saved.revision) + 1, updated_at: now() })
+      return result
+    }
     if ((match = path.match(/^\/api\/pi\/turn-submissions\/([^/]+)\/cancel$/))) {
       const stream = streams.get(match[1]); if (stream) stream.stopped = true
       return { request_id: match[1], state: 'bound' }

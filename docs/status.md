@@ -13,6 +13,55 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Private drafts, bounded thinking and memory recall (9 October)
+
+New-chat and conversation drafts now save their complete message intent to Pi:
+text, model, selected skills, research mode and Think choice, plus the new chat's
+agent, title and privacy overrides. Revision checks prevent one tab from silently
+overwriting another. The UI shows saved, unconfirmed and conflict states; draft
+text is not written to browser storage. Saving does not send a message or admit
+memory. Auth changes and forgetting fence late reads and writes. Starting a chat
+atomically transfers a draft and records an idempotent receipt; recovery opens
+that same chat without sending. Submission consumes only its frozen draft
+revision, preserving subsequent edits. The CLI shares these operations through
+`draft show/save/clear/start/start-status` and `chat --draft-revision`.
+
+Requested thinking has an absolute elapsed-time limit, capped at 120 seconds and
+frozen at admission. This also covers providers that continuously emit chunks and
+would never reach a per-read timeout. Expiry closes the owned transport, rejects
+late findings and does not restart or fall back. Capacity remains held until the
+adapter exits; a legacy adapter without a close operation can still take its
+existing I/O timeout to return. Queue waiting has its own bound.
+
+Memory recall retains whole records within a 32 KiB serialized context budget
+and records omissions explicitly; the raw response is separately bounded.
+Lexical fallback now selects query-relevant candidates before its result limit,
+so an older matching memory can survive a large collection. Missing semantic
+dependencies still report degraded readiness. Empty recall envelopes become a
+short scope-aware prompt notice; substantive records, briefing and citations
+remain exact. Durable receipts retain the full retrieval status. Static tool
+instructions precede changing memory context for prompt reuse.
+
+Malformed, unknown or unsupported tool-shaped model output now fails explicitly
+instead of appearing as an ordinary answer. Explanatory examples remain inert,
+and recorded actions are not replayed when only their final answer needs retry.
+Ollama readiness matches exact tags; installing a sized variant does not make an
+uninstalled bare `latest` route available. Provider transports explicitly refuse
+environment proxies and redirects.
+
+The local installation bundle now includes MemoryGate as well as Pi and ToolGate.
+Fresh and repeated patch application is verified, and enhancement refuses to
+change a running MemoryGate source. Reviewed development checkouts can use
+`--memorygate-source`. Production release pins remain unchanged.
+
+Validation: Gateway contracts and the production build pass (591,949-byte entry,
+with the existing 700,000-byte guard); 64 CLI/installer tests, 46 thinking and
+cancellation tests, and 101 memory/prompt/tool/context regressions pass. Fresh and
+repeat Pi bundle checks reproduce all 52 reviewed files. Local Pi and Gateway
+health checks passed after the rollout, with consistent database checkpoints
+retained privately. Browser live acceptance remains a separate check from these
+source and installation results.
+
 ### Chat-first companion and explicit thinking (9 October)
 
 The owner selected a new chat-first product direction. The root route opens a
@@ -50,8 +99,9 @@ Production build, browser contract checks, provider/runtime regressions, and fre
 and repeated application of the ordered Pi installation bundle pass. Local
 providers, Pi, and Gateway were restarted with successful health checks. A live
 ordinary message created no thinking job. Its CPU-only Qwen 2.5 3B response took
-45 seconds and returned tool-shaped text for a simple greeting request; response
-quality and malformed tool-proposal handling remain active follow-up work.
+45 seconds and returned tool-shaped text for a simple greeting request. The
+protocol fix above addresses that failure mode; local-model response quality and
+latency remain measured follow-up work.
 
 ### Reusable skills and external MCP tools (9 October)
 

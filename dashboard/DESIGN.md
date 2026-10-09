@@ -45,6 +45,36 @@ privacy contracts. Background thinking is an explicit per-message opt-in;
 automatic model choice belongs to the talking model. Composer behavior is owned
 by the runtime workspace rather than by navigation.
 
+Composer drafts save privately on the Conker server, separately from messages,
+model input and memory. A quiet status beneath either composer distinguishes
+loading, saving, saved, unsaved, offline and unconfirmed saves. Browser storage
+contains no draft text or options. Only an interrupted new-chat start's request
+identity, revision and browser-session identity may survive in session storage.
+Logout clears in-memory editors and that recovery identity; server drafts remain
+available after sign-in. Forgetting a chat clears its draft and pending content.
+
+Every draft has a server revision. Concurrent changes preserve the local editor
+and expose both versions with their model, skills, Think, research and new-chat
+privacy choices. Use saved version and Keep my edits require the shared
+`ConfirmationDialog`, bound to the exact versions shown. A newer change stops
+the choice. Unconfirmed saves are read back before another write; offline edits
+remain in memory with a leave-page warning until saved. Saved drafts do not
+trigger that warning by themselves.
+
+New chat remains an unsent draft until Send atomically promotes it to a chat.
+An interrupted creation recovers the same chat and leaves sending explicit.
+The uninterrupted first send requires the exact promoted draft; another tab's
+replacement never becomes an automatic message. Each send freezes its draft
+revision and options. Same-request retries reuse that snapshot, and consuming
+an older submitted revision preserves newer edits. Task requests keep their
+separate review and scope. Submission recovery is visible beside the composer,
+independent of draft-save status. Long recovery content scrolls within a bounded
+composer region on small screens.
+
+Chat code loads in its own module while the workspace remains mounted across
+navigation, retaining streams and recovery state. The production entry-size
+guard remains unchanged.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.

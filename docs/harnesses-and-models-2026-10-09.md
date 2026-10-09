@@ -44,10 +44,11 @@ Codex-managed account flow.
 
 - **Talking / answers:** manual model lock or Auto. The per-chat override remains
   authoritative and cannot silently fall back to a different model.
-- **Thinking:** a separate model call begins concurrently with each ordinary
-  companion turn when enabled. It produces findings, not a raw reasoning trace,
-  and runs no tools. The talking response does not wait for it. The UI provides
-  status, cancellation, findings and “Discuss these findings.”
+- **Thinking:** select Think for the next Companion message, or use `chat --think`.
+  This explicitly requests a separate analysis; ordinary messages do not start
+  one. It produces findings, runs no tools, and does not block the talking reply.
+  Follow-up conversation preserves the analysis; another Think request replaces
+  it. Findings identify the message they analyzed and can be discussed explicitly.
 - **Routing:** Laya chooses among the owner's eligible answer models using model
   descriptions and a bounded conversation projection. Long requests carry marked
   excerpts and length/turn metrics. System prompts, recalled memory and tools
@@ -60,17 +61,22 @@ Codex-managed account flow.
   conversations, not autonomous team or scheduled-job turns.
 
 Laya is a classifier, not an oracle. Its score is normalized entropy separation
-(`1 - H(p)/log(k)`), not correctness probability. The local profile uses a 0.01
-minimum separation; an unavailable, too-large or near-tied decision uses only the
-configured fallback. This is a starting policy, not a measured optimal router.
+(`1 - H(p)/log(k)`), not correctness probability. The original local profile used
+a 0.01 minimum separation; new initialization preserves the service's default
+threshold instead of forcing that override. Existing saved settings are retained.
+An unavailable, too-large or near-tied decision uses only the configured fallback.
+This is a starting policy, not a measured optimal router.
 Evaluation against the owner's tasks is still needed before claiming best-model
 selection. The service accepts 2–8 choices and rejects input beyond its token
-window instead of silently clipping it.
+window instead of silently clipping it. One eligible talking model bypasses the
+classifier. Classifiers cannot be assigned as talking or thinking models.
 
-Thinking has two concurrent slots and a configured timeout, at most 120 seconds.
-There is no unbounded queue. New input supersedes unfinished findings; cancel
-discards a late result. An already-dispatched provider request can still finish
-and consume allowance. Restart marks pending work interrupted without retrying.
+Thinking has two concurrent slots, a queue capped at 16, and bounded queue and
+inference waits. Talking gets priority when both models share a local endpoint;
+an interrupted thinker can continue once after the reply. Cancel closes the exact
+provider connection or native process and discards late results. Connection setup
+may still await its timeout, and work already performed may count toward usage.
+Restart marks pending work interrupted without retrying.
 No-harness conversations skip the analyst. Forgetting removes stored findings.
 The lane has separate model usage receipts and cannot grant or execute tools.
 
@@ -110,16 +116,28 @@ python scripts/workspace.py up
 `enhance` applies the reviewed backend patch to the exact pinned clean Pi source,
 installs the separate Laya and Codex runtimes, and configures the private bridge.
 Use `--pi-source C:/path/to/conker-pi` for a reviewed development checkout. Existing
-model choices are preserved; a fresh configuration enables Auto over Qwen 2.5 3B
-and Qwen 3 4B and uses Qwen 3 for background analysis. Both models must be installed.
+model choices are preserved. Fresh initialization checks installed models and
+uses the configured `--model` as the talking model; installed Qwen 3 4B is an
+optional additional choice. Missing models remain unavailable, and setup does
+not silently replace the selected model with an unrelated installed model.
 
 ```powershell
 python scripts/conker.py new "A new conversation"
 python scripts/conker.py sessions
-python scripts/conker.py chat SESSION_ID "My question" --model local-fast
+python scripts/conker.py chat SESSION_ID "My question" --model MODEL_ID
+python scripts/conker.py chat SESSION_ID "Analyze this problem" --think
 python scripts/conker.py show SESSION_ID
 python scripts/conker.py thinking SESSION_ID
 python scripts/conker.py thinking SESSION_ID --cancel TURN_ID
+python scripts/conker.py submission REQUEST_ID
+python scripts/conker.py stop REQUEST_ID
+python scripts/conker.py resume TURN_ID
+python scripts/conker.py draft show new
+python scripts/conker.py draft save new draft.json --expected-revision 0
+python scripts/conker.py draft start --request-id MY_UNIQUE_REQUEST_ID --expected-revision 1
+python scripts/conker.py draft start-status MY_UNIQUE_REQUEST_ID
+python scripts/conker.py draft show SESSION_ID
+python scripts/conker.py draft clear SESSION_ID --expected-revision 1
 python scripts/conker.py models
 python scripts/conker.py models --save role-update.json
 python scripts/conker.py auth chatgpt login
@@ -136,6 +154,18 @@ python scripts/conker.py api pi /agents
 operations to the local host owner; `--body file.json` supplies POST data. ToolGate
 continues enforcing execution grants. The native command keeps the caller's
 working directory. Normal Conker chats and native-agent sessions are separate.
+
+Draft saves use the revision returned by `draft show`; the numbers above assume
+an empty new draft. `draft.json` contains `text` and optional `model_id`,
+`skill_ids`, `think` and `research_mode` (`off`, `web` or `deep`). A new draft can
+also contain `agent_id`, `title` and `privacy`. Omit privacy keys to inherit setup
+defaults; explicit false is an override. Draft files remain the owner's local
+files and may contain private text. `draft start` moves the saved intent into one
+new chat atomically and does not run a model. Reuse its request ID after an
+uncertain response, or inspect it with `start-status`; a successful recovery does
+not send the message. For an existing chat, `chat --draft-revision N` submits the
+exact saved text and options and consumes that revision only when the user
+message is recorded. Task drafts use `--task TASK_ID` with show/save/clear.
 
 ## Capability coverage and remaining work
 
@@ -155,13 +185,14 @@ This release establishes the requested model/authentication/concurrency path and
 native harness access. It does not claim complete feature-for-feature equivalence
 with every harness.
 
-## Verification record
+## Initial profile verification
 
-Validated on this Windows host against the production dashboard at
+The initial profile below was validated on this Windows host against the dashboard at
 `https://localhost:18550`. The portable backend patch contains commits
 `142b67e` and `4a69639`, based on Pi
 `865b74b86db808a50ad487231009a21a301b3a96`. Its application was checked against
-the unchanged pinned source checkout.
+the unchanged pinned source checkout. Later changes, current checks and remaining
+issues are recorded in [Status](status.md).
 
 - The production build, TypeScript, design guard and lint passed. The final
   Gateway entry is 691,007 bytes; no fixture chunk is included. Existing Vite

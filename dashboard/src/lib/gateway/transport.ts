@@ -30,12 +30,14 @@ export class GatewayError extends Error {
   readonly kind: GatewayErrorKind
   readonly status?: number
   readonly turnId?: string
-  constructor(kind: GatewayErrorKind, status?: number, turnId?: string) {
+  readonly code?: 'draft_changed'
+  constructor(kind: GatewayErrorKind, status?: number, turnId?: string, code?: 'draft_changed') {
     super(messages[kind])
     this.name = 'GatewayError'
     this.kind = kind
     this.status = status
     this.turnId = turnId
+    this.code = code
   }
 }
 export function gatewayError(error: unknown): GatewayError {
@@ -63,6 +65,10 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
+const draftRoute = /^\/api\/control\/pi\/drafts\/[A-Za-z0-9_-]{1,128}(?:\/tasks\/[A-Za-z0-9_-]{1,128})?$/
+const draftStartRoute = /^\/api\/control\/pi\/drafts\/new\/start$/
+routes.GET.unshift(draftRoute, /^\/api\/control\/pi\/drafts\/new\/start\/[A-Za-z0-9_-]{16,128}$/)
+routes.POST.unshift(draftRoute, draftStartRoute)
 routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/, /^\/api\/owner\/mcp\/tools(?:\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/access)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
 routes.GET.unshift(/^\/api\/host\/providers$/)
@@ -110,6 +116,7 @@ routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100
 /** Routine session writes need the signed-in session only (ADR-0010); every other write asks for the password. */
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
+conversationWrites.push(draftRoute, draftStartRoute)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -244,13 +251,15 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         if (response.url && new URL(response.url).origin !== origin) throw new GatewayError('invalid-response')
         if (!response.ok) {
           let turnId: string | undefined
-          if (response.status === 503 && /^\/api\/pi\/(sessions\/[A-Za-z0-9_-]+\/turns|turns\/[A-Za-z0-9_-]+\/resume)$/.test(path)) {
+          let code: 'draft_changed' | undefined
+          if ([409, 503].includes(response.status) && /^\/api\/pi\/(sessions\/[A-Za-z0-9_-]+\/turns|turns\/[A-Za-z0-9_-]+\/resume)$/.test(path)) {
             try {
               const value = await responseObject(response)
               if (object(value.detail) && typeof value.detail.turn_id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value.detail.turn_id)) turnId = value.detail.turn_id
+              if (response.status === 409 && object(value.detail) && value.detail.code === 'draft_changed') code = 'draft_changed'
             } catch { /* Error bodies are never displayed; only a bounded turn identity can be retained. */ }
           } else await response.body?.cancel().catch(() => undefined)
-          throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId)
+          throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code)
         }
         return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {
