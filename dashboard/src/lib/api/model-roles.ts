@@ -37,6 +37,8 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
     const assignment = value.roles[role]
     const label = MODEL_ROLE_LABELS[role]
     if (!assignment || typeof assignment.enabled !== "boolean" || !Array.isArray(assignment.eligibleModelIds) || assignment.eligibleModelIds.length > 200 || assignment.eligibleModelIds.some(id => typeof id !== "string" || !known.has(id)) || new Set(assignment.eligibleModelIds).size !== assignment.eligibleModelIds.length) { errors.push(`${label}: choose unique catalogue models for the eligible list.`); continue }
+    const decisionRoute = role === 'routing' ? 'model-routing' : role === 'memory-ranking' || role === 'search-ranking' ? role : null
+    if (configuration.models.some(model => assignment.eligibleModelIds.includes(model.id) && model.providerId === 'decisions' && model.route !== decisionRoute)) errors.push(`${label}: this decision classifier cannot perform this role.`)
     if (!Number.isSafeInteger(assignment.timeoutMs) || assignment.timeoutMs < 100 || assignment.timeoutMs > 120000) errors.push(`${label}: timeout must be 100–120,000 milliseconds.`)
     if (!["stop", "fallback"].includes(assignment.failure)) errors.push(`${label}: choose stop or explicit fallback on failure.`)
     for (const id of [assignment.modelId, assignment.fallbackModelId]) if (id !== null && (typeof id !== "string" || !known.has(id) || !assignment.eligibleModelIds.includes(id))) errors.push(`${label}: selected and fallback models must belong to its eligible list.`)
@@ -50,6 +52,9 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
   }
   if (value.answerMode === "manual" && value.roles.answer?.failure !== "stop") errors.push("A manual answer lock must stop on failure; it cannot silently switch models.")
   if (value.answerMode === "router" && (!value.roles.answer?.enabled || !value.roles.routing?.enabled)) errors.push("Router mode needs an enabled answer role and routing decision role.")
+  const routing = value.roles.routing
+  if (value.answerMode === 'router' && routing && configuration.models.some(model => model.providerId === 'decisions' && [routing.modelId, routing.fallbackModelId].includes(model.id)) && (value.roles.answer?.eligibleModelIds.length ?? 0) > 8) errors.push('Laya supports a shortlist of at most eight talking models.')
+  if (configuration.models.some(model => model.id === configuration.defaultModelId && model.providerId === 'decisions')) errors.push('A decision classifier cannot be the default talking model.')
   return errors
 }
 

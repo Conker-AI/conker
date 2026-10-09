@@ -1,48 +1,27 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { Activity, BookOpen, Bot, ChevronLeft, ChevronRight, Clock3, Folder, GitBranch, Inbox, MessageSquare, PanelRight, Pin, Plus, Settings2, X } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Pin, Plus, X } from 'lucide-react'
 import { BaseLayout } from '@/components/layouts/base-layout'
 import { Button } from '@/components/ui/button'
-import { useSidebar } from '@/components/ui/sidebar'
+import { DetailPanel } from '@/components/design-system/overlays'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { GatewayRuntimeClient, RuntimeSession, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayError } from '@/lib/gateway/transport'
 import { closeTab, moveTab, visitTab, workspaceTab, type WorkspaceTab } from './workspace-tabs'
+import { ConnectedShellContext } from './workspace-shell-context'
+import { resolveGatewayRoute } from './navigation'
 import '@/styles/connected-workspace.css'
 
-const railItems = [
-  { path: '/chats', title: 'Conversations', icon: MessageSquare },
-  { path: '/projects', title: 'Projects', icon: Folder },
-  { path: '/memory', title: 'Memory', icon: BookOpen },
-  { path: '/agents', title: 'Agent studio', icon: Bot },
-  { path: '/tools', title: 'Tools & workflows', icon: GitBranch },
-  { path: '/jobs', title: 'Schedules', icon: Clock3 },
-  { path: '/inbox', title: 'Inbox', icon: Inbox },
-]
-
-function WorkspaceRail() {
-  const location = useLocation()
-  const { setOpen, isMobile, setOpenMobile } = useSidebar()
-  return <nav className="conker-mode-rail" aria-label="Workspace modes">
-    <Link className="conker-monogram" to="/" aria-label="Conker home">C</Link>
-    {railItems.map(({ path, title, icon: Icon }) => <Link key={path} to={path} title={title} aria-label={title} aria-current={location.pathname === path ? 'page' : undefined} onClick={() => { if (isMobile) setOpenMobile(false); else setOpen(true) }}><Icon size={17} /></Link>)}
-    <span className="conker-rail-space" />
-    <Link to="/activity" title="Activity" aria-label="Activity"><Activity size={17} /></Link>
-    <Link to="/settings" title="Settings" aria-label="Settings"><Settings2 size={17} /></Link>
-  </nav>
-}
-
-function ConversationReference({ detail, error, loading, onClose }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onClose: () => void }) {
-  return <aside className="conker-reference" aria-label="Conversation context">
-    <div className="conker-reference-heading"><span>Conversation context</span><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close context"><X size={15} /></Button></div>
-    <div className="conker-reference-content">
-      {loading ? <p role="status">Loading saved context…</p> : error ? <p role="alert">{error}</p> : !detail ? <p>Open a saved conversation to inspect its model, memory, and recorded work.</p> : <>
+function ConversationReference({ detail, error, loading, onRetry }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void }) {
+  return <div className="conker-reference-content" id="conker-conversation-context">
+      {loading ? <p role="status">Loading saved context…</p> : error ? <div role="alert"><p>{error}</p><Button variant="outline" size="sm" onClick={onRetry}>Try again</Button></div> : !detail ? <p>Start a conversation to see its model, memory, and recorded work here.</p> : <>
         <h2>{detail.title || 'Untitled conversation'}</h2>
         <p>{detail.messages.length} {detail.messages.length === 1 ? 'message' : 'messages'} · {detail.turns.length} {detail.turns.length === 1 ? 'turn' : 'turns'}</p>
         <h3>Memory</h3>
-        <p>{detail.memory.configured ? 'Memory service connected' : 'Memory is not configured'}</p>
+        <p>{detail.memory.configured ? 'Memory is configured' : 'Memory is not configured'}</p>
         <p>{detail.memory.retrieval ? `${detail.memory.retrieval.records} records · ${detail.memory.retrieval.status}` : 'No retrieval evidence for this conversation yet.'}</p>
         {detail.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}
         <h3>Recorded turns</h3>
@@ -56,10 +35,9 @@ function ConversationReference({ detail, error, loading, onClose }: { detail: Ru
         <Link to="/memory">Explore memory and sources</Link>
       </>}
     </div>
-  </aside>
 }
 
-export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, conversationState, sourcePrivacy, badge }: {
+export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, conversationState, sourcePrivacy }: {
   children: ReactNode; header: ReactNode; sidebar: ReactNode; runtime: GatewayRuntimeClient
   conversationState: GatewayRuntimeWorkspaceState; sourcePrivacy: GatewaySourcePrivacyState; badge?: ReactNode
 }) {
@@ -67,7 +45,9 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const current = workspaceTab(location.pathname, location.search)
   const [tabs, setTabs] = useState<WorkspaceTab[]>(() => current ? [current] : [])
   const [sessions, setSessions] = useState<RuntimeSession[]>([])
+  const [tabsOpen, setTabsOpen] = useState(false)
   const [referenceOpen, setReferenceOpen] = useState(false)
+  const [referenceRetry, setReferenceRetry] = useState(0)
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -77,6 +57,9 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const dragged = useRef<string | null>(null)
   const tablist = useRef<HTMLDivElement>(null)
   const activeId = current?.id ?? ''
+  const isMobile = useIsMobile()
+  const onChat = resolveGatewayRoute(location.pathname) === 'chat'
+  const contextOpen = referenceOpen && onChat
   useEffect(() => {
     let cancelled = false
     const incoming = workspaceTab(location.pathname, location.search)
@@ -85,21 +68,21 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   }, [location.pathname, location.search])
   useEffect(() => {
     const controller = new AbortController()
-    if (!operation) runtime.listSessions({ signal: controller.signal }).then(value => { if (!controller.signal.aborted) setSessions(value) }).catch(() => undefined)
+    if (tabsOpen && !operation) runtime.listSessions({ signal: controller.signal }).then(value => { if (!controller.signal.aborted) setSessions(value) }).catch(() => undefined)
     return () => controller.abort()
-  }, [runtime, operation, selected])
+  }, [runtime, operation, selected, tabsOpen])
   const referenceSession = current?.sessionId && !forgotten.includes(current.sessionId) ? current.sessionId : null
   useEffect(() => {
     const controller = new AbortController()
     queueMicrotask(() => {
       if (controller.signal.aborted) return
-      setDetail(null); setError(null); setLoading(Boolean(referenceOpen && referenceSession))
-      if (referenceOpen && referenceSession) runtime.getSession(referenceSession, { signal: controller.signal }).then(value => {
+      setDetail(null); setError(null); setLoading(Boolean(contextOpen && referenceSession))
+      if (contextOpen && referenceSession) runtime.getSession(referenceSession, { signal: controller.signal }).then(value => {
         if (!controller.signal.aborted) setDetail(value)
       }).catch(failure => { if (!controller.signal.aborted) setError(gatewayError(failure).message) }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     })
     return () => controller.abort()
-  }, [runtime, referenceOpen, referenceSession, operation])
+  }, [runtime, contextOpen, referenceSession, operation, referenceRetry])
   useEffect(() => {
     const list = tablist.current
     if (!list) return
@@ -108,7 +91,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     observer.observe(list)
     revealActive()
     return () => observer.disconnect()
-  }, [activeId, tabs])
+  }, [activeId, tabs, tabsOpen])
   const visibleTabs = tabs.filter(tab => !tab.sessionId || !forgotten.includes(tab.sessionId))
   const title = (tab: WorkspaceTab) => tab.sessionId ? sessions.find(session => session.id === tab.sessionId)?.title || tab.title : tab.title
   const go = (href: string) => {
@@ -122,8 +105,11 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     setTabs(result.tabs)
     if (result.next) go(result.next)
   }
-  return <BaseLayout variant="canvas" className="conker-workspace" rail={<WorkspaceRail />} sidebar={sidebar} header={header}
-    beforeHeader={<div className="conker-tabbar">
+  const reference = <ConversationReference detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
+  const closeReference = () => { setReferenceOpen(false); document.querySelector<HTMLButtonElement>('[aria-label="Conversation context"]')?.focus() }
+  return <ConnectedShellContext.Provider value={{ tabsOpen, toggleTabs: () => setTabsOpen(value => !value), openViewCount: visibleTabs.length, contextOpen, toggleContext: () => setReferenceOpen(value => !value), showContext: onChat }}>
+  <BaseLayout variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}
+    beforeHeader={tabsOpen && <div id="conker-open-views" className="conker-tabbar">
       <div className="conker-history"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Go back"><ChevronLeft /></Button><Button variant="ghost" size="icon" onClick={() => navigate(1)} aria-label="Go forward"><ChevronRight /></Button></div>
       <div className="conker-tabs" ref={tablist} role="tablist" aria-label="Open workspace tabs">
         {visibleTabs.map(tab => <div key={tab.id} className="conker-tab" data-active={tab.id === activeId} draggable onDragStart={() => { dragged.current = tab.id }} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (dragged.current) setTabs(previous => moveTab(previous, dragged.current!, tab.id)); dragged.current = null }} onDragEnd={() => { dragged.current = null }}>
@@ -138,10 +124,11 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
         </div>)}
       </div>
       <Button variant="ghost" size="icon" onClick={newChat} aria-label="New conversation"><Plus /></Button>
-      <Button variant="ghost" size="icon" onClick={() => setReferenceOpen(value => !value)} aria-label="Toggle conversation context" aria-expanded={referenceOpen}><PanelRight /></Button>
+      <Button variant="ghost" size="icon" onClick={() => { setTabsOpen(false); document.querySelector<HTMLButtonElement>('[aria-label="Open views"]')?.focus() }} aria-label="Hide open views"><X /></Button>
     </div>}
-    footer={<footer className="conker-statusbar"><span><span className="conker-local-dot" />{badge ? 'Demo workspace' : 'Connected workspace'}</span><span>{operation ? 'Conversation in progress' : 'Ready'} · <Link to="/system">Service status</Link></span><span className="conker-shortcuts">Ctrl K search · Ctrl B sidebar</span></footer>}
-    reference={referenceOpen ? <ConversationReference detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onClose={() => setReferenceOpen(false)} /> : null}>
-    <div id="conker-workspace-document" role="tabpanel" aria-label={current ? title(current) : 'Workspace'} className="flex min-h-0 flex-1 flex-col">{children}</div>
+    reference={contextOpen && !isMobile ? <aside className="conker-reference" aria-label="Conversation context" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeReference() } }}><div className="conker-reference-heading"><h2>Conversation context</h2><Button variant="ghost" size="icon" onClick={closeReference} aria-label="Close context"><X /></Button></div>{reference}</aside> : null}>
+    <div id="conker-workspace-document" role={tabsOpen ? 'tabpanel' : undefined} aria-label={current ? title(current) : 'Workspace'} className="flex min-h-0 flex-1 flex-col">{children}</div>
   </BaseLayout>
+  {isMobile && <DetailPanel open={contextOpen} onOpenChange={setReferenceOpen} title="Conversation context" description="Models, memory and recorded work for this chat.">{reference}</DetailPanel>}
+  </ConnectedShellContext.Provider>
 }

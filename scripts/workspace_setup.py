@@ -138,7 +138,6 @@ def enhance(config, pi_source, toolgate_source=None):
         PI_SUBSCRIPTION_KEY=private["inference_key"],
         PI_DECISION_URL="http://127.0.0.1:18560",
         PI_DECISION_KEY=decision_key,
-        PI_DECISION_MIN_CONFIDENCE="0.01",
     )
     config["environments"]["gateway"].update(
         GATEWAY_PROVIDER_CONTROL_URL="http://127.0.0.1:18570",
@@ -154,5 +153,5 @@ def enhance(config, pi_source, toolgate_source=None):
     CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
     run(config["python"], ROOT / "scripts/workspace_models.py", "initialize")
     print(
-        "Enabled isolated native authentication, Laya routing and independent thinking. Start with workspace.py up."
+        "Prepared native authentication and model roles. Verify models in Setup; thinking runs only when requested. Start with workspace.py up."
     )

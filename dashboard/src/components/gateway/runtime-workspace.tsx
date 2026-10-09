@@ -1,4 +1,5 @@
 import { ThinkingStatus } from './thinking-status'
+import { ThinkControl } from './think-control'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
 import { ConversationHistory } from '@/components/chat/history'
@@ -68,9 +69,10 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [localPrivacy] = useState(createGatewaySourcePrivacyState)
   const privacy = sourcePrivacy ?? localPrivacy
   const forgottenIds = useStore(privacy, value => value.sessionIds)
-  const { selected, drafts, skillChoices, uncertain, title, createUnknown, operation, taskIntent } = useStore(workspace)
+  const { selected, drafts, skillChoices, thinkChoices, uncertain, title, createUnknown, operation, taskIntent } = useStore(workspace)
   const firstSkills = skillChoices.__new__ ?? []
   const setSkillChoices = (id: string, ids: string[]) => workspace.setState(value => ({ skillChoices: { ...value.skillChoices, [id]: ids } }))
+  const setThinkChoice = (id: string, think: boolean) => workspace.setState(value => ({ thinkChoices: { ...value.thinkChoices, [id]: think } }))
   const safeTaskIntent = visibleTaskDispatchIntent(taskIntent, forgottenIds)
   const setSelected = (value: string | null) => workspace.setState({ selected: value })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
@@ -165,16 +167,16 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
 
   const refreshThinking = useCallback(async (id: string, signal: AbortSignal) => {
     const generation = detailGeneration.current
-    const result = await client.getSession(id, { signal })
+    const result = await client.getThinking(id, { signal })
     if (signal.aborted || !mounted.current || !activeRef.current || selectedRef.current !== id || generation !== detailGeneration.current) return
-    if (result.status === 'forgotten') privacy.getState().markForgotten([id])
+    if (result.forgotten) privacy.getState().markForgotten([id])
     // The submission receipt owns transcript reconciliation; polling only updates analysis.
     setDetail(previous => previous?.id !== id ? previous : privacy.getState().sessionIds.includes(id)
-      ? maskForgottenConversation(result) : { ...previous, thinking: result.thinking })
+      ? maskForgottenConversation(previous) : { ...previous, thinking: result.results })
   }, [client, privacy])
-  const thinkingActive = current?.thinking?.some(row => row.status === 'running') ?? false
+  const thinkingActive = current?.thinking?.some(row => row.status === 'running' || row.status === 'queued') ?? false
   useEffect(() => {
-    if (!selected || !active || (!thinkingActive && !sendPending)) return
+    if (!selected || !active || !visible || (!thinkingActive && !sendPending)) return
     const id = selected, controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>
     const poll = async () => {
@@ -185,7 +187,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     }
     timer = setTimeout(poll, 1000)
     return () => { controller.abort(); clearTimeout(timer) }
-  }, [selected, active, thinkingActive, sendPending, refreshThinking])
+  }, [selected, active, visible, thinkingActive, sendPending, refreshThinking])
 
   async function saveArtifact(message: RuntimeMessage) {
     if (!control || message.role !== 'assistant' || message.content.kind !== 'text' || !current || current.status !== 'open') return
@@ -225,7 +227,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
     if (!forgottenIds.length) return
-    workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
+    workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), thinkChoices: Object.fromEntries(Object.entries(value.thinkChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, think: false, pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
     setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)
     setSessions(values => values.map(value => forgottenIds.includes(value.id) ? maskForgottenSession(value) : value))
   }, [forgottenIds, workspace])
@@ -241,6 +243,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   async function startChat() {
     const text = firstMessage
     const skills = firstPrivacy.harnessDisabled ? [] : [...firstSkills]
+    const think = firstAgent === 'companion' && !firstPrivacy.harnessDisabled && Boolean(thinkChoices.__new__)
     if (!text.trim() || [...text].length > 16_000 || firstPrivacy.harnessDisabled && !firstModel || workspace.getState().operation || createUnknown || !activeRef.current) return
     const epoch = workspace.getState().epoch
     workspace.setState({ operation: 'create' }); setCreateError(null)
@@ -258,13 +261,13 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     } finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
     if (workspace.getState().epoch !== epoch || !mounted.current || !activeRef.current) return
     // Seed the draft so the text survives a failed send, exactly like a message typed in the chat.
-    workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text }, skillChoices: { ...values.skillChoices, [created]: skills, __new__: [] } }))
+    workspace.setState(values => ({ drafts: { ...values.drafts, [created]: text }, skillChoices: { ...values.skillChoices, [created]: skills, __new__: [] }, thinkChoices: { ...values.thinkChoices, [created]: think, __new__: false } }))
     setSessionAgents(current => ({ ...current, [created]: firstAgent }))
     if (firstModel) setModelChoices(current => ({ ...current, [created]: firstModel }))
     setFirstMessage('')
     openSession(created)
     void refreshList()
-    await dispatchSubmission(created, text, createTurnRequestId(), undefined, undefined, firstModel, skills)
+    await dispatchSubmission(created, text, createTurnRequestId(), undefined, undefined, firstModel, skills, think)
     setFirstModel('')
     setFirstPrivacy({ memoryDisabled: false, harnessDisabled: false })
   }
@@ -287,7 +290,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     workspace.setState(values => {
       const uncertain = { ...values.uncertain }; delete uncertain[id]
       uncertain[destination] = { text: privacy.getState().sessionIds.includes(destination) ? '' : text, requestOptions: frozenOptions, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, turnId: receipt.turnId!, checked: false, accepted: true, submission: receipt }
-      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] ?? '' }, skillChoices: { ...values.skillChoices, [id]: [] }, uncertain, selected: destination }
+      return { drafts: { ...values.drafts, [id]: !taskBinding && values.drafts[id] === text ? '' : values.drafts[id] ?? '' }, skillChoices: { ...values.skillChoices, [id]: [] }, thinkChoices: { ...values.thinkChoices, [id]: false }, uncertain, selected: destination }
     })
     if (!mounted.current || !activeRef.current) return
     if (selectedRef.current !== destination) openSession(destination)
@@ -316,10 +319,10 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       }
     }
   }
-  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string, skillOverride?: string[]) {
+  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string, skillOverride?: string[], thinkOverride?: boolean) {
     if (workspace.getState().operation || !activeRef.current) return
     const prior = Object.values(workspace.getState().uncertain).find(attempt => attempt.requestId === requestId)
-    const requestOptions = prior ? retainedRequestOptions(prior) : createRequestOptions(modelOverride ?? modelChoices[id], skillOverride ?? (taskBinding || harnessBySession?.[id] ? [] : workspace.getState().skillChoices[id] ?? []))
+    const requestOptions = prior ? retainedRequestOptions(prior) : createRequestOptions(modelOverride ?? modelChoices[id], skillOverride ?? (taskBinding || harnessBySession?.[id] ? [] : workspace.getState().skillChoices[id] ?? []), thinkOverride ?? (!taskBinding && (sessionAgents[id] ?? 'companion') === 'companion' && !harnessBySession?.[id] && Boolean(workspace.getState().thinkChoices[id])))
     const { modelId } = requestOptions
     if (harnessBySession?.[id] && !modelId) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
     const epoch = workspace.getState().epoch
@@ -472,6 +475,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
                   {control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}
                   {control && <GatewayModelPicker compact client={control} value={firstModel} iconOnlyOnMobile disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} />}
                   <GatewaySkillPicker client={client} value={firstSkills} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={ids => setSkillChoices('__new__', ids)} />
+                  <ThinkControl companion={firstAgent === 'companion'} checked={Boolean(thinkChoices.__new__)} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={think => setThinkChoice('__new__', think)} />
               </>} actions={<>
                     <NewChatPrivacyControl value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
                     <Tooltip><TooltipTrigger asChild><span className="hidden sm:inline-flex"><Button type="button" variant="ghost" size="icon" className="size-8 rounded-full" aria-label="Voice call unavailable before the first message" disabled><AnimatedIconGlyph icon={PhoneIcon} /></Button></span></TooltipTrigger><TooltipContent side="top">Send a message first, then call from the chat header.</TooltipContent></Tooltip>
@@ -499,7 +503,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={pending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}
             {attempt && (attempt.requestId ? <SubmissionRecovery attempt={attempt} pending={detailPending || sendPending} forgotten={forgottenIds.includes(selected) || !!attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)} draftEmpty={!draft.length && !attempt.taskBinding} onRestore={() => recover('restoreDraft')} onCheck={() => recover('check')} onRetry={() => recover('retrySameRequest')} onRelease={() => recover('releaseUnstarted')} /> : <div className="space-y-3 rounded-lg border p-3"><p className="text-sm font-medium">{attempt.accepted ? 'Conker got your message; the reply isn’t saved yet' : 'Not sure your last message went through'}</p><p className="text-xs leading-5 text-muted-foreground">{attempt.accepted ? 'Sending is paused until the reply shows up, so nothing is done twice.' : 'Your text is kept. Sending is paused because the last message may still be running.'} Check the chat, and your chat list in case it continued in a new chat.</p><Button size="sm" variant="outline" disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}>Check the chat</Button>{attempt.checked && <><Label className="flex items-center gap-2 text-xs"><Checkbox checked={reviewed} onCheckedChange={value => setReviewed(value === true)} />I checked. Sending again might do the same work twice.</Label><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeFound.availability !== 'enabled'} onClick={() => recover('acknowledgeFound')}>It’s in the chat</Button><Button size="sm" variant="outline" className="h-auto min-h-(--control-height-sm) whitespace-normal text-left" disabled={recoveryActions?.acknowledgeUnknown.availability !== 'enabled'} onClick={() => recover('acknowledgeUnknown')}>Let me send again</Button></div></>}</div>)}
             {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !current.turns.some(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply') && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
-            {current && <ThinkingStatus rows={current.thinking ?? []} disabled={!active} onCancel={async turnId => { await client.cancelThinking(current.id, turnId); await request(signal => refreshThinking(current.id, signal)) }} onDiscuss={result => { workspace.setState(state => ({ drafts: { ...state.drafts, [current.id]: [state.drafts[current.id]?.trimEnd(), `Discuss these background findings and check their conclusions:\n\n${result}`].filter(Boolean).join('\n\n') } })); replyComposer.current?.focus() }} />}
+            {current && <ThinkingStatus messages={current.messages} rows={current.thinking ?? []} disabled={!active} onCancel={async turnId => { await client.cancelThinking(current.id, turnId); await request(signal => refreshThinking(current.id, signal)) }} onDiscuss={result => { workspace.setState(state => ({ drafts: { ...state.drafts, [current.id]: [state.drafts[current.id]?.trimEnd(), `Discuss these background findings and check their conclusions:\n\n${result}`].filter(Boolean).join('\n\n') } })); replyComposer.current?.focus() }} />}
             {/* Waiting on the owner is the main loop, so it is shown in the chat, not under Details. */}
             {current && current.status !== 'forgotten' && current.turns.filter(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply').map(turn => <div key={`waiting:${turn.id}`} role="status" className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1 space-y-1">
@@ -519,6 +523,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
               {control && current?.status === 'open' && <GatewaySessionAgentControl compact key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}
               {control && <GatewayModelPicker compact iconOnlyOnMobile key={`model:${selected}`} client={control} value={modelChoices[selected] ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => setModelChoices(current => ({ ...current, [selected]: value }))} />}
               <GatewaySkillPicker key={`skills:${selected}`} client={client} value={skillChoices[selected] ?? []} disabled={pending || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={ids => setSkillChoices(selected, ids)} />
+              <ThinkControl companion={activeAgentId === 'companion'} checked={Boolean(thinkChoices[selected])} disabled={pending || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={think => setThinkChoice(selected, think)} />
             </>} actions={<>
               {headerExtra}
               <NewChatVoiceControl value={chat.draft} input={replyComposer} onRecordingChange={setDictating} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation)} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} />

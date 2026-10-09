@@ -58,6 +58,33 @@ def discovery(tmp_path, **overrides):
     return path, value
 
 
+def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):
+    run, calls = invoke
+    request_id = "request_recovery_0001"
+    assert run("chat", "s_one", "Hello", "--request-id", request_id) == 0
+    assert "think" not in calls[-1][2]
+    assert run("chat", "s_one", "Analyze", "--think", "--request-id", request_id) == 0
+    assert calls[-1][2]["think"] is True
+    assert run("thinking", "s_one") == 0
+    assert calls[-1] == ("pi", "/sessions/s_one/thinking", None)
+    assert run("submission", request_id) == 0
+    assert calls[-1] == ("pi", f"/turn-submissions/{request_id}", None)
+    assert run("stop", request_id) == 0
+    assert calls[-1] == ("pi", f"/turn-submissions/{request_id}/cancel", {})
+    assert run("resume", "turn_saved") == 0
+    assert calls[-1] == ("pi", "/turns/turn_saved/resume", {})
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [("stop", "short"), ("submission", "../outside"), ("resume", "turn/other")],
+)
+def test_recovery_rejects_invalid_identity_before_network(invoke, arguments):
+    run, calls = invoke
+    assert run(*arguments) == 1
+    assert not calls
+
+
 def test_skill_import_preserves_exact_source_and_replacement_identity(invoke, tmp_path):
     run, calls = invoke
     path = tmp_path / "SKILL.md"

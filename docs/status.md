@@ -13,6 +13,46 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Chat-first companion and explicit thinking (9 October)
+
+The owner selected a new chat-first product direction. The root route opens a
+conversation; the daily overview remains at `/overview`. A single sidebar groups
+Work and Library around recent chats and Memory. Open views and conversation
+context appear on request. Existing approvals, deep links, theme customization,
+and mobile focus behavior remain available.
+
+Thinking is an explicit per-message choice in the composer or `chat --think`.
+Ordinary follow-up messages preserve that requested analysis; another Think
+request replaces it. Findings stay associated with their original message.
+Talking takes priority over competing local inference. Cancellation reaches the
+active provider connection or native process, fences late results, and retains
+capacity until the adapter exits. A preempted thinker gets at most one automatic
+continuation. Connection setup can still await its bounded timeout; cancellation
+does not promise that a remote provider stopped charging. The lightweight status
+route avoids polling full transcripts.
+
+Local model initialization now uses the configured model and verified installed
+inventory, preserves existing role choices, and leaves missing models unavailable.
+It no longer forces a low routing-confidence threshold. A single eligible talking
+model skips the classifier. New role updates reject decision classifiers in text
+generation roles and enforce Laya's supported shortlist size. Model choices refresh
+after saved changes. CLI recovery exposes the existing submission inspection,
+resume, stop, and thinking operations.
+
+Subscription and direct OpenAI, Anthropic, and OpenRouter continuation accept
+recorded tool evidence without enabling native tool execution. Regression
+coverage verifies a completed action is not replayed
+when its final answer fails and is retried. Live subscription entitlement remains
+unverified while both native accounts are signed out. These changes target the
+local working app; production release pins and Linux acceptance remain separate.
+
+Production build, browser contract checks, provider/runtime regressions, and fresh
+and repeated application of the ordered Pi installation bundle pass. Local
+providers, Pi, and Gateway were restarted with successful health checks. A live
+ordinary message created no thinking job. Its CPU-only Qwen 2.5 3B response took
+45 seconds and returned tool-shaped text for a simple greeting request; response
+quality and malformed tool-proposal handling remain active follow-up work.
+
 ### Reusable skills and external MCP tools (9 October)
 
 The local Conker workspace now imports instruction-only `SKILL.md` files in

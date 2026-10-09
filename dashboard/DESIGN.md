@@ -1,14 +1,49 @@
 # Conker dashboard design system
 
-## Connected workspace update — 9 October
+## Chat-first companion — 9 October
 
-The owner's subsequent SiYuan direction adds compact document tabs, a mode rail,
-and an optional conversation context pane in `ConnectedWorkspaceShell`.
-`connected-workspace.css` owns this shell composition; shared semantic theme
-variables and native controls remain authoritative. Existing domain pages and
-their asynchronous/verification contracts remain intact. Tab navigation does not
-duplicate domain state or imply a running action stopped when its tab closed.
-See [connected-workspace.md](../docs/connected-workspace.md) for behavior and current limits.
+The owner chose a full product redesign around a reliable daily companion.
+Conversation is the starting place. The shell uses a single sidebar and a quiet
+working surface: New chat and Search Conker at the top, recent conversation
+history taking the remaining space, and Settings and account controls at the
+bottom. Work groups Overview, Approvals, Tasks, Runs, Schedules and the activity
+log. Memory stays directly visible. Library groups Projects, Artifacts, Agents,
+Skills, and Tools & workflows. The root path opens chat; the existing daily
+overview moves to `/overview` under Work. All session and capability deep links
+remain valid.
+
+`gatewayDestinations` and `gatewayPageNavigation` in the connected navigation
+module own the labels and sections used by the sidebar, global search, header,
+and open views. The mode rail and idle-as-ready footer are removed. Setup status
+comes from the setup service; an idle conversation says nothing about provider
+or tool readiness. System diagnostics remain available in the account menu.
+
+Open views are a secondary header disclosure, closed initially. Their optional
+strip retains navigation history, tab switching, pinning, closing, and dragging.
+Closing the last view opens New chat; closing a tab never cancels work. Tab
+identities stay in memory and omit message text, searches and content. Forgotten
+chats disappear from both history and open views immediately. The conversation
+context panel opens on request: beside the chat on desktop, in `DetailPanel`
+with native focus handling on mobile. Its source reads run only while visible.
+
+`connected-workspace.css` owns these semantic shell roles. Use the existing theme
+and typeface, `--sidebar` for the navigation surface, `--background` for the work
+surface, and `--sidebar-primary` only for New chat and attention counts. Sidebar
+controls use `--control-height` (40px), primary and account rows use
+`--control-height-lg` (44px), and subordinate desktop links use
+`--control-height-sm` (32px). Mobile subordinate links return to 40px. Corners
+follow `--radius-md` / `--radius-sm`; custom themes and radius remain functional.
+History and expanded destinations have separate bounded scroll regions. Opening
+Work or Library closes the other group so history keeps its place. The
+header retains the shared appbar geometry; when its search slot is empty the
+conversation title and actions use the available width. Global search is always
+in the sidebar and appears in the header when the sidebar is hidden. Collection
+pages retain their own scoped search in that header slot.
+
+This shell change preserves source-owned async, verification, permission and
+privacy contracts. Background thinking is an explicit per-message opt-in;
+automatic model choice belongs to the talking model. Composer behavior is owned
+by the runtime workspace rather than by navigation.
 
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
@@ -34,12 +69,12 @@ consequences; and whether it directs the user toward their intended action.
 | Loading / empty | `CollectionLoading` reflects search and rows, not decorative dashboard cards. Empty feedback names the state and provides the appropriate creation or filter recovery action. | Collection libraries, lazy workspaces, Activity |
 | Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | System diagnostics, Today, Inbox, Chat |
 
-Keep the main shell flat and the approved appbar geometry unchanged. Meaningful
+Keep the main shell flat and the shared appbar geometry consistent. Meaningful
 record headings remain; duplicate route headings do not. Search has one visible
 page entry point, with its current scope named by the field and scope menu.
 Expanded sidebar destinations have their own height-bounded scroll region;
-fixed navigation and profile do not shrink away, and recent lists retain room
-even in short desktop windows. This preserves the sidebar's existing appearance.
+fixed navigation and profile do not shrink away, and recent chat history retains
+room even in short desktop windows.
 Guidance about permission, expiry, model
 processing, provenance and recovery stays visible at the relevant action.
 Search/list hints can follow results; they do not compete with the find controls.

@@ -66,6 +66,7 @@ const routes: Record<GatewayMethod, RegExp[]> = {
 routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/, /^\/api\/owner\/mcp\/tools(?:\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/access)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
 routes.GET.unshift(/^\/api\/host\/providers$/)
+routes.GET.unshift(new RegExp(`^/api/pi/sessions/${ids}/thinking$`))
 routes.GET.unshift(/^\/api\/host\/claude$/)
 routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 routes.POST.unshift(/^\/api\/host\/providers$/)

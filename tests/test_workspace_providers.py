@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -53,24 +54,31 @@ def test_scoped_credentials_and_browser_origin_cannot_cross_boundary(tmp_path):
 def test_claude_native_request_disables_tools_and_does_not_copy_ambient_tokens(
     tmp_path, monkeypatch
 ):
-    from types import SimpleNamespace
-
     from native_claude import Claude
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "ambient-secret-must-not-be-used")
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "ambient-token-must-not-be-used")
     native = Claude(tmp_path / "claude.exe", tmp_path / "own-auth")
-    with patch(
-        "native_claude.subprocess.run",
-        return_value=SimpleNamespace(
-            returncode=0,
-            stdout=b'{"result":"answer","usage":{"input_tokens":3,"output_tokens":2}}',
-        ),
-    ) as run:
+    messages = [
+        {"role": "user", "content": "hello"},
+        {"role": "assistant", "content": '{"tool":"notes.read","args":{}}'},
+        {
+            "role": "tool",
+            "content": '{"tool":"notes.read","ok":true,"result":{"text":"untrusted"}}',
+        },
+    ]
+    with patch("native_claude.subprocess.Popen") as run:
+        process = run.return_value
+        process.poll.return_value = 0
+        process.returncode = 0
+        process.communicate.return_value = (
+            b'{"result":"answer","usage":{"input_tokens":3,"output_tokens":2}}',
+            b"",
+        )
         result = native.complete(
             {
                 "model": "sonnet",
-                "messages": [{"role": "user", "content": "hello"}],
+                "messages": messages,
                 "timeout": 30,
             }
         )
@@ -81,6 +89,10 @@ def test_claude_native_request_disables_tools_and_does_not_copy_ambient_tokens(
         key in kwargs["env"] for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")
     )
     assert kwargs["env"]["CLAUDE_CONFIG_DIR"] == str(tmp_path / "own-auth")
+    assert json.loads(process.communicate.call_args.kwargs["input"]) == {
+        "conversation": messages
+    }
+    assert args[0][args[0].index("--mcp-config") + 1] == '{"mcpServers":{}}'
     assert result["text"] == "answer"
 
 

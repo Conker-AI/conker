@@ -1,8 +1,140 @@
-"""Initialize explicit local model roles while this workspace is stopped."""
+"""Initialize local model roles from the installation choice and actual inventory."""
 
+import json
 import sys
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, ProxyHandler, build_opener
 
 from workspace import read_config
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def installed_models(url):
+    """Inspect local Ollama; an inventory is not an inference test."""
+    parsed = urlsplit(url)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in {"", "/"}
+    ):
+        raise ValueError(
+            "Model initialization requires the configured loopback Ollama URL."
+        )
+    opener = build_opener(ProxyHandler({}), NoRedirect())
+    with opener.open(url.rstrip("/") + "/api/tags", timeout=5) as response:
+        raw = response.read(2_000_001)
+    if len(raw) > 2_000_000:
+        raise ValueError("Local model inventory is too large.")
+    value = json.loads(raw)
+    rows = value.get("models") if isinstance(value, dict) else None
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValueError("Local model inventory is invalid.")
+    return {
+        row["name"]
+        for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("name"), str)
+        and 0 < len(row["name"]) <= 300
+    }
+
+
+def configuration_for(model, installed, roles):
+    if not isinstance(model, str) or not model.strip() or len(model) > 300:
+        raise ValueError("The installation needs a valid local model route.")
+
+    def present(route):
+        return route in installed or (
+            ":" not in route and route + ":latest" in installed
+        )
+
+    primary_available = present(model)
+    models = [
+        {
+            "id": "local-answer",
+            "providerId": "ollama",
+            "name": model,
+            "route": model,
+            "enabled": primary_available,
+            "routingDescription": "The owner's selected local model for everyday conversation and tasks.",
+        }
+    ]
+    # Do not adopt unrelated local models or replace the installation choice.
+    if primary_available and model != "qwen3:4b" and present("qwen3:4b"):
+        models.append(
+            {
+                "id": "local-thinking",
+                "providerId": "ollama",
+                "name": "Qwen 3 · analysis",
+                "route": "qwen3:4b",
+                "enabled": True,
+                "routingDescription": "Complex reasoning, code, multi-step planning and analytical comparison.",
+            }
+        )
+    answer_ids = [entry["id"] for entry in models if entry["enabled"]]
+    models.append(
+        {
+            "id": "laya-router",
+            "providerId": "decisions",
+            "name": "Laya · automatic selection",
+            "route": "model-routing",
+            "enabled": primary_available,
+            "routingDescription": "Selects a talking model; does not write answers.",
+        }
+    )
+    assignments = {
+        role: {
+            "enabled": False,
+            "eligibleModelIds": [],
+            "modelId": None,
+            "timeoutMs": 120000,
+            "failure": "stop",
+            "fallbackModelId": None,
+        }
+        for role in roles
+    }
+    if primary_available:
+        for role in ("answer", "summarization"):
+            assignments[role].update(
+                enabled=True,
+                eligibleModelIds=answer_ids if role == "answer" else ["local-answer"],
+                modelId="local-answer",
+            )
+        thinker = "local-thinking" if "local-thinking" in answer_ids else "local-answer"
+        # The assignment enables explicit Think requests, not automatic inference.
+        assignments["thinking"].update(
+            enabled=True, eligibleModelIds=[thinker], modelId=thinker
+        )
+        assignments["routing"].update(
+            enabled=True,
+            eligibleModelIds=["laya-router"],
+            modelId="laya-router",
+            timeoutMs=10000,
+        )
+    return {
+        "providers": [
+            {"id": identity, "name": name, "enabled": True}
+            for identity, name in (
+                ("ollama", "Local Ollama"),
+                ("decisions", "Laya"),
+                ("chatgpt", "ChatGPT subscription"),
+                ("claude-code", "Claude Code subscription"),
+            )
+        ],
+        "models": models,
+        "defaultModelId": "local-answer" if primary_available else None,
+        "roleSettings": {
+            "answerMode": "router" if primary_available else "manual",
+            "roles": assignments,
+        },
+    }
 
 
 def initialize():
@@ -16,93 +148,32 @@ def initialize():
         saved = model_roles.load(store)
         if saved["configuration"]:
             print(
-                "Existing role choices retained. Enable Auto and Thinking in Settings."
+                "Existing model choices retained. Review Talking and Thinking in Settings."
             )
             return
-        providers = [
-            {"id": id, "name": name, "enabled": True}
-            for id, name in [
-                ("ollama", "Local Ollama"),
-                ("decisions", "Laya"),
-                ("chatgpt", "ChatGPT subscription"),
-                ("claude-code", "Claude Code subscription"),
-            ]
-        ]
-        models = [
-            {
-                "id": id,
-                "providerId": provider,
-                "name": name,
-                "route": route,
-                "enabled": True,
-                "routingDescription": description,
-            }
-            for id, provider, name, route, description in [
-                (
-                    "local-fast",
-                    "ollama",
-                    "Qwen 2.5 · fast conversation",
-                    "qwen2.5:3b",
-                    "Quick conversation, simple questions, short replies, lightweight writing. Prefer for everyday requests.",
-                ),
-                (
-                    "local-thinking",
-                    "ollama",
-                    "Qwen 3 · analysis",
-                    "qwen3:4b",
-                    "Complex reasoning, coding, multi-step planning, long context, analytical comparison and difficult problems.",
-                ),
-                (
-                    "laya-router",
-                    "decisions",
-                    "Laya · automatic selection",
-                    "model-routing",
-                    "Selects an eligible model for the request. This classifier does not write answers.",
-                ),
-            ]
-        ]
-        roles = {
-            role: {
-                "enabled": False,
-                "eligibleModelIds": [],
-                "modelId": None,
-                "timeoutMs": 120000,
-                "failure": "stop",
-                "fallbackModelId": None,
-            }
-            for role in model_roles.ROLES
-        }
-        roles["answer"].update(
-            enabled=True,
-            eligibleModelIds=["local-fast", "local-thinking"],
-            modelId="local-fast",
-            failure="fallback",
-            fallbackModelId="local-thinking",
-        )
-        roles["routing"].update(
-            enabled=True,
-            eligibleModelIds=["laya-router"],
-            modelId="laya-router",
-            timeoutMs=10000,
-        )
-        roles["thinking"].update(
-            enabled=True, eligibleModelIds=["local-thinking"], modelId="local-thinking"
-        )
-        value = {
-            "providers": providers,
-            "models": models,
-            "defaultModelId": "local-fast",
-            "roleSettings": {"answerMode": "router", "roles": roles},
-        }
+        environment = settings["environments"]["pi"]
+        try:
+            installed = installed_models(environment["PI_OLLAMA_URL"])
+        except (OSError, ValueError):
+            print(
+                "Local model inventory unavailable; model choices were not changed. Start Ollama and rerun workspace_models.py."
+            )
+            return
+        value = configuration_for(environment["PI_MODEL"], installed, model_roles.ROLES)
         model_roles.save(
             store,
             model_roles.Update(
                 expected_revision=saved["revision"], configuration=value
             ),
         )
-        print(
-            "Configured Auto with Laya, two eligible local models, and a separate background thinker."
-        )
+        if value["defaultModelId"]:
+            print(
+                "Configured the installed talking model, conversation summaries, and thinking on request. Verify inference in Setup."
+            )
+        else:
+            print(
+                "The installation's model is not installed. Saved its disabled route; select and verify a model in Setup."
+            )
     finally:
         store.close()
 

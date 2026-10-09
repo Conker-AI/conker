@@ -1,4 +1,4 @@
-import { resolveGatewayRoute } from './navigation'
+import { gatewayViewTitle, resolveGatewayRoute } from './navigation'
 
 export type WorkspaceTab = { id: string; href: string; title: string; sessionId: string | null; pinned: boolean }
 
@@ -10,10 +10,8 @@ export function workspaceTab(pathname: string, search: string): WorkspaceTab | n
   const identity = new URLSearchParams()
   const keys = route === 'chat' ? ['session'] : route === 'tools' ? ['draft', 'view'] : ['tab']
   for (const key of keys) { const value = params.get(key); if (value) identity.set(key, value) }
-  const href = pathname + (identity.size ? `?${identity}` : '')
-  const names: Record<string, string> = { today: 'Today', setup: 'Setup', chat: params.has('session') ? 'Conversation' : 'New conversation', chats: 'Conversations', inbox: 'Inbox', projects: 'Projects', artifacts: 'Artifacts', jobs: 'Schedules', memory: 'Memory', activity: 'Activity', agents: 'Agents', tools: params.has('draft') ? 'Workflow' : 'Tools & workflows', system: 'System', settings: 'Settings', 'companion-settings': 'Companion' }
-  const section = params.get('tab')
-  const title = section && ['providers', 'search', 'teams', 'harness', 'files', 'processes', 'ports', 'containers'].includes(section) ? section[0].toUpperCase() + section.slice(1) : names[route]
+  const href = (route === 'chat' ? '/chat' : pathname) + (identity.size ? `?${identity}` : '')
+  const title = gatewayViewTitle(pathname, search)
   return { id: href, href, title, sessionId: route === 'chat' ? params.get('session') : null, pinned: false }
 }
 
@@ -31,7 +29,7 @@ export function closeTab(tabs: WorkspaceTab[], id: string, active: string): { ta
   const index = tabs.findIndex(tab => tab.id === id)
   if (index < 0 || tabs[index].pinned) return { tabs, next: null }
   const remaining = tabs.filter(tab => tab.id !== id)
-  return { tabs: remaining, next: id === active ? remaining[Math.min(index, remaining.length - 1)]?.href ?? '/' : null }
+  return { tabs: remaining, next: id === active ? remaining[Math.min(index, remaining.length - 1)]?.href ?? '/chat' : null }
 }
 
 export function moveTab(tabs: WorkspaceTab[], from: string, to: string): WorkspaceTab[] {

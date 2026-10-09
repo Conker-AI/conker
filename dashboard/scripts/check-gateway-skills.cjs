@@ -57,6 +57,18 @@ async function main() {
   assert.deepEqual(calls.pop()[1].body, { text: 'Review this change', request_id: requestId, model_id: 'chosen-model', skill_ids: ['review-code'] })
   assert.deepEqual(saved.skillIds, ['review-code'])
   assert.equal(saved.modelId, 'chosen-model')
+  response = { submission: { ...receipt, think: true } }
+  const thinkingRequest = await runtime.submitRequest('s_one', 'Think this through', requestId, createRequestOptions('', [], true))
+  assert.equal(calls.pop()[1].body.think, true)
+  assert.equal(thinkingRequest.think, true)
+  assert.equal(retainedRequestOptions({ text: '', checked: true, submission: thinkingRequest }).think, true, 'Retry restores explicit thinking from the admitted request')
+  await assert.rejects(runtime.submitRequest('s_one', 'Analyze', requestId, { think: 'true' }), error => error.kind === 'validation')
+  response = { schemaVersion: 1, session_id: 's_one', content_status: 'available', results: [{ session_id: 's_one', turn_id: 'turn_one', input_message_id: 'message_one', created_at: 1800000000, status: 'queued', model: null, provider: null, result: null, detail: null }] }
+  assert.equal((await runtime.getThinking('s_one')).results[0].inputMessageId, 'message_one')
+  assert.equal(calls.pop()[0], '/api/pi/sessions/s_one/thinking')
+  response.content_status = 'forgotten'
+  assert.deepEqual(await runtime.getThinking('s_one'), { forgotten: true, results: [] }, 'Forgotten results are never retained from a stale response')
+  calls.pop()
   response = { submission: { ...receipt, model_id: null } }
   await runtime.submitRequest('s_one', 'Review this change', requestId, createRequestOptions('', ['review-code']))
   assert.deepEqual(calls.pop()[1].body, { text: 'Review this change', request_id: requestId, skill_ids: ['review-code'] }, 'Automatic plus skills omits the empty composer model instead of failing preflight')
@@ -74,10 +86,11 @@ async function main() {
   const wideReader = createGatewaySkillsClient({ request: (route, options) => transport.request(route, options) })
   assert.equal((await wideReader.get('review-code')).markdown, unicode.markdown, 'The actual gateway transport accepts a valid large Unicode source created through CLI')
   const workspace = createGatewayRuntimeWorkspaceState()
-  workspace.setState({ skillChoices: { s_one: ['review-code'] }, uncertain: { s_one: { text: 'Review', checked: false, requestOptions: options } } })
+  workspace.setState({ skillChoices: { s_one: ['review-code'] }, thinkChoices: { s_one: true }, uncertain: { s_one: { text: 'Review', checked: false, requestOptions: options } } })
   assert.deepEqual(workspace.getState().skillChoices.s_one, ['review-code'], 'An uncertain attempt retains the visible selection')
   workspace.getState().reset()
   assert.deepEqual(workspace.getState().skillChoices, {}, 'Changing browser identity clears selections')
+  assert.deepEqual(workspace.getState().thinkChoices, {}, 'Changing browser identity clears thinking opt-in')
   console.log('Skills metadata, revision-bound import/state, bounded selection, durable request replay and privacy checks passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

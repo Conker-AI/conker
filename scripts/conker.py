@@ -235,6 +235,23 @@ def main():
     chat.add_argument("--model")
     chat.add_argument("--request-id")
     chat.add_argument(
+        "--think",
+        action="store_true",
+        help="Request background analysis for this message",
+    )
+    resume = commands.add_parser(
+        "resume", help="Resume the saved turn without replaying completed actions"
+    )
+    resume.add_argument("turn")
+    stop = commands.add_parser(
+        "stop", help="Stop the saved submission by its request ID"
+    )
+    stop.add_argument("request_id")
+    submission = commands.add_parser(
+        "submission", help="Inspect a durable submission before deciding how to recover"
+    )
+    submission.add_argument("request_id")
+    chat.add_argument(
         "--skill",
         action="append",
         default=[],
@@ -321,6 +338,10 @@ def main():
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "thinking" and args.cancel:
         identity(args.cancel, r"[A-Za-z0-9_-]{1,128}", "turn ID")
+    if args.command == "resume":
+        identity(args.turn, r"[A-Za-z0-9_-]{1,128}", "turn ID")
+    if args.command in {"stop", "submission"}:
+        identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
     if args.command == "chat":
         if len(args.skill) > 3 or len(set(args.skill)) != len(args.skill):
             raise ValueError("Select at most three distinct skills.")
@@ -375,8 +396,15 @@ def main():
                 "request_id": args.request_id or uuid.uuid4().hex,
                 **({"model_id": args.model} if args.model else {}),
                 **({"skill_ids": args.skill} if args.skill else {}),
+                **({"think": True} if args.think else {}),
             },
         )
+    elif args.command == "resume":
+        value = request(config, "pi", f"/turns/{args.turn}/resume", {})
+    elif args.command == "stop":
+        value = request(config, "pi", f"/turn-submissions/{args.request_id}/cancel", {})
+    elif args.command == "submission":
+        value = request(config, "pi", f"/turn-submissions/{args.request_id}")
     elif args.command == "skills":
         path, body = "/skills", None
         if args.operation == "show":
@@ -430,7 +458,7 @@ def main():
                 {},
             )
             if args.cancel
-            else request(config, "pi", f"/sessions/{args.session}").get("thinking", [])
+            else request(config, "pi", f"/sessions/{args.session}/thinking")
         )
     elif args.command == "models":
         value = request(

@@ -263,7 +263,10 @@ export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession'>, onCurrentSessionRevoked: () => void) {
+  const modelListeners = new Set<() => void>()
+  const modelsChanged = () => { for (const listener of modelListeners) listener() }
   return {
+    subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
     chatgpt: createChatGPTClient(auth),
@@ -408,6 +411,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
         method: 'POST', body: { candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
       }))
       if (result.revision !== expectedRevision + 1 || result.configuration?.defaultModelId !== selected) throw new GatewayError('invalid-response')
+      modelsChanged()
       return result
     },
     async activateSetupModel(candidateId: string, expectedRevision: number, requestId: string, signal?: AbortSignal) {
@@ -417,6 +421,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
         method: 'POST', body: { requestId: request, candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
       }))
       if (result.revision !== expectedRevision + 1 || result.candidateId !== selected || result.probe.requestId !== request || result.probe.configurationRevision !== result.revision || result.probe.candidateId !== selected) throw new GatewayError('invalid-response')
+      modelsChanged()
       return result
     },
     async sessionSettings(id: string, signal?: AbortSignal): Promise<OwnerSessionSettings> {
@@ -440,7 +445,9 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     async saveModels(value: OwnerModelsConfiguration, expectedRevision: number, signal?: AbortSignal): Promise<OwnerModelSettings> {
       // Snapshot only public fields. Neither draft secrets nor unknown metadata can cross this boundary.
       const body = { expected_revision: parse(count, expectedRevision, true), configuration: parse(configuration, value, true) }
-      return parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { method: 'POST', body, signal }))
+      const result = parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { method: 'POST', body, signal }))
+      modelsChanged()
+      return result
     },
     /** The exact current text and revision; forgetting succeeds only if it is still current. */
     async forgetPreview(id: string, signal?: AbortSignal): Promise<MemoryForgetPreview> {

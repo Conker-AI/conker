@@ -3,9 +3,11 @@
 import json
 import os
 import re
+import signal
 import subprocess
 import threading
 import time
+from contextlib import nullcontext
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -25,6 +27,35 @@ def environment(home):
     env = {key: os.environ[key] for key in keep if key in os.environ}
     env.update(CLAUDE_CONFIG_DIR=str(home), NO_COLOR="1")
     return env
+
+
+def stop_inference_process(process):
+    """Stop only a child created by this worker, including its subprocesses."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == "nt":
+            # Never accept a PID from a request. The live Popen handle supplies
+            # this worker-owned root; taskkill /T includes native CLI children.
+            taskkill = (
+                Path(os.environ.get("SYSTEMROOT", "C:/Windows"))
+                / "System32/taskkill.exe"
+            )
+            subprocess.run(
+                [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if process.poll() is None:
+        process.kill()
+    process.wait(timeout=5)
 
 
 class Claude:
@@ -158,7 +189,7 @@ class Claude:
             self.process = None
         self.url = None
 
-    def complete(self, value):
+    def complete(self, value, *, cancellation=None):
         model = value.get("model", "")
         messages = value.get("messages")
         timeout = value.get("timeout")
@@ -201,17 +232,37 @@ class Claude:
             "--max-turns",
             "1",
         ]
-        result = subprocess.run(
+        if cancellation:
+            cancellation.check()
+        process = subprocess.Popen(
             command,
-            input=prompt.encode(),
-            capture_output=True,
-            check=False,
-            timeout=timeout,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             **self.options(),
         )
-        if result.returncode or len(result.stdout) > 2_000_000:
+        try:
+            with (
+                cancellation.register(lambda: stop_inference_process(process))
+                if cancellation
+                else nullcontext()
+            ):
+                if cancellation:
+                    cancellation.check()
+                stdout, _stderr = process.communicate(
+                    input=prompt.encode(), timeout=timeout
+                )
+                if cancellation:
+                    cancellation.check()
+        finally:
+            if process.poll() is None:
+                stop_inference_process(process)
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None:
+                    stream.close()
+        if process.returncode or len(stdout) > 2_000_000:
             raise ValueError("Claude Code did not complete this request.")
-        value = json.loads(result.stdout)
+        value = json.loads(stdout)
         if value.get("is_error") or not isinstance(value.get("result"), str):
             raise ValueError("Claude Code did not complete this request.")
         usage = value.get("usage") or {}

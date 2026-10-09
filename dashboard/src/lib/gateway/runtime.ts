@@ -28,7 +28,7 @@ export type RuntimeTurn = {
   approvalRequestId?: string | null; detail: string | null; action: { id: string; state: string; jobId: string | null } | null
   memory: RuntimeMemory
 }
-export type RuntimeThinking = { turnId: string; status: 'running' | 'completed' | 'canceled' | 'superseded' | 'failed' | 'interrupted' | 'skipped'; model: string | null; provider: string | null; result: string | null; detail: string | null }
+export type RuntimeThinking = { turnId: string; inputMessageId?: string | null; createdAt?: number | null; status: 'queued' | 'running' | 'completed' | 'canceled' | 'superseded' | 'failed' | 'interrupted' | 'skipped'; model: string | null; provider: string | null; result: string | null; detail: string | null }
 export type RuntimeSessionDetail = RuntimeSession & {
   thinking?: RuntimeThinking[]; messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
   pendingSubmissions: RuntimePendingSubmission[]; pendingSubmissionsTruncated: boolean
@@ -41,7 +41,7 @@ export type RuntimeTurnReceipt = {
 }
 export type RuntimeMessageRef = { messageId: string; purpose: 'input' | 'intermediate' | 'tool_result' | 'final'; actionId: string | null; sequence: number }
 export type RuntimeSubmission = {
-  skillIds?: string[]; modelId?: string | null
+  skillIds?: string[]; modelId?: string | null; think?: boolean
   requestId: string; requestedSessionId: string; sessionId: string | null; turnId: string | null; taskId: string | null
   inputMessageId: string | null; finalMessageId: string | null; messageRefs: RuntimeMessageRef[]
   state: 'preparing' | 'bound' | 'preparation_failed' | 'preparation_interrupted' | 'forgotten'
@@ -168,8 +168,8 @@ function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn
 }
 function thinking(value: unknown, sessionId: string): RuntimeThinking {
   const row = record(value)
-  if (id(row.session_id) !== sessionId || !['running', 'completed', 'canceled', 'superseded', 'failed', 'interrupted', 'skipped'].includes(String(row.status))) return bad()
-  return { turnId: id(row.turn_id), status: row.status as RuntimeThinking['status'], model: nullable(row.model, text), provider: nullable(row.provider, text), result: row.status === 'completed' ? nullable(row.result, text) : null, detail: nullable(row.detail, text) }
+  if (id(row.session_id) !== sessionId || !['queued', 'running', 'completed', 'canceled', 'superseded', 'failed', 'interrupted', 'skipped'].includes(String(row.status))) return bad()
+  return { turnId: id(row.turn_id), inputMessageId: row.input_message_id == null ? null : id(row.input_message_id), createdAt: row.created_at == null ? null : number(row.created_at), status: row.status as RuntimeThinking['status'], model: nullable(row.model, text), provider: nullable(row.provider, text), result: row.status === 'completed' ? nullable(row.result, text) : null, detail: nullable(row.detail, text) }
 }
 function unique<T extends { id: string }>(rows: T[]): T[] {
   if (new Set(rows.map(row => row.id)).size !== rows.length) return bad()
@@ -207,7 +207,8 @@ export function parseRuntimeSubmission(value: unknown, requestId?: string, sessi
   let skillIds: string[] = []
   try { skillIds = contentStatus === 'forgotten' ? [] : validateSkillIds(row.skill_ids === undefined ? [] : array(row.skill_ids, 3).map(item => text(item, 64))) } catch { return bad() }
   const modelId = contentStatus === 'forgotten' || row.model_id == null ? null : text(row.model_id, 200)
-  return { skillIds, modelId, requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
+  const think = contentStatus !== 'forgotten' && (row.think === undefined ? false : bool(row.think))
+  return { skillIds, modelId, think, requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
     messageRefs: refs, state: contentStatus === 'forgotten' ? 'forgotten' : preparation, status: state(row.status), acted: bool(row.acted), contentStatus,
     createdAt: date(row.created_at), updatedAt: date(row.updated_at) }
 }
@@ -243,14 +244,15 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (requestId.length < 16) throw new GatewayError('validation')
       return parseRuntimeSubmission(await auth.request(`/api/pi/turn-submissions/${requestId}`, options), requestId, requestedSessionId)
     },
-    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[] } = {}): Promise<RuntimeSubmission> {
+    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[]; think?: boolean } = {}): Promise<RuntimeSubmission> {
       inputId(sessionId); inputId(requestId)
       if (requestId.length < 16 || typeof userText !== 'string' || !userText.trim() || [...userText].length > 16_000 || (options.taskId === undefined) !== (options.taskExpectedRevision === undefined)) throw new GatewayError('validation')
       if (options.taskId !== undefined && (!inputId(options.taskId) || !Number.isSafeInteger(options.taskExpectedRevision) || options.taskExpectedRevision! < 1)) throw new GatewayError('validation')
       if (options.modelId !== undefined && (typeof options.modelId !== 'string' || !options.modelId.length || options.modelId.length > 200)) throw new GatewayError('validation')
       const skillIds = validateSkillIds(options.skillIds ?? [])
+      if (options.think !== undefined && typeof options.think !== 'boolean') throw new GatewayError('validation')
       try {
-        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.think ? { think: true } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         const receipt = parseRuntimeSubmission(response.submission, requestId, sessionId)
         if (receipt.taskId !== (options.taskId ?? null)) return bad()
         return receipt
@@ -280,6 +282,12 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
     async cancelThinking(sessionId: string, turnId: string) {
       inputId(sessionId); inputId(turnId)
       await auth.request(`/api/pi/sessions/${sessionId}/thinking/${turnId}/cancel`, { method: 'POST', body: {} })
+    },
+    async getThinking(sessionId: string, options: { signal?: AbortSignal } = {}) {
+      inputId(sessionId)
+      const response = await auth.request(`/api/pi/sessions/${sessionId}/thinking`, options)
+      if (response.schemaVersion !== 1 || response.session_id !== sessionId || !['available', 'forgotten'].includes(String(response.content_status))) return bad()
+      return { forgotten: response.content_status === 'forgotten', results: response.content_status === 'forgotten' ? [] : array(response.results, 50).map(row => thinking(row, sessionId)) }
     },
     async createSession(title = '', options: { signal?: AbortSignal; agentId?: string; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean } } = {}): Promise<{ sessionId: string }> {
       if (typeof title !== 'string' || title.length > 1024) throw new GatewayError('validation')

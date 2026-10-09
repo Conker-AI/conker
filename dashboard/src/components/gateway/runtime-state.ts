@@ -2,27 +2,27 @@ import type { RuntimeSessionDetail, RuntimeSubmission } from '@/lib/gateway/runt
 import type { TaskDispatchIntent, TaskSubmissionBinding } from './task-dispatch-state'
 import { createStore } from 'zustand/vanilla'
 
-export type RequestModelOptions = { modelId?: string; skillIds?: string[] }
+export type RequestModelOptions = { modelId?: string; skillIds?: string[]; think?: boolean }
 export type UncertainTurn = { requestOptions?: RequestModelOptions; taskBinding?: TaskSubmissionBinding; rejectionStatus?: 409; text: string; turnId?: string; checked: boolean; accepted?: boolean; requestId?: string; requestedSessionId?: string; submission?: RuntimeSubmission; notFound?: boolean }
 
 /** The composer's empty selection means Automatic, so no model override is sent. */
-export function createRequestOptions(modelId?: string | null, skillIds: string[] = []): RequestModelOptions {
-  return { ...(modelId ? { modelId } : {}), skillIds: [...skillIds] }
+export function createRequestOptions(modelId?: string | null, skillIds: string[] = [], think = false): RequestModelOptions {
+  return { ...(modelId ? { modelId } : {}), skillIds: [...skillIds], ...(think ? { think: true } : {}) }
 }
 
 /** A same-request retry must replay the options frozen at the original send. */
 export function retainedRequestOptions(attempt: UncertainTurn): RequestModelOptions {
   const options = attempt.requestOptions
-  return options ? createRequestOptions(options.modelId, options.skillIds) : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds)
+  return options ? createRequestOptions(options.modelId, options.skillIds, options.think) : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds, attempt.submission?.think)
 }
 
 export function createGatewayRuntimeWorkspaceState() {
   return createStore<{
-    epoch: number; selected: string | null; drafts: Record<string, string>; skillChoices: Record<string, string[]>; uncertain: Record<string, UncertainTurn>
+    epoch: number; selected: string | null; drafts: Record<string, string>; skillChoices: Record<string, string[]>; thinkChoices: Record<string, boolean>; uncertain: Record<string, UncertainTurn>
     taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | 'resume' | null
     reset: () => void
-  }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, skillChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null,
-    reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, skillChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null }),
+  }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null,
+    reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null }),
   }))
 }
 export type GatewayRuntimeWorkspaceState = ReturnType<typeof createGatewayRuntimeWorkspaceState>
