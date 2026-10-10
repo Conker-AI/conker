@@ -6,7 +6,7 @@ import { BaseLayout } from '@/components/layouts/base-layout'
 import { Button } from '@/components/ui/button'
 import { DetailPanel } from '@/components/design-system/overlays'
 import { useIsMobile } from '@/hooks/use-mobile'
-import type { GatewayRuntimeClient, RuntimeSession, RuntimeSessionDetail } from '@/lib/gateway/runtime'
+import type { GatewayRuntimeClient, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -14,6 +14,7 @@ import { closeTab, moveTab, visitTab, workspaceTab, type WorkspaceTab } from './
 import { ConnectedShellContext } from './workspace-shell-context'
 import { resolveGatewayRoute } from './navigation'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
+import { useSessionDiscovery } from './session-discovery-context'
 import '@/styles/connected-workspace.css'
 
 function ConversationReference({ detail, error, loading, onRetry, runtime, sourcePrivacy, active }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void; runtime: GatewayRuntimeClient; sourcePrivacy: GatewaySourcePrivacyState; active: boolean }) {
@@ -46,14 +47,13 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const location = useLocation(), navigate = useNavigate()
   const current = workspaceTab(location.pathname, location.search)
   const [tabs, setTabs] = useState<WorkspaceTab[]>(() => current ? [current] : [])
-  const [sessions, setSessions] = useState<RuntimeSession[]>([])
+  const { rows: sessions } = useSessionDiscovery()
   const [tabsOpen, setTabsOpen] = useState(false)
   const [referenceOpen, setReferenceOpen] = useState(false)
   const [referenceRetry, setReferenceRetry] = useState(0)
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const selected = useStore(conversationState, state => state.selected)
   const operation = useStore(conversationState, state => state.operation)
   const forgotten = useStore(sourcePrivacy, state => state.sessionIds)
   const dragged = useRef<string | null>(null)
@@ -68,11 +68,6 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     queueMicrotask(() => { if (!cancelled && incoming) setTabs(previous => visitTab(previous, incoming)) })
     return () => { cancelled = true }
   }, [location.pathname, location.search])
-  useEffect(() => {
-    const controller = new AbortController()
-    if (tabsOpen && !operation) runtime.listSessions({ signal: controller.signal }).then(value => { if (!controller.signal.aborted) setSessions(value) }).catch(() => undefined)
-    return () => controller.abort()
-  }, [runtime, operation, selected, tabsOpen])
   const referenceSession = current?.sessionId && !forgotten.includes(current.sessionId) ? current.sessionId : null
   useEffect(() => {
     const controller = new AbortController()

@@ -3925,7 +3925,7 @@ index c0df78b..520e13d 100644
              ],
              "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
-index c59ea34..ce92512 100644
+index c59ea34..6b30d10 100644
 --- a/pi/store.py
 +++ b/pi/store.py
 @@ -53,6 +53,7 @@ from . import (
@@ -3936,7 +3936,15 @@ index c59ea34..ce92512 100644
      session_settings,
      setup_choices,
      setup_model_probes,
-@@ -254,6 +255,10 @@ def _message(row: sqlite3.Row) -> dict:
+@@ -133,6 +134,7 @@ CREATE TABLE IF NOT EXISTS turns (
+     detail       TEXT
+ );
+ 
++CREATE INDEX IF NOT EXISTS sessions_by_created_at ON sessions(created_at DESC);
+ CREATE INDEX IF NOT EXISTS messages_by_session ON messages(session_id, seq);
+ CREATE INDEX IF NOT EXISTS turns_by_session ON turns(session_id, started_at);
+ 
+@@ -254,6 +256,10 @@ def _message(row: sqlite3.Row) -> dict:
  
  def _message_with_attachments(db, row):
      item = _message(row)
@@ -3947,7 +3955,7 @@ index c59ea34..ce92512 100644
      if item.get("content_status") != "forgotten":
          version = db.execute(
              "SELECT v.root_message_id,v.retry_of,f.selected_message_id,f.revision "
-@@ -331,6 +336,7 @@ class Store:
+@@ -331,6 +337,7 @@ class Store:
                  db.executescript(response_retries.SCHEMA)
                  db.executescript(turn_steering.SCHEMA)
                  db.executescript(research_usage.SCHEMA)
@@ -3955,7 +3963,7 @@ index c59ea34..ce92512 100644
                  db.executescript(universal_search.SCHEMA)
                  db.executescript(message_citations.SCHEMA)
                  owner_preferences.initialize(db)
-@@ -357,6 +363,7 @@ class Store:
+@@ -357,6 +364,7 @@ class Store:
                  system_inventory.initialize(db)
                  db.executescript(filesystem_reads.SCHEMA)
                  db.executescript(system_actions.SCHEMA)
@@ -3963,7 +3971,7 @@ index c59ea34..ce92512 100644
          except BaseException:
              self.close()
              raise
-@@ -388,6 +395,14 @@ class Store:
+@@ -388,6 +396,14 @@ class Store:
                  db.execute(f"ALTER TABLE turns ADD COLUMN {column} TEXT")
          if "acted" not in have:
              db.execute("ALTER TABLE turns ADD COLUMN acted INTEGER NOT NULL DEFAULT 0")
@@ -3978,7 +3986,7 @@ index c59ea34..ce92512 100644
  
      @contextmanager
      def _connect(self) -> Iterator[sqlite3.Connection]:
-@@ -411,43 +426,50 @@ class Store:
+@@ -411,43 +427,50 @@ class Store:
          agent_id: str | None = None,
          privacy: dict[str, bool] | None = None,
      ) -> str:
@@ -8334,6 +8342,116 @@ index 0000000..46d31ec
 +        usage = research_usage.receipt(store, result["turn_id"])
 +        assert usage["foreground"]["attempt_count"] == 3
 +        assert usage["thinking"]["attempt_count"] == 1
+diff --git a/tests/test_session_listing.py b/tests/test_session_listing.py
+new file mode 100644
+index 0000000..d774a1e
+--- /dev/null
++++ b/tests/test_session_listing.py
+@@ -0,0 +1,104 @@
++"""The bounded session list uses its creation index without rewriting history."""
++
++import hashlib
++import sqlite3
++from contextlib import closing, contextmanager
++
++from fastapi.testclient import TestClient
++
++from pi import api
++from pi.store import Store
++
++
++def populate(store):
++    with store._connect() as db:
++        # Tied creation times and reverse IDs detect unintended tie-break changes.
++        db.executemany(
++            "INSERT INTO sessions(id,title,status,created_at,summary) VALUES(?,?,?,?,?)",
++            [
++                (f"ses_{300 - index:04}", f"Title {index}", "open", index // 3, f"Summary {index}")
++                for index in range(300)
++            ],
++        )
++
++
++def capture_list_query(store, monkeypatch, limit):
++    statements = []
++    connect = store._connect
++
++    @contextmanager
++    def traced():
++        with connect() as db:
++            db.set_trace_callback(statements.append)
++            yield db
++
++    with monkeypatch.context() as patch:
++        patch.setattr(store, "_connect", traced)
++        rows = store.list_sessions(limit=limit)
++    (query,) = [
++        statement for statement in statements if statement.startswith("SELECT * FROM sessions")
++    ]
++    with connect() as db:
++        plan = [row[3] for row in db.execute("EXPLAIN QUERY PLAN " + query)]
++    assert any("USING INDEX sessions_by_created_at" in step for step in plan)
++    assert not any("TEMP B-TREE" in step for step in plan)
++    return rows
++
++
++def test_actual_bounded_list_query_uses_creation_index(tmp_path, monkeypatch):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        populate(store)
++        rows = capture_list_query(store, monkeypatch, 200)
++        assert len(rows) == 200 and len({row["id"] for row in rows}) == 200
++        assert [row["created_at"] for row in rows] == sorted(
++            (row["created_at"] for row in rows), reverse=True
++        )
++        assert rows[0]["created_at"] == 99 and rows[-1]["created_at"] == 33
++        assert capture_list_query(store, monkeypatch, 7) == rows[:7]
++        assert all(row["summary"].replace("Summary", "Title") == row["title"] for row in rows)
++
++
++def test_existing_database_migration_retains_data_and_tied_time_order(tmp_path, monkeypatch):
++    path = tmp_path / "pi.db"
++    with closing(Store(path)) as original:
++        populate(original)
++        original.append_message("ses_0001", "user", "Retained conversation")
++    with sqlite3.connect(path) as db:
++        db.row_factory = sqlite3.Row
++        db.execute("DROP INDEX sessions_by_created_at")
++        old_query = "SELECT * FROM sessions ORDER BY created_at DESC LIMIT 200"
++        expected = [dict(row) for row in db.execute(old_query)]
++        old_plan = [row[3] for row in db.execute("EXPLAIN QUERY PLAN " + old_query)]
++        assert any("TEMP B-TREE" in step for step in old_plan)
++    for _ in range(2):
++        with closing(Store(path)) as migrated:
++            assert capture_list_query(migrated, monkeypatch, 200) == expected
++            assert migrated.messages("ses_0001")[0]["content"] == "Retained conversation"
++            with migrated._connect() as db:
++                assert db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 300
++                assert (
++                    db.execute(
++                        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='sessions_by_created_at'"
++                    ).fetchone()[0]
++                    == 1
++                )
++
++
++def test_list_api_retains_bounds_runtime_auth_and_projection(tmp_path, monkeypatch):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        populate(store)
++        monkeypatch.setattr(api.app.state, "store", store, raising=False)
++        monkeypatch.setattr(api.app.state, "admin_key", "recovery-key", raising=False)
++        monkeypatch.setattr(
++            api.app.state,
++            "gateway_key_hash",
++            hashlib.sha256(b"runtime-key").hexdigest(),
++            raising=False,
++        )
++        client = TestClient(api.app)
++        headers = {"X-Pi-Gateway-Key": "runtime-key"}
++        assert client.get("/sessions").status_code == 401
++        for suffix, limit in (("", 50), ("?limit=0", 1), ("?limit=7", 7), ("?limit=500", 200)):
++            response = client.get("/sessions" + suffix, headers=headers)
++            assert response.status_code == 200
++            assert response.json() == {"results": store.list_sessions(limit)}
 diff --git a/tests/test_session_observation.py b/tests/test_session_observation.py
 new file mode 100644
 index 0000000..992a07e

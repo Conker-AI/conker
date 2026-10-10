@@ -11,7 +11,6 @@ import {
 import { useCircularTransition } from '@/hooks/use-circular-transition'
 import { useTheme } from '@/hooks/use-theme'
 import { UniversalSearchContext } from '@/lib/workspace-chrome'
-import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
@@ -21,6 +20,7 @@ import { OwnerAvatar } from './owner-avatar'
 import { useOwnerProfile } from '@/lib/owner-profile'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
+import { useSessionDiscovery } from './session-discovery-context'
 
 function Destination({ item, active, onNavigate, count }: { item: GatewayDestination; active: boolean; onNavigate: () => void; count?: number | null }) {
   return <SidebarMenuItem>
@@ -32,8 +32,8 @@ function Destination({ item, active, onNavigate, count }: { item: GatewayDestina
 }
 
 /** Conversation history owns the space; work and resources stay one disclosure away. */
-export function GatewayChatSidebar({ runtime, owner, control, conversationState, sourcePrivacy, onSignOut, badge }: {
-  runtime: GatewayRuntimeClient; owner: GatewayOwnerClient; control: GatewayControlClient; conversationState: GatewayRuntimeWorkspaceState
+export function GatewayChatSidebar({ owner, control, conversationState, sourcePrivacy, onSignOut, badge }: {
+  owner: GatewayOwnerClient; control: GatewayControlClient; conversationState: GatewayRuntimeWorkspaceState
   sourcePrivacy: GatewaySourcePrivacyState; onSignOut: () => void; badge?: ReactNode
 }) {
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
@@ -44,9 +44,8 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
   const selected = useStore(conversationState, value => value.selected)
   const operation = useStore(conversationState, value => value.operation)
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
-  const [sessions, setSessions] = useState<RuntimeSession[]>([])
+  const { rows: sessions, loaded, error, refresh } = useSessionDiscovery()
   const [pendingApprovals, setPendingApprovals] = useState<number | null>(null)
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [expanded, setExpanded] = useState<Partial<Record<'work' | 'library', boolean>>>({})
   const [profileOpen, setProfileOpen] = useState(false)
   const profile = useOwnerProfile()
@@ -54,23 +53,19 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
   const setupSummary = setupStatus && setupStatus.state !== 'complete' ? summarizeSetup(setupStatus) : null
   const request = useRef<AbortController | null>(null)
 
-  const refresh = useCallback(() => {
+  const refreshApprovals = useCallback(() => {
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    setLoadState('loading')
-    runtime.listSessions({ signal: controller.signal }).then(rows => {
-      if (!controller.signal.aborted) { setSessions(rows); setLoadState('ready') }
-    }).catch(() => { if (!controller.signal.aborted) setLoadState('error') })
     owner.listRequests({ limit: 50 }).then(result => {
       if (!controller.signal.aborted) setPendingApprovals(result.results.filter(row => row.status === 'pending' && row.reviewable).length)
     }).catch(() => { if (!controller.signal.aborted) setPendingApprovals(null) })
-  }, [runtime, owner])
+  }, [owner])
   useEffect(() => {
     let cancelled = false
-    if (!operation) queueMicrotask(() => { if (!cancelled) refresh() })
+    if (!operation) queueMicrotask(() => { if (!cancelled) refreshApprovals() })
     return () => { cancelled = true; request.current?.abort() }
-  }, [operation, selected, location.pathname, refresh])
+  }, [operation, selected, location.pathname, refreshApprovals])
   const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false, 'content') }, [isMobile, setOpenMobile])
   const newChat = useCallback(() => {
     conversationState.setState({ selected: null }); navigate('/chat'); afterNavigate()
@@ -126,15 +121,15 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
       </SidebarMenu></SidebarGroup>
       <SidebarGroup className="conker-chat-history">
         <div className="conker-history-heading"><span>Recent chats</span><Link to="/chats" onClick={afterNavigate} aria-label="View all chats" aria-current={page.route === 'chats' ? 'page' : undefined}><History aria-hidden="true" /><span>View all</span></Link></div>
-        <div className="conker-history-list" aria-label="Recent chats" aria-busy={loadState === 'loading'}>
+        <div className="conker-history-list" aria-label="Recent chats" aria-busy={!loaded && !error}>
           <SidebarMenu>{visible.map(session => <SidebarMenuItem key={session.id}>
             <SidebarMenuButton asChild className="conker-chat-link" isActive={onChat && session.id === selected}>
               <Link to={`/chat?session=${encodeURIComponent(session.id)}`} onClick={afterNavigate} aria-current={onChat && session.id === selected ? 'page' : undefined} title={session.title || 'Untitled chat'}><span className="truncate">{session.title || 'Untitled chat'}</span></Link>
             </SidebarMenuButton>
           </SidebarMenuItem>)}</SidebarMenu>
-          {loadState === 'loading' && !visible.length && <p role="status" className="conker-sidebar-note">Loading your chats…</p>}
-          {loadState === 'ready' && !visible.length && <p className="conker-sidebar-note">Start a conversation. You can return to it here.</p>}
-          {loadState === 'error' && <div role="alert" className="conker-sidebar-note"><p>Couldn’t refresh your chats.</p><button type="button" className="mt-2 underline underline-offset-4 hover:text-foreground" onClick={refresh}>Try again</button></div>}
+          {!loaded && !error && <p role="status" className="conker-sidebar-note">Loading your chats…</p>}
+          {loaded && !error && !visible.length && <p className="conker-sidebar-note">Start a conversation. You can return to it here.</p>}
+          {error && <div role="status" className="conker-sidebar-note"><p>Couldn’t refresh your chats.</p><button type="button" className="mt-2 underline underline-offset-4 hover:text-foreground" onClick={() => void refresh()}>Try again</button></div>}
         </div>
       </SidebarGroup>
     </SidebarContent>

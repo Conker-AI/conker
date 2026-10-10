@@ -13,6 +13,44 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Discover CLI-created chats across the workspace (10 October)
+
+The sidebar, Chats collection, chat header and open-view titles now share one
+authenticated recent-list controller. It reads while visible and online every
+15 seconds, with immediate focus/reconnect and local-operation refreshes.
+Requests are serialized; a refresh requested during an older read waits for one
+fresh successor. Deadlines, bounded backoff and authentication/workspace/privacy
+checks reject late results and settle interrupted callers.
+
+Background list updates preserve existing rows, search and keyboard focus.
+Failures show the retained list and a keyboard-accessible Try again action.
+Forgotten records enter the shared privacy boundary before publication. Absence
+from the newest 200 chats never means deletion or closes a tab; open views keep
+navigation identities without a separate private title cache. Sidebar approval
+checks remain independent of this list loop.
+
+Pi now indexes the existing creation-time list query, eliminating its temporary
+sort without changing response shape, ordering or limits. All 34 relevant backend
+tests pass, including actual query-plan checks, tied timestamps and repeated
+old-database migration. Fresh and repeated installation reproduce 85 reviewed Pi
+files. Frontend discovery, observation, navigation, workspace, boundary and draft
+checks pass alongside TypeScript, affected lint, the 400-file design check and
+independent review.
+
+The local rollout preserved database backups and the previous build; Pi and
+Gateway are healthy. All 168 published files match the staged manifest, and the
+601,126-byte entry passes the unchanged 700,000-byte limit. One genuine CLI-created
+empty synthetic chat appeared in the sidebar and filtered Chats collection
+without navigation or manual refresh. Search focus and an unsent draft survived;
+the observed browser interval contained only three shared list reads. Browser-only
+503 simulations retained rows/search and recovered through keyboard retry on
+desktop dark and mobile light. Screenshots were inspected, no mobile overflow was
+present, and the original theme and empty QA draft were restored.
+
+Older conversations remain stored but cannot yet be browsed or title-filtered
+beyond the current window. An isolated 202-chat reproduction confirms this next
+gap; a compact paged chat directory is being implemented separately.
+
 ### Keep open chats synchronized with CLI work (10 October)
 
 A persisted, content-free session counter now detects external work even when a
@@ -57,9 +95,8 @@ offscreen delayed-update notice; it now remains above the history scroller.
 Keyboard recovery works, mobile has no horizontal overflow, and the synthetic
 draft was cleared after verification. The browser's original theme was restored.
 
-This slice watches the selected conversation. Discovering newly created CLI chats
-in the sidebar and Chats list while navigation stays idle remains the next
-verified follow-up; their list readers are currently separate.
+This slice watches the selected conversation. The subsequent shared-discovery
+milestone above also finds newly created CLI chats while navigation stays idle.
 
 ### Reuse routing decisions and preserve working builds (10 October)
 

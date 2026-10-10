@@ -7,6 +7,7 @@ import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { useMemoryDelivery } from './use-memory-delivery'
 import { useRuntimeObservation } from './use-runtime-observation'
 import { createRuntimeDetailReader } from './runtime-detail-read'
+import { useSessionDiscovery } from './session-discovery-context'
 import { ThinkControl } from './think-control'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
@@ -34,7 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
-import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSession, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
+import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
 import { followLivePreview } from '@/lib/gateway/live-preview'
 import { GatewayError, gatewayError } from '@/lib/gateway/transport'
 import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
@@ -104,7 +105,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const safeTaskIntent = visibleTaskDispatchIntent(taskIntent, forgottenIds)
   const setSelected = (value: string | null) => workspace.setState({ selected: value })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
-  const [sessions, setSessions] = useState<RuntimeSession[]>([])
+  const { rows: sessions, refresh: refreshList } = useSessionDiscovery()
   const [agentNames, setAgentNames] = useState<Record<string, string>>({ companion: 'Conker' })
   const [sessionAgents, setSessionAgents] = useState<Record<string, string>>({})
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
@@ -129,7 +130,6 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const mounted = useRef(false)
   const controllers = useRef(new Set<AbortController>())
   const detailReadError = useRef<string | null>(null)
-  const listGeneration = useRef(0)
   const selectedRef = useRef(selected)
   selectedRef.current = selected
   const active = auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed
@@ -181,19 +181,6 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     try { return await action(controller.signal) }
     finally { controllers.current.delete(controller) }
   }, [])
-  const refreshList = useCallback(async () => {
-    const generation = ++listGeneration.current
-    try {
-      const rows = await request(signal => client.listSessions({ signal }))
-      if (!mounted.current || !activeRef.current || generation !== listGeneration.current) return false
-      privacy.getState().markForgotten(rows.filter(row => row.status === 'forgotten').map(row => row.id))
-      setSessions(rows.map(row => privacy.getState().sessionIds.includes(row.id) ? maskForgottenSession(row) : row))
-      return true
-    } catch {
-      // The sidebar shows list errors; here the list only supplies chat titles.
-      return false
-    }
-  }, [client, privacy, request])
   const detailReader = useMemo(() => createRuntimeDetailReader({
     read: (id, signal) => client.getSession(id, { signal }),
     scope: id => {
@@ -281,7 +268,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     const pendingControllers = controllers.current
     return () => { mounted.current = false; for (const controller of pendingControllers) controller.abort(); pendingControllers.clear() }
   }, [])
-  useEffect(() => { if (active) void refreshList(); else { for (const controller of controllers.current) controller.abort(); controllers.current.clear() } }, [active, refreshList])
+  useEffect(() => { if (!active) { for (const controller of controllers.current) controller.abort(); controllers.current.clear() } }, [active])
   useEffect(() => {
     if (!active || !control) return
     const controller = new AbortController()
@@ -302,7 +289,6 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     if (!forgottenIds.length) return
     workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), thinkChoices: Object.fromEntries(Object.entries(value.thinkChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, think: false, draftRevision: null, researchMode: 'off', pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
     setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)
-    setSessions(values => values.map(value => forgottenIds.includes(value.id) ? maskForgottenSession(value) : value))
   }, [forgottenIds, workspace])
   useEffect(() => {
     if (!Object.values(draftEntries).some(draftNeedsUnload) && !Object.keys(uncertain).length && !pendingStart && !taskIntent && !sendPending && !createPending) return

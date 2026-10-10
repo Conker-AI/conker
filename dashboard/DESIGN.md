@@ -35,6 +35,20 @@ chats disappear from both history and open views immediately. The conversation
 context panel opens on request: beside the chat on desktop, in `DetailPanel`
 with native focus handling on mobile. Its source reads run only while visible.
 
+The sidebar, Chats collection, chat header and open-view titles share one recent
+chat list in the authenticated workspace. A visible, online workspace checks it
+every 15 seconds and on focus or reconnection. Background reads retain collection
+rows, search and keyboard focus; a failed read labels the retained list and offers
+Try again. Hidden/offline workspaces pause reads. Authentication changes and
+workspace resets discard the list and reject late responses. These reads never
+send messages, change drafts or resolve uncertain actions.
+
+Recent discovery contains at most 200 chats. Absence from that window never means
+deletion or forgetting and never closes an open view. Tabs retain navigation
+identity, with a generic Chat title when no current title is available; they do
+not retain a separate private title cache. Explicit forgotten records cross the
+shared privacy boundary before any list consumer can display them.
+
 `connected-workspace.css` owns these semantic shell roles. Use the existing theme
 and typeface, `--sidebar` for the navigation surface, `--background` for the work
 surface, and `--sidebar-primary` only for New chat and attention counts. Sidebar
