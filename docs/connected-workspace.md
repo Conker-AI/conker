@@ -85,6 +85,13 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   between the saved version and this tab's version. An unconfirmed save is read
   back before another write. Interrupted chat creation opens the same chat for
   review without automatically sending its draft.
+- An open, visible chat checks a small server change counter for work started
+  through the CLI or another client. It checks every 15 seconds while idle and
+  every 2 seconds while work is active, then reloads saved history when changed.
+  A local send, hidden view, offline browser or sign-out pauses those checks.
+  Reading updates preserves the composer and never retries or resumes work.
+  Failed reads show delayed updates and retry with a bounded delay; Check now
+  requests another read. A fork remains a separate chat to open explicitly.
 - Tab metadata is not persisted in browser storage. Forgotten conversations
   disappear from the tab strip and context pane.
 - Use the single sidebar or Ctrl/Cmd+K search to move through Conker.

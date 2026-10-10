@@ -37,6 +37,7 @@ export type RuntimeSessionDetail = RuntimeSession & {
   thinking?: RuntimeThinking[]; messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
   pendingSubmissions: RuntimePendingSubmission[]; pendingSubmissionsTruncated: boolean
 }
+export type RuntimeObservation = { sessionId: string; revision: number; active: boolean; forgotten: boolean }
 export type RuntimeTurnReceipt = {
   requestedSessionId: string; sessionId?: string; forkedFrom?: string
   turnId: string; status?: string; acted?: boolean
@@ -314,6 +315,12 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       const response = await auth.request(`/api/pi/sessions/${sessionId}/thinking`, options)
       if (response.schemaVersion !== 1 || response.session_id !== sessionId || !['available', 'forgotten'].includes(String(response.content_status))) return bad()
       return { forgotten: response.content_status === 'forgotten', results: response.content_status === 'forgotten' ? [] : array(response.results, 50).map(row => thinking(row, sessionId)) }
+    },
+    async getObservation(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<RuntimeObservation> {
+      inputId(sessionId)
+      const response = await auth.request(`/api/pi/sessions/${sessionId}/observation`, options)
+      if (response.schemaVersion !== 1 || response.session_id !== sessionId || !Number.isSafeInteger(response.revision) || (response.revision as number) < 0 || typeof response.active !== 'boolean' || !['available', 'forgotten'].includes(String(response.content_status)) || response.content_status === 'forgotten' && response.active) return bad()
+      return { sessionId, revision: response.revision as number, active: response.active, forgotten: response.content_status === 'forgotten' }
     },
     async getMemoryDelivery(sessionId: string, options: { signal?: AbortSignal; messageId?: string } = {}) {
       const { createMemoryDeliveryClient } = await import('./memory-delivery')

@@ -81,6 +81,8 @@ const turnUsageRoute = /^\/api\/pi\/turns\/[A-Za-z0-9_-]{1,128}\/usage$/
 routes.GET.unshift(turnUsageRoute)
 const memoryDeliveryRoute = /^\/api\/pi\/sessions\/[A-Za-z0-9_-]{1,128}(?:\/messages\/[A-Za-z0-9_-]{1,128})?\/memory-delivery$/
 routes.GET.unshift(memoryDeliveryRoute)
+const observationRoute = /^\/api\/pi\/sessions\/[A-Za-z0-9_-]{1,128}\/observation$/
+routes.GET.unshift(observationRoute)
 routes.GET.unshift(/^\/api\/host\/claude$/)
 routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 routes.POST.unshift(/^\/api\/host\/providers$/)
@@ -232,7 +234,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       const method = options.method ?? 'GET'
       if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_.-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
-      if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
+      if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path) || observationRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
       if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')

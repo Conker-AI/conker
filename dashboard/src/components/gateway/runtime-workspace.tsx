@@ -5,6 +5,8 @@ import { readDraftStart, rememberDraftStart, clearDraftStart, type PendingDraftS
 import { ThinkingStatus } from './thinking-status'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { useMemoryDelivery } from './use-memory-delivery'
+import { useRuntimeObservation } from './use-runtime-observation'
+import { createRuntimeDetailReader } from './runtime-detail-read'
 import { ThinkControl } from './think-control'
 import { ChatTranscript } from '@/components/chat/transcript'
 import { ChatComposer, ChatComposerFrame, conversationColumn } from '@/components/chat/composer'
@@ -18,7 +20,7 @@ import { GatewaySkillPicker } from './skill-picker'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evidence"
 import { memoryRetrievalSummary } from './plain-status'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Bot, Brain, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
@@ -126,7 +128,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const chatLatest = useRef<{ snapshot: GatewayChatState; handlers: GatewayChatHandlers } | null>(null)
   const mounted = useRef(false)
   const controllers = useRef(new Set<AbortController>())
-  const detailGeneration = useRef(0)
+  const detailReadError = useRef<string | null>(null)
   const listGeneration = useRef(0)
   const selectedRef = useRef(selected)
   selectedRef.current = selected
@@ -134,6 +136,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const activeRef = useRef(active)
   activeRef.current = active
   const current = detail?.id === selected ? forgottenIds.includes(detail.id) ? maskForgottenConversation(detail) : detail : null
+  const knownForgotten = !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten')
   const selectedForMemory = useCallback(() => workspace.getState().selected, [workspace])
   const memoryRead = useMemoryDelivery({ client, authStore, privacy, sessionId: current?.id ?? null, messageKey: current?.messages.filter(message => message.role === 'user').at(-1)?.id ?? '',
     active: Boolean(active && visible && current?.status !== 'forgotten'), identity: auth.session?.sessionId ?? '', epoch: workspaceEpoch, selected: selectedForMemory })
@@ -191,12 +194,17 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       return false
     }
   }, [client, privacy, request])
-  const refreshDetail = useCallback(async (id: string) => {
-    const generation = ++detailGeneration.current
-    setDetailPending(true); setDetailError(null)
-    try {
-      const response = await request(signal => client.getSession(id, { signal }))
-      if (!mounted.current || !activeRef.current || generation !== detailGeneration.current || selectedRef.current !== id) return false
+  const detailReader = useMemo(() => createRuntimeDetailReader({
+    read: (id, signal) => client.getSession(id, { signal }),
+    scope: id => {
+      const auth = authStore.getState(), state = workspace.getState()
+      return auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed && state.selected === id
+        ? JSON.stringify([auth.session.sessionId, state.epoch, id]) : null
+    },
+    pending: setDetailPending,
+    failure: error => { detailReadError.current = error === null ? null : gatewayError(error).message; setDetailError(detailReadError.current) },
+    apply: response => {
+      const id = response.id
       if (response.status === 'forgotten') privacy.getState().markForgotten([id])
       const next = privacy.getState().sessionIds.includes(id) ? maskForgottenConversation(response) : response
       setDetail(next)
@@ -206,25 +214,43 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         const updated = { ...values.uncertain }; delete updated[id]
         return { uncertain: updated }
       })
-      return true
-    } catch (error) {
-      if (mounted.current && activeRef.current && generation === detailGeneration.current) setDetailError(gatewayError(error).message)
-      return false
-    } finally { if (mounted.current && generation === detailGeneration.current) setDetailPending(false) }
-  }, [client, privacy, request, workspace])
+    },
+  }), [client, authStore, privacy, workspace])
+  const refreshDetail = useCallback((id: string) => detailReader.refresh(id), [detailReader])
+  useEffect(() => {
+    const auth = authStore.subscribe((value, before) => {
+      if (value.session?.sessionId !== before.session?.sessionId || value.phase !== before.phase || value.pending !== before.pending || value.logoutUnconfirmed !== before.logoutUnconfirmed) detailReader.cancel()
+    })
+    const selection = workspace.subscribe((value, before) => { if (value.selected !== before.selected || value.epoch !== before.epoch || value.operation !== before.operation) detailReader.cancel() })
+    const forget = privacy.subscribe(() => detailReader.cancel())
+    return () => { auth(); selection(); forget(); detailReader.cancel(false) }
+  }, [authStore, workspace, privacy, detailReader])
+
+  const observation = useRuntimeObservation({ client, authStore, workspace, privacy, sessionId: selected,
+    active: Boolean(active && visible && !operation && !detailPending && !knownForgotten), identity: auth.session?.sessionId ?? '', epoch: workspaceEpoch,
+    version: detailReader.generation,
+    apply: response => {
+      // Background reads update saved history only. Drafts, receipts and mutation locks keep their owners.
+      setDetail(privacy.getState().sessionIds.includes(response.id) ? maskForgottenConversation(response) : response)
+      if (detailReadError.current) {
+        const oldError = detailReadError.current
+        detailReadError.current = null; setDetailError(value => value === oldError ? null : value)
+      }
+    } })
+  const historyLoading = Boolean(selected && !current && !observation.error && !knownForgotten)
 
   const refreshThinking = useCallback(async (id: string, signal: AbortSignal) => {
-    const generation = detailGeneration.current
+    const generation = detailReader.generation()
     const result = await client.getThinking(id, { signal })
-    if (signal.aborted || !mounted.current || !activeRef.current || selectedRef.current !== id || generation !== detailGeneration.current) return
+    if (signal.aborted || !mounted.current || !activeRef.current || selectedRef.current !== id || generation !== detailReader.generation()) return
     if (result.forgotten) privacy.getState().markForgotten([id])
     // The submission receipt owns transcript reconciliation; polling only updates analysis.
     setDetail(previous => previous?.id !== id ? previous : privacy.getState().sessionIds.includes(id)
       ? maskForgottenConversation(previous) : { ...previous, thinking: result.results })
-  }, [client, privacy])
-  const thinkingActive = current?.thinking?.some(row => row.status === 'running' || row.status === 'queued') ?? false
+  }, [client, privacy, detailReader])
   useEffect(() => {
-    if (!selected || !active || !visible || (!thinkingActive && !sendPending)) return
+    // A local send owns transcript reconciliation; the observer covers external/background work.
+    if (!selected || !active || !visible || !sendPending) return
     const id = selected, controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>
     const poll = async () => {
@@ -235,7 +261,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     }
     timer = setTimeout(poll, 1000)
     return () => { controller.abort(); clearTimeout(timer) }
-  }, [selected, active, visible, thinkingActive, sendPending, refreshThinking])
+  }, [selected, active, visible, sendPending, refreshThinking])
 
   async function saveArtifact(message: RuntimeMessage) {
     if (!control || message.role !== 'assistant' || message.content.kind !== 'text' || !current || current.status !== 'open') return
@@ -272,7 +298,6 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     }).catch(() => {})
     return () => controller.abort()
   }, [active, control, selected])
-  useEffect(() => { if (selected && active) void refreshDetail(selected) }, [selected, active, refreshDetail])
   useEffect(() => {
     if (!forgottenIds.length) return
     workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), thinkChoices: Object.fromEntries(Object.entries(value.thinkChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, think: false, draftRevision: null, researchMode: 'off', pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
@@ -527,7 +552,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const chatSnapshot: GatewayChatState = {
     operationPending: !!operation,
     memoryRead: memoryRead.state,
-    sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending,
+    sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending: detailPending || historyLoading,
     activeAgentName, agentNames,
     forgotten: !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten' || !!attempt?.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)),
     attempt, reviewed, notice, error: detailError, rejected, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
@@ -600,16 +625,17 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             </div>
           </div>
         </> : <>
-          {visible && <GatewayHeader context={<h2 className="min-w-0 truncate text-sm font-medium">{current?.status === 'forgotten' ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>}>
-            {control && current?.status !== 'forgotten' && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || Boolean(attempt)} />}
+          {visible && <GatewayHeader context={<h2 className="min-w-0 truncate text-sm font-medium">{knownForgotten ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || 'New chat'}</h2>}>
+            {control && !knownForgotten && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || historyLoading || Boolean(attempt)} />}
             <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Chat options"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
               <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onSelect={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/memory"><Brain />Open memory</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/tools"><Wrench />Open tools</Link></DropdownMenuItem>
             </DropdownMenuContent></DropdownMenu>
           </GatewayHeader>}
+          {observation.error && <div className={`${conversationColumn} shrink-0 py-2`}><p role="status" className="text-sm text-muted-foreground">{current ? 'Chat updates are delayed. Showing the last saved history while checking again.' : 'Chat history is unavailable. Checking again.'} <Button variant="link" size="sm" className="h-auto p-0" onClick={observation.refresh}>Check now</Button></p></div>}
           <ConversationHistory key={selected} sessionId={selected} focusedMessageId={focusedMessageId}>
-            {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !chat.outcomes?.length && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
+            {knownForgotten && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !chat.outcomes?.length && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
             {current && <ThinkingStatus messages={current.messages} rows={current.thinking ?? []} disabled={!active} onCancel={async turnId => { await client.cancelThinking(current.id, turnId); await request(signal => refreshThinking(current.id, signal)) }} onDiscuss={result => { draftController.edit(current.id, { text: [draftController.current(current.id)?.value.text.trimEnd(), `Discuss these background findings and check their conclusions:\n\n${result}`].filter(Boolean).join('\n\n') }); replyComposer.current?.focus() }} />}
             {current && current.turns.length > 0 && <details className="text-xs text-muted-foreground" onToggle={event => { if (event.target === event.currentTarget) setTurnDetailsOpen(event.currentTarget.open) }}><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Details</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}{!chat.outcomes?.some(outcome => outcome.id === turn.id) && <TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} />}<ModelRoutingEvidence detail={turn.detail} /><TurnUsageDisclosure client={client} turnId={turn.id} sessionId={current.id} sourcePrivacy={privacy} active={visible && turnDetailsOpen} refreshKey={`${turn.status}:${turn.endedAt}:${current.thinking?.find(row => row.turnId === turn.id)?.status ?? ""}`} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">{memoryRetrievalSummary(turn.memory.retrieval)}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
           </ConversationHistory>

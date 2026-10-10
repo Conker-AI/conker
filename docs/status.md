@@ -13,6 +13,54 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Keep open chats synchronized with CLI work (10 October)
+
+A persisted, content-free session counter now detects external work even when a
+turn starts and finishes between browser reads. Preparation, saved messages,
+turns, tool actions, background thinking, response selection and forgetting
+advance it in their own transaction. Forked requests also update the original
+chat's counter when the destination turn changes. Existing databases gain the
+counter without replacing history, and restarting does not reset it.
+
+The visible chat checks this metadata while idle and active, loading saved
+history only after a changed counter. It keeps the counter from before the
+history read, so concurrent writes cannot be acknowledged without being shown.
+Updates preserve the draft and saved uncertainty; they do not send, retry,
+resume or navigate to a fork. Hidden/offline views and local sends pause the
+observer. Read failures back off and expose a Check now action.
+
+Manual history reads and background observation share invalidation boundaries.
+Switching chats, changing authentication, resetting the workspace or forgetting
+a source rejects late responses. Initial history still shows loading, while
+routine observation leaves the composer usable.
+
+Backend validation covers 128 distinct cases, including 23 new observation tests,
+with lint and two independent reviews passing. Two older forgetting assertions
+were reproduced as failing without observation enabled, then corrected to verify
+the complete memory-delivery metadata already returned by the previous release.
+Fresh and repeated installation reproduce all 84 reviewed Pi files.
+
+Frontend parser, controller, hook-lifetime and manual-read executable checks pass,
+alongside TypeScript, affected lint, the 397-file design check and existing
+runtime/workspace/navigation/boundary/draft checks. Both published builds match
+their staged 168-file manifests; the final 598,129-byte entry passes the unchanged
+700,000-byte limit. Pi and Gateway are healthy, with prior builds and database
+backups retained.
+
+A genuine CLI turn in the selected synthetic QA chat appeared automatically in
+the browser. Its unsent draft survived and Send unlocked; the turn completed
+without actions or model-configuration changes. During the observed interval the
+browser made 14 metadata reads and three full-history reads, with no submission,
+resume or cancellation requests. Browser-only 503 simulations verified recovery
+through Check now. Desktop dark and mobile light inspection caught and fixed an
+offscreen delayed-update notice; it now remains above the history scroller.
+Keyboard recovery works, mobile has no horizontal overflow, and the synthetic
+draft was cleared after verification. The browser's original theme was restored.
+
+This slice watches the selected conversation. Discovering newly created CLI chats
+in the sidebar and Chats list while navigation stays idle remains the next
+verified follow-up; their list readers are currently separate.
+
 ### Reuse routing decisions and preserve working builds (10 October)
 
 Identical primary Laya routing requests can reuse a successful choice within one

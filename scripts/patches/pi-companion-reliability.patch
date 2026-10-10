@@ -58,7 +58,7 @@ index 92cefef..02eb2b5 100644
              credentialsIncluded=False,
              runtime="Claude Code",
 diff --git a/pi/api.py b/pi/api.py
-index bf97285..4776996 100644
+index bf97285..42e24d5 100644
 --- a/pi/api.py
 +++ b/pi/api.py
 @@ -486,7 +486,7 @@ app.include_router(
@@ -70,7 +70,7 @@ index bf97285..4776996 100644
  app.include_router(conversation_search.router(lambda: app.state.store, require_admin))
  app.include_router(
      attachments_api.router(lambda: app.state.store, require_admin, session_settings.source_privacy)
-@@ -767,6 +767,38 @@ def get_session(session_id: str):
+@@ -767,6 +767,58 @@ def get_session(session_id: str):
      }
  
  
@@ -106,10 +106,30 @@ index bf97285..4776996 100644
 +    return _memory_delivery_status(session_id, request, message_id)
 +
 +
++@app.get("/sessions/{session_id}/observation", dependencies=[Depends(require_key)])
++def observe_session(session_id: str, request: Request):
++    from . import session_observation
++
++    if request.url.query or not 1 <= len(session_id) <= 128 or not all(
++        character.isascii() and (character.isalnum() or character in "_-")
++        for character in session_id
++    ):
++        raise HTTPException(422, "Invalid conversation observation request.")
++    try:
++        return JSONResponse(
++            session_observation.read(app.state.store, session_id),
++            headers={"Cache-Control": "no-store"},
++        )
++    except ValueError:
++        raise HTTPException(404, "Conversation not found.") from None
++    except OverflowError:
++        raise HTTPException(503, "Conversation observation unavailable.") from None
++
++
  @app.get("/sessions/{session_id}/thinking", dependencies=[Depends(require_key)])
  def thinking_status(session_id: str):
      session = app.state.store.get_session(session_id)
-@@ -780,6 +812,21 @@ def thinking_status(session_id: str):
+@@ -780,6 +832,21 @@ def thinking_status(session_id: str):
      }
  
  
@@ -131,7 +151,7 @@ index bf97285..4776996 100644
  @app.post("/sessions/{session_id}/thinking/{turn_id}/cancel", dependencies=[Depends(require_key)])
  def cancel_thinking(session_id: str, turn_id: str):
      try:
-@@ -845,6 +892,11 @@ def run_turn(session_id: str, body: TurnRequest):
+@@ -845,6 +912,11 @@ def run_turn(session_id: str, body: TurnRequest):
          ) from exc
  
  
@@ -183,13 +203,14 @@ index 09a5d8e..dc3cb19 100644
                          with store._connect() as db:
                              db.execute(
 diff --git a/pi/browser_contract.py b/pi/browser_contract.py
-index e32eec8..804784d 100644
+index e32eec8..32507f6 100644
 --- a/pi/browser_contract.py
 +++ b/pi/browser_contract.py
-@@ -8,8 +8,11 @@ RUNTIME_ROUTES = {
+@@ -8,8 +8,12 @@ RUNTIME_ROUTES = {
          r"/sessions",
          r"/sessions/[A-Za-z0-9_-]+",
          r"/sessions/[A-Za-z0-9_-]+/thinking",
++        r"/sessions/[A-Za-z0-9_-]{1,128}/observation",
 +        r"/sessions/[A-Za-z0-9_-]{1,128}/memory-delivery",
 +        r"/sessions/[A-Za-z0-9_-]{1,128}/messages/[A-Za-z0-9_-]{1,128}/memory-delivery",
          r"/sessions/[A-Za-z0-9_-]+/submissions",
@@ -198,7 +219,7 @@ index e32eec8..804784d 100644
          r"/turn-submissions/[A-Za-z0-9_-]+",
          r"/turn-submissions/[A-Za-z0-9_-]+/stream",
          r"/approvals",
-@@ -50,6 +53,7 @@ def runtime_allowed(method: str, path: str) -> bool:
+@@ -50,6 +54,7 @@ def runtime_allowed(method: str, path: str) -> bool:
  # origin) but not a fresh password proof. Their real-world effects still pass
  # ToolGate approval. Every other browser write keeps operation-bound verification.
  SESSION_ONLY_WRITES = (
@@ -206,7 +227,7 @@ index e32eec8..804784d 100644
      r"/sessions/[A-Za-z0-9_-]+/thinking/[A-Za-z0-9_-]+/cancel",
      r"/sessions",
      r"/sessions/[A-Za-z0-9_-]+/turns",
-@@ -73,6 +77,8 @@ def session_only_write(method: str, path: str) -> bool:
+@@ -73,6 +78,8 @@ def session_only_write(method: str, path: str) -> bool:
  # conversation runtime credential. Expand only alongside the corresponding UI.
  OWNER_ROUTES = {
      "GET": (
@@ -215,7 +236,7 @@ index e32eec8..804784d 100644
          r"/skills",
          r"/skills/[a-z0-9][a-z0-9-]{0,63}",
          r"/search",
-@@ -115,8 +121,10 @@ OWNER_ROUTES = {
+@@ -115,8 +122,10 @@ OWNER_ROUTES = {
          r"/memory/objects",
          r"/memory/objects/[a-z]+/[A-Za-z0-9_-]+",
          r"/memory/forget/[A-Za-z0-9_.:-]+",
@@ -3273,6 +3294,148 @@ index 0000000..9a08ce5
 +def current(store_path, turn_id):
 +    memo = _current.get()
 +    return memo if memo is not None and memo.matches(store_path, turn_id) else None
+diff --git a/pi/session_observation.py b/pi/session_observation.py
+new file mode 100644
+index 0000000..f6240d1
+--- /dev/null
++++ b/pi/session_observation.py
+@@ -0,0 +1,136 @@
++"""Content-free change tokens for observing work started by another client.
++
++Counters change in the transaction that changes history, not when a browser
++reads them. Read this token before loading history: a later token must never be
++used to acknowledge an earlier, possibly nontransactional history projection.
++"""
++
++MAX_SAFE_REVISION = (1 << 53) - 1
++
++SCHEMA = """
++CREATE TABLE IF NOT EXISTS session_observations (
++ session_id TEXT PRIMARY KEY REFERENCES sessions(id),
++ revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=0)
++);
++INSERT OR IGNORE INTO session_observations SELECT id,0 FROM sessions;
++CREATE INDEX IF NOT EXISTS observation_running_turns ON turns(session_id) WHERE status='running';
++CREATE INDEX IF NOT EXISTS observation_active_thinking ON background_thinking(session_id)
++ WHERE status IN ('queued','running');
++CREATE TRIGGER IF NOT EXISTS session_observation_session_insert AFTER INSERT ON sessions
++BEGIN
++ INSERT INTO session_observations VALUES(NEW.id,1)
++ ON CONFLICT(session_id) DO UPDATE SET revision=revision+1;
++END;
++"""
++
++
++def _trigger(table, operation, identities):
++    # Identifiers/expressions below are fixed schema definitions, never request input.
++    return f"""
++CREATE TRIGGER IF NOT EXISTS session_observation_{table}_{operation.lower()}
++AFTER {operation} ON {table}
++BEGIN
++ UPDATE session_observations SET revision=revision+1
++ WHERE session_id IN ({identities});
++END;
++"""
++
++
++SCHEMA += _trigger("sessions", "UPDATE", "SELECT OLD.id UNION SELECT NEW.id")
++for _table in ("messages", "background_thinking", "forgotten_sessions", "response_families"):
++    for _operation in ("INSERT", "UPDATE", "DELETE"):
++        _rows = (
++            ("NEW",)
++            if _operation == "INSERT"
++            else ("OLD",)
++            if _operation == "DELETE"
++            else ("OLD", "NEW")
++        )
++        SCHEMA += _trigger(
++            _table, _operation, " UNION ".join(f"SELECT {row}.session_id" for row in _rows)
++        )
++for _operation in ("INSERT", "UPDATE", "DELETE"):
++    _rows = (
++        ("NEW",)
++        if _operation == "INSERT"
++        else ("OLD",)
++        if _operation == "DELETE"
++        else ("OLD", "NEW")
++    )
++    SCHEMA += _trigger(
++        "turns",
++        _operation,
++        " UNION ".join(f"SELECT {row}.session_id" for row in _rows)
++        + " UNION SELECT requested_session_id FROM turn_submissions WHERE turn_id IN ("
++        + ",".join(f"{row}.id" for row in _rows)
++        + ")",
++    )
++    SCHEMA += _trigger(
++        "turn_submissions",
++        _operation,
++        " UNION ".join(
++            f"SELECT {row}.{column}"
++            for row in _rows
++            for column in ("requested_session_id", "effective_session_id")
++        ),
++    )
++    SCHEMA += _trigger(
++        "tool_actions",
++        _operation,
++        "SELECT session_id FROM turns WHERE id IN ("
++        + ",".join(f"{row}.turn_id" for row in _rows)
++        + ")",
++    )
++    SCHEMA += _trigger(
++        "response_versions",
++        _operation,
++        "SELECT session_id FROM messages WHERE id IN ("
++        + ",".join(f"{row}.message_id" for row in _rows)
++        + ")",
++    )
++
++
++def initialize(db):
++    # Run after the observed tables exist; backfill never resets existing counters.
++    db.executescript(SCHEMA)
++
++
++def read(store, session_id):
++    with store._connect() as db:
++        db.execute("BEGIN")
++        row = db.execute(
++            "SELECT s.status,o.revision,EXISTS(SELECT 1 FROM forgotten_sessions f "
++            "WHERE f.session_id=s.id) AS forgotten FROM sessions s "
++            "JOIN session_observations o ON o.session_id=s.id WHERE s.id=?",
++            (session_id,),
++        ).fetchone()
++        if row is None:
++            raise ValueError("Conversation not found.")
++        revision = row["revision"]
++        # Do not round, wrap or saturate a counter into a misleading unchanged token.
++        if type(revision) is not int or not 0 <= revision <= MAX_SAFE_REVISION:
++            raise OverflowError("Conversation observation unavailable.")
++        forgotten = bool(row["forgotten"] or row["status"] == "forgotten")
++        active = (
++            False
++            if forgotten
++            else bool(
++                db.execute(
++                    "SELECT EXISTS(SELECT 1 FROM turns WHERE session_id=? AND status='running') "
++                    "OR EXISTS(SELECT 1 FROM turns t JOIN turn_submissions s ON s.turn_id=t.id "
++                    "WHERE s.requested_session_id=? AND t.status='running') "
++                    "OR EXISTS(SELECT 1 FROM turn_submissions "
++                    "WHERE (requested_session_id=? OR effective_session_id=?) AND state='preparing') "
++                    "OR EXISTS(SELECT 1 FROM background_thinking "
++                    "WHERE session_id=? AND status IN ('queued','running'))",
++                    (session_id, session_id, session_id, session_id, session_id),
++                ).fetchone()[0]
++            )
++        )
++        return {
++            "schemaVersion": 1,
++            "session_id": session_id,
++            "revision": revision,
++            "active": active,
++            "content_status": "forgotten" if forgotten else "available",
++        }
 diff --git a/pi/setup_model_probes.py b/pi/setup_model_probes.py
 index c1e0d21..22d9255 100644
 --- a/pi/setup_model_probes.py
@@ -3762,10 +3925,18 @@ index c0df78b..520e13d 100644
              ],
              "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
-index c59ea34..62db805 100644
+index c59ea34..ce92512 100644
 --- a/pi/store.py
 +++ b/pi/store.py
-@@ -254,6 +254,10 @@ def _message(row: sqlite3.Row) -> dict:
+@@ -53,6 +53,7 @@ from . import (
+     research_usage,
+     response_retries,
+     response_versions,
++    session_observation,
+     session_settings,
+     setup_choices,
+     setup_model_probes,
+@@ -254,6 +255,10 @@ def _message(row: sqlite3.Row) -> dict:
  
  def _message_with_attachments(db, row):
      item = _message(row)
@@ -3776,7 +3947,7 @@ index c59ea34..62db805 100644
      if item.get("content_status") != "forgotten":
          version = db.execute(
              "SELECT v.root_message_id,v.retry_of,f.selected_message_id,f.revision "
-@@ -331,6 +335,7 @@ class Store:
+@@ -331,6 +336,7 @@ class Store:
                  db.executescript(response_retries.SCHEMA)
                  db.executescript(turn_steering.SCHEMA)
                  db.executescript(research_usage.SCHEMA)
@@ -3784,7 +3955,15 @@ index c59ea34..62db805 100644
                  db.executescript(universal_search.SCHEMA)
                  db.executescript(message_citations.SCHEMA)
                  owner_preferences.initialize(db)
-@@ -388,6 +393,14 @@ class Store:
+@@ -357,6 +363,7 @@ class Store:
+                 system_inventory.initialize(db)
+                 db.executescript(filesystem_reads.SCHEMA)
+                 db.executescript(system_actions.SCHEMA)
++                session_observation.initialize(db)
+         except BaseException:
+             self.close()
+             raise
+@@ -388,6 +395,14 @@ class Store:
                  db.execute(f"ALTER TABLE turns ADD COLUMN {column} TEXT")
          if "acted" not in have:
              db.execute("ALTER TABLE turns ADD COLUMN acted INTEGER NOT NULL DEFAULT 0")
@@ -3799,7 +3978,7 @@ index c59ea34..62db805 100644
  
      @contextmanager
      def _connect(self) -> Iterator[sqlite3.Connection]:
-@@ -411,43 +424,50 @@ class Store:
+@@ -411,43 +426,50 @@ class Store:
          agent_id: str | None = None,
          privacy: dict[str, bool] | None = None,
      ) -> str:
@@ -4835,10 +5014,57 @@ index 0000000..72643fb
 +        assert len(gate.invocations) == 1 and len(provider.sent) == 2
 +    assert not foreground_inference._active
 diff --git a/tests/test_forgetting.py b/tests/test_forgetting.py
-index cab427b..a9cd061 100644
+index cab427b..1114547 100644
 --- a/tests/test_forgetting.py
 +++ b/tests/test_forgetting.py
-@@ -372,7 +372,7 @@ def test_citation_http_distinguishes_forgotten_from_missing_and_cannot_delete(
+@@ -74,6 +74,12 @@ def test_content_and_derived_copies_disappear_but_envelopes_and_receipt_survive(
+                 "content_status": "forgotten",
+                 "receipt_id": receipt["id"],
+                 "forgotten_at": receipt["forgotten_at"],
++                "memory_delivery": {
++                    "state": "removed",
++                    "reason_code": "forgotten",
++                    "admission_method": None,
++                    "memory_id": None,
++                },
+             }
+             assert store.messages(original["session_id"]) == [row]
+         for sid in (root, child):
+@@ -88,7 +94,15 @@ def test_content_and_derived_copies_disappear_but_envelopes_and_receipt_survive(
+                 assert turn[field] == original[field]
+         assert store.awaiting_approval() == []
+         assert store.acted_without_reply() == []
+-        assert store.get_message(kept["id"]) == kept
++        assert store.get_message(kept["id"]) == {
++            **kept,
++            "memory_delivery": {
++                "state": "pending",
++                "reason_code": "queued",
++                "admission_method": None,
++                "memory_id": None,
++            },
++        }
+         assert store.get_session(other)["title"] == "unrelated"
+         store.append_message(other, "assistant", "still usable")
+     # Scan the live database and its sidecars, not just SELECT output.
+@@ -361,7 +375,15 @@ def test_citation_http_distinguishes_forgotten_from_missing_and_cannot_delete(
+         assert response.json()["receipt_id"] == receipt["id"]
+         assert response.json()["forgotten_at"] == receipt["forgotten_at"]
+         assert client.get("/messages/unknown", headers=headers).status_code == 404
+-        assert client.get(f"/messages/{kept['id']}", headers=headers).json() == kept
++        assert client.get(f"/messages/{kept['id']}", headers=headers).json() == {
++            **kept,
++            "memory_delivery": {
++                "state": "pending",
++                "reason_code": "queued",
++                "admission_method": None,
++                "memory_id": None,
++            },
++        }
+         session = client.get(f"/sessions/{root}", headers=headers).json()
+         assert session["messages"][0] == response.json()
+         for method in (client.delete, client.patch, client.post):
+@@ -372,7 +394,7 @@ def test_citation_http_distinguishes_forgotten_from_missing_and_cannot_delete(
              assert client.post(f"/turns/{turn['id']}/resume", headers=headers).status_code == 409
  
  
@@ -4847,7 +5073,7 @@ index cab427b..a9cd061 100644
      path, root, *_ = conversation
  
      class Provider:
-@@ -391,7 +391,10 @@ def test_model_request_to_forget_is_only_conversation(conversation):
+@@ -391,7 +413,10 @@ def test_model_request_to_forget_is_only_conversation(conversation):
          # a fresh conversation rather than bypassing the unresolved-turn guard.
          chat = store.create_session()
          store.append_message(chat, "user", SECRET)
@@ -8108,6 +8334,371 @@ index 0000000..46d31ec
 +        usage = research_usage.receipt(store, result["turn_id"])
 +        assert usage["foreground"]["attempt_count"] == 3
 +        assert usage["thinking"]["attempt_count"] == 1
+diff --git a/tests/test_session_observation.py b/tests/test_session_observation.py
+new file mode 100644
+index 0000000..992a07e
+--- /dev/null
++++ b/tests/test_session_observation.py
+@@ -0,0 +1,359 @@
++"""External work is observable without loading content or advancing a write receipt."""
++
++import hashlib
++import json
++import sqlite3
++from contextlib import closing, contextmanager
++
++import pytest
++from fastapi.testclient import TestClient
++from test_gateway_api import RUNTIME, gateway, sign_in  # noqa: F401
++from test_loop import Recorder, loop_with
++from test_response_versions import alternative, choose
++
++from pi import actions, api, browser_contract, forgetting, session_observation, submissions
++from pi.store import Store
++
++
++@pytest.fixture
++def store(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as value:
++        yield value
++
++
++def observe(store, sid):
++    return session_observation.read(store, sid)
++
++
++def test_idle_fast_complete_and_other_session_isolation(store):
++    sid, other = store.create_session(title="Private title"), store.create_session()
++    before, untouched = observe(store, sid), observe(store, other)
++    assert before == {
++        "schemaVersion": 1,
++        "session_id": sid,
++        "revision": 1,
++        "active": False,
++        "content_status": "available",
++    }
++    provider = Recorder("Private answer")
++    loop_with(store, provider).run_turn(sid, "Private request")
++    # Both observations can be idle; the counter still detects the intervening turn.
++    after = observe(store, sid)
++    assert not after["active"] and after["revision"] > before["revision"]
++    assert observe(store, other) == untouched
++    assert "Private" not in json.dumps(after)
++
++
++def test_messages_same_status_turn_update_resume_and_session_close(store):
++    sid = store.create_session()
++    previous = observe(store, sid)["revision"]
++    store.append_message(sid, "user", "Independent message")
++    assert observe(store, sid)["revision"] > previous
++    tid = store.start_turn(sid)
++    running = observe(store, sid)
++    assert running["active"]
++    with store._connect() as db:
++        db.execute("UPDATE turns SET detail='Private intermediate detail' WHERE id=?", (tid,))
++    assert observe(store, sid)["revision"] > running["revision"]
++    store.finish_turn(tid, "acted_no_reply", acted=1)
++    parked = observe(store, sid)
++    assert not parked["active"]
++    assert store.claim_turn(tid, "acted_no_reply")
++    assert observe(store, sid)["active"]
++    assert observe(store, sid)["revision"] > parked["revision"]
++    store.finish_turn(tid, "complete")
++    previous = observe(store, sid)["revision"]
++    store.close_session(sid, "closed")
++    assert observe(store, sid)["revision"] > previous
++
++
++@pytest.mark.parametrize(
++    "status",
++    [
++        "awaiting_approval",
++        "awaiting_budget",
++        "action_in_progress",
++        "outcome_unknown",
++        "interrupted",
++        "failed",
++        "cancelled",
++    ],
++)
++def test_parked_unknown_and_terminal_turns_are_not_processing(store, status):
++    sid = store.create_session()
++    tid = store.start_turn(sid)
++    store.finish_turn(tid, status, acted=1)
++    assert not observe(store, sid)["active"]
++
++
++def test_preturn_preparation_failure_replay_and_restart_recovery(store):
++    sid = store.create_session()
++    before = observe(store, sid)
++    args = (store, "external_prepare_01", sid, "Private text", None)
++    submissions.reserve(*args)
++    preparing = observe(store, sid)
++    assert preparing["active"] and preparing["revision"] > before["revision"]
++    assert store.turns(sid) == [] and store.messages(sid) == []
++    assert submissions.reserve(*args)[1] is False
++    assert observe(store, sid) == preparing
++    submissions.fail_preparation(store, "external_prepare_01")
++    failed = observe(store, sid)
++    assert not failed["active"] and failed["revision"] > preparing["revision"]
++    submissions.reserve(store, "external_prepare_02", sid, "Other", None)
++    before = observe(store, sid)
++    with store._connect() as db:
++        submissions.recover_preparations(db)
++    assert not observe(store, sid)["active"]
++    assert observe(store, sid)["revision"] > before["revision"]
++
++
++def test_forked_submission_updates_source_and_effective_conversation(store):
++    sid = store.create_session()
++    submissions.reserve(store, "external_fork_0001", sid, "Private text", None)
++    before = observe(store, sid)
++    bound = submissions.bind(store, "external_fork_0001", fork_summary="Private summary")
++    child, tid = bound["effective_session_id"], bound["turn_id"]
++    assert child != sid and store.get_session(sid)["status"] == "forked"
++    source, destination = observe(store, sid), observe(store, child)
++    assert source["active"] and destination["active"]
++    assert source["revision"] > before["revision"]
++    store.complete_turn(tid, "Final reply")
++    assert not observe(store, sid)["active"] and not observe(store, child)["active"]
++    assert observe(store, sid)["revision"] > source["revision"]
++    assert observe(store, child)["revision"] > destination["revision"]
++    assert submissions.list_pending(store, sid)["results"] == []
++
++
++def test_tool_action_and_thinking_transitions_are_observed(store):
++    sid = store.create_session()
++    tid = store.start_turn(sid)
++    before = observe(store, sid)
++    actions.prepare(store, tid, "synthetic.read", {"private": "args"}, "action_observe_01")
++    assert observe(store, sid)["revision"] > before["revision"]
++    before = observe(store, sid)
++    actions.state(store, "action_observe_01", "outcome_unknown")
++    assert observe(store, sid)["revision"] > before["revision"]
++    store.finish_turn(tid, "complete")
++    with store._connect() as db:
++        db.execute(
++            "INSERT INTO background_thinking(turn_id,session_id,status,created_at) VALUES(?,?,'queued',0)",
++            (tid, sid),
++        )
++    queued = observe(store, sid)
++    assert queued["active"]
++    for status in ("running", "completed", "canceled"):
++        before = observe(store, sid)
++        with store._connect() as db:
++            db.execute(
++                "UPDATE background_thinking SET status=?,result='Private finding' WHERE turn_id=?",
++                (status, tid),
++            )
++        after = observe(store, sid)
++        assert after["revision"] > before["revision"]
++        assert after["active"] is (status == "running")
++        assert "Private" not in json.dumps(after)
++    before = observe(store, sid)
++    with store._connect() as db:
++        db.execute("DELETE FROM background_thinking WHERE turn_id=?", (tid,))
++    assert observe(store, sid)["revision"] > before["revision"]
++
++
++def test_response_selection_updates_revision_without_new_messages(store):
++    sid = store.create_session()
++    original = loop_with(store, Recorder("Original")).run_turn(sid, "Question")["message"]
++    root, replacement = alternative(store, sid, original["id"])
++    before, message_count = observe(store, sid), len(store.messages(sid))
++    choose(store, sid, root, replacement["id"])
++    assert observe(store, sid)["revision"] > before["revision"]
++    assert len(store.messages(sid)) == message_count
++    assert not observe(store, sid)["active"]
++
++
++def test_revision_migration_existing_sessions_and_repeated_startup(tmp_path):
++    path = tmp_path / "pi.db"
++    with closing(Store(path)) as original:
++        sid = original.create_session()
++        original.append_message(sid, "user", "Old private content")
++    # Simulate a prior release, retaining all actual history and authority tables.
++    with sqlite3.connect(path) as db:
++        names = [
++            row[0]
++            for row in db.execute(
++                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'session_observation_%'"
++            )
++        ]
++        for name in names:
++            db.execute(f'DROP TRIGGER "{name}"')
++        db.execute("DROP TABLE session_observations")
++    with closing(Store(path)) as migrated:
++        assert observe(migrated, sid)["revision"] == 0
++        migrated.append_message(sid, "user", "New content")
++        expected = observe(migrated, sid)
++        assert expected["revision"] > 0
++        with migrated._connect() as db:
++            session_observation.initialize(db)
++        assert observe(migrated, sid) == expected
++    with closing(Store(path)) as reopened:
++        assert observe(reopened, sid) == expected
++        assert len(reopened.messages(sid)) == 2
++
++
++def test_reads_are_content_free_and_do_not_write_or_load_history(store, monkeypatch):
++    sid = store.create_session()
++    store.append_message(sid, "user", "Private content")
++
++    def forbidden(*args, **kwargs):
++        pytest.fail("Observation must not load a transcript or model")
++
++    monkeypatch.setattr(store, "messages", forbidden)
++    monkeypatch.setattr(store, "turns", forbidden)
++    with store._connect() as monitor:
++        version = monitor.execute("PRAGMA data_version").fetchone()[0]
++        baseline = observe(store, sid)
++        for _ in range(4):
++            assert observe(store, sid) == baseline
++        assert monitor.execute("PRAGMA data_version").fetchone()[0] == version
++
++
++def test_snapshot_revision_and_active_are_coherent_during_concurrent_commit(store, monkeypatch):
++    sid = store.create_session()
++    baseline = observe(store, sid)
++    connect = store._connect
++    changed = False
++
++    class Connection:
++        def __init__(self, db):
++            self.db = db
++
++        def execute(self, statement, *args):
++            nonlocal changed
++            cursor = self.db.execute(statement, *args)
++            if statement.startswith("SELECT s.status") and not changed:
++                changed = True
++                with connect() as writer:
++                    writer.execute(
++                        "INSERT INTO turns(id,session_id,status,started_at) VALUES('trn_concurrent',?,'running',0)",
++                        (sid,),
++                    )
++            return cursor
++
++    @contextmanager
++    def hooked():
++        with connect() as db:
++            yield Connection(db)
++
++    monkeypatch.setattr(store, "_connect", hooked)
++    assert observe(store, sid) == baseline
++    following = observe(store, sid)
++    assert following["active"] and following["revision"] > baseline["revision"]
++
++
++def test_transaction_rollback_does_not_publish_revision(store):
++    sid = store.create_session()
++    before = observe(store, sid)
++    with store._connect() as db:
++        db.execute("BEGIN IMMEDIATE")
++        db.execute(
++            "INSERT INTO turns(id,session_id,status,started_at) VALUES('trn_rollback',?,'running',0)",
++            (sid,),
++        )
++        db.rollback()
++    assert observe(store, sid) == before
++
++
++@pytest.mark.parametrize("populated", [False, True])
++def test_offline_forget_advances_and_masks_observation(store, populated):
++    sid = store.create_session(title="Private title")
++    if populated:
++        loop_with(store, Recorder("Private answer")).run_turn(sid, "Private input")
++    before = observe(store, sid)
++    plan = forgetting.preview(store.path, sid)
++    store.close()
++    forgetting.forget(store.path, sid, plan["confirmation"])
++    with closing(Store(store.path)) as reopened:
++        after = observe(reopened, sid)
++        assert after["revision"] > before["revision"]
++        assert after["content_status"] == "forgotten" and not after["active"]
++        assert "Private" not in json.dumps(after)
++
++
++def test_independent_forget_tombstone_masks_running_legacy_rows(store):
++    sid = store.create_session()
++    store.start_turn(sid)
++    before = observe(store, sid)
++    with store._connect() as db:
++        db.execute("INSERT INTO forgetting_receipts VALUES('del_test',?,0,'confirmed',0,1)", (sid,))
++        db.execute("INSERT INTO forgotten_sessions VALUES(?,'del_test')", (sid,))
++    after = observe(store, sid)
++    assert after["revision"] > before["revision"]
++    assert after["content_status"] == "forgotten" and not after["active"]
++
++
++def test_api_auth_query_identity_bounds_and_safe_revision(store, monkeypatch):
++    sid = store.create_session()
++    monkeypatch.setattr(api.app.state, "store", store, raising=False)
++    monkeypatch.setattr(api.app.state, "admin_key", "recovery-key", raising=False)
++    monkeypatch.setattr(
++        api.app.state, "gateway_key_hash", hashlib.sha256(b"runtime-key").hexdigest(), raising=False
++    )
++    client = TestClient(api.app)
++    headers = {"X-Pi-Gateway-Key": "runtime-key"}
++    path = f"/sessions/{sid}/observation"
++    assert browser_contract.runtime_allowed("GET", path)
++    assert not browser_contract.runtime_allowed("POST", path)
++    assert client.get(path).status_code == 401
++    result = client.get(path, headers=headers)
++    assert result.json() == observe(store, sid)
++    assert result.headers["Cache-Control"] == "no-store"
++    assert client.get(path, headers={"X-Pi-Key": "recovery-key"}).json() == result.json()
++    for suffix in ("?text=private", "?limit=1", "?revision=1&revision=2"):
++        assert client.get(path + suffix, headers=headers).status_code == 422
++    assert client.get("/sessions/missing/observation", headers=headers).status_code == 404
++    for identity in ("bad.id", "a" * 129, "日本語"):
++        assert (
++            client.get(
++                f"/sessions/{identity}/observation", headers={"X-Pi-Key": "recovery-key"}
++            ).status_code
++            == 422
++        )
++    with store._connect() as db:
++        db.execute(
++            "UPDATE session_observations SET revision=? WHERE session_id=?",
++            (session_observation.MAX_SAFE_REVISION + 1, sid),
++        )
++    assert client.get(path, headers=headers).status_code == 503
++
++
++def test_gateway_uses_scoped_runtime_credential_and_never_forwards_browser_keys(gateway):
++    client, _, seen = gateway
++    path = "/api/pi/sessions/ses_synthetic/observation"
++    assert client.get(path).status_code == 401
++    assert not seen
++    sign_in(client)
++    response = client.get(path, headers={"X-Pi-Key": "attacker", "X-Pi-Gateway-Key": "attacker"})
++    assert response.status_code == 200
++    assert len(seen) == 1
++    assert seen[0].headers["X-Pi-Gateway-Key"] == RUNTIME
++    assert "X-Pi-Key" not in seen[0].headers
++    assert "Set-Cookie" not in response.headers and response.headers["Cache-Control"] == "no-store"
++    assert client.post(path, json={}, headers=sign_in(client)).status_code == 403
++    assert len(seen) == 1
++
++
++def test_idle_queries_have_partial_active_indexes(store):
++    with store._connect() as db:
++        queries = [
++            (
++                "SELECT 1 FROM background_thinking WHERE session_id=? AND status IN ('queued','running')",
++                "observation_active_thinking",
++            ),
++            (
++                "SELECT 1 FROM turns WHERE session_id=? AND status='running'",
++                "observation_running_turns",
++            ),
++        ]
++        for query, index in queries:
++            plan = " ".join(
++                str(tuple(row)) for row in db.execute("EXPLAIN QUERY PLAN " + query, ("missing",))
++            )
++            assert index in plan
 diff --git a/tests/test_setup_activation.py b/tests/test_setup_activation.py
 new file mode 100644
 index 0000000..984f6fa

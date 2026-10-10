@@ -56,6 +56,7 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const sessions = seed()
+  const observations = new Map<string, { signature: string; revision: number }>()
   // Reloadable, development-only saved outcomes. They never invoke a provider or tool.
   const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
   if (outcomeScenario) {
@@ -483,6 +484,12 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       sessions.push(created)
       sessionSettings.set(created.id, { revision: 1, settings: { agentId, privacy: { memoryDisabled: Boolean(privacy?.memoryDisabled), harnessDisabled: Boolean(privacy?.harnessDisabled) } } })
       return { session_id: created.id }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/observation$/)) && method === 'GET') {
+      const item = find(match[1]), signature = JSON.stringify(item), before = observations.get(item.id)
+      const next = { signature, revision: (before?.revision ?? 0) + (before?.signature === signature ? 0 : 1) }
+      observations.set(item.id, next)
+      return { schemaVersion: 1, session_id: item.id, revision: next.revision, active: item.turns.some(turn => turn.status === 'running'), content_status: 'available' }
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)$/)) && method === 'GET') {
       const item = find(match[1])
