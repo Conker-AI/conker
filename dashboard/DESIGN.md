@@ -347,8 +347,9 @@ fail. Expose partial, unavailable and degraded coverage rather than inventing hi
 
 Settings use verified writes with revision checks. Metadata and literal text need
 no provider; semantic retrieval and bounded `search-ranking` are opt-in. The model
-role owns its model, timeout and fallback. Current source adapters scan at most
-200 records; memory library text is limited to retained previews, and only
+role owns its model, timeout and fallback. Conversation metadata matches retained
+titles and summaries before the cap of 200 eligible results; other metadata
+adapters still use bounded scans. Memory library text is limited to retained previews, and only
 MemoryGate supplies a semantic index. Other sources have no semantic capability
 until their source-owned index adapters exist. Do not describe this as complete
 cross-source indexing. Private and forgotten origins remain excluded. No raw

@@ -13,6 +13,33 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Find older chat metadata in global search (10 October)
+
+Global search now matches retained conversation titles and summaries before its
+200-result allowance. Private and forgotten matches do not consume that allowance;
+the forgotten ledger also excludes inconsistent legacy rows. Coverage is partial
+only when more than 200 eligible matches exist, not merely because the database
+contains more than 200 chats. A single indexed read snapshot streams candidates
+without materializing the full history. Existing exact-text search, ranking,
+response fields and pagination remain unchanged in this slice.
+
+All 38 focused backend cases passed, including 25 new regressions, alongside
+independent review and lint. Fresh and repeated installation reproduce 89 reviewed
+Pi files. Frontend search checks, affected lint, TypeScript and the design/build
+guards passed. Settings now describes bounded results without incorrectly claiming
+all sources search the same recent-record window. Other sources retain their prior
+scan limits, and incomplete-coverage and ranking notices remain visible.
+
+Pi and Gateway are healthy after local rollout. All 169 published assets match the
+staged manifest; the entry remains 602,046 bytes. Prior assets and database backups
+are retained. A live browser metadata query reported searched conversation coverage
+and preserved focus. Browser-only partial/unavailable responses retained their
+coverage notice. Desktop and mobile settings screenshots were inspected.
+
+The parallel audit verified two further privacy gaps: exact-message eligibility
+does not yet apply every legacy default/ledger rule, and open global results need
+to clear when forgetting is discovered. Those isolated fixes follow this milestone.
+
 ### Browse and search older chats from the UI and CLI (10 October)
 
 Chats now reads a compact, paged directory instead of filtering the recent 200
@@ -45,9 +72,8 @@ retained results after browser-only 503 errors, visible recovery and keyboard re
 Isolated UI checks covered 50-to-100-row paging and long summary wrapping; the live
 database contains eight visible chats. Screenshots were inspected.
 
-Global search still has its separate recent-metadata limit in this rollout. Its
-reviewed older-match fix and newly verified exact-search privacy alignment are the
-next isolated slices; neither is implied by this directory milestone.
+The subsequent metadata-search milestone above removes the separate global-search
+recent-metadata limit. Exact-search privacy alignment remains a distinct slice.
 
 ### Discover CLI-created chats across the workspace (10 October)
 
