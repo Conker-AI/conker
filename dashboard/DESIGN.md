@@ -345,6 +345,17 @@ navigates to its actual source; search never executes work or changes authority.
 Abort obsolete queries, debounce typing and retain literal results when providers
 fail. Expose partial, unavailable and degraded coverage rather than inventing hits.
 
+Global search belongs to the authenticated workspace. Authentication or workspace
+identity changes close it and clear query and results. A shared forget notification
+immediately clears all record results and cancels earlier reads, then repeats the
+open query without moving focus. Known forgotten conversation identities and
+session-linked result URLs remain masked even in a newer stale source response.
+Opaque derived records expose no session identity; their renewed eligibility is
+owned by the source's privacy check, not inferred by the browser. Page commands
+remain usable when record reads fail. Settings, stage and pagination reads have
+deadlines; explicit retry keeps recovery available without an automatic retry loop.
+Whitespace-only changes preserve the current request and its results.
+
 Settings use verified writes with revision checks. Metadata and literal text need
 no provider; semantic retrieval and bounded `search-ranking` are opt-in. The model
 role owns its model, timeout and fallback. Conversation metadata matches retained

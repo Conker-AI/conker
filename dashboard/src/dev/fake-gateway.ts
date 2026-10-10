@@ -412,6 +412,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       }
       return structuredClone(saved)
     }
+    if (method === 'GET' && ['/api/control/pi/search', '/api/control/pi/search/settings'].includes(path) && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'search') fail(503)
     if (path === '/api/control/pi/search/settings') {
       if (method === 'POST') {
         if (options.body?.expected_revision !== searchSettings.revision) fail(409)
@@ -487,7 +488,11 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const page = matches.slice(0, limit)
       return { schemaVersion: 1, results: page.map(row => ({ ...sessionRow(row), title: [...row.title].slice(0, 300).join(''), summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null, content_status: 'available', title_truncated: [...row.title].length > 300, summary_truncated: [...row.summary ?? ''].length > 400 })), next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null }
     }
-    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).slice(0, 200).map(sessionRow) }
+    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).slice(0, 200).map(session => {
+      const row = sessionRow(session)
+      // Search deliberately keeps its earlier data so the real UI's stale-result mask is exercised.
+      return session.id === previewSessions.week && globalThis.sessionStorage?.getItem('conker-fake-search-forgotten') === 'week' ? { ...row, status: 'forgotten', title: '', summary: null } : row
+    }) }
     if (method === 'POST' && path === '/api/pi/sessions') {
       // Failure-path switch: a first message containing [fail] makes creation fail with a server error.
       if (String(options.body?.title ?? '').includes('[fail]')) fail(503)

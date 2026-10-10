@@ -13,6 +13,44 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Apply conversation privacy consistently during search (10 October)
+
+Exact-message search now applies the same current settings, legacy setup defaults
+and immutable private-origin policy as conversation metadata. The authoritative
+forgotten-session ledger excludes inconsistent legacy rows. These checks precede
+pagination, so private candidates cannot hide older permitted results. Cursor,
+privacy and message reads share one snapshot; SQL returns at most 51 rows and the
+per-search policy cache is bounded to 256 entries. APIs and cursor formats remain
+compatible.
+
+Global search now clears record results and cursors immediately when forgetting
+is discovered. Late settings, result and pagination responses cannot restore them;
+known forgotten session identities remain masked in fresh responses, and record
+activation rechecks current state. Query and focus survive this refresh. Opaque
+derived records rely on a fresh source eligibility check. Auth/workspace identity
+changes close search and clear it. Whitespace edits no longer strand a request,
+and read deadlines expose explicit retry while keeping page commands available.
+
+Backend verification passed 80 distinct search/settings/forgetting cases, including
+10 new privacy cases and an independent rerun of those cases. Installation is
+repeatable across all 91 reviewed Pi files. New executable search-lifecycle cases,
+existing search checks, the full gateway suite, TypeScript, affected lint and the
+405-file design check passed. Independent code review and isolated desktop light/
+mobile dark checks passed. Live checks verified ten exact matches and two metadata
+matches against permitted source identities without changing model/search settings.
+Browser-only stale-result injection verified immediate masking with query/focus
+retained. Live keyboard testing caught competing Enter handlers: Retry also selected
+the highlighted page. Footer Enter now preserves native button activation while
+blocking that competing command. Isolated regression checks require a successful
+recovery response, unchanged URL, retained dialog and focused search input; they pass.
+
+The final local build publishes 169 manifest-verified assets with a 604,606-byte
+entry, below the unchanged 700,000-byte guard. Pi and Gateway are healthy, with
+prior assets and database backups retained. Live mobile keyboard retry confirmed
+both successful settings/result responses, unchanged navigation, an open dialog
+and restored input focus. No horizontal overflow was present. The browser returned
+to desktop dark, and the model/search configuration remained unchanged.
+
 ### Find older chat metadata in global search (10 October)
 
 Global search now matches retained conversation titles and summaries before its
@@ -36,9 +74,8 @@ are retained. A live browser metadata query reported searched conversation cover
 and preserved focus. Browser-only partial/unavailable responses retained their
 coverage notice. Desktop and mobile settings screenshots were inspected.
 
-The parallel audit verified two further privacy gaps: exact-message eligibility
-does not yet apply every legacy default/ledger rule, and open global results need
-to clear when forgetting is discovered. Those isolated fixes follow this milestone.
+The subsequent privacy milestone above aligns exact-message eligibility and clears
+open global results when forgetting is discovered.
 
 ### Browse and search older chats from the UI and CLI (10 October)
 
