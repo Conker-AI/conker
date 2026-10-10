@@ -10,7 +10,7 @@ import sys
 import uuid
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from workspace import read_config
@@ -224,7 +224,32 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def request(config, service, path, body=None):
+def history_query(values):
+    """Keep the only query-enabled CLI route bounded and literal."""
+    if not isinstance(values, dict) or set(values) - {"limit", "q", "cursor"}:
+        raise ValueError("Use only limit, query and cursor for chat history.")
+    if "limit" in values and (
+        type(values["limit"]) is not int or not 1 <= values["limit"] <= 50
+    ):
+        raise ValueError("Choose a chat page size from 1 to 50.")
+    if "q" in values:
+        query = values["q"]
+        if not isinstance(query, str) or len(query) > 200 or "\x00" in query:
+            raise ValueError("Use a chat query of at most 200 characters without NUL.")
+        try:
+            query.encode("utf-8")
+        except UnicodeError:
+            raise ValueError("Use valid Unicode for the chat query.") from None
+    if "cursor" in values:
+        cursor = values["cursor"]
+        if not isinstance(cursor, str) or not re.fullmatch(
+            r"h1\.[0-9a-f]{64}\.[A-Za-z0-9_-]{1,128}", cursor, re.ASCII
+        ):
+            raise ValueError("Use the next_cursor returned by the same chat search.")
+    return values
+
+
+def request(config, service, path, body=None, *, query=None):
     if service not in {"providers", "toolgate-owner", "pi-owner", "toolgate", "pi"}:
         raise ValueError("Choose a configured Conker service.")
     if (
@@ -234,6 +259,14 @@ def request(config, service, path, body=None):
         or any(ord(character) < 32 for character in path)
     ):
         raise ValueError("Use a service-relative path without query or fragment.")
+    suffix = ""
+    if query is not None:
+        if service != "pi" or path != "/sessions/history" or body is not None:
+            raise ValueError(
+                "Structured query options are only for reading chat history."
+            )
+        encoded = urlencode(history_query(query))
+        suffix = "?" + encoded if encoded else ""
     if service == "providers":
         origin, headers = (
             "http://127.0.0.1:18570",
@@ -279,7 +312,7 @@ def request(config, service, path, body=None):
         else None
     )
     with build_opener(ProxyHandler({}), NoRedirect()).open(
-        Request(origin + path, data=data, headers=headers), timeout=660
+        Request(origin + path + suffix, data=data, headers=headers), timeout=660
     ) as response:
         return json.load(response)
 
@@ -287,7 +320,14 @@ def request(config, service, path, body=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("sessions")
+    sessions = commands.add_parser("sessions", help="Browse compact chat history pages")
+    sessions.add_argument("--limit", type=int, default=50, help="Chats per page (1-50)")
+    sessions.add_argument(
+        "--query", help="Literal title/summary search, at most 200 characters"
+    )
+    sessions.add_argument(
+        "--cursor", help="next_cursor from the same query; omit to refresh"
+    )
     new = commands.add_parser("new")
     new.add_argument("title", nargs="?", default="")
     chat = commands.add_parser("chat")
@@ -514,7 +554,24 @@ def main():
         )
         return subprocess.call([native[args.harness], *args.arguments], env=env)
     if args.command == "sessions":
-        value = request(config, "pi", "/sessions")
+        query = history_query(
+            {
+                "limit": args.limit,
+                **({"q": args.query} if args.query is not None else {}),
+                **({"cursor": args.cursor} if args.cursor is not None else {}),
+            }
+        )
+        try:
+            value = request(config, "pi", "/sessions/history", query=query)
+        except HTTPError as exc:
+            exc.close()
+            message = (
+                "Chat history request was rejected. Start again without --cursor; "
+                "use the same query when continuing its next page."
+                if exc.code == 422
+                else f"Chat history could not be read (HTTP {exc.code}); try again later."
+            )
+            raise ValueError(message) from None
     elif args.command == "new":
         value = request(config, "pi", "/sessions", {"title": args.title})
     elif args.command == "show":

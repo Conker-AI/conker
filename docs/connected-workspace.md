@@ -77,11 +77,17 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   conversations remain directly accessible.
 - Expand Open views to manage feature pages and conversations as tabs. Pin,
   close, reorder, or move with Left/Right/Home/End. Delete closes an unpinned tab.
-- Chats created through the CLI appear in the sidebar and Chats page automatically
-  while the app is visible and online. One shared recent-list check runs every
-  15 seconds, also refreshing on focus and reconnection. Delayed updates retain
-  the previous rows and search with a Try again action. The current list contains
-  the newest 200 chats; older chats remain stored and their direct links work.
+- Chats created through the CLI appear in the sidebar automatically while the
+  app is visible and online. One shared recent-list check runs every 15 seconds,
+  also refreshing on focus and reconnection. Delayed updates retain previous
+  rows with a Try again action. This recent window contains the newest 200 chats.
+- Chats also browses older conversations through Load older. Its search covers
+  stored titles and summaries before paging, with compact previews in results.
+  Counts describe loaded results. Refresh chats reads a fresh first page; loaded
+  pages otherwise retain their last-read state. New-chat notices come from the
+  shared recent list and offer an explicit refresh without disturbing search.
+  Read errors preserve the same query's loaded results, and known forgotten
+  records disappear immediately.
 - Tabs are in-memory navigation, not duplicated records. Unsent drafts save to
   the private server with their model, skills, research mode and Think choice.
   The new-chat draft also retains its agent, title and privacy choices. Composer

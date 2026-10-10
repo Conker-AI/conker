@@ -4,6 +4,7 @@ import { parseSkills, validateSkillIds } from './skills'
 import type { GatewayDraftClient } from './drafts'
 import type { GatewayTurnUsageClient } from './turn-usage'
 import type { MemoryDelivery } from './memory-delivery'
+import type { GatewayHistoryClient } from './session-history'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -239,7 +240,10 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
   const drafts = () => draftClient ??= import('./drafts').then(module => module.createGatewayDraftClient(auth))
   let usageClient: Promise<GatewayTurnUsageClient> | undefined
   const usage = () => usageClient ??= import('./turn-usage').then(module => module.createGatewayTurnUsageClient(auth))
+  let historyClient: Promise<GatewayHistoryClient> | undefined
+  const history = () => historyClient ??= import('./session-history').then(module => module.createGatewayHistoryClient(auth))
   return {
+    getSessionHistory: async (...args: Parameters<GatewayHistoryClient['list']>) => (await history()).list(...args),
     getTurnUsage: async (...args: Parameters<GatewayTurnUsageClient['get']>) => (await usage()).get(...args),
     drafts: {
       load: async (...args: Parameters<GatewayDraftClient['load']>) => (await drafts()).load(...args),

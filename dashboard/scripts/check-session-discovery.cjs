@@ -121,38 +121,15 @@ async function controllerCases() {
 }
 
 function collectionCases() {
-  // Execute the real collection component with its state retained across discovery changes.
-  const source = fs.readFileSync(path.join(root, 'src/components/gateway/chats-workspace.tsx'), 'utf8')
-  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  let query = '', discovery = { rows: [row()], loaded: true, refreshing: false, error: false, refresh: async () => true }, tree
-  const jsx = (type, props) => ({ type, props }), module = { exports: {} }
-  new Function('require', 'module', 'exports', code)(name => {
-    if (name === 'react') return { useState: () => [query, value => { query = value }], useMemo: run => run() }
-    if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
-    if (name === 'zustand') return { useStore: (_, select) => select({ sessionIds: [] }) }
-    if (name === './session-discovery-context') return { useSessionDiscovery: () => discovery }
-    if (name === './source-privacy') return { maskForgottenSession: value => value }
-    return new Proxy({}, { get: (_, property) => property })
-  }, module, module.exports)
-  const find = type => {
-    let found
-    function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === type) found = node; [node.props?.children].flat(Infinity).forEach(visit) }
-    visit(tree); return found
-  }
-  const render = () => { tree = module.exports.GatewayChatsWorkspace({ conversationState: {}, sourcePrivacy: {} }) }
-  render(); find('CollectionPanel').props.onQueryChange('first'); render()
-  discovery = { ...discovery, refreshing: true }; render(); assert.equal(find('CollectionPanel').props.query, 'first'); assert.equal(find('CollectionLoading'), undefined)
-  discovery = { ...discovery, refreshing: false, error: true }; render(); assert.equal(find('CollectionPanel').props.query, 'first'); assert.equal(find('CollectionPanel').props.count, 1)
-  assert.equal(find('CollectionRow').props.title, 'First chat', 'An error retains collection rows and its existing search state')
   const tab = workspaceTab('/chat', '?session=chat_a')
   assert.equal(tab.title, 'Chat'); assert.equal(tab.sessionId, 'chat_a')
   const shell = fs.readFileSync(path.join(root, 'src/components/gateway/workspace-shell.tsx'), 'utf8')
   assert.match(shell, /tabs\.filter\(tab => !tab\.sessionId \|\| !forgotten\.includes\(tab\.sessionId\)\)/)
   assert.doesNotMatch(shell, /setTabs\([^\n]+sessions|title: session\.title|title:.*session\?\.title/, 'Open tabs retain navigation, never a private title cache beyond the discovery window')
-  for (const name of ['chat-sidebar', 'chats-workspace', 'workspace-shell', 'runtime-workspace']) {
+  for (const name of ['chat-sidebar', 'workspace-shell', 'runtime-workspace']) {
     const content = fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')
     assert.match(content, /useSessionDiscovery\(\)/); assert.doesNotMatch(content, /\.listSessions\(/, `${name} must not create a duplicate discovery request`)
   }
 }
-async function main() { await controllerCases(); collectionCases(); console.log('Shared session discovery serialization, fresh-demand coalescing, polling/backoff/deadline, auth/epoch/privacy boundaries and retained collection tests passed.') }
+async function main() { await controllerCases(); collectionCases(); console.log('Shared session discovery serialization, fresh-demand coalescing, polling/backoff/deadline, auth/epoch/privacy boundaries and shared consumer tests passed.') }
 main().catch(error => { console.error(error); process.exitCode = 1 })

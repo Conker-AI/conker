@@ -87,7 +87,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   return <SessionDiscoveryProvider runtime={runtime} authStore={authStore} workspace={conversationState} privacy={sourcePrivacy}><UniversalSearchProvider client={control.search}><WorkspaceChromeProvider><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
     <Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
-      {chatsActive && <GatewayChatsWorkspace conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
+      {chatsActive && <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} state={ownerState} active /></div>}
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}

@@ -58,7 +58,7 @@ index 92cefef..02eb2b5 100644
              credentialsIncluded=False,
              runtime="Claude Code",
 diff --git a/pi/api.py b/pi/api.py
-index bf97285..42e24d5 100644
+index bf97285..4d3c74c 100644
 --- a/pi/api.py
 +++ b/pi/api.py
 @@ -486,7 +486,7 @@ app.include_router(
@@ -70,7 +70,24 @@ index bf97285..42e24d5 100644
  app.include_router(conversation_search.router(lambda: app.state.store, require_admin))
  app.include_router(
      attachments_api.router(lambda: app.state.store, require_admin, session_settings.source_privacy)
-@@ -767,6 +767,58 @@ def get_session(session_id: str):
+@@ -747,6 +747,16 @@ def list_sessions(limit: int = 50):
+     return {"results": app.state.store.list_sessions(limit=min(max(limit, 1), 200))}
+ 
+ 
++@app.get("/sessions/history", dependencies=[Depends(require_key)])
++def session_history_page(request: Request):
++    from . import session_history
++
++    return JSONResponse(
++        session_history.page(app.state.store, **session_history.request_arguments(request.query_params)),
++        headers={"Cache-Control": "no-store"},
++    )
++
++
+ @app.get("/sessions/{session_id}", dependencies=[Depends(require_key)])
+ def get_session(session_id: str):
+     session = app.state.store.get_session(session_id)
+@@ -767,6 +777,58 @@ def get_session(session_id: str):
      }
  
  
@@ -129,7 +146,7 @@ index bf97285..42e24d5 100644
  @app.get("/sessions/{session_id}/thinking", dependencies=[Depends(require_key)])
  def thinking_status(session_id: str):
      session = app.state.store.get_session(session_id)
-@@ -780,6 +832,21 @@ def thinking_status(session_id: str):
+@@ -780,6 +842,21 @@ def thinking_status(session_id: str):
      }
  
  
@@ -151,7 +168,7 @@ index bf97285..42e24d5 100644
  @app.post("/sessions/{session_id}/thinking/{turn_id}/cancel", dependencies=[Depends(require_key)])
  def cancel_thinking(session_id: str, turn_id: str):
      try:
-@@ -845,6 +912,11 @@ def run_turn(session_id: str, body: TurnRequest):
+@@ -845,6 +922,11 @@ def run_turn(session_id: str, body: TurnRequest):
          ) from exc
  
  
@@ -203,11 +220,14 @@ index 09a5d8e..dc3cb19 100644
                          with store._connect() as db:
                              db.execute(
 diff --git a/pi/browser_contract.py b/pi/browser_contract.py
-index e32eec8..32507f6 100644
+index e32eec8..db2da33 100644
 --- a/pi/browser_contract.py
 +++ b/pi/browser_contract.py
-@@ -8,8 +8,12 @@ RUNTIME_ROUTES = {
+@@ -6,10 +6,15 @@ RUNTIME_ROUTES = {
+     "GET": (
+         r"/health",
          r"/sessions",
++        r"/sessions/history",
          r"/sessions/[A-Za-z0-9_-]+",
          r"/sessions/[A-Za-z0-9_-]+/thinking",
 +        r"/sessions/[A-Za-z0-9_-]{1,128}/observation",
@@ -219,7 +239,7 @@ index e32eec8..32507f6 100644
          r"/turn-submissions/[A-Za-z0-9_-]+",
          r"/turn-submissions/[A-Za-z0-9_-]+/stream",
          r"/approvals",
-@@ -50,6 +54,7 @@ def runtime_allowed(method: str, path: str) -> bool:
+@@ -50,6 +55,7 @@ def runtime_allowed(method: str, path: str) -> bool:
  # origin) but not a fresh password proof. Their real-world effects still pass
  # ToolGate approval. Every other browser write keeps operation-bound verification.
  SESSION_ONLY_WRITES = (
@@ -227,7 +247,7 @@ index e32eec8..32507f6 100644
      r"/sessions/[A-Za-z0-9_-]+/thinking/[A-Za-z0-9_-]+/cancel",
      r"/sessions",
      r"/sessions/[A-Za-z0-9_-]+/turns",
-@@ -73,6 +78,8 @@ def session_only_write(method: str, path: str) -> bool:
+@@ -73,6 +79,8 @@ def session_only_write(method: str, path: str) -> bool:
  # conversation runtime credential. Expand only alongside the corresponding UI.
  OWNER_ROUTES = {
      "GET": (
@@ -236,7 +256,7 @@ index e32eec8..32507f6 100644
          r"/skills",
          r"/skills/[a-z0-9][a-z0-9-]{0,63}",
          r"/search",
-@@ -115,8 +122,10 @@ OWNER_ROUTES = {
+@@ -115,8 +123,10 @@ OWNER_ROUTES = {
          r"/memory/objects",
          r"/memory/objects/[a-z]+/[A-Za-z0-9_-]+",
          r"/memory/forget/[A-Za-z0-9_.:-]+",
@@ -3294,6 +3314,188 @@ index 0000000..9a08ce5
 +def current(store_path, turn_id):
 +    memo = _current.get()
 +    return memo if memo is not None and memo.matches(store_path, turn_id) else None
+diff --git a/pi/session_history.py b/pi/session_history.py
+new file mode 100644
+index 0000000..d0c38f7
+--- /dev/null
++++ b/pi/session_history.py
+@@ -0,0 +1,176 @@
++"""Compact owner-readable chat directory; distinct from cross-source search.
++
++Private chats remain readable by their owner, as on the existing session list.
++This reads session metadata only, never transcripts, memory, or a model. Pages
++are individual snapshots, not a claim that an earlier page is still current.
++"""
++
++import hashlib
++import json
++import math
++import re
++
++from .tasks import TaskError
++
++MAX_QUERY = 200
++MAX_CURSOR = 196
++MAX_TITLE = 300
++MAX_PREVIEW = 400
++MAX_PAGE_BYTES = 256 * 1024
++_ID = re.compile(r"[A-Za-z0-9_-]{1,128}", re.ASCII)
++_CURSOR = re.compile(r"h1\.([0-9a-f]{64})\.([A-Za-z0-9_-]{1,128})", re.ASCII)
++_FORGOTTEN = "(s.status='forgotten' OR f.session_id IS NOT NULL)"
++
++
++def _invalid_request():
++    raise TaskError("invalid_history_request", "Use a bounded history query and page size.", 422)
++
++
++def _invalid_cursor():
++    raise TaskError(
++        "invalid_history_cursor", "History cursor unavailable; restart this search.", 422
++    )
++
++
++def _unavailable():
++    raise TaskError("history_unavailable", "Conversation history is unavailable.", 503)
++
++
++def request_arguments(params):
++    """Validate the whole query, including unknown or repeated fields."""
++    if set(params) - {"q", "limit", "cursor"} or any(
++        len(params.getlist(key)) != 1 for key in params
++    ):
++        _invalid_request()
++    raw_limit = params.get("limit", "50")
++    if not re.fullmatch(r"[0-9]{1,2}", raw_limit, re.ASCII):
++        _invalid_request()
++    return {"limit": int(raw_limit), "q": params.get("q"), "cursor": params.get("cursor")}
++
++
++def _arguments(limit, q, cursor):
++    if type(limit) is not int or not 1 <= limit <= 50:
++        _invalid_request()
++    if q is not None and (not isinstance(q, str) or len(q) > MAX_QUERY or "\x00" in q):
++        _invalid_request()
++    try:
++        normalized = (q or "").strip().casefold()
++        digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
++    except UnicodeError:
++        _invalid_request()
++    anchor = None
++    if cursor is not None:
++        if not isinstance(cursor, str) or len(cursor) > MAX_CURSOR:
++            _invalid_cursor()
++        match = _CURSOR.fullmatch(cursor)
++        if match is None or match[1] != digest:
++            _invalid_cursor()
++        anchor = match[2]
++    return normalized, digest, anchor
++
++
++def _text(value, maximum):
++    return value[:maximum] if isinstance(value, str) else None
++
++
++def _time(value, nullable=False):
++    if value is None and nullable:
++        return None
++    if (
++        type(value) not in (int, float)
++        or not math.isfinite(value)
++        or not 0 <= value <= 8_640_000_000_000
++    ):
++        _unavailable()
++    return value
++
++
++def _record(row):
++    if (
++        not isinstance(row["id"], str)
++        or not _ID.fullmatch(row["id"])
++        or (
++            row["parent_id"] is not None
++            and (not isinstance(row["parent_id"], str) or not _ID.fullmatch(row["parent_id"]))
++        )
++    ):
++        _unavailable()
++    if row["status"] not in {"open", "forked", "closed", "forgotten"} or not isinstance(
++        row["title"], str
++    ):
++        _unavailable()
++    return {
++        "id": row["id"],
++        "parent_id": row["parent_id"],
++        "title": row["title"],
++        "status": row["status"],
++        "created_at": _time(row["created_at"]),
++        "closed_at": _time(row["closed_at"], nullable=True),
++        "summary_preview": row["summary_preview"],
++        "title_truncated": bool(row["title_truncated"]),
++        "summary_truncated": bool(row["summary_truncated"]),
++        "content_status": "forgotten" if row["status"] == "forgotten" else "available",
++    }
++
++
++def page(store, *, limit=50, q=None, cursor=None):
++    normalized, digest, anchor = _arguments(limit, q, cursor)
++    with store._connect() as db:
++        db.execute("BEGIN")
++        # Python casefold handles Unicode; SQLite LOWER/NOCASE handles only ASCII.
++        db.create_function(
++            "history_casefold",
++            1,
++            lambda value: value.casefold() if isinstance(value, str) else "",
++            deterministic=True,
++        )
++        # Unlike SQLite substr/length, these also preserve embedded NUL in old metadata.
++        db.create_function("history_preview", 2, _text, deterministic=True)
++        db.create_function(
++            "history_length",
++            1,
++            lambda value: len(value) if isinstance(value, str) else 0,
++            deterministic=True,
++        )
++        where, values = [], []
++        if normalized:
++            where.append(f"NOT {_FORGOTTEN}")
++            # instr is a literal substring operation: %, _ and backslash are not patterns.
++            where.append(
++                "(instr(history_casefold(s.title),?)>0 OR instr(history_casefold(s.summary),?)>0)"
++            )
++            values.extend((normalized, normalized))
++        if anchor is not None:
++            boundary = db.execute(
++                "SELECT created_at,id FROM sessions WHERE id=?", (anchor,)
++            ).fetchone()
++            if boundary is None:
++                _invalid_cursor()
++            _time(boundary["created_at"])
++            where.append("(s.created_at,s.id)<(?,?)")
++            values.extend((boundary["created_at"], boundary["id"]))
++        clause = " WHERE " + " AND ".join(where) if where else ""
++        rows = db.execute(
++            f"SELECT s.id,s.parent_id,s.created_at,s.closed_at,"
++            f"CASE WHEN {_FORGOTTEN} THEN 'forgotten' ELSE s.status END AS status,"
++            f"CASE WHEN {_FORGOTTEN} THEN '' ELSE history_preview(s.title,{MAX_TITLE}) END AS title,"
++            f"CASE WHEN {_FORGOTTEN} THEN NULL ELSE history_preview(s.summary,{MAX_PREVIEW}) END AS summary_preview,"
++            f"CASE WHEN {_FORGOTTEN} THEN 0 ELSE history_length(s.title)>{MAX_TITLE} END AS title_truncated,"
++            f"CASE WHEN {_FORGOTTEN} THEN 0 ELSE history_length(s.summary)>{MAX_PREVIEW} END AS summary_truncated "
++            "FROM sessions s LEFT JOIN forgotten_sessions f ON f.session_id=s.id"
++            + clause
++            + " ORDER BY s.created_at DESC,s.id DESC LIMIT ?",
++            (*values, limit + 1),
++        ).fetchall()
++        results = [_record(row) for row in rows[:limit]]
++        result = {
++            "schemaVersion": 1,
++            "results": results,
++            "next_cursor": f"h1.{digest}.{results[-1]['id']}" if len(rows) > limit else None,
++        }
++        if (
++            len(json.dumps(result, ensure_ascii=False, allow_nan=False).encode("utf-8"))
++            > MAX_PAGE_BYTES
++        ):
++            _unavailable()
++        return result
 diff --git a/pi/session_observation.py b/pi/session_observation.py
 new file mode 100644
 index 0000000..f6240d1
@@ -3925,7 +4127,7 @@ index c0df78b..520e13d 100644
              ],
              "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
-index c59ea34..6b30d10 100644
+index c59ea34..3b8ebaf 100644
 --- a/pi/store.py
 +++ b/pi/store.py
 @@ -53,6 +53,7 @@ from . import (
@@ -3936,15 +4138,16 @@ index c59ea34..6b30d10 100644
      session_settings,
      setup_choices,
      setup_model_probes,
-@@ -133,6 +134,7 @@ CREATE TABLE IF NOT EXISTS turns (
+@@ -133,6 +134,8 @@ CREATE TABLE IF NOT EXISTS turns (
      detail       TEXT
  );
  
 +CREATE INDEX IF NOT EXISTS sessions_by_created_at ON sessions(created_at DESC);
++CREATE INDEX IF NOT EXISTS sessions_history_order ON sessions(created_at DESC,id DESC);
  CREATE INDEX IF NOT EXISTS messages_by_session ON messages(session_id, seq);
  CREATE INDEX IF NOT EXISTS turns_by_session ON turns(session_id, started_at);
  
-@@ -254,6 +256,10 @@ def _message(row: sqlite3.Row) -> dict:
+@@ -254,6 +257,10 @@ def _message(row: sqlite3.Row) -> dict:
  
  def _message_with_attachments(db, row):
      item = _message(row)
@@ -3955,7 +4158,7 @@ index c59ea34..6b30d10 100644
      if item.get("content_status") != "forgotten":
          version = db.execute(
              "SELECT v.root_message_id,v.retry_of,f.selected_message_id,f.revision "
-@@ -331,6 +337,7 @@ class Store:
+@@ -331,6 +338,7 @@ class Store:
                  db.executescript(response_retries.SCHEMA)
                  db.executescript(turn_steering.SCHEMA)
                  db.executescript(research_usage.SCHEMA)
@@ -3963,7 +4166,7 @@ index c59ea34..6b30d10 100644
                  db.executescript(universal_search.SCHEMA)
                  db.executescript(message_citations.SCHEMA)
                  owner_preferences.initialize(db)
-@@ -357,6 +364,7 @@ class Store:
+@@ -357,6 +365,7 @@ class Store:
                  system_inventory.initialize(db)
                  db.executescript(filesystem_reads.SCHEMA)
                  db.executescript(system_actions.SCHEMA)
@@ -3971,7 +4174,7 @@ index c59ea34..6b30d10 100644
          except BaseException:
              self.close()
              raise
-@@ -388,6 +396,14 @@ class Store:
+@@ -388,6 +397,14 @@ class Store:
                  db.execute(f"ALTER TABLE turns ADD COLUMN {column} TEXT")
          if "acted" not in have:
              db.execute("ALTER TABLE turns ADD COLUMN acted INTEGER NOT NULL DEFAULT 0")
@@ -3986,7 +4189,7 @@ index c59ea34..6b30d10 100644
  
      @contextmanager
      def _connect(self) -> Iterator[sqlite3.Connection]:
-@@ -411,43 +427,50 @@ class Store:
+@@ -411,43 +428,50 @@ class Store:
          agent_id: str | None = None,
          privacy: dict[str, bool] | None = None,
      ) -> str:
@@ -8342,12 +8545,406 @@ index 0000000..46d31ec
 +        usage = research_usage.receipt(store, result["turn_id"])
 +        assert usage["foreground"]["attempt_count"] == 3
 +        assert usage["thinking"]["attempt_count"] == 1
+diff --git a/tests/test_session_history.py b/tests/test_session_history.py
+new file mode 100644
+index 0000000..19e9d74
+--- /dev/null
++++ b/tests/test_session_history.py
+@@ -0,0 +1,388 @@
++"""Older chats remain reachable through bounded metadata pages and literal search."""
++
++import hashlib
++import json
++import sqlite3
++from contextlib import closing, contextmanager
++
++import pytest
++from fastapi.testclient import TestClient
++from test_gateway_api import RUNTIME, gateway, sign_in  # noqa: F401
++
++from pi import api, browser_contract, forgetting, session_history, session_observation
++from pi.store import Store
++from pi.tasks import TaskError
++
++
++@pytest.fixture
++def store(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as value:
++        yield value
++
++
++def populate(store, count=307):
++    with store._connect() as db:
++        db.executemany(
++            "INSERT INTO sessions(id,title,status,created_at,summary) VALUES(?,?,'open',?,?)",
++            [(f"ses_{i:04}", f"Title {i}", i // 3, f"Summary {i}") for i in range(count)],
++        )
++    return [f"ses_{i:04}" for i in reversed(range(count))]
++
++
++def walk(store, **kwargs):
++    rows, cursor, seen = [], None, set()
++    while True:
++        result = session_history.page(store, cursor=cursor, **kwargs)
++        rows.extend(result["results"])
++        cursor = result["next_cursor"]
++        if cursor is None:
++            return rows
++        assert cursor not in seen and len(cursor) <= session_history.MAX_CURSOR
++        seen.add(cursor)
++
++
++def test_more_than_200_chats_and_tied_timestamps_have_no_gaps_or_duplicates(store):
++    expected = populate(store)
++    rows = walk(store, limit=17)
++    assert [row["id"] for row in rows] == expected
++    assert len({row["id"] for row in rows}) == 307
++    assert all(
++        set(row)
++        == {
++            "id",
++            "parent_id",
++            "title",
++            "status",
++            "created_at",
++            "closed_at",
++            "summary_preview",
++            "content_status",
++            "title_truncated",
++            "summary_truncated",
++        }
++        for row in rows
++    )
++    assert all(
++        row["content_status"] == "available"
++        and not row["title_truncated"]
++        and not row["summary_truncated"]
++        for row in rows
++    )
++    assert len(store.list_sessions(200)) == 200
++
++
++def test_insertion_before_cursor_does_not_shift_or_repeat_loaded_pages(store):
++    expected = populate(store)
++    first = session_history.page(store, limit=23)
++    with store._connect() as db:
++        db.execute("INSERT INTO sessions(id,title,created_at) VALUES('ses_new','New',999)")
++        # An insertion after the cursor is visible on a later page; no full-history
++        # snapshot is promised, but existing rows are neither skipped nor repeated.
++        db.execute("INSERT INTO sessions(id,title,created_at) VALUES('ses_middle','Middle',10.5)")
++    rows = list(first["results"])
++    cursor = first["next_cursor"]
++    while cursor:
++        following = session_history.page(store, cursor=cursor, limit=23)
++        rows.extend(following["results"])
++        cursor = following["next_cursor"]
++    ids = [row["id"] for row in rows]
++    assert "ses_new" not in ids and ids.count("ses_middle") == 1
++    assert [identity for identity in ids if identity != "ses_middle"] == expected
++    assert session_history.page(store)["results"][0]["id"] == "ses_new"
++
++
++def test_search_filters_all_session_metadata_before_page_limit(store):
++    populate(store)
++    with store._connect() as db:
++        db.execute("UPDATE sessions SET title='Old unique title' WHERE id='ses_0001'")
++        db.execute(
++            "UPDATE sessions SET summary=? WHERE id='ses_0000'",
++            ("x" * 20_000 + "Old unique summary",),
++        )
++    assert not any("Old unique" in row["title"] for row in store.list_sessions(200))
++    result = walk(store, q="old UNIQUE", limit=1)
++    assert [row["id"] for row in result] == ["ses_0001", "ses_0000"]
++    assert result[-1]["summary_preview"] == "x" * 400
++    assert result[-1]["summary_truncated"]
++    assert session_history.page(store, q="no such retained metadata")["results"] == []
++
++
++@pytest.mark.parametrize(
++    "title,query",
++    [
++        ("Обсудим ПРИВЕТ", "привет"),
++        ("Straße plan", "STRASSE"),
++        ("פרטים שלום", "שלום"),
++        ("İstanbul", "i\u0307STANBUL"),
++        ("Keep 100%_literal\\path", "%_literal\\"),
++        ("quote ' OR 1=1 -- retained", "' OR 1=1 --"),
++    ],
++)
++def test_unicode_casefold_and_sql_metacharacters_are_literal(store, title, query):
++    wanted = store.create_session(title=title)
++    store.create_session(title="Unrelated 1000 literal path")
++    result = session_history.page(store, q=query)
++    assert [row["id"] for row in result["results"]] == [wanted]
++
++
++def test_cursor_binds_normalized_query_but_not_page_size(store):
++    for _ in range(4):
++        store.create_session(title="Straße")
++    first = session_history.page(store, q=" Straße ", limit=1)
++    cursor = first["next_cursor"]
++    following = session_history.page(store, q="STRASSE", cursor=cursor, limit=3)
++    assert len(following["results"]) == 3 and following["next_cursor"] is None
++    assert first["results"][0]["id"] not in {row["id"] for row in following["results"]}
++    assert "Straße" not in cursor and "STRASSE" not in cursor
++    with pytest.raises(TaskError) as error:
++        session_history.page(store, q="different", cursor=cursor)
++    assert error.value.status == 422 and error.value.detail["code"] == "invalid_history_cursor"
++
++
++@pytest.mark.parametrize(
++    "cursor",
++    [
++        "",
++        "wrong",
++        "h1." + "0" * 64 + ".ses_missing",
++        "x" * 197,
++        "../private",
++        "h1." + "g" * 64 + ".ses_x",
++        "h1." + "0" * 64 + ".日本語",
++    ],
++)
++def test_malformed_oversized_and_mismatched_cursor_rejected_before_read(store, monkeypatch, cursor):
++    def forbidden():
++        pytest.fail("Invalid cursor must be rejected before opening the database")
++
++    monkeypatch.setattr(store, "_connect", forbidden)
++    with pytest.raises(TaskError) as error:
++        session_history.page(store, cursor=cursor)
++    assert error.value.status == 422 and error.value.detail["code"] == "invalid_history_cursor"
++
++
++def test_missing_cursor_anchor_has_fixed_recoverable_error(store):
++    cursor = "h1." + hashlib.sha256(b"").hexdigest() + ".ses_missing"
++    with pytest.raises(TaskError) as error:
++        session_history.page(store, cursor=cursor)
++    assert error.value.detail == {
++        "code": "invalid_history_cursor",
++        "message": "History cursor unavailable; restart this search.",
++    }
++
++
++@pytest.mark.parametrize(
++    "kwargs",
++    [
++        {"limit": 0},
++        {"limit": 51},
++        {"limit": True},
++        {"q": "🙂" * 201},
++        {"q": 7},
++        {"q": "a\x00b"},
++        {"q": "\ud800"},
++    ],
++)
++def test_invalid_query_and_limit_rejected_before_read(store, monkeypatch, kwargs):
++    def forbidden():
++        pytest.fail("Invalid request must be rejected before opening the database")
++
++    monkeypatch.setattr(store, "_connect", forbidden)
++    with pytest.raises(TaskError) as error:
++        session_history.page(store, **kwargs)
++    assert error.value.status == 422 and error.value.detail["code"] == "invalid_history_request"
++
++
++def test_previews_are_bounded_by_codepoints_and_do_not_rewrite_legacy_content(store):
++    title, summary = "🙂" * 301, "界\x00" * 201
++    sid = store.create_session(title=title, summary=summary)
++    row = session_history.page(store)["results"][0]
++    assert row["title"] == title[:300] and row["summary_preview"] == summary[:400]
++    assert row["title_truncated"] and row["summary_truncated"]
++    assert store.get_session(sid)["title"] == title and store.get_session(sid)["summary"] == summary
++    other = store.create_session(title="short", summary=None)
++    rows = {row["id"]: row for row in session_history.page(store)["results"]}
++    assert rows[other]["summary_preview"] is None
++    assert not rows[other]["title_truncated"] and not rows[other]["summary_truncated"]
++
++
++def test_maximum_page_payload_stays_bounded_with_escaped_legacy_text(store):
++    with store._connect() as db:
++        db.executemany(
++            "INSERT INTO sessions(id,title,summary,created_at) VALUES(?,?,?,0)",
++            [(f"ses_{i:04}", "\x01" * 1000, "\x02" * 1000) for i in range(51)],
++        )
++    result = session_history.page(store)
++    assert len(result["results"]) == 50 and result["next_cursor"]
++    assert len(json.dumps(result, ensure_ascii=False).encode()) < session_history.MAX_PAGE_BYTES
++    assert all(
++        len(row["title"]) == 300 and len(row["summary_preview"]) == 400 for row in result["results"]
++    )
++
++
++def test_private_chat_owner_access_is_preserved_without_widening_global_search(store):
++    from pi import universal_search
++
++    sid = store.create_session(
++        title="Private Needle",
++        summary="Private summary",
++        privacy={"memoryDisabled": True, "harnessDisabled": True},
++    )
++    store.append_message(sid, "user", "Private transcript is not a directory field")
++    result = session_history.page(store, q="needle")
++    assert [row["id"] for row in result["results"]] == [sid]
++    assert result["results"][0]["summary_preview"] == "Private summary"
++    assert "transcript" not in json.dumps(result)
++    matches, _ = universal_search.lexical(
++        store, None, None, "needle", {"sources": ["conversations"]}, "metadata"
++    )
++    assert matches == []
++
++
++def test_forgotten_tombstone_masks_inconsistent_legacy_content_and_search(store):
++    sid = store.create_session(title="Secret needle", summary="Secret summary")
++    with store._connect() as db:
++        db.execute(
++            "INSERT INTO forgetting_receipts VALUES('del_history',?,0,'confirmed',0,0)", (sid,)
++        )
++        db.execute("INSERT INTO forgotten_sessions VALUES(?,'del_history')", (sid,))
++    row = session_history.page(store)["results"][0]
++    assert (
++        row["id"] == sid and row["status"] == "forgotten" and row["content_status"] == "forgotten"
++    )
++    assert row["title"] == "" and row["summary_preview"] is None
++    assert not row["title_truncated"] and not row["summary_truncated"]
++    assert "Secret" not in json.dumps(row)
++    assert session_history.page(store, q="needle")["results"] == []
++
++
++def test_real_forgetting_preserves_cursor_boundary_and_clears_search(tmp_path):
++    path = tmp_path / "pi.db"
++    with closing(Store(path)) as original:
++        for _ in range(3):
++            original.create_session(title="needle")
++        first = session_history.page(original, q="needle", limit=1)
++        sid = first["results"][0]["id"]
++        cursor = first["next_cursor"]
++    forgetting.forget(path, sid, forgetting.preview(path, sid)["confirmation"])
++    with closing(Store(path)) as reopened:
++        following = session_history.page(reopened, q="needle", cursor=cursor)
++        assert len(following["results"]) == 2 and sid not in {
++            row["id"] for row in following["results"]
++        }
++        assert all(row["content_status"] == "available" for row in following["results"])
++
++
++def test_history_index_migrates_repeatedly_without_changing_data_or_observation(tmp_path):
++    path = tmp_path / "pi.db"
++    with closing(Store(path)) as original:
++        populate(original)
++        original.append_message("ses_0000", "user", "Retained original")
++        expected = session_history.page(original, limit=50)
++        observation = session_observation.read(original, "ses_0000")
++    with sqlite3.connect(path) as db:
++        db.row_factory = sqlite3.Row
++        db.execute("DROP INDEX sessions_history_order")
++        # This is the exact preceding release: its original creation index remains.
++        # Ascending IDs within tied times differ from the new directory's ID DESC.
++        legacy = [
++            dict(row)
++            for row in db.execute("SELECT * FROM sessions ORDER BY created_at DESC LIMIT 200")
++        ]
++    for _ in range(2):
++        with closing(Store(path)) as reopened:
++            assert session_history.page(reopened, limit=50) == expected
++            assert reopened.messages("ses_0000")[0]["content"] == "Retained original"
++            assert session_observation.read(reopened, "ses_0000") == observation
++            assert reopened.list_sessions(200) == legacy
++            with reopened._connect() as db:
++                db.execute("ANALYZE")
++            assert reopened.list_sessions(200) == legacy
++
++
++def test_actual_directory_query_is_indexed_bounded_and_read_only(store, monkeypatch):
++    populate(store)
++    queries, plans = [], []
++    connect = store._connect
++
++    @contextmanager
++    def traced():
++        with connect() as db:
++            db.set_trace_callback(queries.append)
++            yield db
++            # The actual read connection owns the registered Unicode/preview UDFs.
++            sql = next(
++                statement for statement in reversed(queries) if statement.startswith("SELECT s.id")
++            )
++            plans.append(" ".join(row[3] for row in db.execute("EXPLAIN QUERY PLAN " + sql)))
++
++    monkeypatch.setattr(store, "_connect", traced)
++    with connect() as monitor:
++        version = monitor.execute("PRAGMA data_version").fetchone()[0]
++        result = session_history.page(store, limit=10)
++        following = session_history.page(store, limit=10, cursor=result["next_cursor"])
++        assert len(following["results"]) == 10
++        assert monitor.execute("PRAGMA data_version").fetchone()[0] == version
++        selects = [sql for sql in queries if sql.startswith("SELECT s.id")]
++        assert len(selects) == 2 and all(sql.endswith("LIMIT 11") for sql in selects)
++        for plan in plans:
++            assert "sessions_history_order" in plan and "TEMP B-TREE" not in plan
++        assert all("FROM messages" not in sql and "memory" not in sql for sql in queries)
++
++
++def test_api_runtime_auth_static_route_and_strict_query_contract(store, monkeypatch):
++    populate(store)
++    monkeypatch.setattr(api.app.state, "store", store, raising=False)
++    monkeypatch.setattr(api.app.state, "admin_key", "recovery-key", raising=False)
++    monkeypatch.setattr(
++        api.app.state, "gateway_key_hash", hashlib.sha256(b"runtime-key").hexdigest(), raising=False
++    )
++    client = TestClient(api.app)
++    path = "/sessions/history"
++    headers = {"X-Pi-Gateway-Key": "runtime-key"}
++    assert browser_contract.runtime_allowed("GET", path)
++    assert not browser_contract.runtime_allowed("POST", path)
++    assert client.get(path).status_code == 401
++    response = client.get(path, headers=headers)
++    assert response.status_code == 200 and response.json() == session_history.page(store)
++    assert response.headers["Cache-Control"] == "no-store"
++    assert client.get(path, headers={"X-Pi-Key": "recovery-key"}).json() == response.json()
++    for query in (
++        "limit=0",
++        "limit=51",
++        "limit=-1",
++        "limit=1.5",
++        "limit=true",
++        "limit=100000",
++        "limit=1&limit=2",
++        "q=a&q=b",
++        "q=" + "x" * 201,
++        "q=%00",
++        "private=true",
++    ):
++        result = client.get(path + "?" + query, headers=headers)
++        assert result.status_code == 422
++        assert result.json()["detail"]["code"] == "invalid_history_request"
++    for query in ("cursor=", "cursor=" + "x" * 197):
++        result = client.get(path + "?" + query, headers=headers)
++        assert (
++            result.status_code == 422
++            and result.json()["detail"]["code"] == "invalid_history_cursor"
++        )
++    assert client.get(path + "?q=%20%20", headers=headers).json() == response.json()
++
++
++def test_gateway_directory_read_uses_only_scoped_runtime_credential(gateway):
++    client, _, seen = gateway
++    path = "/api/pi/sessions/history"
++    assert client.get(path).status_code == 401 and not seen
++    headers = sign_in(client)
++    response = client.get(
++        path + "?limit=7&q=old",
++        headers={"X-Pi-Key": "browser-secret", "X-Pi-Gateway-Key": "browser-secret"},
++    )
++    assert response.status_code == 200 and len(seen) == 1
++    assert seen[0].url.path == "/sessions/history" and seen[0].url.params["limit"] == "7"
++    assert seen[0].headers["X-Pi-Gateway-Key"] == RUNTIME and "X-Pi-Key" not in seen[0].headers
++    assert "Set-Cookie" not in response.headers
++    assert client.post(path, json={}, headers=headers).status_code == 403 and len(seen) == 1
 diff --git a/tests/test_session_listing.py b/tests/test_session_listing.py
 new file mode 100644
-index 0000000..d774a1e
+index 0000000..c57c58d
 --- /dev/null
 +++ b/tests/test_session_listing.py
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,105 @@
 +"""The bounded session list uses its creation index without rewriting history."""
 +
 +import hashlib
@@ -8416,6 +9013,7 @@ index 0000000..d774a1e
 +    with sqlite3.connect(path) as db:
 +        db.row_factory = sqlite3.Row
 +        db.execute("DROP INDEX sessions_by_created_at")
++        db.execute("DROP INDEX sessions_history_order")
 +        old_query = "SELECT * FROM sessions ORDER BY created_at DESC LIMIT 200"
 +        expected = [dict(row) for row in db.execute(old_query)]
 +        old_plan = [row[3] for row in db.execute("EXPLAIN QUERY PLAN " + old_query)]

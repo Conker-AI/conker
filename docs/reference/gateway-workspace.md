@@ -16,7 +16,21 @@ from product routes.
 
 Owner-password login, session verification, logout and failed-logout locking use the real gateway cookie/CSRF protocol. Password setup and recovery require the host CLI. The password is cleared from the form before the attempt; errors do not echo server bodies or credentials.
 
-The conversation workspace lists up to the latest 200 sessions, searches that loaded list, creates a session, reads saved messages and turn metadata, and submits one text turn. A returned automatic fork selects the actual destination. A receipt is not presented as a completed answer: saved detail is fetched separately. Forgotten and closed history is read-only; forgotten content is suppressed even if an inconsistent response includes it.
+The sidebar follows the latest 200 sessions through shared discovery. Chats reads
+compact pages from `GET /sessions/history`, searches full titles and summaries
+before its page limit, and exposes Load older and Refresh chats. Each page is a
+read snapshot; the loaded count is not a total. Search is literal and Unicode
+case-insensitive. Page size is 1–50, queries are at most 200 codepoints, and cursors
+are bound to the normalized query and the last record's stable ordering identity.
+Response previews are bounded and explicitly identify truncation. Private chats
+remain owner-readable here; this does not expand cross-source search eligibility.
+Forgotten records have no title or summary and are hidden by the interface.
+
+The conversation workspace creates a session, reads saved messages and turn
+metadata, and submits one text turn. A returned automatic fork selects the actual
+destination. A receipt is not presented as a completed answer: saved detail is
+fetched separately. Forgotten and closed history is read-only; forgotten content
+is suppressed even if an inconsistent response includes it.
 
 The new-conversation composer exposes the configured answer route before the first
 message. An explicit model choice is retained across session creation and included in

@@ -127,6 +127,8 @@ not silently replace the selected model with an unrelated installed model.
 ```powershell
 python scripts/conker.py new "A new conversation"
 python scripts/conker.py sessions
+python scripts/conker.py sessions --limit 20 --query "project notes"
+python scripts/conker.py sessions --limit 20 --query "project notes" --cursor NEXT_CURSOR
 python scripts/conker.py chat SESSION_ID "My question" --model MODEL_ID
 python scripts/conker.py chat SESSION_ID "Analyze this problem" --think
 python scripts/conker.py show SESSION_ID
@@ -155,6 +157,18 @@ python scripts/conker.py native codex
 python scripts/conker.py native claude
 python scripts/conker.py api pi /agents
 ```
+
+`sessions` reads one compact history page, including chats beyond the sidebar's
+recent window. Its JSON contains `results` and `next_cursor`; pass a returned
+cursor with the same query to continue, or omit it to refresh. Page size is 1–50
+(default 50). Search is a literal, case-insensitive match against stored titles
+and summaries, with a 200-character query limit. It does not search messages.
+Pages contain title/summary previews with explicit truncation flags, not full
+summaries. Owner-readable private chats remain in this directory; forgotten
+content is suppressed. Each page reflects when it was read, not an immutable
+snapshot of the entire history. `show SESSION_ID` reads the full retained chat.
+For scripts needing the earlier raw recent-list response, use
+`python scripts/conker.py api pi /sessions`; that HTTP contract is unchanged.
 
 `models --save` accepts the same revision-bound update as the UI, containing
 `expected_revision` and `configuration`. `api pi` and `api toolgate` expose service

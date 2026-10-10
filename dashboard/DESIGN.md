@@ -35,8 +35,8 @@ chats disappear from both history and open views immediately. The conversation
 context panel opens on request: beside the chat on desktop, in `DetailPanel`
 with native focus handling on mobile. Its source reads run only while visible.
 
-The sidebar, Chats collection, chat header and open-view titles share one recent
-chat list in the authenticated workspace. A visible, online workspace checks it
+The sidebar, chat header and open-view titles share one recent chat list in the
+authenticated workspace. A visible, online workspace checks it
 every 15 seconds and on focus or reconnection. Background reads retain collection
 rows, search and keyboard focus; a failed read labels the retained list and offers
 Try again. Hidden/offline workspaces pause reads. Authentication changes and
@@ -48,6 +48,27 @@ deletion or forgetting and never closes an open view. Tabs retain navigation
 identity, with a generic Chat title when no current title is available; they do
 not retain a separate private title cache. Explicit forgotten records cross the
 shared privacy boundary before any list consumer can display them.
+
+Chats browses a separate compact directory, in pages of up to 50 records, so
+older conversations remain reachable. Search matches full stored titles and
+summaries before paging; displayed previews mark truncation. The count describes
+loaded chats, never the total history. Load older (or Load more results) appends
+the next page. Refresh chats replaces the loaded page chain with a fresh first
+page. Each page reflects its last read; the interface states this explicitly.
+Shared recent discovery can signal newer chats but never silently rewrites older
+pages. When the earlier discovery evidence is unknown, the notice asks to check
+for newer chats rather than claiming a new chat was found.
+
+Search remains mounted while results load, fail or become empty. Changing the
+query clears the previous results and cursor. Refresh failures preserve only
+the same query's results, with their stale-state explanation. Invalid cursors
+retire continuation and offer an explicit refresh. A page containing only
+forgotten records still exposes Load older when another page exists. Known
+forgotten records are masked immediately; authentication and workspace changes
+clear the directory and reject late replies. CollectionPanel's optional
+emptyContent slot lets these states retain the shared search and toolbar.
+CollectionRow descriptions wrap long unbroken text, including URLs and compact
+summary previews, without expanding the collection beyond its available width.
 
 `connected-workspace.css` owns these semantic shell roles. Use the existing theme
 and typeface, `--sidebar` for the navigation surface, `--background` for the work

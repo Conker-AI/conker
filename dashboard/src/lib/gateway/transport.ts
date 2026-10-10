@@ -2,12 +2,13 @@
 export const GATEWAY_JSON_LIMIT = 65_536
 // The gateway caps request bodies, but does not cap proxy responses. Bound browser memory separately.
 export const GATEWAY_RESPONSE_LIMIT = 8 * 1024 * 1024
+export const GATEWAY_HISTORY_LIMIT = 256 * 1024
 export const GATEWAY_CHARACTER_LIMIT = 66 * 1024 * 1024
 export const GATEWAY_AUDIO_LIMIT = 10 * 1024 * 1024
 export const GATEWAY_AUDIO_RESPONSE_LIMIT = 32 * 1024 * 1024
 export const memoryForgetErrorCodes = ['revision_conflict', 'work_active', 'forget_in_progress', 'forget_pending', 'request_conflict', 'not_found', 'not_configured', 'outcome_unknown', 'invalid_receipt', 'unavailable'] as const
 export type MemoryForgetErrorCode = typeof memoryForgetErrorCodes[number]
-type GatewayErrorCode = 'draft_changed' | MemoryForgetErrorCode
+type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -236,6 +237,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path) || observationRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
+      if (path === '/api/pi/sessions/history' && options.query !== undefined && Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'q' ? typeof value !== 'string' || [...value].length > 200 || value.includes('\0') || /[\uD800-\uDFFF]/u.test(value) : key === 'cursor' ? typeof value !== 'string' || !/^h1\.[a-f0-9]{64}\.[A-Za-z0-9_-]{1,128}$/.test(value) : true)) throw new GatewayError('validation')
       if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
       if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()
@@ -275,10 +277,15 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && memoryForgetErrorCodes.includes(value.detail.code as MemoryForgetErrorCode)) code = value.detail.code as MemoryForgetErrorCode
             } catch { /* Retain only a known operation code, never upstream text. */ }
+          } else if (method === 'GET' && path === '/api/pi/sessions/history' && response.status === 422) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && (value.detail.code === 'invalid_history_cursor' || value.detail.code === 'invalid_history_request')) code = value.detail.code
+            } catch { /* Only fixed directory codes survive; upstream text is never displayed. */ }
           } else await response.body?.cancel().catch(() => undefined)
           throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code)
         }
-        return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
+        return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : path === '/api/pi/sessions/history' ? GATEWAY_HISTORY_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {
         if (error instanceof GatewayError) throw error
         throw new GatewayError(options.signal?.aborted ? 'aborted' : 'network')

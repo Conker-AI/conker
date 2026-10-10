@@ -23,7 +23,7 @@ const previewSessions = {
 }
 
 type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json }
-type Session = { id: string; title: string; created_at: number; messages: Message[]; turns: Json[] }
+type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[] }
 
 const replies = [
   "Here's a simple plan for the week:\n\n1. **Monday:** revision block before school, 45 minutes.\n2. **Tuesday and Thursday:** judo, so keep homework light.\n3. **Friday:** hand in the physics worksheet.\n\nWant me to put these in your calendar?",
@@ -56,6 +56,9 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const sessions = seed()
+  if (globalThis.sessionStorage?.getItem('conker-fake-history') === 'paged') {
+    for (let index = 0; index < 115; index++) sessions.push({ id: `ses_history_${String(index).padStart(3, '0')}`, title: index === 70 ? `${'A long planning note '.repeat(20)}archived-keyword` : `Earlier conversation ${String(index + 1).padStart(3, '0')}`, ...(index === 70 ? { summary: `${'x'.repeat(400)} summary-keyword` } : {}), created_at: now() - 172800 - index * 60, messages: [], turns: [] })
+  }
   const observations = new Map<string, { signature: string; revision: number }>()
   // Reloadable, development-only saved outcomes. They never invoke a provider or tool.
   const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
@@ -472,7 +475,19 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       terminalLease = null
       return { closed: true }
     }
-    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).map(sessionRow) }
+    if (method === 'GET' && path === '/api/pi/sessions/history') {
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'history') fail(503)
+      const q = String(options.query?.q ?? '').trim().toLowerCase(), limit = Number(options.query?.limit ?? 50)
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(q)))].map(value => value.toString(16).padStart(2, '0')).join('')
+      const sorted = [...sessions].sort((a, b) => b.created_at - a.created_at || b.id.localeCompare(a.id))
+      const cursor = options.query?.cursor
+      const anchor = cursor === undefined ? null : sorted.find(row => `h1.${digest}.${row.id}` === cursor)
+      if (cursor !== undefined && !anchor) throw new GatewayError('http', 422, undefined, 'invalid_history_cursor')
+      const matches = sorted.filter(row => (!q || row.title.toLowerCase().includes(q) || row.summary?.toLowerCase().includes(q)) && (!anchor || row.created_at < anchor.created_at || row.created_at === anchor.created_at && row.id < anchor.id))
+      const page = matches.slice(0, limit)
+      return { schemaVersion: 1, results: page.map(row => ({ ...sessionRow(row), title: [...row.title].slice(0, 300).join(''), summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null, content_status: 'available', title_truncated: [...row.title].length > 300, summary_truncated: [...row.summary ?? ''].length > 400 })), next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null }
+    }
+    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).slice(0, 200).map(sessionRow) }
     if (method === 'POST' && path === '/api/pi/sessions') {
       // Failure-path switch: a first message containing [fail] makes creation fail with a server error.
       if (String(options.body?.title ?? '').includes('[fail]')) fail(503)

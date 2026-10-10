@@ -13,6 +13,42 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Browse and search older chats from the UI and CLI (10 October)
+
+Chats now reads a compact, paged directory instead of filtering the recent 200
+records. Search checks full titles and summaries before pagination; each response
+contains at most 50 clipped previews and a query-bound cursor. Literal Unicode
+matching, deterministic creation order, strict query validation and a 256 KiB
+response bound keep reads predictable. The original recent-list API is unchanged.
+The CLI exposes the same directory through `sessions --limit`, `--query` and
+`--cursor`, with validation before network access and safe read errors.
+
+Loaded pages are explicit snapshots. Load older extends them; Refresh chats starts
+a fresh chain. Shared recent discovery offers a new-chat notice without rewriting
+loaded pages. Search stays mounted through loading and errors, refresh failures
+retain rows, and auth, workspace, privacy, cursor and offline boundaries reject
+stale reads. Forgotten entries are masked before publication. Long unbroken
+summary previews now wrap within the shared collection row on mobile.
+
+Validation passed 99 distinct backend cases, including 34 new history/listing
+cases, and 89 CLI/history/draft cases, including 27 new CLI cases. Fresh and repeated
+installation reproduce all 87 reviewed Pi files. TypeScript, affected lint, the
+403-file design check, focused directory/discovery/observation/navigation/runtime/
+workspace/boundary checks and independent reviews passed.
+
+The local rollout retained database backups and the previous build. Pi and Gateway
+are healthy; all 169 published files match the staged manifest, and the 602,046-byte
+entry remains below the unchanged 700,000-byte limit. Real CLI reads verified two
+nonoverlapping pages and title search without returning full summaries or changing
+model settings. Live desktop dark and mobile light checks verified server search,
+retained results after browser-only 503 errors, visible recovery and keyboard retry.
+Isolated UI checks covered 50-to-100-row paging and long summary wrapping; the live
+database contains eight visible chats. Screenshots were inspected.
+
+Global search still has its separate recent-metadata limit in this rollout. Its
+reviewed older-match fix and newly verified exact-search privacy alignment are the
+next isolated slices; neither is implied by this directory milestone.
+
 ### Discover CLI-created chats across the workspace (10 October)
 
 The sidebar, Chats collection, chat header and open-view titles now share one
@@ -47,9 +83,8 @@ the observed browser interval contained only three shared list reads. Browser-on
 desktop dark and mobile light. Screenshots were inspected, no mobile overflow was
 present, and the original theme and empty QA draft were restored.
 
-Older conversations remain stored but cannot yet be browsed or title-filtered
-beyond the current window. An isolated 202-chat reproduction confirms this next
-gap; a compact paged chat directory is being implemented separately.
+The subsequent paged-directory milestone above removes this slice's browsing and
+title-filtering limit while retaining shared recent discovery for navigation.
 
 ### Keep open chats synchronized with CLI work (10 October)
 
