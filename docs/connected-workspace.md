@@ -161,6 +161,16 @@ module health contract projects an unverified hosted provider as `unknown`, with
 overall degraded health. That coarse service status remains separate from a
 saved model-test receipt.
 
+Subscription cards separately track owner verification, the outgoing operation
+and current connection evidence. Status reads have a 15-second deadline. The
+75-second operation deadline starts after verification, immediately before the
+POST attempt; time spent entering the owner password is excluded. An uncertain
+result requires a read-only Check status before another action, and that read
+does not claim the earlier request was canceled. No operation is automatically
+repeated. Sign-in polling is serialized, pauses while hidden/offline, and stops
+after 20 automatic reads until the owner explicitly checks again. Device codes
+are ephemeral and tied to their exact login identity.
+
 ## What this local installation does and does not establish
 
 The production frontend cannot fall back to fixture data. A stopped service

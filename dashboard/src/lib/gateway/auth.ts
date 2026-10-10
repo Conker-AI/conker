@@ -124,10 +124,11 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
       }
     },
     async request(path: string, options: GatewayRequest = {}): Promise<Record<string, unknown>> {
-      const post = options.method === 'POST'
-      if (post && options.query !== undefined) throw new GatewayError('validation')
-      const operation = post ? snapshotGatewayOperation(path, options.body) : null
-      const signal = options.signal
+      const { onDispatch, ...requestOptions } = options
+      const post = requestOptions.method === 'POST'
+      if (post && requestOptions.query !== undefined) throw new GatewayError('validation')
+      const operation = post ? snapshotGatewayOperation(path, requestOptions.body) : null
+      const signal = requestOptions.signal
       if (post && signal?.aborted) throw new GatewayError('verification-cancelled')
       const ticket = await serial(async () => {
         // Authentication endpoints belong to the methods above; callers cannot bypass rotation handling.
@@ -168,9 +169,15 @@ export function createGatewayAuthClient({ transport, verification, now = () => D
         }, signal)
         if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
       }
+      if (post) {
+        if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+        // Time only the outgoing operation, never the owner's password interaction.
+        onDispatch?.()
+        if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+      }
       try {
         // The proof is supplied once, only on the frozen operation it authorized. No replay on failure.
-        const value = await transport.request(path, { ...options, ...(operation ? { body: operation.body, verificationToken } : {}), csrfToken: ticket.csrfToken })
+        const value = await transport.request(path, { ...requestOptions, ...(operation ? { body: operation.body, verificationToken } : {}), csrfToken: ticket.csrfToken })
         verificationToken = undefined
         if (!current()) throw new GatewayError('session-changed')
         return value

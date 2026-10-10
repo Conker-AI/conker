@@ -56,6 +56,13 @@ a model, grant tools or prove that the account can run a particular model.
 Inspect readiness, add the supported model to the catalogue, and choose its role.
 Provider allowance and availability still apply.
 
+If sign-in, cancellation or disconnect cannot be confirmed, use **Check status**.
+This reads the latest connection without repeating the operation. The earlier
+request may still have changed authorization. Automatic checks run only while a
+sign-in is pending and pause when the page is hidden, offline or their check limit
+is reached; the card offers a manual check. A ChatGPT device code belongs to one
+sign-in attempt and is not saved across page reloads.
+
 **Runtime readiness > Refresh** checks provider status without changing your
 model draft. While a check is pending or unavailable, retained names are labeled
 as last checked. A stalled check offers **Try again** after 15 seconds. An

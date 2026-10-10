@@ -53,6 +53,8 @@ export type GatewayRequest = {
   body?: Record<string, unknown>
   query?: Record<string, string | number | boolean>
   signal?: AbortSignal
+  /** Auth-only POST observation: dispatch is starting, not acknowledged. Never sent to transport. */
+  onDispatch?: () => void
 }
 export type GatewayTransport = ReturnType<typeof createGatewayTransport>
 const ids = '[A-Za-z0-9_-]+'

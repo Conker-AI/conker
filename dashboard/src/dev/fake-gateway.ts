@@ -8,7 +8,7 @@ import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal }
+type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
 
 const now = () => Date.now() / 1000
 const iso = (seconds: number) => new Date(seconds * 1000).toISOString()
@@ -55,6 +55,7 @@ function seed(): Session[] {
 export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
+  const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
   const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
   if (thinkingScenario) sessions[0].thinking = [{ session_id: sessions[0].id, turn_id: String(sessions[0].turns[0].id), input_message_id: sessions[0].messages[0].id, created_at: now(), status: 'running', provider: 'ollama', model: 'qwen2.5:7b', result: null, detail: null }]
@@ -892,6 +893,25 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         responseDigest: 'a'.repeat(64), completedAt: iso(now()), recordedAt: iso(now()),
       } }
     }
+    if ((path === '/api/host/chatgpt' || path === '/api/host/claude') && globalThis.sessionStorage?.getItem('conker-fake-subscription')) {
+      const scenario = globalThis.sessionStorage.getItem('conker-fake-subscription')
+      if (method === 'GET' && scenario === 'read-failure') return fail(503)
+      if (method === 'GET' && scenario === 'read-timeout') return new Promise<Json>(() => { /* Isolated status deadline fixture. */ })
+      if (method === 'GET' && scenario === 'slow-read') await new Promise(resolve => setTimeout(resolve, 5000))
+      if (method === 'POST') {
+        options.onDispatch?.()
+        if (scenario === 'operation-timeout') return new Promise<Json>(() => { /* Isolated dispatch deadline fixture. */ })
+        subscriptionStates.set(path, options.body?.operation === 'login' ? 'pending' : options.body?.operation === 'models' ? 'connected' : 'idle')
+        if (scenario === 'lost-response') return fail(503)
+      }
+      const current = scenario === 'connected' ? 'connected' : subscriptionStates.get(path) ?? 'idle'
+      const loginId = current === 'pending' ? `login_${'a'.repeat(32)}` : null
+      const common = { available: true, connected: current === 'connected', loginId, loginState: loginId ? 'pending' : 'idle', credentialsIncluded: false }
+      return path.endsWith('/chatgpt') ? { ...common, connectionId: common.connected ? `connection_${'a'.repeat(32)}` : null, plan: common.connected ? 'plus' : null, problem: null, models: [], catalogueComplete: false,
+        deviceCode: method === 'POST' && options.body?.operation === 'login' ? { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } : null,
+      } : { ...common, runtime: 'Claude Code', models: [], authorizationUrl: loginId ? 'https://claude.ai/oauth/authorize' : null }
+    }
+    if (path === '/api/host/claude') return { available: false, connected: false, loginId: null, loginState: 'idle', authorizationUrl: null, credentialsIncluded: false, runtime: 'Claude Code', models: [] }
     if (path === '/api/host/chatgpt') {
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
@@ -1084,5 +1104,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } })
   }
 
-  return { request, streamResponse }
+  const subscriptionVerificationEnabled = (path: string) => ['/api/host/chatgpt', '/api/host/claude'].includes(path) && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
+  return { request, streamResponse, subscriptionVerificationEnabled }
 }

@@ -17,19 +17,28 @@ import { createGatewayProposalClient } from '@/lib/gateway/proposals'
 import { createGatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayAuthState } from '@/lib/gateway/auth-store'
 import type { GatewayAuthClient } from '@/lib/gateway/auth'
+import { createGatewayVerificationStore, describeGatewayOperation } from '@/lib/gateway/verification'
+import { snapshotGatewayOperation } from '@/lib/gateway/transport'
+import { GatewayOperationVerification } from '@/components/auth/gateway-verification'
 import { createFakeGateway } from './fake-gateway'
 
 function services() {
   const requestedSetup = new URLSearchParams(window.location.search).get('preview-setup')
   const setupStep = requestedSetup === 'model' || requestedSetup === 'memory' || requestedSetup === 'capabilities' || requestedSetup === 'protection' || requestedSetup === 'rehearsal' ? requestedSetup : undefined
   const fake = createFakeGateway({ setupStep })
-  const auth = { request: fake.request, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>
+  const verification = createGatewayVerificationStore()
+  const auth = { request: async (path, options = {}) => {
+    if (options.method === 'POST' && fake.subscriptionVerificationEnabled(path)) {
+      await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)
+    }
+    return fake.request(path, options)
+  }, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
-    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: null, setupRequired: false },
+    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: fake.subscriptionVerificationEnabled('/api/host/chatgpt') ? Date.now() / 1000 + 86400 : null, setupRequired: false },
     bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
   })), { dispose: () => undefined })
-  return { fake, workspace: {
+  return { fake, verification, workspace: {
     authStore, runtime: createGatewayRuntimeClient(auth), activity: createGatewayActivityClient(auth), owner: createGatewayOwnerClient(auth),
     proposals: createGatewayProposalClient(auth), control: createGatewayControlClient(auth, () => undefined),
     conversationState: createGatewayRuntimeWorkspaceState(), activityState: createGatewayActivityWorkspaceState(),
@@ -50,5 +59,5 @@ export default function GatewayPreview() {
     return () => { if (window.fetch === previewFetch) window.fetch = original }
   }, [value.fake])
   // Honest status: this is sample data, not a server.
-  return <GatewayWorkspace {...value.workspace} badge={<span title="Sample data, no server." className="truncate rounded-full border px-2 py-0.5 text-xs text-muted-foreground">Preview</span>} />
+  return <><GatewayWorkspace {...value.workspace} badge={<span title="Sample data, no server." className="truncate rounded-full border px-2 py-0.5 text-xs text-muted-foreground">Preview</span>} /><GatewayOperationVerification store={value.verification} authStore={value.workspace.authStore} /></>
 }

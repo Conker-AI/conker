@@ -13,6 +13,63 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Recover subscription operations without repeating them (10 October)
+
+ChatGPT and Claude Code connection cards now distinguish current status, owner
+verification, provider work and an unconfirmed outcome. A failed status read no
+longer leaves Connected or Checking on screen. Read-only recovery is available
+after a lost operation response; it retains a notice that the earlier request
+was unconfirmed and never repeats login, cancellation or logout automatically.
+
+Status reads have a 15-second deadline. Provider operations have 75 seconds after
+verification, allowing for the host's existing 70-second Codex control timeout.
+The local dispatch callback stays outside the transport and wire payload; waiting
+for or canceling password verification never starts that clock or sends the
+operation. Session and abort checks run on both sides of the callback.
+
+Each card fences client, owner, login identity and component lifetime changes.
+Slow sign-in checks run serially, three seconds after the previous read finishes,
+and stop after 20 automatic reads until the owner checks again. Hidden or offline
+pages pause them. Same-login device codes and controls stay mounted during checks
+and visibility pauses, with last-checked status labels and guarded actions.
+Actual failed reads, identity changes and teardown clear private sign-in content.
+Keyboard recovery is scoped to the original action and does not move focus out
+of another control or an open verification dialog.
+
+Independent review cleared the nine-group dispatch boundary suite and shared
+controller/real-card recovery coverage, including owner/client A-to-B-to-A, a
+late login response after replacement, exact cancellation identity, bounded
+polling, same-login code retention, failed model-catalogue projection and teardown
+during synchronous state publication. Provider, authentication and verification
+compatibility suites also passed. Native runtimes and server authority are unchanged.
+
+The full gateway regression suite, TypeScript, affected ESLint and the design
+guard (415 reachable sources) passed. Actual verification-dialog cancellation
+and submission, slow polling with selected code text, keyboard recovery and
+failed Claude status recovery passed in the isolated browser. Desktop dark and
+mobile light screenshots were inspected. The local production build verified
+169 assets with a 604,822-byte gateway entry, beneath the unchanged 700,000-byte
+cap, and excluded development fixtures. Gateway restarted healthy; the healthy
+Pi checkout remained unchanged at `33254f1`. Read-only CLI status checks returned
+both native runtimes available and signed out, with model configuration and
+recorded work counts unchanged.
+
+Served-app acceptance intercepted one Claude operation and synthetic owner proof,
+held the response through the real dispatch deadline, and observed the uncertain
+state about 79 seconds after verification submission. No operation or recovery
+read was automatically repeated. Explicit keyboard recovery retained focus and
+the unconfirmed-outcome notice; the late operation response could not replace
+the recovered pending status. Desktop and 390-pixel mobile screenshots were
+inspected without overflow. Interceptors were removed and the real Providers
+page restored. No native OAuth operation or hosted inference was performed.
+
+The next verified gap is the API-key panel: an old refresh can overwrite an
+acknowledged spending-policy change, an unresolved operation can strand its
+controls, and a mounted client replacement can retain an unsent key draft.
+Server revision and owner-verification guards remain intact. The next slice
+will fence that panel's lifecycle and recover observations without repeating
+credential or spending-policy mutations.
+
 ### Report provider readiness without stale success (10 October)
 
 Providers now distinguishes checking, current and unavailable runtime evidence.
@@ -62,12 +119,8 @@ model settings and recorded work counts are unchanged. Live hosted inference has
 not been claimed: this installation has no OpenRouter credential and its native
 subscriptions remain signed out.
 
-The next verified gap is independent subscription-card recovery: a lost login
-operation response can leave controls pending, Claude's failed status read can
-retain stale or Checking text, and a late ChatGPT login response can cross a
-client replacement. Synthetic component tests reproduced these cases. Recovery
-must preserve time spent in owner verification and never automatically repeat a
-login/logout operation; this milestone does not claim those cards are repaired.
+The separate subscription-card recovery defects discovered during this milestone
+are resolved by the later recovery milestone above.
 
 ### Preserve inherited privacy and reliable Think cancellation (10 October)
 

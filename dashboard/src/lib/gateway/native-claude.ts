@@ -17,10 +17,10 @@ export function createNativeClaudeClient(auth: Pick<GatewayAuthClient, 'request'
   function parse(value: unknown) { const result = status.safeParse(value); if (!result.success) throw new GatewayError('invalid-response'); return result.data }
   return {
     async status(signal?: AbortSignal) { return parse(await auth.request('/api/host/claude', { signal })) },
-    async apply(value: NativeClaudeOperation, signal?: AbortSignal) {
+    async apply(value: NativeClaudeOperation, signal?: AbortSignal, onDispatch?: () => void) {
       const result = operation.safeParse(value)
       if (!result.success) throw new GatewayError('validation')
-      return parse(await auth.request('/api/host/claude', { method: 'POST', body: result.data, signal }))
+      return parse(await auth.request('/api/host/claude', { method: 'POST', body: result.data, signal, onDispatch }))
     },
   }
 }

@@ -36,6 +36,18 @@ alone. Runtime health evidence is separate from the subscription connection
 card's cached status. Catalogue reads cannot overwrite a newer
 model-settings save, and authentication changes discard both kinds of evidence.
 
+Subscription cards distinguish checking, verified current status, owner verification,
+provider work and an unconfirmed outcome. Status reads time out after 15 seconds;
+provider-operation deadlines start only after owner verification, allowing 75 seconds
+for the host's bounded provider call. An unconfirmed operation is never replayed.
+Check status reads current evidence while retaining the earlier uncertainty notice.
+Only pending sign-ins poll: one read at a time, three seconds after completion, at
+most 20 reads while visible and online, then an explicit Check status. Same-login
+device codes and controls stay in place during reads and visibility pauses, labeled
+as last checked. Failed reads, changed login identity, authentication changes and
+teardown clear private sign-in content. Busy controls retain keyboard focus without
+accepting duplicate operations. Subscription status does not prove inference readiness.
+
 Open views are a secondary header disclosure, closed initially. Their optional
 strip retains navigation history, tab switching, pinning, closing, and dragging.
 Closing the last view opens New chat; closing a tab never cancels work. Tab
