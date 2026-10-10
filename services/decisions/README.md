@@ -76,6 +76,15 @@ turns, each excerpted to at most 200 characters. Longer requests use a marked
 head/tail excerpt and length evidence. The receipt names the input scope. This
 bounded projection does not provide full conversation or tool-result reasoning.
 
+Within one uninterrupted foreground attempt, Pi can reuse a successful primary
+Laya choice when the exact typed request, frozen configuration and adapter match.
+This avoids repeated identical classifier calls after tool results that do not
+change the routing projection. Reuse still checks cancellation and eligibility;
+it is identified explicitly and adds no provider-call or elapsed-time record.
+Steering, approval/reply recovery, later turns and background thinking get separate
+scopes. Failures and helper fallbacks are never reused. Long-request conversation
+metrics can change after tools, requiring another classification.
+
 Memory reranking is separately opt-in through the `memory-ranking` model role.
 It runs after scoped retrieval, preserves every original record and its evidence,
 and only changes ordering. Its inputs are marked 160-character previews.

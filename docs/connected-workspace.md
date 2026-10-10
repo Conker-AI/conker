@@ -35,6 +35,14 @@ python scripts/workspace.py up
 ```
 
 Stop before rebuilding to replace the Gateway's snapshot of frontend assets.
+`workspace.py build` enforces that boundary and compiles into an isolated
+`.local-run/builds` checkpoint. Design, type and production bundle checks run
+before publication. A verified copy replaces the served tree only while Gateway
+is stopped; the previous tree remains in that checkpoint. Copy or verification
+failures preserve the old build. If Windows blocks both publication and restoration,
+the serving directory remains absent, so startup refuses it; the previous assets
+remain available in the reported build checkpoint. Independent simultaneous
+launcher commands are not serialized.
 Stopping retains every database and the dedicated PostgreSQL volume. Existing
 Conker installations, server data, provider credentials and grants are not copied.
 The launcher refuses unrelated listeners and container identities. An occupied
@@ -86,6 +94,10 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   A configured model choice does not imply escalation. Routing responses list
   unavailable attempts separately from successful selection evidence and report
   whether a fallback was used.
+  An unchanged Laya routing input can reuse the earlier decision within one
+  uninterrupted turn attempt. The receipt identifies reuse; usage records count
+  only actual model calls. Ollama's reported cached prompt tokens are retained,
+  with missing counters shown as unknown.
 - Saved user messages show a separate memory delivery status. “Added to memory”
   requires a valid MemoryGate acknowledgement; a saved chat or an assistant saying
   “I remember” is not that acknowledgement. Pending delivery can be checked again

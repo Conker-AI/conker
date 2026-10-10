@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const assets = path.resolve(__dirname, '../dist/assets')
+const assets = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(__dirname, '../dist/assets')
 const files = fs.readdirSync(assets)
 assert.equal(files.some(file => file.includes('fixture')), false, 'production bundle contains a fixture chunk')
 

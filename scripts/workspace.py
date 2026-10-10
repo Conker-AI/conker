@@ -140,12 +140,13 @@ print('Owner login initialized. Password retained only in the private local gate
 
 
 def build():
-    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
-    if not npm:
-        raise SystemExit("Node.js/npm is required to build the dashboard.")
-    if not (ROOT / "dashboard/node_modules").exists():
-        run(npm, "ci", "--no-audit", "--no-fund", cwd=ROOT / "dashboard")
-    run(npm, "run", "build", cwd=ROOT / "dashboard")
+    from workspace_build import build_dashboard
+
+    def require_stopped():
+        if CONFIG.exists() and owned_process(read_config(), "gateway"):
+            raise SystemExit("Stop Gateway before rebuilding its assets. The current build was retained.")
+
+    build_dashboard(ROOT, STATE, run, require_stopped)
 
 
 def launch(config, command, service):

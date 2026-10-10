@@ -13,6 +13,49 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Reuse routing decisions and preserve working builds (10 October)
+
+Identical primary Laya routing requests can reuse a successful choice within one
+uninterrupted foreground attempt. Exact input, configuration and adapter identity
+must match, and current cancellation and eligibility checks still run. Steering,
+recovery, later turns, background thinking, failures and helper fallbacks cannot
+inherit the result. Receipts identify reuse without adding inference timing or
+usage. Synthetic one- and two-tool turns now make one classifier call instead of
+two or three. The corresponding usage ledger counts only real calls.
+
+Ollama's reported cached prompt tokens now reach Completion and usage receipts.
+Known zero is preserved; absent or malformed values remain unknown. A separate
+two-request synthetic diagnostic with a 32-token output cap measured 31.7 seconds
+cold (8.0 seconds loading, 21.5 seconds prompt evaluation), then 3.2 seconds on an immediate repeat with
+529 of 530 prompt tokens cached. This explains the exercised latency, not broad
+performance or quality. No model configuration or model-residency policy changed.
+
+Workspace builds now require Gateway to be stopped, compile into an isolated
+checkpoint, and run the existing design, type and production guards there. A
+separate copy is verified before moving served assets. The last build is retained
+and restored if publication fails. If Windows also blocks restoration, the serving
+path is absent and startup refuses it; no partially copied frontend is served.
+Independent concurrent launcher invocations remain outside this change's guarantee.
+
+Validation: 124 routing/usage/steering/recovery/thinking tests and 42 cached-usage
+and streaming checks pass. Build and launcher coverage includes 37 tests, including
+copy failures, blocked publication/restoration, startup during compilation and
+the actual Node bundle guard's fixture and 700,000-byte limits. The final build
+subset has 14 tests; lint and independent review pass. Routing evidence passed
+10 frontend checks plus TypeScript, affected lint, design and desktop/mobile
+keyboard/visual review in both themes. Fresh and repeated installation reproduce
+all 82 reviewed Pi files.
+
+The local rollout exercised the new workspace build command and verified all
+168 published files against its staged output. The 597,608-byte entry passes the
+unchanged production limit, and prior assets and SQLite backups remain available.
+Pi and Gateway pass health checks. A live Automatic greeting selected local-fast
+with one routing and one answer call, no fallback, action or background thinking,
+and model configuration still at revision 1. Its answer reports 640 input tokens,
+24 output tokens and a known zero cached tokens. The two calls took 47.5 seconds
+combined, including a 6.9-second Laya decision. Cold local latency remains a
+measured limitation; this is not a broad speed or routing-accuracy claim.
+
 ### Routing cancellation, accurate receipts and mobile focus (10 October)
 
 Stop now interrupts the exact connected routing request, including the wait before
