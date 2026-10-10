@@ -33,10 +33,10 @@ export function createProviderControlClient(auth: Pick<GatewayAuthClient, 'reque
   }
   return {
     async status(signal?: AbortSignal) { return parse(await auth.request('/api/host/providers', { signal })) },
-    async apply(value: ProviderCredentialOperation, signal?: AbortSignal) {
+    async apply(value: ProviderCredentialOperation, signal?: AbortSignal, onDispatch?: () => void) {
       const body = operation.safeParse(value)
       if (!body.success) throw new GatewayError('validation')
-      return parse(await auth.request('/api/host/providers', { method: 'POST', body: body.data, signal }))
+      return parse(await auth.request('/api/host/providers', { method: 'POST', body: body.data, signal, onDispatch }))
     },
   }
 }

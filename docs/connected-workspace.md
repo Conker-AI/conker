@@ -171,6 +171,16 @@ repeated. Sign-in polling is serialized, pauses while hidden/offline, and stops
 after 20 automatic reads until the owner explicitly checks again. Device codes
 are ephemeral and tied to their exact login identity.
 
+API-key settings use a separate credential lifecycle. Read-only checks have a
+15-second deadline and cannot overwrite a newer acknowledged change. Credential
+and spending-policy operations allow 210 seconds from dispatch, excluding time
+spent entering the owner password. That bounds how long the browser waits; it
+does not cancel the host operation or prove rollback. An unconfirmed result
+requires an explicit status read before another mutation, retains its uncertainty
+notice after recovery, and never automatically replays the operation. Owner or
+client replacement clears the selected credential and unsent key. An editor is
+bound to the active and staged revisions it displayed.
+
 ## What this local installation does and does not establish
 
 The production frontend cannot fall back to fixture data. A stopped service

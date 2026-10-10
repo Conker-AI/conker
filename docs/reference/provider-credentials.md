@@ -72,6 +72,24 @@ Settings receives opaque revisions and safe credential status, not secret values
 arbitrary endpoints or provider error bodies. Model catalogue entries are separate
 from credential readiness. OpenAI API access is not ChatGPT/Codex subscription login.
 
+The browser distinguishes owner verification, provider work and an unconfirmed
+outcome. A status check stops waiting after 15 seconds. A submitted operation
+allows 210 seconds after verification; time spent entering the password is not
+counted. Some host recovery sequences can continue beyond that limit. A timeout
+or lost response does not establish cancellation, failure or rollback.
+
+Use **Check status** in the API-key panel after an unconfirmed operation. It reads current
+evidence without repeating the write, and keeps the earlier uncertainty visible.
+Credential revisions and recovery markers determine which actions are available
+next. A slow older refresh cannot replace an acknowledged change. Pending or
+failed checks label retained settings as last checked and prevent changes until
+current status is available.
+
+Unsent keys remain only in the current editor's memory and are cleared on submit,
+close, owner change or server-client replacement. The editor is tied to the
+displayed active and staged revisions; changed revisions require opening it
+again. Canceling password verification does not restore a submitted key draft.
+
 Paid requests require separate explicit authorization. Settings and
 `conker providers spending status|on|off|recover` use the same fixed host policy
 operation. It revision-checks the current flag, restarts Pi and the decision sidecar,

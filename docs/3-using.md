@@ -71,6 +71,13 @@ not verified**. An explicit model test in Setup verifies a response for the save
 configuration; opening Settings does not run that test or spend inference usage.
 
 API-key providers are a separate connection with their own spending controls.
+If saving a key or changing spending cannot be confirmed, use **Check status**
+in the API-key panel before another action. This reads the server without repeating the
+change; the earlier request may still finish. A refresh temporarily labels
+retained settings as last checked. Changing the owner or server connection clears
+an unsent key. See [Hosted provider credentials](reference/provider-credentials.md)
+for verification, activation and recovery.
+
 Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see
 [Harnesses and model roles](harnesses-and-models-2026-10-09.md).

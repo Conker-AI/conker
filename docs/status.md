@@ -13,6 +13,73 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Keep credential edits bound to current provider evidence (10 October)
+
+API-key settings now serialize status reads and verified mutations. A refresh
+cannot overwrite an acknowledged spending-policy change, and actions require
+the current status snapshot and exact credential revisions. Retained settings
+are labeled as last checked while a read is pending or unavailable. An owner,
+client or component-lifetime change clears the private editor and rejects late
+results, including replacement back to a previously used client.
+
+Status reads stop waiting after 15 seconds. Credential operations allow 210
+seconds from the verified dispatch attempt, accommodating the existing host
+180-second and Gateway 190-second limits. Host rollback can still outlast that
+browser deadline. A lost response produces an unconfirmed outcome with an
+explicit Check status action, never an automatic mutation replay.
+Recovery reads retain the uncertainty notice and display the latest recovery
+markers; they do not establish that the earlier request was canceled.
+
+Each key-editor opening has its own identity. Closing and reopening the same
+provider cannot accept a stale input, close or submit callback from the old form.
+Refresh preserves an unchanged editor but clears it if its reviewed record
+changes. Keys clear before verification and are not restored when verification
+is canceled. Payment-policy recovery, credential recovery and exact-revision
+guards remain server enforced; this slice changes no server contract.
+
+The full gateway suite and independent credential, provider-control and dispatch
+checks passed. The 13 dispatch groups cover all eight credential operations,
+unchanged verified bodies, secret-free confirmation descriptions, validation
+before dispatch and no POST replay. Controller and actual-component tests cover
+the original stale-read race, double submission, read and write deadlines,
+verification cancellation, client/owner A-to-B-to-A, synchronous teardown,
+same-provider editor reopening and policy-recovery controls. Independent focus
+checks cover the current opener, fallback target, newer dialogs and owner scope.
+
+Rendered browser checks passed for slow status reads, failed writes followed by
+explicit recovery, editor cancellation, and owner-verification cancellation from
+both Save key and keyboard submission. The key clears and focus returns to the
+current action. A temporary focus observer now disconnects immediately after
+recovery. Desktop/mobile light/dark screenshots were inspected; the shorter
+Check status label preserves readable mobile header spacing. Final TypeScript,
+affected ESLint, the design guard (419 sources) and the focused regressions passed.
+The production build verified 169 assets and a 604,837-byte entry beneath the
+unchanged 700,000-byte cap, with no development fixture chunk. Gateway and Pi
+are healthy; Pi remains clean and unchanged at `33254f1`. Native CLI status reads
+still report both subscription runtimes available and signed out, with model
+configuration and recorded work counts unchanged.
+
+Served-app acceptance intercepted one paid-policy mutation and one synthetic
+owner proof. The failed write was not repeated; explicit status recovery showed
+the current policy and retained the unconfirmed-outcome notice. A later failed
+read disabled actions and labeled retained settings, then keyboard recovery
+restored current evidence and focus. Desktop and 390-pixel mobile screenshots
+were inspected without overflow. Interceptors were removed, the real Providers
+page restored, and real provider status compared unchanged before/after. No real
+credential, spending-policy or hosted-inference operation was performed.
+
+The next capability audit identified native-session discovery as a useful bounded
+increment. The terminal currently tracks an ephemeral shell lease, while native
+Claude sessions have their own lifecycle and can outlive terminal attachment.
+The installed Claude 2.1.270 provides JSON session discovery, exact-session logs
+and Stop commands, matching its [session-management interface](https://code.claude.com/docs/en/agent-view#list-sessions-as-json).
+A future owner-only view should use Conker's isolated native
+configuration, read output only on request, and preserve native approval handling.
+Stop would need exact-session owner verification and uncertain-outcome recovery.
+Codex thread discovery needs a separate app-server adapter; its existing account
+reader intentionally accepts only account and model-catalogue calls. Neither
+native-session integration is included in this credential-recovery slice.
+
 ### Recover subscription operations without repeating them (10 October)
 
 ChatGPT and Claude Code connection cards now distinguish current status, owner
@@ -63,12 +130,10 @@ the recovered pending status. Desktop and 390-pixel mobile screenshots were
 inspected without overflow. Interceptors were removed and the real Providers
 page restored. No native OAuth operation or hosted inference was performed.
 
-The next verified gap is the API-key panel: an old refresh can overwrite an
-acknowledged spending-policy change, an unresolved operation can strand its
-controls, and a mounted client replacement can retain an unsent key draft.
-Server revision and owner-verification guards remain intact. The next slice
-will fence that panel's lifecycle and recover observations without repeating
-credential or spending-policy mutations.
+The API-key panel then exposed the same class of lifecycle gaps: an old refresh
+could overwrite an acknowledged spending-policy change, unresolved operations
+could strand controls, and a mounted client replacement retained unsent keys.
+The later credential-recovery slice above addresses these cases.
 
 ### Report provider readiness without stale success (10 October)
 

@@ -55,7 +55,7 @@ export function GatewayProvidersSettings({ client, authStore }: { client: Gatewa
   return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
     <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />
     <NativeClaudeConnection client={client} authStore={authStore} />
-    <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} onChanged={() => setReload(number => number + 1)} /></details>
+    <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></details>
     <WorkspaceSection title="Runtime readiness" description="Connection and catalogue entries do not prove a model can answer." action={<Button variant="ghost" size="sm" className="aria-disabled:opacity-50" disabled={health.phase === 'inactive'} aria-disabled={health.phase === 'checking'} aria-busy={health.phase === 'checking'} onClick={() => { if (health.phase === 'current' || health.phase === 'unavailable') void health.refresh() }}><RefreshCw />{health.phase === 'checking' ? 'Checking…' : health.phase === 'unavailable' ? 'Try again' : 'Refresh'}</Button>}>
       {health.phase === 'checking' && <p role="status" className="text-sm text-muted-foreground">Checking provider readiness…</p>}
       {health.phase === 'unavailable' && <p role="status" className="text-sm text-muted-foreground">Provider readiness could not be checked. Try again to read the current status.</p>}
