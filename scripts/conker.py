@@ -249,7 +249,9 @@ def history_query(values):
     return values
 
 
-def request(config, service, path, body=None, *, query=None):
+def request(
+    config, service, path, body=None, *, query=None, timeout=660, maximum_bytes=None
+):
     if service not in {"providers", "toolgate-owner", "pi-owner", "toolgate", "pi"}:
         raise ValueError("Choose a configured Conker service.")
     if (
@@ -312,8 +314,13 @@ def request(config, service, path, body=None, *, query=None):
         else None
     )
     with build_opener(ProxyHandler({}), NoRedirect()).open(
-        Request(origin + path + suffix, data=data, headers=headers), timeout=660
+        Request(origin + path + suffix, data=data, headers=headers), timeout=timeout
     ) as response:
+        if maximum_bytes is not None:
+            raw = response.read(maximum_bytes + 1)
+            if len(raw) > maximum_bytes:
+                raise ValueError("The native session response exceeded its size limit.")
+            return json.loads(raw)
         return json.load(response)
 
 
@@ -481,6 +488,18 @@ def main():
     )
     native.add_argument("harness", choices=["codex", "claude"])
     native.add_argument("arguments", nargs=argparse.REMAINDER)
+    native_sessions = commands.add_parser(
+        "native-sessions",
+        help="Read or stop Claude background sessions in Conker's isolated native store",
+    )
+    native_sessions.add_argument("provider", choices=["claude"])
+    native_operations = native_sessions.add_subparsers(dest="operation", required=True)
+    native_operations.add_parser("list")
+    for operation in ("status", "output", "stop"):
+        operation_parser = native_operations.add_parser(operation)
+        operation_parser.add_argument("id")
+        if operation == "stop":
+            operation_parser.add_argument("--expected-identity", required=True)
     api = commands.add_parser(
         "api",
         help="Host-owner access to the same service APIs; tool grants still apply",
@@ -489,6 +508,21 @@ def main():
     api.add_argument("path")
     api.add_argument("--body", type=Path)
     args = parser.parse_args()
+    if args.command == "native-sessions":
+        if args.operation != "list":
+            identity(
+                args.id,
+                r"[A-Za-z0-9][A-Za-z0-9_-]{0,99}",
+                "exact native session ID",
+                100,
+            )
+        if args.operation == "stop":
+            identity(
+                args.expected_identity,
+                r"[0-9a-f]{64}",
+                "observed native session identity",
+                64,
+            )
     if args.command in {"chat", "show", "thinking", "memory-delivery"}:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "memory-delivery" and args.message is not None:
@@ -553,7 +587,18 @@ def main():
             / ("chatgpt-auth" if args.harness == "codex" else "claude-auth")
         )
         return subprocess.call([native[args.harness], *args.arguments], env=env)
-    if args.command == "sessions":
+    if args.command == "native-sessions":
+        path, body = "/claude/sessions", None
+        if args.operation != "list":
+            path += "/" + args.id
+        if args.operation in {"output", "stop"}:
+            path += "/" + args.operation
+        if args.operation == "stop":
+            body = {"expectedIdentity": args.expected_identity}
+        value = request(
+            config, "providers", path, body, timeout=30, maximum_bytes=1048576
+        )
+    elif args.command == "sessions":
         query = history_query(
             {
                 "limit": args.limit,
@@ -725,7 +770,7 @@ def main():
         if args.provider == "claude" and args.action == "login":
             body["billing"] = args.billing
         value = request(config, "providers", "/" + args.provider, body)
-    print(json.dumps(value, indent=2, ensure_ascii=False))
+    print(json.dumps(value, indent=2, ensure_ascii=args.command == "native-sessions"))
     return 0
 
 

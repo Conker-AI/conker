@@ -34,6 +34,7 @@ export const gatewayDestinations = [
   { id: 'settings', route: 'settings', title: 'Settings', path: '/settings', group: 'settings' },
   { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'settings' },
   { id: 'system', route: 'system', title: 'System & diagnostics', path: '/system', group: 'settings' },
+  { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'work' },
   { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'settings' },
 ] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: string }[]
 export type GatewayDestination = typeof gatewayDestinations[number]
@@ -44,7 +45,7 @@ const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, st
   settings: [['general', 'General'], ['providers', 'Providers'], ['search', 'Search']],
   activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
   agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills']],
-  system: [['overview', 'Overview'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['files', 'Files']],
+  system: [['overview', 'Overview'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files']],
   'companion-settings': [['identity', 'Identity & soul'], ['speaking', 'Speaking style'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['modes', 'Expression & modes'], ['harness', 'Harness']],
 }
 
@@ -115,7 +116,7 @@ export function gatewayConversationLink(sessionId: string, messageId?: string): 
   return messageId ? `${conversation}&message=${encodeURIComponent(messageId)}` : conversation
 }
 
-export const gatewaySystemSections = ['overview', 'processes', 'ports', 'containers', 'terminal', 'files'] as const
+export const gatewaySystemSections = ['overview', 'processes', 'ports', 'containers', 'terminal', 'native-sessions', 'files'] as const
 export type GatewaySystemSection = typeof gatewaySystemSections[number]
 
 export function gatewaySystemSection(search: string): GatewaySystemSection {

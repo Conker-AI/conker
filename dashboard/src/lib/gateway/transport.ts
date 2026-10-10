@@ -86,6 +86,9 @@ const memoryDeliveryRoute = /^\/api\/pi\/sessions\/[A-Za-z0-9_-]{1,128}(?:\/mess
 routes.GET.unshift(memoryDeliveryRoute)
 const observationRoute = /^\/api\/pi\/sessions\/[A-Za-z0-9_-]{1,128}\/observation$/
 routes.GET.unshift(observationRoute)
+const nativeSessionsRoute = /^\/api\/host\/claude\/sessions(?:\/[A-Za-z0-9][A-Za-z0-9_-]{0,99}(?:\/(?:output|stop))?)?$/
+routes.GET.unshift(/^\/api\/host\/claude\/sessions(?:\/[A-Za-z0-9][A-Za-z0-9_-]{0,99}(?:\/output)?)?$/)
+routes.POST.unshift(/^\/api\/host\/claude\/sessions\/[A-Za-z0-9][A-Za-z0-9_-]{0,99}\/stop$/)
 routes.GET.unshift(/^\/api\/host\/claude$/)
 routes.POST.unshift(/^\/api\/host\/claude$/, new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 routes.POST.unshift(/^\/api\/host\/providers$/)
@@ -236,6 +239,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
     async request(path: string, options: GatewayRequest & { csrfToken?: string; verificationToken?: string } = {}): Promise<Record<string, unknown>> {
       const method = options.method ?? 'GET'
       if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || !/^\/[A-Za-z0-9/_.-]+$/.test(path) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
+      if (nativeSessionsRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path) || observationRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
@@ -287,7 +291,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
           } else await response.body?.cancel().catch(() => undefined)
           throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code)
         }
-        return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : path === '/api/pi/sessions/history' ? GATEWAY_HISTORY_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
+        return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : path === '/api/pi/sessions/history' ? GATEWAY_HISTORY_LIMIT : nativeSessionsRoute.test(path) ? path === '/api/host/claude/sessions' ? 1024 * 1024 : path.endsWith('/output') ? 512 * 1024 : GATEWAY_JSON_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {
         if (error instanceof GatewayError) throw error
         throw new GatewayError(options.signal?.aborted ? 'aborted' : 'network')

@@ -19,7 +19,7 @@ const { gatewayCommandDestinations, gatewaySidebarDestinations, gatewayDestinati
 assert.equal(new Set(gatewayCommandDestinations.map(item => item.path)).size, gatewayCommandDestinations.length, 'Command destinations must be unique')
 assert.equal(new Set(gatewaySidebarDestinations.map(item => item.path)).size, gatewaySidebarDestinations.length, 'Sidebar destinations must be unique')
 assert.deepEqual(gatewayCommandDestinations.slice(0, 2).map(item => item.title), ['New chat', 'All chats'], 'Chat is the primary entry point')
-assert.deepEqual(gatewayDestinations.filter(item => item.group === 'work').map(item => item.id), ['today', 'inbox', 'tasks', 'runs', 'jobs', 'events'])
+assert.deepEqual(gatewayDestinations.filter(item => item.group === 'work').map(item => item.id), ['today', 'inbox', 'tasks', 'runs', 'jobs', 'events', 'native-sessions'])
 assert.deepEqual(gatewayDestinations.filter(item => item.group === 'library').map(item => item.id), ['projects', 'artifacts', 'agents', 'skills', 'tools'])
 assert.equal(gatewayDestinations.find(item => item.id === 'memory').group, 'memory', 'Memory stays directly visible')
 assert.equal(gatewayCommandDestinations.find(item => item.path === '/setup').title, 'Setup & readiness')
@@ -60,6 +60,7 @@ for (const component of ['activity-details', 'task-dispatch-review', 'proposals-
 }
 
 assert.equal(gatewaySystemSection('?tab=terminal'), 'terminal')
+assert.equal(gatewaySystemSection('?tab=native-sessions'), 'native-sessions')
 assert.equal(gatewaySystemSection('?tab=unknown'), 'overview')
 assert.equal(gatewayAgentSection('?tab=teams'), 'teams')
 assert.equal(gatewayAgentSection('?tab=templates'), 'agents')

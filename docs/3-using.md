@@ -82,6 +82,31 @@ Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see
 [Harnesses and model roles](harnesses-and-models-2026-10-09.md).
 
+## Inspect native Claude sessions
+
+Open **Native sessions** in Work, or **System > Native sessions**, to inspect
+Claude background sessions in Conker's isolated native profile. This directory
+is separate from Chats. Interactive Claude sessions are outside its scope;
+the page reports omitted entries and list truncation.
+
+Select a session to check its current native state and working directory.
+**Read output** loads a bounded plain-text snapshot on request. It does not
+subscribe to a stream or save a transcript in Conker. Changing the selection
+or signing out clears the displayed output. A failed check labels retained
+information as last checked instead of claiming that the session disappeared.
+
+**Stop** asks for owner verification of that exact session. An acknowledged
+request means Stop was requested; check status to learn its current state.
+After a lost response, check status before considering another Stop. Conker
+does not repeat the operation automatically. Stopping cannot undo completed
+actions or provider usage.
+
+The displayed attach command runs manually from the Conker repository root
+and uses the same isolated profile. Attaching can resume native work. Native
+permission and approval prompts remain in Claude; this view does not answer
+them. Closing a terminal does not establish that a background session stopped.
+See [Native sessions](reference/native-sessions.md) for CLI commands and limits.
+
 ## Drafts, Stop and recovery
 
 Unsent drafts save privately on the server with their model, skills, research

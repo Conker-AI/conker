@@ -13,6 +13,67 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Inspect and control exact native Claude background sessions (10 October)
+
+The enhanced local profile adds **Native sessions** to Work and System, with a
+link from Terminal. The CLI provides matching list, status, output and Stop
+operations. This view covers Claude background sessions in Conker's isolated
+native profile. It is separate from chat history and reports both the 100-row
+display limit and omitted non-background entries. Unsupported or malformed
+native responses remain unavailable; a new native state is unknown.
+
+Opening output explicitly reads a bounded plain-text snapshot without saving it
+in Conker. Native identity is checked before and after the read, and selection
+or authentication changes clear the browser copy. Stop uses a fresh exact native
+identity check, owner verification and a one-use operation proof. Its receipt
+says requested, not stopped. Recovery reads preserve uncertainty without an
+automatic Stop replay. Native tools, permissions and approval prompts remain
+owned by Claude; attaching is a separate manual operation that can resume work.
+
+Native commands have a shared 20-second operation deadline and bounded pipes.
+The CLI and Gateway allow 30 seconds; browser reads allow 35 seconds and Stop
+allows 45 seconds after verified dispatch. Provider shutdown now requests a
+graceful exit, with a fallback that targets only the exact Conker provider
+processes. It does not recursively terminate native supervisors or their jobs.
+Observation cleanup similarly stops only its own short-lived CLI process.
+
+The host, CLI, provider, launcher and inference regression run passed 184 tests;
+an independent focused run passed 125. Two additional redirected-output tests
+verify that native-session JSON preserves Unicode on ASCII/cp1252 Windows
+streams; its focused 12-test CLI suite passed. Gateway's 44 new boundary tests
+and 33 existing native-auth/verification tests passed.
+The reviewed Gateway commit is `08e2ef2`; its portable patch reproduces 105
+files from a fresh pinned checkout and remains unchanged on repeat application.
+A read-only check against installed Claude 2.1.270 returned an empty isolated
+registry in 250 ms. No native task or real Stop was issued for that check.
+
+The full dashboard Gateway suite, focused native lifecycle/component/transport
+checks, TypeScript, affected ESLint and design guard (423 sources) passed.
+Independent review corrected the attribution of an old Stop receipt after native
+identity replacement. Rendered checks caught and fixed lost keyboard focus when
+canceling Stop; confirmation cancellation, nested owner-verification cancellation
+and explicit recovery now return focus appropriately. Desktop/mobile light/dark,
+empty, unavailable, output and uncertainty states were inspected after transitions.
+
+Local rollout backed up Pi/Gateway databases and retained prior assets. Gateway,
+Pi and the provider bridge are healthy; live Pi is clean at `08e2ef2`. The build
+verified 172 assets and a 608,577-byte entry under the unchanged 700,000-byte cap,
+without a development fixture chunk. CLI discovery took 469 ms and matched the
+pre-rollout empty registry. Model configuration and recorded work counts remained
+unchanged; both native subscription runtimes remain available and signed out.
+
+Served-browser acceptance intercepted one synthetic Stop and one synthetic owner
+proof. Output loaded only on request, stayed inert and was discarded on an
+identity mismatch. The failed Stop was not repeated; explicit status recovery
+showed Stopped while retaining the unconfirmed-outcome notice. A replacement
+session did not inherit that receipt. Keyboard focus and 390-pixel layout passed.
+Interceptors were removed and the real empty registry restored and checked
+unchanged. No real OAuth, inference, native task or Stop was performed.
+
+[Native session documentation](reference/native-sessions.md) describes commands,
+recovery and the current scope. Codex discovery, native task launch, streaming
+events and native approval integration remain separate work.
+
 ### Keep credential edits bound to current provider evidence (10 October)
 
 API-key settings now serialize status reads and verified mutations. A refresh
@@ -67,18 +128,6 @@ restored current evidence and focus. Desktop and 390-pixel mobile screenshots
 were inspected without overflow. Interceptors were removed, the real Providers
 page restored, and real provider status compared unchanged before/after. No real
 credential, spending-policy or hosted-inference operation was performed.
-
-The next capability audit identified native-session discovery as a useful bounded
-increment. The terminal currently tracks an ephemeral shell lease, while native
-Claude sessions have their own lifecycle and can outlive terminal attachment.
-The installed Claude 2.1.270 provides JSON session discovery, exact-session logs
-and Stop commands, matching its [session-management interface](https://code.claude.com/docs/en/agent-view#list-sessions-as-json).
-A future owner-only view should use Conker's isolated native
-configuration, read output only on request, and preserve native approval handling.
-Stop would need exact-session owner verification and uncertain-outcome recovery.
-Codex thread discovery needs a separate app-server adapter; its existing account
-reader intentionally accepts only account and model-catalogue calls. Neither
-native-session integration is included in this credential-recovery slice.
 
 ### Recover subscription operations without repeating them (10 October)
 

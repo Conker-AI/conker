@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CircleAlert, Info, LoaderCircle, Power, RefreshCw, ShieldCheck, TerminalSquare } from 'lucide-react'
 import { FitAddon } from '@xterm/addon-fit'
@@ -169,6 +170,7 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
 
   return <GatewayPageFrame className="flex flex-col gap-4 overflow-hidden">
     <PageHeader actionsOnly title="Terminal" description="Work directly in one operator-configured workspace through a short-lived owner shell." density="compact" actions={<div className="flex items-center gap-2">
+      <WorkspaceAction asChild><Link to="/system?tab=native-sessions">Native sessions</Link></WorkspaceAction>
       <Tooltip><TooltipTrigger asChild><WorkspaceAction iconOnly disabled={phase === 'checking' || phase === 'starting' || phase === 'closing'} onClick={() => void inspect()} aria-label="Check terminal status"><RefreshCw /></WorkspaceAction></TooltipTrigger><TooltipContent>Check status</TooltipContent></Tooltip>
       {lease ? <WorkspaceAction disabled={phase === 'closing'} onClick={() => void close()}><Power />{phase === 'closing' ? 'Closing…' : 'Close terminal'}</WorkspaceAction> : <WorkspaceAction disabled={phase !== 'idle'} onClick={() => void start()}><TerminalSquare />{phase === 'starting' ? 'Starting…' : 'Start terminal'}</WorkspaceAction>}
     </div>} />
@@ -177,7 +179,7 @@ export function GatewayTerminalWorkspace({ client }: { client: GatewayTerminalCl
       <StatusBadge tone={active ? 'live' : phase === 'exited' || error ? 'warning' : 'neutral'}>{status}</StatusBadge>
       <span className="min-w-0 truncate font-mono text-foreground" title={details?.workspace}>{details?.workspace ?? 'Workspace unavailable'}</span>
       {details && <><span>Maximum {lifetime(details.maximumLifetimeSeconds)}</span><span>Not saved to history or backups</span></>}
-      <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="ml-auto size-8" aria-label="Terminal access details"><Info /></Button></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] text-sm"><p className="font-medium">Ephemeral owner shell</p><p className="mt-2 leading-6 text-muted-foreground">The server operator chooses the workspace. Conker does not persist commands, output, or the lease. This is host-account access, not a filesystem sandbox. Closing the shell ends its processes. Run codex or claude to use their native prompts and tools.</p></PopoverContent></Popover>
+      <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" className="ml-auto size-8" aria-label="Terminal access details"><Info /></Button></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] text-sm"><p className="font-medium">Ephemeral owner shell</p><p className="mt-2 leading-6 text-muted-foreground">The server operator chooses the workspace. Conker does not persist commands, output, or the lease. This is host-account access, not a filesystem sandbox. Closing this shell ends its foreground work. Independently supervised native background sessions can keep running; inspect them in Native sessions. Run codex or claude here to use their native prompts and tools.</p></PopoverContent></Popover>
     </div>
 
     {error && <div className="flex shrink-0 items-start gap-3 border-y py-3 text-sm text-destructive" role="alert"><CircleAlert className="mt-0.5 size-4 shrink-0" /><div className="min-w-0 flex-1"><p>{error}</p>{uncertain && <Button className="mt-3" variant="outline" size="sm" onClick={() => { uncertainRef.current = false; setUncertain(false); setError(null); terminalRef.current?.focus() }}>Resume input without replay</Button>}</div></div>}

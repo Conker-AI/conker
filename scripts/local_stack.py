@@ -130,7 +130,11 @@ def serve(name, config):
                     access_log=False)
     elif name == "providers":
         from workspace_providers import create_app
-        uvicorn.run(create_app(config), host="127.0.0.1", port=SERVICES[name], proxy_headers=False, access_log=False)
+        app = create_app(config)
+        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=SERVICES[name], proxy_headers=False, access_log=False,
+                                             timeout_graceful_shutdown=5))
+        app.state.request_shutdown = lambda: setattr(server, "should_exit", True)
+        server.run()
     else:
         module = {"pi": "pi.api:app", "memorygate": "app.main:app",
                   "toolgate": "toolgate.api.server:app", "decisions": "server:create_app"}[name]
@@ -170,6 +174,11 @@ def main():
             command = process.cmdline()
             if str(Path(__file__).resolve()) not in command or command[-2:] != ["serve", args.service]:
                 raise SystemExit("Process identity no longer matches; nothing stopped.")
+            if args.service == "providers":
+                from provider_lifecycle import stop
+                stop(process, config, SERVICES[args.service], Path(__file__).resolve())
+                print("Stopped local providers; native background sessions retained.")
+                return
             children = process.children(recursive=True)
             for child in reversed(children):
                 child.terminate()

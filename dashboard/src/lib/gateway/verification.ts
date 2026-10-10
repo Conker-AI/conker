@@ -37,6 +37,12 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push(body.operation === 'login' ? 'Starts OpenAI device-code sign-in. You authorize it on OpenAI, not by entering an API key. Credentials stay private on this server.' : body.operation === 'logout' ? 'Removes this server connection. Models using it stop answering until you reconnect; this does not revoke all OpenAI sessions.' : body.operation === 'cancel' ? 'Cancels this exact pending sign-in attempt.' : 'Reads the signed-in provider catalogue. It does not select a model or run inference.')
     details.push('Your Conker tool permissions and API-key spending policy are unchanged. ChatGPT plan limits still apply.')
   }
+  else if (/^\/api\/host\/claude\/sessions\/[A-Za-z0-9][A-Za-z0-9_-]{0,99}\/stop$/.test(path)) {
+    title = 'Stop native Claude session'; target = `Claude session ${parts[5]}`
+    details.push('Requests stop for this exact Conker-owned background session. Completed changes are not undone. Native permissions and approvals are unchanged.')
+    if (typeof body.expectedIdentity === 'string' && /^[a-f0-9]{64}$/.test(body.expectedIdentity)) details.push(`Session identity: ${body.expectedIdentity}.`)
+    details.push('A successful request does not prove the process has stopped. Check status afterward; uncertain requests are never automatically repeated.')
+  }
   else if (path === '/api/host/claude') {
     target = 'Official Claude Code on this Conker host'
     title = body.operation === 'login' ? 'Sign in with Claude Code' : body.operation === 'logout' ? 'Disconnect Claude Code' : 'Cancel Claude Code sign-in'

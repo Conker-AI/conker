@@ -194,7 +194,9 @@ dependencies as unavailable or unconfigured. Their configuration in another
 deployment is not inherited here.
 
 The optional `enhance` profile now installs Laya, native subscription sign-in,
-independent background thinking, and a Windows owner terminal. See
+independent background thinking, and a Windows owner terminal. The provider
+bridge also exposes [Claude background sessions](reference/native-sessions.md)
+for owner inspection and exact-session Stop through CLI and UI. See
 [harnesses and model roles](harnesses-and-models-2026-10-09.md) for setup, CLI
 commands, current validation and remaining parity work.
 

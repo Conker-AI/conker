@@ -17,6 +17,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from inference_requests import AdmissionError, Requests
 from native_claude import Claude
+from native_claude_sessions import SessionError, Sessions, stop_payload
 from starlette.concurrency import run_in_threadpool
 
 
@@ -29,11 +30,15 @@ def create_app(config):
         )
     chatgpt = ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
     claude = Claude(settings["claude"], Path(settings["state"]) / "claude-auth")
+    native_sessions = Sessions(
+        settings["claude"], Path(settings["state"]) / "claude-auth"
+    )
     requests = Requests()
 
     @asynccontextmanager
     async def lifespan(app):
         yield
+        native_sessions.close()
         requests.close()
         if chatgpt.rpc:
             chatgpt.rpc.close()
@@ -41,6 +46,11 @@ def create_app(config):
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.inference_requests = requests
+    app.state.request_shutdown = None
+
+    @app.exception_handler(SessionError)
+    async def native_session_error(_request, exc):
+        return JSONResponse({"error": str(exc)}, status_code=exc.status)
 
     def split_request(value):
         if not isinstance(value, dict):
@@ -70,9 +80,15 @@ def create_app(config):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
         if request.method == "POST":
             size = request.headers.get("content-length", "")
+            limit = (
+                1024
+                if request.url.path.startswith("/claude/sessions/")
+                or request.url.path == "/lifecycle/stop"
+                else 4_000_000
+            )
             if (
                 not size.isdigit()
-                or not 0 < int(size) <= 4_000_000
+                or not 0 < int(size) <= limit
                 or request.headers.get("transfer-encoding")
             ):
                 return JSONResponse({"error": "invalid_request"}, status_code=422)
@@ -81,6 +97,21 @@ def create_app(config):
     @app.get("/chatgpt")
     def chatgpt_status():
         return chatgpt.status()
+
+    @app.post("/lifecycle/stop")
+    async def lifecycle_stop(request: Request):
+        # Host launcher only: no Gateway/browser route, no inference authority.
+        try:
+            raw = await request.body()
+            if len(raw) > 1024 or json.loads(raw) != {}:
+                raise ValueError()
+        except (ValueError, TypeError, UnicodeError):
+            return JSONResponse({"error": "invalid_request"}, status_code=422)
+        callback = app.state.request_shutdown
+        if callback is None:
+            return JSONResponse({"error": "lifecycle_unavailable"}, status_code=503)
+        callback()
+        return {"status": "stopping"}
 
     @app.post("/chatgpt")
     async def chatgpt_operation(request: Request):
@@ -99,6 +130,23 @@ def create_app(config):
             return await run_in_threadpool(claude.apply, await request.json())
         except Exception:  # noqa: BLE001 - Native errors may contain credentials; publish only a fixed code.
             return JSONResponse({"error": "provider_operation_failed"}, status_code=503)
+
+    @app.get("/claude/sessions")
+    def claude_sessions():
+        return native_sessions.list()
+
+    @app.get("/claude/sessions/{identity}")
+    def claude_session(identity: str):
+        return native_sessions.status(identity)
+
+    @app.get("/claude/sessions/{identity}/output")
+    def claude_session_output(identity: str):
+        return native_sessions.output(identity)
+
+    @app.post("/claude/sessions/{identity}/stop")
+    async def claude_session_stop(identity: str, request: Request):
+        value = stop_payload(await request.body())
+        return await run_in_threadpool(native_sessions.stop, identity, value)
 
     @app.get("/inference/status")
     def inference_status():

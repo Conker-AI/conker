@@ -55,6 +55,7 @@ function seed(): Session[] {
 export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
+  const nativeRows = ['review_changes', 'waiting_input'].map((id, index) => ({ id, identity: (index ? 'b' : 'a').repeat(64), sessionId: `native_conversation_${index}`, name: index ? 'Review needs native input' : 'Review workspace changes', cwd: index ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', startedAt: Date.now() - (index + 1) * 60000, state: index ? 'blocked' : 'working', processStatus: index ? 'waiting' : 'busy', waitingFor: index ? 'permission_prompt' : null, canStop: true }))
   const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
@@ -912,6 +913,24 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         deviceCode: method === 'POST' && options.body?.operation === 'login' ? { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } : null,
       } : { ...common, runtime: 'Claude Code', models: [], authorizationUrl: loginId ? 'https://claude.ai/oauth/authorize' : null }
     }
+    if (path.startsWith('/api/host/claude/sessions')) {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
+      if (scenario === 'unavailable') return fail(503)
+      if (scenario === 'read-timeout' && method === 'GET') return new Promise<Json>(() => { /* Isolated read deadline. */ })
+      const parts = path.split('/'), row = nativeRows.find(item => item.id === parts[5])
+      if (path === '/api/host/claude/sessions') return { schemaVersion: 1, provider: 'claude', scope: 'background_sessions', results: scenario === 'empty' ? [] : structuredClone(nativeRows), truncated: false, omittedCount: 1 }
+      if (!row) return fail(404)
+      if (path.endsWith('/output')) return { schemaVersion: 1, provider: 'claude', id: row.id, identity: row.identity, text: 'Claude native output snapshot\nReviewing workspace files…\n<untrusted text remains plain text>\n', truncated: true, outputPersisted: false }
+      if (path.endsWith('/stop') && method === 'POST') {
+        options.onDispatch?.()
+        if (options.body?.expectedIdentity !== row.identity) return fail(409)
+        if (scenario === 'stop-timeout') return new Promise<Json>(() => { /* Isolated dispatched Stop deadline. */ })
+        row.state = 'stopped'; row.processStatus = 'idle'; row.waitingFor = null; row.canStop = false
+        if (scenario === 'lost-response') return fail(503)
+        return { schemaVersion: 1, provider: 'claude', id: row.id, identity: row.identity, status: 'stop_requested', automaticReplay: false }
+      }
+      return { schemaVersion: 1, provider: 'claude', result: structuredClone(row) }
+    }
     if (path === '/api/host/claude') return { available: false, connected: false, loginId: null, loginState: 'idle', authorizationUrl: null, credentialsIncluded: false, runtime: 'Claude Code', models: [] }
     if (path === '/api/host/chatgpt') {
       if (method !== 'GET') throw new GatewayError('dependency', 503)
@@ -1124,5 +1143,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
 
   const subscriptionVerificationEnabled = (path: string) => ['/api/host/chatgpt', '/api/host/claude'].includes(path) && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
   const credentialVerificationEnabled = (path: string) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
-  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled }
+  const nativeSessionVerificationEnabled = (path: string) => /^\/api\/host\/claude\/sessions\/[^/]+\/stop$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
+  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled }
 }

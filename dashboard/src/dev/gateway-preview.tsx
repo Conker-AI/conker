@@ -28,14 +28,14 @@ function services() {
   const fake = createFakeGateway({ setupStep })
   const verification = createGatewayVerificationStore()
   const auth = { request: async (path, options = {}) => {
-    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path))) {
+    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path))) {
       await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)
     }
     return fake.request(path, options)
   }, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock'>
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
-    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: (fake.subscriptionVerificationEnabled('/api/host/chatgpt') || fake.credentialVerificationEnabled('/api/host/providers')) ? Date.now() / 1000 + 86400 : null, setupRequired: false },
+    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: (fake.subscriptionVerificationEnabled('/api/host/chatgpt') || fake.credentialVerificationEnabled('/api/host/providers') || fake.nativeSessionVerificationEnabled('/api/host/claude/sessions/preview/stop')) ? Date.now() / 1000 + 86400 : null, setupRequired: false },
     bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
   })), { dispose: () => undefined })
   return { fake, verification, workspace: {
