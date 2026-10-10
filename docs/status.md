@@ -13,6 +13,47 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Model setup, foreground Stop and service recovery (10 October)
+
+Model setup checks each exact installed local route. Activation probes a staged
+selection and commits settings together with its receipt only on success. Failed
+or uncertain probes leave routing unchanged, concurrent owner updates win, and
+replaying a successful activation returns its receipt without another model call.
+
+Foreground inference now registers an exact cancellable operation, so Stop can
+interrupt a silent provider stream. Late answers remain fenced by the durable
+stop record. Tool effects retain their reconciliation path; a delayed old Stop
+cannot cancel a later explicitly resumed reply, while a newer Stop still can.
+
+The launcher distinguishes process ownership from port readiness. It waits for
+owned starting processes instead of duplicating them, verifies shutdown, and
+refuses runtime maintenance while those processes remain active. Unreadable
+ownership fails closed. Concurrent independent launcher invocations are not
+serialized by this change.
+
+Setup and the sidebar share one cancellable, client-scoped status read with
+bounded focus refresh. Failed refreshes remain visible even after prior
+completion, and retained results are labelled as the last verified progress.
+Progress describes saved setup evidence, separately from current model availability.
+
+Validation: 63 model setup/readiness tests and 58 launcher/correction tests pass.
+Cancellation, loop, thinking and reply recovery checks cover 81 cases, including
+the final 24-case stop-generation regression run. Relevant frontend contracts,
+TypeScript, affected lint, design checks and all 406 source-module reachability
+checks pass. Desktop/mobile status recovery was visually reviewed in both themes.
+The staged production entry is 596,356 bytes, below the unchanged 700,000-byte limit.
+
+Fresh and repeated installation reproduce all 75 reviewed Pi files. The local
+rollout retained SQLite checkpoints and the previous assets; Pi and Gateway
+passed health checks. A live local-thinking request, with background Think off,
+confirmed cancellation in 422 ms after Stop, with no tool action or saved answer.
+A separate explicit local-fast request completed one answer call (501 input and
+12 output tokens) in 31.2 seconds, with no thinking call. Chat displays that saved
+answer and retires the older stopped-turn panels. Both new synthetic inputs were
+excluded from memory. These observations confirm the exercised paths; local
+generation latency, automatic-router timeout and small-model tool reliability
+remain limitations. Model configuration remains at its prior revision.
+
 ### Visible turn recovery and owner memory corrections (10 October)
 
 Saved failed, interrupted and stopped replies remain visible after reopening a
@@ -51,8 +92,9 @@ in CLI and chat while its original message remained. Semantic-index removal
 reported degraded because semantic search is unavailable. Claude status remains
 signed out with no pending login identity. A separate greeting using Automatic
 hit a router timeout and selected the configured local thinking model for the
-answer; it remained pending and an explicit Stop was requested. This does not
-establish successful reply or prompt-cancellation acceptance.
+answer. An explicit Stop eventually cancelled the turn with no tool action, but
+only after about 53 seconds. That observed delay prompted the foreground
+cancellation fix above; it is not successful prompt-cancellation acceptance.
 
 ### Explicit memory requests and delivery acknowledgements (10 October)
 

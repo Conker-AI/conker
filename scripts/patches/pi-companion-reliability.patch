@@ -750,6 +750,100 @@ index a01c26f..dfb6439 100644
 +        return call(drafts.save, session_id, body, scope(request, session_id, legacy=True))
  
      return routes
+diff --git a/pi/foreground_inference.py b/pi/foreground_inference.py
+new file mode 100644
+index 0000000..c23bf11
+--- /dev/null
++++ b/pi/foreground_inference.py
+@@ -0,0 +1,88 @@
++"""Connect durable owner stops to the exact foreground provider operation.
++
++Only active inference transports are interrupted. Tool effects keep their own
++reconciliation path, and the durable guard still decides whether a result may
++be committed. Registry entries never outlive the call that owns them.
++"""
++
++import threading
++from contextlib import contextmanager
++
++from . import inference_control
++
++_lock = threading.Lock()
++_active = {}
++
++
++def _keys(store, execution):
++    return [
++        (store.path, kind, identity)
++        for kind, identity in (
++            ("turn", (execution or {}).get("turnExecutionId")),
++            ("submission", (execution or {}).get("submissionExecutionId")),
++        )
++        if identity
++    ]
++
++
++def cancel(store, *, turn_id=None, request_id=None, requested_at=None):
++    """Called only after the stop has committed; never cancel another identity."""
++    keys = _keys(store, {"turnExecutionId": turn_id, "submissionExecutionId": request_id})
++    with _lock:
++        tokens = {
++            token
++            for key in keys
++            for token, allowed_stop in _active.get(key, ())
++            if requested_at is None or allowed_stop is None or requested_at > allowed_stop
++        }
++    for token in tokens:
++        token.cancel("owner")
++
++
++@contextmanager
++def scope(store, execution):
++    # Thinking already owns a cancellable token and its separate budget/registry.
++    # Nested calls must preserve that owner instead of replacing its control.
++    keys = _keys(store, execution)
++    if inference_control.current() is not None or not keys:
++        yield
++        return
++
++    from . import turn_control
++    from .providers import ProviderUnavailable
++
++    token = inference_control.Token()
++    # An explicitly resumed reply can permit a previous stop. Its permission
++    # is immutable and exact; delayed delivery of that stop must not cancel it.
++    allowed_stop = None
++    if (execution or {}).get("replyRecoveryId"):
++        with store._connect() as db:
++            permission = db.execute(
++                "SELECT cancelled_at FROM turn_reply_recoveries WHERE request_id=? AND turn_id=?",
++                (execution["replyRecoveryId"], execution.get("turnExecutionId")),
++            ).fetchone()
++        allowed_stop = permission[0] if permission else None
++    registration = (token, allowed_stop)
++    with _lock:
++        for key in keys:
++            _active.setdefault(key, set()).add(registration)
++    try:
++        with inference_control.bind(token):
++            # Covers a stop committed before registration. Stops after this
++            # check see the registered token and close only its transport.
++            turn_control.guard(store, execution)
++            yield
++            token.check()
++            turn_control.guard(store, execution)
++    except inference_control.InferenceCancelled as exc:
++        raise ProviderUnavailable(
++            "Owner stopped this inference; completed effects are retained."
++        ) from exc
++    finally:
++        with _lock:
++            for key in keys:
++                tokens = _active.get(key)
++                if tokens is not None:
++                    tokens.discard(registration)
++                    if not tokens:
++                        del _active[key]
 diff --git a/pi/inference_control.py b/pi/inference_control.py
 index 138fee4..78076a5 100644
 --- a/pi/inference_control.py
@@ -821,10 +915,23 @@ index 138fee4..78076a5 100644
      def register(self, callback):
          with self._lock:
 diff --git a/pi/loop.py b/pi/loop.py
-index 42029e1..657b7a2 100644
+index 42029e1..5908f94 100644
 --- a/pi/loop.py
 +++ b/pi/loop.py
-@@ -182,10 +182,6 @@ class Loop:
+@@ -135,6 +135,12 @@ class Loop:
+             return []
+ 
+     def _call(self, messages: list[Message], ctx: TurnContext, execution=None, role="answer"):
++        from . import foreground_inference
++
++        with foreground_inference.scope(self.store, execution):
++            return self._call_controlled(messages, ctx, execution, role)
++
++    def _call_controlled(self, messages, ctx, execution, role):
+         from . import inference_control
+ 
+         inference_control.check()
+@@ -182,10 +188,6 @@ class Loop:
              adapters = team_execution.metered_providers(self.store, execution, adapters)
              from . import research_usage
  
@@ -835,7 +942,7 @@ index 42029e1..657b7a2 100644
              result = model_roles.dispatch(
                  configuration,
                  role,
-@@ -194,6 +190,7 @@ class Loop:
+@@ -194,6 +196,7 @@ class Loop:
                  harness_disabled=execution["privacy"]["harnessDisabled"],
                  override=override if role == "answer" else None,
                  guard=guard,
@@ -843,7 +950,7 @@ index 42029e1..657b7a2 100644
              )
              completion = result["completion"]
              evidence = {
-@@ -293,21 +290,25 @@ class Loop:
+@@ -293,21 +296,25 @@ class Loop:
              raise context_controls.ContextError(
                  exc.detail["code"], exc.detail["message"], exc.status
              ) from exc
@@ -881,19 +988,23 @@ index 42029e1..657b7a2 100644
          from . import research
  
          research_used = (
-@@ -397,7 +398,10 @@ class Loop:
+@@ -397,7 +404,14 @@ class Loop:
                  messages.append(attached)
          context_controls.check_budget(policy, messages)
          if turn_id:
 -            turn_context.capture(self.store, turn_id, selected_history, prefix_messages, reply_to)
 +            turn_context.capture(
-+                self.store, turn_id, selected_history, prefix_messages, reply_to,
++                self.store,
++                turn_id,
++                selected_history,
++                prefix_messages,
++                reply_to,
 +                acknowledgement_generation=acknowledgement_generation,
 +            )
              turn_steering.consume(
                  self.store,
                  turn_id,
-@@ -664,6 +668,7 @@ class Loop:
+@@ -664,6 +678,7 @@ class Loop:
              from . import research
  
              research.validate_narration(execution, completion.text)
@@ -901,7 +1012,7 @@ index 42029e1..657b7a2 100644
              turn_control.guard(self.store, execution)
          except (ProviderUnavailable, RuntimeError) as exc:
              reason = getattr(exc, "reason", type(exc).__name__)
-@@ -993,7 +998,7 @@ class Loop:
+@@ -993,7 +1008,7 @@ class Loop:
                  limit = 1
              elif execution.get("researchMode") == "deep":
                  limit = min(limit, research.plan(self.store, turn_id)["search_limit"])
@@ -910,7 +1021,7 @@ index 42029e1..657b7a2 100644
                  call = tool_protocol.parse(completion.text, allowed)
                  if call is None:
                      break
-@@ -1095,11 +1100,13 @@ class Loop:
+@@ -1095,11 +1110,13 @@ class Loop:
                      acted = True
                  history = self._history(
                      session_id,
@@ -2039,7 +2150,7 @@ index 5afd9eb..d913e13 100644
          db.execute(
              "UPDATE memory_outbox SET operation='delete',state='pending',attempts=0,"
 diff --git a/pi/model_roles.py b/pi/model_roles.py
-index e7a92b5..a937d18 100644
+index e7a92b5..f2de75a 100644
 --- a/pi/model_roles.py
 +++ b/pi/model_roles.py
 @@ -4,6 +4,7 @@ from __future__ import annotations
@@ -2050,7 +2161,40 @@ index e7a92b5..a937d18 100644
  from typing import Literal
  
  from pydantic import BaseModel, ConfigDict, Field, model_validator
-@@ -239,6 +240,7 @@ def dispatch(
+@@ -216,16 +217,23 @@ def save(store, body: Update):
+     body = Update.model_validate(body.model_dump())
+     with store._connect() as db:
+         db.execute("BEGIN IMMEDIATE")
+-        row = db.execute("SELECT revision FROM model_role_settings WHERE singleton=1").fetchone()
+-        current = row[0] if row else 0
+-        if current != body.expected_revision:
+-            raise ValueError("Model settings changed; reload before saving.")
+-        db.execute(
+-            "INSERT INTO model_role_settings VALUES(1,?,?) ON CONFLICT(singleton) "
+-            "DO UPDATE SET revision=excluded.revision,configuration=excluded.configuration",
+-            (current + 1, body.configuration.model_dump_json()),
+-        )
++        result = save_in(db, body)
+         db.commit()
++    return result
++
++
++def save_in(db, body: Update):
++    """Caller holds the writer transaction when activation also records its receipt."""
++    body = Update.model_validate(body.model_dump())
++    row = db.execute("SELECT revision FROM model_role_settings WHERE singleton=1").fetchone()
++    current = row[0] if row else 0
++    if current != body.expected_revision:
++        raise ValueError("Model settings changed; reload before saving.")
++    db.execute(
++        "INSERT INTO model_role_settings VALUES(1,?,?) ON CONFLICT(singleton) "
++        "DO UPDATE SET revision=excluded.revision,configuration=excluded.configuration",
++        (current + 1, body.configuration.model_dump_json()),
++    )
+     return {"revision": current + 1, "configuration": body.configuration.model_dump()}
+ 
+ 
+@@ -239,6 +247,7 @@ def dispatch(
      override=None,
      allowed_model_ids=None,
      guard=None,
@@ -2058,7 +2202,7 @@ index e7a92b5..a937d18 100644
  ):
      """Adapters are server-owned; stored IDs cannot create credentials or transports.
  
-@@ -302,6 +304,7 @@ def dispatch(
+@@ -302,6 +311,7 @@ def dispatch(
                  providers,
                  allowed_model_ids=allowed_model_ids,
                  guard=guard,
@@ -2066,7 +2210,7 @@ index e7a92b5..a937d18 100644
              )
              attempts.extend(decision["attempts"])
              choice = json.loads(decision["completion"].text)
-@@ -347,9 +350,14 @@ def dispatch(
+@@ -347,9 +357,14 @@ def dispatch(
              guard()
          try:
              require_images(adapter, messages)
@@ -2084,7 +2228,7 @@ index e7a92b5..a937d18 100644
              if guard is not None:
                  guard()
 diff --git a/pi/providers.py b/pi/providers.py
-index 34d75d1..e4463e5 100644
+index 34d75d1..5ecb388 100644
 --- a/pi/providers.py
 +++ b/pi/providers.py
 @@ -22,6 +22,7 @@ import httpx
@@ -2165,7 +2309,12 @@ index 34d75d1..e4463e5 100644
                  )
              response = stack.enter_context(stream)
              if token is not None:
-@@ -242,14 +259,24 @@ class OllamaProvider:
+@@ -238,20 +255,49 @@ class OllamaProvider:
+             raise ValueError("stream ended before completion")
+         return {**final, "message": {"role": "assistant", "content": "".join(text)}}
+ 
+-    def health(self) -> dict:
++    def _inventory(self):
          try:
              response = httpx.get(
                  f"{self.base_url}/api/tags",
@@ -2183,14 +2332,37 @@ index 34d75d1..e4463e5 100644
 +                or not entry["name"]
 +                for entry in entries
 +            ):
-+                return {"status": "unavailable", "reason": "invalid_model_inventory"}
++                return [], {"status": "unavailable", "reason": "invalid_model_inventory"}
 +            models = [entry["name"] for entry in entries]
          except Exception as exc:
-             return {"status": "unavailable", "reason": type(exc).__name__}
+-            return {"status": "unavailable", "reason": type(exc).__name__}
 -        models = [m.get("name", "") for m in response.json().get("models", [])]
++            return [], {"status": "unavailable", "reason": type(exc).__name__}
          if not models:
-             return {"status": "not_configured", "reason": "no models pulled"}
+-            return {"status": "not_configured", "reason": "no models pulled"}
++            return [], {"status": "not_configured", "reason": "no models pulled"}
++        return models, None
++
++    def health_models(self, requested: list[str]) -> dict[str, dict]:
++        """One inventory observation; availability belongs to each requested route."""
++        models, failure = self._inventory()
++        return {
++            route: failure
++            or (
++                {"status": "ok"}
++                if _installed(route, models)
++                else {"status": "not_configured", "reason": "model is not pulled"}
++            )
++            for route in requested
++        }
++
++    def health(self) -> dict:
++        models, failure = self._inventory()
++        if failure:
++            return failure
          # Any model is not the model. An install where the embedding model
+         # downloaded and the chat model did not would otherwise report `ok`
+         # while being unable to answer a single turn - readiness claimed from a
 diff --git a/pi/research_usage.py b/pi/research_usage.py
 index 966a58a..d519bbd 100644
 --- a/pi/research_usage.py
@@ -2613,6 +2785,494 @@ index e58b3cf..2e1fb6a 100644
              if (
                  submissions._busy(db, sid)
                  or db.execute(
+diff --git a/pi/setup_model_probes.py b/pi/setup_model_probes.py
+index c1e0d21..22d9255 100644
+--- a/pi/setup_model_probes.py
++++ b/pi/setup_model_probes.py
+@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS setup_model_probe_requests (
+     state                  TEXT NOT NULL CHECK(state IN ('started','passed','failed')),
+     failure_code           TEXT,
+     started_at             REAL NOT NULL,
+-    completed_at           REAL
++    completed_at           REAL,
++    operation              TEXT NOT NULL DEFAULT 'probe'
+ );
+ CREATE TABLE IF NOT EXISTS setup_model_probe_receipts (
+     request_id             TEXT PRIMARY KEY REFERENCES setup_model_probe_requests(request_id),
+@@ -85,6 +86,11 @@ class ProbeReceipt(StrictModel):
+ 
+ def initialize(db: sqlite3.Connection) -> None:
+     db.executescript(SCHEMA)
++    columns = {row[1] for row in db.execute("PRAGMA table_info(setup_model_probe_requests)")}
++    if "operation" not in columns:
++        db.execute(
++            "ALTER TABLE setup_model_probe_requests ADD COLUMN operation TEXT NOT NULL DEFAULT 'probe'"
++        )
+ 
+ 
+ def _utc(value: float) -> datetime:
+@@ -140,44 +146,57 @@ def _selected(saved: dict, candidate_id: str) -> tuple[dict, dict]:
+     return model, provider
+ 
+ 
+-def _claim(store, body: ProbeInput, now: datetime) -> ProbeReceipt | None:
++def _prior(db, body, operation):
++    prior = db.execute(
++        "SELECT * FROM setup_model_probe_requests WHERE request_id=?", (body.requestId,)
++    ).fetchone()
++    if prior is None:
++        return None
++    if (
++        prior["configuration_revision"] != body.expectedRevision
++        or prior["candidate_id"] != body.candidateId
++        or prior["operation"] != operation
++    ):
++        raise ProbeError(
++            "replay_conflict", "requestId was already used for another model probe.", 409
++        )
++    if prior["state"] == "passed":
++        receipt = db.execute(
++            "SELECT * FROM setup_model_probe_receipts WHERE request_id=?", (body.requestId,)
++        ).fetchone()
++        if receipt is None:
++            raise ProbeError(
++                "receipt_unavailable", "The saved model probe receipt is unavailable.", 503
++            )
++        return _project(receipt)
++    detail = (
++        "This model probe has an uncertain outcome; start a new explicit test."
++        if prior["state"] == "started"
++        else "This model probe already failed; start a new explicit test."
++    )
++    raise ProbeError("probe_not_replayable", detail, 409)
++
++
++def _claim(
++    store, body: ProbeInput, now: datetime, *, operation="probe", source_revision=None
++) -> ProbeReceipt | None:
+     if not REQUEST_ID.fullmatch(body.requestId):
+         raise ProbeError("invalid_request_id", "requestId must be a bounded machine identity.")
+     with store._connect() as db:
+         db.execute("BEGIN IMMEDIATE")
+-        prior = db.execute(
+-            "SELECT * FROM setup_model_probe_requests WHERE request_id=?", (body.requestId,)
+-        ).fetchone()
+-        if prior:
+-            same = (
+-                prior["configuration_revision"] == body.expectedRevision
+-                and prior["candidate_id"] == body.candidateId
+-            )
+-            if not same:
+-                db.execute("ROLLBACK")
++        prior = _prior(db, body, operation)
++        if prior is not None:
++            return prior
++        if source_revision is not None:
++            row = db.execute(
++                "SELECT revision FROM model_role_settings WHERE singleton=1"
++            ).fetchone()
++            if (row[0] if row else 0) != source_revision:
+                 raise ProbeError(
+-                    "replay_conflict", "requestId was already used for another model probe.", 409
++                    "revision_conflict", "Model settings changed; reload before testing.", 409
+                 )
+-            if prior["state"] == "passed":
+-                receipt = db.execute(
+-                    "SELECT * FROM setup_model_probe_receipts WHERE request_id=?",
+-                    (body.requestId,),
+-                ).fetchone()
+-                db.execute("COMMIT")
+-                if receipt is None:
+-                    raise ProbeError(
+-                        "receipt_unavailable", "The saved model probe receipt is unavailable.", 503
+-                    )
+-                return _project(receipt)
+-            db.execute("ROLLBACK")
+-            detail = (
+-                "This model probe has an uncertain outcome; start a new explicit test."
+-                if prior["state"] == "started"
+-                else "This model probe already failed; start a new explicit test."
+-            )
+-            raise ProbeError("probe_not_replayable", detail, 409)
+         db.execute(
+-            "INSERT INTO setup_model_probe_requests VALUES (?,?,?,?,?,?,?)",
++            "INSERT INTO setup_model_probe_requests(request_id,configuration_revision,candidate_id,state,failure_code,started_at,completed_at,operation) VALUES (?,?,?,?,?,?,?,?)",
+             (
+                 body.requestId,
+                 body.expectedRevision,
+@@ -186,6 +205,7 @@ def _claim(store, body: ProbeInput, now: datetime) -> ProbeReceipt | None:
+                 None,
+                 now.timestamp(),
+                 None,
++                operation,
+             ),
+         )
+         db.execute("COMMIT")
+@@ -219,6 +239,49 @@ def probe(store, router, body: ProbeInput, *, now: datetime | None = None) -> Pr
+     if replay is not None:
+         return replay
+ 
++    return _execute(store, router, body, model, adapter)
++
++
++def _activation_body(body):
++    return ProbeInput(
++        requestId=body.requestId,
++        candidateId=body.candidateId,
++        expectedRevision=body.expectedRevision + 1,
++    )
++
++
++def activation_replay(store, body):
++    proposed = _activation_body(body)
++    if not REQUEST_ID.fullmatch(proposed.requestId):
++        raise ProbeError("invalid_request_id", "requestId must be a bounded machine identity.")
++    with store._connect() as db:
++        return _prior(db, proposed, "activate")
++
++
++def activate(store, router, body, staged):
++    proposed = _activation_body(body)
++    model = next(
++        item.model_dump() for item in staged.configuration.models if item.id == body.candidateId
++    )
++    adapter = router.adapters().get(model["providerId"])
++    if adapter is None or not callable(getattr(adapter, "complete_bounded", None)):
++        raise ProbeError(
++            "provider_unavailable", "The selected answer-model provider cannot be tested.", 503
++        )
++    replay = _claim(
++        store,
++        proposed,
++        datetime.now(UTC),
++        operation="activate",
++        source_revision=body.expectedRevision,
++    )
++    if replay is not None:
++        return replay
++    return _execute(store, router, proposed, model, adapter, staged=staged)
++
++
++def _execute(store, router, body, model, adapter, *, staged=None):
++
+     try:
+         completion = adapter.complete_bounded(
+             [Message("user", PROBE_PROMPT)],
+@@ -236,8 +299,15 @@ def probe(store, router, body: ProbeInput, *, now: datetime | None = None) -> Pr
+             "provider_error", "The selected answer model could not complete the setup test.", 503
+         ) from None
+ 
+-    text = completion.text.strip() if isinstance(completion.text, str) else ""
+-    actual = completion.model.strip() if isinstance(completion.model, str) else ""
++    text = getattr(completion, "text", None)
++    actual = getattr(completion, "model", None)
++    text = text.strip() if isinstance(text, str) else ""
++    actual = actual.strip() if isinstance(actual, str) else ""
++    try:
++        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
++        actual.encode("utf-8")
++    except UnicodeEncodeError:
++        text = ""
+     if not text or len(text) > MAX_RESPONSE_CHARACTERS or not actual or len(actual) > 300:
+         _failed(store, body.requestId, "invalid_response", datetime.now(UTC))
+         raise ProbeError(
+@@ -245,31 +315,44 @@ def probe(store, router, body: ProbeInput, *, now: datetime | None = None) -> Pr
+         )
+     execution = "local" if adapter is getattr(router, "local", None) else "hosted"
+     completed = datetime.now(UTC)
+-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+-    with store._connect() as db:
+-        db.execute("BEGIN IMMEDIATE")
+-        db.execute(
+-            "INSERT INTO setup_model_probe_receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
+-            (
+-                body.requestId,
+-                body.expectedRevision,
+-                body.candidateId,
+-                model["providerId"],
+-                model["route"],
+-                actual,
+-                execution,
+-                digest,
+-                completed.timestamp(),
+-                completed.timestamp(),
+-            ),
+-        )
+-        db.execute(
+-            "UPDATE setup_model_probe_requests SET state='passed',completed_at=? "
+-            "WHERE request_id=? AND state='started'",
+-            (completed.timestamp(), body.requestId),
+-        )
+-        row = db.execute(
+-            "SELECT * FROM setup_model_probe_receipts WHERE request_id=?", (body.requestId,)
+-        ).fetchone()
+-        db.execute("COMMIT")
++    try:
++        with store._connect() as db:
++            db.execute("BEGIN IMMEDIATE")
++            if staged is not None:
++                model_roles.save_in(db, staged)
++            return _record(db, body, model, actual, execution, digest, completed)
++    except ValueError:
++        _failed(store, body.requestId, "revision_conflict", datetime.now(UTC))
++        raise ProbeError(
++            "revision_conflict",
++            "Model settings changed during the test; previous selection was not replaced.",
++            409,
++        ) from None
++
++
++def _record(db, body, model, actual, execution, digest, completed):
++    db.execute(
++        "INSERT INTO setup_model_probe_receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
++        (
++            body.requestId,
++            body.expectedRevision,
++            body.candidateId,
++            model["providerId"],
++            model["route"],
++            actual,
++            execution,
++            digest,
++            completed.timestamp(),
++            completed.timestamp(),
++        ),
++    )
++    db.execute(
++        "UPDATE setup_model_probe_requests SET state='passed',completed_at=? "
++        "WHERE request_id=? AND state='started'",
++        (completed.timestamp(), body.requestId),
++    )
++    row = db.execute(
++        "SELECT * FROM setup_model_probe_receipts WHERE request_id=?", (body.requestId,)
++    ).fetchone()
++    db.execute("COMMIT")
+     return _project(row)
+diff --git a/pi/setup_models.py b/pi/setup_models.py
+index edaf2a9..915f5f0 100644
+--- a/pi/setup_models.py
++++ b/pi/setup_models.py
+@@ -46,18 +46,25 @@ class Activated(StrictModel):
+     probe: setup_model_probes.ProbeReceipt
+ 
+ 
+-def _status(adapter) -> Literal["ready", "unverified", "unavailable"]:
++def availability(adapter, routes) -> dict[str, str]:
++    """One bounded provider observation per options read, with route-specific results."""
+     if adapter is None:
+-        return "unavailable"
++        return dict.fromkeys(routes, "unavailable")
+     try:
+-        value = adapter.health().get("status")
++        check = getattr(adapter, "health_models", None)
++        if callable(check):
++            observed = check(list(routes))
++        else:
++            health = adapter.health()
++            observed = dict.fromkeys(routes, health)
++        return {
++            route: {"ok": "ready", "unverified": "unverified"}.get(
++                observed.get(route, {}).get("status"), "unavailable"
++            )
++            for route in routes
++        }
+     except Exception:
+-        return "unavailable"
+-    if value == "ok":
+-        return "ready"
+-    if value == "unverified":
+-        return "unverified"
+-    return "unavailable"
++        return dict.fromkeys(routes, "unavailable")
+ 
+ 
+ def options(store, router) -> Options:
+@@ -67,6 +74,18 @@ def options(store, router) -> Options:
+     if configuration is not None:
+         selected = configuration["roleSettings"]["roles"]["answer"]["modelId"]
+     adapters = router.adapters()
++    local = getattr(router, "local", None)
++    route = getattr(router, "local_model", "")
++    requested = {}
++    for model in (configuration or {}).get("models", []):
++        if model["providerId"] != "decisions":
++            requested.setdefault(model["providerId"], set()).add(model["route"])
++    if local is not None and isinstance(route, str) and route.strip():
++        requested.setdefault(local.name, set()).add(route)
++    statuses = {
++        provider: availability(adapters.get(provider), routes)
++        for provider, routes in requested.items()
++    }
+     values: list[Candidate] = []
+     seen: set[str] = set()
+ 
+@@ -74,7 +93,7 @@ def options(store, router) -> Options:
+         providers = {item["id"]: item for item in configuration["providers"]}
+         for model in configuration["models"]:
+             provider = providers.get(model["providerId"])
+-            if provider is None:
++            if provider is None or model["providerId"] == "decisions":
+                 continue
+             values.append(
+                 Candidate(
+@@ -83,29 +102,27 @@ def options(store, router) -> Options:
+                     providerName=provider["name"],
+                     name=model["name"],
+                     route=model["route"],
+-                    status=_status(adapters.get(model["providerId"])),
++                    status=statuses[model["providerId"]][model["route"]],
+                     selected=model["id"] == selected,
+                     execution=(
+                         "local"
+-                        if adapters.get(model["providerId"]) is getattr(router, "local", None)
++                        if local is not None and adapters.get(model["providerId"]) is local
+                         else "hosted"
+                     ),
+                     dataNotice=(
+                         "The setup test stays on this server."
+-                        if adapters.get(model["providerId"]) is getattr(router, "local", None)
++                        if local is not None and adapters.get(model["providerId"]) is local
+                         else f"The setup test is sent to {provider['name']}."
+                     ),
+                     costNotice=(
+                         "No provider charge."
+-                        if adapters.get(model["providerId"]) is getattr(router, "local", None)
++                        if local is not None and adapters.get(model["providerId"]) is local
+                         else "Provider billing may apply."
+                     ),
+                 )
+             )
+             seen.add(model["id"])
+ 
+-    local = getattr(router, "local", None)
+-    route = getattr(router, "local_model", "")
+     if local is not None and isinstance(route, str) and route.strip():
+         matching = next(
+             (item for item in values if item.providerId == local.name and item.route == route),
+@@ -125,7 +142,7 @@ def options(store, router) -> Options:
+                     providerName="Local model",
+                     name=route,
+                     route=route,
+-                    status=_status(local),
++                    status=statuses[local.name][route],
+                     selected=False,
+                     execution="local",
+                     dataNotice="The setup test stays on this server.",
+@@ -147,7 +164,7 @@ def _disabled(role: str) -> dict:
+     }
+ 
+ 
+-def select(store, router, body: Selection) -> dict:
++def _selection(store, router, body: Selection) -> model_roles.Update:
+     current = options(store, router)
+     if current.revision != body.expectedRevision:
+         raise ValueError("Model settings changed; reload before choosing an answer model.")
+@@ -158,6 +175,8 @@ def select(store, router, body: Selection) -> dict:
+         raise RuntimeError("The selected answer model is not ready because it is unavailable.")
+ 
+     saved = model_roles.load(store)
++    if saved["revision"] != body.expectedRevision:
++        raise ValueError("Model settings changed; reload before choosing an answer model.")
+     configuration = saved["configuration"]
+     if configuration is None:
+         roles = {role: _disabled(role) for role in model_roles.ROLES}
+@@ -221,29 +240,29 @@ def select(store, router, body: Selection) -> dict:
+         configuration["roleSettings"]["answerMode"] = "manual"
+         configuration["defaultModelId"] = candidate.id
+ 
+-    return model_roles.save(
+-        store,
+-        model_roles.Update(
+-            expected_revision=body.expectedRevision,
+-            configuration=model_roles.Configuration.model_validate(configuration),
+-        ),
++    return model_roles.Update(
++        expected_revision=body.expectedRevision,
++        configuration=model_roles.Configuration.model_validate(configuration),
+     )
+ 
+ 
++def select(store, router, body: Selection) -> dict:
++    return model_roles.save(store, _selection(store, router, body))
++
++
+ def activate(store, router, body: Activation) -> Activated:
+     """Select and prove one model as a single owner-control operation."""
+-    saved = select(
++    replay = setup_model_probes.activation_replay(store, body)
++    if replay is not None:
++        return Activated(
++            revision=replay.configurationRevision, candidateId=body.candidateId, probe=replay
++        )
++    staged = _selection(
+         store,
+         router,
+         Selection(candidateId=body.candidateId, expectedRevision=body.expectedRevision),
+     )
+-    receipt = setup_model_probes.probe(
+-        store,
+-        router,
+-        setup_model_probes.ProbeInput(
+-            requestId=body.requestId,
+-            candidateId=body.candidateId,
+-            expectedRevision=saved["revision"],
+-        ),
++    receipt = setup_model_probes.activate(store, router, body, staged)
++    return Activated(
++        revision=receipt.configurationRevision, candidateId=body.candidateId, probe=receipt
+     )
+-    return Activated(revision=saved["revision"], candidateId=body.candidateId, probe=receipt)
+diff --git a/pi/setup_status.py b/pi/setup_status.py
+index c0df78b..520e13d 100644
+--- a/pi/setup_status.py
++++ b/pi/setup_status.py
+@@ -12,6 +12,7 @@ from . import (
+     model_roles,
+     setup_choices,
+     setup_model_probes,
++    setup_models,
+     setup_protection,
+     setup_receipts,
+     setup_rehearsal,
+@@ -273,14 +274,21 @@ def _model(store, router):
+         (model for model in configuration["models"] if model["id"] == answer["modelId"]), None
+     )
+     adapter = router.adapters().get(selected["providerId"]) if selected else None
+-    if adapter is None:
+-        live = {"status": "unavailable"}
+-    else:
+-        try:
+-            live = adapter.health()
+-        except Exception:
+-            live = {"status": "unavailable"}
+-    live_status = live.get("status")
++    enabled = (
++        selected
++        and selected["enabled"]
++        and answer["enabled"]
++        and any(
++            item["id"] == selected["providerId"] and item["enabled"]
++            for item in configuration["providers"]
++        )
++    )
++    readiness = (
++        setup_models.availability(adapter, [selected["route"]]).get(selected["route"])
++        if enabled
++        else "unavailable"
++    )
++    live_status = {"ready": "ok", "unverified": "unverified"}.get(readiness, "unavailable")
+     if live_status not in {"ok", "unverified"}:
+         return _step(
+             "model",
+@@ -296,7 +304,7 @@ def _model(store, router):
+                 _evidence(
+                     "model.provider",
+                     "degraded",
+-                    "Selected answer-model provider is unavailable.",
++                    "Selected answer model or its provider is unavailable.",
+                 ),
+             ],
+             "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
 index c59ea34..62db805 100644
 --- a/pi/store.py
@@ -3159,6 +3819,49 @@ index 2152210..49b8aca 100644
 +    finally:
 +        if trigger:
 +            db.execute(trigger[0])
+diff --git a/pi/turn_control.py b/pi/turn_control.py
+index 04d18c5..c605d1a 100644
+--- a/pi/turn_control.py
++++ b/pi/turn_control.py
+@@ -65,8 +65,9 @@ def cancel(store, turn_id):
+         db.execute("BEGIN IMMEDIATE")
+         result = _cancel_db(db, turn_id)
+         db.commit()
+-    from . import background_thinking
++    from . import background_thinking, foreground_inference
+ 
++    foreground_inference.cancel(store, turn_id=turn_id, requested_at=result["requested_at"])
+     background_thinking.cancel_for_turn(store, turn_id)
+     return result
+ 
+@@ -74,13 +75,14 @@ def cancel(store, turn_id):
+ def cancel_submission(store, request_id):
+     from . import attachment_turns, submissions
+ 
++    requested_at = None
+     with store._connect() as db:
+         db.execute("BEGIN IMMEDIATE")
+         row = submissions._row(db, request_id)
+         if row["state"] == "forgotten":
+             raise tasks.TaskError("not_found", "Submission not found.", 404)
+         if row["turn_id"]:
+-            _cancel_db(db, row["turn_id"])
++            requested_at = _cancel_db(db, row["turn_id"])["requested_at"]
+         elif row["state"] == "preparing":
+             db.execute(
+                 "UPDATE turn_submissions SET state='preparation_failed',"
+@@ -97,6 +99,11 @@ def cancel_submission(store, request_id):
+             raise tasks.TaskError("not_preparing", "This submission has already finished.", 409)
+         result = submissions._view(db, submissions._row(db, request_id))
+         db.commit()
++    from . import foreground_inference
++
++    foreground_inference.cancel(
++        store, turn_id=row["turn_id"], request_id=request_id, requested_at=requested_at
++    )
+     if row["turn_id"]:
+         from . import background_thinking
+ 
 diff --git a/tests/test_audit_memory.py b/tests/test_audit_memory.py
 index 3ca73db..8d08381 100644
 --- a/tests/test_audit_memory.py
@@ -3194,6 +3897,245 @@ index 23fe69d..376ca76 100644
      )
      model_roles.save(store, model_roles.Update(expected_revision=0, configuration=value))
      provider = ConcurrentProvider()
+diff --git a/tests/test_foreground_cancellation.py b/tests/test_foreground_cancellation.py
+new file mode 100644
+index 0000000..72643fb
+--- /dev/null
++++ b/tests/test_foreground_cancellation.py
+@@ -0,0 +1,233 @@
++"""Owner Stop interrupts silent inference without abandoning saved effects."""
++
++import json
++import threading
++from contextlib import closing
++from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++
++import pytest
++from test_loop import Recorder, loop_with
++
++from pi import foreground_inference, inference_control, session_settings, submissions, turn_control
++from pi.loop import TurnFailed
++from pi.providers import OllamaProvider, ProviderUnavailable
++from pi.store import Store
++
++
++@pytest.mark.parametrize("stop_by", ["turn", "submission"])
++def test_stop_interrupts_silent_ollama_and_retains_exact_input(tmp_path, stop_by):
++    started, disconnected, finished = (threading.Event() for _ in range(3))
++    payloads, failures = [], []
++
++    class Handler(BaseHTTPRequestHandler):
++        protocol_version = "HTTP/1.1"
++
++        def log_message(self, *_):
++            pass
++
++        def do_POST(self):
++            payloads.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
++            self.send_response(200)
++            self.send_header("Content-Type", "application/x-ndjson")
++            self.end_headers()
++            # Real socket read stays blocked: no visible text and no more chunks.
++            self.wfile.write(b'{"message":{"thinking":"private"},"done":false}\n')
++            self.wfile.flush()
++            started.set()
++            self.connection.settimeout(5)
++            try:
++                if self.connection.recv(1) == b"":
++                    disconnected.set()
++            except (ConnectionResetError, ConnectionAbortedError):
++                disconnected.set()
++            except OSError:
++                pass
++            self.close_connection = True
++
++    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
++    serving = threading.Thread(target=server.serve_forever, daemon=True)
++    serving.start()
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++        provider = OllamaProvider(f"http://127.0.0.1:{server.server_port}")
++        loop = loop_with(store, provider)
++        request_id = "silent_foreground_stop"
++
++        def infer():
++            try:
++                loop.run_turn(session, "Synthetic greeting", request_id=request_id)
++            except Exception as exc:
++                failures.append(exc)
++            finally:
++                finished.set()
++
++        worker = threading.Thread(target=infer, daemon=True)
++        try:
++            worker.start()
++            assert started.wait(4)
++            receipt = submissions.get(store, request_id)
++            if stop_by == "turn":
++                turn_control.cancel(store, receipt["turn_id"])
++            else:
++                turn_control.cancel_submission(store, request_id)
++            assert finished.wait(3), "Stop must not wait for the next visible token"
++            assert disconnected.wait(2)
++            worker.join(1)
++            assert len(failures) == 1 and isinstance(failures[0], TurnFailed)
++            assert submissions.get(store, request_id)["status"] == "cancelled"
++            assert [m["content"] for m in store.messages(session)] == ["Synthetic greeting"]
++            assert len(payloads) == 1 and payloads[0]["stream"] is True
++            with inference_control.local_capacity(provider.local_capacity_key, 0.1):
++                pass
++            # Replay doesn't call the provider again or append another user input.
++            assert loop.run_turn(session, "Synthetic greeting", request_id=request_id)["replayed"]
++            assert len(payloads) == 1
++        finally:
++            foreground_inference.cancel(store, request_id=request_id)
++            server.shutdown()
++            server.server_close()
++            serving.join(2)
++            worker.join(3)
++    assert not foreground_inference._active
++
++
++def test_scope_checks_stop_committed_before_registration(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++        turn = store.start_turn(session)
++        execution = session_settings.execution(store, session, turn)
++        turn_control.cancel(store, turn)
++        with (
++            pytest.raises(ProviderUnavailable, match="stopped"),
++            foreground_inference.scope(store, execution),
++        ):
++            pytest.fail("A prior stop must prevent provider entry")
++    assert not foreground_inference._active
++
++
++def test_stop_during_registration_cannot_miss_transport(tmp_path, monkeypatch):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++        turn = store.start_turn(session)
++        execution = session_settings.execution(store, session, turn)
++        original = turn_control.guard
++
++        def stop_first(store, execution):
++            turn_control.cancel(store, turn)
++            original(store, execution)
++
++        monkeypatch.setattr(turn_control, "guard", stop_first)
++        with (
++            pytest.raises(ProviderUnavailable, match="stopped"),
++            foreground_inference.scope(store, execution),
++        ):
++            pytest.fail("A stop during registration must prevent provider entry")
++    assert not foreground_inference._active
++
++
++def test_late_completion_is_discarded_and_unrelated_call_remains_usable(tmp_path):
++    tokens = []
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++
++        class IgnoresStop(Recorder):
++            def complete(self, messages, *, model):
++                tokens.append(inference_control.current())
++                turn_control.cancel_submission(store, "late_completion_request")
++                return super().complete(messages, model=model)
++
++        provider = IgnoresStop()
++        with pytest.raises(TurnFailed, match="stopped"):
++            loop_with(store, provider).run_turn(
++                session, "First", request_id="late_completion_request"
++            )
++        assert len(provider.calls) == 1
++        assert tokens[0].stopped.is_set()
++        other = Recorder()
++        result = loop_with(store, other).run_turn(
++            session, "Next", request_id="next_completion_request"
++        )
++        assert result["message"]["content"] == "answered"
++        assert len(other.calls) == 1
++        assert [m["content"] for m in store.messages(session)] == ["First", "Next", "answered"]
++    assert not foreground_inference._active
++
++
++def test_cancellation_is_scoped_to_store_and_exact_turn(tmp_path):
++    with closing(Store(tmp_path / "one.db")) as one, closing(Store(tmp_path / "two.db")) as two:
++        session = one.create_session()
++        turn = one.start_turn(session)
++        execution = session_settings.execution(one, session, turn)
++        with foreground_inference.scope(one, execution):
++            token = inference_control.current()
++            foreground_inference.cancel(two, turn_id=turn)
++            foreground_inference.cancel(one, turn_id="unrelated")
++            assert not token.stopped.is_set()
++        foreground_inference.cancel(one, turn_id=turn)
++        assert not token.stopped.is_set(), "Completed calls have no cancellation registration"
++
++
++def test_preparation_scope_uses_submission_identity(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++        request_id = "preparation_inference_stop"
++        submissions.reserve(store, request_id, session, "Draft", {})
++        execution = session_settings.execution(store, session, request_id=request_id)
++        with (
++            pytest.raises(ProviderUnavailable, match="stopped"),
++            foreground_inference.scope(store, execution),
++        ):
++            token = inference_control.current()
++            turn_control.cancel_submission(store, request_id)
++            assert token.stopped.is_set()
++        assert submissions.get(store, request_id)["status"] == "cancelled"
++        assert store.messages(session) == []
++
++
++def test_existing_background_token_keeps_its_original_owner(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        session = store.create_session()
++        turn = store.start_turn(session)
++        token = inference_control.Token()
++        with (
++            inference_control.bind(token, background=True),
++            foreground_inference.scope(store, session_settings.execution(store, session, turn)),
++        ):
++            assert inference_control.current() is token
++            assert not foreground_inference._active
++        assert not token.stopped.is_set()
++
++
++@pytest.mark.parametrize("new_stop", [False, True])
++def test_delayed_old_stop_cannot_cancel_a_newly_consented_reply(tmp_path, monkeypatch, new_stop):
++    from test_reply_recovery import stopped
++
++    from pi.loop import ActedWithoutReply
++
++    delayed = []
++    deliver = foreground_inference.cancel
++    monkeypatch.setattr(foreground_inference, "cancel", lambda *a, **kw: delayed.append((a, kw)))
++    with closing(Store(tmp_path / "pi.db")) as store:
++        loop, provider, gate, turn = stopped(store)
++        assert len(delayed) == 1 and delayed[0][1]["requested_at"] is not None
++        monkeypatch.setattr(foreground_inference, "cancel", deliver)
++        original = provider.complete
++
++        def during_recovery(messages, *, model):
++            token = inference_control.current()
++            deliver(*delayed[0][0], **delayed[0][1])
++            assert not token.stopped.is_set(), "Earlier Stop cannot cancel later explicit consent"
++            if new_stop:
++                turn_control.cancel(store, turn)
++                assert token.stopped.is_set(), "A new Stop must still interrupt this reply"
++            return original(messages, model=model)
++
++        provider.complete = during_recovery
++        if new_stop:
++            with pytest.raises(ActedWithoutReply):
++                loop.recover_reply(turn, "new_explicit_reply_001")
++            assert store.get_turn(turn)["status"] == "acted_no_reply"
++        else:
++            assert loop.recover_reply(turn, "new_explicit_reply_001")["status"] == "complete"
++        assert len(gate.invocations) == 1 and len(provider.sent) == 2
++    assert not foreground_inference._active
 diff --git a/tests/test_forgetting.py b/tests/test_forgetting.py
 index cab427b..a9cd061 100644
 --- a/tests/test_forgetting.py
@@ -5731,6 +6673,376 @@ index 0000000..e178df2
 +            == 200
 +        )
 +        assert client.get("/api/pi/drafts/new").status_code == 403
+diff --git a/tests/test_setup_activation.py b/tests/test_setup_activation.py
+new file mode 100644
+index 0000000..984f6fa
+--- /dev/null
++++ b/tests/test_setup_activation.py
+@@ -0,0 +1,364 @@
++"""Installed-route readiness and activation must preserve a working owner choice."""
++
++import sqlite3
++from contextlib import closing
++from datetime import UTC, datetime
++
++import httpx
++import pytest
++
++from pi import model_roles, setup_model_probes, setup_models, setup_status
++from pi.providers import Completion, OllamaProvider, ProviderUnavailable
++from pi.store import Store
++
++
++class Adapter:
++    name = "ollama"
++
++    def __init__(self, callback=None):
++        self.calls = []
++        self.callback = callback
++
++    def health(self):
++        return {"status": "ok"}
++
++    def complete_bounded(self, messages, *, model, timeout):
++        self.calls.append((messages, model, timeout))
++        if self.callback:
++            return self.callback()
++        return Completion("ready", model, self.name)
++
++
++class Router:
++    def __init__(self, adapter=None):
++        self.local = adapter or Adapter()
++        self.local_model = "working:3b"
++
++    def adapters(self):
++        return {"ollama": self.local}
++
++
++@pytest.fixture
++def store(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as result:
++        yield result
++
++
++def seed(store):
++    roles = {
++        role: dict(
++            enabled=False,
++            eligibleModelIds=[],
++            modelId=None,
++            timeoutMs=1000,
++            failure="stop",
++            fallbackModelId=None,
++        )
++        for role in model_roles.ROLES
++    }
++    roles["answer"].update(enabled=True, eligibleModelIds=["working"], modelId="working")
++    roles["routing"].update(enabled=True, eligibleModelIds=["laya"], modelId="laya")
++    roles["proposals"]["timeoutMs"] = 7777
++    configuration = dict(
++        providers=[
++            dict(id="ollama", name="Local", enabled=True),
++            dict(id="decisions", name="Laya", enabled=True),
++        ],
++        models=[
++            dict(
++                id="working", name="Working", providerId="ollama", route="working:3b", enabled=True
++            ),
++            dict(id="spare", name="Spare", providerId="ollama", route="spare:4b", enabled=True),
++            dict(
++                id="laya", name="Laya", providerId="decisions", route="model-routing", enabled=True
++            ),
++        ],
++        defaultModelId="working",
++        roleSettings=dict(answerMode="manual", roles=roles),
++    )
++    return model_roles.save(
++        store, model_roles.Update(expected_revision=0, configuration=configuration)
++    )
++
++
++def activation(request="activate-spare", revision=1, candidate="spare"):
++    return setup_models.Activation(
++        requestId=request, candidateId=candidate, expectedRevision=revision
++    )
++
++
++def inventory(monkeypatch, names):
++    calls = []
++
++    def tags(url, **kwargs):
++        calls.append(url)
++        assert kwargs["trust_env"] is False
++        assert kwargs["follow_redirects"] is False
++        assert kwargs["timeout"] == 5.0
++        return httpx.Response(
++            200,
++            json={"models": [{"name": name} for name in names]},
++            request=httpx.Request("GET", url),
++        )
++
++    monkeypatch.setattr(httpx, "get", tags)
++    return calls
++
++
++def test_catalogue_readiness_uses_one_inventory_and_each_exact_route(store, monkeypatch):
++    seed(store)
++    calls = inventory(monkeypatch, ["working:3b"])
++    router = Router(OllamaProvider("http://127.0.0.1:11434", model="working:3b"))
++
++    found = setup_models.options(store, router)
++
++    assert {item.id: item.status for item in found.candidates} == {
++        "working": "ready",
++        "spare": "unavailable",
++    }
++    assert len(calls) == 1
++    before = model_roles.load(store)
++    with pytest.raises(RuntimeError, match="not ready"):
++        setup_models.activate(store, router, activation())
++    assert model_roles.load(store) == before
++    with store._connect() as db:
++        assert db.execute("SELECT COUNT(*) FROM setup_model_probe_requests").fetchone()[0] == 0
++
++
++def test_missing_adapter_default_does_not_hide_an_installed_alternative(store, monkeypatch):
++    seed(store)
++    inventory(monkeypatch, ["spare:4b"])
++    router = Router(OllamaProvider("http://127.0.0.1:11434", model="working:3b"))
++    found = setup_models.options(store, router)
++    assert {item.id: item.status for item in found.candidates} == {
++        "working": "unavailable",
++        "spare": "ready",
++    }
++
++
++def test_model_health_retains_exact_tag_and_latest_alias_semantics(monkeypatch):
++    calls = inventory(monkeypatch, ["tiny:latest", "working:3b"])
++    result = OllamaProvider("http://127.0.0.1:11434").health_models(
++        ["tiny", "tiny:latest", "working", "working:3b", "working:8b"]
++    )
++    assert {route for route, health in result.items() if health["status"] == "ok"} == {
++        "tiny",
++        "tiny:latest",
++        "working:3b",
++    }
++    assert len(calls) == 1
++
++
++def test_setup_readiness_drops_after_selected_route_disappears(store, monkeypatch):
++    seed(store)
++    setup_models.activate(store, Router(), activation())
++    calls = inventory(monkeypatch, ["working:3b"])
++    router = Router(OllamaProvider("http://127.0.0.1:11434", model="working:3b"))
++
++    status = setup_status._model(store, router)
++
++    assert status.state == "degraded"
++    assert status.blockingReasonCode == "model_provider_unavailable"
++    assert len(calls) == 1
++    assert setup_model_probes.current(store, 2, "spare") is not None
++
++
++@pytest.mark.parametrize(
++    "result,code",
++    [
++        (ProviderUnavailable("sensitive provider detail"), "provider_unavailable"),
++        (RuntimeError("sensitive provider detail"), "provider_error"),
++        (Completion("", "spare:4b", "ollama"), "invalid_response"),
++        (Completion("ready", "", "ollama"), "invalid_response"),
++        (Completion("x" * 16001, "spare:4b", "ollama"), "invalid_response"),
++        (Completion("ready", "x" * 301, "ollama"), "invalid_response"),
++        (Completion("\ud800", "spare:4b", "ollama"), "invalid_response"),
++        (Completion("ready", "\ud800", "ollama"), "invalid_response"),
++        (None, "invalid_response"),
++    ],
++)
++def test_failed_activation_preserves_complete_previous_configuration(store, result, code):
++    before = seed(store)
++
++    def response():
++        assert model_roles.load(store) == before
++        if isinstance(result, Exception):
++            raise result
++        return result
++
++    router = Router(Adapter(response))
++    with pytest.raises(setup_model_probes.ProbeError) as failure:
++        setup_models.activate(store, router, activation())
++    assert failure.value.code == code
++    assert "sensitive" not in str(failure.value)
++    assert model_roles.load(store) == before
++    assert setup_model_probes.current(store, 2, "spare") is None
++    with pytest.raises(setup_model_probes.ProbeError) as retry:
++        setup_models.activate(store, router, activation())
++    assert retry.value.code == "probe_not_replayable"
++    assert len(router.local.calls) == 1
++
++
++def test_failed_fresh_setup_leaves_no_configuration(store):
++    router = Router(Adapter(lambda: Completion("", "working:3b", "ollama")))
++    with pytest.raises(setup_model_probes.ProbeError):
++        setup_models.activate(store, router, activation(revision=0, candidate="local-answer"))
++    assert model_roles.load(store) == {"revision": 0, "configuration": None}
++
++
++def test_activation_commits_settings_and_receipt_together_and_replay_does_not_restore(store):
++    before = seed(store)
++    router = Router()
++    result = setup_models.activate(store, router, activation())
++    after = model_roles.load(store)
++    assert result.revision == after["revision"] == 2
++    assert after["configuration"]["defaultModelId"] == "spare"
++    for role in model_roles.ROLES:
++        if role != "answer":
++            assert (
++                after["configuration"]["roleSettings"]["roles"][role]
++                == before["configuration"]["roleSettings"]["roles"][role]
++            )
++    assert setup_model_probes.current(store, 2, "spare") == result.probe
++    later = model_roles.save(
++        store, model_roles.Update(expected_revision=2, configuration=before["configuration"])
++    )
++
++    class NoCalls:
++        def adapters(self):
++            pytest.fail("Receipt replay must not call adapters or probe again")
++
++    assert setup_models.activate(store, NoCalls(), activation()) == result
++    assert model_roles.load(store) == later
++    assert len(router.local.calls) == 1
++
++
++def test_duplicate_activation_during_probe_does_not_invoke_again(store):
++    before = seed(store)
++
++    def during_probe():
++        assert model_roles.load(store) == before
++        with pytest.raises(setup_model_probes.ProbeError) as duplicate:
++            setup_models.activate(store, router, activation())
++        assert duplicate.value.code == "probe_not_replayable"
++        return Completion("ready", "spare:4b", "ollama")
++
++    router = Router(Adapter(during_probe))
++    first = setup_models.activate(store, router, activation())
++    assert setup_models.activate(store, router, activation()) == first
++    assert len(router.local.calls) == 1
++
++
++def test_owner_update_during_probe_wins_and_no_receipt_is_published(store):
++    before = seed(store)
++
++    def update_during_probe():
++        updated = before["configuration"]
++        updated["roleSettings"]["roles"]["proposals"]["timeoutMs"] = 8765
++        model_roles.save(store, model_roles.Update(expected_revision=1, configuration=updated))
++        return Completion("ready", "spare:4b", "ollama")
++
++    router = Router(Adapter(update_during_probe))
++    with pytest.raises(setup_model_probes.ProbeError) as failure:
++        setup_models.activate(store, router, activation())
++    assert failure.value.code == "revision_conflict"
++    assert failure.value.status == 409
++    after = model_roles.load(store)
++    assert after["revision"] == 2
++    assert after["configuration"] == before["configuration"]
++    assert setup_model_probes.current(store, 2, "spare") is None
++    assert len(router.local.calls) == 1
++
++
++def test_revision_change_before_claim_prevents_inference(store, monkeypatch):
++    before = seed(store)
++    original = setup_models._selection
++
++    def racing_selection(*args):
++        staged = original(*args)
++        model_roles.save(
++            store, model_roles.Update(expected_revision=1, configuration=before["configuration"])
++        )
++        return staged
++
++    monkeypatch.setattr(setup_models, "_selection", racing_selection)
++    router = Router()
++    with pytest.raises(setup_model_probes.ProbeError) as failure:
++        setup_models.activate(store, router, activation())
++    assert failure.value.code == "revision_conflict"
++    assert router.local.calls == []
++    with store._connect() as db:
++        assert db.execute("SELECT COUNT(*) FROM setup_model_probe_requests").fetchone()[0] == 0
++
++
++def test_receipt_write_failure_rolls_back_selection_and_blocks_automatic_replay(store):
++    before = seed(store)
++    with store._connect() as db:
++        db.execute(
++            "CREATE TRIGGER fail_probe BEFORE INSERT ON setup_model_probe_receipts BEGIN SELECT RAISE(ABORT, 'synthetic storage failure'); END"
++        )
++    router = Router()
++    with pytest.raises(sqlite3.IntegrityError):
++        setup_models.activate(store, router, activation())
++    assert model_roles.load(store) == before
++    with pytest.raises(setup_model_probes.ProbeError) as failure:
++        setup_models.activate(store, router, activation())
++    assert failure.value.code == "probe_not_replayable"
++    assert setup_model_probes.current(store, 2, "spare") is None
++    assert len(router.local.calls) == 1
++
++
++def test_probe_identity_cannot_be_reused_as_activation(store):
++    seed(store)
++    router = Router()
++    setup_model_probes.probe(
++        store,
++        router,
++        setup_model_probes.ProbeInput(
++            requestId="shared-request", candidateId="working", expectedRevision=1
++        ),
++    )
++    with pytest.raises(setup_model_probes.ProbeError) as failure:
++        setup_models.activate(
++            store, router, activation("shared-request", revision=0, candidate="working")
++        )
++    assert failure.value.code == "replay_conflict"
++    assert len(router.local.calls) == 1
++
++
++def test_legacy_probe_request_migration_retains_identity_and_receipt(tmp_path):
++    path = tmp_path / "legacy.db"
++    with sqlite3.connect(path) as db:
++        db.executescript(
++            setup_model_probes.SCHEMA.replace(
++                ",\n    operation              TEXT NOT NULL DEFAULT 'probe'", ""
++            )
++        )
++        now = datetime.now(UTC).timestamp()
++        db.execute(
++            "INSERT INTO setup_model_probe_requests VALUES(?,?,?,?,?,?,?)",
++            ("old-probe", 1, "working", "passed", None, now, now),
++        )
++        original = (
++            "old-probe",
++            1,
++            "working",
++            "ollama",
++            "working:3b",
++            "working:3b",
++            "local",
++            "a" * 64,
++            now,
++            now,
++        )
++        db.execute("INSERT INTO setup_model_probe_receipts VALUES(?,?,?,?,?,?,?,?,?,?)", original)
++    with closing(Store(path)) as store:
++        with store._connect() as db:
++            assert (
++                db.execute("SELECT operation FROM setup_model_probe_requests").fetchone()[0]
++                == "probe"
++            )
++            assert (
++                tuple(db.execute("SELECT * FROM setup_model_probe_receipts").fetchone()) == original
++            )
++        assert setup_model_probes.current(store, 1, "working").requestId == "old-probe"
 diff --git a/tests/test_thinking_deadline.py b/tests/test_thinking_deadline.py
 new file mode 100644
 index 0000000..ca1c794

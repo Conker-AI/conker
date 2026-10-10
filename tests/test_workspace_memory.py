@@ -206,7 +206,7 @@ def test_targeted_command_updates_only_stopped_config_atomically_and_never_print
     monkeypatch.setattr(setup, "CONFIG", path)
     checked = []
     monkeypatch.setattr(
-        setup, "owned_listener", lambda _config, name: checked.append(name) or False
+        setup, "owned_process", lambda _config, name: checked.append(name) or False
     )
     monkeypatch.setattr(
         setup, "run", lambda *a, **k: pytest.fail("No installation or model calls")
@@ -230,7 +230,7 @@ def test_targeted_command_refuses_running_services_before_writes(
     path = tmp_path / "configuration.json"
     path.write_text("unchanged", encoding="utf-8")
     monkeypatch.setattr(setup, "CONFIG", path)
-    monkeypatch.setattr(setup, "owned_listener", lambda _config, name: name == running)
+    monkeypatch.setattr(setup, "owned_process", lambda _config, name: name == running)
     with pytest.raises(SystemExit, match="Stop Pi and MemoryGate"):
         setup.configure_memory_corrections(config())
     assert path.read_text() == "unchanged"
@@ -243,7 +243,7 @@ def test_stale_or_incomplete_setup_never_overwrites_current_config(
     path = tmp_path / "configuration.json"
     path.write_text(json.dumps({**value, "changed": True}), encoding="utf-8")
     monkeypatch.setattr(setup, "CONFIG", path)
-    monkeypatch.setattr(setup, "owned_listener", lambda *args: False)
+    monkeypatch.setattr(setup, "owned_process", lambda *args: False)
     before = path.read_bytes()
     with pytest.raises(SystemExit, match="configuration changed"):
         setup.configure_memory_corrections(value)
@@ -307,7 +307,7 @@ def test_missing_correction_sources_does_not_mint_or_write_credentials(
     path.write_text(json.dumps(value), encoding="utf-8")
     original = path.read_bytes()
     monkeypatch.setattr(setup, "CONFIG", path)
-    monkeypatch.setattr(setup, "owned_listener", lambda *args: False)
+    monkeypatch.setattr(setup, "owned_process", lambda *args: False)
     monkeypatch.setattr(
         memory.secrets,
         "token_urlsafe",
@@ -326,7 +326,7 @@ def test_enhancement_validates_existing_partial_link_before_any_source_or_depend
         "saved-existing-private-key-123456789"
     )
     before = copy.deepcopy(value)
-    monkeypatch.setattr(setup, "owned_listener", lambda *args: False)
+    monkeypatch.setattr(setup, "owned_process", lambda *args: False)
     monkeypatch.setattr(
         setup,
         "run",
@@ -344,7 +344,7 @@ def test_status_does_not_claim_live_readiness_or_generate_credentials(monkeypatc
     )
     assert memory.status(value) == "not configured"
     monkeypatch.setattr(workspace, "read_config", lambda: value)
-    monkeypatch.setattr(workspace, "owned_listener", lambda *args: False)
+    monkeypatch.setattr(workspace, "service_state", lambda *args: "stopped")
     monkeypatch.setattr(sys, "argv", ["workspace.py", "status"])
     workspace.main()
 
@@ -361,7 +361,7 @@ def test_custom_service_ports_are_refused_before_minting_or_writing(
     path.write_text(json.dumps(value), encoding="utf-8")
     before = path.read_bytes()
     monkeypatch.setattr(setup, "CONFIG", path)
-    monkeypatch.setattr(setup, "owned_listener", lambda *args: False)
+    monkeypatch.setattr(setup, "owned_process", lambda *args: False)
     monkeypatch.setattr(
         memory.secrets,
         "token_urlsafe",

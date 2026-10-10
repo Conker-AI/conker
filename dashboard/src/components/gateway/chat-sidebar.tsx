@@ -139,8 +139,8 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter className="conker-sidebar-footer"><SidebarMenu>
-      {(setupSummary || (setupError && !setupStatus)) && <SidebarMenuItem><SidebarMenuButton asChild className="conker-setup-link" isActive={page.route === 'setup'}><Link to="/setup" onClick={afterNavigate}>
-        <CircleDashed aria-hidden="true" /><span className="min-w-0 flex-1"><span className="block truncate font-medium">{setupSummary?.attention ? 'Setup needs attention' : setupSummary ? 'Finish setup' : 'Review setup'}</span><span className="block truncate text-xs text-muted-foreground">{setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Status unavailable'}</span></span><ChevronRight aria-hidden="true" />
+      {(setupSummary || setupError) && <SidebarMenuItem><SidebarMenuButton asChild className="conker-setup-link" isActive={page.route === 'setup'}><Link to="/setup" onClick={afterNavigate}>
+        <CircleDashed aria-hidden="true" /><span className="min-w-0 flex-1"><span className="block truncate font-medium">{setupError ? 'Review setup status' : setupSummary?.attention ? 'Setup needs attention' : 'Finish setup'}</span><span className="block truncate text-xs text-muted-foreground">{setupError ? 'Status unavailable' : setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Checking setup…'}</span></span><ChevronRight aria-hidden="true" />
       </Link></SidebarMenuButton></SidebarMenuItem>}
       <SidebarMenuItem><SidebarMenuButton asChild className="conker-nav-item" isActive={page.route === 'settings'}><Link to="/settings" onClick={afterNavigate}><Settings2 aria-hidden="true" /><span>Settings</span></Link></SidebarMenuButton></SidebarMenuItem>
       <SidebarMenuItem><DropdownMenu open={profileOpen} onOpenChange={setProfileOpen}><DropdownMenuTrigger asChild>

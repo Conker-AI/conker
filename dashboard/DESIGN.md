@@ -18,6 +18,15 @@ and open views. The mode rail and idle-as-ready footer are removed. Setup status
 comes from the setup service; an idle conversation says nothing about provider
 or tool readiness. System diagnostics remain available in the account menu.
 
+Setup's sidebar prompt and page share one authenticated, client-scoped read.
+Opening Setup refreshes its evidence; visible focus, reconnect and visibility
+events trigger at most one automatic read per 30 seconds, without a timer loop.
+Explicit refresh and saved setup choices can refresh immediately. A failed read
+shows status unavailable even after prior completion; retained page evidence is
+labeled as the last verified result. Leaving the authenticated workspace clears
+the shared cache and cancels pending reads. Setup counts describe first-run
+choices and evidence, separately from a chat's current ability to answer.
+
 Open views are a secondary header disclosure, closed initially. Their optional
 strip retains navigation history, tab switching, pinning, closing, and dragging.
 Closing the last view opens New chat; closing a tab never cancels work. Tab

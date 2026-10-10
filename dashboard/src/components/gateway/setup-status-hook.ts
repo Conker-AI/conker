@@ -1,32 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { GatewayControlClient, SetupStatus } from '@/lib/gateway/control'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import type { GatewayControlClient } from '@/lib/gateway/control'
+import { emptySetupRead, setupStatusStore } from './setup-status-store'
 
-const setupRefreshEvent = 'conker:setup-status-refresh'
+const empty = () => emptySetupRead
+const inactive = () => () => undefined
 
-export function useGatewaySetupStatus(client: GatewayControlClient, active = true) {
-  const [status, setStatus] = useState<SetupStatus | null>(null)
-  const [error, setError] = useState(false)
-  const [revision, setRevision] = useState(0)
-  const refresh = useCallback(() => window.dispatchEvent(new Event(setupRefreshEvent)), [])
-  useEffect(() => {
-    const update = () => setRevision(value => value + 1)
-    window.addEventListener(setupRefreshEvent, update)
-    return () => window.removeEventListener(setupRefreshEvent, update)
-  }, [])
-  useEffect(() => {
-    if (!active) return
-    if (typeof client.setupStatus !== 'function') {
-      let cancelled = false
-      queueMicrotask(() => {
-        if (!cancelled) { setStatus(null); setError(true) }
-      })
-      return () => { cancelled = true }
-    }
-    const controller = new AbortController()
-    client.setupStatus(controller.signal).then(value => { setStatus(value); setError(false) }).catch(() => {
-      if (!controller.signal.aborted) setError(true)
-    })
-    return () => controller.abort()
-  }, [active, client, revision])
-  return { status, error, refresh }
+export function useGatewaySetupStatus(client: GatewayControlClient, active = true, refreshOnMount = false) {
+  const store = setupStatusStore(client)
+  const subscribe = useCallback((listener: () => void) => active ? store.subscribe(listener) : inactive(), [active, store])
+  const state = useSyncExternalStore(subscribe, active ? store.getSnapshot : empty, empty)
+  useEffect(() => { if (active && refreshOnMount) store.enter() }, [active, refreshOnMount, store])
+  return { ...state, refresh: store.refresh }
 }

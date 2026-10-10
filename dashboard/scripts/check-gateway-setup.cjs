@@ -20,9 +20,62 @@ const valid = {
     evidence: [{ source: `test.${id}`, status: state === 'complete' ? 'ok' : 'missing', revision: null, detail: `Evidence for ${id}.` }] })),
 }
 
+async function checkSharedSetup(temporary) {
+  const output = path.join(temporary, 'setup-store.cjs')
+  await build({ entryPoints: [path.join(root, 'src/components/gateway/setup-status-store.ts')], outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent' })
+  const { createSetupStatusStore, setupStatusStore, setupRefreshCooldown } = require(output)
+  const originalWindow = global.window, originalDocument = global.document
+  global.window = new EventTarget(); global.document = Object.assign(new EventTarget(), { visibilityState: 'visible' })
+  const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
+  const calls = []
+  const client = { setupStatus(signal) { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); calls.push({ signal, resolve, reject }); return promise } }
+  let clock = 0
+  const store = createSetupStatusStore(client, () => clock), first = [], second = []
+  const complete = { ...valid, state: 'complete', currentStep: null, recommendedNextOperation: null }
+  try {
+    assert.equal(setupStatusStore(client), setupStatusStore(client), 'A client has one shared setup read')
+    assert.notEqual(setupStatusStore(client), setupStatusStore({ ...client }), 'Other authenticated clients do not share evidence')
+    const leaveSidebar = store.subscribe(() => first.push(store.getSnapshot()))
+    const leavePage = store.subscribe(() => second.push(store.getSnapshot()))
+    store.enter(); await flush()
+    assert.equal(calls.length, 1, 'Sidebar and Setup entry share one in-flight read')
+    calls[0].resolve(valid); await flush()
+    assert.equal(first.at(-1), second.at(-1), 'Both surfaces observe the exact same result')
+    window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('online')); await flush()
+    assert.equal(calls.length, 1, 'Automatic events are bounded by the freshness cooldown')
+    store.enter(); await flush(); assert.equal(calls.length, 2, 'Entering Setup always checks completed prior evidence')
+    store.refresh(); await flush(); assert.equal(calls.length, 3); assert.equal(calls[1].signal.aborted, true)
+    calls[2].resolve(complete); calls[1].resolve(valid); await flush()
+    assert.equal(store.getSnapshot().status, complete, 'A superseded late reply cannot overwrite newer evidence')
+    clock += setupRefreshCooldown
+    window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('online')); document.dispatchEvent(new Event('visibilitychange')); await flush()
+    assert.equal(calls.length, 4, 'A burst of return events starts only one read')
+    calls[3].reject(new Error('offline')); await flush()
+    assert.equal(store.getSnapshot().error, true); assert.equal(store.getSnapshot().status, complete, 'Prior completion is retained as stale evidence, never silently treated as current')
+    document.visibilityState = 'hidden'; clock += setupRefreshCooldown
+    window.dispatchEvent(new Event('online')); document.dispatchEvent(new Event('visibilitychange')); await flush()
+    assert.equal(calls.length, 4, 'A hidden workspace starts no automatic read')
+    document.visibilityState = 'visible'; document.dispatchEvent(new Event('visibilitychange')); await flush()
+    assert.equal(calls.length, 5)
+    leavePage(); assert.equal(calls[4].signal.aborted, false, 'Closing Setup keeps the shared sidebar read alive')
+    leaveSidebar(); assert.equal(calls[4].signal.aborted, true); assert.equal(store.getSnapshot().status, null)
+    const leaveNewSession = store.subscribe(() => {}); await flush()
+    calls[5].resolve(complete); calls[4].resolve(valid); await flush()
+    assert.equal(store.getSnapshot().status, complete, 'An old authenticated lifetime cannot populate a new one')
+    leaveNewSession()
+    window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('conker:setup-status-refresh')); await flush()
+    assert.equal(calls.length, 6, 'Unsubscribed clients do not perform background reads')
+    const transient = store.subscribe(() => {}); transient()
+    const strictMode = store.subscribe(() => {}); await flush()
+    assert.equal(calls.length, 7, 'StrictMode remount deduplicates deferred first reads')
+    strictMode(); calls[6].resolve(valid); await flush(); assert.equal(store.getSnapshot().status, null)
+  } finally { global.window = originalWindow; global.document = originalDocument }
+}
+
 async function main() {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'conker-setup-check-'))
   try {
+    await checkSharedSetup(temporary)
     const output = path.join(temporary, 'control.cjs')
     await build({ entryPoints: [path.join(root, 'src/lib/gateway/control.ts')], outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent' })
     const { createGatewayControlClient } = require(output)
@@ -134,6 +187,7 @@ async function main() {
     const today = await fs.readFile(path.join(root, 'src/components/gateway/today-workspace.tsx'), 'utf8')
     const preview = await fs.readFile(path.join(root, 'src/dev/fake-gateway.ts'), 'utf8')
     const statusHook = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-hook.ts'), 'utf8')
+    const statusStore = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-store.ts'), 'utf8')
     assert.ok(transport.includes('/^\\/api\\/control\\/pi\\/setup\\/status$/'),
       'Setup status must be an exact GET allowlist route')
     assert.match(transport, /setup\\\/receipts/, 'Receipt reads and writes must use bounded exact routes')
@@ -193,8 +247,13 @@ async function main() {
       'The setup surface must select and prove a server-discovered answer model without leaving onboarding')
     assert.match(progress, /dataNotice[\s\S]*costNotice/,
       'Model onboarding must disclose where the setup prompt goes and whether provider billing may apply')
-    assert.match(statusHook, /conker:setup-status-refresh/,
+    assert.match(statusStore, /conker:setup-status-refresh/,
       'Every setup-status consumer must refresh after a receipt changes progress')
+    assert.match(statusHook, /useSyncExternalStore/, 'Setup consumers subscribe to shared evidence')
+    assert.match(sidebar, /setupSummary \|\| setupError/, 'A failed refresh after completion still exposes status recovery')
+    assert.match(sidebar, /setupError \? 'Status unavailable'/, 'Stale setup progress is not presented as a current count')
+    assert.match(progress, /useGatewaySetupStatus\(client, true, true\)/, 'Entering Setup revalidates shared evidence')
+    assert.match(progress, /Setup was complete at the last check/, 'A retained completion never claims its evidence is still current after a failed read')
     console.log('Gateway setup passed: strict server contract, exact route, connected surface and completion-aware sidebar.')
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })

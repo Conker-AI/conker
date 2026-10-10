@@ -939,6 +939,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { step: 'rehearsal', revision: 1, receiptId: 'rehearsal-' + 'c'.repeat(64), source: 'conker.first-run-rehearsal', subject: 'owner.daily-workflow', evidenceDigest: 'c'.repeat(64), completedAt: iso(now()), expiresAt: iso(now() + 86400), recordedAt: iso(now()), state: 'valid' }
     }
     if (path === '/api/control/pi/setup/status') {
+      const setupScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (setupScenario === 'setup-status') return fail(503)
       const memoryChoice = setupChoices.get('memory')?.choice
       const capabilitiesChoice = setupChoices.get('capabilities')?.choice
       const memoryPending = memoryChoice === 'undecided'
@@ -948,7 +950,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const rehearsalPreview = preview.setupStep === 'rehearsal'
       const currentStep = rehearsalComplete ? null : !setupModelChosen ? 'model' : memoryPending ? 'memory' : capabilitiesPending ? 'capabilities' : rehearsalPreview ? 'rehearsal' : boundaryReceipt ? 'protection' : 'boundaries'
       const recommendedNextOperation = rehearsalComplete ? null : !setupModelChosen ? 'test_model' : memoryPending ? 'configure_memory' : capabilitiesPending ? 'configure_capabilities' : rehearsalPreview ? 'run_rehearsal' : boundaryReceipt ? 'verify_protection' : 'review_boundaries'
-      return {
+      const status = {
         schemaVersion: 1, workflow: 'first-run', state: rehearsalComplete ? 'complete' : 'in_progress', currentStep, recommendedNextOperation, generatedAt: iso(now()),
         steps: [
           ['security', 'complete', true, [], null, 'Owner access and durable storage are verified.'],
@@ -964,6 +966,9 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
           ...(id === 'capabilities' ? [{ source: 'speech', status: 'missing', revision: null, detail: 'Voice is optional and not configured. Use conker speech configure on the host to enable it.' }] : []),
         ] })),
       }
+      return setupScenario === 'setup-complete' ? { ...status, state: 'complete', currentStep: null, recommendedNextOperation: null,
+        steps: status.steps.map(step => ({ ...step, state: step.state === 'skipped' ? 'skipped' : 'complete', blockingReasonCode: null,
+          evidence: [{ source: 'preview.complete', status: 'ok', revision: 1, detail: 'Synthetic completed setup evidence.' }] })) } : status
     }
     if (path === '/api/control/pi/memory/forget-pending' && method === 'GET') return { schemaVersion: 1, pending: pendingForget ? { ...pendingForget } : null }
     if ((match = path.match(/^\/api\/control\/pi\/memory\/forget\/([^/]+)$/)) && method === 'GET') {

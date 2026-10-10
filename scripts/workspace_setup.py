@@ -6,7 +6,7 @@ import secrets
 import shutil
 from pathlib import Path
 
-from workspace import CONFIG, PORTS, ROOT, STATE, interpreter, owned_listener, run
+from workspace import CONFIG, PORTS, ROOT, STATE, interpreter, owned_process, run
 
 
 def _require_memory_ports(config):
@@ -20,7 +20,7 @@ def _require_memory_ports(config):
 
 def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     if any(
-        owned_listener(config, service)
+        owned_process(config, service)
         for service in (
             "pi",
             "gateway",
@@ -197,7 +197,7 @@ def configure_memory_corrections(config):
     """Targeted stopped-service repair; no packages, provider settings or grants change."""
     from workspace_memory import prepare, require_sources, write_config
 
-    if any(owned_listener(config, service) for service in ("pi", "memorygate")):
+    if any(owned_process(config, service) for service in ("pi", "memorygate")):
         raise SystemExit("Stop Pi and MemoryGate before preparing memory corrections.")
     _require_memory_ports(config)
     try:

@@ -39,6 +39,9 @@ Stopping retains every database and the dedicated PostgreSQL volume. Existing
 Conker installations, server data, provider credentials and grants are not copied.
 The launcher refuses unrelated listeners and container identities. An occupied
 port is never treated as proof that this workspace is running.
+The launcher also checks recorded processes before their ports open. Startup waits
+for an owned process, shutdown verifies its exit, and maintenance refuses a process
+that is still starting. Unreadable ownership is reported for inspection.
 
 Older local installations may lack the dedicated connection for editing and
 forgetting individual memories. Prepare it without reinstalling models or providers:
@@ -90,6 +93,15 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   action for an existing record.
 - Themes, narrow layouts, owner verification, Stop and uncertain-outcome
   recovery retain their existing behavior. Closing a tab does not stop a turn.
+  Stop interrupts the owned inference request even while no answer text arrives;
+  recorded tool effects still require their normal outcome checks. An old Stop
+  cannot interrupt a later reply that the owner explicitly resumed.
+
+Setup and the sidebar share their latest check, including refresh failures.
+Progress tracks saved setup choices and verification evidence. Choosing and testing
+an answer model checks its exact local route and saves the selection only after a
+successful test. Failed tests leave settings alone, and concurrent owner changes
+take precedence. No setup test runs merely from opening the page.
 
 ## What this local installation does and does not establish
 
