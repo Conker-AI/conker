@@ -9,6 +9,15 @@ from pathlib import Path
 from workspace import CONFIG, PORTS, ROOT, STATE, interpreter, owned_listener, run
 
 
+def _require_memory_ports(config):
+    configured = config.get("ports", {})
+    if not isinstance(configured, dict) or any(
+        type(configured.get(service)) is not int or configured[service] != PORTS[service]
+        for service in ("pi", "memorygate")
+    ):
+        raise SystemExit("Pi and MemoryGate ports must match this workspace's ownership checks; configuration unchanged.")
+
+
 def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     if any(
         owned_listener(config, service)
@@ -24,6 +33,12 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         raise SystemExit(
             "Stop this workspace before changing its runtimes: python scripts/workspace.py down"
         )
+    _require_memory_ports(config)
+    from workspace_memory import prepare, require_sources
+    try:
+        config, _ = prepare(config)
+    except (ValueError, TypeError) as exc:
+        raise SystemExit(str(exc)) from None
     source = (pi_source or Path(config["repositories"]["pi"])).resolve()
     from workspace_patches import apply_bundle
 
@@ -54,6 +69,10 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         raise SystemExit(
             "Select the MemoryGate recall checkout with --memorygate-source."
         )
+    try:
+        require_sources({"repositories": {"pi": str(source), "memorygate": str(memorygate)}})
+    except (ValueError, TypeError) as exc:
+        raise SystemExit(str(exc)) from None
     run(config["python"], "-m", "pip", "install", "-r", source / "requirements.txt")
     decisions = STATE / "runtimes/decisions"
     if not interpreter(decisions).exists():
@@ -170,5 +189,25 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
     run(config["python"], ROOT / "scripts/workspace_models.py", "initialize")
     print(
-        "Prepared native authentication and model roles. Verify models in Setup; thinking runs only when requested. Start with workspace.py up."
+        "Prepared native authentication, model roles and dedicated memory corrections. Verify capabilities after startup; thinking runs only when requested. Start with workspace.py up."
     )
+
+
+def configure_memory_corrections(config):
+    """Targeted stopped-service repair; no packages, provider settings or grants change."""
+    from workspace_memory import prepare, require_sources, write_config
+
+    if any(owned_listener(config, service) for service in ("pi", "memorygate")):
+        raise SystemExit("Stop Pi and MemoryGate before preparing memory corrections.")
+    _require_memory_ports(config)
+    try:
+        original = CONFIG.read_bytes()
+        if json.loads(original) != config:
+            raise ValueError("Workspace configuration changed; reload before preparing memory corrections.")
+        require_sources(config)
+        prepared, changed = prepare(config)
+        if changed:
+            write_config(CONFIG, prepared, original)
+    except (ValueError, TypeError, OSError) as exc:
+        raise SystemExit(str(exc)) from None
+    print("Dedicated memory corrections configured; credentials retained privately. Start Pi and MemoryGate, then verify the owner capability. Running readiness is not implied.")

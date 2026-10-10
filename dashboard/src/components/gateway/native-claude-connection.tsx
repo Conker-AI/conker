@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import type { NativeClaudeStatus } from '@/lib/gateway/native-claude'
+import type { NativeClaudeOperation, NativeClaudeStatus } from '@/lib/gateway/native-claude'
 import { Button } from '@/components/ui/button'
 import { WorkspaceSection } from '@/components/design-system'
 
@@ -18,12 +18,12 @@ export function NativeClaudeConnection({ client }: { client: GatewayControlClien
     return () => controller.abort()
   }, [client, reload, pending])
   useEffect(() => { if (value?.loginState !== 'pending' || pending) return; const timer = setInterval(() => setReload(value => value + 1), 3000); return () => clearInterval(timer) }, [value?.loginState, pending])
-  async function apply(operation: 'login' | 'cancel' | 'logout', billing?: 'subscription' | 'api') {
+  async function apply(operation: NativeClaudeOperation) {
     if (mutating.current || !lifetime.current) return
     mutating.current = true; ++epoch.current
     const signal = lifetime.current.signal
     setPending(true); setError('')
-    try { const next = await client.claude.apply(operation, billing, signal); if (!signal.aborted) setValue(next) }
+    try { const next = await client.claude.apply(operation, signal); if (!signal.aborted) setValue(next) }
     catch (error) { if (!signal.aborted) setError(error instanceof Error ? error.message : 'Operation was not confirmed. Refresh status.') }
     finally { mutating.current = false; if (!signal.aborted) setPending(false) }
   }
@@ -31,7 +31,7 @@ export function NativeClaudeConnection({ client }: { client: GatewayControlClien
     <p role="status" className="text-sm text-muted-foreground">{!value ? 'Checking native app…' : !value.available ? 'Claude Code is not available on this host.' : value.connected ? 'Connected · inference not yet verified' : value.loginState === 'pending' ? 'Waiting for you to finish sign-in in the browser' : 'Not connected'}</p>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {value?.available && <div className="flex flex-wrap gap-2">
-      {value.loginState === 'pending' ? <><Button variant="outline" size="sm" disabled={pending} onClick={() => void apply('cancel')}>Cancel sign-in</Button>{value.authorizationUrl && <Button asChild size="sm"><a href={value.authorizationUrl} target="_blank" rel="noreferrer">Continue sign-in</a></Button>}</> : value.connected ? <Button variant="outline" size="sm" disabled={pending} onClick={() => void apply('logout')}>Disconnect Claude Code</Button> : <><Button size="sm" disabled={pending} onClick={() => void apply('login', 'subscription')}>Sign in with Claude subscription</Button><Button size="sm" variant="outline" disabled={pending} onClick={() => void apply('login', 'api')}>Use Claude Console</Button></>}
+      {value.loginState === 'pending' ? <><Button variant="outline" size="sm" disabled={pending} onClick={() => void apply({ operation: 'cancel', loginId: value.loginId! })}>Cancel sign-in</Button>{value.authorizationUrl && <Button asChild size="sm"><a href={value.authorizationUrl} target="_blank" rel="noreferrer">Continue sign-in</a></Button>}</> : value.connected ? <Button variant="outline" size="sm" disabled={pending} onClick={() => void apply({ operation: 'logout' })}>Disconnect Claude Code</Button> : <><Button size="sm" disabled={pending} onClick={() => void apply({ operation: 'login', billing: 'subscription' })}>Sign in with Claude subscription</Button><Button size="sm" variant="outline" disabled={pending} onClick={() => void apply({ operation: 'login', billing: 'api' })}>Use Claude Console</Button></>}
     </div>}
     <p className="text-xs text-muted-foreground">Choose provider “claude-code” with model “sonnet”, “opus”, or “haiku” below. Native tool execution is separate from Conker’s text-only model roles.</p>
     <p className="text-sm"><Link className="underline underline-offset-4" to="/system?tab=terminal">Open the native Codex / Claude terminal</Link></p>

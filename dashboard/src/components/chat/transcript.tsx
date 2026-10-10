@@ -65,6 +65,11 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
       <p role="status" className="mt-1.5 text-xs text-muted-foreground">Waiting for saved history</p>
     </article>}
     {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} />}</article>}
+    {chat.outcomes?.map(outcome => <section key={outcome.id} aria-label={outcome.title} className="space-y-3 rounded-lg border bg-muted p-4">
+      <div className="space-y-1"><h3 className="text-sm font-medium">{outcome.title}</h3><p className="text-sm leading-6 text-muted-foreground">{outcome.description}</p><p className="text-xs leading-5 text-muted-foreground">{outcome.consequence}</p></div>
+      <div className="flex flex-wrap gap-2">{outcome.controls.map(control => <Button key={control.label} type="button" size="sm" variant={control.primary ? 'default' : 'outline'} className="h-auto min-h-(--control-height-sm) whitespace-normal" disabled={control.action.availability !== 'enabled'} onClick={() => { if (control.action.availability === 'enabled') void control.action.run() }}>{control.label}</Button>)}</div>
+      <p className="text-xs text-muted-foreground">Saved turn · <time dateTime={outcome.recordedAt}>{new Date(outcome.recordedAt).toLocaleString()}</time></p>
+    </section>)}
     {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
   </div>
 }

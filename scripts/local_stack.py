@@ -78,6 +78,8 @@ def initialize():
                 "GATEWAY_DASHBOARD_DIR": str(ROOT / "dashboard/dist")},
         },
     }
+    from workspace_memory import prepare
+    config, _ = prepare(config)
     # Exclusive creation and owner-only permissions on POSIX. Windows follows
     # the user's profile ACL; this is local development, not a sandbox boundary.
     with CONFIG.open("x", encoding="utf-8") as stream:

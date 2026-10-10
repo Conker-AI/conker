@@ -16,6 +16,7 @@ const { snapshotGatewayOperation, isConversationWrite } = load('transport.ts')
 const { describeGatewayOperation } = load('verification.ts')
 const { createBrowserSessionsClient } = load('browser-sessions.ts')
 const { createChatGPTClient } = load('chatgpt.ts')
+const { createNativeClaudeClient } = load('native-claude.ts')
 const route = '/api/host/providers'
 const revision = 'credential_' + 'a'.repeat(32)
 function status() {
@@ -118,6 +119,66 @@ async function connectionRecoveryChecks(subscription) {
   } finally { for (const slot of slots) slot?.cleanup?.(); global.window = previousWindow }
 }
 
+async function nativeCancellationChecks(idle) {
+  const slots = [], effects = []; let cursor = 0, dirty = false
+  const hooks = {
+    useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], next => { slots[index] = typeof next === 'function' ? next(slots[index]) : next; dirty = true }] },
+    useRef(initial) { const index = cursor++; if (!(index in slots)) slots[index] = { current: initial }; return slots[index] },
+    useEffect(effect, deps) {
+      const index = cursor++, previous = slots[index]
+      if (!previous || deps.some((value, position) => !Object.is(value, previous.deps[position]))) {
+        slots[index] = { deps, cleanup: null }
+        effects.push(() => { previous?.cleanup?.(); slots[index].cleanup = effect() })
+      }
+    },
+  }
+  const file = path.resolve(__dirname, '../src/components/gateway/native-claude-connection.tsx')
+  const component = { exports: {} }
+  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  new Function('require', 'module', 'exports', code)(name => {
+    if (name === 'react') return hooks
+    if (name === 'react/jsx-runtime') return require(name)
+    const parts = { 'react-router-dom': { Link: 'a' }, '@/components/ui/button': { Button: 'button' }, '@/components/design-system': { WorkspaceSection: 'section' } }
+    assert.ok(parts[name], `Unexpected native connection dependency ${name}`)
+    return parts[name]
+  }, component, component.exports)
+  const defer = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
+  const reads = [], writes = []
+  const client = { claude: {
+    status(signal) { const request = { ...defer(), signal }; reads.push(request); return request.promise },
+    apply(operation, signal) { const request = { ...defer(), operation, signal }; writes.push(request); return request.promise },
+  } }
+  let tree
+  const render = () => { cursor = 0; dirty = false; tree = component.exports.NativeClaudeConnection({ client }); while (effects.length) effects.shift()() }
+  const settle = async () => { await new Promise(resolve => setImmediate(resolve)); if (dirty) render() }
+  const walk = value => !value || typeof value !== 'object' ? [] : Array.isArray(value) ? value.flatMap(walk) : [value, ...walk(value.props?.children), ...walk(value.props?.action)]
+  const text = value => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join('') : value?.props ? text(value.props.children) : ''
+  const button = label => walk(tree).find(node => node.type === 'button' && text(node) === label)
+  const first = { ...idle, loginState: 'pending', loginId: 'login_' + 'a'.repeat(32) }
+  const replacement = { ...first, loginId: 'login_' + 'b'.repeat(32) }
+  const originalInterval = global.setInterval, originalClear = global.clearInterval
+  global.setInterval = () => 1; global.clearInterval = () => {}
+  try {
+    render(); reads[0].resolve(first); await settle()
+    const capturedCancel = button('Cancel sign-in').props.onClick
+    button('Refresh').props.onClick(); render(); reads.at(-1).resolve(replacement); await settle()
+    // The owner action captured A before a different tab replaced it with B.
+    capturedCancel(); capturedCancel(); render()
+    assert.equal(writes.length, 1)
+    assert.deepEqual(writes[0].operation, { operation: 'cancel', loginId: first.loginId })
+    writes[0].reject(new Error('Operation was not confirmed. Refresh status.')); await settle()
+    reads.at(-1).resolve(replacement); await settle()
+    assert.equal(writes.length, 1, 'Recovering current status must never cancel a replacement automatically')
+    button('Cancel sign-in').props.onClick(); render()
+    assert.deepEqual(writes[1].operation, { operation: 'cancel', loginId: replacement.loginId })
+    writes[1].resolve({ ...idle, loginState: 'canceled' }); await settle()
+    assert.ok(button('Sign in with Claude subscription'))
+  } finally {
+    for (const slot of slots) slot?.cleanup?.()
+    global.setInterval = originalInterval; global.clearInterval = originalClear
+  }
+}
+
 async function main() {
   const calls = []; let result = status()
   const client = createProviderControlClient({ request: async (...args) => { calls.push(args); return result } })
@@ -170,11 +231,38 @@ async function main() {
   for (const invalid of [{ operation: 'login', apiKey: 'PRIVATE' }, { operation: 'logout', connectionId: 'stale' }, { operation: 'command/exec' }]) await assert.rejects(chatgpt.apply(invalid), error => error.kind === 'validation')
   chatgptResponse = { ...subscription, accessToken: 'PRIVATE' }
   await assert.rejects(chatgpt.status(), error => error.kind === 'invalid-response')
+  const nativeIdle = { available: true, connected: false, loginId: null, loginState: 'idle', authorizationUrl: null, credentialsIncluded: false, runtime: 'Claude Code', models: [] }
+  let nativeResponse = nativeIdle
+  const nativeCalls = [], nativePath = '/api/host/claude', loginId = 'login_' + 'a'.repeat(32)
+  const native = createNativeClaudeClient({ request: async (...args) => { nativeCalls.push(args); return nativeResponse } })
+  assert.equal((await native.status()).loginId, null)
+  assert.equal(nativeCalls[0][0], nativePath)
+  assert.equal(isConversationWrite(nativePath), false, 'Native cancellation remains an exact owner-verified action')
+  nativeResponse = { ...nativeIdle, loginState: 'pending', loginId }
+  assert.equal((await native.apply({ operation: 'login', billing: 'subscription' })).loginId, loginId)
+  const cancellation = { operation: 'cancel', loginId }
+  await native.apply(cancellation)
+  assert.deepEqual(nativeCalls.at(-1)[1].body, cancellation)
+  assert.deepEqual(snapshotGatewayOperation(nativePath, cancellation).body, cancellation)
+  for (const invalid of [{ operation: 'cancel' }, { operation: 'cancel', loginId: null }, { operation: 'cancel', loginId: 'invalid' }, { ...cancellation, billing: 'api' }, { operation: 'login', loginId }, { operation: 'logout', loginId }]) {
+    const before = nativeCalls.length
+    await assert.rejects(native.apply(invalid), error => error.kind === 'validation')
+    assert.equal(nativeCalls.length, before)
+  }
+  for (const malformed of [{ ...nativeResponse, loginId: null }, { ...nativeResponse, loginId: 'invalid' }, { ...nativeIdle, loginId }, { ...nativeIdle, privateToken: 'PRIVATE' }]) {
+    nativeResponse = malformed
+    await assert.rejects(native.status(), error => error.kind === 'invalid-response')
+  }
   const general = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/models-settings.tsx'), 'utf8')
   assert.ok(!general.includes('<ProviderCredentials') && !general.includes('<ModelsProviders'), 'provider management is not General')
   const header = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/header.tsx'), 'utf8')
-  assert.ok(header.includes("label: 'Providers'") && header.includes('/settings?tab=providers'))
+  assert.ok(header.includes('gatewayPageNavigation'))
+  const { gatewayPageNavigation } = load(path.resolve(__dirname, '../src/components/gateway/navigation.ts'))
+  const providerNavigation = gatewayPageNavigation('/settings', '?tab=providers')
+  assert.equal(providerNavigation.activeSection, 'providers')
+  assert.deepEqual(providerNavigation.sections.find(section => section.value === 'providers'), { value: 'providers', label: 'Providers', to: '/settings?tab=providers', badge: undefined })
   await connectionRecoveryChecks(subscription)
+  await nativeCancellationChecks(nativeIdle)
   console.log('Provider control passed: separate subscription and API-key flows, exact verification, strict secret-free projections, dedicated Providers settings and late-read recovery.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

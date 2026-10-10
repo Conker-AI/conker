@@ -225,7 +225,7 @@ sys.exit(0 if listening else 1)
 def main():
     global ORDER
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "enhance", "up", "down", "status", "build", "password"])
+    parser.add_argument("command", choices=["install", "enhance", "memory-corrections", "up", "down", "status", "build", "password"])
     parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
     parser.add_argument("--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development")
     parser.add_argument("--memorygate-source", type=Path, help="Explicit MemoryGate checkout for local development")
@@ -238,6 +238,10 @@ def main():
         build()
         return
     config = read_config()
+    if args.command == "memory-corrections":
+        from workspace_setup import configure_memory_corrections
+        configure_memory_corrections(config)
+        return
     if args.command == "enhance":
         from workspace_setup import enhance
         enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
@@ -271,6 +275,8 @@ def main():
     else:
         for service in ORDER:
             print(f"{service}: {'running (inspect System for health)' if owned_listener(config, service) else 'stopped'}")
+        from workspace_memory import status as memory_correction_status
+        print("memory corrections: " + memory_correction_status(config))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
-import type { Action, Attempt, ChatContract, ChatMessage, Generation, RecoveryAction, Submission } from './contract'
+import type { Action, Attempt, ChatContract, ChatMessage, ChatTurnOutcome, Generation, RecoveryAction, Submission } from './contract'
 import type { RuntimeMessage, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { canReleaseTaskConflict, canSubmitRuntime, hasActiveRuntimeTurn, type UncertainTurn } from '@/components/gateway/runtime-state'
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
 import { memoryFeedback } from './memory-feedback'
+import { sameTurnOutcome, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
 
 export type GatewayChatState = {
   sessionId: string; epoch: number; active: boolean; current: RuntimeSessionDetail | null
@@ -13,12 +14,15 @@ export type GatewayChatState = {
   preview: { sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null
   focusedMessageId?: string | null
   memoryRead?: MemoryDeliveryWatchState | null
+  operationPending?: boolean
 }
 export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
   stop: () => void | Promise<void>; copy: (message: RuntimeMessage, kind: 'copy' | 'link') => Promise<void>
   saveArtifact: (message: RuntimeMessage) => void | Promise<void>
   refreshMemory?: (messageId: string) => void
+  resumeTurn?: (turnId: string) => void | Promise<void>
+  reviewTurn?: (turnId: string, destination: TurnDestination) => void
 } & Record<RecoveryAction, () => void | Promise<void>>
 const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
 
@@ -82,8 +86,21 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     previewText: preview?.text ?? '', resetVersion: preview?.resetVersion ?? 0, end: preview?.end,
     stop: action(value => value.inFlight?.requestId === flight.requestId && !value.inFlight.stopping && value.sendPending, handler => handler.stop(), 'Stop is already requested.'),
   } : null
+  const outcomes: ChatTurnOutcome[] = isForgotten(state) ? [] : visibleTurnOutcomes(state.current?.turns ?? [], !!generation).map(turn => {
+    const copy = turnOutcomeCopy(turn)
+    const eligible = (value: GatewayChatState) => !isForgotten(value) && value.current?.turns.some(saved => sameTurnOutcome(turn, saved)) === true
+    const control = (label: string, run: (handlers: GatewayChatHandlers) => void | Promise<void>, ready: (value: GatewayChatState) => boolean = () => true, primary = false) => ({ label, primary, action: action(value => eligible(value) && ready(value), run, 'The saved turn changed or a request is in progress. Check its current status first.') })
+    const controls = [control('Check saved history', handler => handler.checkHistory(), value => !value.operationPending && !value.detailPending && !value.sendPending && !value.inFlight)]
+    const review = (label: string, destination: TurnDestination) => { if (handlers().reviewTurn) controls.push(control(label, handler => handler.reviewTurn?.(turn.id, destination))) }
+    if (turn.status === 'awaiting_approval' && turn.approvalRequestId) review('Review action', 'approval')
+    else if (turn.action || turn.acted || ['outcome_unknown', 'action_in_progress', 'awaiting_budget'].includes(turn.status)) review('Review saved action', 'run')
+    if (copy.modelUnavailable) review('Review models', 'models')
+    if (copy.toolUnavailable) review('Review tools', 'tools')
+    if (handlers().resumeTurn && (turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted)) controls.push(control(turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval', handler => handler.resumeTurn?.(turn.id), value => value.current?.status === 'open' && !value.operationPending && !value.detailPending && !value.sendPending && !value.attempt, true))
+    return { id: turn.id, title: copy.title, description: copy.description, consequence: copy.consequence, recordedAt: turn.endedAt ?? turn.startedAt, controls }
+  })
   return {
-    source: 'gateway', sessionId: state.sessionId, messages, history: state.detailPending ? 'loading' : state.error ? 'error' : 'ready',
+    source: 'gateway', sessionId: state.sessionId, messages, outcomes, history: state.detailPending ? 'loading' : state.error ? 'error' : 'ready',
     activeAgentName: state.activeAgentName,
     notice: state.notice, error: state.error, draft: isForgotten(state) || submission.kind === 'sending' ? '' : state.draft, focusedMessageId: state.focusedMessageId,
     setDraft: action(value => !value.sendPending && !isForgotten(value), (handler, text: string) => handler.setDraft(text), 'The composer is unavailable while sending or after forgetting.'),

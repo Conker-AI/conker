@@ -13,6 +13,47 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Visible turn recovery and owner memory corrections (10 October)
+
+Saved failed, interrupted and stopped replies remain visible after reopening a
+chat. Pending approvals and unresolved action outcomes stay visible alongside
+their explicit recovery controls. Status checks do not resend a message; reply-only
+recovery uses the exact recorded turn. Guidance distinguishes recorded actions
+from unconfirmed outcomes and does not display arbitrary provider exceptions.
+
+Local setup now creates a distinct memory correction credential scoped to the
+existing companion namespace. Older installations can use `workspace.py
+memory-corrections` while Pi and MemoryGate are stopped. It preserves all other
+configuration, refuses partial credentials or mismatched scopes/ports, and
+reports configuration separately from running readiness.
+
+Claude cancellation now carries the sign-in attempt's identity through UI,
+Gateway, bridge and CLI. A delayed request for an old attempt cannot cancel a
+replacement. No external authentication was performed to test this behavior.
+
+The model prompt now separates ordinary replies from tool-request JSON and
+explains that Conker handles memory delivery. A model-only diagnostic returned
+ordinary text for the synthetic Remember request, but a separate tool request
+still produced malformed JSON. Strict rejection remains in place; these examples
+do not establish reliable tool use by the installed small model.
+
+Validation: 121 tool/prompt/memory regressions, 60 correction setup checks and
+59 Claude bridge/CLI/Gateway checks pass. Gateway contracts, saved-outcome and
+provider UI checks, TypeScript, affected lint and production build pass
+(595,422-byte entry; no fixtures). Desktop and narrow mobile recovery views were
+reviewed in both themes. The installer reproduces all 69 reviewed Pi files and
+remains unchanged on repeat application.
+
+The local app now runs this milestone with database and private configuration
+checkpoints. Live chat displays the saved failure with Details closed. The exact
+synthetic memory was previewed and forgotten; its receipt changed to `removed`
+in CLI and chat while its original message remained. Semantic-index removal
+reported degraded because semantic search is unavailable. Claude status remains
+signed out with no pending login identity. A separate greeting using Automatic
+hit a router timeout and selected the configured local thinking model for the
+answer; it remained pending and an explicit Stop was requested. This does not
+establish successful reply or prompt-cancellation acceptance.
+
 ### Explicit memory requests and delivery acknowledgements (10 October)
 
 Direct “Remember that…” and “Запомни, что…” statements have a distinct owner
@@ -50,9 +91,9 @@ Local rollout retained SQLite and verified PostgreSQL dump checkpoints; MemoryGa
 Pi and Gateway passed health checks. A synthetic live request returned the exact
 `owner_requested` acknowledgement in CLI and chat. Its local model reply failed
 after requesting an unavailable tool (nothing executed). Individual forget preview
-also revealed that this installation lacks `PI_MEMORY_CORRECTION_*` configuration.
-The synthetic test memory remains pending that setup repair. Those are follow-up
-gaps, not successful end-to-end reply or deletion acceptance.
+also revealed missing `PI_MEMORY_CORRECTION_*` configuration. The later owner
+correction milestone above repairs that setup and confirms removal of this exact
+synthetic record. The failed reply remains a recorded limitation.
 
 ### Recorded model calls and recoverable memory forgetting (10 October)
 

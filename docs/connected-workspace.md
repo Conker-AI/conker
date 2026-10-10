@@ -40,6 +40,20 @@ Conker installations, server data, provider credentials and grants are not copie
 The launcher refuses unrelated listeners and container identities. An occupied
 port is never treated as proof that this workspace is running.
 
+Older local installations may lack the dedicated connection for editing and
+forgetting individual memories. Prepare it without reinstalling models or providers:
+
+```powershell
+python scripts/workspace.py down
+python scripts/workspace.py memory-corrections
+python scripts/workspace.py up
+```
+
+This creates one distinct correction credential scoped to the existing companion
+memory namespace. It preserves existing credentials and refuses conflicting or
+partial configurations. The configuration status does not prove a running service
+has accepted the credential; verify the record preview in Memory after startup.
+
 The backend repositories are pinned in `scripts/workspace-sources.json` and
 cloned beneath the ignored `.local-run/sources` directory. Each has its own
 Python environment so conflicting dependency pins do not get silently combined.

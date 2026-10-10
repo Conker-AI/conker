@@ -31,7 +31,7 @@ async function main() {
     const message = { id: 'm1', sessionId: 'a', sequence: 7, role: 'assistant', createdAt: '2026-09-25T10:00:00Z', content: { kind: 'text', text: 'Saved answer' } }
     const base = { sessionId: 'a', epoch: 1, active: true, current: { id: 'a', status: 'open', messages: [message], turns: [], pendingSubmissions: [] }, draft: 'Next', pending: false, sendPending: false, detailPending: false, forgotten: false, reviewed: false, notice: null, error: null, rejected: null, inFlight: null, preview: null }
     let state = { ...base }, calls = []
-    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'saveArtifact', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
+    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'saveArtifact', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown', 'resumeTurn', 'reviewTurn'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
     const project = () => gatewayChatContract(state, () => state, () => handlers)
     const run = async action => { assert.equal(action.availability, 'enabled'); await action.run() }
     let chat = project()
@@ -94,7 +94,57 @@ async function main() {
     state = { ...state, sessionId: 'b' }; assert.equal(project().generation, null); assert.equal(project().submission.kind, 'idle', 'Another session must not inherit the sending input')
     state = { ...base, rejected: 'Request rejected' }; assert.deepEqual(project().submission, { kind: 'rejected', message: 'Request rejected' })
     assert.equal(project().draft, 'Next', 'A failed send restores the retained draft')
-    console.log('Chat adapter: mapping, stale callbacks, privacy, parked locks, recovery, task separation, forks and preview lifecycle passed.')
+    const failedTurn = { id: 'turn_failed', sessionId: 'a', status: 'failed', acted: false, startedAt: '2026-10-10T12:00:00Z', endedAt: '2026-10-10T12:00:01Z', detail: 'The model requested an unavailable tool. This request was not executed.', action: null, approvalRequestId: null }
+    const failedState = { ...base, current: { ...base.current, messages: [{ ...message, role: 'user', content: { kind: 'text', text: 'A saved user request' } }], turns: [failedTurn] } }
+    state = failedState; calls = []; chat = project()
+    assert.equal(chat.outcomes.length, 1); assert.match(chat.outcomes[0].title, /couldn’t finish/)
+    assert.match(chat.outcomes[0].consequence, /No tool action is recorded/); assert.match(chat.outcomes[0].description, /tool that is unavailable/)
+    assert.deepEqual(chat.outcomes[0].controls.map(control => control.label), ['Check saved history', 'Review tools'])
+    state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, detail: 'model requested unavailable tool' }] } }
+    assert.ok(project().outcomes[0].controls.some(control => control.label === 'Review tools'), 'Historical unavailable-tool failures keep the same fixed guidance')
+    state = failedState
+    const failedMarkup = renderToStaticMarkup(createElement(ChatTranscript, { chat }))
+    assert.match(failedMarkup, /<section[^>]*aria-label="Conker couldn’t finish the reply"/)
+    assert.match(failedMarkup, /A saved user request/); assert.match(failedMarkup, /Check saved history/)
+    assert.equal(calls.length, 0, 'Rendering a durable failure never retries model or tool work')
+    await run(chat.outcomes[0].controls[0].action); assert.deepEqual(calls, [['checkHistory']]); assert.equal(state.draft, 'Next')
+    const oldReview = chat.outcomes[0].controls[1].action
+    for (const patch of [{ epoch: 2 }, { active: false }, { forgotten: true }, { sessionId: 'b' }, { current: { ...failedState.current, turns: [{ ...failedTurn, status: 'complete' }] } }]) {
+      calls = []; state = { ...failedState, ...patch }; await oldReview.run(); assert.equal(calls.length, 0, 'Outcome navigation rechecks the saved source and turn')
+    }
+    state = { ...failedState, forgotten: true }; assert.deepEqual(project().outcomes, [])
+    state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, detail: 'PRIVATE provider payload' }] } }; assert.ok(!renderToStaticMarkup(createElement(ChatTranscript, { chat: project() })).includes('PRIVATE'))
+    const later = { ...failedTurn, id: 'turn_later', startedAt: '2026-10-10T13:00:00Z', endedAt: '2026-10-10T13:00:01Z', status: 'complete', detail: null }
+    state = { ...failedState, current: { ...failedState.current, turns: [later, failedTurn] } }; assert.deepEqual(project().outcomes, [], 'A later success removes old terminal failure from the main transcript')
+    for (const status of ['failed', 'interrupted']) for (const actionState of ['dispatching', 'in_progress', 'outcome_unknown', 'unknown']) {
+      state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, status, action: { id: 'action_a', state: actionState, jobId: null } }, later] } }
+      const outcome = project().outcomes[0]; assert.ok(outcome, 'An older unconfirmed action stays visible even before acted is set')
+      assert.match(outcome.consequence, /not confirmed/)
+      assert.ok(outcome.controls.some(control => control.label === 'Review saved action'))
+      assert.ok(!outcome.controls.some(control => control.label === 'Ask only for the reply'))
+    }
+    for (const status of ['outcome_unknown', 'action_in_progress', 'awaiting_budget']) {
+      state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, status, action: { id: 'action_a', state: 'outcome_unknown', jobId: null } }, later] } }
+      const outcome = project().outcomes[0]; assert.ok(outcome); assert.match(outcome.consequence, /not confirmed/)
+      assert.deepEqual(outcome.controls.map(control => control.label), ['Check saved history', 'Review saved action'], 'Uncertain action never receives generic Retry or reply-only recovery')
+    }
+    for (const acted of [false, true]) {
+      state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, status: 'interrupted', acted }] } }
+      assert.equal(project().outcomes[0].title, 'This turn was interrupted'); assert.ok(!project().outcomes[0].controls.some(control => control.label === 'Ask only for the reply'))
+    }
+    const unreplied = { ...failedTurn, status: 'acted_no_reply', acted: true, action: { id: 'action_a', state: 'completed', jobId: null } }
+    state = { ...failedState, pending: true, current: { ...failedState.current, turns: [unreplied] } }; calls = []; chat = project()
+    const resume = chat.outcomes[0].controls.find(control => control.label === 'Ask only for the reply').action
+    assert.equal(resume.availability, 'enabled', 'A separate unsendable composer draft does not block recovery of a saved reply')
+    await run(resume); assert.deepEqual(calls, [['resumeTurn', failedTurn.id]], 'Explicit recovery targets the same saved turn, never send')
+    for (const patch of [{ operationPending: true }, { active: false }, { forgotten: true }, { epoch: 4 }, { sessionId: 'b' }, { current: { ...failedState.current, turns: [{ ...unreplied, status: 'outcome_unknown' }] } }]) {
+      calls = []; state = { ...failedState, current: { ...failedState.current, turns: [unreplied] }, ...patch }; await resume.run(); assert.equal(calls.length, 0)
+    }
+    state = { ...failedState, current: { ...failedState.current, turns: [{ ...unreplied, acted: false }] } }; assert.ok(!project().outcomes[0].controls.some(control => control.label === 'Ask only for the reply'))
+    state = { ...failedState, current: { ...failedState.current, turns: [{ ...unreplied, status: 'awaiting_approval', approvalRequestId: 'approval_a' }] } }
+    chat = project(); assert.ok(!chat.outcomes[0].description.includes('Nothing has been done')); assert.match(chat.outcomes[0].consequence, /action was recorded/)
+    calls = []; await run(chat.outcomes[0].controls.find(control => control.label === 'Review action').action); assert.deepEqual(calls, [['reviewTurn', failedTurn.id, 'approval']])
+    console.log('Chat adapter: mapping, stale callbacks, privacy, saved outcomes, explicit safe recovery, task separation, forks and preview lifecycle passed.')
   } finally { await fs.rm(temporary, { recursive: true, force: true }) }
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

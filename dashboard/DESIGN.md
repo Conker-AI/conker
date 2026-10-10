@@ -107,6 +107,21 @@ request per historical message or reloading the transcript. Receipt state stays
 in memory; no text or receipts enter browser storage. Errors and explanations
 use fixed copy, with no delivery exception text or admission scores.
 
+Saved turn outcomes stay visible in the transcript after a reload. The latest
+failed, interrupted or stopped attempt has a compact outcome panel; older
+terminal attempts remain in Details after later work succeeds. Every still
+unresolved action remains visible. These panels use saved turn identity, never
+guess a message association from nearby text or timestamps. They distinguish
+no recorded tool action, recorded action and unconfirmed effects.
+
+Checking history only reads persisted state. Reply-only recovery is explicit
+and restricted to an acknowledged acted-without-reply state; approval
+continuation retains the existing review flow. Other uncertain outcomes link
+to the saved action and do not offer an unsafe generic Retry. Every callback
+rechecks current turn state, source privacy, selected chat, auth and operation
+locks. No outcome panel remains visible after source forgetting. Failure copy
+uses known public cases or a safe generic explanation, never provider errors.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.

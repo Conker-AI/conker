@@ -5,6 +5,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from urllib.error import HTTPError
 
 import pytest
 
@@ -72,6 +73,46 @@ def test_memory_delivery_reads_runtime_metadata_without_ingestion(invoke):
         ("pi", "/sessions/ses_one/memory-delivery", None),
         ("pi", "/sessions/ses_one/messages/msg_older/memory-delivery", None),
     ]
+
+
+def test_claude_cancel_cli_uses_exact_observed_identity_and_never_retries(
+    invoke,
+    monkeypatch,
+):
+    run, _calls = invoke
+    calls = []
+    login_id = "login_" + "a" * 32
+
+    def request(config, service, path, body=None):
+        calls.append((service, path, body))
+        if body is None:
+            return {"loginState": "pending", "loginId": login_id}
+        raise HTTPError("http://synthetic/claude", 503, "unconfirmed", {}, None)
+
+    monkeypatch.setattr(cli, "request", request)
+    assert run("auth", "claude", "cancel") == 1
+    assert calls == [
+        ("providers", "/claude", None),
+        ("providers", "/claude", {"operation": "cancel", "loginId": login_id}),
+    ]
+
+
+@pytest.mark.parametrize("login_id", [None, "", "previous", "login_" + "a" * 33])
+def test_claude_cancel_cli_refuses_missing_or_invalid_identity(
+    invoke,
+    monkeypatch,
+    login_id,
+):
+    run, _calls = invoke
+    calls = []
+
+    def request(config, service, path, body=None):
+        calls.append((service, path, body))
+        return {"loginId": login_id}
+
+    monkeypatch.setattr(cli, "request", request)
+    assert run("auth", "claude", "cancel") == 1
+    assert calls == [("providers", "/claude", None)]
 
 
 def test_thinking_is_explicit_and_recovery_names_saved_identity(invoke):

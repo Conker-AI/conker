@@ -20,7 +20,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from "./model-routing-evide
 import { memoryRetrievalSummary } from './plain-status'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Bot, Brain, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import { TaskDispatchReview } from './task-dispatch-review'
@@ -67,6 +67,7 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
 
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
 export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
+  const navigate = useNavigate()
   const auth = useStore(authStore)
   const [routeParams] = useSearchParams()
   const focusedMessageId = routeParams.get('message')
@@ -379,7 +380,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     void refreshList()
   }
   async function resumeTurn(turnId: string) {
-    if (!selected || workspace.getState().operation || !activeRef.current) return
+    const latest = chatLatest.current?.snapshot.current
+    const turn = latest?.turns.find(turn => turn.id === turnId)
+    if (!selected || workspace.getState().selected !== selected || latest?.id !== selected || latest.status !== 'open' || privacy.getState().sessionIds.includes(selected) || workspace.getState().uncertain[selected] || !turn || !(turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted) || workspace.getState().operation || !activeRef.current) return
     const id = selected, epoch = workspace.getState().epoch
     let failure: string | null = null
     workspace.setState({ operation: 'resume' }); setNotice(null); setDetailError(null)
@@ -502,7 +505,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     finally { if (mounted.current) setDetailPending(false) }
   }
   async function checkHistory() {
-    if (!selected || detailPending || sendPending) return
+    if (!selected || detailPending || sendPending || workspace.getState().operation) return
     setReviewed(false)
     const id = selected
     workspace.setState(values => values.uncertain[id] ? { uncertain: { ...values.uncertain, [id]: { ...values.uncertain[id], checked: false } } } : {})
@@ -522,6 +525,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const activeAgentId = selected ? sessionAgents[selected] ?? 'companion' : firstAgent
   const activeAgentName = agentNames[activeAgentId] ?? (activeAgentId === 'companion' ? 'Conker' : 'Agent')
   const chatSnapshot: GatewayChatState = {
+    operationPending: !!operation,
     memoryRead: memoryRead.state,
     sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending,
     activeAgentName, agentNames,
@@ -529,6 +533,16 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     attempt, reviewed, notice, error: detailError, rejected, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
   }
   const chatHandlers: GatewayChatHandlers = {
+    resumeTurn,
+    reviewTurn: (id, destination) => {
+      const saved = chatLatest.current?.snapshot.current
+      const turn = saved?.turns.find(row => row.id === id)
+      if (!saved || !turn || saved.id !== workspace.getState().selected || !activeRef.current || privacy.getState().sessionIds.includes(saved.id)) return
+      if (destination === 'approval' && turn.approvalRequestId) navigate(`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`)
+      else if (destination === 'run') navigate(`/activity?tab=runs&run=${encodeURIComponent(turn.id)}`)
+      else if (destination === 'models') navigate('/settings?tab=providers')
+      else if (destination === 'tools') navigate('/tools')
+    },
     refreshMemory: memoryRead.refresh,
     copy: copyMessage, saveArtifact, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
     send: submit, stop: stopAnswer, checkHistory,
@@ -543,7 +557,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     const latest = chatLatest.current?.snapshot ?? chatSnapshot
     const store = workspace.getState()
     const ids = privacy.getState().sessionIds
-    return { ...latest, epoch: store.epoch, sessionId: store.selected ?? '', active: !!activeRef.current,
+    return { ...latest, epoch: store.epoch, sessionId: store.selected ?? '', active: !!activeRef.current, operationPending: !!store.operation,
       draft: draftController.current(store.selected ?? '')?.value.text ?? '', attempt: store.uncertain[store.selected ?? ''],
       sendPending: store.operation === 'send', pending: latest.pending || !!store.operation || !draftCanSend(draftController.current(store.selected ?? 'new')),
       forgotten: latest.forgotten || ids.includes(latest.sessionId) || !!latest.attempt?.requestedSessionId && ids.includes(latest.attempt.requestedSessionId),
@@ -595,20 +609,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
             </DropdownMenuContent></DropdownMenu>
           </GatewayHeader>}
           <ConversationHistory key={selected} sessionId={selected} focusedMessageId={focusedMessageId}>
-            {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !current.turns.some(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply') && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
+            {current?.status === 'forgotten' && <p className="text-sm text-muted-foreground">This conversation was forgotten. Sending is disabled.</p>}{current && hasActiveRuntimeTurn(current) && !chat.outcomes?.length && <p role="status" className="text-sm text-muted-foreground">The server has an unfinished turn. Check history for its status before sending again.</p>}<ChatTranscript chat={chat} />
             {current && <ThinkingStatus messages={current.messages} rows={current.thinking ?? []} disabled={!active} onCancel={async turnId => { await client.cancelThinking(current.id, turnId); await request(signal => refreshThinking(current.id, signal)) }} onDiscuss={result => { draftController.edit(current.id, { text: [draftController.current(current.id)?.value.text.trimEnd(), `Discuss these background findings and check their conclusions:\n\n${result}`].filter(Boolean).join('\n\n') }); replyComposer.current?.focus() }} />}
-            {/* Waiting on the owner is the main loop, so it is shown in the chat, not under Details. */}
-            {current && current.status !== 'forgotten' && current.turns.filter(turn => turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply').map(turn => <div key={`waiting:${turn.id}`} role="status" className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-sm font-medium">{turn.status === 'awaiting_approval' ? 'Conker is waiting for your OK' : 'Conker acted but did not reply'}</p>
-                <p className="text-sm text-muted-foreground">{turn.status === 'awaiting_approval' ? 'Nothing has been done yet. Review the exact action, then continue here.' : 'The action already happened. Ask for the reply; it will not be done again.'}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {turn.status === 'awaiting_approval' && turn.approvalRequestId && <Button asChild size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review</Link></Button>}
-                <Button size="sm" variant={turn.status === 'awaiting_approval' ? 'outline' : 'default'} disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Get the reply' : 'Continue'}</Button>
-              </div>
-            </div>)}
-            {current && current.turns.length > 0 && <details className="text-xs text-muted-foreground" onToggle={event => { if (event.target === event.currentTarget) setTurnDetailsOpen(event.currentTarget.open) }}><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Details</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}<TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} /><ModelRoutingEvidence detail={turn.detail} /><TurnUsageDisclosure client={client} turnId={turn.id} sessionId={current.id} sourcePrivacy={privacy} active={visible && turnDetailsOpen} refreshKey={`${turn.status}:${turn.endedAt}:${current.thinking?.find(row => row.turnId === turn.id)?.status ?? ""}`} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">{memoryRetrievalSummary(turn.memory.retrieval)}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
+            {current && current.turns.length > 0 && <details className="text-xs text-muted-foreground" onToggle={event => { if (event.target === event.currentTarget) setTurnDetailsOpen(event.currentTarget.open) }}><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">Details</summary><ul className="mt-3 space-y-3">{current.turns.map(turn => <li key={turn.id} className="space-y-1 text-xs text-muted-foreground"><p className="break-all"><span className="font-medium text-foreground">{turn.status.replaceAll('_', ' ')}</span> · {turn.id}</p>{(turn.provider || turn.model) && <p className="break-words">{[turn.provider, turn.model].filter(Boolean).join(' / ')}</p>}{turn.approvalRequestId && turn.status === 'awaiting_approval' && <Button asChild variant="outline" size="sm"><Link to={`/inbox?request=${encodeURIComponent(turn.approvalRequestId)}`}>Review action</Link></Button>}{['awaiting_approval', 'acted_no_reply'].includes(turn.status) && <Button variant="outline" size="sm" disabled={Boolean(operation) || detailPending} onClick={() => void resumeTurn(turn.id)}>{turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval'}</Button>}{!chat.outcomes?.some(outcome => outcome.id === turn.id) && <TurnFailureGuidance status={turn.status} detail={turn.detail} hasAction={Boolean(turn.action)} />}<ModelRoutingEvidence detail={turn.detail} /><TurnUsageDisclosure client={client} turnId={turn.id} sessionId={current.id} sourcePrivacy={privacy} active={visible && turnDetailsOpen} refreshKey={`${turn.status}:${turn.endedAt}:${current.thinking?.find(row => row.turnId === turn.id)?.status ?? ""}`} />{turn.memory.retrieval && <details><summary className="cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">{memoryRetrievalSummary(turn.memory.retrieval)}</summary><div className="space-y-1 py-2"><p>{turn.memory.retrieval.records} records supplied{turn.memory.retrieval.mode ? ` · ${turn.memory.retrieval.mode}` : ''}</p>{turn.memory.retrieval.reranking && <p>Relevance ranking: {turn.memory.retrieval.reranking.status.replaceAll('_', ' ')}{turn.memory.retrieval.reranking.model ? ` · ${turn.memory.retrieval.reranking.model}` : ''}</p>}{turn.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}</div></details>}{turn.action && <p>Action: {turn.action.state.replaceAll('_', ' ')}</p>}</li>)}</ul></details>}
           </ConversationHistory>
           <div className={`${conversationColumn} max-h-[75dvh] shrink-0 space-y-3 overflow-y-auto pb-4 pt-2`}>
             {current && current.status !== 'forgotten' && <PendingSubmissions key={`${current.id}:${current.pendingSubmissions.map(item => item.updatedAt).join(',')}`} client={client} sessionId={current.id} initial={current.pendingSubmissions} truncated={current.pendingSubmissionsTruncated} disabled={sendPending || detailPending || !!attempt} onInspect={saved => void inspectSubmission(saved)} />}

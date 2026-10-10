@@ -92,6 +92,9 @@ Codex is pinned to 0.160.1. Claude Code is the installed official executable
 desktop/CLI account stores are not imported. The private Windows bridge binds
 only 127.0.0.1 and has distinct control and inference keys. Browser access goes
 through Gateway session, CSRF and exact operation-bound owner verification.
+Claude sign-in cancellation is bound to the displayed attempt's `loginId`, just
+as ChatGPT cancellation is bound to its own attempt. A delayed cancellation cannot
+stop a replacement sign-in. CLI cancellation reads and submits the same identity.
 
 Claude model-role calls use print mode with native tools, MCP and slash commands
 disabled. Full native tools, plugins, interactive prompts and native sessions are

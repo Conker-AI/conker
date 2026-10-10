@@ -653,12 +653,18 @@ def main():
             and args.action == "models"
             else {"operation": args.action}
         )
-        if args.provider == "chatgpt" and args.action in {"cancel", "logout"}:
-            status = request(config, "providers", "/chatgpt")
+        if args.action == "cancel" or (
+            args.provider == "chatgpt" and args.action == "logout"
+        ):
+            status = request(config, "providers", "/" + args.provider)
             key = "loginId" if args.action == "cancel" else "connectionId"
             if not status.get(key):
                 raise ValueError("There is no matching active sign-in or connection.")
-            body[key] = status[key]
+            body[key] = (
+                identity(status[key], r"login_[0-9a-f]{32}", "Claude sign-in identity")
+                if args.provider == "claude"
+                else status[key]
+            )
         if args.provider == "claude" and args.action == "login":
             body["billing"] = args.billing
         value = request(config, "providers", "/" + args.provider, body)

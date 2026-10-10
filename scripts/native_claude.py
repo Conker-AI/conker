@@ -7,6 +7,7 @@ import signal
 import subprocess
 import threading
 import time
+import uuid
 from contextlib import nullcontext
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -65,6 +66,7 @@ class Claude:
         self.lock = threading.RLock()
         self.process = None
         self.login_state = "idle"
+        self.login_id = None
         self.url = None
         self.started = 0
 
@@ -99,6 +101,7 @@ class Claude:
                 if self.process.poll() is not None:
                     self.login_state = "complete" if connected else "failed"
                     self.process = None
+                    self.login_id = None
                     self.url = None
                 elif time.monotonic() - self.started > 600:
                     self.close()
@@ -107,6 +110,7 @@ class Claude:
                 "available": available,
                 "connected": connected,
                 "loginState": self.login_state,
+                "loginId": self.login_id,
                 "authorizationUrl": self.url,
                 "credentialsIncluded": False,
                 "runtime": "Claude Code",
@@ -133,10 +137,18 @@ class Claude:
                     **self.options(),
                 )
                 self.login_state, self.started = "pending", time.monotonic()
+                self.login_id = "login_" + uuid.uuid4().hex
                 threading.Thread(
                     target=self._read_login, args=(self.process,), daemon=True
                 ).start()
-            elif operation == "cancel" and set(value) == {"operation"}:
+            elif (
+                operation == "cancel"
+                and set(value) == {"operation", "loginId"}
+                and self.login_id is not None
+                and value["loginId"] == self.login_id
+                and self.process is not None
+                and self.process.poll() is None
+            ):
                 self.close()
                 self.login_state = "canceled"
             elif operation == "logout" and set(value) == {"operation"}:
@@ -187,6 +199,8 @@ class Claude:
             except subprocess.TimeoutExpired:
                 self.process.kill()
             self.process = None
+            self.login_state = "canceled"
+        self.login_id = None
         self.url = None
 
     def complete(self, value, *, cancellation=None):

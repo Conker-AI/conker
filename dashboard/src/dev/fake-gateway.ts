@@ -56,6 +56,17 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const sessions = seed()
+  // Reloadable, development-only saved outcomes. They never invoke a provider or tool.
+  const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
+  if (outcomeScenario) {
+    const session = sessions[0], turn = session.turns[0]
+    session.messages = session.messages.filter(message => message.role === 'user')
+    Object.assign(turn, { status: ({ unreplied: 'acted_no_reply', unknown: 'outcome_unknown', approval: 'awaiting_approval', 'interrupted-acted': 'interrupted' } as Record<string, string>)[outcomeScenario] ?? outcomeScenario,
+      acted: ['unreplied', 'interrupted-acted'].includes(outcomeScenario) ? 1 : 0,
+      detail: outcomeScenario === 'failed' ? 'The model requested an unavailable tool. This request was not executed.' : null,
+      action: ['unreplied', 'unknown', 'approval', 'interrupted-acted'].includes(outcomeScenario) ? { id: 'act_preview_outcome', state: outcomeScenario === 'unknown' ? 'outcome_unknown' : outcomeScenario === 'approval' ? 'awaiting_approval' : 'completed', job_id: null } : null,
+      approval_request_id: outcomeScenario === 'approval' ? 'req_email_coach' : null })
+  }
   let searchSettings: SearchSettings = { revision: 0, configuration: { sources: [...searchSources], exactText: true, semantic: false, reranking: false } }
   try {
     const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
@@ -522,7 +533,10 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
       const turn = owner.turns.find(item => item.id === match![1])!
       const decided = approvals.find(item => item.id === turn.approval_request_id)
-      if (turn.status === 'awaiting_approval' && decided?.status === 'approved') {
+      if (turn.status === 'acted_no_reply' && turn.acted === 1) {
+        owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'The recorded action is complete. This is the missing reply; the action was not repeated.', created_at: now() })
+        Object.assign(turn, { status: 'complete', ended_at: now() })
+      } else if (turn.status === 'awaiting_approval' && decided?.status === 'approved') {
         owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'Done. I sent the email to coach and will tell you when they reply.', created_at: now() })
         Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() })
       } else if (turn.status === 'awaiting_approval' && decided && decided.status !== 'pending') {
@@ -530,6 +544,11 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         Object.assign(turn, { status: 'complete', ended_at: now() })
       }
       return { turn_id: turn.id, session_id: owner.id, status: turn.status }
+    }
+    if ((match = path.match(/^\/api\/pi\/runs\/([^/]+)$/)) && method === 'GET') {
+      const session = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
+      const turn = session.turns.find(turn => turn.id === match![1])!
+      return { ...turn, acted: turn.acted === 1, task_ids: [], outputs: [], source: { kind: 'conversation', session_id: session.id }, provenance: 'recorded', content_status: 'available' }
     }
     if (path === '/api/pi/tasks' || path === '/api/pi/runs') return { results: [], next_cursor: null }
     if (path === '/api/pi/events') return { results: [], next_cursor: null }
