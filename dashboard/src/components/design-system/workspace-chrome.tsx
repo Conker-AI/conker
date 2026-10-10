@@ -59,8 +59,9 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
 
 /** One frame serves collection pages, conversations and graph workspaces. */
 export function WorkspaceAppbar({ context, search, actions, sections, toolbar }: WorkspaceAppbarProps) {
-  const { isMobile, openMobile, state } = useSidebar()
-  const hidden = isMobile ? !openMobile : state === 'collapsed'
+  const { isMobile, state } = useSidebar()
+  // Keep the mobile opener mounted behind the modal so dismissal can restore its focus.
+  const showSidebarTrigger = isMobile || state === 'collapsed'
   const chrome = useWorkspaceChrome()
   const header = useRef<HTMLElement>(null)
   const setCompactSearch = chrome?.setCompactSearch
@@ -77,7 +78,7 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
   return <header ref={header} data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
     <div className="workspace-appbar-row">
       <div className="workspace-appbar-context">
-        {hidden && <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand sidebar" title="Expand sidebar" />}
+        {showSidebarTrigger && <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand sidebar" title="Expand sidebar" />}
         {context}
         <div ref={chrome?.setSummary} className="workspace-appbar-summary shrink-0" />
       </div>

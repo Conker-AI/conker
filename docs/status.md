@@ -13,6 +13,45 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Routing cancellation, accurate receipts and mobile focus (10 October)
+
+Stop now interrupts the exact connected routing request, including the wait before
+response headers and a partial response body. Late results cannot start an answer
+or fallback. Connection setup before a socket handle exists still follows its
+phase timeout, and disconnecting does not stop Laya's already-running computation.
+
+Configured model choices no longer falsely report escalation. Responses separate
+selection evidence from unavailable attempts, expose whether a fallback was used,
+and preserve existing saved receipt formats for history, retries and thinking.
+
+The mobile sidebar keeps its opener mounted and returns keyboard focus after
+dismissal. Destination actions hand focus to main content. Deferred restoration is
+fenced against another dialog, a newer opening, or an unmounted/replaced workspace.
+
+Validation: 32 decision cancellation/provider/role tests, 48 routing receipt checks
+and 55 additional routing, legacy loop, usage and foreground cancellation checks
+pass. Runtime changes received independent review. Three separate synthetic local
+routing measurements took 6.48, 1.32 and 1.29 seconds; they establish neither broad
+classification accuracy nor a performance improvement. The decision-service guide
+now describes the current bounded input, fallback policies and measured limits.
+
+Frontend navigation/lifecycle checks, workspace primitives, TypeScript, affected
+lint, design checks and all 407 source-module reachability checks pass. Chats,
+Inbox and search settings were reviewed at desktop/mobile sizes in both themes.
+Keyboard checks include returning to the composer and restoring Search after a
+sidebar opened above it. The final production entry is 597,608 bytes; the unchanged
+700,000-byte guard passes and the build contains no fixture chunk.
+
+Fresh and repeated installation reproduce all 79 reviewed Pi files. The local
+runtime and frontend are updated, with SQLite and previous-asset checkpoints;
+Pi and Gateway pass health checks. Windows initially blocked the staged directory
+move, so the prior frontend was restored before a verified 168-file asset copy.
+A live Automatic request cancelled in 422 ms after Stop, with one routing attempt
+and no answer, fallback, action or thinking call. A separate manual local-fast
+reply confirms accurate selection evidence, no escalation and no fallback; its
+one answer call took 34.6 seconds. The saved model configuration remains at
+revision 1. Slow local generation remains unresolved.
+
 ### Model setup, foreground Stop and service recovery (10 October)
 
 Model setup checks each exact installed local route. Activation probes a staged

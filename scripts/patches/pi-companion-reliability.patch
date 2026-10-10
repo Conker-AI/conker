@@ -144,10 +144,10 @@ index bf97285..4776996 100644
  def preview_memory_forget(memory_id: str):
      try:
 diff --git a/pi/background_thinking.py b/pi/background_thinking.py
-index 09a5d8e..c92eba3 100644
+index 09a5d8e..dc3cb19 100644
 --- a/pi/background_thinking.py
 +++ b/pi/background_thinking.py
-@@ -304,12 +304,27 @@ class Thinking:
+@@ -304,12 +304,31 @@ class Thinking:
                              ).rowcount
                          if not changed:
                              return
@@ -161,8 +161,12 @@ index 09a5d8e..c92eba3 100644
 +                        # Provider read timeouts reset as data arrives. This
 +                        # separate wall deadline also stops never-ending streams.
 +                        with control.token.deadline(timeout):
-+                            _, completion, evidence = self.loop._call(
++                            route, completion, skipped = self.loop._call(
 +                                messages, context, execution, role="thinking"
++                            )
++                            # Preserve the historical list of serialized receipts.
++                            evidence = (
++                                [route.detail(skipped)] if route.selection is not None else skipped
 +                            )
                          inference_control.check()
                      break
@@ -223,18 +227,72 @@ index e32eec8..804784d 100644
          r"/skills/[a-z0-9][a-z0-9-]{0,63}/state",
          r"/search/settings",
 diff --git a/pi/decision_provider.py b/pi/decision_provider.py
-index ec6fc4a..bdff2c6 100644
+index ec6fc4a..371eb02 100644
 --- a/pi/decision_provider.py
 +++ b/pi/decision_provider.py
-@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
+@@ -4,17 +4,61 @@ from __future__ import annotations
+ 
+ import json
+ import math
++import socket
++from contextlib import contextmanager, suppress
+ from typing import ClassVar
+ from urllib.parse import urlsplit
  
  import httpx
  
++from . import inference_control
 +from .loopback_http import verification
  from .providers import Completion, ProviderUnavailable
  
  FOLLOW_UP_CHARACTERS = 400
-@@ -93,7 +94,11 @@ class DecisionProvider:
+ CONTEXT_CHARACTERS = 200
+ 
+ 
++@contextmanager
++def _request_control(client):
++    """Interrupt this decision's connection, including waiting for response headers.
++
++    HTTPX exposes the connected stream through its request trace extension. Keep
++    only that handle, never trace content or other clients' pooled connections.
++    DNS/connect before a handle exists still use the configured phase timeout.
++    Disconnecting does not claim that the decision service stopped its compute.
++    """
++    token = inference_control.current()
++    if token is None:
++        yield {}
++        return
++    connected = []
++
++    def interrupt():
++        if connected:
++            stream = connected[-1]
++            with suppress(AttributeError, OSError, ValueError):
++                connection = stream.get_extra_info("socket")
++                if connection is not None:
++                    connection.shutdown(socket.SHUT_RDWR)
++            with suppress(Exception):
++                stream.close()
++        client.close()
++
++    def trace(event, info):
++        if event in {"connection.connect_tcp.complete", "connection.start_tls.complete"}:
++            connected[:] = [info["return_value"]]
++            # A connection can finish after Stop captured an empty handle list.
++            # Close it here before the request is allowed to proceed.
++            if token.stopped.is_set():
++                interrupt()
++            token.check()
++
++    with token.register(interrupt):
++        yield {"trace": trace}
++        token.check()
++
++
+ def _excerpt(text: str) -> dict:
+     if len(text) <= CONTEXT_CHARACTERS:
+         return {"content": text}
+@@ -93,7 +137,11 @@ class DecisionProvider:
      def health(self):
          try:
              with httpx.Client(
@@ -247,7 +305,13 @@ index ec6fc4a..bdff2c6 100644
              ) as client:
                  response = client.get(self.url + "/health", headers={"X-Decision-Key": self.key})
                  response.raise_for_status()
-@@ -110,6 +115,7 @@ class DecisionProvider:
+@@ -105,20 +153,24 @@ class DecisionProvider:
+         return {"status": "unavailable", "reason": "Decision service is not ready."}
+ 
+     def choose(self, state, instructions, choices, *, timeout=2.0):
++        inference_control.check()
+         try:
+             if not isinstance(state, str) or len(state) > 12000:
                  raise ValueError()
              with httpx.Client(
                  transport=self.transport,
@@ -255,6 +319,33 @@ index ec6fc4a..bdff2c6 100644
                  trust_env=False,
                  timeout=min(max(timeout, 0.1), 30),
                  follow_redirects=False,
+             ) as client:
+-                response = client.post(
+-                    self.url + "/v1/choose",
+-                    headers={"X-Decision-Key": self.key},
+-                    json={"state": state, "instructions": instructions, "choices": choices},
+-                )
++                with _request_control(client) as extensions:
++                    response = client.post(
++                        self.url + "/v1/choose",
++                        headers={"X-Decision-Key": self.key},
++                        json={"state": state, "instructions": instructions, "choices": choices},
++                        extensions=extensions,
++                    )
+                 response.raise_for_status()
+                 if len(response.content) > 16384:
+                     raise ValueError()
+@@ -142,8 +194,10 @@ class DecisionProvider:
+                 raise ValueError()
+             if data["confidence"] < self.minimum_confidence:
+                 raise ProviderUnavailable("Decision confidence below configured threshold.")
++            inference_control.check()
+             return data
+         except (ValueError, TypeError, KeyError, httpx.HTTPError):
++            inference_control.check()
+             raise ProviderUnavailable(
+                 "Typed decision service unavailable or input unsupported."
+             ) from None
 diff --git a/pi/direct_providers.py b/pi/direct_providers.py
 index e0c7017..fb31ac4 100644
 --- a/pi/direct_providers.py
@@ -915,7 +1006,7 @@ index 138fee4..78076a5 100644
      def register(self, callback):
          with self._lock:
 diff --git a/pi/loop.py b/pi/loop.py
-index 42029e1..5908f94 100644
+index 42029e1..5b17105 100644
 --- a/pi/loop.py
 +++ b/pi/loop.py
 @@ -135,6 +135,12 @@ class Loop:
@@ -950,7 +1041,29 @@ index 42029e1..5908f94 100644
              )
              completion = result["completion"]
              evidence = {
-@@ -293,21 +296,25 @@ class Loop:
+@@ -203,9 +206,19 @@ class Loop:
+                 "attempts": result["attempts"],
+             }
+             return (
+-                Route(Tier.CONFIGURED, Reason.CONFIGURED, result["providerId"], completion.model),
++                Route(
++                    Tier.CONFIGURED,
++                    Reason.CONFIGURED,
++                    result["providerId"],
++                    completion.model,
++                    selection=evidence,
++                ),
+                 completion,
+-                [json.dumps(evidence)],
++                [
++                    f"{attempt['role']}: {attempt['modelId']} unavailable"
++                    for attempt in result["attempts"]
++                    if attempt["status"] == "unavailable"
++                ],
+             )
+         if override:
+             raise ProviderUnavailable(
+@@ -293,21 +306,25 @@ class Loop:
              raise context_controls.ContextError(
                  exc.detail["code"], exc.detail["message"], exc.status
              ) from exc
@@ -988,7 +1101,7 @@ index 42029e1..5908f94 100644
          from . import research
  
          research_used = (
-@@ -397,7 +404,14 @@ class Loop:
+@@ -397,7 +414,14 @@ class Loop:
                  messages.append(attached)
          context_controls.check_budget(policy, messages)
          if turn_id:
@@ -1004,7 +1117,7 @@ index 42029e1..5908f94 100644
              turn_steering.consume(
                  self.store,
                  turn_id,
-@@ -664,6 +678,7 @@ class Loop:
+@@ -664,6 +688,7 @@ class Loop:
              from . import research
  
              research.validate_narration(execution, completion.text)
@@ -1012,7 +1125,16 @@ index 42029e1..5908f94 100644
              turn_control.guard(self.store, execution)
          except (ProviderUnavailable, RuntimeError) as exc:
              reason = getattr(exc, "reason", type(exc).__name__)
-@@ -993,7 +1008,7 @@ class Loop:
+@@ -696,7 +721,7 @@ class Loop:
+             latency_ms=int((time.monotonic() - started) * 1000),
+             route_tier=route.tier.value,
+             route_reason=route.reason.value,
+-            detail="; ".join(_skipped) or None,
++            detail=route.detail(_skipped),
+         )
+         return {
+             "session_id": session_id,
+@@ -993,7 +1018,7 @@ class Loop:
                  limit = 1
              elif execution.get("researchMode") == "deep":
                  limit = min(limit, research.plan(self.store, turn_id)["search_limit"])
@@ -1021,7 +1143,7 @@ index 42029e1..5908f94 100644
                  call = tool_protocol.parse(completion.text, allowed)
                  if call is None:
                      break
-@@ -1095,11 +1110,13 @@ class Loop:
+@@ -1095,11 +1120,13 @@ class Loop:
                      acted = True
                  history = self._history(
                      session_id,
@@ -1036,6 +1158,30 @@ index 42029e1..5908f94 100644
              turn_control.guard(self.store, execution)
          except (ProviderUnavailable, RuntimeError) as exc:
              # The user's message stays. It was said, and a transcript that drops
+@@ -1134,21 +1161,14 @@ class Loop:
+             acted=int(acted),
+             # Which candidates refused, so a model that always refuses is
+             # visible in the record rather than only as latency.
+-            detail="; ".join(skipped) or None,
++            detail=route.detail(skipped),
+         )
+         return {
+             "session_id": session_id,
+             "forked_from": forked_from,
+             "turn_id": turn_id,
+             "acted": acted,
+-            "route": {
+-                "tier": route.tier.value,
+-                "reason": route.reason.value,
+-                "provider": route.provider,
+-                "model": route.model,
+-                "escalated": route.escalated,
+-                "skipped": skipped,
+-            },
++            "route": route.receipt(skipped),
+             "message": message,
+             "memory": self.memory.status(session_id, turn_id),
+         }
 diff --git a/pi/loopback_http.py b/pi/loopback_http.py
 new file mode 100644
 index 0000000..1c3c4a7
@@ -2774,7 +2920,7 @@ index 966a58a..d519bbd 100644
 +    def _call(self, invoke, model):
 +        return self.observe(invoke, provider=self.name, model=model, role=self.role)
 diff --git a/pi/response_retries.py b/pi/response_retries.py
-index e58b3cf..2e1fb6a 100644
+index e58b3cf..46bb496 100644
 --- a/pi/response_retries.py
 +++ b/pi/response_retries.py
 @@ -111,6 +111,7 @@ def run(loop, sid, mid, body):
@@ -2785,6 +2931,60 @@ index e58b3cf..2e1fb6a 100644
              if (
                  submissions._busy(db, sid)
                  or db.execute(
+@@ -196,7 +197,7 @@ def run(loop, sid, mid, body):
+             latency_ms=int((time.monotonic() - started) * 1000),
+             route_tier=route.tier.value,
+             route_reason=route.reason.value,
+-            detail="; ".join(skipped) or None,
++            detail=route.detail(skipped),
+         )
+     except Exception:
+         # Stable request identities inspect this failed/interrupted attempt; no
+diff --git a/pi/routing.py b/pi/routing.py
+index e2f101a..9823d4f 100644
+--- a/pi/routing.py
++++ b/pi/routing.py
+@@ -14,6 +14,7 @@ needs the record this produces.
+ 
+ from __future__ import annotations
+ 
++import json
+ from dataclasses import dataclass
+ from enum import StrEnum
+ 
+@@ -44,10 +45,31 @@ class Route:
+     provider: str
+     model: str
+     unavailable_reason: str | None = None
++    selection: dict | None = None
+ 
+     @property
+     def escalated(self) -> bool:
+-        return self.reason is not Reason.DEFAULT
++        # Configured models have no ordered price or capability tier. Choosing
++        # one (including an approved fallback) does not prove an escalation.
++        return self.tier is Tier.STRONG
++
++    def detail(self, skipped: list[str]) -> str | None:
++        """Keep the historical selection receipt readable independently of failures."""
++        if self.selection is not None:
++            return json.dumps(self.selection)
++        return "; ".join(skipped) or None
++
++    def receipt(self, skipped: list[str]) -> dict:
++        return {
++            "tier": self.tier.value,
++            "reason": self.reason.value,
++            "provider": self.provider,
++            "model": self.model,
++            "escalated": self.escalated,
++            "fallback_used": bool(skipped),
++            "skipped": skipped,
++            **({"selection": self.selection} if self.selection is not None else {}),
++        }
+ 
+ 
+ @dataclass(frozen=True)
 diff --git a/pi/setup_model_probes.py b/pi/setup_model_probes.py
 index c1e0d21..22d9255 100644
 --- a/pi/setup_model_probes.py
@@ -3883,10 +4083,15 @@ index 3ca73db..8d08381 100644
      )
  
 diff --git a/tests/test_background_thinking.py b/tests/test_background_thinking.py
-index 23fe69d..376ca76 100644
+index 23fe69d..86a6c77 100644
 --- a/tests/test_background_thinking.py
 +++ b/tests/test_background_thinking.py
-@@ -32,7 +32,9 @@ def setup(store):
+@@ -1,3 +1,4 @@
++import json
+ import threading
+ from contextlib import closing
+ 
+@@ -32,7 +33,9 @@ def setup(store):
          dict(id="thinker", providerId="one", name="Thinker", route="think", enabled=True)
      )
      value["roleSettings"]["roles"]["thinking"].update(
@@ -3897,6 +4102,211 @@ index 23fe69d..376ca76 100644
      )
      model_roles.save(store, model_roles.Update(expected_revision=0, configuration=value))
      provider = ConcurrentProvider()
+@@ -60,6 +63,9 @@ def test_talking_completes_while_thinking_is_blocked(tmp_path):
+         wait_workers(loop, provider)
+         row = background_thinking.list_for_session(store, session)[0]
+         assert row["status"] == "completed" and row["result"] == "Useful findings"
++        evidence = json.loads(json.loads(row["detail"])[0])
++        assert evidence["role"] == "thinking"
++        assert evidence["attempts"][-1]["actualModel"] == "think"
+         assert len(store.messages(session)) == 2
+ 
+ 
+diff --git a/tests/test_decision_cancellation.py b/tests/test_decision_cancellation.py
+new file mode 100644
+index 0000000..77c6d3f
+--- /dev/null
++++ b/tests/test_decision_cancellation.py
+@@ -0,0 +1,189 @@
++"""Synthetic classifier sockets only; Stop must not wait for a routing timeout."""
++
++import json
++import threading
++from contextlib import contextmanager
++from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++
++import httpx
++import pytest
++from test_decision_provider import setup
++from test_model_roles import Adapter
++
++from pi import inference_control, model_roles
++from pi.decision_provider import DecisionProvider
++from pi.providers import Message
++
++
++def decision():
++    return {
++        "choice": "a",
++        "confidence": 0.8,
++        "model": "synthetic-laya",
++        "probabilities": {"a": 0.8, "b": 0.2},
++    }
++
++
++@contextmanager
++def stalled_server(headers):
++    started, disconnected = threading.Event(), threading.Event()
++    requests = []
++
++    class Handler(BaseHTTPRequestHandler):
++        protocol_version = "HTTP/1.1"
++
++        def log_message(self, *_):
++            pass
++
++        def do_POST(self):
++            requests.append(
++                (self.path, json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
++            )
++            if headers:
++                self.send_response(200)
++                self.send_header("Content-Type", "application/json")
++                self.send_header("Content-Length", "1000")
++                self.end_headers()
++                self.wfile.write(b'{"choice":')
++                self.wfile.flush()
++            # Normal classifier inference waits before any response headers.
++            started.set()
++            self.connection.settimeout(5)
++            try:
++                if self.connection.recv(1) == b"":
++                    disconnected.set()
++            except (ConnectionResetError, ConnectionAbortedError):
++                disconnected.set()
++            except OSError:
++                pass
++            self.close_connection = True
++
++    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
++    server.daemon_threads = True
++    serving = threading.Thread(target=server.serve_forever, daemon=True)
++    serving.start()
++    try:
++        yield f"http://127.0.0.1:{server.server_port}", started, disconnected, requests
++    finally:
++        server.shutdown()
++        server.server_close()
++        serving.join(2)
++
++
++@pytest.mark.parametrize("headers", [False, True], ids=["before-headers", "partial-body"])
++def test_stop_closes_owned_classifier_connection_without_answer_or_fallback(headers):
++    token, finished = inference_control.Token(), threading.Event()
++    failures = []
++    configuration, _ = setup(httpx.MockTransport(lambda _: pytest.fail("unused transport")))
++    configuration["roleSettings"]["roles"]["routing"]["timeoutMs"] = 15000
++    configuration["roleSettings"]["roles"]["answer"].update(failure="fallback", fallbackModelId="b")
++    first, second = Adapter('{"modelId":"b"}'), Adapter()
++    with stalled_server(headers) as (url, started, disconnected, requests):
++        provider = DecisionProvider(url, "x" * 32)
++
++        def work():
++            try:
++                with inference_control.bind(token):
++                    model_roles.dispatch(
++                        configuration,
++                        "answer",
++                        [Message("user", "Synthetic request")],
++                        {"decisions": provider, "one": first, "two": second},
++                        guard=inference_control.check,
++                    )
++            except Exception as exc:
++                failures.append(exc)
++            finally:
++                finished.set()
++
++        worker = threading.Thread(target=work, daemon=True)
++        try:
++            worker.start()
++            assert started.wait(3)
++            token.cancel("owner")
++            assert finished.wait(2), "Stop must not await the configured15-second routing timeout"
++            assert disconnected.wait(2)
++            assert len(failures) == 1
++            assert isinstance(failures[0], inference_control.InferenceCancelled)
++            assert first.calls == second.calls == []
++            assert len(requests) == 1 and requests[0][0] == "/v1/choose"
++            assert token._callbacks == set()
++        finally:
++            token.cancel()
++            worker.join(3)
++        assert not worker.is_alive()
++
++
++def test_pre_cancelled_parent_token_prevents_classifier_request():
++    token = inference_control.Token()
++    provider = DecisionProvider(
++        "http://127.0.0.1:8060",
++        "x" * 32,
++        transport=httpx.MockTransport(lambda _: pytest.fail("must not send")),
++    )
++    with inference_control.bind(token):
++        token.cancel()
++        with pytest.raises(inference_control.InferenceCancelled):
++            provider.choose("request", "choose", {"a": "A", "b": "B"})
++    assert token._callbacks == set()
++
++
++def test_late_success_is_fenced_and_callbacks_do_not_leak_to_later_requests():
++    token = inference_control.Token()
++    calls = []
++
++    def handler(request):
++        calls.append(request)
++        assert request.headers["X-Decision-Key"] == "x" * 32
++        if len(calls) == 1:
++            assert inference_control.current() is token
++            token.cancel()
++        return httpx.Response(200, json=decision())
++
++    provider = DecisionProvider(
++        "http://127.0.0.1:8060", "x" * 32, transport=httpx.MockTransport(handler)
++    )
++    with inference_control.bind(token), pytest.raises(inference_control.InferenceCancelled):
++        provider.choose("request", "choose", {"a": "A", "b": "B"})
++    assert token._callbacks == set()
++    later = inference_control.Token()
++    with inference_control.bind(later):
++        assert provider.choose("later", "choose", {"a": "A", "b": "B"}) == decision()
++    assert later._callbacks == set()
++    assert len(calls) == 2
++
++
++@pytest.mark.parametrize(
++    "event", ["connection.connect_tcp.complete", "connection.start_tls.complete"]
++)
++def test_connected_handle_arriving_after_stop_is_closed_before_progress(event):
++    token = inference_control.Token()
++
++    class Stream:
++        closed = False
++        shut_down = False
++
++        def get_extra_info(self, name):
++            assert name == "socket"
++            return self
++
++        def shutdown(self, _):
++            self.shut_down = True
++
++        def close(self):
++            self.closed = True
++
++    stream = Stream()
++
++    def handler(request):
++        token.cancel()
++        request.extensions["trace"](event, {"return_value": stream})
++        pytest.fail("Late connected handle must not continue after Stop")
++
++    provider = DecisionProvider(
++        "http://127.0.0.1:8060", "x" * 32, transport=httpx.MockTransport(handler)
++    )
++    with inference_control.bind(token), pytest.raises(inference_control.InferenceCancelled):
++        provider.choose("request", "choose", {"a": "A", "b": "B"})
++    assert stream.closed and stream.shut_down
++    assert token._callbacks == set()
 diff --git a/tests/test_foreground_cancellation.py b/tests/test_foreground_cancellation.py
 new file mode 100644
 index 0000000..72643fb
@@ -6673,6 +7083,177 @@ index 0000000..e178df2
 +            == 200
 +        )
 +        assert client.get("/api/pi/drafts/new").status_code == 403
+diff --git a/tests/test_route_receipts.py b/tests/test_route_receipts.py
+new file mode 100644
+index 0000000..73d3b6f
+--- /dev/null
++++ b/tests/test_route_receipts.py
+@@ -0,0 +1,137 @@
++"""Selection evidence, fallback, and stronger tiers are distinct public facts."""
++
++import json
++from contextlib import closing
++
++import pytest
++from test_model_role_execution import Adapter, config, save
++from test_tool_turns import CALL, FakeGate
++
++from pi import model_roles, response_retries
++from pi.loop import ActedWithoutReply, Loop
++from pi.providers import ProviderUnavailable
++from pi.routing import Reason, Router, Tier, TurnContext
++from pi.store import Store
++
++
++def automatic(*, answer_fallback=False):
++    value = config(mode="router").model_dump()
++    value["providers"].append(dict(id="selector", name="Selector", enabled=True))
++    value["models"].append(
++        dict(id="choice", providerId="selector", name="Choice", route="choice", enabled=True)
++    )
++    value["roleSettings"]["roles"]["routing"].update(
++        eligibleModelIds=["choice"], modelId="choice"
++    )
++    if answer_fallback:
++        value["roleSettings"]["roles"]["answer"].update(
++            failure="fallback", fallbackModelId="b"
++        )
++    return model_roles.Configuration.model_validate(value)
++
++
++@pytest.mark.parametrize("primary", ["a", "b"])
++def test_manual_model_selection_is_not_escalation_or_a_skipped_attempt(tmp_path, primary):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        save(store, config(primary=primary))
++        local, hosted = Adapter("local"), Adapter("hosted")
++        loop = Loop(store, Router(providers={"local": local, "hosted": hosted}))
++        result = loop.run_turn(store.create_session(), "One answer")
++        receipt = result["route"]
++        assert receipt["tier"] == "configured" and receipt["reason"] == "configured"
++        assert receipt["escalated"] is False and receipt["fallback_used"] is False
++        assert receipt["skipped"] == []
++        assert receipt["selection"] == json.loads(store.get_turn(result["turn_id"])["detail"])
++        assert receipt["selection"]["modelId"] == primary
++        assert [a["status"] for a in receipt["selection"]["attempts"]] == ["completed"]
++        assert len(local.calls) + len(hosted.calls) == 1
++
++
++@pytest.mark.parametrize("failed", [None, "answer", "routing"])
++def test_automatic_selection_reports_only_real_unavailable_attempts(tmp_path, failed):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        save(store, automatic(answer_fallback=failed is not None))
++        selector = Adapter("selector", '{"modelId":"a"}', fail=failed == "routing")
++        local, hosted = Adapter("local", fail=failed == "answer"), Adapter("hosted")
++        loop = Loop(store, Router(providers={
++            "local": local, "hosted": hosted, "selector": selector,
++        }))
++        result = loop.run_turn(store.create_session(), "Choose a model")
++        receipt = result["route"]
++        assert receipt["escalated"] is False
++        assert receipt["fallback_used"] is (failed is not None)
++        expected = [] if failed is None else [
++            "answer: a unavailable" if failed == "answer" else "routing: choice unavailable"
++        ]
++        assert receipt["skipped"] == expected
++        evidence = receipt["selection"]
++        assert evidence == json.loads(store.get_turn(result["turn_id"])["detail"])
++        assert evidence["modelId"] == ("a" if failed is None else "b")
++        assert all("{" not in reason for reason in receipt["skipped"])
++        assert len(selector.calls) == 1
++        assert len(local.calls) == (0 if failed == "routing" else 1)
++        assert len(hosted.calls) == (0 if failed is None else 1)
++
++
++def test_single_eligible_automatic_answer_keeps_selection_evidence(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        value = automatic()
++        value.roleSettings.roles["answer"].eligibleModelIds = ["a"]
++        save(store, value)
++        local, selector = Adapter("local"), Adapter("selector")
++        result = Loop(store, Router(providers={"local": local, "selector": selector})).run_turn(
++            store.create_session(), "One option"
++        )
++        route = result["route"]
++        assert not route["escalated"] and not route["fallback_used"] and route["skipped"] == []
++        assert route["selection"]["attempts"][0]["selectionReason"] == "single_eligible_model"
++        assert len(local.calls) == 1 and not selector.calls
++
++
++def test_unavailable_stronger_tier_is_not_reported_as_actual_escalation():
++    router = Router(local_provider=Adapter("local"), local_model="local-model")
++    route = router.route(TurnContext(is_analysis=True))
++    assert route.tier is Tier.LOCAL and route.reason is Reason.ANALYSIS
++    assert route.escalated is False
++
++
++def test_selected_retry_keeps_the_historical_json_receipt(tmp_path):
++    with closing(Store(tmp_path / "pi.db")) as store:
++        save(store, config())
++        local, hosted = Adapter("local"), Adapter("hosted")
++        loop = Loop(store, Router(providers={"local": local, "hosted": hosted}))
++        sid = store.create_session()
++        first = loop.run_turn(sid, "Original")
++        result = response_retries.run(loop, sid, first["message"]["id"], response_retries.Retry(
++            request_id="route_retry_0001", model_id="b",
++        ))
++        evidence = json.loads(store.get_turn(result["turn_id"])["detail"])
++        assert evidence["modelId"] == "b" and evidence["modelConfigurationRevision"] == 1
++        assert evidence["attempts"][-1]["actualModel"] == "actual-b"
++        assert len(local.calls) == len(hosted.calls) == 1
++
++
++def test_action_reply_recovery_keeps_evidence_without_repeating_effects(tmp_path):
++    class Scripted(Adapter):
++        def __init__(self):
++            super().__init__("local")
++            self.replies = iter([CALL, ProviderUnavailable("offline"), "Saved action completed."])
++
++        def complete_bounded(self, messages, *, model, timeout):
++            self.response = next(self.replies)
++            if isinstance(self.response, Exception):
++                self.calls.append((messages, model, timeout))
++                raise self.response
++            return super().complete_bounded(messages, model=model, timeout=timeout)
++
++    with closing(Store(tmp_path / "pi.db")) as store:
++        save(store, config())
++        provider, gate = Scripted(), FakeGate()
++        loop = Loop(store, Router(providers={"local": provider}), toolgate=gate)
++        with pytest.raises(ActedWithoutReply) as error:
++            loop.run_turn(store.create_session(), "Act once")
++        result = loop.recover_reply(error.value.turn_id, "route_reply_0001")
++        assert result["status"] == "complete" and len(gate.invocations) == 1
++        evidence = json.loads(store.get_turn(result["turn_id"])["detail"])
++        assert evidence["attempts"][-1]["actualModel"] == "actual-a"
++        assert len(provider.calls) == 3
+diff --git a/tests/test_routing.py b/tests/test_routing.py
+index 02ceadf..42c488e 100644
+--- a/tests/test_routing.py
++++ b/tests/test_routing.py
+@@ -158,12 +158,18 @@ def test_a_paid_model_is_refused_by_default():
+         provider.complete([Message("user", "hi")], model="expensive")
+ 
+ 
+-def test_a_paid_model_runs_only_when_opted_into():
++def test_a_paid_model_runs_only_when_opted_into(monkeypatch):
+     provider = Catalogued([paid("expensive")], allow_paid=True)
+-    # It gets past the guard; the network call is what fails, not the policy.
+-    with pytest.raises(Exception) as exc:
+-        provider.complete([Message("user", "hi")], model="expensive")
+-    assert not isinstance(exc.value, PaidModelRefused)
++    posted = []
++
++    def reply(payload, model, timeout):
++        posted.append((payload, model))
++        return {"choices": [{"message": {"content": "Synthetic answer"}}]}
++
++    monkeypatch.setattr(provider, "_posted", reply)
++    result = provider.complete([Message("user", "hi")], model="expensive")
++    assert result.text == "Synthetic answer"
++    assert len(posted) == 1 and posted[0][0]["model"] == posted[0][1] == "expensive"
+ 
+ 
+ def test_an_unknown_model_is_refused_rather_than_called_blind():
 diff --git a/tests/test_setup_activation.py b/tests/test_setup_activation.py
 new file mode 100644
 index 0000000..984f6fa

@@ -27,11 +27,14 @@ or direct client access is configured.
 identity and elapsed inference time. Confidence is not a correctness guarantee.
 Requests exceeding the actual tokenizer budgets are rejected before inference;
 the SDK's silent truncation is not used. Concurrent requests fail fast while the
-model is busy. A client timeout does not cancel a forward pass already running.
+model is busy. Pi can interrupt its connected request on Stop, even before response
+headers arrive. A disconnect or client timeout does not cancel a forward pass
+already running; the service may remain busy until that pass finishes. Connection
+setup before Pi receives a socket handle remains bounded by the phase timeout.
 
-## First measurements on the owner's laptop
+## Measurements on the owner's laptop
 
-Intel i7-1355U, 16 GB RAM, CPU inference with four threads:
+Initial SDK benchmark: Intel i7-1355U, 16 GB RAM, CPU inference with four threads:
 
 - Load: 10.5 seconds; resident process memory about 2 GB.
 - Eight synthetic simple/complex routing cases: 6/8 correct.
@@ -45,44 +48,53 @@ do not establish broad accuracy or an optimal configuration. The SDK warns about
 temperature calibration for 11+ choices; this service allows at most eight.
 This checkpoint is English-only; multilingual support needs separate evaluation.
 
+A later check on 10 October used three consecutive synthetic requests against the
+running local service with the configured model descriptions. HTTP wall times were
+6,480, 1,323 and 1,286 ms. Resident memory rose from about 42 MB to 1.4 GB during the
+first call. This is consistent with paging contributing to a cold request, but
+does not isolate the cause or establish a performance improvement. These inputs
+and operating conditions differ from the initial benchmark. No configuration
+changed, and these three classifications are not an accuracy evaluation.
+
 ## Pi integration
 
 Set `PI_DECISION_URL` and `PI_DECISION_KEY` on the server. Register an enabled
 catalogue model with provider `decisions` and route `model-routing`, then assign
 it to the routing role. Other catalogue models can carry `routingDescription`
 to describe suitable work. Manual answer selection and no-harness rules take
-precedence. The routing role's explicit fallback is used for unavailable,
-oversize, busy or low-confidence requests. `PI_DECISION_MIN_CONFIDENCE` defaults
-to 0.2; passing it does not prove a classification is right.
+precedence. The routing role may first try its own explicitly configured helper
+fallback. If routing still fails or returns an ineligible choice, the answer
+role's failure policy determines whether to stop or use its configured answer
+fallback. This includes unavailable, oversize, busy and low-confidence requests.
+`PI_DECISION_MIN_CONFIDENCE` defaults to 0.2; passing it does not prove a
+classification is right. Stop is cancellation, so it never triggers a fallback.
+
+The Laya adapter excludes system prompts and recalled memory from its routing
+projection. It sends the latest user request up to 800 characters. A short
+follow-up (under 400 characters) also includes up to two earlier conversation
+turns, each excerpted to at most 200 characters. Longer requests use a marked
+head/tail excerpt and length evidence. The receipt names the input scope. This
+bounded projection does not provide full conversation or tool-result reasoning.
 
 Memory reranking is separately opt-in through the `memory-ranking` model role.
 It runs after scoped retrieval, preserves every original record and its evidence,
 and only changes ordering. Its inputs are marked 160-character previews.
 No-harness skips it. Failure retains baseline order and a visible receipt.
-Fresh stack initialization defaults it off. It is enabled in the current local
-acceptance setup. `check_memory_pipeline.py` exercises the real decision service
+Fresh stack initialization defaults it off; it is also off in the current local
+setup. `check_memory_pipeline.py` exercises the real decision service
 and durable Pi context storage with synthetic retrieval records; run with Pi on
 PYTHONPATH and PI_DECISION_URL/PI_DECISION_KEY in the process environment.
 `memory-pipeline-local.json` records the warm result. This does not establish
 broad relevance accuracy or test real MemoryGate retrieval ranking.
 
-## Local stack progress
+## Running the local workspace
 
-`scripts/local_stack.py init` creates ignored `.local-run` state and distinct
-service credentials. `start SERVICE`, `stop SERVICE`, and `status` manage only
-that local setup. PostgreSQL uses a dedicated Docker container/volume on loopback
-port 55432. The source APIs bind to loopback: ToolGate 8010, MemoryGate 8020,
-Pi 8051, decisions 8060, gateway HTTPS 8050. No existing deployment state is used.
-
-The authenticated dashboard shell now connects real memory exploration, model
-configuration and persisted conversations. Browser routing acceptance passed with
-a 538 ms Laya decision and a local Qwen answer. See
-`docs/local-integration-plan.md` for evidence and remaining gaps; other dashboard
-features and vector embeddings are not yet fully integrated.
-
-The routing adapter sends only the latest user request (up to 1,600 characters),
-not the whole conversation. Its receipt names this input scope. Context-dependent
-follow-ups require manual model choice or a more capable contextual router.
+Use `scripts/workspace.py` and the [connected workspace guide](../../docs/connected-workspace.md)
+for installation, service ownership, status and recovery. Ignored `.local-run`
+configuration owns the selected ports and distinct credentials. Do not copy a
+historical benchmark's ports or keys into an existing workspace. The current
+[source status](../../docs/status.md) distinguishes tested changes from local
+acceptance and remaining limitations.
 
 ## Catalogue-selected memory ranking
 

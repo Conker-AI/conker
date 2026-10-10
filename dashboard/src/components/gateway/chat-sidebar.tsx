@@ -71,7 +71,7 @@ export function GatewayChatSidebar({ runtime, owner, control, conversationState,
     if (!operation) queueMicrotask(() => { if (!cancelled) refresh() })
     return () => { cancelled = true; request.current?.abort() }
   }, [operation, selected, location.pathname, refresh])
-  const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false) }, [isMobile, setOpenMobile])
+  const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false, 'content') }, [isMobile, setOpenMobile])
   const newChat = useCallback(() => {
     conversationState.setState({ selected: null }); navigate('/chat'); afterNavigate()
   }, [conversationState, navigate, afterNavigate])

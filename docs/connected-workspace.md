@@ -80,7 +80,12 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
 - Tab metadata is not persisted in browser storage. Forgotten conversations
   disappear from the tab strip and context pane.
 - Use the single sidebar or Ctrl/Cmd+K search to move through Conker.
+  On mobile, dismissing the sidebar returns keyboard focus to its opener;
+  choosing a destination moves focus into that page.
 - The optional context pane reads actual saved model, turn and memory receipts.
+  A configured model choice does not imply escalation. Routing responses list
+  unavailable attempts separately from successful selection evidence and report
+  whether a fallback was used.
 - Saved user messages show a separate memory delivery status. “Added to memory”
   requires a valid MemoryGate acknowledgement; a saved chat or an assistant saying
   “I remember” is not that acknowledgement. Pending delivery can be checked again
@@ -96,6 +101,9 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   Stop interrupts the owned inference request even while no answer text arrives;
   recorded tool effects still require their normal outcome checks. An old Stop
   cannot interrupt a later reply that the owner explicitly resumed.
+  This includes connected routing requests waiting for Laya's response. Stop
+  prevents a late result from starting an answer or fallback; the decision
+  service's already-running computation may continue until it finishes.
 
 Setup and the sidebar share their latest check, including refresh failures.
 Progress tracks saved setup choices and verification evidence. Choosing and testing

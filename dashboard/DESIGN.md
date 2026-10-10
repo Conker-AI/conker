@@ -49,6 +49,11 @@ conversation title and actions use the available width. Global search is always
 in the sidebar and appears in the header when the sidebar is hidden. Collection
 pages retain their own scoped search in that header slot.
 
+The mobile sidebar restores focus to its actual opener after dismissal, including
+keyboard shortcuts and its internal close control. Choosing a destination moves
+focus to the main content instead. Closing must not steal focus from another open
+dialog, a newer sidebar opening, or an authenticated workspace that has unmounted.
+
 This shell change preserves source-owned async, verification, permission and
 privacy contracts. Background thinking is an explicit per-message opt-in;
 automatic model choice belongs to the talking model. Composer behavior is owned
