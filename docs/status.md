@@ -13,6 +13,29 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Keep Unicode and long literal search matches visible (10 October)
+
+Search previews now translate case-folded match positions back to the original
+text. Expanding characters such as sharp-s, ligatures and dotted-I no longer move
+the preview away from its match. A global exact result is retained when the full
+message matches even if its bounded preview cannot contain the entire query.
+The source proves literal containment with `instr`, avoiding SQLite `LIKE`'s
+embedded-null false matches. Privacy, ordering, cursor and response contracts remain
+unchanged. Preview limits remain 500 characters for direct search and 400 globally.
+
+All 67 focused search/privacy cases passed, including 19 new regressions; an
+independent reviewer reran those 19 cases and cleared the implementation. A measured
+ASCII fast path avoids an added character walk: the local 65,006-character sample
+took about 0.04 ms per preview versus 3.6 ms without that fast path. This is a helper
+microbenchmark, not an end-to-end search latency claim. Lint and formatting pass.
+
+Fresh and repeated installation reproduce 93 reviewed Pi files. Local Pi/Gateway
+are healthy after rollout with database backups retained and all 169 dashboard
+assets unchanged. Read-only live search still returns the expected permitted
+conversation matches; model and search settings remain unchanged. Unicode edge
+cases were verified through isolated database and HTTP-route tests rather than
+adding synthetic long messages to the owner's history.
+
 ### Apply conversation privacy consistently during search (10 October)
 
 Exact-message search now applies the same current settings, legacy setup defaults

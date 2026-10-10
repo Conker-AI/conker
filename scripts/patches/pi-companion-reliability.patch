@@ -268,10 +268,10 @@ index e32eec8..db2da33 100644
          r"/skills/[a-z0-9][a-z0-9-]{0,63}/state",
          r"/search/settings",
 diff --git a/pi/conversation_search.py b/pi/conversation_search.py
-index 131d18e..49bced8 100644
+index 131d18e..424550e 100644
 --- a/pi/conversation_search.py
 +++ b/pi/conversation_search.py
-@@ -1,7 +1,11 @@
+@@ -1,18 +1,36 @@
  """Literal owner search over retained public conversation text, with exact IDs."""
  
 +from functools import lru_cache
@@ -279,12 +279,18 @@ index 131d18e..49bced8 100644
  from fastapi import APIRouter, Depends, HTTPException, Query
  
 +from . import session_settings
++from .search_excerpt import excerpt
 +
  
  def search(store, query, limit=30, cursor=None):
      query = query.strip()
-@@ -13,6 +17,16 @@ def search(store, query, limit=30, cursor=None):
-     params = [query, pattern]
+     if not 1 <= len(query) <= 500 or type(limit) is not int or not 1 <= limit <= 50:
+         raise ValueError("Use 1-500 search characters and a limit of 1-50.")
+-    pattern = (
+-        "%" + query.casefold().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+-    )
+-    params = [query, pattern]
++    params = [query.casefold()]
      after = ""
      with store._connect() as db:
 +        db.execute("BEGIN")
@@ -297,16 +303,27 @@ index 131d18e..49bced8 100644
 +            return privacy is not None and not any(privacy.values())
 +
 +        db.create_function("search_session_eligible", 1, eligible, deterministic=True)
++        db.create_function(
++            "search_excerpt",
++            1,
++            lambda text: excerpt(text, query, width=500, leading=100),
++            deterministic=True,
++        )
          db.create_function(
              "search_casefold",
              1,
-@@ -35,15 +49,10 @@ def search(store, query, limit=30, cursor=None):
-                        max(1,instr(search_casefold(json_extract(m.content,'$')),search_casefold(?))-100),500) AS excerpt
+@@ -31,19 +49,13 @@ def search(store, query, limit=30, cursor=None):
+         rows = db.execute(
+             r"""
+             SELECT m.id,m.session_id,m.seq,m.role,m.created_at,s.title,
+-                   substr(json_extract(m.content,'$'),
+-                       max(1,instr(search_casefold(json_extract(m.content,'$')),search_casefold(?))-100),500) AS excerpt
++                   search_excerpt(json_extract(m.content,'$')) AS excerpt
              FROM messages m JOIN sessions s ON s.id=m.session_id
              WHERE s.status!='forgotten' AND m.role IN ('user','assistant')
 +              AND NOT EXISTS(SELECT 1 FROM forgotten_sessions f WHERE f.session_id=s.id)
                AND json_valid(m.content) AND json_type(m.content)='text'
-               AND search_casefold(json_extract(m.content,'$')) LIKE ? ESCAPE '\'
+-              AND search_casefold(json_extract(m.content,'$')) LIKE ? ESCAPE '\'
 -              AND NOT EXISTS(SELECT 1 FROM session_settings settings
 -                  WHERE settings.session_id=s.id AND (
 -                    json_extract(settings.settings,'$.privacy.memoryDisabled')=1 OR
@@ -314,6 +331,7 @@ index 131d18e..49bced8 100644
 -              AND NOT EXISTS(SELECT 1 FROM message_privacy p JOIN messages original
 -                  ON original.id=p.message_id WHERE original.session_id=s.id
 -                  AND (p.memory_disabled=1 OR p.harness_disabled=1))
++              AND instr(search_casefold(json_extract(m.content,'$')),?)>0
 +              AND search_session_eligible(s.id)
          """
              + after
@@ -3365,6 +3383,27 @@ index 0000000..9a08ce5
 +def current(store_path, turn_id):
 +    memo = _current.get()
 +    return memo if memo is not None and memo.matches(store_path, turn_id) else None
+diff --git a/pi/search_excerpt.py b/pi/search_excerpt.py
+new file mode 100644
+index 0000000..1952dec
+--- /dev/null
++++ b/pi/search_excerpt.py
+@@ -0,0 +1,15 @@
++"""Bounded literal-match previews retain offsets in the original Unicode text."""
++
++
++def excerpt(text, query, *, width=400, leading=80):
++    folded_position = text.casefold().find(query.casefold())
++    position = max(0, folded_position)
++    if folded_position > 0 and not text.isascii():
++        folded_offset = 0
++        for index, character in enumerate(text):
++            folded_offset += len(character.casefold())
++            if folded_offset > folded_position:
++                position = index
++                break
++    start = max(0, position - leading)
++    return text[start : start + width]
 diff --git a/pi/session_history.py b/pi/session_history.py
 new file mode 100644
 index 0000000..d0c38f7
@@ -4792,10 +4831,30 @@ index 04d18c5..c605d1a 100644
          from . import background_thinking
  
 diff --git a/pi/universal_search.py b/pi/universal_search.py
-index ba538d2..6c68829 100644
+index ba538d2..4a3fe53 100644
 --- a/pi/universal_search.py
 +++ b/pi/universal_search.py
-@@ -115,6 +115,46 @@ def record(source, identity, title, text, href, query, stage="metadata", role=No
+@@ -18,6 +18,7 @@ from . import (
+     tasks,
+ )
+ from .providers import Message, ProviderUnavailable
++from .search_excerpt import excerpt
+ 
+ SOURCES = (
+     "conversations",
+@@ -88,11 +89,6 @@ def save_settings(store, body, *, semantic_available, ranking_available):
+     return {"revision": revision + 1, "configuration": cfg.model_dump()}
+ 
+ 
+-def excerpt(text, query):
+-    position = text.casefold().find(query.casefold())
+-    return text[max(0, position - 80) : max(0, position - 80) + 400]
+-
+-
+ def public_session(store, identity):
+     with store._connect() as db:
+         privacy = session_settings.source_privacy(db, identity)
+@@ -115,6 +111,46 @@ def record(source, identity, title, text, href, query, stage="metadata", role=No
      }
  
  
@@ -4842,7 +4901,34 @@ index ba538d2..6c68829 100644
  def lexical(store, memory, toolgate, query, settings, stage):
      results, coverage = [], []
  
-@@ -145,17 +185,8 @@ def lexical(store, memory, toolgate, query, settings, stage):
+@@ -132,30 +168,28 @@ def lexical(store, memory, toolgate, query, settings, stage):
+                     for _ in range(SCAN_LIMIT // 50):
+                         page = conversation_search.search(store, query, limit=50, cursor=cursor)
+                         for row in page["results"]:
+-                            add(
+-                                source,
+-                                row["id"],
+-                                row["title"],
+-                                row["excerpt"],
+-                                f"/chat?session={quote(row['session_id'])}&message={quote(row['id'])}",
+-                                row["role"],
++                            # The source matched full retained text after privacy
++                            # checks. A bounded preview may contain only part of
++                            # a long match; it must not veto that verified result.
++                            results.append(
++                                {
++                                    "id": f"{source}:{row['id']}:{stage}",
++                                    "source": source,
++                                    "recordId": row["id"],
++                                    "title": row["title"][:500],
++                                    "excerpt": excerpt(row["excerpt"], query),
++                                    "href": f"/chat?session={quote(row['session_id'])}&message={quote(row['id'])}",
++                                    "matchType": stage,
++                                    "role": row["role"],
++                                }
+                             )
+                         cursor = page["next_cursor"]
+                         if cursor is None:
                              break
                      partial = cursor is not None
                  else:
@@ -9325,6 +9411,116 @@ index 0000000..46d31ec
 +        usage = research_usage.receipt(store, result["turn_id"])
 +        assert usage["foreground"]["attempt_count"] == 3
 +        assert usage["thinking"]["attempt_count"] == 1
+diff --git a/tests/test_search_excerpts.py b/tests/test_search_excerpts.py
+new file mode 100644
+index 0000000..f544210
+--- /dev/null
++++ b/tests/test_search_excerpts.py
+@@ -0,0 +1,104 @@
++"""Literal matches use original-text offsets when building bounded previews."""
++
++from contextlib import closing
++
++import pytest
++from test_universal_search import client_for
++
++from pi import conversation_search, universal_search
++from pi.store import Store
++
++
++@pytest.mark.parametrize(
++    "prefix",
++    ["ß" * 2000, "ﬃ" * 2000, "İ" * 2000, "🙂ß" * 1000],
++    ids=["sharp-s", "ligature", "dotted-i", "astral"],
++)
++def test_expanding_prefix_preserves_direct_and_global_exact_match(tmp_path, prefix):
++    with closing(Store(tmp_path / "search.db")) as store:
++        sid = store.create_session(title="Planning")
++        message = store.append_message(sid, "user", prefix + "Needle" + "z" * 2000)
++        direct = conversation_search.search(store, "needle")["results"]
++        assert len(direct) == 1 and direct[0]["id"] == message["id"]
++        assert "Needle" in direct[0]["excerpt"] and len(direct[0]["excerpt"]) <= 500
++        page = client_for(store).get("/search", params={"q": "needle", "stage": "text"}).json()
++        assert [row["recordId"] for row in page["results"]] == [message["id"]]
++        assert "Needle" in page["results"][0]["excerpt"]
++        assert len(page["results"][0]["excerpt"]) <= 400
++        assert page["results"][0]["href"] == f"/chat?session={sid}&message={message['id']}"
++
++
++@pytest.mark.parametrize(
++    "prefix", ["ß" * 2000, "ﬃ" * 2000, "İ" * 2000], ids=["sharp-s", "ligature", "dotted-i"]
++)
++def test_metadata_summary_preview_uses_original_offsets(tmp_path, prefix):
++    with closing(Store(tmp_path / "metadata.db")) as store:
++        sid = store.create_session(title="Planning", summary=prefix + "Needle" + "z" * 2000)
++        rows, coverage = universal_search.conversation_metadata(store, "needle")
++        assert [row["recordId"] for row in rows] == [sid]
++        assert "Needle" in rows[0]["excerpt"] and len(rows[0]["excerpt"]) <= 400
++        assert coverage is False
++
++
++def test_verified_full_text_match_survives_query_larger_than_preview(tmp_path):
++    # A 200-character query can expand to 600 characters after casefolding.
++    query = "ﬃ" * 200
++    with closing(Store(tmp_path / "long.db")) as store:
++        sid = store.create_session(title="Long match")
++        message = store.append_message(sid, "assistant", "x" * 1000 + "ffi" * 200 + "y" * 1000)
++        direct = conversation_search.search(store, query)["results"]
++        assert [row["id"] for row in direct] == [message["id"]]
++        assert len(direct[0]["excerpt"]) <= 500
++        assert query.casefold() not in direct[0]["excerpt"].casefold()
++        rows, coverage = universal_search.lexical(
++            store, None, None, query, {"sources": ["conversations"]}, "text"
++        )
++        assert [row["recordId"] for row in rows] == [message["id"]]
++        assert len(rows[0]["excerpt"]) <= 400 and rows[0]["matchType"] == "text"
++        assert coverage == [{"source": "conversations", "status": "searched"}]
++
++
++@pytest.mark.parametrize(
++    "text,query,expected",
++    [
++        ("x" * 1000 + "ß" + "y" * 1000, "s", "x" * 80 + "ß"),
++        ("x" * 1000 + "ﬃ" + "y" * 1000, "fi", "x" * 80 + "ﬃ"),
++        ("x" * 1000 + "İ" + "y" * 1000, "\u0307", "x" * 80 + "İ"),
++        ("Needle" + "x" * 1000, "needle", "Needle"),
++        ("x" * 1000 + "Needle", "needle", "x" * 80 + "Needle"),
++        ("preview only", "title match", "preview only"),
++    ],
++    ids=["inside-sharp-s", "inside-ligature", "inside-dotted-i", "start", "end", "title-only"],
++)
++def test_preview_starts_near_original_match(text, query, expected):
++    excerpt = universal_search.excerpt(text, query)
++    assert excerpt.startswith(expected) and len(excerpt) <= 400
++
++
++def test_unverified_source_records_still_require_literal_match():
++    assert (
++        universal_search.record("projects", "p1", "Other", "no match", "/projects/p1", "needle")
++        is None
++    )
++
++
++@pytest.mark.parametrize(
++    "text,query,matched",
++    [
++        ("prefix a\0WRONG tail", "a\0DIFFERENT", False),
++        ("prefix a\0Needle tail", "needle", True),
++        ("prefix a\0Needle tail", "a\0Needle", True),
++        ("prefix a WRONG tail", "a\0", False),
++    ],
++    ids=["nul-query-mismatch", "match-after-nul", "match-across-nul", "nul-not-in-text"],
++)
++def test_sql_source_proves_literal_match_even_with_nul(tmp_path, text, query, matched):
++    with closing(Store(tmp_path / "nul.db")) as store:
++        sid = store.create_session(title="Literal")
++        message = store.append_message(sid, "user", text)
++        expected = [message["id"]] if matched else []
++        direct = conversation_search.search(store, query)
++        assert [row["id"] for row in direct["results"]] == expected
++        response = client_for(store).get("/search", params={"q": query, "stage": "text"})
++        assert response.status_code == 200
++        assert [row["recordId"] for row in response.json()["results"]] == expected
 diff --git a/tests/test_session_history.py b/tests/test_session_history.py
 new file mode 100644
 index 0000000..19e9d74
