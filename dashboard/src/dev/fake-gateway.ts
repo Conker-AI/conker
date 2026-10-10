@@ -23,7 +23,7 @@ const previewSessions = {
 }
 
 type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json }
-type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[] }
+type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
 
 const replies = [
   "Here's a simple plan for the week:\n\n1. **Monday:** revision block before school, 45 minutes.\n2. **Tuesday and Thursday:** judo, so keep homework light.\n3. **Friday:** hand in the physics worksheet.\n\nWant me to put these in your calendar?",
@@ -56,6 +56,8 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const sessions = seed()
+  const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
+  if (thinkingScenario) sessions[0].thinking = [{ session_id: sessions[0].id, turn_id: String(sessions[0].turns[0].id), input_message_id: sessions[0].messages[0].id, created_at: now(), status: 'running', provider: 'ollama', model: 'qwen2.5:7b', result: null, detail: null }]
   if (globalThis.sessionStorage?.getItem('conker-fake-history') === 'paged') {
     for (let index = 0; index < 115; index++) sessions.push({ id: `ses_history_${String(index).padStart(3, '0')}`, title: index === 70 ? `${'A long planning note '.repeat(20)}archived-keyword` : `Earlier conversation ${String(index + 1).padStart(3, '0')}`, ...(index === 70 ? { summary: `${'x'.repeat(400)} summary-keyword` } : {}), created_at: now() - 172800 - index * 60, messages: [], turns: [] })
   }
@@ -513,7 +515,19 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)$/)) && method === 'GET') {
       const item = find(match[1])
-      return { ...sessionRow(item), messages: item.messages.map(message => message.role === 'user' ? { ...message, memory_delivery: deliveryFor(message) } : message), turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+      return { ...sessionRow(item), thinking: item.thinking ?? [], messages: item.messages.map(message => message.role === 'user' ? { ...message, memory_delivery: deliveryFor(message) } : message), turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/thinking\/([^/]+)\/cancel$/)) && method === 'POST') {
+      const item = find(match[1]), row = item.thinking?.find(row => row.turn_id === match![2])
+      if (!row) return fail(404)
+      if (thinkingScenario) return new Promise<Json>(() => { /* Simulate a lost cancellation response; no real work. */ })
+      row.status = 'canceled'
+      return { schemaVersion: 1 }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/thinking$/)) && method === 'GET') {
+      const item = find(match[1])
+      if (thinkingScenario && item.thinking?.[0]) item.thinking[0].status = 'canceled'
+      return { schemaVersion: 1, session_id: item.id, content_status: 'available', results: item.thinking ?? [] }
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)(?:\/messages\/([^/]+))?\/memory-delivery$/)) && method === 'GET') {
       const rows = find(match[1]).messages.filter(message => message.role === 'user' && (!match![2] || message.id === match![2]))

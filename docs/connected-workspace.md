@@ -134,6 +134,15 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   This includes connected routing requests waiting for Laya's response. Stop
   prevents a late result from starting an answer or fallback; the decision
   service's already-running computation may continue until it finishes.
+- Cancel thinking is bound to the displayed analysis. An unconfirmed cancellation
+  offers Check thinking status, a read-only operation; talking remains available.
+  A newer Think request cannot inherit an older cancellation's error or pending
+  state. Each cancellation and confirmation read has a 15-second deadline.
+- Forks that carry restricted messages retain those restrictions through linked
+  summaries, including older descendants with incomplete stored settings. Unsafe
+  frozen work is refused without changing saved evidence. Missing or unresolved
+  ancestry requires a new independent chat; removing exact pins alone does not
+  establish that a linked summary is independent of them.
 
 Setup and the sidebar share their latest check, including refresh failures.
 Progress tracks saved setup choices and verification evidence. Choosing and testing

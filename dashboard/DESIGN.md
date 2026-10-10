@@ -94,6 +94,14 @@ privacy contracts. Background thinking is an explicit per-message opt-in;
 automatic model choice belongs to the talking model. Composer behavior is owned
 by the runtime workspace rather than by navigation.
 
+Cancel thinking belongs to the specific background request. A newer Think
+request never inherits an earlier cancellation's pending state or error. Each
+cancellation and confirmation read has a 15-second deadline; an unconfirmed
+outcome offers Check thinking status, which only reads and never retries the
+cancellation. Talking and its draft remain independent. Authentication changes,
+workspace resets, selection changes, forgetting and teardown reject late replies.
+Another Think request replaces unfinished analysis; ordinary talking preserves it.
+
 Composer drafts save privately on the Conker server, separately from messages,
 model input and memory. A quiet status beneath either composer distinguishes
 loading, saving, saved, unsaved, offline and unconfirmed saves. Browser storage

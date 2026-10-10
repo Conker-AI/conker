@@ -310,9 +310,9 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (new Set(pending.map(row => row.requestId)).size !== pending.length) return bad()
       return { ...parsed, thinking: forgotten ? [] : array(response.thinking ?? [], 50).map(row => thinking(row, sessionId)), messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
     },
-    async cancelThinking(sessionId: string, turnId: string) {
+    async cancelThinking(sessionId: string, turnId: string, options: { signal?: AbortSignal } = {}) {
       inputId(sessionId); inputId(turnId)
-      await auth.request(`/api/pi/sessions/${sessionId}/thinking/${turnId}/cancel`, { method: 'POST', body: {} })
+      await auth.request(`/api/pi/sessions/${sessionId}/thinking/${turnId}/cancel`, { method: 'POST', body: {}, signal: options.signal })
     },
     async getThinking(sessionId: string, options: { signal?: AbortSignal } = {}) {
       inputId(sessionId)

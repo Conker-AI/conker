@@ -13,6 +13,59 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Preserve inherited privacy and reliable Think cancellation (10 October)
+
+Reviewed forks now retain the immutable privacy restrictions of carried messages,
+including old summary-only descendants that lost those flags in stored settings.
+Effective reads protect legacy children without rewriting their settings or saved
+execution evidence. Unsafe frozen submissions, turns and context replay are
+refused; fresh turns use the narrowed policy. Queued memory ingestion honors
+inherited memory exclusions, while harness-only restrictions and deletion delivery
+keep their independent behavior.
+
+Ancestry reads are bounded to 256 sessions in one snapshot and inspect only carried
+immutable message flags. An ancestor's own historical messages or later privacy
+settings do not narrow an ordinary descendant's future policy. Missing, forgotten,
+cyclic or over-limit ancestry is unavailable. All seven child-creation paths reject
+an over-limit child atomically, without leaving orphan chats, calls, team records
+or fork receipts. Dropping exact pins does not remove the inherited restriction
+from a linked summary; an independent new chat has no such inherited context.
+
+Cancel thinking now belongs to one specific analysis. Each cancellation and status
+read has a 15-second deadline; an uncertain outcome offers a read-only status check
+without repeating the cancellation. A stalled older request cannot disable a newer
+Think request, publish its error there, or overwrite newer findings. Authentication,
+selection, workspace, forgetting and teardown boundaries discard late responses.
+Talking and saved drafts remain independent. Keyboard recovery retains focus on
+the resulting status, and Settings now accurately says another Think request
+replaces analysis while ordinary talking preserves it.
+
+Validation passed 252 distinct backend cases: 52 new regressions and 200 affected
+compatibility tests. Independent review cleared inheritance, recovery, ingestion
+and all creation paths. Two stale test assertions were reproduced on the prior
+clean revision and corrected for existing memory-delivery metadata and safe
+unavailable-tool refusal; product behavior was not changed for those assertions.
+Ruff, formatting and diff checks pass. Fresh and repeated installation reproduce
+101 reviewed Pi files.
+
+The full dashboard gateway suite passed, followed by focused tests and review for
+the final keyboard-focus change. TypeScript, affected lint, the 407-file design
+guard and production build pass. Desktop/light and mobile/dark fixture checks
+verified the real timeout, draft preservation, available Send and keyboard recovery.
+The local rollout retained database and prior-asset checkpoints; Pi and Gateway are
+healthy, all 169 served assets match the build, and the entry is 604,627 bytes under
+the unchanged 700,000-byte limit. Served-UI browser-only acceptance confirmed one
+cancellation followed by one status read, unchanged draft/navigation, retained
+focus and no horizontal overflow. No model work or real cancellation was started.
+Read-only live search still returns ten permitted exact matches and two metadata
+matches, with model and search settings unchanged.
+
+The README and four core guides now describe the connected chat app, current model
+roles, drafts, memory receipts, native runtime boundaries and local installation.
+They no longer present aspirational guarantees or working Agents/Schedules screens
+as disconnected previews. Independent accuracy review and 38 local-link checks
+passed. This remains a local milestone, not assembled Linux release acceptance.
+
 ### Enforce forgetting at the shared source boundary (10 October)
 
 The shared source-privacy policy now checks the authoritative forgetting ledger
@@ -29,10 +82,8 @@ The local backend rollout retained database backups, kept all 169 dashboard asse
 unchanged and passed Pi/Gateway health checks. Read-only search acceptance still
 passes without changing model or search settings.
 
-The next verified privacy defect is separate: reviewed forks can carry an immutable
-private pin while inheriting a parent's later public settings. New-fork inheritance,
-legacy execution snapshots and queued ingestion need a coordinated repair; that
-work remains isolated and is not included in this ledger milestone.
+The separate reviewed-fork inheritance defect identified here is resolved by the
+later inherited-privacy milestone above, including legacy execution and ingestion.
 
 ### Keep Unicode and long literal search matches visible (10 October)
 

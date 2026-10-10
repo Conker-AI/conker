@@ -267,6 +267,63 @@ index e32eec8..db2da33 100644
          r"/skills/import",
          r"/skills/[a-z0-9][a-z0-9-]{0,63}/state",
          r"/search/settings",
+diff --git a/pi/calls.py b/pi/calls.py
+index 1dee44e..7290554 100644
+--- a/pi/calls.py
++++ b/pi/calls.py
+@@ -517,6 +517,7 @@ def start(store, body: Start):
+             "INSERT INTO sessions(id,parent_id,title,status,created_at) VALUES(?,?,?,'open',?)",
+             (child, body.conversationId, "Call", now),
+         )
++        session_settings.inherited_privacy(db, child)
+         db.execute(
+             "INSERT INTO session_settings VALUES(?,1,?) ON CONFLICT(session_id) DO "
+             "UPDATE SET revision=1,settings=excluded.settings",
+diff --git a/pi/context_controls.py b/pi/context_controls.py
+index 985fc41..244040a 100644
+--- a/pi/context_controls.py
++++ b/pi/context_controls.py
+@@ -289,6 +289,8 @@ def cancelled_input_ids(store, rows):
+ 
+ 
+ def reviewed_fork(store, identity, body: ReviewedFork):
++    from . import session_settings
++
+     body = ReviewedFork.model_validate(body.model_dump())
+     digest = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
+     with store._connect() as db:
+@@ -338,14 +340,19 @@ def reviewed_fork(store, identity, body: ReviewedFork):
+         if "retrieve" in policy.messagePolicies.values():
+             raise ContextError("retrieval_pending", "Resolve retrieval before approving a summary.")
+         pin_chars = 0
++        privacy = {"memoryDisabled": False, "harnessDisabled": False}
+         for message_id in pins:
+             row = db.execute(
+-                "SELECT m.content FROM messages m LEFT JOIN forgotten_sessions f "
+-                "ON f.session_id=m.session_id WHERE m.id=? AND f.session_id IS NULL",
++                "SELECT m.content,p.memory_disabled,p.harness_disabled FROM messages m "
++                "JOIN sessions s ON s.id=m.session_id LEFT JOIN message_privacy p ON p.message_id=m.id "
++                "LEFT JOIN forgotten_sessions f ON f.session_id=m.session_id "
++                "WHERE m.id=? AND f.session_id IS NULL AND s.status!='forgotten'",
+                 (message_id,),
+             ).fetchone()
+-            if row is None:
+-                raise ContextError("unavailable_pin", "Exact source unavailable.")
++            if row is None or row[1] is None or row[2] is None:
++                raise ContextError("unavailable_pin", "Exact source or its privacy is unavailable.")
++            privacy["memoryDisabled"] |= bool(row[1])
++            privacy["harnessDisabled"] |= bool(row[2])
+             pin_chars += estimate(str(json.loads(row[0])))
+         cost = pin_chars + estimate(policy.sessionInstructions) + estimate(body.summary)
+         if (
+@@ -361,6 +368,7 @@ def reviewed_fork(store, identity, body: ReviewedFork):
+             "VALUES (?,?,?,'open',?,?)",
+             (child, identity, parent["title"], now, body.summary),
+         )
++        session_settings.copy_parent_settings(db, identity, child, privacy)
+         carried = policy.model_copy(update={"messagePolicies": {key: "keep-exact" for key in pins}})
+         db.execute(
+             "INSERT INTO context_policies VALUES (?,1,?)", (child, carried.model_dump_json())
 diff --git a/pi/conversation_search.py b/pi/conversation_search.py
 index 131d18e..424550e 100644
 --- a/pi/conversation_search.py
@@ -2264,7 +2321,7 @@ index d12dc3a..17b9f6a 100644
                  order = json.loads(result["completion"].text)["order"]
                  if (
 diff --git a/pi/memory_store.py b/pi/memory_store.py
-index 5afd9eb..d913e13 100644
+index 5afd9eb..6951f70 100644
 --- a/pi/memory_store.py
 +++ b/pi/memory_store.py
 @@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS memory_contexts (
@@ -2299,7 +2356,37 @@ index 5afd9eb..d913e13 100644
      columns = {row[1] for row in db.execute("PRAGMA table_info(memory_outbox)")}
      if "destination_agent_id" not in columns:
          db.execute("BEGIN IMMEDIATE")
-@@ -99,13 +117,36 @@ def pin_destination(store, message_id, agent_id):
+@@ -69,6 +87,8 @@ def migrate(db):
+ 
+ 
+ def pin_destination(store, message_id, agent_id):
++    from . import agents, session_settings
++
+     with store._connect() as db:
+         db.execute("BEGIN IMMEDIATE")
+         eligibility = db.execute(
+@@ -79,6 +99,20 @@ def pin_destination(store, message_id, agent_id):
+         ).fetchone()
+         if operation and operation[0] == "ingest" and (not eligibility or not eligibility[0]):
+             raise ValueError("This message is excluded from memory ingestion.")
++        if operation and operation[0] == "ingest":
++            origin = db.execute(
++                "SELECT session_id FROM messages WHERE id=?", (message_id,)
++            ).fetchone()
++            try:
++                floor = session_settings.inherited_privacy(db, origin[0]) if origin else None
++            except agents.AgentError:
++                raise ValueError(
++                    "Inherited source privacy is unavailable; memory ingestion is excluded."
++                ) from None
++            if floor is None or floor["memoryDisabled"]:
++                raise ValueError(
++                    "Inherited messages exclude this conversation from memory ingestion."
++                )
+         row = db.execute(
+             "SELECT destination_agent_id,delivery_started FROM memory_outbox WHERE message_id=?",
+             (message_id,),
+@@ -99,13 +133,36 @@ def pin_destination(store, message_id, agent_id):
  
  def pending_deletions(store):
      with store._connect() as db:
@@ -2337,7 +2424,7 @@ index 5afd9eb..d913e13 100644
          db.execute(
              "INSERT INTO memory_contexts VALUES (?,?,?,?)",
              (
-@@ -115,20 +156,102 @@ def save_context(store, turn_id, status, package=None):
+@@ -115,20 +172,102 @@ def save_context(store, turn_id, status, package=None):
                  time.time(),
              ),
          )
@@ -2441,7 +2528,7 @@ index 5afd9eb..d913e13 100644
              " JOIN messages m ON m.id=o.message_id"
              + (" WHERE m.session_id=?" if session_id else ""),
              (session_id,) if session_id else (),
-@@ -136,7 +259,25 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -136,7 +275,25 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
      pending = sum(row["state"] == "pending" and row["operation"] == "ingest" for row in rows)
      blocked = sum(row["state"] == "blocked" for row in rows)
      deleting = pending_deletions(store)
@@ -2468,7 +2555,7 @@ index 5afd9eb..d913e13 100644
      admission = {
          state: sum(receipt.get("state") == state for receipt in receipts)
          for state in ("admitted", "filtered", "deleted")
-@@ -170,6 +311,30 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -170,6 +327,30 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
              "Memory context is incomplete or unavailable for this turn; "
              "the conversation continues with that gap."
          )
@@ -2499,7 +2586,7 @@ index 5afd9eb..d913e13 100644
      return {
          "configured": configured,
          "pending_ingestion": pending,
-@@ -185,9 +350,7 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -185,9 +366,7 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
  def redact(db, session_ids):
      # Context packages can quote a forgotten message in any session. Clearing
      # all cached packages avoids relying on incomplete third-party lineage.
@@ -2510,6 +2597,18 @@ index 5afd9eb..d913e13 100644
      for sid in session_ids:
          db.execute(
              "UPDATE memory_outbox SET operation='delete',state='pending',attempts=0,"
+diff --git a/pi/message_forks.py b/pi/message_forks.py
+index 9d28e1e..955b857 100644
+--- a/pi/message_forks.py
++++ b/pi/message_forks.py
+@@ -145,6 +145,7 @@ def create(store, sid, message_id, body):
+             "VALUES(?,?,?,'open',?,?)",
+             (child, sid, parent["title"], time.time(), body.reviewed_summary),
+         )
++        session_settings.inherited_privacy(db, child)
+         carried_settings = {**settings["settings"], "privacy": privacy}
+         db.execute(
+             "INSERT INTO session_settings VALUES(?,1,?) ON CONFLICT(session_id) "
 diff --git a/pi/model_roles.py b/pi/model_roles.py
 index e7a92b5..0267896 100644
 --- a/pi/model_roles.py
@@ -3729,10 +3828,225 @@ index 0000000..f6240d1
 +            "content_status": "forgotten" if forgotten else "available",
 +        }
 diff --git a/pi/session_settings.py b/pi/session_settings.py
-index 07ab799..e75857e 100644
+index 07ab799..7c60763 100644
 --- a/pi/session_settings.py
 +++ b/pi/session_settings.py
-@@ -337,6 +337,10 @@ def execution(store, identity, turn_id=None, request_id=None):
+@@ -64,6 +64,78 @@ for _table, _id in (
+     SCHEMA += f"CREATE TRIGGER IF NOT EXISTS {_table}_no_replace BEFORE INSERT ON {_table} WHEN EXISTS(SELECT 1 FROM {_table} WHERE {_id}=NEW.{_id}) BEGIN SELECT RAISE(ABORT,'execution selection is immutable'); END;\n"
+ 
+ 
++MAX_PRIVACY_LINEAGE = 256
++
++
++def inherited_privacy(db, identity):
++    """Retain carried exclusions through summaries, never ancestors' own-history policy.
++
++    Dropping exact pins does not establish that a linked summary is independent
++    of them. A new, independent conversation has no inherited floor. Each level
++    reads only policy metadata, using one snapshot even for legacy read callers.
++    """
++    if db.in_transaction:
++        return _inherited_privacy(db, identity)
++    db.execute("SAVEPOINT inherited_privacy_read")
++    try:
++        return _inherited_privacy(db, identity)
++    finally:
++        db.execute("RELEASE inherited_privacy_read")
++
++
++def _inherited_privacy(db, identity):
++    floor = {"memoryDisabled": False, "harnessDisabled": False}
++    seen = set()
++    for _ in range(MAX_PRIVACY_LINEAGE):
++        if identity in seen:
++            break
++        seen.add(identity)
++        row = db.execute(
++            "SELECT ancestor.parent_id,ancestor.status,tombstone.session_id,"
++            "MAX(p.memory_disabled),MAX(p.harness_disabled),"
++            "MAX(i.message_id IS NOT NULL AND (m.id IS NULL OR p.message_id IS NULL "
++            "OR origin.id IS NULL OR origin.status='forgotten' OR f.session_id IS NOT NULL)) "
++            "FROM sessions ancestor LEFT JOIN forgotten_sessions tombstone "
++            "ON tombstone.session_id=ancestor.id LEFT JOIN context_inherited_messages i "
++            "ON i.session_id=ancestor.id LEFT JOIN messages m ON m.id=i.message_id "
++            "LEFT JOIN message_privacy p ON p.message_id=i.message_id "
++            "LEFT JOIN sessions origin ON origin.id=m.session_id "
++            "LEFT JOIN forgotten_sessions f ON f.session_id=m.session_id "
++            "WHERE ancestor.id=? GROUP BY ancestor.id",
++            (identity,),
++        ).fetchone()
++        if row is None or row[1] == "forgotten" or row[2] is not None or row[5]:
++            break
++        floor["memoryDisabled"] |= bool(row[3])
++        floor["harnessDisabled"] |= bool(row[4])
++        identity = row[0]
++        if identity is None:
++            return floor
++    raise agents.AgentError(
++        "inherited_source_unavailable",
++        "Inherited context is unavailable, its privacy is unknown, or its ancestry "
++        "cannot be safely resolved. Start a new conversation without that source.",
++    )
++
++
++def require_inherited_privacy(db, identity, snapshot):
++    """Reject unsafe frozen context; never rewrite its policy or recorded prefix."""
++    floor = inherited_privacy(db, identity)
++    policies = [snapshot.get("privacy")]
++    if isinstance(snapshot.get("settings"), dict):
++        policies.append(snapshot["settings"].get("privacy"))
++    if any(
++        required and (not isinstance(privacy, dict) or privacy.get(flag) is not True)
++        for privacy in policies
++        for flag, required in floor.items()
++    ):
++        raise agents.AgentError(
++            "inherited_privacy",
++            "This saved execution predates inherited privacy restrictions. "
++            "Start a new turn with the protected settings; the saved execution was not changed.",
++        )
++
++
+ def _load(db, identity):
+     row = db.execute("SELECT status FROM sessions WHERE id=?", (identity,)).fetchone()
+     if row is None or row[0] == "forgotten":
+@@ -77,14 +149,39 @@ def _load(db, identity):
+         ).fetchone()
+         if choice and choice[0] == "skip":
+             default["privacy"]["memoryDisabled"] = True
+-    return {
++    result = {
+         "revision": stored["revision"] if stored else 0,
+         "settings": json.loads(stored["settings"]) if stored else default,
+     }
++    floor = inherited_privacy(db, identity)
++    for flag, required in floor.items():
++        result["settings"]["privacy"][flag] |= required
++    return result
++
++
++def copy_parent_settings(db, parent, child, floor=None):
++    """Persist effective inherited settings during child creation, in its transaction."""
++    selected = _load(db, parent)["settings"]
++    # The parent's final allowed level must not produce an unusable next level.
++    inherited_privacy(db, child)
++    for flag, required in (floor or {}).items():
++        selected["privacy"][flag] |= required
++    raw = db.execute(
++        "SELECT revision,settings FROM session_settings WHERE session_id=?", (child,)
++    ).fetchone()
++    current = json.loads(raw["settings"]) if raw else _load(db, child)["settings"]
++    if current == selected:
++        return
++    db.execute(
++        "INSERT INTO session_settings VALUES(?,?,?) ON CONFLICT(session_id) "
++        "DO UPDATE SET settings=excluded.settings",
++        (child, raw["revision"] if raw else 1, json.dumps(selected)),
++    )
+ 
+ 
+ def load(store, identity):
+     with store._connect() as db:
++        db.execute("BEGIN")
+         return _load(db, identity)
+ 
+ 
+@@ -93,6 +190,7 @@ def _snapshot(db, identity):
+ 
+     frozen = team_execution.session_snapshot(db, identity)
+     if frozen is not None:
++        require_inherited_privacy(db, identity, frozen)
+         return frozen
+     from . import calls, characters, project_context
+ 
+@@ -121,7 +219,9 @@ def _snapshot(db, identity):
+         "authority": "none",
+         "projectContext": project_context.capture(db, identity, value["settings"]),
+     }
+-    return calls.execution_snapshot(db, identity, snapshot)
++    snapshot = calls.execution_snapshot(db, identity, snapshot)
++    require_inherited_privacy(db, identity, snapshot)
++    return snapshot
+ 
+ 
+ def _project(db, identity):
+@@ -173,14 +273,9 @@ def save(store, identity, body):
+             raise agents.AgentError(
+                 "session_busy", "Resolve current work before changing session settings."
+             )
+-        inherited = db.execute(
+-            "SELECT MAX(p.memory_disabled),MAX(p.harness_disabled) "
+-            "FROM context_inherited_messages i JOIN message_privacy p ON p.message_id=i.message_id "
+-            "WHERE i.session_id=?",
+-            (identity,),
+-        ).fetchone()
+-        if (inherited[0] and not body.settings.privacy.memoryDisabled) or (
+-            inherited[1] and not body.settings.privacy.harnessDisabled
++        inherited = inherited_privacy(db, identity)
++        if (inherited["memoryDisabled"] and not body.settings.privacy.memoryDisabled) or (
++            inherited["harnessDisabled"] and not body.settings.privacy.harnessDisabled
+         ):
+             raise agents.AgentError(
+                 "inherited_privacy", "Keep the inherited messages' privacy modes enabled."
+@@ -250,7 +345,13 @@ def validate_reply(db, identity, reply_to):
+ 
+ 
+ def reserve(
+-    db, request_id, identity, model_id=None, reply_to=None, research_mode="off", skill_ids=None,
++    db,
++    request_id,
++    identity,
++    model_id=None,
++    reply_to=None,
++    research_mode="off",
++    skill_ids=None,
+     think=False,
+ ):
+     from . import background_thinking, project_context, skills
+@@ -286,12 +387,20 @@ def bind(db, turn_id, identity, request_id=None):
+         else None
+     )
+     snapshot = json.loads(row[0]) if row else _snapshot(db, identity)
++    if row:
++        origin = db.execute(
++            "SELECT requested_session_id FROM turn_submissions WHERE request_id=?", (request_id,)
++        ).fetchone()
++        if origin:
++            require_inherited_privacy(db, origin[0], snapshot)
++    require_inherited_privacy(db, identity, snapshot)
+     db.execute("INSERT INTO turn_settings VALUES (?,?)", (turn_id, json.dumps(snapshot)))
+     project_context.record_dependencies(db, identity, snapshot)
+ 
+ 
+ def execution(store, identity, turn_id=None, request_id=None):
+     with store._connect() as db:
++        db.execute("BEGIN")
+         _load(db, identity)
+         if turn_id or request_id:
+             if turn_id and request_id:
+@@ -319,13 +428,14 @@ def execution(store, identity, turn_id=None, request_id=None):
+             row = db.execute(f"SELECT snapshot FROM {table} WHERE {key}=?", (value,)).fetchone()
+             if row:
+                 snapshot = json.loads(row[0])
++                require_inherited_privacy(db, identity, snapshot)
+                 if turn_id:
+                     snapshot["turnExecutionId"] = turn_id
+                 if request_id:
+                     snapshot["submissionExecutionId"] = request_id
+                 return snapshot
+             # Legacy turns had only the Companion, without runtime privacy settings.
+-            return {
++            snapshot = {
+                 "agentId": "companion",
+                 "kind": "companion",
+                 "configuration": None,
+@@ -333,10 +443,16 @@ def execution(store, identity, turn_id=None, request_id=None):
+                 "legacy": True,
+                 "turnExecutionId": turn_id,
+             }
++            require_inherited_privacy(db, identity, snapshot)
++            return snapshot
+         return _snapshot(db, identity)
  
  
  def source_privacy(db, identity):
@@ -4232,7 +4546,7 @@ index c0df78b..520e13d 100644
              ],
              "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
-index c59ea34..3b8ebaf 100644
+index c59ea34..2bcf786 100644
 --- a/pi/store.py
 +++ b/pi/store.py
 @@ -53,6 +53,7 @@ from . import (
@@ -4294,7 +4608,7 @@ index c59ea34..3b8ebaf 100644
  
      @contextmanager
      def _connect(self) -> Iterator[sqlite3.Connection]:
-@@ -411,43 +428,50 @@ class Store:
+@@ -411,43 +428,52 @@ class Store:
          agent_id: str | None = None,
          privacy: dict[str, bool] | None = None,
      ) -> str:
@@ -4357,6 +4671,8 @@ index c59ea34..3b8ebaf 100644
 +            " VALUES (?,?,?,'open',?,?)",
 +            (session_id, parent_id, title, time.time(), summary),
 +        )
++        if parent_id is not None:
++            session_settings.copy_parent_settings(db, parent_id, session_id)
 +        if initial_settings is not None:
              db.execute(
 -                "INSERT INTO sessions (id, parent_id, title, status, created_at, summary)"
@@ -4375,7 +4691,7 @@ index c59ea34..3b8ebaf 100644
  
      def get_session(self, session_id: str) -> dict | None:
 diff --git a/pi/submissions.py b/pi/submissions.py
-index f383164..4cf1201 100644
+index f383164..48cb227 100644
 --- a/pi/submissions.py
 +++ b/pi/submissions.py
 @@ -149,6 +149,9 @@ def _view(db, row):
@@ -4414,6 +4730,26 @@ index f383164..4cf1201 100644
                  )
              except drafts.DraftError as exc:
                  raise SubmissionError("draft_changed", str(exc)) from exc
+@@ -473,6 +486,7 @@ def bind(store, request_id, *, fork_summary=None):
+                 "VALUES(?,?,?,'open',?,?)",
+                 (child, session_id, parent["title"], now, fork_summary),
+             )
++            session_settings.copy_parent_settings(db, session_id, child)
+             session_id = child
+         turn_id = "trn_" + uuid.uuid4().hex[:16]
+         db.execute(
+diff --git a/pi/team_execution.py b/pi/team_execution.py
+index 41c961d..5902481 100644
+--- a/pi/team_execution.py
++++ b/pi/team_execution.py
+@@ -139,6 +139,7 @@ def _session(db, parent, privacy):
+         "INSERT INTO sessions(id,parent_id,title,created_at) VALUES(?,?,?,?)",
+         (identity, parent, "Team execution", time.time()),
+     )
++    session_settings.inherited_privacy(db, identity)
+     # Explicitly narrowed privacy prevents team copies entering Companion ingestion.
+     settings = {"agentId": "companion", "privacy": {**privacy, "memoryDisabled": True}}
+     db.execute(
 diff --git a/pi/toolgate.py b/pi/toolgate.py
 index bc604b3..82d578e 100644
 --- a/pi/toolgate.py
@@ -5013,6 +5349,29 @@ index 23fe69d..86a6c77 100644
          assert len(store.messages(session)) == 2
  
  
+diff --git a/tests/test_calls.py b/tests/test_calls.py
+index 370c4ba..7727349 100644
+--- a/tests/test_calls.py
++++ b/tests/test_calls.py
+@@ -87,7 +87,17 @@ def test_real_typed_turn_replay_history_and_independent_conversation(store):
+     assert result["call"]["requests"][0]["speechStatus"] == "unavailable"
+     assert result["call"]["requests"][0]["textStatus"] == "complete"
+     assert any(m.content == "earlier exact context" for m in provider.seen[0][0])
+-    assert store.messages(source) == [original]
++    assert store.messages(source) == [
++        {
++            **original,
++            "memory_delivery": {
++                "state": "pending",
++                "reason_code": "queued",
++                "admission_method": None,
++                "memory_id": None,
++            },
++        }
++    ]
+     assert [m["role"] for m in store.messages(call["sessionId"])] == ["user", "assistant"]
+     assert all("source" in e for e in result["call"]["events"] if e["kind"] != "event")
+     assert send(store, loop, call)["replayed"] is True and len(provider.seen) == 1
 diff --git a/tests/test_decision_cancellation.py b/tests/test_decision_cancellation.py
 new file mode 100644
 index 0000000..77c6d3f
@@ -8780,6 +9139,628 @@ index 0000000..e178df2
 +            == 200
 +        )
 +        assert client.get("/api/pi/drafts/new").status_code == 403
+diff --git a/tests/test_reviewed_fork_privacy.py b/tests/test_reviewed_fork_privacy.py
+new file mode 100644
+index 0000000..ad5238f
+--- /dev/null
++++ b/tests/test_reviewed_fork_privacy.py
+@@ -0,0 +1,616 @@
++"""Carried immutable privacy protects new forks and legacy execution boundaries."""
++
++import json
++from contextlib import closing
++
++import pytest
++
++from pi import agents, memory_store, submissions, turn_context
++from pi import context_controls as context
++from pi import session_settings as settings
++from pi.loop import Loop
++from pi.memory import Memory
++from pi.providers import Message
++from pi.routing import Router
++from pi.store import Store
++
++PUBLIC = {"memoryDisabled": False, "harnessDisabled": False}
++MODES = [
++    {"memoryDisabled": True, "harnessDisabled": False},
++    {"memoryDisabled": False, "harnessDisabled": True},
++    {"memoryDisabled": True, "harnessDisabled": True},
++]
++
++
++@pytest.fixture
++def store(tmp_path):
++    with closing(Store(tmp_path / "forks.db")) as value:
++        yield value
++
++
++def change(store, sid, privacy):
++    return settings.save(
++        store,
++        sid,
++        settings.Update(
++            expected_revision=settings.load(store, sid)["revision"],
++            settings=settings.Settings(agentId="companion", privacy=settings.Privacy(**privacy)),
++        ),
++    )
++
++
++def source(store, sid):
++    with store._connect() as db:
++        return settings.source_privacy(db, sid)
++
++
++def private_history(store, privacy):
++    parent = store.create_session(privacy=privacy)
++    pin = store.append_message(parent, "user", "An exact private source")
++    change(store, parent, PUBLIC)
++    return parent, pin
++
++
++def carry(store, child, pin):
++    # The old reviewed-fork code persisted the raw public settings before these refs.
++    with store._connect() as db:
++        db.execute("INSERT INTO context_inherited_messages VALUES(?,?,0)", (child, pin["id"]))
++
++
++def legacy_child(store, privacy, *, attach=True):
++    parent, pin = private_history(store, privacy)
++    child = store.create_session(parent_id=parent, summary="A legacy reviewed summary")
++    if attach:
++        carry(store, child, pin)
++    return parent, pin, child
++
++
++def reviewed(store, sid, pins=(), request="reviewed_fork_privacy_001"):
++    saved = context.load(store, sid)
++    context.save(
++        store,
++        sid,
++        context.Update(
++            expected_revision=saved["revision"],
++            policy=context.Policy(
++                sessionInstructions="Keep exact context",
++                messagePolicies={pin["id"]: "keep-exact" for pin in pins},
++                budget=context.Budget(
++                    contextWindowTokens=10000, outputReserveTokens=100, otherInputTokens=0
++                ),
++            ),
++        ),
++    )
++    messages = store.messages(sid)
++    body = context.ReviewedFork(
++        expected_revision=saved["revision"] + 1,
++        expected_last_message_id=messages[-1]["id"] if messages else None,
++        summary="Reviewed summary",
++        request_id=request,
++    )
++    return context.reviewed_fork(store, sid, body), body
++
++
++def raw(store, table, column, value):
++    with store._connect() as db:
++        return [
++            tuple(row) for row in db.execute(f"SELECT * FROM {table} WHERE {column}=?", (value,))
++        ]
++
++
++@pytest.mark.parametrize("privacy", MODES)
++def test_reviewed_private_pins_narrow_saved_settings_without_changing_source(store, privacy):
++    parent, pin = private_history(store, privacy)
++    original = raw(store, "message_privacy", "message_id", pin["id"])
++    assert settings.execution(store, parent)["privacy"] == PUBLIC
++    result, body = reviewed(store, parent, [pin])
++    child = result["session_id"]
++    saved = settings.load(store, child)
++    assert saved["settings"]["privacy"] == privacy
++    assert saved["revision"] == settings.load(store, parent)["revision"] == 2
++    assert (
++        json.loads(raw(store, "session_settings", "session_id", child)[0][2])["privacy"] == privacy
++    )
++    assert context.reviewed_fork(store, parent, body)["session_id"] == child
++    assert context.history(store, child)[0]["id"] == pin["id"]
++    assert store.messages(child) == []
++    assert raw(store, "message_privacy", "message_id", pin["id"]) == original
++    assert settings.execution(store, parent)["privacy"] == PUBLIC
++    with pytest.raises(agents.AgentError) as error:
++        change(store, child, PUBLIC)
++    assert error.value.detail["code"] == "inherited_privacy"
++    turn = store.start_turn(child)
++    frozen = settings.execution(store, child, turn)
++    assert frozen["privacy"] == frozen["settings"]["privacy"] == privacy
++    message = store.append_message(child, "user", "Continue", turn_id=turn, purpose="input")
++    assert raw(store, "message_privacy", "message_id", message["id"])[0][1:] == (
++        int(privacy["memoryDisabled"]),
++        int(privacy["harnessDisabled"]),
++        int(not privacy["memoryDisabled"]),
++    )
++    assert (
++        bool(raw(store, "memory_outbox", "message_id", message["id"]))
++        is not privacy["memoryDisabled"]
++    )
++
++
++def test_public_pin_does_not_inherit_unselected_private_own_history(store):
++    parent, private = private_history(store, MODES[2])
++    public = store.append_message(parent, "user", "Public future input")
++    result, _ = reviewed(store, parent, [public])
++    child = result["session_id"]
++    assert settings.execution(store, parent)["privacy"] == PUBLIC
++    assert settings.execution(store, child)["privacy"] == PUBLIC
++    assert source(store, parent)["incognito"] is True
++    assert source(store, child)["incognito"] is False
++    assert [row["id"] for row in context.history(store, child)] == [public["id"]]
++    assert private["id"] != public["id"]
++
++
++@pytest.mark.parametrize("privacy", MODES)
++def test_legacy_child_reads_and_fresh_submission_are_protected_without_rewriting_rows(
++    store, privacy
++):
++    _, pin, child = legacy_child(store, privacy)
++    before = raw(store, "session_settings", "session_id", child)
++    assert json.loads(before[0][2])["privacy"] == PUBLIC
++    assert settings.load(store, child)["settings"]["privacy"] == privacy
++    assert source(store, child) == {**privacy, "incognito": True}
++    request = "legacy_protected_request_001"
++    submissions.reserve(store, request, child, "Protected input", {})
++    assert settings.execution(store, child, request_id=request)["privacy"] == privacy
++    receipt = submissions.bind(store, request)
++    assert settings.execution(store, child, receipt["turn_id"])["privacy"] == privacy
++    assert raw(store, "session_settings", "session_id", child) == before
++    assert raw(store, "message_privacy", "message_id", pin["id"])[0][1:3] == tuple(
++        map(int, privacy.values())
++    )
++
++
++@pytest.mark.parametrize("kind", ["store", "reviewed", "automatic"])
++@pytest.mark.parametrize("privacy", MODES)
++def test_effective_parent_privacy_survives_summary_only_descendants(store, kind, privacy):
++    _, _, parent = legacy_child(store, privacy)
++    revision = settings.load(store, parent)["revision"]
++    if kind == "store":
++        child = store.create_session(parent_id=parent, summary="Owner summary")
++    elif kind == "reviewed":
++        result, _ = reviewed(store, parent)
++        child = result["session_id"]
++    else:
++        request = "automatic_protected_request_001"
++        submissions.reserve(store, request, parent, "First input", {})
++        receipt = submissions.bind(store, request, fork_summary="Automatic summary")
++        child = receipt["effective_session_id"]
++        assert settings.execution(store, child, receipt["turn_id"])["privacy"] == privacy
++        store.finish_turn(receipt["turn_id"], "complete")
++    with store._connect() as db:
++        assert (
++            db.execute(
++                "SELECT COUNT(*) FROM context_inherited_messages WHERE session_id=?", (child,)
++            ).fetchone()[0]
++            == 0
++        )
++    assert settings.load(store, child)["revision"] == revision
++    assert (
++        json.loads(raw(store, "session_settings", "session_id", child)[0][2])["privacy"] == privacy
++    )
++    assert settings.execution(store, child)["privacy"] == privacy
++    turn = store.start_turn(child)
++    assert settings.execution(store, child, turn)["privacy"] == privacy
++
++
++def test_ordinary_public_parent_revision_and_ambient_defaults_are_unchanged(store):
++    parent = store.create_session()
++    child = store.create_session(parent_id=parent)
++    assert settings.load(store, parent)["revision"] == settings.load(store, child)["revision"] == 0
++    assert raw(store, "session_settings", "session_id", child) == []
++    _, _, private_child = legacy_child(store, MODES[0])
++    assert settings.load(store, private_child)["settings"]["privacy"] == MODES[0]
++    change(store, parent, MODES[2])
++    change(store, parent, PUBLIC)
++    assert settings.execution(store, parent)["privacy"] == PUBLIC
++
++
++@pytest.mark.parametrize("fork_summary", [None, "Must roll back new child"])
++@pytest.mark.parametrize("privacy", MODES)
++def test_unsafe_reserved_snapshot_refused_atomically_before_binding(store, fork_summary, privacy):
++    _, pin, child = legacy_child(store, privacy, attach=False)
++    request = "legacy_unsafe_request_001"
++    submissions.reserve(store, request, child, "Retained pending input", {})
++    before = {
++        table: raw(store, table, "request_id", request)
++        for table in ("turn_submissions", "submission_settings")
++    }
++    carry(store, child, pin)
++    with pytest.raises(agents.AgentError) as error:
++        settings.execution(store, child, request_id=request)
++    assert error.value.detail["code"] == "inherited_privacy"
++    with pytest.raises(agents.AgentError, match="predates inherited"):
++        submissions.bind(store, request, fork_summary=fork_summary)
++    assert len(store.list_sessions()) == 2
++    assert store.get_session(child)["status"] == "open"
++    assert store.messages(child) == store.turns(child) == []
++    for table, content in before.items():
++        assert raw(store, table, "request_id", request) == content
++
++
++class NeverRemote:
++    agent_id = "default"
++
++    def retrieve(self, *args, **kwargs):
++        pytest.fail("Unsafe inherited context reached memory retrieval")
++
++    def deliver(self, *args, **kwargs):
++        pytest.fail("Unsafe inherited context reached memory delivery")
++
++
++class NeverProvider:
++    name = "local"
++
++    def complete(self, *args, **kwargs):
++        pytest.fail("Unsafe inherited context reached inference")
++
++
++@pytest.mark.parametrize("privacy", MODES)
++def test_old_turn_recovery_recall_and_context_replay_refuse_without_journal_changes(store, privacy):
++    _, pin, child = legacy_child(store, privacy, attach=False)
++    completed = store.start_turn(child)
++    turn_context.capture(store, completed, [], [Message("system", "Original completed context")])
++    store.finish_turn(completed, "complete")
++    turn = store.start_turn(child)
++    turn_context.capture(store, turn, [], [Message("system", "Old derived recall")])
++    store.finish_turn(turn, "acted_no_reply", acted=True)
++    before = {
++        (table, identity): raw(store, table, "turn_id", identity)
++        for identity in (turn, completed)
++        for table in ("turn_settings", "turn_context_inputs", "turn_context_policies")
++    }
++    before_turn = store.get_turn(turn)
++    carry(store, child, pin)
++    loop = Loop(
++        store,
++        Router(local_provider=NeverProvider(), local_model="test"),
++        memory=Memory(store, NeverRemote()),
++    )
++    for action in (
++        lambda: settings.execution(store, child, turn),
++        lambda: loop.resume_turn(turn),
++        lambda: loop.memory.prepare(turn, "query"),
++        lambda: turn_context.replay(store, completed),
++    ):
++        with pytest.raises(agents.AgentError) as error:
++            action()
++        assert error.value.detail["code"] == "inherited_privacy"
++    assert store.get_turn(turn) == before_turn
++    for (table, identity), content in before.items():
++        assert raw(store, table, "turn_id", identity) == content
++
++
++@pytest.mark.parametrize("privacy", MODES)
++def test_legacy_ingest_gate_preserves_harness_only_and_delete_semantics(store, privacy):
++    _, pin, child = legacy_child(store, privacy, attach=False)
++    message = store.append_message(child, "user", "Queued under the old public settings")
++    flags = raw(store, "message_privacy", "message_id", message["id"])
++    carry(store, child, pin)
++    if privacy["memoryDisabled"]:
++        before = raw(store, "memory_outbox", "message_id", message["id"])
++        with pytest.raises(ValueError, match="exclude"):
++            memory_store.pin_destination(store, message["id"], "default")
++        assert raw(store, "memory_outbox", "message_id", message["id"]) == before
++        assert Memory(store, NeverRemote()).drain_once() == 0
++        with store._connect() as db:
++            state = db.execute(
++                "SELECT state,delivery_started FROM memory_outbox WHERE message_id=?",
++                (message["id"],),
++            ).fetchone()
++            assert tuple(state) == ("blocked", 0)
++    else:
++        assert memory_store.pin_destination(store, message["id"], "default") == "default"
++    assert raw(store, "message_privacy", "message_id", message["id"]) == flags
++    with store._connect() as db:
++        db.execute(
++            "UPDATE memory_outbox SET operation='delete' WHERE message_id=?", (message["id"],)
++        )
++    assert memory_store.pin_destination(store, message["id"], "default") == "default"
++
++
++def break_source(store, parent, pin, kind):
++    with store._connect() as db:
++        if kind == "missing_privacy":
++            db.execute("DROP TRIGGER message_privacy_no_delete")
++            db.execute("DELETE FROM message_privacy WHERE message_id=?", (pin["id"],))
++        elif kind == "ledger":
++            db.execute(
++                "INSERT INTO forgetting_receipts VALUES(?,?,0,'confirmed',0,0)",
++                (f"del_{parent}", parent),
++            )
++            db.execute("INSERT INTO forgotten_sessions VALUES(?,?)", (parent, f"del_{parent}"))
++        elif kind == "status":
++            db.execute("UPDATE sessions SET status='forgotten' WHERE id=?", (parent,))
++        else:
++            db.execute("PRAGMA foreign_keys=OFF")
++            db.execute(
++                "UPDATE context_inherited_messages SET message_id='missing' WHERE message_id=?",
++                (pin["id"],),
++            )
++
++
++@pytest.mark.parametrize("kind", ["missing_privacy", "ledger", "status", "missing_message"])
++def test_unknown_inherited_sources_fail_closed_without_remote_or_child_creation(store, kind):
++    parent, pin, child = legacy_child(store, MODES[0], attach=False)
++    queued = store.append_message(child, "user", "Legacy queued content")
++    carry(store, child, pin)
++    break_source(store, parent, pin, kind)
++    assert source(store, child) is None
++    with pytest.raises(agents.AgentError) as error:
++        settings.load(store, child)
++    assert error.value.detail["code"] == "inherited_source_unavailable"
++    assert "Start a new conversation" in str(error.value)
++    for action in (
++        lambda: settings.execution(store, child),
++        lambda: store.start_turn(child),
++        lambda: store.create_session(parent_id=child, summary="Unknown origin"),
++        lambda: submissions.reserve(store, "unknown_origin_request_001", child, "Question", {}),
++    ):
++        with pytest.raises(agents.AgentError, match="unavailable"):
++            action()
++    with pytest.raises(ValueError, match="privacy is unavailable"):
++        memory_store.pin_destination(store, queued["id"], "default")
++    with store._connect() as db:
++        db.execute(
++            "UPDATE memory_outbox SET operation='delete' WHERE message_id=?", (queued["id"],)
++        )
++    assert memory_store.pin_destination(store, queued["id"], "default") == "default"
++    assert len(store.list_sessions()) == 2
++    assert store.turns(child) == []
++    with store._connect() as db:
++        assert db.execute("SELECT COUNT(*) FROM turn_submissions").fetchone()[0] == 0
++
++
++@pytest.mark.parametrize("kind", ["missing_privacy", "ledger", "status"])
++def test_reviewed_fork_unknown_pin_rolls_back_without_closing_source(store, kind):
++    origin = store.create_session()
++    pin = store.append_message(origin, "user", "Original public source")
++    parent = store.create_session(parent_id=origin)
++    carry(store, parent, pin)
++    break_source(store, origin, pin, kind)
++    with pytest.raises(context.ContextError, match="unavailable"):
++        reviewed(store, parent, [pin])
++    assert store.get_session(parent)["status"] == "open"
++    assert len(store.list_sessions()) == 2
++    with store._connect() as db:
++        assert db.execute("SELECT COUNT(*) FROM context_fork_requests").fetchone()[0] == 0
++
++
++def test_frozen_nested_policy_cannot_disagree_with_inherited_floor(store):
++    _, _, child = legacy_child(store, MODES[0])
++    snapshot = settings.execution(store, child)
++    snapshot["settings"]["privacy"] = PUBLIC.copy()
++    with store._connect() as db, pytest.raises(agents.AgentError, match="predates inherited"):
++        settings.require_inherited_privacy(db, child, snapshot)
++
++
++@pytest.mark.parametrize("privacy", MODES)
++def test_legacy_double_reviewed_fork_protects_summary_and_frozen_work(store, monkeypatch, privacy):
++    origin, pin = private_history(store, privacy)
++    # Reproduce both old reviewed-fork calls through the normal APIs. The old
++    # implementation relied only on the raw settings inheritance trigger.
++    with monkeypatch.context() as old:
++        old.setattr(settings, "copy_parent_settings", lambda *_: None)
++        old.setattr(settings, "inherited_privacy", lambda *_: PUBLIC.copy())
++        first, _ = reviewed(store, origin, [pin], "old_first_reviewed_fork")
++        second, _ = reviewed(store, first["session_id"], [], "old_second_reviewed_fork")
++        child = second["session_id"]
++        turn = store.start_turn(child)
++        turn_context.capture(store, turn, [], [Message("system", "Legacy summary context")])
++        store.finish_turn(turn, "complete")
++        queued = store.append_message(child, "user", "Queued from old summary-only child")
++        request = "old_summary_request_001"
++        submissions.reserve(store, request, child, "Legacy saved input", {})
++    with store._connect() as db:
++        assert (
++            db.execute(
++                "SELECT COUNT(*) FROM context_inherited_messages WHERE session_id=?", (child,)
++            ).fetchone()[0]
++            == 0
++        )
++    before = {
++        (table, key, value): raw(store, table, key, value)
++        for table, key, value in (
++            ("session_settings", "session_id", child),
++            ("turn_settings", "turn_id", turn),
++            ("turn_context_inputs", "turn_id", turn),
++            ("submission_settings", "request_id", request),
++            ("turn_submissions", "request_id", request),
++            ("message_privacy", "message_id", queued["id"]),
++        )
++    }
++    assert json.loads(before[("session_settings", "session_id", child)][0][2])["privacy"] == PUBLIC
++    assert source(store, child) == {**privacy, "incognito": True}
++    assert settings.execution(store, child)["privacy"] == privacy
++    for action in (
++        lambda: settings.execution(store, child, turn),
++        lambda: settings.execution(store, child, request_id=request),
++        lambda: turn_context.replay(store, turn),
++        lambda: submissions.bind(store, request, fork_summary="Unsafe next descendant"),
++        lambda: Memory(store, NeverRemote()).prepare(turn, "query"),
++    ):
++        with pytest.raises(agents.AgentError, match="predates inherited"):
++            action()
++    if privacy["memoryDisabled"]:
++        with pytest.raises(ValueError, match="exclude"):
++            memory_store.pin_destination(store, queued["id"], "default")
++    else:
++        assert memory_store.pin_destination(store, queued["id"], "default") == "default"
++    assert len(store.list_sessions()) == 3
++    assert store.get_session(child)["status"] == "open"
++    for (table, key, value), content in before.items():
++        assert raw(store, table, key, value) == content
++
++
++def test_ordinary_ancestry_does_not_inherit_own_history_or_later_policy_changes(store):
++    parent, _ = private_history(store, MODES[2])
++    child = store.create_session(parent_id=parent, summary="Public owner-reviewed summary")
++    grandchild = store.create_session(parent_id=child, summary="Another public summary")
++    change(store, parent, MODES[2])
++    change(store, child, MODES[0])
++    assert settings.execution(store, grandchild)["privacy"] == PUBLIC
++    assert source(store, grandchild) == {**PUBLIC, "incognito": False}
++    change(store, grandchild, MODES[2])
++    change(store, grandchild, PUBLIC)
++    assert settings.execution(store, grandchild)["privacy"] == PUBLIC
++
++
++@pytest.mark.parametrize("fault", ["missing_parent", "cycle", "depth"])
++def test_invalid_lineage_is_bounded_and_never_guesses_public(store, fault):
++    parent = store.create_session()
++    child = store.create_session(parent_id=parent)
++    with store._connect() as db:
++        if fault == "missing_parent":
++            db.execute("PRAGMA foreign_keys=OFF")
++            db.execute("UPDATE sessions SET parent_id='missing' WHERE id=?", (parent,))
++        elif fault == "cycle":
++            db.execute("UPDATE sessions SET parent_id=? WHERE id=?", (child, parent))
++        else:
++            for index in range(settings.MAX_PRIVACY_LINEAGE - 2):
++                next_id = f"ses_lineage_{index}"
++                db.execute(
++                    "INSERT INTO sessions(id,parent_id,created_at) VALUES(?,?,0)", (next_id, child)
++                )
++                child = next_id
++            assert settings.inherited_privacy(db, child) == PUBLIC
++            db.execute(
++                "INSERT INTO sessions(id,parent_id,created_at) VALUES('ses_too_deep',?,0)", (child,)
++            )
++            child = "ses_too_deep"
++        statements = []
++        db.set_trace_callback(statements.append)
++        with pytest.raises(agents.AgentError) as error:
++            settings.inherited_privacy(db, child)
++        assert error.value.detail["code"] == "inherited_source_unavailable"
++        assert (
++            len([sql for sql in statements if sql.startswith("SELECT ancestor")])
++            <= settings.MAX_PRIVACY_LINEAGE
++        )
++        assert db.in_transaction is False
++    assert source(store, child) is None
++    with pytest.raises(agents.AgentError):
++        store.start_turn(child)
++    assert store.turns(child) == []
++
++
++def test_lineage_read_uses_one_snapshot_and_leaves_no_transaction_or_data_changes(store):
++    origin, pin, parent = legacy_child(store, MODES[0])
++    child = store.create_session(parent_id=parent, summary="Derived summary")
++    changed = False
++    with store._connect() as db:
++        before = db.total_changes
++
++        def concurrent_forget(sql):
++            nonlocal changed
++            if (
++                not changed
++                and sql.startswith("SELECT ancestor")
++                and f"ancestor.id='{parent}'" in sql
++            ):
++                changed = True
++                break_source(store, origin, pin, "ledger")
++
++        db.set_trace_callback(concurrent_forget)
++        assert settings.inherited_privacy(db, child) == MODES[0]
++        assert changed is True
++        assert db.in_transaction is False and db.total_changes == before
++        db.set_trace_callback(None)
++        with pytest.raises(agents.AgentError, match="unavailable"):
++            settings.inherited_privacy(db, child)
++        assert db.in_transaction is False and db.total_changes == before
++
++
++@pytest.mark.parametrize(
++    "kind", ["store", "reviewed", "automatic", "message", "call", "team_start", "team_step"]
++)
++def test_creation_at_lineage_limit_refuses_atomically_even_with_inherited_raw_settings(store, kind):
++    from pi import calls, message_forks, team_execution
++
++    parent = store.create_session(privacy=PUBLIC)
++    with store._connect() as db:
++        for index in range(settings.MAX_PRIVACY_LINEAGE - (2 if kind == "team_step" else 1)):
++            child = f"ses_creation_depth_{index}"
++            db.execute(
++                "INSERT INTO sessions(id,parent_id,created_at) VALUES(?,?,0)", (child, parent)
++            )
++            parent = child
++    assert settings.execution(store, parent)["privacy"] == PUBLIC
++    assert raw(store, "session_settings", "session_id", parent)
++    request = "max_depth_auto_request_001"
++    before = None
++    if kind == "automatic":
++        submissions.reserve(store, request, parent, "Retained pending text", {})
++        before = raw(store, "turn_submissions", "request_id", request)
++    if kind == "message":
++        boundary = store.append_message(parent, "user", "Exact branch boundary")
++    if kind.startswith("team"):
++        from test_team_execution import setup, start
++
++        team, _ = setup(store)
++        if kind == "team_step":
++            run = start(store, team, parent)
++    with store._connect() as db:
++        counts = {
++            table: db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
++            for table in (
++                "sessions",
++                "messages",
++                "calls",
++                "call_events",
++                "team_runs",
++                "team_steps",
++                "tasks",
++                "message_fork_requests",
++            )
++        }
++    with pytest.raises(agents.AgentError) as error:
++        if kind == "store":
++            store.create_session(parent_id=parent, summary="Too deep")
++        elif kind == "reviewed":
++            reviewed(store, parent)
++        elif kind == "automatic":
++            submissions.bind(store, request, fork_summary="Too deep")
++        elif kind == "message":
++            message_forks.create(
++                store,
++                parent,
++                boundary["id"],
++                message_forks.Fork(
++                    request_id="too_deep_message_fork",
++                    expected_settings_revision=settings.load(store, parent)["revision"],
++                    expected_context_revision=0,
++                ),
++            )
++        elif kind == "call":
++            calls.start(store, calls.Start(request_id="too_deep_call_start", conversationId=parent))
++        elif kind == "team_start":
++            start(store, team, parent)
++        else:
++            team_execution.execute(
++                store,
++                Loop(store, Router(local_provider=NeverProvider(), local_model="test")),
++                run["id"],
++                team_execution.Step(
++                    request_id="too_deep_team_step",
++                    expected_revision=run["revision"],
++                    roleId="first",
++                ),
++            )
++    assert error.value.detail["code"] == "inherited_source_unavailable"
++    assert store.get_session(parent)["status"] == "open"
++    assert store.turns(parent) == []
++    with store._connect() as db:
++        for table, count in counts.items():
++            assert db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count
++        assert db.execute("SELECT COUNT(*) FROM context_fork_requests").fetchone()[0] == 0
++    if before is not None:
++        assert raw(store, "turn_submissions", "request_id", request) == before
++    if kind == "team_step":
++        assert team_execution.get(store, run["id"]) == run
 diff --git a/tests/test_route_receipts.py b/tests/test_route_receipts.py
 new file mode 100644
 index 0000000..73d3b6f
@@ -10936,6 +11917,43 @@ index 0000000..632f1fc
 +            db.execute("SELECT outcome FROM tasks WHERE id=?", (task["id"],)).fetchone()[0]
 +            == "Retained task outcome"
 +        )
+diff --git a/tests/test_team_execution.py b/tests/test_team_execution.py
+index 8631664..effabb9 100644
+--- a/tests/test_team_execution.py
++++ b/tests/test_team_execution.py
+@@ -385,15 +385,29 @@ def test_real_tools_remain_per_role_and_every_reply_is_metered(store):
+         handoffId="review",
+         conditionReviewed=True,
+     )
+-    second = teams.execute(store, runtime, run["id"], second_body)
++    with pytest.raises(TurnFailed, match="model requested an unavailable tool"):
++        teams.execute(store, runtime, run["id"], second_body)
++    second = teams.get(store, run["id"])
++    assert second["state"] == "blocked" and second["steps"][-1]["state"] == "blocked"
++    refused = store.turns(second["steps"][-1]["session_id"])
++    assert len(refused) == 1 and refused[0]["status"] == "failed"
++    assert refused[0]["acted"] == 0
++    assert (
++        refused[0]["detail"]
++        == "The model requested an unavailable tool. This request was not executed."
++    )
+     assert gate.invoked == ["read"] and len(second["modelCalls"]) == 3
+     assert all("TOOL OBSERVATION MUST NOT TRANSFER" not in m.content for m in provider.calls[2][1])
+     teams.execute(store, runtime, run["id"], first_body)
+     assert len(gate.invoked) == 1 and len(provider.calls) == 3
++    with pytest.raises(agents.AgentError, match="Blocked work cannot be marked completed"):
++        teams.finish(
++            store, run["id"], teams.Finish(expected_revision=second["revision"], state="completed")
++        )
+     finished = teams.finish(
+-        store, run["id"], teams.Finish(expected_revision=second["revision"], state="completed")
++        store, run["id"], teams.Finish(expected_revision=second["revision"], state="cancelled")
+     )
+-    assert teams.reconcile(store, run["id"])["state"] == "completed"
++    assert teams.reconcile(store, run["id"])["state"] == "cancelled"
+     with pytest.raises(agents.AgentError, match="Resolve"):
+         execute(store, provider, finished, request_id="after_finish_request_001")
+ 
 diff --git a/tests/test_thinking_deadline.py b/tests/test_thinking_deadline.py
 new file mode 100644
 index 0000000..ca1c794

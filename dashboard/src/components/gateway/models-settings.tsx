@@ -112,7 +112,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
         <SelectTrigger id="thinking-model" className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent><SelectItem value="__off__">Off</SelectItem>{enabled.filter(model => model.providerId !== 'decisions').map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">Uses the selected provider’s allowance independently of replies. New messages supersede unfinished findings.</p>
+      <p className="text-xs text-muted-foreground">Uses the selected provider’s allowance independently of replies. Another Think request replaces unfinished findings.</p>
     </WorkspaceSection>
     <BrowserSessions client={client} />
   </div></GatewayPageFrame>

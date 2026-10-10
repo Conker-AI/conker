@@ -111,6 +111,10 @@ or make a hosted model local. Use the explicit forget action for retained conten
 Private chats remain available to their owner in Chats while source policy limits
 their reuse elsewhere.
 
+A fork carrying restricted context retains that restriction through linked
+summaries. Removing an exact pin does not make a summary independent of it.
+Start a new independent chat when you need a conversation without that context.
+
 ## Where other work lives
 
 | Destination | Use it for |
