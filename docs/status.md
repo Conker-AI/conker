@@ -13,6 +13,27 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Enforce forgetting at the shared source boundary (10 October)
+
+The shared source-privacy policy now checks the authoritative forgetting ledger
+before projecting session settings. An inconsistent legacy status cannot restore
+a forgotten origin. This fixes verified retained-origin leaks in global activity,
+continuity/notifications and project-source resolution. Existing public, private,
+archived and missing-source behavior stays intact; no schema or authority changes
+are involved. Tasks and copied artifacts already had their own ledger checks.
+
+All 139 distinct affected cases passed, including 13 new shared-caller regressions.
+Independent review reran those 13 cases and cleared the change; lint and formatting
+checks passed. Fresh and repeated installation reproduce 94 reviewed Pi files.
+The local backend rollout retained database backups, kept all 169 dashboard assets
+unchanged and passed Pi/Gateway health checks. Read-only search acceptance still
+passes without changing model or search settings.
+
+The next verified privacy defect is separate: reviewed forks can carry an immutable
+private pin while inheriting a parent's later public settings. New-fork inheritance,
+legacy execution snapshots and queued ingestion need a coordinated repair; that
+work remains isolated and is not included in this ledger milestone.
+
 ### Keep Unicode and long literal search matches visible (10 October)
 
 Search previews now translate case-folded match positions back to the original
