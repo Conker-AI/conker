@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, RefreshCw, Square, TerminalSquare } from 'lucide-react'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
@@ -12,7 +12,7 @@ import { useNativeSessions } from './use-native-sessions'
 
 const states = { working: 'Working', blocked: 'Needs attention', done: 'Done', failed: 'Failed', stopped: 'Stopped', unknown: 'State unknown' }
 const waiting = { permission_prompt: 'Native permission prompt', input_needed: 'Native input needed', sandbox_request: 'Native sandbox request', worker_request: 'Native worker request', dialog_open: 'Native dialog open' }
-export function GatewayNativeSessionsWorkspace({ client, authStore }: { client: NativeSessionsClient; authStore: GatewayAuthStore }) {
+export function GatewayNativeSessionsWorkspace({ client, authStore, providerControl }: { client: NativeSessionsClient; authStore: GatewayAuthStore; providerControl?: ReactNode }) {
   const state = useNativeSessions(client, authStore), { controller, selected } = state
   const [search, setSearch] = useState({ controller, scope: state.scope, text: '' }), [copied, setCopied] = useState<NativeSession | null>(null)
   const [review, setReview] = useState<{ controller: typeof controller; scope: number; target: NativeSession } | null>(null)
@@ -50,11 +50,11 @@ export function GatewayNativeSessionsWorkspace({ client, authStore }: { client: 
     })
   }
   return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Native sessions" description="Claude Code background sessions owned by Conker. These are separate from your chats and text-only model roles." density="compact" actions={<><WorkspaceAction asChild><Link to="/system?tab=terminal"><TerminalSquare />Terminal</Link></WorkspaceAction><WorkspaceAction aria-disabled={!!state.pending || !state.active} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending && state.active) void controller.list() }}><RefreshCw />{state.pending === 'list' ? 'Checking…' : 'Refresh sessions'}</WorkspaceAction></>} />
+    <PageHeader actionsOnly title="Native sessions" description="Claude Code background sessions owned by Conker. These are separate from your chats and text-only model roles." density="compact" actions={<>{providerControl}<WorkspaceAction asChild><Link to="/system?tab=terminal"><TerminalSquare />Terminal</Link></WorkspaceAction><WorkspaceAction aria-disabled={!!state.pending || !state.active} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending && state.active) void controller.list() }}><RefreshCw />{state.pending === 'list' ? 'Checking…' : 'Refresh sessions'}</WorkspaceAction></>} />
     <p className="text-sm leading-6 text-muted-foreground">Conker-owned Claude Code background sessions. These are separate from your chats and text-only model roles.</p>
     {!state.active && <p role="status" className="text-sm text-muted-foreground">Sign in to inspect native sessions.</p>}
     {state.listError && <p role="status" className="text-sm text-muted-foreground">Native sessions could not be checked. Refresh sessions to try again. Any retained rows are from the last successful check.</p>}
-    {state.rows && <p className="text-xs leading-5 text-muted-foreground">Last checked native state. Refresh to observe changes.{state.rows.truncated ? ' The list is limited to 100 background sessions.' : ''}{state.rows.omittedCount > 0 ? ` ${state.rows.omittedCount} native ${state.rows.omittedCount === 1 ? 'entry is' : 'entries are'} omitted; this list does not cover all native work.` : ''} Codex session discovery is not included.</p>}
+    {state.rows && <p className="text-xs leading-5 text-muted-foreground">Last checked native state. Refresh to observe changes.{state.rows.truncated ? ' The list is limited to 100 background sessions.' : ''}{state.rows.omittedCount > 0 ? ` ${state.rows.omittedCount} native ${state.rows.omittedCount === 1 ? 'entry is' : 'entries are'} omitted; this list does not cover all native work.` : ''}</p>}
     <CollectionPanel query={query} onQueryChange={setQuery} label="Search native Claude sessions" placeholder="Search native sessions…" count={visible.length} unit="sessions" emptyTitle={query ? 'No matching background sessions' : 'No Claude background sessions found'} emptyDescription={query ? 'Try a session name, identity or working directory.' : 'Only Conker-owned, isolated Claude background sessions appear here. Use the native terminal for interactive work.'} icon={<TerminalSquare />} emptyContent={!state.rows ? state.pending === 'list' ? <CollectionLoading label="Checking native sessions…" /> : <p className="py-8 text-sm text-muted-foreground">{state.active ? 'No session list is available. Refresh sessions to check the host.' : 'Native session details are hidden while signed out.'}</p> : undefined}>
       <CollectionSection title="Claude background sessions"><ul>{visible.map(row => <li key={row.id}><RecordItem title={row.name || row.id} description={<span className="wrap-anywhere font-mono">{row.cwd}</span>} onOpen={() => { controller.select(row) }} selected={selected?.id === row.id} leading={<TerminalSquare className="size-4" />} meta={<><StatusBadge tone={row.state === 'blocked' || row.state === 'unknown' ? 'warning' : 'neutral'}>{states[row.state]}</StatusBadge><span className="wrap-anywhere">{row.id}</span><span>{new Date(row.startedAt).toLocaleString()}</span></>} /></li>)}</ul></CollectionSection>
     </CollectionPanel>

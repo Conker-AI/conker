@@ -263,11 +263,27 @@ def request(
         raise ValueError("Use a service-relative path without query or fragment.")
     suffix = ""
     if query is not None:
-        if service != "pi" or path != "/sessions/history" or body is not None:
-            raise ValueError(
-                "Structured query options are only for reading chat history."
+        if service == "pi" and path == "/sessions/history" and body is None:
+            encoded = urlencode(history_query(query))
+        elif service == "providers" and path == "/codex/sessions" and body is None:
+            from native_codex_sessions import list_query
+
+            values = list_query(query)
+            encoded = urlencode(
+                {
+                    "limit": values["limit"],
+                    "archived": "true" if values["archived"] else "false",
+                    **(
+                        {"cursor": values["cursor"]}
+                        if values["cursor"] is not None
+                        else {}
+                    ),
+                }
             )
-        encoded = urlencode(history_query(query))
+        else:
+            raise ValueError(
+                "Structured query options are only for reading chat or Codex history."
+            )
         suffix = "?" + encoded if encoded else ""
     if service == "providers":
         origin, headers = (
@@ -490,11 +506,23 @@ def main():
     native.add_argument("arguments", nargs=argparse.REMAINDER)
     native_sessions = commands.add_parser(
         "native-sessions",
-        help="Read or stop Claude background sessions in Conker's isolated native store",
+        help="Read isolated Codex history or inspect and stop Claude background sessions",
     )
-    native_sessions.add_argument("provider", choices=["claude"])
+    native_sessions.add_argument("provider", choices=["claude", "codex"])
     native_operations = native_sessions.add_subparsers(dest="operation", required=True)
-    native_operations.add_parser("list")
+    native_list = native_operations.add_parser("list")
+    native_list.add_argument(
+        "--limit", type=int, help="Codex page size, 1 to 50 (default 25)"
+    )
+    native_list.add_argument(
+        "--cursor", help="Next cursor from the same Codex history scope and page size"
+    )
+    native_list.add_argument(
+        "--archived",
+        action="store_true",
+        default=None,
+        help="Read archived Codex history",
+    )
     for operation in ("status", "output", "stop"):
         operation_parser = native_operations.add_parser(operation)
         operation_parser.add_argument("id")
@@ -508,7 +536,31 @@ def main():
     api.add_argument("path")
     api.add_argument("--body", type=Path)
     args = parser.parse_args()
+    native_query = None
     if args.command == "native-sessions":
+        if args.provider == "codex":
+            from native_codex_sessions import list_query, thread_id
+
+            if args.operation not in {"list", "status"}:
+                raise ValueError(
+                    "Codex saved history supports only list and status reads."
+                )
+            if args.operation == "list":
+                native_query = list_query(
+                    {
+                        key: getattr(args, key)
+                        for key in ("limit", "cursor", "archived")
+                        if getattr(args, key) is not None
+                    }
+                )
+            else:
+                thread_id(args.id)
+        elif args.operation == "list" and any(
+            getattr(args, key) is not None for key in ("limit", "cursor", "archived")
+        ):
+            raise ValueError(
+                "Pagination and archive options apply only to Codex saved history."
+            )
         if args.operation != "list":
             identity(
                 args.id,
@@ -588,16 +640,34 @@ def main():
         )
         return subprocess.call([native[args.harness], *args.arguments], env=env)
     if args.command == "native-sessions":
-        path, body = "/claude/sessions", None
+        path, body = f"/{args.provider}/sessions", None
         if args.operation != "list":
             path += "/" + args.id
         if args.operation in {"output", "stop"}:
             path += "/" + args.operation
         if args.operation == "stop":
             body = {"expectedIdentity": args.expected_identity}
-        value = request(
-            config, "providers", path, body, timeout=30, maximum_bytes=1048576
-        )
+        try:
+            value = request(
+                config,
+                "providers",
+                path,
+                body,
+                query=native_query,
+                timeout=30,
+                maximum_bytes=1048576,
+            )
+        except HTTPError as exc:
+            if args.provider != "codex":
+                raise
+            exc.close()
+            message = (
+                "Codex history options or cursor were rejected. Start again without --cursor; "
+                "keep the same archive scope and page size for later pages."
+                if exc.code == 422 and args.operation == "list"
+                else f"Codex saved metadata could not be read (HTTP {exc.code}); try again later."
+            )
+            raise ValueError(message) from None
     elif args.command == "sessions":
         query = history_query(
             {

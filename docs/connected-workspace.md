@@ -195,8 +195,10 @@ deployment is not inherited here.
 
 The optional `enhance` profile now installs Laya, native subscription sign-in,
 independent background thinking, and a Windows owner terminal. The provider
-bridge also exposes [Claude background sessions](reference/native-sessions.md)
-for owner inspection and exact-session Stop through CLI and UI. See
+bridge also exposes [native sessions](reference/native-sessions.md) through CLI
+and owner UI: Codex saved-thread metadata and Claude background-session
+inspection and exact-session Stop. Codex saved history does not establish live
+activity in other native processes. See
 [harnesses and model roles](harnesses-and-models-2026-10-09.md) for setup, CLI
 commands, current validation and remaining parity work.
 

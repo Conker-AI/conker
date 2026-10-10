@@ -1,8 +1,8 @@
 diff --git a/gateway/api.py b/gateway/api.py
-index 8569b84..e917cf4 100644
+index 8569b84..5d993b2 100644
 --- a/gateway/api.py
 +++ b/gateway/api.py
-@@ -619,6 +619,51 @@ def create_app(
+@@ -619,6 +619,78 @@ def create_app(
          except ProviderControlError as exc:
              raise AuthError(str(exc), 503) from None
  
@@ -51,9 +51,179 @@ index 8569b84..e917cf4 100644
 +    async def native_session_stop(identity: str, request: Request):
 +        return await native_session_request(request, "stop", identity)
 +
++    async def codex_session_request(request: Request, action: str, identity: str | None = None):
++        from starlette.concurrency import run_in_threadpool
++
++        from . import codex_sessions
++        from .native_sessions import NativeSessionsError
++
++        session(request)
++        try:
++            result = await run_in_threadpool(
++                codex_sessions.request,
++                app.state.provider_transport,
++                action,
++                identity,
++                request.scope["query_string"],
++            )
++        except NativeSessionsError as exc:
++            raise AuthError(str(exc), exc.status, code=exc.code) from None
++        return JSONResponse(result)
++
++    @app.get("/api/host/codex/sessions")
++    async def codex_session_list(request: Request):
++        return await codex_session_request(request, "list")
++
++    @app.get("/api/host/codex/sessions/{identity}")
++    async def codex_session_status(identity: str, request: Request):
++        return await codex_session_request(request, "status", identity)
++
      def terminal_access(request):
          owner = session(request)
          if app.state.terminals is None:
+diff --git a/gateway/codex_sessions.py b/gateway/codex_sessions.py
+new file mode 100644
+index 0000000..92d4f7c
+--- /dev/null
++++ b/gateway/codex_sessions.py
+@@ -0,0 +1,137 @@
++"""Owner-only metadata projection of Codex's isolated saved thread history."""
++
++import re
++import unicodedata
++from typing import Annotated, Literal
++
++import httpx
++from pydantic import Field, field_validator, model_validator
++
++from pi.native_codex_query import CURSOR, THREAD_ID, canonical_query, parse_query
++
++from .native_sessions import NativeSessionsError, _json
++from .provider_control import Strict
++
++TIMEOUT = 30
++CAPS = {"list": 2 * 1024 * 1024, "status": 65536}
++ERROR_CODES = {
++    "invalid_native_session_request": 422,
++    "native_session_not_found": 404,
++    "native_sessions_unavailable": 503,
++}
++ThreadId = Annotated[str, Field(pattern=rf"^{THREAD_ID}$", min_length=36, max_length=36)]
++Cursor = Annotated[str, Field(pattern=rf"^{CURSOR}$", max_length=8192)]
++SafeInt = Annotated[int, Field(ge=0, le=9007199254740991)]
++
++
++class Thread(Strict):
++    id: ThreadId
++    name: str | None = Field(max_length=300)
++    preview: str = Field(max_length=500)
++    previewTruncated: bool
++    cwd: str = Field(min_length=1, max_length=4096)
++    createdAt: SafeInt
++    updatedAt: SafeInt
++    modelProvider: str = Field(min_length=1, max_length=200)
++    source: Literal["cli", "vscode", "exec", "appServer", "subAgent", "custom", "unknown"]
++
++    @field_validator("name", "preview", "cwd", "modelProvider")
++    @classmethod
++    def inert_text(cls, value):
++        if value is not None and any(
++            unicodedata.category(character) in {"Cc", "Cf", "Cs"} for character in value
++        ):
++            raise ValueError("Unsafe native metadata.")
++        return value
++
++
++class Evidence(Strict):
++    schemaVersion: Literal[1]
++    provider: Literal["codex"]
++    scope: Literal["saved_threads"]
++    runtimeVisibility: Literal["observer_only"]
++
++    @model_validator(mode="before")
++    @classmethod
++    def exact_version(cls, value):
++        if not isinstance(value, dict) or type(value.get("schemaVersion")) is not int:
++            raise ValueError("Invalid native metadata version.")
++        return value
++
++
++class Catalogue(Evidence):
++    archived: bool
++    results: list[Thread] = Field(max_length=50)
++    nextCursor: Cursor | None
++
++    @model_validator(mode="after")
++    def distinct_threads(self):
++        if len({row.id for row in self.results}) != len(self.results):
++            raise ValueError("Duplicate native thread.")
++        return self
++
++
++class Status(Evidence):
++    session: Thread
++
++
++def request(transport, action, identity=None, query=b""):
++    try:
++        if action == "list" and identity is None:
++            selected = parse_query(query)
++            query = canonical_query(query)
++        elif (
++            action == "status"
++            and isinstance(identity, str)
++            and re.fullmatch(THREAD_ID, identity)
++            and query == b""
++        ):
++            selected = None
++        else:
++            raise ValueError()
++    except (ValueError, UnicodeError):
++        raise NativeSessionsError("invalid_native_session_request") from None
++    if transport is None:
++        raise NativeSessionsError()
++    path = "/codex/sessions" + (f"/{identity}" if identity else "")
++    url = httpx.URL("http://conker-host" + path).copy_with(query=query or None)
++    try:
++        with (
++            httpx.Client(
++                transport=transport, timeout=TIMEOUT, trust_env=False, follow_redirects=False
++            ) as client,
++            client.stream("GET", url) as response,
++        ):
++            if 300 <= response.status_code < 400:
++                raise ValueError()
++            raw = bytearray()
++            cap = CAPS[action] if response.status_code == 200 else 4096
++            for chunk in response.iter_bytes(chunk_size=8192):
++                if len(raw) + len(chunk) > cap:
++                    raise ValueError()
++                raw.extend(chunk)
++            value = _json(raw)
++            if response.status_code != 200:
++                code = value.get("error") if isinstance(value, dict) else None
++                if (
++                    isinstance(value, dict)
++                    and set(value) == {"error"}
++                    and code in ERROR_CODES
++                    and ERROR_CODES[code] == response.status_code
++                ):
++                    raise NativeSessionsError(code)
++                raise ValueError()
++            result = (Catalogue if action == "list" else Status).model_validate(value)
++            if action == "list":
++                if (
++                    result.archived != selected["archived"]
++                    or len(result.results) > selected["limit"]
++                ):
++                    raise ValueError()
++                if result.nextCursor is not None and result.nextCursor == selected.get("cursor"):
++                    raise ValueError()
++            elif result.session.id != identity:
++                raise ValueError()
++            return result.model_dump()
++    except (httpx.HTTPError, ValueError, UnicodeError, RecursionError, TypeError):
++        raise NativeSessionsError() from None
 diff --git a/gateway/native_claude.py b/gateway/native_claude.py
 index 92cefef..02eb2b5 100644
 --- a/gateway/native_claude.py
@@ -3152,6 +3322,56 @@ index e7a92b5..0267896 100644
          except ProviderUnavailable:
              if guard is not None:
                  guard()
+diff --git a/pi/native_codex_query.py b/pi/native_codex_query.py
+new file mode 100644
+index 0000000..7e905ab
+--- /dev/null
++++ b/pi/native_codex_query.py
+@@ -0,0 +1,44 @@
++"""The exact, bounded read-only Codex history pagination contract."""
++
++import re
++from urllib.parse import parse_qsl, urlencode
++
++THREAD_ID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
++CURSOR = r"[A-Za-z0-9_-]{1,8192}"
++
++
++def parse_query(raw: bytes) -> dict:
++    # A browser may percent-encode each cursor byte once. Decode within this
++    # bound, then forward only the canonical <=8300-byte query to the host.
++    if not isinstance(raw, bytes) or len(raw) > 25000:
++        raise ValueError("Invalid native session pagination.")
++    text = raw.decode("ascii")
++    if re.search(r"%(?![0-9A-Fa-f]{2})", text):
++        raise ValueError("Invalid native session pagination.")
++    pairs = parse_qsl(
++        text, keep_blank_values=True, strict_parsing=True, errors="strict", max_num_fields=3
++    )
++    values = dict(pairs)
++    if len(pairs) != len(values) or set(values) - {"limit", "archived", "cursor"}:
++        raise ValueError("Invalid native session pagination.")
++    limit = values.get("limit", "25")
++    archived = values.get("archived", "false")
++    cursor = values.get("cursor")
++    if (
++        not re.fullmatch(r"[1-9][0-9]?", limit)
++        or not 1 <= int(limit) <= 50
++        or archived not in {"true", "false"}
++        or (cursor is not None and not re.fullmatch(CURSOR, cursor))
++    ):
++        raise ValueError("Invalid native session pagination.")
++    return {
++        "limit": int(limit),
++        "archived": archived == "true",
++        **({"cursor": cursor} if cursor else {}),
++    }
++
++
++def canonical_query(raw: bytes) -> bytes:
++    value = parse_query(raw)
++    value["archived"] = "true" if value["archived"] else "false"
++    return urlencode(value).encode("ascii")
 diff --git a/pi/openrouter.py b/pi/openrouter.py
 index 8fb810a..bae5ca5 100644
 --- a/pi/openrouter.py
@@ -3170,6 +3390,40 @@ index 8fb810a..bae5ca5 100644
 +        # Catalogue availability (possibly cached) is not an authentication,
 +        # entitlement, or successful-inference receipt.
 +        return {"status": "unverified"}
+diff --git a/pi/private_transport.py b/pi/private_transport.py
+index b0b31b0..7e0c7ac 100644
+--- a/pi/private_transport.py
++++ b/pi/private_transport.py
+@@ -24,12 +24,27 @@ class PrivateTransport(httpx.BaseTransport):
+         self.transport = transport or httpx.HTTPTransport()
+ 
+     def handle_request(self, request):
+-        if request.url.host not in {"conker-host", "conker-chatgpt"} or request.url.query:
++        if request.url.host not in {"conker-host", "conker-chatgpt"}:
+             raise ValueError("Unsupported private provider destination.")
++        query = b""
++        if request.url.query:
++            from .native_codex_query import canonical_query
++
++            if (
++                request.method != "GET"
++                or request.url.scheme != "http"
++                or request.url.host != "conker-host"
++                or request.url.userinfo
++                or request.url.fragment
++                or self.prefix
++                or request.url.raw_path.split(b"?", 1)[0] != b"/codex/sessions"
++            ):
++                raise ValueError("Unsupported private provider destination.")
++            query = canonical_query(request.url.query)
+         headers = dict(request.headers)
+         headers.pop("host", None)
+         headers["authorization"] = "Bearer " + self.key
+-        target = self.url.copy_with(path=self.prefix + request.url.path)
++        target = self.url.copy_with(path=self.prefix + request.url.path, query=query or None)
+         headers["host"] = target.netloc.decode("ascii")
+         return self.transport.handle_request(
+             httpx.Request(
 diff --git a/pi/providers.py b/pi/providers.py
 index 34d75d1..12fa0a7 100644
 --- a/pi/providers.py
@@ -6744,6 +6998,399 @@ index cab427b..1114547 100644
          assert store.messages(chat)[0]["content"] == SECRET
          assert store.messages(root)[0]["content"] == SECRET
          assert store.get_session(root)["status"] == "open"
+diff --git a/tests/test_gateway_codex_sessions.py b/tests/test_gateway_codex_sessions.py
+new file mode 100644
+index 0000000..f3856ee
+--- /dev/null
++++ b/tests/test_gateway_codex_sessions.py
+@@ -0,0 +1,387 @@
++"""Codex discovery carries bounded stored metadata, never native execution authority."""
++
++import hashlib
++import json
++import sqlite3
++from contextlib import closing
++
++import httpx
++import pytest
++from fastapi.testclient import TestClient
++
++from gateway import codex_sessions as native
++from gateway import store as auth_module
++from gateway.api import Config, create_app
++from gateway.native_sessions import NativeSessionsError
++from gateway.store import AuthStore
++from pi.native_codex_query import canonical_query, parse_query
++from pi.private_transport import PrivateTransport
++
++ORIGIN = "https://localhost:8050"
++PREFIX = "/api/host/codex/sessions"
++ID = "01234567-89ab-cdef-0123-456789abcdef"
++OTHER = "11234567-89ab-cdef-0123-456789abcdef"
++PASSWORD = "Synthetic Codex discovery owner password"
++
++
++def row(**changes):
++    return {
++        "id": ID,
++        "name": "Synthetic private title",
++        "preview": "Synthetic preview, never a transcript",
++        "previewTruncated": False,
++        "cwd": "C:/synthetic/project",
++        "createdAt": 1700000000,
++        "updatedAt": 1700000001,
++        "modelProvider": "openai",
++        "source": "cli",
++        **changes,
++    }
++
++
++def payload(action="list", **changes):
++    return {
++        "schemaVersion": 1,
++        "provider": "codex",
++        "scope": "saved_threads",
++        "runtimeVisibility": "observer_only",
++        **(
++            {"archived": False, "results": [row()], "nextCursor": None}
++            if action == "list"
++            else {"session": row()}
++        ),
++        **changes,
++    }
++
++
++@pytest.fixture
++def boundary(tmp_path, monkeypatch):
++    monkeypatch.setattr(
++        auth_module,
++        "password_hash",
++        lambda value, salt: hashlib.sha256(salt + value.encode()).hexdigest(),
++    )
++    auth = AuthStore(tmp_path / "auth.db")
++    auth.set_password(PASSWORD)
++    seen, response = [], [None]
++
++    def host(request):
++        seen.append(request)
++        if isinstance(response[0], Exception):
++            raise response[0]
++        if response[0] is not None:
++            return response[0]
++        return httpx.Response(
++            200,
++            json=(
++                payload(archived=request.url.params.get("archived") == "true")
++                if request.url.path == "/codex/sessions"
++                else payload("status")
++            ),
++        )
++
++    transport = PrivateTransport(
++        "http://127.0.0.1:18570", "private-control-key-" * 3, transport=httpx.MockTransport(host)
++    )
++    app = create_app(
++        Config(ORIGIN, str(auth.path), "http://pi", "r" * 32),
++        store=auth,
++        provider_transport=transport,
++    )
++    with TestClient(app, base_url=ORIGIN) as client:
++        yield client, seen, response, auth
++
++
++def login(client):
++    csrf = client.get("/auth/session").json()["csrf_token"]
++    result = client.post(
++        "/auth/login",
++        json={"password": PASSWORD},
++        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf},
++    )
++    assert result.status_code == 200
++
++
++def test_owner_reads_forward_only_bounded_metadata_query_and_never_persist_it(boundary):
++    client, seen, _, auth = boundary
++    assert client.get(PREFIX).status_code == 401
++    assert client.get(PREFIX, headers={"X-Pi-Gateway-Key": "r" * 32}).status_code == 401
++    assert (
++        client.get(PREFIX, headers={"Authorization": "Bearer " + "inference" * 5}).status_code
++        == 401
++    )
++    assert not seen
++    login(client)
++    for suffix, expected in [
++        ("", payload()),
++        ("?limit=50&archived=true&cursor=opaque_CURSOR-1", payload(archived=True)),
++        (f"/{ID}", payload("status")),
++    ]:
++        result = client.get(PREFIX + suffix)
++        assert result.status_code == 200 and result.json() == expected
++        assert result.headers["cache-control"] == "no-store"
++    assert [str(request.url) for request in seen] == [
++        "http://127.0.0.1:18570/codex/sessions?limit=25&archived=false",
++        "http://127.0.0.1:18570/codex/sessions?limit=50&archived=true&cursor=opaque_CURSOR-1",
++        f"http://127.0.0.1:18570/codex/sessions/{ID}",
++    ]
++    for request in seen:
++        assert request.method == "GET" and not request.content
++        assert request.headers["authorization"] == "Bearer " + "private-control-key-" * 3
++        assert request.headers["host"] == "127.0.0.1:18570"
++        assert set(request.extensions["timeout"].values()) == {30}
++        assert all(
++            name not in request.headers
++            for name in ["cookie", "x-conker-verification", "x-csrf-token", "x-pi-gateway-key"]
++        )
++    with closing(sqlite3.connect(auth.path)) as db:
++        assert "Synthetic private title" not in "\n".join(db.iterdump())
++
++
++@pytest.mark.parametrize(
++    "query",
++    [
++        "limit=0",
++        "limit=01",
++        "limit=51",
++        "limit=true",
++        "limit=1.0",
++        "limit=",
++        "limit=1&limit=2",
++        "archived=",
++        "archived=1",
++        "archived=False",
++        "archived=true&archived=false",
++        "cursor=",
++        "cursor=a%3Db",
++        "cursor=a%0Ab",
++        "cursor=%FF",
++        "cursor=%xx",
++        "cursor=" + "a" * 8193,
++        "cursor=a&cursor=b",
++        "q=private",
++        "scope=all",
++        "limit=2&archived=false&cursor=a&unknown=x",
++        "limit",
++        "limit=2&&archived=false",
++    ],
++)
++def test_invalid_list_queries_are_refused_before_transport(boundary, query):
++    client, seen, _, _ = boundary
++    login(client)
++    result = client.get(PREFIX + "?" + query)
++    assert result.status_code == 422
++    assert result.json()["detail"]["code"] == "invalid_native_session_request"
++    assert not seen
++
++
++@pytest.mark.parametrize("identity", ["wrong", ID.upper(), ID + "\n", "../status"])
++def test_invalid_thread_id_has_no_host_read(identity):
++    seen = []
++    with pytest.raises(NativeSessionsError) as exc:
++        native.request(
++            httpx.MockTransport(lambda request: seen.append(request)), "status", identity
++        )
++    assert exc.value.status == 422 and not seen
++
++
++def test_no_detail_query_transcript_or_mutation_route(boundary):
++    client, seen, _, _ = boundary
++    login(client)
++    assert client.get(f"{PREFIX}/{ID}?includeTurns=true").status_code == 422
++    for suffix in ["", f"/{ID}", f"/{ID}/stop", f"/{ID}/resume", f"/{ID}/output"]:
++        assert client.post(PREFIX + suffix, json={}).status_code in {404, 405}
++    assert client.get(f"{PREFIX}/{ID}/output").status_code == 404
++    assert not seen
++
++
++@pytest.mark.parametrize(
++    "action,changes,query",
++    [
++        ("list", {"schemaVersion": True}, b""),
++        ("list", {"runtimeVisibility": "live"}, b""),
++        ("list", {"archived": 0}, b""),
++        ("list", {"archived": True}, b""),
++        ("list", {"results": [row(), row()]}, b""),
++        ("list", {"results": [row(), row(id=OTHER)]}, b"limit=1"),
++        ("list", {"nextCursor": "bad\n"}, b""),
++        ("list", {"nextCursor": "a" * 8193}, b""),
++        ("list", {"nextCursor": "same"}, b"cursor=same"),
++        ("status", {"session": row(id=OTHER)}, b""),
++        ("status", {"session": row(id=ID.upper())}, b""),
++        ("status", {"session": row(createdAt=True)}, b""),
++        ("status", {"session": row(updatedAt=9007199254740992)}, b""),
++        ("status", {"session": row(name="x" * 301)}, b""),
++        ("status", {"session": row(preview="x" * 501)}, b""),
++        ("status", {"session": row(previewTruncated=0)}, b""),
++        ("status", {"session": row(cwd="")}, b""),
++        ("status", {"session": row(modelProvider="x" * 201)}, b""),
++        ("status", {"session": row(source="other")}, b""),
++        ("status", {"session": row(name="x\x1by")}, b""),
++        ("status", {"session": row(preview="x\u200by")}, b""),
++        ("status", {"session": row(cwd="x\u202ey")}, b""),
++        ("status", {"session": row(preview="x\ud800y")}, b""),
++        ("status", {"session": row(turns=[{"text": "private transcript"}])}, b""),
++        ("status", {"archived": False}, b""),
++    ],
++)
++def test_invalid_host_dto_fails_closed(action, changes, query):
++    raw = json.dumps(payload(action, **changes)).encode()
++    with pytest.raises(NativeSessionsError) as exc:
++        native.request(
++            httpx.MockTransport(lambda _: httpx.Response(200, content=raw)),
++            action,
++            None if action == "list" else ID,
++            query,
++        )
++    assert exc.value.code == "native_sessions_unavailable"
++
++
++def test_exact_bounds_empty_history_and_missing_host_are_distinct():
++    assert parse_query(b"") == {"limit": 25, "archived": False}
++    assert (
++        canonical_query(b"cursor=A_%2D&archived=true&limit=50")
++        == b"limit=50&archived=true&cursor=A_-"
++    )
++    for value in [
++        payload(results=[]),
++        payload(nextCursor="a" * 8192),
++        payload("status", session=row(name=None, preview="😀" * 500, cwd="x" * 4096)),
++    ]:
++        action = "list" if "results" in value else "status"
++        assert (
++            native.request(
++                httpx.MockTransport(lambda _, value=value: httpx.Response(200, json=value)),
++                action,
++                None if action == "list" else ID,
++            )
++            == value
++        )
++    with pytest.raises(NativeSessionsError) as exc:
++        native.request(None, "list")
++    assert exc.value.status == 503
++
++
++def test_full_page_at_unicode_metadata_bounds_fits_wire_cap():
++    value = payload(
++        results=[
++            row(
++                id=f"{index:08x}-89ab-cdef-0123-456789abcdef",
++                name="😀" * 300,
++                preview="😀" * 500,
++                cwd="😀" * 4096,
++                modelProvider="😀" * 200,
++            )
++            for index in range(50)
++        ],
++        nextCursor="a" * 8192,
++    )
++    response = httpx.Response(200, json=value)
++    assert len(response.content) < native.CAPS["list"]
++    assert (
++        native.request(httpx.MockTransport(lambda _: response), "list", query=b"limit=50") == value
++    )
++
++
++@pytest.mark.parametrize("raw", [b"x" * 25001, b"cursor=\xff", b"cursor=%", b"cursor=%0"])
++def test_query_parser_bounds_raw_bytes_and_rejects_invalid_encoding(raw):
++    with pytest.raises(ValueError):
++        parse_query(raw)
++
++
++def test_once_encoded_cursor_is_canonicalized_before_smaller_host_query_cap():
++    raw = b"limit=50&archived=true&cursor=" + b"%61" * 8192
++    assert len(raw) > 8500
++    forwarded = canonical_query(raw)
++    assert forwarded == b"limit=50&archived=true&cursor=" + b"a" * 8192
++    assert len(forwarded) < 8300
++
++
++@pytest.mark.parametrize(
++    "status,body,code",
++    [
++        (422, {"error": "invalid_native_session_request"}, "invalid_native_session_request"),
++        (404, {"error": "native_session_not_found"}, "native_session_not_found"),
++        (503, {"error": "native_sessions_unavailable"}, "native_sessions_unavailable"),
++        (409, {"error": "native_session_changed"}, "native_sessions_unavailable"),
++        (500, {"error": "private host error"}, "native_sessions_unavailable"),
++        (
++            404,
++            {"error": "native_session_not_found", "secret": "private"},
++            "native_sessions_unavailable",
++        ),
++        (503, ["private"], "native_sessions_unavailable"),
++    ],
++)
++def test_host_errors_are_fixed_and_not_replayed(boundary, status, body, code):
++    client, seen, response, _ = boundary
++    login(client)
++    response[0] = httpx.Response(status, json=body)
++    result = client.get(PREFIX)
++    assert result.json()["detail"]["code"] == code and len(seen) == 1
++    assert "private" not in result.text
++
++
++@pytest.mark.parametrize(
++    "response",
++    [
++        httpx.ReadTimeout("private host secret"),
++        httpx.Response(302, headers={"Location": "https://external.invalid"}),
++        httpx.Response(200, content=b'{"schemaVersion":1,"schemaVersion":1}'),
++        httpx.Response(200, content=b'{"value":NaN}'),
++    ],
++)
++def test_unknown_read_outcomes_are_static_and_never_replayed(boundary, response):
++    client, seen, configured, _ = boundary
++    login(client)
++    configured[0] = response
++    result = client.get(PREFIX)
++    assert result.status_code == 503 and "private" not in result.text and len(seen) == 1
++
++
++def test_stream_cap_stops_and_closes_before_unbounded_metadata_is_buffered():
++    class Stream(httpx.SyncByteStream):
++        chunks = 0
++        closed = False
++
++        def __iter__(self):
++            for _ in range(1000):
++                self.chunks += 1
++                yield b"x" * 8192
++
++        def close(self):
++            self.closed = True
++
++    stream = Stream()
++    with pytest.raises(NativeSessionsError):
++        native.request(httpx.MockTransport(lambda _: httpx.Response(200, stream=stream)), "list")
++    assert stream.closed and stream.chunks <= 257
++
++
++@pytest.mark.parametrize(
++    "method,url,prefix",
++    [
++        ("POST", "http://conker-host/codex/sessions?limit=2", ""),
++        ("GET", "http://conker-host/chatgpt?limit=2", ""),
++        ("GET", "http://conker-host/claude/sessions?limit=2", ""),
++        ("GET", f"http://conker-host/codex/sessions/{ID}?limit=2", ""),
++        ("GET", "http://conker-host/codex/%73essions?limit=2", ""),
++        ("GET", "http://conker-chatgpt/codex/sessions?limit=2", ""),
++        ("GET", "http://conker-host/codex/sessions?limit=2", "/inference"),
++        ("GET", "https://conker-host/codex/sessions?limit=2", ""),
++        ("GET", "http://user@conker-host/codex/sessions?limit=2", ""),
++        ("GET", "http://conker-host/codex/sessions?limit=2#fragment", ""),
++        ("GET", "http://conker-host/codex/sessions?cursor=bad%0A", ""),
++    ],
++)
++def test_private_query_exception_does_not_widen_other_destinations(method, url, prefix):
++    seen = []
++    transport = PrivateTransport(
++        "http://127.0.0.1:18570",
++        "k" * 32,
++        prefix=prefix,
++        transport=httpx.MockTransport(lambda request: seen.append(request)),
++    )
++    with httpx.Client(transport=transport) as client, pytest.raises(ValueError):
++        client.request(method, url)
++    assert not seen
 diff --git a/tests/test_gateway_native_claude.py b/tests/test_gateway_native_claude.py
 index 7e6c327..31694f2 100644
 --- a/tests/test_gateway_native_claude.py

@@ -1,11 +1,77 @@
-# Native Claude sessions
+# Native sessions
 
-Conker exposes Claude's background-session registry through the enhanced local
-provider bridge. The UI is **System > Native sessions**, with a Work shortcut
-and a link from Terminal. It reads Conker's isolated `claude-auth` profile,
-not another CLI installation's account or history.
+The enhanced local profile exposes native session discovery through
+**System > Native sessions**, with a Work shortcut and a link from Terminal.
+Choose **Claude Code** for its background-session registry or **Codex** for
+saved thread history. These are separate from Conker Chats.
 
-## CLI
+Each provider reads its Conker-owned isolated profile: `claude-auth` or
+`chatgpt-auth`. Another CLI installation's account and history are not imported.
+The APIs require the host owner's private control credential or the signed-in
+browser owner. Browser API responses use `Cache-Control: no-store`.
+Inference credentials do not authorize native history or controls.
+
+## Codex saved history
+
+The Codex view lists **Unarchived** or **Archived** threads, newest updated first.
+**Load more** reads another page; **Refresh** starts again in the current scope.
+**Search loaded threads** filters only metadata already loaded in the browser.
+All source kinds supported by the pinned native runtime are requested, including
+CLI, editor, exec, app-server and subagent threads.
+
+Select a thread to read its saved name, preview, working directory, timestamps,
+source and model provider. Previews are plain text, limited to 500 characters and
+marked when truncated. This view does not load the full conversation transcript.
+A failed read is unavailable, not evidence that history is empty or deleted.
+
+Run these commands from the Conker repository:
+
+```powershell
+python scripts/conker.py native-sessions codex list
+python scripts/conker.py native-sessions codex list --archived --limit 10
+python scripts/conker.py native-sessions codex list --archived --limit 10 --cursor NEXT_CURSOR
+python scripts/conker.py native-sessions codex status THREAD_UUID
+python scripts/conker.py native codex resume THREAD_UUID
+```
+
+`status` reads saved metadata. It does **not** establish whether that thread is
+running elsewhere. Use the exact lowercase UUID. The page size is 1–50, default
+25; a continuation cursor belongs to the same isolated profile, archive scope
+and page size. Start again without the cursor if it is rejected.
+
+The displayed resume command is copied for manual use. Running it opens the
+native agent and can resume work; it retains Codex's own permission and approval
+prompts. Discovery itself sends no prompt and does not launch or resume a task.
+
+### What the Codex connection can establish
+
+Conker starts a separate, short-lived app-server process to read native saved
+metadata. It cannot establish activity in another Codex process. Responses label
+this boundary as `runtimeVisibility: "observer_only"`; the UI does not convert
+the observer's `notLoaded` state into stopped, completed or idle.
+
+The adapter allows only initialization, `thread/list` and `thread/read` with
+`includeTurns: false`. Native listing may scan rollouts and maintain its own
+history index. Conker does not copy transcripts into its database. Each read has
+a 20-second operation deadline plus bounded cleanup; cleanup terminates only the
+observer it created. Gateway and CLI allow 30 seconds; browser reads allow 35.
+
+List responses contain `schemaVersion: 1`, `provider: "codex"`,
+`scope: "saved_threads"`, `runtimeVisibility: "observer_only"`, `archived`,
+`results` and `nextCursor`. Detail responses use the same fixed scope fields
+and a `session` object. Native control/status fields are deliberately absent.
+
+The contract was checked against installed Codex **0.160.1** using its offline
+schema generator. The official [app-server documentation](https://learn.chatgpt.com/docs/app-server)
+describes the underlying metadata calls. Live native events, Stop and approvals
+require a separate connection with ownership of the relevant running turn.
+
+## Claude background sessions
+
+Claude discovery covers background sessions in Conker's isolated profile.
+Ordinary interactive sessions are outside this registry's supported scope.
+
+### CLI
 
 Run from the Conker repository:
 
@@ -28,7 +94,7 @@ start time and working directory. Stop re-reads the native registry and rejects
 a changed identity or a session that is no longer working or blocked. Native
 names and shortened ID prefixes are never accepted as control targets.
 
-## Evidence and recovery
+### Evidence and recovery
 
 List responses have `schemaVersion: 1`, `provider: "claude"` and
 `scope: "background_sessions"`. They return at most 100 background entries,
@@ -53,7 +119,7 @@ It is not evidence that native work has stopped. Read status explicitly after a
 successful or unconfirmed request. Recovery retains the earlier uncertainty and
 never replays Stop automatically. Completed actions and usage remain completed.
 
-## Native runtime boundary
+### Native runtime boundary
 
 Discovery, status and output do not launch or resume an agent task. Claude may
 start its own session supervisor to answer discovery. Conker owns only the
@@ -65,8 +131,8 @@ terminate native background supervisors or their jobs.
 The attach command is a manual native operation and can resume an exited
 session. Claude continues to own its tools, permissions and approval prompts.
 This view does not approve requests, change permission modes, launch sessions,
-or turn native output into a structured Conker run. Ordinary interactive native
-sessions and Codex thread discovery need separate adapters.
+or turn native output into a structured Conker run. Ordinary interactive Claude
+sessions need a separate adapter.
 
 Claude documents these interfaces in its
 [background session guide](https://code.claude.com/docs/en/agent-view).

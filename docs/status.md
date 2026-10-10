@@ -13,6 +13,81 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Discover saved Codex threads from CLI and UI (10 October)
+
+Native sessions now has a Claude Code/Codex provider selector. Codex reads saved
+history from Conker's isolated native profile, with separate Unarchived and
+Archived views, bounded pages, explicit Load more and Refresh, and search of
+loaded metadata. Unnamed threads use a bounded plain-text preview. Selecting a
+thread reads its saved details and provides an exact manual resume command.
+The CLI offers matching `native-sessions codex list` and `status` reads.
+
+This connection observes saved history, not activity in another Codex process.
+The interface says that explicitly and does not infer Running, Idle or Stopped.
+It sends no prompt and exposes no Codex launch, Stop or approval operation.
+Claude's existing background-session output, verified Stop and recovery remain
+in their own provider view. Provider, archive scope, owner, client and selection
+changes reject delayed responses and clear the previous inspection.
+
+The host adapter uses Codex 0.160.1's generated protocol contract and a separate
+owned app-server process. It permits initialization, `thread/list`, and
+`thread/read` with `includeTurns: false`; the account adapter's authority is
+unchanged. Listing requests all supported source kinds and lets Codex maintain
+its own history index. Cursors bind the profile, archive scope and page size.
+The 20-second operation deadline includes initialization; cleanup targets only
+the observer. Gateway/CLI allow 30 seconds and browser reads allow 35.
+
+The 72 new host tests and 62 CLI/history compatibility tests passed together;
+69 affected existing host tests also passed. Gateway's 84 new tests, seven
+private-transport tests and 53 existing native/auth tests passed. Independent
+review found no remaining contract or lifecycle issue. Gateway commit `30096e5`
+was packaged and matched 108 files from a fresh pinned checkout; applying the
+bundle again was byte-stable. The full dashboard Gateway suite passed, including
+Codex DTO, cursor, timeout, late-response and component checks.
+
+Rendered desktop dark and mobile light checks covered paging failure/retry,
+archive switching, long paths and previews, unavailable/empty states, and detail
+dismissal. Testing found and fixed a lost-focus case when switching providers;
+the restoration is bound to the current owner, client and provider change and
+does not take focus from another dialog. The focused regression suite and
+independent review passed after this correction.
+
+Served-browser testing also exposed a mobile toolbar collision between More
+workspace actions and Open views. The shared mobile action group now wraps its
+inner controls inside the available width. Pointer checks at 320 and 390 pixels,
+plus Chats, Inbox and Providers in light/dark themes, verified that controls stay
+reachable without horizontal overflow.
+
+Keyboard testing found a second shared-actions defect: wrapping a select root as
+a menu item registered a missing focus target. `WorkspaceChoice` now renders a
+select inline and radio choices in overflow: desktop submenus and labeled mobile
+groups that fit at 320 pixels. Provider selection restores focus only after that
+change commits. Selecting the already active provider does not navigate, reset
+archive scope or leave a later focus request behind.
+
+The local rollout backed up Pi/Gateway databases and retained the previous
+dashboard assets. Live Pi is clean at `30096e5`; Pi, Gateway and the provider
+bridge are healthy. The final build verified 172 assets and a 616,794-byte entry
+under the unchanged 700,000-byte cap, without a development fixture chunk.
+The full Gateway regression suite, final focused checks, TypeScript, affected
+lint, design guard (429 sources) and seven workspace primitive checks passed.
+
+Served-browser acceptance used eight synthetic GET responses to check paging,
+loaded search, inert previews, exact resume commands, mismatched-detail refusal,
+read recovery, archive scope and provider switching. Enter, arrow navigation,
+Escape and focus restoration passed with zero uncaught page errors. Desktop and
+320/390-pixel menu/detail captures were inspected. The interceptors were removed
+and real history checked unchanged. CLI reads took 734 ms; Claude's registry,
+model configuration and recorded work counts also remained unchanged. Both
+native subscription runtimes remain available and signed out, with no login
+pending.
+
+Read-only checks against the installed runtime returned empty unarchived and
+archived history in the isolated profile. A separate empty test profile verified
+the missing-thread response and observer cleanup. Nonempty history is covered by
+synthetic protocol/pipe tests; no real native task, OAuth or inference was started.
+See [Native sessions](reference/native-sessions.md) for commands and scope.
+
 ### Inspect and control exact native Claude background sessions (10 October)
 
 The enhanced local profile adds **Native sessions** to Work and System, with a
@@ -71,8 +146,9 @@ Interceptors were removed and the real empty registry restored and checked
 unchanged. No real OAuth, inference, native task or Stop was performed.
 
 [Native session documentation](reference/native-sessions.md) describes commands,
-recovery and the current scope. Codex discovery, native task launch, streaming
-events and native approval integration remain separate work.
+recovery and the current scope. Codex discovery was added in the later milestone
+above; native task launch, streaming events and native approval integration
+remain separate work.
 
 ### Keep credential edits bound to current provider evidence (10 October)
 

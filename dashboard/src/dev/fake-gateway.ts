@@ -56,6 +56,7 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const nativeRows = ['review_changes', 'waiting_input'].map((id, index) => ({ id, identity: (index ? 'b' : 'a').repeat(64), sessionId: `native_conversation_${index}`, name: index ? 'Review needs native input' : 'Review workspace changes', cwd: index ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', startedAt: Date.now() - (index + 1) * 60000, state: index ? 'blocked' : 'working', processStatus: index ? 'waiting' : 'busy', waitingFor: index ? 'permission_prompt' : null, canStop: true }))
+  const codexRows = Array.from({ length: 28 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, name: index === 0 ? 'Review the release checklist' : null, preview: index === 1 ? 'Inspect the native session metadata and preserve the exact owner-approved command. '.repeat(7).slice(0, 500) : `Saved review ${index + 1}: check the workspace changes before continuing.`, previewTruncated: index === 1, cwd: index === 1 ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', createdAt: Math.floor(Date.now() / 1000) - 7200 - index * 60, updatedAt: Math.floor(Date.now() / 1000) - index * 60, modelProvider: 'openai', source: index === 2 ? 'subAgent' : 'cli' }))
   const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
@@ -912,6 +913,24 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return path.endsWith('/chatgpt') ? { ...common, connectionId: common.connected ? `connection_${'a'.repeat(32)}` : null, plan: common.connected ? 'plus' : null, problem: null, models: [], catalogueComplete: false,
         deviceCode: method === 'POST' && options.body?.operation === 'login' ? { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } : null,
       } : { ...common, runtime: 'Claude Code', models: [], authorizationUrl: loginId ? 'https://claude.ai/oauth/authorize' : null }
+    }
+    if (path.startsWith('/api/host/codex/sessions')) {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-codex-sessions'), envelope = { schemaVersion: 1, provider: 'codex', scope: 'saved_threads', runtimeVisibility: 'observer_only' }
+      if (method !== 'GET') return fail(404)
+      if (scenario === 'unavailable') return fail(503)
+      if (scenario === 'timeout') return new Promise<Json>(() => { /* A development-only stalled read. */ })
+      const sourceRows = scenario === 'long' ? codexRows.map((row, index) => index === 0 ? { ...row, name: null, preview: '😀'.repeat(500), previewTruncated: true, cwd: `C:/work/${'long-directory-'.repeat(18)}`, updatedAt: Number.MAX_SAFE_INTEGER } : row) : codexRows
+      if (path === '/api/host/codex/sessions') {
+        const archived = options.query?.archived === true, limit = Number(options.query?.limit ?? 25), cursor = options.query?.cursor
+        if (scenario === 'page-error' && cursor) return fail(503)
+        if (scenario === 'cursor-error' && cursor) return fail(422)
+        if (cursor && cursor !== 'preview_page_2') return fail(422)
+        const rows = scenario === 'empty' ? [] : archived ? sourceRows.slice(-2) : sourceRows, start = cursor ? 25 : 0
+        return { ...envelope, archived, results: structuredClone(rows.slice(start, start + limit)), nextCursor: start + limit < rows.length ? 'preview_page_2' : null }
+      }
+      if (scenario === 'detail-error') return fail(404)
+      const row = sourceRows.find(row => row.id === path.split('/')[5]) ?? fail(404)
+      return { ...envelope, session: structuredClone(row) }
     }
     if (path.startsWith('/api/host/claude/sessions')) {
       const scenario = globalThis.sessionStorage?.getItem('conker-fake-native-sessions')

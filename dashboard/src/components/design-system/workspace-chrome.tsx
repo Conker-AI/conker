@@ -1,7 +1,8 @@
 import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { WorkspaceChromeContext, useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,15 @@ export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem
   return <Button {...props} data-slot="workspace-action" size={iconOnly && !menuItem ? 'icon' : 'sm'}
     variant={iconOnly || menuItem ? 'ghost' : emphasis === 'primary' ? 'default' : 'outline'}
     className={cn(emphasis === 'quiet' && 'shadow-none', !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'), menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none', className)} />
+}
+
+/** Choices keep native Select behavior inline and real menu items in overflow. */
+export function WorkspaceChoice({ label, value, options, onValueChange, disabled, menuItem = false, mobileMenu = false }: {
+  label: string; value: string; options: readonly { value: string; label: string }[]; onValueChange: (value: string) => void; disabled?: boolean; menuItem?: boolean; mobileMenu?: boolean
+}) {
+  if (menuItem && mobileMenu) return <><DropdownMenuLabel>{label}</DropdownMenuLabel><DropdownMenuRadioGroup aria-label={label} value={value} onValueChange={onValueChange}>{options.map(option => <DropdownMenuRadioItem key={option.value} value={option.value} disabled={disabled}>{option.label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup><DropdownMenuSeparator /></>
+  if (menuItem) return <DropdownMenuSub><DropdownMenuSubTrigger disabled={disabled}>{label}: {options.find(option => option.value === value)?.label ?? value}</DropdownMenuSubTrigger><DropdownMenuSubContent><DropdownMenuRadioGroup value={value} onValueChange={onValueChange}>{options.map(option => <DropdownMenuRadioItem key={option.value} value={option.value}>{option.label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuSubContent></DropdownMenuSub>
+  return <Select value={value} onValueChange={onValueChange} disabled={disabled}><SelectTrigger aria-label={label} size="sm"><SelectValue /></SelectTrigger><SelectContent>{options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select>
 }
 
 export function WorkspaceChromeProvider({ children }: { children: ReactNode }) {
@@ -53,7 +63,7 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
   }, [])
   const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
   return <div ref={group}>{items.length < 2 || !compact ? children : <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger asChild><WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions"><MoreHorizontal /></WorkspaceAction></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
-    {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean }>(item) ? <DropdownMenuItem key={index} asChild disabled={item.props.disabled}>{cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })}</DropdownMenuItem> : item)}
+    {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean }>(item) ? item.type === WorkspaceChoice ? cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile }) : <DropdownMenuItem key={index} asChild disabled={item.props.disabled}>{cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })}</DropdownMenuItem> : item)}
   </DropdownMenuContent></DropdownMenu></>}</div>
 }
 

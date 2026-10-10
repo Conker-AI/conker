@@ -214,6 +214,7 @@ create a new request ID. Source conversations are kept.
 | Subscription sign-in | Both native runtimes detected; real Codex device flow and Claude authorization-link start/cancel exercised; final user authorization and hosted inference pending |
 | Full Codex / Claude native CLI commands | Native command passthrough and Windows browser terminal; native permissions retained |
 | Claude background-session discovery, status, output and Stop | Isolated native profile, CLI and owner UI; exact identity verification and explicit recovery; [scope and commands](reference/native-sessions.md) |
+| Codex saved-thread discovery and metadata | Isolated native profile, paginated unarchived/archived CLI and owner UI; manual exact resume command; activity in other native processes is not visible |
 | Native agent events in Conker's structured Activity and approval views | Remaining integration; terminal output is not a structured Conker run |
 | Hermes/Pi/OpenCode plugin and skill package interoperability | Research complete for architecture; no universal importer or compatibility claim |
 | Voice conversation and speech models | Existing call UI and browser speech surfaces; dedicated speech service and per-stage speech-model routing remain unconfigured |

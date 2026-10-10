@@ -18,6 +18,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from inference_requests import AdmissionError, Requests
 from native_claude import Claude
 from native_claude_sessions import SessionError, Sessions, stop_payload
+from native_codex_sessions import Sessions as CodexSessions
+from native_codex_sessions import raw_list_query
 from starlette.concurrency import run_in_threadpool
 
 
@@ -33,12 +35,16 @@ def create_app(config):
     native_sessions = Sessions(
         settings["claude"], Path(settings["state"]) / "claude-auth"
     )
+    codex_sessions = CodexSessions(
+        settings["codex"], Path(settings["state"]) / "chatgpt-auth"
+    )
     requests = Requests()
 
     @asynccontextmanager
     async def lifespan(app):
         yield
         native_sessions.close()
+        codex_sessions.close()
         requests.close()
         if chatgpt.rpc:
             chatgpt.rpc.close()
@@ -72,7 +78,12 @@ def create_app(config):
         )
         if (
             request.headers.get("origin")
-            or request.url.query
+            or (
+                request.url.query
+                and not (
+                    request.method == "GET" and request.url.path == "/codex/sessions"
+                )
+            )
             or not hmac.compare_digest(
                 request.headers.get("authorization", ""), "Bearer " + key
             )
@@ -134,6 +145,14 @@ def create_app(config):
     @app.get("/claude/sessions")
     def claude_sessions():
         return native_sessions.list()
+
+    @app.get("/codex/sessions")
+    def codex_saved_sessions(request: Request):
+        return codex_sessions.list(raw_list_query(request.scope["query_string"]))
+
+    @app.get("/codex/sessions/{identity}")
+    def codex_saved_session(identity: str):
+        return codex_sessions.status(identity)
 
     @app.get("/claude/sessions/{identity}")
     def claude_session(identity: str):

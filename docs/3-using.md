@@ -82,11 +82,22 @@ Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see
 [Harnesses and model roles](harnesses-and-models-2026-10-09.md).
 
-## Inspect native Claude sessions
+## Inspect native sessions
 
-Open **Native sessions** in Work, or **System > Native sessions**, to inspect
-Claude background sessions in Conker's isolated native profile. This directory
-is separate from Chats. Interactive Claude sessions are outside its scope;
+Open **Native sessions** in Work, or **System > Native sessions**, and choose a
+provider. This directory reads Conker's isolated native profiles and is separate
+from Chats and other CLI installations' history.
+
+For **Codex**, choose **Unarchived** or **Archived**, then load more pages as
+needed. Search matches only loaded threads. Select a thread for saved metadata
+and a bounded preview. This connection cannot tell whether work is running in
+another Codex process; it does not display a live activity state.
+
+Copy the exact resume command and run it manually from the Conker repository
+root to open that conversation in Codex. Resuming can run native work and keeps
+Codex's own permission prompts. Reading this page does not resume the thread.
+
+For **Claude Code**, inspect background sessions. Interactive Claude sessions are outside its scope;
 the page reports omitted entries and list truncation.
 
 Select a session to check its current native state and working directory.
