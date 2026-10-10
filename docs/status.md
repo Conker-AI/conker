@@ -13,6 +13,62 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Report provider readiness without stale success (10 October)
+
+Providers now distinguishes checking, current and unavailable runtime evidence.
+Failed or pending reads remove Ready labels; retained provider/model names are
+explicitly last checked. Reads settle within 15 seconds and offer a manual retry.
+The retry button retains keyboard focus during a check and rejects duplicate
+activation. Authentication, client replacement and teardown discard late results.
+The Runtime row uses fresh health evidence independently of each subscription
+connection card.
+
+Refreshing readiness preserves unsaved model choices. Model-catalogue reads also
+have a deadline and retry; a late read cannot overwrite a newer saved revision.
+Retired clients, including returning to the same client object, cannot restore
+old catalogues or strand the editor in a saving state. Duplicate saves are fenced
+before React renders; uncertain writes are never automatically repeated.
+
+OpenRouter catalogue observations now report inference as unverified. Cached,
+empty and paid-only catalogues are not response receipts. An empty catalogue no
+longer triggers an unnecessary second request; failures retain provider identity
+and payment policy so the unavailable row stays visible. The generic module
+health contract projects unverified hosted readiness as unknown, with its existing
+degraded aggregation. Explicit Setup activation still performs one bounded test,
+records its configuration-bound receipt and replays that receipt without another
+dispatch. Paid-model guards and failed-test selection preservation are unchanged.
+
+All 156 affected backend cases passed, including 19 new readiness regressions.
+Two older direct-provider loop fixtures failed identically on the unchanged base
+because they mocked the previous HTTP transport. A separately reviewed test-only
+commit now exercises the real streaming parser, usage recording, cancellation
+token and transport cleanup, with guards against escaped network requests. All
+25 direct-provider cases pass independently. Ruff and diff checks pass; fresh and
+repeated installation reproduce all 103 reviewed Pi files.
+
+The full dashboard gateway suite, focused provider suites, TypeScript, affected
+lint, 409-file design guard and production build passed. Independent review and
+desktop/dark and mobile/light previews verified keyboard retry and model-draft
+preservation. Served-UI browser-only acceptance then confirmed the real 15-second
+deadline, four explicit readiness reads, zero model writes, retained keyboard
+focus, visible unverified/unavailable hosted rows and no mobile overflow. All
+interceptors and the temporary unsaved edit were removed afterward.
+
+The local rollout retained database and previous-asset checkpoints. Pi and
+Gateway are healthy; all 169 served assets match the build and the entry is
+604,639 bytes under the unchanged 700,000-byte limit. The subsequent test-only
+revision changes no running application code. Read-only CLI acceptance confirms
+model settings and recorded work counts are unchanged. Live hosted inference has
+not been claimed: this installation has no OpenRouter credential and its native
+subscriptions remain signed out.
+
+The next verified gap is independent subscription-card recovery: a lost login
+operation response can leave controls pending, Claude's failed status read can
+retain stale or Checking text, and a late ChatGPT login response can cross a
+client replacement. Synthetic component tests reproduced these cases. Recovery
+must preserve time spent in owner verification and never automatically repeat a
+login/logout operation; this milestone does not claim those cards are repaired.
+
 ### Preserve inherited privacy and reliable Think cancellation (10 October)
 
 Reviewed forks now retain the immutable privacy restrictions of carried messages,

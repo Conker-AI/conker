@@ -56,6 +56,13 @@ a model, grant tools or prove that the account can run a particular model.
 Inspect readiness, add the supported model to the catalogue, and choose its role.
 Provider allowance and availability still apply.
 
+**Runtime readiness > Refresh** checks provider status without changing your
+model draft. While a check is pending or unavailable, retained names are labeled
+as last checked. A stalled check offers **Try again** after 15 seconds. An
+OpenRouter catalogue can be cached, so its presence means **Configured, inference
+not verified**. An explicit model test in Setup verifies a response for the saved
+configuration; opening Settings does not run that test or spend inference usage.
+
 API-key providers are a separate connection with their own spending controls.
 Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see

@@ -27,6 +27,15 @@ labeled as the last verified result. Leaving the authenticated workspace clears
 the shared cache and cancels pending reads. Setup counts describe first-run
 choices and evidence, separately from a chat's current ability to answer.
 
+Providers' Runtime readiness distinguishes a current response from a check in
+progress or an unavailable read. During refresh and failure, retained provider
+and model names are explicitly last-checked evidence; they never retain a Ready
+label. Reads have a 15-second deadline, an explicit retry, and owner-identity
+fences. Runtime readiness refresh leaves the model editor and its unsaved choices
+alone. Runtime health evidence is separate from the subscription connection
+card's cached status. Catalogue reads cannot overwrite a newer
+model-settings save, and authentication changes discard both kinds of evidence.
+
 Open views are a secondary header disclosure, closed initially. Their optional
 strip retains navigation history, tab switching, pinning, closing, and dragging.
 Closing the last view opens New chat; closing a tab never cancels work. Tab

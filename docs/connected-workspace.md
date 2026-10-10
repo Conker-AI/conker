@@ -150,6 +150,17 @@ an answer model checks its exact local route and saves the selection only after 
 successful test. Failed tests leave settings alone, and concurrent owner changes
 take precedence. No setup test runs merely from opening the page.
 
+Providers' Runtime readiness refresh preserves unsaved model choices. Pending or
+failed checks label retained names as last-checked evidence and remove Ready
+labels. Provider and model-catalogue reads have a 15-second deadline with explicit
+retry; an older read cannot replace a newer saved model revision. A successful
+OpenRouter catalogue read reports inference as unverified, including cached,
+empty and paid-only catalogues. Failed reads retain the provider identity so its
+unavailable state stays visible. These reads do not run inference. The generic
+module health contract projects an unverified hosted provider as `unknown`, with
+overall degraded health. That coarse service status remains separate from a
+saved model-test receipt.
+
 ## What this local installation does and does not establish
 
 The production frontend cannot fall back to fixture data. A stopped service

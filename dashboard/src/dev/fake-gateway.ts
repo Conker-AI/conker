@@ -900,7 +900,12 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { schemaVersion: 1, available: false, secretsIncluded: false, paidAllowed: null, policyRecoveryRequired: false, providers: [] }
     }
-    if (path === '/api/pi/models') return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
+    if (path === '/api/pi/models') {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (scenario === 'provider-readiness') return fail(503)
+      if (scenario === 'provider-readiness-timeout') return new Promise<Json>(() => { /* Isolated timeout fixture; no provider request. */ })
+      return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
+    }
     if (path === '/health') return { service: 'gateway', version: '0.1.0', status: 'ok', checked_at: iso(now()), age_seconds: 0,
       checks: { owner_login: { status: 'ok' }, runtime: { status: 'ok' }, owner_channel: { status: 'ok' } } }
     if (path === '/api/diagnostics') return {

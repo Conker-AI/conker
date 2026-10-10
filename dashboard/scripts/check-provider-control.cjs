@@ -55,6 +55,8 @@ async function connectionRecoveryChecks(subscription) {
       '@/components/ui/button': { Button: 'button' }, '@/components/design-system': { WorkspaceSection: 'section' },
       '@/app/settings/models-providers': { ModelsProviders: 'div' }, './page-frame': { GatewayPageFrame: 'main' }, './provider-credentials': { ProviderCredentials: 'div' },
       './native-claude-connection': { NativeClaudeConnection: 'section' },
+      './use-provider-readiness': { useProviderReadiness: () => { throw new Error('Connection test must not invoke runtime readiness') } },
+      './runtime-read-deadline': { readRuntimeWithDeadline: () => { throw new Error('Connection test must not invoke catalogue reads') } },
     }
     assert.ok(parts[name], `Unexpected Providers dependency ${name}`)
     return parts[name]
