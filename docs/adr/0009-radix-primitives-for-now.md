@@ -51,9 +51,8 @@ attentiveness at upgrade time rather than capability. When a component turns out
 that is the signal to reopen this.
 
 **Revisit when Base UI publishes `1.0.0` final**, not when a blog post says it has. shadcn ships an
-official `migrate-radix-to-base` skill — installed in this repository at
-`.agents/skills/migrate-radix-to-base/` — which is itself evidence that the migration is expected to
-be mechanical.
+official `migrate-radix-to-base` skill (published in shadcn/ui; install it when the migration starts),
+which is itself evidence that the migration is expected to be mechanical.
 
 **The rejected alternative was following the default.** Base UI is very likely fine; the objection
 is not to its quality but to what an RC means: the API is still allowed to change. This product is

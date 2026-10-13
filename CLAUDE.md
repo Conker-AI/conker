@@ -15,8 +15,6 @@ and docs. The services live in their own repositories under
 Frontend work: also [dashboard/DESIGN.md](dashboard/DESIGN.md) and
 [dashboard/AGENTS.md](dashboard/AGENTS.md).
 
-**Don't read `docs/archive/` unless asked.** It's historical and often out of date.
-
 ## Rules
 
 - **Build, don't document.** No new plan, audit, progress or acceptance files. Plans and tasks go
