@@ -57,6 +57,9 @@ export type FakeGateway = ReturnType<typeof createFakeGateway>
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const nativeRows = ['review_changes', 'waiting_input'].map((id, index) => ({ id, identity: (index ? 'b' : 'a').repeat(64), sessionId: `native_conversation_${index}`, name: index ? 'Review needs native input' : 'Review workspace changes', cwd: index ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', startedAt: Date.now() - (index + 1) * 60000, state: index ? 'blocked' : 'working', processStatus: index ? 'waiting' : 'busy', waitingFor: index ? 'permission_prompt' : null, canStop: true }))
   const codexRows = Array.from({ length: 28 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, name: index === 0 ? 'Review the release checklist' : null, preview: index === 1 ? 'Inspect the native session metadata and preserve the exact owner-approved command. '.repeat(7).slice(0, 500) : `Saved review ${index + 1}: check the workspace changes before continuing.`, previewTruncated: index === 1, cwd: index === 1 ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', createdAt: Math.floor(Date.now() / 1000) - 7200 - index * 60, updatedAt: Math.floor(Date.now() / 1000) - index * 60, modelProvider: 'openai', source: index === 2 ? 'subAgent' : 'cli' }))
+  const corrections = new Map<string, Json>()
+  const correctionTexts = new Map<string, { revision: number; text: string }>()
+  if (globalThis.sessionStorage?.getItem('conker-fake-correction') === 'pending') corrections.set('correction_preview_saved', { schemaVersion: 1, requestId: 'correction_preview_saved', memoryId: 'mem_judo', previousRevision: 1, payloadHash: 'a'.repeat(64), status: 'unknown', revision: null, indexing: null, errorCode: null, cachedPackagesCleared: 0, sourceConversationKept: true })
   const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
@@ -1092,6 +1095,32 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         steps: status.steps.map(step => ({ ...step, state: step.state === 'skipped' ? 'skipped' : 'complete', blockingReasonCode: null,
           evidence: [{ source: 'preview.complete', status: 'ok', revision: 1, detail: 'Synthetic completed setup evidence.' }] })) } : status
     }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/memories\/([^/]+)$/)) && method === 'GET') {
+      const item = memories.find(row => row.type === 'memory' && row.id === match![1])
+      if (!item) throw new GatewayError('http', 404, undefined, 'not_found')
+      return { schemaVersion: 1, memoryId: item.id, revision: correctionTexts.get(item.id)?.revision ?? 1, text: correctionTexts.get(item.id)?.text ?? item.preview, sourceType: 'conversation', confidence: 'high' }
+    }
+    if (path === '/api/control/pi/memory/corrections/pending' && method === 'GET') {
+      const value = [...corrections.values()].find(value => value.status === 'unknown' || value.status === 'applying')
+      return { schemaVersion: 1, pending: value ? { requestId: value.requestId, memoryId: value.memoryId, expectedRevision: value.previousRevision, payloadHash: value.payloadHash, status: value.status } : null }
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/([A-Za-z0-9_-]+)(\/retry)?$/))) {
+      const value = corrections.get(match[1]); if (!value) throw new GatewayError('http', 404, undefined, 'not_found')
+      if (method === 'POST' && match[2]) { options.onDispatch?.(); Object.assign(value, { status: 'applied', revision: Number(value.previousRevision) + 1, indexing: 'indexed', cachedPackagesCleared: 1 }) }
+      return { ...value }
+    }
+    if (path === '/api/control/pi/memory/corrections' && method === 'POST') {
+      options.onDispatch?.()
+      const body = options.body!, id = String(body.memory_id), current = correctionTexts.get(id)?.revision ?? 1
+      if (body.expected_revision !== current) throw new GatewayError('http', 409, undefined, 'revision_conflict')
+      const lost = globalThis.sessionStorage?.getItem('conker-fake-correction') === 'lost-response'
+      const value = { schemaVersion: 1, requestId: String(body.request_id), memoryId: id, previousRevision: current, payloadHash: 'b'.repeat(64), status: lost ? 'unknown' : 'applied', revision: lost ? null : current + 1, indexing: lost ? null : 'indexed', errorCode: null, cachedPackagesCleared: lost ? 0 : 1, sourceConversationKept: true }
+      corrections.set(value.requestId, value)
+      if (lost) throw new GatewayError('network')
+      correctionTexts.set(id, { revision: current + 1, text: String(body.text) })
+      const item = memories.find(row => row.id === id); if (item) item.preview = String(body.text).slice(0, 400)
+      return { ...value }
+    }
     if (path === '/api/control/pi/memory/forget-pending' && method === 'GET') return { schemaVersion: 1, pending: pendingForget ? { ...pendingForget } : null }
     if ((match = path.match(/^\/api\/control\/pi\/memory\/forget\/([^/]+)$/)) && method === 'GET') {
       const item = memories.find(row => row.type === 'memory' && row.id === match![1])
@@ -1163,5 +1192,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const subscriptionVerificationEnabled = (path: string) => ['/api/host/chatgpt', '/api/host/claude'].includes(path) && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
   const credentialVerificationEnabled = (path: string) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
   const nativeSessionVerificationEnabled = (path: string) => /^\/api\/host\/claude\/sessions\/[^/]+\/stop$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
-  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled }
+  const correctionVerificationEnabled = (path: string) => /^\/api\/control\/pi\/memory\/corrections(?:\/[A-Za-z0-9_-]+\/retry)?$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-correction')
+  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled, correctionVerificationEnabled }
 }

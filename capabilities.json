@@ -77,6 +77,13 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/control/pi/memory/forget'"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "/api/control/pi/memory/forget"}]
     },
     {
+      "id": "memory-corrections", "name": "Owner-reviewed memory text correction", "authority": "memorygate", "state": "active",
+      "gatewayRoutes": ["/api/control/pi/memory/corrections/memories/{id}", "/api/control/pi/memory/corrections", "/api/control/pi/memory/corrections/pending", "/api/control/pi/memory/corrections/{requestId}", "/api/control/pi/memory/corrections/{requestId}/retry"], "uiRoutes": ["/memory"],
+      "cliCommands": ["python scripts/conker.py memory-edit show MEMORY_ID", "python scripts/conker.py memory-edit apply MEMORY_ID FILE --expected-revision N --request-id ID", "python scripts/conker.py memory-edit pending", "python scripts/conker.py memory-edit status REQUEST_ID", "python scripts/conker.py memory-edit retry REQUEST_ID --expected-payload-hash SHA256", "conker inspect memory-edit:MEMORY_ID", "conker inspect memory-edit-pending", "conker inspect memory-edit-status:REQUEST_ID", "conker apply memory FILE"],
+      "deploymentRequirements": ["reviewed Pi and MemoryGate correction extensions", "PI_MEMORY_CORRECTION_KEY", "MEMORYGATE_CORRECTION_KEY", "matching Companion namespace and destination", "PI_OWNER_KEY_SHA256", "pi_data", "postgres_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/memory-corrections.ts", "contains": "/api/control/pi/memory/corrections"}, {"path": "scripts/conker.py", "contains": "def memory_edit_operation(args):"}, {"path": "dashboard/src/components/gateway/memory-correction.tsx", "contains": "Retry approved change"}]
+    },
+    {
       "id": "tool-inventory", "name": "Scoped tool inventory", "authority": "toolgate", "state": "active",
       "gatewayRoutes": ["/api/pi/tools"], "uiRoutes": ["/tools"], "cliCommands": ["conker inspect tools"], "deploymentRequirements": ["PI_TOOLGATE_KEY", "TOOLGATE_BOOTSTRAP_EXECUTION_KEY"],
       "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/pi/tools'"}, {"path": "dashboard/src/components/gateway/tools-inventory.tsx", "contains": "client.tools(controller.signal)"}, {"path": "conker", "contains": "cmd_inspect"}]

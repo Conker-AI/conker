@@ -7,11 +7,46 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **10 October 2026**. The current tree has **37 tracked
-capability families: 36 active and 1 deferred**. Active means at least one real
+Last source verification: **10 October 2026**. The current tree has **38 tracked
+capability families: 37 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### Correct retained memory from CLI and UI (10 October)
+
+Memory's inspector now offers an editor that reads the full authoritative text
+and revision before review. Saving requires owner verification of the exact
+operation. The local `memory-edit` CLI and container `inspect`/`apply memory`
+commands use that same Companion-only service. A correction changes retained
+text while preserving its source conversation, provenance, confidence and
+permissions. The receipt reports text persistence separately from search
+indexing, including delayed indexing after a successful save.
+
+Pi coordinates a durable correction journal with memory forgetting and active
+work. It pauses recall during unresolved changes, clears cached recall before
+dispatch and again before releasing the hold, and fences delayed context
+preparation. Interrupted operations become uncertain after restart and are
+never replayed automatically. Status recovery only reads MemoryGate's receipt;
+an explicit retry sends the original approved payload. A definitive revision
+conflict releases the hold. Forgetting a source chat removes any corresponding
+pending correction text and prevents a delayed admission from retaining it.
+
+MemoryGate remains the sole memory writer. Its receipt now exposes the existing
+stored payload hash, so Pi checks exact text as well as request, namespace,
+target and revision before accepting success. Completed Pi journal entries
+retain content-free identity and receipt metadata. The browser keeps an unsent
+draft only while its editor is open. When no receipt exists after a lost
+response, a new review explicitly preserves the uncertainty, rechecks pending
+work and rereads the current memory before asking for another approval.
+
+Backend checkpoint `a684c54` passed 76 new correction tests and 259 affected
+compatibility tests. MemoryGate checkpoint `d26fa08` passed 55 correction,
+forgetting and conversation-memory tests. Both received independent review.
+The packaged bundles matched 114 Pi files and 11 MemoryGate files from fresh
+pinned checkouts, with byte-stable repeat application. The host CLI and
+capability slice passed 100 tests, including exact Unicode/line-ending
+preservation, size bounds and lost-response behavior.
 
 ### Discover saved Codex threads from CLI and UI (10 October)
 

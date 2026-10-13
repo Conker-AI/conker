@@ -7,6 +7,7 @@ import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayTeamsClient } from './teams'
 import { createNativeSessionsClient } from './native-sessions'
+import { createMemoryCorrectionsClient } from './memory-corrections'
 import { createCodexSessionsClient } from './codex-sessions'
 import { createGatewayTerminalClient } from './terminal'
 import { createGatewayFilesystemClient } from './filesystem'
@@ -306,6 +307,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     search: createGatewaySearchClient(auth),
     terminal: createGatewayTerminalClient(auth),
     nativeSessions: createNativeSessionsClient(auth),
+    memoryCorrections: createMemoryCorrectionsClient(auth),
     codexSessions: createCodexSessionsClient(auth),
     async diagnostics(signal?: AbortSignal): Promise<GatewayDiagnostics> {
       return parse(diagnostics, await auth.request('/api/diagnostics', { signal }))

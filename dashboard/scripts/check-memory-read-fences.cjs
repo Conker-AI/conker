@@ -20,8 +20,10 @@ function harness() {
     },
   }
   const jsx = (type, props) => ({ type, props })
+  const correction = { controller: { select(){}, invalidate(){} }, changed:0, ready:true, busy:null, recovery:null }
   const module = { exports: {} }
   new Function('require', 'module', 'exports', code)(name => {
+    if (name === './use-memory-correction') return { useMemoryCorrection: () => correction }
     if (name === 'react') return react
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
     if (name === 'react-router-dom') return { useSearchParams: () => [params, (value, options) => { params = value; writes.push([params.toString(), options]) }] }

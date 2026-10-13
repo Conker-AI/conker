@@ -1,5 +1,5 @@
 diff --git a/gateway/api.py b/gateway/api.py
-index 8569b84..5d993b2 100644
+index 8569b84..2396d88 100644
 --- a/gateway/api.py
 +++ b/gateway/api.py
 @@ -619,6 +619,78 @@ def create_app(
@@ -81,6 +81,23 @@ index 8569b84..5d993b2 100644
      def terminal_access(request):
          owner = session(request)
          if app.state.terminals is None:
+@@ -837,6 +909,8 @@ def create_app(
+         target = "/" + path
+         if not owner_allowed(request.method, target):
+             raise AuthError("This owner operation is not available through the gateway.", 403)
++        if target.startswith("/memory/corrections") and request.scope["query_string"]:
++            raise AuthError("Memory corrections do not accept query parameters.", 422)
+         if not app.state.config.pi_owner_key:
+             raise AuthError("Pi owner-control connection is not configured.", 503)
+         body = (
+@@ -844,6 +918,7 @@ def create_app(
+                 request,
+                 max_bytes=66 * 1024 * 1024
+                 if target.startswith("/characters/companion/")
++                else 128000 if target.startswith("/memory/corrections")
+                 else 65536,
+             )
+             if request.method == "POST"
 diff --git a/gateway/codex_sessions.py b/gateway/codex_sessions.py
 new file mode 100644
 index 0000000..92d4f7c
@@ -224,6 +241,131 @@ index 0000000..92d4f7c
 +            return result.model_dump()
 +    except (httpx.HTTPError, ValueError, UnicodeError, RecursionError, TypeError):
 +        raise NativeSessionsError() from None
+diff --git a/gateway/inspection.py b/gateway/inspection.py
+index 4bdf75a..264155c 100644
+--- a/gateway/inspection.py
++++ b/gateway/inspection.py
+@@ -8,7 +8,7 @@ from dataclasses import dataclass
+ 
+ import httpx
+ 
+-from pi import characters
++from pi import characters, memory_edits
+ from pi.browser_contract import owner_allowed, runtime_allowed
+ 
+ from .api import Config
+@@ -42,6 +42,7 @@ INSPECTIONS = {
+     "inventory-services": Inspection("owner", "/system/inventory/configured/services"),
+     "jobs": Inspection("owner", "/jobs"),
+     "memory": Inspection("owner", "/memory/objects"),
++    "memory-edit-pending": Inspection("owner", "/memory/corrections/pending"),
+     "models": Inspection("owner", "/models/configuration"),
+     "projects": Inspection("owner", "/projects"),
+     "setup": Inspection("owner", "/setup/status"),
+@@ -64,6 +65,8 @@ INSPECTIONS = {
+     ),
+ }
+ SESSION_SETTINGS = re.compile(r"^session-settings:([A-Za-z0-9_-]{1,128})$")
++MEMORY_EDIT = re.compile(rf"memory-edit:({memory_edits.MEMORY_ID})")
++MEMORY_EDIT_STATUS = re.compile(rf"memory-edit-status:({memory_edits.REQUEST_ID})")
+ APPROVAL = re.compile(r"^approval:([A-Za-z0-9_-]{1,128})$")
+ SUBMISSION = re.compile(r"^submission:([A-Za-z0-9_-]{16,128})$")
+ FILE_LISTING = re.compile(r"^file-listing:([A-Za-z0-9_-]{16,100})$")
+@@ -85,6 +88,14 @@ def resources() -> tuple[str, ...]:
+ 
+ def inspect_resource(config: Config, resource: str, client: httpx.Client) -> dict:
+     operation = INSPECTIONS.get(resource)
++    if operation is None:
++        selected = MEMORY_EDIT.fullmatch(resource)
++        if selected:
++            operation = Inspection("owner", f"/memory/corrections/memories/{selected.group(1)}")
++    if operation is None:
++        selected = MEMORY_EDIT_STATUS.fullmatch(resource)
++        if selected:
++            operation = Inspection("owner", f"/memory/corrections/{selected.group(1)}")
+     if operation is None:
+         selected = SESSION_SETTINGS.fullmatch(resource)
+         if selected:
+@@ -150,7 +161,7 @@ def inspect_resource(config: Config, resource: str, client: httpx.Client) -> dic
+         raise InspectionError(
+             "Unknown inspection resource. Choose one of: "
+             + ", ".join(resources())
+-            + ", active-call:ID, approval:ID, call:ID, file-listing:ID, inventory:ID, session-settings:ID, submission:ID, tool-access:ID:VERSION:DIGEST, tool-draft:ID, tool-publications:ID, tool-runs:ID, tool-validation:ID"
++            + ", active-call:ID, approval:ID, call:ID, file-listing:ID, inventory:ID, memory-edit:ID, memory-edit-status:ID, session-settings:ID, submission:ID, tool-access:ID:VERSION:DIGEST, tool-draft:ID, tool-publications:ID, tool-runs:ID, tool-validation:ID"
+         )
+     if operation.authority == "owner":
+         if not config.pi_owner_key or not owner_allowed("GET", operation.path):
+@@ -195,9 +206,17 @@ def inspect_resource(config: Config, resource: str, client: httpx.Client) -> dic
+     response_limit = (
+         characters.MAX_REQUEST_BYTES
+         if operation.path.startswith("/characters/companion")
++        else 128000
++        if operation.path.startswith("/memory/corrections")
+         else MAX_RESPONSE_BYTES
+     )
+-    limit_label = "66 MiB" if response_limit == characters.MAX_REQUEST_BYTES else "8 MiB"
++    limit_label = (
++        "66 MiB"
++        if response_limit == characters.MAX_REQUEST_BYTES
++        else "128000 bytes"
++        if response_limit == 128000
++        else "8 MiB"
++    )
+     try:
+         with client.stream(
+             "GET",
+diff --git a/gateway/mutation.py b/gateway/mutation.py
+index 59c00e3..132cb1e 100644
+--- a/gateway/mutation.py
++++ b/gateway/mutation.py
+@@ -25,6 +25,7 @@ from pi import (
+     collaboration,
+     filesystem_reads,
+     jobs,
++    memory_edits,
+     memory_forget,
+     projects,
+     proposals,
+@@ -173,6 +174,20 @@ class MemoryForget(StrictModel):
+     expected_revision: int = Field(ge=1)
+ 
+ 
++class MemoryCorrect(memory_edits.Apply):
++    operation: Literal["correct"]
++
++
++class MemoryRetry(memory_edits.Retry):
++    operation: Literal["retry-correction"]
++    request_id: str = Field(pattern=rf"^{memory_edits.REQUEST_ID}$")
++
++
++MEMORY_MUTATION = TypeAdapter(
++    Annotated[MemoryForget | MemoryCorrect | MemoryRetry, Field(discriminator="operation")]
++)
++
++
+ class ProposalDecision(StrictModel):
+     operation: Literal["decide"]
+     id: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$")
+@@ -490,9 +505,17 @@ def _resolve(resource: str, payload: dict) -> Mutation:
+         return Mutation("POST", f"/jobs/{value.id}/run", {"request_id": value.request_id})
+     if resource == "memory":
+         try:
+-            value = MemoryForget.model_validate(payload)
++            value = MEMORY_MUTATION.validate_python(payload)
+         except ValidationError:
+             raise MutationError("Memory apply request has an unsupported shape.") from None
++        if isinstance(value, MemoryCorrect):
++            return Mutation("POST", "/memory/corrections", value.model_dump(exclude={"operation"}))
++        if isinstance(value, MemoryRetry):
++            return Mutation(
++                "POST",
++                f"/memory/corrections/{value.request_id}/retry",
++                {"expected_payload_hash": value.expected_payload_hash},
++            )
+         body = memory_forget.Forget(
+             request_id=value.request_id,
+             memory_id=value.memory_id,
 diff --git a/gateway/native_claude.py b/gateway/native_claude.py
 index 92cefef..02eb2b5 100644
 --- a/gateway/native_claude.py
@@ -530,10 +672,42 @@ index 66a078c..10a5d0a 100644
              or re.fullmatch(r"/auth/sessions/[A-Za-z0-9_-]{16,128}/revoke", path)
          )
 diff --git a/pi/api.py b/pi/api.py
-index bf97285..f509b17 100644
+index bf97285..4a055f2 100644
 --- a/pi/api.py
 +++ b/pi/api.py
-@@ -486,7 +486,7 @@ app.include_router(
+@@ -43,6 +43,8 @@ from . import (
+     filesystem_reads,
+     jobs_api,
+     memory_corrections,
++    memory_edits,
++    memory_edits_api,
+     memory_forget,
+     memory_proposals,
+     memory_proposals_api,
+@@ -146,6 +148,7 @@ async def lifespan(app: FastAPI):
+     context_retrieval.recover_interrupted(store)
+     team_execution.recover_interrupted(store)
+     memory_proposals.recover_interrupted(store)
++    memory_edits.recover_interrupted(store)
+     proposals.recover_interrupted(store)
+     calls.recover(store)
+     system_inventory.recover(store)
+@@ -446,6 +449,14 @@ app.include_router(
+ app.include_router(
+     collaboration_api.create_router(lambda: app.state.store, require_admin, require_owner)
+ )
++app.include_router(
++    memory_edits_api.router(
++        lambda: app.state.store,
++        lambda: getattr(app.state, "memory_corrections", None),
++        lambda: getattr(getattr(app.state, "memory", None), "client", None),
++        require_owner,
++    )
++)
+ app.include_router(
+     memory_proposals_api.router(
+         lambda: app.state.store,
+@@ -486,7 +497,7 @@ app.include_router(
          require_owner,
      )
  )
@@ -542,7 +716,7 @@ index bf97285..f509b17 100644
  app.include_router(conversation_search.router(lambda: app.state.store, require_admin))
  app.include_router(
      attachments_api.router(lambda: app.state.store, require_admin, session_settings.source_privacy)
-@@ -680,6 +680,14 @@ def health():
+@@ -680,6 +691,14 @@ def health():
      if cached and now - _health_cache["at"] < HEALTH_CACHE_SECONDS:
          return {**cached, "age_seconds": round(now - _health_cache["at"], 1)}
  
@@ -557,7 +731,7 @@ index bf97285..f509b17 100644
      checks = {
          "store": app.state.store.health(),
          "memory": app.state.loop.memory.health(),
-@@ -687,11 +695,7 @@ def health():
+@@ -687,11 +706,7 @@ def health():
          # not_configured, not unavailable: no hosted provider is a valid install,
          # not a broken one, and collapsing the two is how a dashboard starts
          # lying about what is wrong.
@@ -570,7 +744,7 @@ index bf97285..f509b17 100644
          "provider_credentials": {
              "status": "ok" if app.state.provider_credentials else "not_configured",
              "configured": app.state.provider_credentials,
-@@ -747,6 +751,16 @@ def list_sessions(limit: int = 50):
+@@ -747,6 +762,16 @@ def list_sessions(limit: int = 50):
      return {"results": app.state.store.list_sessions(limit=min(max(limit, 1), 200))}
  
  
@@ -587,7 +761,7 @@ index bf97285..f509b17 100644
  @app.get("/sessions/{session_id}", dependencies=[Depends(require_key)])
  def get_session(session_id: str):
      session = app.state.store.get_session(session_id)
-@@ -767,6 +781,58 @@ def get_session(session_id: str):
+@@ -767,6 +792,58 @@ def get_session(session_id: str):
      }
  
  
@@ -646,7 +820,7 @@ index bf97285..f509b17 100644
  @app.get("/sessions/{session_id}/thinking", dependencies=[Depends(require_key)])
  def thinking_status(session_id: str):
      session = app.state.store.get_session(session_id)
-@@ -780,6 +846,21 @@ def thinking_status(session_id: str):
+@@ -780,6 +857,21 @@ def thinking_status(session_id: str):
      }
  
  
@@ -668,7 +842,7 @@ index bf97285..f509b17 100644
  @app.post("/sessions/{session_id}/thinking/{turn_id}/cancel", dependencies=[Depends(require_key)])
  def cancel_thinking(session_id: str, turn_id: str):
      try:
-@@ -845,6 +926,11 @@ def run_turn(session_id: str, body: TurnRequest):
+@@ -845,6 +937,11 @@ def run_turn(session_id: str, body: TurnRequest):
          ) from exc
  
  
@@ -680,7 +854,7 @@ index bf97285..f509b17 100644
  @app.get("/memory/forget/{memory_id}", dependencies=[Depends(require_owner)])
  def preview_memory_forget(memory_id: str):
      try:
-@@ -1053,14 +1139,25 @@ def models():
+@@ -1053,14 +1150,25 @@ def models():
          return {
              "local": local,
              "direct": direct,
@@ -749,7 +923,7 @@ index 09a5d8e..dc3cb19 100644
                          with store._connect() as db:
                              db.execute(
 diff --git a/pi/browser_contract.py b/pi/browser_contract.py
-index e32eec8..db2da33 100644
+index e32eec8..f2b8149 100644
 --- a/pi/browser_contract.py
 +++ b/pi/browser_contract.py
 @@ -6,10 +6,15 @@ RUNTIME_ROUTES = {
@@ -785,17 +959,29 @@ index e32eec8..db2da33 100644
          r"/skills",
          r"/skills/[a-z0-9][a-z0-9-]{0,63}",
          r"/search",
-@@ -115,8 +123,10 @@ OWNER_ROUTES = {
+@@ -115,8 +123,13 @@ OWNER_ROUTES = {
          r"/memory/objects",
          r"/memory/objects/[a-z]+/[A-Za-z0-9_-]+",
          r"/memory/forget/[A-Za-z0-9_.:-]+",
 +        r"/memory/forget-pending",
++        r"/memory/corrections/pending",
++        r"/memory/corrections/memories/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}",
++        r"/memory/corrections/[A-Za-z0-9_-]{16,128}",
      ),
      "POST": (
 +        r"/drafts/(?:new(?:/start)?|[A-Za-z0-9_-]{1,128}(?:/tasks/[A-Za-z0-9_-]{1,128})?)",
          r"/skills/import",
          r"/skills/[a-z0-9][a-z0-9-]{0,63}/state",
          r"/search/settings",
+@@ -151,6 +164,8 @@ OWNER_ROUTES = {
+         r"/sessions/[A-Za-z0-9_-]+/settings",
+         r"/proposals/passes",
+         r"/memory/forget",
++        r"/memory/corrections",
++        r"/memory/corrections/[A-Za-z0-9_-]{16,128}/retry",
+     ),
+ }
+ 
 diff --git a/pi/calls.py b/pi/calls.py
 index 1dee44e..7290554 100644
 --- a/pi/calls.py
@@ -2012,7 +2198,7 @@ index 0000000..1c3c4a7
 +        return ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 +    return True
 diff --git a/pi/memory.py b/pi/memory.py
-index 71cbcd1..4c1f3de 100644
+index 71cbcd1..ceede60 100644
 --- a/pi/memory.py
 +++ b/pi/memory.py
 @@ -4,14 +4,99 @@ import json
@@ -2217,6 +2403,15 @@ index 71cbcd1..4c1f3de 100644
  
      def close(self):
          self.http.close()
+@@ -138,7 +233,7 @@ class Memory:
+             if selected["agentId"] == "companion"
+             else self.read_clients.get(selected["agentId"])
+         )
+-        if memory_store.pending_deletions(self.store):
++        if memory_store.recall_held(self.store):
+             state = "unavailable"
+         elif client:
+             try:
 @@ -171,7 +266,30 @@ class Memory:
                  if self.ranker is not None and not selected.get("privacy", {}).get(
                      "harnessDisabled", False
@@ -2270,6 +2465,17 @@ index 71cbcd1..4c1f3de 100644
          memory_store.save_context(self.store, turn_id, state, package)
  
      def status(self, session_id=None, turn_id=None):
+@@ -202,8 +330,9 @@ class Memory:
+             delivery["pending_ingestion"]
+             or delivery["pending_deletion"]
+             or delivery["blocked_delivery"]
++            or memory_store.recall_held(self.store)
+         ):
+-            return {"status": "degraded", "reason": "Memory delivery or deletion is pending"}
++            return {"status": "degraded", "reason": "Memory delivery or a reviewed change is pending"}
+         return state
+ 
+     def drain_once(self, limit=20):
 diff --git a/pi/memory_corrections.py b/pi/memory_corrections.py
 index 954526e..8257bbc 100644
 --- a/pi/memory_corrections.py
@@ -2304,10 +2510,10 @@ index 954526e..8257bbc 100644
          with self.http.stream(method, "/runtime/corrections/" + path, **kwargs) as response:
 diff --git a/pi/memory_delivery.py b/pi/memory_delivery.py
 new file mode 100644
-index 0000000..47e55d1
+index 0000000..edd4786
 --- /dev/null
 +++ b/pi/memory_delivery.py
-@@ -0,0 +1,235 @@
+@@ -0,0 +1,240 @@
 +"""Content-free, source-bound memory acknowledgement projections."""
 +
 +import hashlib
@@ -2496,6 +2702,11 @@ index 0000000..47e55d1
 +            "SELECT COUNT(*),COUNT(CASE WHEN state='forgotten' THEN 1 END),"
 +            "COUNT(CASE WHEN state='rejected' THEN 1 END) FROM memory_forget_operations"
 +        ).fetchone()
++    ) + tuple(
++        db.execute(
++            "SELECT COUNT(*),COUNT(CASE WHEN state='applied' THEN 1 END),"
++            "COUNT(CASE WHEN state='rejected' THEN 1 END) FROM memory_edit_operations"
++        ).fetchone()
 +    )
 +
 +
@@ -2523,7 +2734,7 @@ index 0000000..47e55d1
 +        return None
 +    from . import memory_store
 +
-+    if memory_store.pending_deletions_in(db):
++    if memory_store.recall_held_in(db):
 +        # Fixed guidance contains no stale acknowledgement and remains safe
 +        # when an exact narration retry repeats it after a forget operation.
 +        return "No memory save acknowledgement is supplied. Do not claim this request was saved to long-term memory; the conversation is separate."
@@ -2543,8 +2754,561 @@ index 0000000..47e55d1
 +        + " Conker handles this message's memory delivery automatically. Do not request a tool"
 +        + " to record this statement. Respond conversationally using this recorded status."
 +    )
+diff --git a/pi/memory_edits.py b/pi/memory_edits.py
+new file mode 100644
+index 0000000..d0f9e39
+--- /dev/null
++++ b/pi/memory_edits.py
+@@ -0,0 +1,452 @@
++"""Owner text corrections coordinated with recall; MemoryGate is the only writer."""
++
++import hashlib
++import json
++import re
++import threading
++from contextlib import contextmanager
++from uuid import NAMESPACE_URL, uuid5
++
++import httpx
++from pydantic import Field, field_validator
++
++from . import agents, memory_store
++from .memory_corrections import CorrectionError
++
++MEMORY_ID = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}"
++REQUEST_ID = r"[A-Za-z0-9_-]{16,128}"
++UNRESOLVED = "('applying','unknown')"
++SCHEMA = """
++CREATE TABLE IF NOT EXISTS memory_edit_operations (
++ request_id TEXT PRIMARY KEY, memory_id TEXT NOT NULL, agent_id TEXT NOT NULL,
++ destination TEXT NOT NULL, expected_revision INTEGER NOT NULL,
++ payload_hash TEXT NOT NULL, remote_payload_hash TEXT NOT NULL, desired TEXT,
++ state TEXT NOT NULL CHECK(state IN ('applying','unknown','applied','rejected')),
++ error_code TEXT, receipt TEXT, cached_packages_cleared INTEGER NOT NULL DEFAULT 0
++);
++CREATE UNIQUE INDEX IF NOT EXISTS memory_edit_one_pending
++ON memory_edit_operations((1)) WHERE state IN ('applying','unknown');
++"""
++
++
++class Apply(agents.StrictModel):
++    request_id: str = Field(pattern=rf"^{REQUEST_ID}$")
++    memory_id: str = Field(pattern=rf"^{MEMORY_ID}$")
++    expected_revision: int = Field(ge=1, le=2147483646)
++    text: str = Field(min_length=1, max_length=16000)
++
++    @field_validator("text")
++    @classmethod
++    def valid_text(cls, value):
++        if not value.strip() or "\x00" in value:
++            raise ValueError("Provide nonblank text without NUL.")
++        value.encode("utf-8")
++        return value
++
++
++class Retry(agents.StrictModel):
++    expected_payload_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
++
++
++class EditError(Exception):
++    def __init__(self, code, message, status=409):
++        super().__init__(message)
++        self.status, self.detail = status, {"code": code, "message": message}
++
++
++def _error(code, message, status=409):
++    raise EditError(code, message, status)
++
++
++def _id(value, pattern):
++    if not isinstance(value, str) or re.fullmatch(pattern, value) is None:
++        _error("invalid_request", "Invalid memory correction identity.", 422)
++    return value
++
++
++def _configured(client):
++    if client is None:
++        _error("not_configured", "Companion memory correction is not configured.", 503)
++
++
++def _binding(row, client):
++    _configured(client)
++    if (row["agent_id"], row["destination"]) != (client.agent_id, client.destination):
++        _error("request_conflict", "Use the original memory configuration for this correction.")
++
++
++def _row(db, identity):
++    row = db.execute(
++        "SELECT * FROM memory_edit_operations WHERE request_id=?", (identity,)
++    ).fetchone()
++    if row is None:
++        _error("not_found", "Memory correction not found.", 404)
++    return row
++
++
++def _view(row):
++    receipt = json.loads(row["receipt"]) if row["receipt"] else None
++    return {
++        "schemaVersion": 1,
++        "requestId": row["request_id"],
++        "memoryId": row["memory_id"],
++        "previousRevision": row["expected_revision"],
++        "payloadHash": row["payload_hash"],
++        "status": row["state"],
++        "revision": receipt["revision"] if receipt else None,
++        "indexing": receipt["indexing"] if receipt else None,
++        "errorCode": row["error_code"],
++        "cachedPackagesCleared": row["cached_packages_cleared"],
++        "sourceConversationKept": True,
++    }
++
++
++def get(store, identity):
++    with store._connect() as db:
++        return _view(_row(db, _id(identity, REQUEST_ID)))
++
++
++def pending(store):
++    with store._connect() as db:
++        row = db.execute(
++            f"SELECT * FROM memory_edit_operations WHERE state IN {UNRESOLVED} LIMIT 1"
++        ).fetchone()
++        return {
++            "schemaVersion": 1,
++            "pending": {
++                "requestId": row["request_id"],
++                "memoryId": row["memory_id"],
++                "expectedRevision": row["expected_revision"],
++                "payloadHash": row["payload_hash"],
++                "status": row["state"],
++            }
++            if row
++            else None,
++        }
++
++
++def preview(client, identity):
++    _id(identity, MEMORY_ID)
++    _configured(client)
++    try:
++        value = client.memory(identity)
++        if (
++            value["revision"] > 2147483646
++            or not isinstance(value["source_type"], str)
++            or not isinstance(value["confidence"], str)
++            or len(value["source_type"]) > 100
++            or len(value["confidence"]) > 100
++            or "\x00" in value["text"]
++        ):
++            raise ValueError()
++        json.dumps(value, ensure_ascii=False).encode("utf-8")
++    except CorrectionError as exc:
++        if exc.status == 404:
++            _error("not_found", "Editable Companion memory not found.", 404)
++        _error("unavailable", "The authoritative memory cannot be loaded.", 503)
++    except (httpx.HTTPError, ValueError, TypeError, KeyError):
++        _error("unavailable", "The authoritative memory cannot be loaded.", 503)
++    return {
++        "schemaVersion": 1,
++        "memoryId": value["id"],
++        "revision": value["revision"],
++        "text": value["text"],
++        "sourceType": value["source_type"],
++        "confidence": value["confidence"],
++    }
++
++
++_active_lock = threading.Lock()
++_active = set()
++
++
++@contextmanager
++def _exclusive(store):
++    with _active_lock:
++        if store.path in _active:
++            _error("in_progress", "A memory correction is in progress. Check its status.")
++        _active.add(store.path)
++    try:
++        yield
++    finally:
++        with _active_lock:
++            _active.discard(store.path)
++
++
++def _digest(body):
++    return hashlib.sha256(
++        json.dumps(
++            body.model_dump(), sort_keys=True, ensure_ascii=False, separators=(",", ":")
++        ).encode("utf-8")
++    ).hexdigest()
++
++
++def remote_digest(agent_id, body):
++    """MemoryGate's exact namespace-bound body fingerprint, excluding request ID."""
++    return hashlib.sha256(
++        json.dumps(
++            {
++                "agent_id": agent_id,
++                "memory_id": body.memory_id,
++                "expected_revision": body.expected_revision,
++                "text": body.text,
++            },
++            sort_keys=True,
++            ensure_ascii=False,
++            separators=(",", ":"),
++        ).encode("utf-8")
++    ).hexdigest()
++
++
++def _admit(store, client, body, digest):
++    with store._connect() as db:
++        db.execute("BEGIN IMMEDIATE")
++        if _source_deleted(db, client.agent_id, body.memory_id):
++            _error("not_found", "The memory's source conversation was forgotten.", 404)
++        if (
++            db.execute("SELECT 1 FROM memory_forget_operations WHERE state='pending'").fetchone()
++            or db.execute(
++                f"SELECT 1 FROM memory_edit_operations WHERE state IN {UNRESOLVED}"
++            ).fetchone()
++        ):
++            _error("change_pending", "Resolve the previous memory change first. Recall is paused.")
++        if (
++            db.execute("SELECT 1 FROM turns WHERE status='running' LIMIT 1").fetchone()
++            or db.execute(
++                "SELECT 1 FROM turn_submissions WHERE state='preparing' LIMIT 1"
++            ).fetchone()
++            or db.execute(
++                "SELECT 1 FROM background_thinking WHERE status IN ('queued','running') LIMIT 1"
++            ).fetchone()
++        ):
++            _error(
++                "work_active", "Finish or stop current work before editing memory. Nothing changed."
++            )
++        db.execute(
++            "INSERT INTO memory_edit_operations"
++            "(request_id,memory_id,agent_id,destination,expected_revision,payload_hash,remote_payload_hash,desired,state)"
++            " VALUES(?,?,?,?,?,?,?,?,'applying')",
++            (
++                body.request_id,
++                body.memory_id,
++                client.agent_id,
++                client.destination,
++                body.expected_revision,
++                digest,
++                remote_digest(client.agent_id, body),
++                body.text,
++            ),
++        )
++        cleared = memory_store.invalidate_recall(db)
++        db.execute(
++            "UPDATE memory_edit_operations SET cached_packages_cleared=? WHERE request_id=?",
++            (cleared, body.request_id),
++        )
++        db.commit()
++
++
++def _receipt(row, value):
++    if (
++        not isinstance(value, dict)
++        or value.get("request_id") != row["request_id"]
++        or value.get("memory_id") != row["memory_id"]
++        or value.get("agent_id") != row["agent_id"]
++        or value.get("payload_hash") != row["remote_payload_hash"]
++        or type(value.get("previous_revision")) is not int
++        or value["previous_revision"] != row["expected_revision"]
++        or type(value.get("revision")) is not int
++        or value["revision"] != row["expected_revision"] + 1
++        or value.get("status") != "applied"
++        or value.get("indexing") not in {"pending", "indexed", "degraded"}
++    ):
++        raise ValueError("Invalid correction receipt.")
++    return {"revision": value["revision"], "indexing": value["indexing"]}
++
++
++def _finish(store, identity, *, receipt=None, rejection=None):
++    with store._connect() as db:
++        db.execute("BEGIN IMMEDIATE")
++        row = _row(db, identity)
++        if row["state"] not in {"applying", "unknown"}:
++            return _view(row)
++        cleared = memory_store.invalidate_recall(db)
++        db.execute(
++            "UPDATE memory_edit_operations SET state=?,desired=NULL,receipt=?,error_code=?,"
++            "cached_packages_cleared=cached_packages_cleared+? WHERE request_id=?",
++            (
++                "applied" if receipt else "rejected",
++                json.dumps(receipt) if receipt else None,
++                rejection,
++                cleared,
++                identity,
++            ),
++        )
++        result = _view(_row(db, identity))
++        db.commit()
++        return result
++
++
++def _unknown(store, identity):
++    with store._connect() as db:
++        db.execute(
++            "UPDATE memory_edit_operations SET state='unknown' WHERE request_id=? AND state='applying'",
++            (identity,),
++        )
++    return get(store, identity)
++
++
++def _dispatch(store, client, identity, *, fresh):
++    with store._connect() as db:
++        row = _row(db, identity)
++        if row["state"] not in {"applying", "unknown"} or row["desired"] is None:
++            return _view(row)
++    try:
++        approved = Apply(
++            request_id=identity,
++            memory_id=row["memory_id"],
++            expected_revision=row["expected_revision"],
++            text=row["desired"],
++        )
++        if (
++            _digest(approved) != row["payload_hash"]
++            or remote_digest(row["agent_id"], approved) != row["remote_payload_hash"]
++        ):
++            raise ValueError()
++    except ValueError:
++        _error("request_conflict", "The saved approved correction could not be verified.")
++    try:
++        value = client.apply(identity, row["memory_id"], row["expected_revision"], row["desired"])
++        receipt = _receipt(row, value)
++    except CorrectionError as exc:
++        # Pinned MemoryGate rechecks the permanent receipt under its target lock.
++        # An exact retry409 therefore cannot hide an earlier matching commit: that
++        # commit would return its receipt200, even after later edits or forgetting.
++        if exc.status == 409 or (fresh and exc.status in {400, 401, 403, 404, 422}):
++            code = {404: "not_found", 409: "revision_conflict"}.get(exc.status, "unavailable")
++            return _finish(store, identity, rejection=code)
++        return _unknown(store, identity)
++    except (httpx.HTTPError, ValueError, TypeError, KeyError):
++        return _unknown(store, identity)
++    return _finish(store, identity, receipt=receipt)
++
++
++def apply(store, client, body):
++    body = Apply.model_validate(body.model_dump())
++    _configured(client)
++    digest = _digest(body)
++    with _exclusive(store):
++        with store._connect() as db:
++            old = db.execute(
++                "SELECT * FROM memory_edit_operations WHERE request_id=?", (body.request_id,)
++            ).fetchone()
++            if old:
++                _binding(old, client)
++                if old["payload_hash"] != digest:
++                    _error(
++                        "request_conflict", "Correction identity was already used for another edit."
++                    )
++                return _view(old)  # Duplicate submit never repeats a remote mutation.
++        current = preview(client, body.memory_id)
++        if current["revision"] != body.expected_revision:
++            _error("revision_conflict", "Memory changed. Review the current version first.")
++        _admit(store, client, body, digest)
++        return _dispatch(store, client, body.request_id, fresh=True)
++
++
++def status(store, client, identity):
++    _id(identity, REQUEST_ID)
++    with store._connect() as db:
++        row = _row(db, identity)
++    _binding(row, client)
++    if row["state"] not in {"applying", "unknown"}:
++        return _view(row)
++    try:
++        receipt = _receipt(row, client.receipt(identity))
++    except (CorrectionError, httpx.HTTPError, ValueError, TypeError, KeyError):
++        # In particular, receipt404 does not prove that no remote commit can still happen.
++        return get(store, identity)
++    return _finish(store, identity, receipt=receipt)
++
++
++def retry(store, client, identity, body):
++    _id(identity, REQUEST_ID)
++    body = Retry.model_validate(body.model_dump())
++    with _exclusive(store):
++        with store._connect() as db:
++            db.execute("BEGIN IMMEDIATE")
++            row = _row(db, identity)
++            _binding(row, client)
++            if row["payload_hash"] != body.expected_payload_hash:
++                _error("request_conflict", "The approved correction identity changed.")
++            if row["state"] not in {"applying", "unknown"}:
++                return _view(row)
++            if row["desired"] is None:
++                _error("request_conflict", "The approved correction payload is unavailable.")
++            db.execute(
++                "UPDATE memory_edit_operations SET state='applying' WHERE request_id=?", (identity,)
++            )
++            db.commit()
++        return _dispatch(store, client, identity, fresh=False)
++
++
++def recover_interrupted(store):
++    with store._connect() as db:
++        db.execute("UPDATE memory_edit_operations SET state='unknown' WHERE state='applying'")
++
++
++def redact_memory(db, agent_id, destination, memory_id):
++    """A verified memory forget must not retain another pending copy of its text."""
++    db.execute(
++        "UPDATE memory_edit_operations SET desired=NULL,state='rejected',error_code='memory_forgotten' "
++        f"WHERE agent_id=? AND destination=? AND memory_id=? AND state IN {UNRESOLVED}",
++        (agent_id, destination, memory_id),
++    )
++
++
++def _source_function(db, agent_id):
++    # Same immutable IDs as MemoryGate's conversation ingestion/receipt contract.
++    # No message content or unbounded result collection is loaded into Python.
++    def identity(message_id):
++        receipt = str(uuid5(NAMESPACE_URL, f"pi:{agent_id}:{message_id}"))
++        return str(uuid5(NAMESPACE_URL, receipt + ":memory"))
++
++    db.create_function("conker_edit_source_id", 1, identity, deterministic=True)
++
++
++def _source_deleted(db, agent_id, memory_id):
++    _source_function(db, agent_id)
++    return (
++        db.execute(
++            "SELECT 1 FROM memory_outbox o WHERE o.operation='delete' "
++            "AND (o.destination_agent_id=? OR o.destination_agent_id IS NULL) "
++            "AND conker_edit_source_id(o.message_id)=? LIMIT 1",
++            (agent_id, memory_id),
++        ).fetchone()
++        is not None
++    )
++
++
++def redact_sources(db, session_ids):
++    # One unresolved operation globally. Historical receipts may have been cleared;
++    # deterministic conversation IDs still bind the memory to the forgotten source.
++    if not db.execute("SELECT 1 FROM sqlite_master WHERE name='memory_edit_operations'").fetchone():
++        return  # Offline forgetting must also work before this additive feature was installed.
++    rows = db.execute(
++        f"SELECT request_id,memory_id,agent_id FROM memory_edit_operations WHERE state IN {UNRESOLVED}"
++    ).fetchall()
++    for row in rows:
++        _source_function(db, row["agent_id"])
++        for sid in session_ids:
++            match = db.execute(
++                "SELECT 1 FROM memory_outbox o JOIN messages m ON m.id=o.message_id "
++                "WHERE m.session_id=? AND (o.destination_agent_id=? OR o.destination_agent_id IS NULL) "
++                "AND conker_edit_source_id(o.message_id)=? LIMIT 1",
++                (sid, row["agent_id"], row["memory_id"]),
++            ).fetchone()
++            if match:
++                db.execute(
++                    "UPDATE memory_edit_operations SET desired=NULL,state='rejected',"
++                    "error_code='memory_forgotten' WHERE request_id=?",
++                    (row["request_id"],),
++                )
++                break
+diff --git a/pi/memory_edits_api.py b/pi/memory_edits_api.py
+new file mode 100644
+index 0000000..1371ae3
+--- /dev/null
++++ b/pi/memory_edits_api.py
+@@ -0,0 +1,89 @@
++"""Narrow owner-only memory correction surface; never a generic memory proxy."""
++
++from fastapi import APIRouter, Depends
++from fastapi.responses import JSONResponse
++from fastapi.routing import APIRoute
++
++from . import memory_delivery
++from . import memory_edits as edits
++
++
++class BoundedRoute(APIRoute):
++    def get_route_handler(self):
++        handler = super().get_route_handler()
++
++        async def bounded(request):
++            if request.scope["query_string"]:
++                return JSONResponse(
++                    {
++                        "detail": {
++                            "code": "invalid_request",
++                            "message": "Query parameters are not supported.",
++                        }
++                    },
++                    status_code=422,
++                )
++            if request.method == "POST":
++                raw = bytearray()
++                async for chunk in request.stream():
++                    raw.extend(chunk)
++                    if len(raw) > 128000:
++                        return JSONResponse(
++                            {
++                                "detail": {
++                                    "code": "invalid_request",
++                                    "message": "Correction body exceeds its limit.",
++                                }
++                            },
++                            status_code=413,
++                        )
++                request._body = bytes(raw)
++            try:
++                return await handler(request)
++            except edits.EditError as exc:
++                return JSONResponse({"detail": exc.detail}, status_code=exc.status)
++
++        return bounded
++
++
++def router(store, client, companion, authorize):
++    routes = APIRouter(
++        prefix="/memory/corrections", dependencies=[Depends(authorize)], route_class=BoundedRoute
++    )
++
++    def scoped_client():
++        value, memory = client(), companion()
++        if value is None or memory is None:
++            edits._configured(None)
++        if (value.agent_id, value.destination) != (
++            memory.agent_id,
++            memory_delivery.destination_digest(memory.http.base_url),
++        ):
++            raise edits.EditError(
++                "not_configured",
++                "Correction must target the configured Companion memory namespace.",
++                503,
++            )
++        return value
++
++    @routes.get("/pending")
++    def pending():
++        return edits.pending(store())
++
++    @routes.get("/memories/{identity}")
++    def preview(identity: str):
++        return edits.preview(scoped_client(), identity)
++
++    @routes.post("")
++    def apply(body: edits.Apply):
++        return edits.apply(store(), scoped_client(), body)
++
++    @routes.get("/{identity}")
++    def status(identity: str):
++        return edits.status(store(), scoped_client(), identity)
++
++    @routes.post("/{identity}/retry")
++    def retry(identity: str, body: edits.Retry):
++        return edits.retry(store(), scoped_client(), identity, body)
++
++    return routes
 diff --git a/pi/memory_forget.py b/pi/memory_forget.py
-index 1438b49..30cf44a 100644
+index 1438b49..5e7e80c 100644
 --- a/pi/memory_forget.py
 +++ b/pi/memory_forget.py
 @@ -1,23 +1,25 @@
@@ -2577,7 +3341,7 @@ index 1438b49..30cf44a 100644
  
  
  class ForgetError(Exception):
-@@ -26,24 +28,113 @@ class ForgetError(Exception):
+@@ -26,24 +28,119 @@ class ForgetError(Exception):
          self.status, self.detail = status, {"code": code, "message": message}
  
  
@@ -2619,6 +3383,12 @@ index 1438b49..30cf44a 100644
 +            raise ForgetError("request_conflict", "Forget request identity was already used.", 409)
 +        if old and old["state"] == "forgotten":
 +            return json.loads(old["receipt"]), False
++        if db.execute(
++            "SELECT 1 FROM memory_edit_operations WHERE state IN ('applying','unknown')"
++        ).fetchone():
++            raise ForgetError(
++                "forget_pending", "Resolve the pending memory correction before forgetting.", 409
++            )
 +        if db.execute(
 +            "SELECT 1 FROM memory_forget_operations WHERE state='pending' AND request_id!=?",
 +            (body.request_id,),
@@ -2706,7 +3476,7 @@ index 1438b49..30cf44a 100644
  
  
  def preview(client, memory_id: str) -> dict:
-@@ -66,38 +157,79 @@ def preview(client, memory_id: str) -> dict:
+@@ -66,38 +163,82 @@ def preview(client, memory_id: str) -> dict:
  
  
  def forget(store, client, body: Forget) -> dict:
@@ -2790,6 +3560,9 @@ index 1438b49..30cf44a 100644
 +            )
 +        with store._connect() as db:
 +            db.execute("BEGIN IMMEDIATE")
++            from . import memory_edits
++
++            memory_edits.redact_memory(db, client.agent_id, client.destination, body.memory_id)
 +            cleared = memory_store.invalidate_recall(db)
 +            old = db.execute(
 +                "SELECT cached_packages_cleared FROM memory_forget_operations WHERE request_id=?",
@@ -2850,7 +3623,7 @@ index d12dc3a..17b9f6a 100644
                  order = json.loads(result["completion"].text)["order"]
                  if (
 diff --git a/pi/memory_store.py b/pi/memory_store.py
-index 5afd9eb..6951f70 100644
+index 5afd9eb..2cf47b3 100644
 --- a/pi/memory_store.py
 +++ b/pi/memory_store.py
 @@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS memory_contexts (
@@ -2915,7 +3688,7 @@ index 5afd9eb..6951f70 100644
          row = db.execute(
              "SELECT destination_agent_id,delivery_started FROM memory_outbox WHERE message_id=?",
              (message_id,),
-@@ -99,13 +133,36 @@ def pin_destination(store, message_id, agent_id):
+@@ -99,13 +133,47 @@ def pin_destination(store, message_id, agent_id):
  
  def pending_deletions(store):
      with store._connect() as db:
@@ -2934,6 +3707,17 @@ index 5afd9eb..6951f70 100644
 +    )
 +
 +
++def recall_held_in(db):
++    return pending_deletions_in(db) + db.execute(
++        "SELECT COUNT(*) FROM memory_edit_operations WHERE state IN ('applying','unknown')"
++    ).fetchone()[0]
++
++
++def recall_held(store):
++    with store._connect() as db:
++        return recall_held_in(db)
++
++
 +def invalidate_recall(db):
 +    """Historical briefings lack IDs; invalidate derived recall, never conversation text."""
 +    from . import turn_context
@@ -2948,12 +3732,12 @@ index 5afd9eb..6951f70 100644
  def save_context(store, turn_id, status, package=None):
      with store._connect() as db:
 +        db.execute("BEGIN IMMEDIATE")
-+        if package is not None and pending_deletions_in(db):
++        if package is not None and recall_held_in(db):
 +            status, package = "unavailable", None
          db.execute(
              "INSERT INTO memory_contexts VALUES (?,?,?,?)",
              (
-@@ -115,20 +172,102 @@ def save_context(store, turn_id, status, package=None):
+@@ -115,20 +183,102 @@ def save_context(store, turn_id, status, package=None):
                  time.time(),
              ),
          )
@@ -2963,7 +3747,7 @@ index 5afd9eb..6951f70 100644
  def context(store, turn_id):
      with store._connect() as db:
          row = db.execute("SELECT * FROM memory_contexts WHERE turn_id=?", (turn_id,)).fetchone()
-+        held = pending_deletions_in(db)
++        held = recall_held_in(db)
      if not row:
          return {"status": "not_recorded", "package": None}
 +    if held and row["package"]:
@@ -3057,7 +3841,7 @@ index 5afd9eb..6951f70 100644
              " JOIN messages m ON m.id=o.message_id"
              + (" WHERE m.session_id=?" if session_id else ""),
              (session_id,) if session_id else (),
-@@ -136,7 +275,25 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -136,7 +286,25 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
      pending = sum(row["state"] == "pending" and row["operation"] == "ingest" for row in rows)
      blocked = sum(row["state"] == "blocked" for row in rows)
      deleting = pending_deletions(store)
@@ -3084,7 +3868,7 @@ index 5afd9eb..6951f70 100644
      admission = {
          state: sum(receipt.get("state") == state for receipt in receipts)
          for state in ("admitted", "filtered", "deleted")
-@@ -170,6 +327,30 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -170,6 +338,30 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
              "Memory context is incomplete or unavailable for this turn; "
              "the conversation continues with that gap."
          )
@@ -3115,8 +3899,13 @@ index 5afd9eb..6951f70 100644
      return {
          "configured": configured,
          "pending_ingestion": pending,
-@@ -185,9 +366,7 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+@@ -183,11 +375,12 @@ def status(store, session_id=None, turn_id=None, *, configured=False):
+ 
+ 
  def redact(db, session_ids):
++    from . import memory_edits
++
++    memory_edits.redact_sources(db, session_ids)
      # Context packages can quote a forgotten message in any session. Clearing
      # all cached packages avoids relying on incomplete third-party lineage.
 -    db.execute(
@@ -5177,10 +5966,18 @@ index c0df78b..520e13d 100644
              ],
              "model_provider_unavailable",
 diff --git a/pi/store.py b/pi/store.py
-index c59ea34..2bcf786 100644
+index c59ea34..0c01ceb 100644
 --- a/pi/store.py
 +++ b/pi/store.py
-@@ -53,6 +53,7 @@ from . import (
+@@ -41,6 +41,7 @@ from . import (
+     drafts,
+     filesystem_reads,
+     jobs,
++    memory_edits,
+     memory_proposals,
+     memory_store,
+     message_forks,
+@@ -53,6 +54,7 @@ from . import (
      research_usage,
      response_retries,
      response_versions,
@@ -5188,7 +5985,7 @@ index c59ea34..2bcf786 100644
      session_settings,
      setup_choices,
      setup_model_probes,
-@@ -133,6 +134,8 @@ CREATE TABLE IF NOT EXISTS turns (
+@@ -133,6 +135,8 @@ CREATE TABLE IF NOT EXISTS turns (
      detail       TEXT
  );
  
@@ -5197,7 +5994,7 @@ index c59ea34..2bcf786 100644
  CREATE INDEX IF NOT EXISTS messages_by_session ON messages(session_id, seq);
  CREATE INDEX IF NOT EXISTS turns_by_session ON turns(session_id, started_at);
  
-@@ -254,6 +257,10 @@ def _message(row: sqlite3.Row) -> dict:
+@@ -254,6 +258,10 @@ def _message(row: sqlite3.Row) -> dict:
  
  def _message_with_attachments(db, row):
      item = _message(row)
@@ -5208,7 +6005,15 @@ index c59ea34..2bcf786 100644
      if item.get("content_status") != "forgotten":
          version = db.execute(
              "SELECT v.root_message_id,v.retry_of,f.selected_message_id,f.revision "
-@@ -331,6 +338,7 @@ class Store:
+@@ -317,6 +325,7 @@ class Store:
+                 setup_protection.initialize(db)
+                 setup_rehearsal.initialize(db)
+                 db.executescript(memory_store.SCHEMA)
++                db.executescript(memory_edits.SCHEMA)
+                 db.executescript(memory_proposals.SCHEMA)
+                 db.executescript(proposals.SCHEMA)
+                 memory_store.migrate(db)
+@@ -331,6 +340,7 @@ class Store:
                  db.executescript(response_retries.SCHEMA)
                  db.executescript(turn_steering.SCHEMA)
                  db.executescript(research_usage.SCHEMA)
@@ -5216,7 +6021,7 @@ index c59ea34..2bcf786 100644
                  db.executescript(universal_search.SCHEMA)
                  db.executescript(message_citations.SCHEMA)
                  owner_preferences.initialize(db)
-@@ -357,6 +365,7 @@ class Store:
+@@ -357,6 +367,7 @@ class Store:
                  system_inventory.initialize(db)
                  db.executescript(filesystem_reads.SCHEMA)
                  db.executescript(system_actions.SCHEMA)
@@ -5224,7 +6029,7 @@ index c59ea34..2bcf786 100644
          except BaseException:
              self.close()
              raise
-@@ -388,6 +397,14 @@ class Store:
+@@ -388,6 +399,14 @@ class Store:
                  db.execute(f"ALTER TABLE turns ADD COLUMN {column} TEXT")
          if "acted" not in have:
              db.execute("ALTER TABLE turns ADD COLUMN acted INTEGER NOT NULL DEFAULT 0")
@@ -5239,7 +6044,7 @@ index c59ea34..2bcf786 100644
  
      @contextmanager
      def _connect(self) -> Iterator[sqlite3.Connection]:
-@@ -411,43 +428,52 @@ class Store:
+@@ -411,43 +430,52 @@ class Store:
          agent_id: str | None = None,
          privacy: dict[str, bool] | None = None,
      ) -> str:
@@ -5650,7 +6455,7 @@ index e8db745..06907fa 100644
 +        )
 +    return value
 diff --git a/pi/turn_context.py b/pi/turn_context.py
-index 2152210..49b8aca 100644
+index 2152210..76ff4e5 100644
 --- a/pi/turn_context.py
 +++ b/pi/turn_context.py
 @@ -3,7 +3,17 @@
@@ -5687,9 +6492,9 @@ index 2152210..49b8aca 100644
          db.execute("BEGIN IMMEDIATE")
 +        from . import memory_store
 +
-+        if _has_recall(prefix) and memory_store.pending_deletions_in(db):
++        if _has_recall(prefix) and memory_store.recall_held_in(db):
 +            raise context_controls.ContextError(
-+                "memory_forgetting", "Recalled context is unavailable while forgetting is pending."
++                "memory_forgetting", "Recalled context is unavailable while a memory change is pending."
 +            )
 +        # Normal outbox progress cannot invalidate a preparation-time note. A
 +        # forget journal change can: recheck its generation under the writer lock.
@@ -8987,6 +9792,1013 @@ index 0000000..9a871b5
 +    ) as memory:
 +        assert memory.drain_once() == 0
 +    assert projected(store, item)["state"] == "unavailable"
+diff --git a/tests/test_memory_edits.py b/tests/test_memory_edits.py
+new file mode 100644
+index 0000000..a178183
+--- /dev/null
++++ b/tests/test_memory_edits.py
+@@ -0,0 +1,710 @@
++"""Synthetic correction, uncertainty and recall lifecycle; no provider/network work."""
++
++import json
++from concurrent.futures import ThreadPoolExecutor
++from contextlib import closing
++from threading import Event
++
++import httpx
++import pytest
++from pydantic import ValidationError
++
++from pi import context_controls, memory_delivery, memory_forget, memory_store, turn_context
++from pi import memory_edits as edits
++from pi.memory_corrections import Client
++from pi.providers import Message
++from pi.store import Store
++
++KEY = "synthetic-correction-capability-" + "k" * 32
++BODY = edits.Apply(
++    request_id="correction_request_0001",
++    memory_id="mem-1",
++    expected_revision=3,
++    text="Owner-reviewed replacement 🐿",
++)
++
++
++class Remote:
++    def __init__(self):
++        self.memory_id = "mem-1"
++        self.text, self.revision = "Original retained fact", 3
++        self.receipts, self.calls, self.applied = {}, [], 0
++        self.lose = self.before_dispatch = False
++        self.reject = None
++        self.malformed = False
++        self.indexing = "indexed"
++
++    def handle(self, request):
++        assert request.headers["X-MemoryGate-Correction-Key"] == KEY
++        assert request.headers["X-Agent-Id"] == "companion"
++        assert "X-MemoryGate-Key" not in request.headers
++        self.calls.append((request.method, request.url.path))
++        identity = request.url.path.rsplit("/", 1)[-1]
++        if request.method == "GET" and "/memories/" in request.url.path:
++            if identity != self.memory_id:
++                return httpx.Response(404)
++            return httpx.Response(
++                200,
++                json={
++                    "id": identity,
++                    "agent_id": "companion",
++                    "revision": self.revision,
++                    "text": self.text,
++                    "source_type": "inferred",
++                    "confidence": "low",
++                },
++            )
++        if request.method == "GET":
++            return httpx.Response(
++                200 if identity in self.receipts else 404, json=self.receipts.get(identity, {})
++            )
++        if self.before_dispatch:
++            raise httpx.ReadTimeout("PRIVATE_PROVIDER_ERROR")
++        if self.reject:
++            return httpx.Response(self.reject, json={"detail": "PRIVATE_PROVIDER_ERROR"})
++        body = json.loads(request.content)
++        assert set(body) == {"memory_id", "expected_revision", "text"}
++        digest = edits.remote_digest("companion", edits.Apply(request_id=identity, **body))
++        if identity in self.receipts:
++            if self.receipts[identity]["payload_hash"] != digest:
++                return httpx.Response(409)
++            return httpx.Response(200, json=self.receipts[identity])
++        if body["expected_revision"] != self.revision:
++            return httpx.Response(409)
++        self.text, self.revision = body["text"], self.revision + 1
++        self.applied += 1
++        self.receipts[identity] = {
++            "request_id": identity,
++            "memory_id": body["memory_id"],
++            "agent_id": "companion",
++            "previous_revision": self.revision - 1,
++            "revision": self.revision,
++            "status": "applied",
++            "payload_hash": digest,
++            "indexing": self.indexing,
++        }
++        if self.lose:
++            raise httpx.ReadTimeout("PRIVATE_PROVIDER_ERROR")
++        return httpx.Response(200, json={} if self.malformed else self.receipts[identity])
++
++
++@pytest.fixture
++def setup(tmp_path):
++    remote = Remote()
++    with (
++        closing(Store(tmp_path / "pi.db")) as store,
++        closing(
++            Client(
++                "http://memorygate", KEY, "companion", transport=httpx.MockTransport(remote.handle)
++            )
++        ) as client,
++    ):
++        yield store, client, remote
++
++
++def unresolved(setup):
++    store, client, remote = setup
++    remote.lose = True
++    result = edits.apply(store, client, BODY)
++    assert result["status"] == "unknown"
++    return result
++
++
++def test_authoritative_snapshot_then_exact_apply_preserves_evidence_and_clears_payload(setup):
++    store, client, remote = setup
++    assert edits.preview(client, "mem-1") == {
++        "schemaVersion": 1,
++        "memoryId": "mem-1",
++        "revision": 3,
++        "text": "Original retained fact",
++        "sourceType": "inferred",
++        "confidence": "low",
++    }
++    result = edits.apply(store, client, BODY)
++    assert result == {
++        "schemaVersion": 1,
++        "requestId": BODY.request_id,
++        "memoryId": "mem-1",
++        "previousRevision": 3,
++        "payloadHash": edits._digest(BODY),
++        "status": "applied",
++        "revision": 4,
++        "indexing": "indexed",
++        "errorCode": None,
++        "cachedPackagesCleared": 0,
++        "sourceConversationKept": True,
++    }
++    assert edits.preview(client, "mem-1")["text"] == BODY.text
++    assert edits.preview(client, "mem-1")["sourceType"] == "inferred"
++    with store._connect() as db:
++        assert db.execute("SELECT desired FROM memory_edit_operations").fetchone()[0] is None
++    assert remote.applied == 1 and not memory_store.recall_held(store)
++    assert edits.pending(store) == {"schemaVersion": 1, "pending": None}
++
++
++def test_duplicate_submit_and_terminal_retry_never_repeat_write(setup):
++    store, client, remote = setup
++    result = edits.apply(store, client, BODY)
++    count = len(remote.calls)
++    assert edits.apply(store, client, BODY) == result
++    assert (
++        edits.retry(
++            store, client, BODY.request_id, edits.Retry(expected_payload_hash=result["payloadHash"])
++        )
++        == result
++    )
++    assert edits.status(store, client, BODY.request_id) == result
++    assert len(remote.calls) == count
++    with pytest.raises(edits.EditError, match="already used"):
++        edits.apply(store, client, BODY.model_copy(update={"text": "different"}))
++    assert remote.applied == 1
++
++
++def test_lost_reply_recovers_with_get_only_and_content_free_pending(setup):
++    store, client, remote = setup
++    result = unresolved(setup)
++    assert memory_store.recall_held(store) == 1
++    assert memory_store.pending_deletions(store) == 0  # Do not label correction as deletion.
++    pending = edits.pending(store)
++    assert pending["pending"] == {
++        "requestId": BODY.request_id,
++        "memoryId": "mem-1",
++        "expectedRevision": 3,
++        "payloadHash": result["payloadHash"],
++        "status": "unknown",
++    }
++    assert BODY.text not in json.dumps(pending) and "PRIVATE" not in json.dumps(result)
++    before = len(remote.calls)
++    assert edits.apply(store, client, BODY)["status"] == "unknown"
++    assert len(remote.calls) == before
++    assert edits.status(store, client, BODY.request_id)["status"] == "applied"
++    assert remote.calls[before:] == [("GET", "/runtime/corrections/" + BODY.request_id)]
++    assert not memory_store.recall_held(store) and remote.applied == 1
++
++
++def test_restart_missing_receipt_stays_unknown_until_explicit_exact_retry(setup):
++    store, client, remote = setup
++    remote.before_dispatch = True
++    first = edits.apply(store, client, BODY)
++    assert first["status"] == "unknown" and remote.applied == 0
++    # Reopening/recovery cannot clear the hold or send a remote request.
++    before = len(remote.calls)
++    with closing(Store(store.path)) as reopened:
++        edits.recover_interrupted(reopened)
++        assert edits.pending(reopened)["pending"]["payloadHash"] == first["payloadHash"]
++        assert len(remote.calls) == before
++        assert edits.status(reopened, client, BODY.request_id)["status"] == "unknown"
++        assert memory_store.recall_held(reopened)
++        with pytest.raises(edits.EditError):
++            edits.retry(
++                reopened, client, BODY.request_id, edits.Retry(expected_payload_hash="0" * 64)
++            )
++        remote.before_dispatch = False
++        assert (
++            edits.retry(
++                reopened,
++                client,
++                BODY.request_id,
++                edits.Retry(expected_payload_hash=first["payloadHash"]),
++            )["status"]
++            == "applied"
++        )
++    assert remote.applied == 1 and remote.text == BODY.text
++
++
++def test_crash_after_admission_remains_recoverable_without_automatic_dispatch(setup, monkeypatch):
++    store, client, remote = setup
++
++    def crash(*args, **kwargs):
++        raise RuntimeError("synthetic crash")
++
++    monkeypatch.setattr(edits, "_dispatch", crash)
++    with pytest.raises(RuntimeError):
++        edits.apply(store, client, BODY)
++    assert edits.pending(store)["pending"]["status"] == "applying"
++    before = len(remote.calls)
++    edits.recover_interrupted(store)
++    assert edits.pending(store)["pending"]["status"] == "unknown"
++    assert len(remote.calls) == before and memory_store.recall_held(store)
++
++
++@pytest.mark.parametrize(
++    "remote_status,code",
++    [
++        (400, "unavailable"),
++        (401, "unavailable"),
++        (403, "unavailable"),
++        (404, "not_found"),
++        (409, "revision_conflict"),
++        (422, "unavailable"),
++    ],
++)
++def test_fresh_definitive_refusal_releases_hold_and_text(setup, remote_status, code):
++    store, client, remote = setup
++    remote.reject = remote_status
++    result = edits.apply(store, client, BODY)
++    assert result["status"] == "rejected" and result["errorCode"] == code
++    assert result["revision"] is None and not memory_store.recall_held(store)
++    with store._connect() as db:
++        assert db.execute("SELECT desired FROM memory_edit_operations").fetchone()[0] is None
++    assert "PRIVATE" not in json.dumps(result)
++
++
++def test_auth_refused_retry_does_not_resolve_previous_unknown(setup):
++    store, client, remote = setup
++    result = unresolved(setup)
++    remote.reject = 401
++    result = edits.retry(
++        store, client, BODY.request_id, edits.Retry(expected_payload_hash=result["payloadHash"])
++    )
++    assert result["status"] == "unknown" and memory_store.recall_held(store)
++
++
++@pytest.mark.parametrize("indexing", ["pending", "degraded", "indexed"])
++def test_indexing_is_separate_from_authoritative_edit(setup, indexing):
++    store, client, remote = setup
++    remote.indexing = indexing
++    result = edits.apply(store, client, BODY)
++    assert result["status"] == "applied" and result["indexing"] == indexing
++    assert not memory_store.recall_held(store)
++
++
++def test_invalid_receipt_keeps_hold_and_can_reconcile(setup):
++    store, client, remote = setup
++    remote.malformed = True
++    assert edits.apply(store, client, BODY)["status"] == "unknown"
++    assert memory_store.recall_held(store)
++    assert edits.status(store, client, BODY.request_id)["status"] == "applied"
++
++
++@pytest.mark.parametrize(
++    "field,value",
++    [
++        ("memory_id", "other"),
++        ("previous_revision", True),
++        ("revision", 7),
++        ("agent_id", "other"),
++        ("indexing", "unknown"),
++    ],
++)
++def test_wrong_receipt_cannot_release_hold(setup, field, value):
++    store, client, remote = setup
++    unresolved(setup)
++    remote.receipts[BODY.request_id][field] = value
++    assert edits.status(store, client, BODY.request_id)["status"] == "unknown"
++    assert memory_store.recall_held(store)
++
++
++@pytest.mark.parametrize("changed", ["destination", "namespace"])
++def test_bound_destination_namespace_checked_before_any_remote_read_or_write(setup, changed):
++    store, client, remote = setup
++    result = unresolved(setup)
++    before = len(remote.calls)
++    if changed == "destination":
++        client.destination = "changed"
++    else:
++        client.agent_id = "other"
++    for operation in (
++        lambda: edits.status(store, client, BODY.request_id),
++        lambda: edits.apply(store, client, BODY),
++        lambda: edits.retry(
++            store, client, BODY.request_id, edits.Retry(expected_payload_hash=result["payloadHash"])
++        ),
++    ):
++        with pytest.raises(edits.EditError) as error:
++            operation()
++        assert error.value.detail["code"] == "request_conflict"
++    assert len(remote.calls) == before
++
++
++def test_foreign_memory_and_stale_revision_cannot_dispatch(setup):
++    store, client, remote = setup
++    for body, code in (
++        (BODY.model_copy(update={"memory_id": "foreign"}), "not_found"),
++        (BODY.model_copy(update={"expected_revision": 2}), "revision_conflict"),
++    ):
++        with pytest.raises(edits.EditError) as error:
++            edits.apply(store, client, body)
++        assert error.value.detail["code"] == code
++    assert all(method == "GET" for method, _ in remote.calls)
++    assert edits.pending(store)["pending"] is None
++
++
++def test_active_turn_preparation_and_thinking_refuse_before_remote_mutation(setup):
++    store, client, remote = setup
++    sid = store.create_session()
++    tid = store.start_turn(sid)
++    with pytest.raises(edits.EditError) as error:
++        edits.apply(store, client, BODY)
++    assert error.value.detail["code"] == "work_active"
++    store.finish_turn(tid, "complete")
++    with store._connect() as db:
++        db.execute(
++            "INSERT INTO background_thinking(turn_id,session_id,status,created_at) VALUES(?,?,'queued',0)",
++            (tid, sid),
++        )
++    with pytest.raises(edits.EditError) as error:
++        edits.apply(store, client, BODY)
++    assert error.value.detail["code"] == "work_active"
++    assert remote.applied == 0 and edits.pending(store)["pending"] is None
++
++
++def test_one_admitted_edit_and_no_concurrent_duplicate_dispatch(setup):
++    store, client, remote = setup
++    entered, release = Event(), Event()
++    original = client.apply
++
++    def blocked(*args):
++        entered.set()
++        assert release.wait(5)
++        return original(*args)
++
++    client.apply = blocked
++    with ThreadPoolExecutor(1) as pool:
++        future = pool.submit(edits.apply, store, client, BODY)
++        assert entered.wait(5)
++        try:
++            assert memory_store.recall_held(store)
++            with pytest.raises(edits.EditError) as error:
++                edits.apply(store, client, BODY)
++            assert error.value.detail["code"] == "in_progress"
++        finally:
++            release.set()
++        assert future.result(5)["status"] == "applied"
++    assert remote.applied == 1
++
++
++def test_correction_and_forget_serialize_without_releasing_each_others_hold(setup):
++    store, client, _remote = setup
++    unresolved(setup)
++    with pytest.raises(edits.EditError) as error:
++        edits.apply(
++            store,
++            client,
++            BODY.model_copy(update={"request_id": "another_request_0001", "expected_revision": 4}),
++        )
++    assert error.value.detail["code"] == "change_pending"
++    with pytest.raises(memory_forget.ForgetError):
++        memory_forget.forget(
++            store,
++            client,
++            memory_forget.Forget(
++                request_id="forget_request_0001", memory_id="mem-1", expected_revision=4
++            ),
++        )
++    assert memory_store.recall_held(store) == 1
++
++
++def test_recall_prefix_briefing_and_retry_copies_are_invalidated_source_kept(setup):
++    from test_memory_forget_recall import recorded, retry_copy, unavailable
++
++    store, client, _remote = setup
++    sid, tid = recorded(store, {"memories": [{"id": "mem-1", "text": "old fact"}]})
++    copied = retry_copy(store, sid, tid)
++    _, briefing = recorded(store, {"briefing": {"watch_flags": ["old fact"]}})
++    _, ordinary = recorded(store)
++    before = turn_context.replay(store, ordinary)
++    messages = store.messages(sid)
++    result = edits.apply(store, client, BODY)
++    assert result["cachedPackagesCleared"] == 2
++    for identity in (tid, copied, briefing):
++        unavailable(store, identity)
++    assert turn_context.replay(store, ordinary) == before
++    assert store.messages(sid) == messages
++
++
++def test_pending_hold_blocks_late_packages_but_allows_no_recall_conversation(setup):
++    store, _client, _remote = setup
++    unresolved(setup)
++    sid = store.create_session()
++    tid = store.start_turn(sid)
++    memory_store.save_context(store, tid, "ok", {"memories": [{"text": "old"}]})
++    assert memory_store.context(store, tid)["package"] is None
++    with pytest.raises(context_controls.ContextError):
++        turn_context.capture(
++            store, tid, [], [Message("system", turn_context.RECALL_HEADER + "old")]
++        )
++    turn_context.capture(store, tid, [], [Message("system", "Normal no-memory instructions")])
++    assert turn_context.load(store, tid)["prefix"][0]["content"] == "Normal no-memory instructions"
++
++
++def test_correction_advances_ack_generation_and_fences_old_preparation(setup):
++    store, client, _remote = setup
++    with store._connect() as db:
++        old_generation = memory_delivery.forget_generation(db)
++    edits.apply(store, client, BODY)
++    sid = store.create_session()
++    tid = store.start_turn(sid)
++    with pytest.raises(context_controls.ContextError):
++        turn_context.capture(
++            store,
++            tid,
++            [],
++            [Message("system", memory_delivery.NOTE_PREFIX + "old acknowledgement")],
++            acknowledgement_generation=old_generation,
++        )
++
++
++@pytest.mark.parametrize(
++    "update",
++    [
++        {"expected_revision": True},
++        {"expected_revision": 2147483647},
++        {"text": " "},
++        {"text": "x\x00y"},
++        {"text": "\ud800"},
++        {"text": "x" * 16001},
++        {"memory_id": "bad\n"},
++        {"request_id": "request_identifier\n"},
++        {"agent_id": "other"},
++    ],
++)
++def test_strict_bounded_request(update):
++    with pytest.raises(ValidationError):
++        edits.Apply.model_validate({**BODY.model_dump(), **update})
++
++
++def test_unicode_text_bound_is_codepoints_not_utf16_units(setup):
++    store, client, remote = setup
++    text = "🐿" * 16000
++    assert edits.apply(store, client, BODY.model_copy(update={"text": text}))["status"] == "applied"
++    assert remote.text == text
++
++
++def source_memory(setup):
++    from uuid import NAMESPACE_URL, uuid5
++
++    store, _client, remote = setup
++    sid = store.create_session()
++    message = store.append_message(sid, "user", "Remember that this synthetic fact is private")
++    receipt_id = str(uuid5(NAMESPACE_URL, "pi:companion:" + message["id"]))
++    remote.memory_id = str(uuid5(NAMESPACE_URL, receipt_id + ":memory"))
++    with store._connect() as db:
++        db.execute(
++            "UPDATE memory_outbox SET destination_agent_id='companion',delivery_started=1 WHERE message_id=?",
++            (message["id"],),
++        )
++    return sid, BODY.model_copy(update={"memory_id": remote.memory_id})
++
++
++@pytest.mark.parametrize("legacy", [False, True])
++def test_source_forget_scrubs_pending_text_and_late_receipt_cannot_restore_it(setup, legacy):
++    from pi import forgetting
++
++    store, client, remote = setup
++    sid, body = source_memory(setup)
++    remote.lose = True
++    result = edits.apply(store, client, body)
++    if legacy:
++        with store._connect() as db:
++            db.execute("UPDATE memory_outbox SET destination_agent_id=NULL")
++    unrelated = store.create_session()
++    store.append_message(unrelated, "user", "An unrelated message")
++    with store._connect() as db:
++        forgetting._redact(db, forgetting._plan(db, unrelated))
++    assert edits.pending(store)["pending"] is not None
++    with store._connect() as db:
++        forgetting._redact(db, forgetting._plan(db, sid))
++    resolved = edits.get(store, body.request_id)
++    assert resolved["status"] == "rejected" and resolved["errorCode"] == "memory_forgotten"
++    with store._connect() as db:
++        assert db.execute("SELECT desired FROM memory_edit_operations").fetchone()[0] is None
++    assert memory_store.recall_held(store)  # Source deletion still needs remote acknowledgement.
++    before = len(remote.calls)
++    assert edits.status(store, client, body.request_id) == resolved
++    assert (
++        edits.retry(
++            store, client, body.request_id, edits.Retry(expected_payload_hash=result["payloadHash"])
++        )
++        == resolved
++    )
++    assert len(remote.calls) == before
++
++
++def test_forget_between_snapshot_and_admission_cannot_restore_pending_text(setup):
++    from pi import forgetting
++
++    store, client, remote = setup
++    sid, body = source_memory(setup)
++    original = client.memory
++
++    def interleave(identity):
++        result = original(identity)
++        with store._connect() as db:
++            forgetting._redact(db, forgetting._plan(db, sid))
++        return result
++
++    client.memory = interleave
++    with pytest.raises(edits.EditError) as failure:
++        edits.apply(store, client, body)
++    assert failure.value.detail["code"] == "not_found"
++    assert edits.pending(store)["pending"] is None and remote.applied == 0
++
++
++def test_late_apply_receipt_after_source_forget_keeps_terminal_redaction(setup):
++    from pi import forgetting
++
++    store, client, _remote = setup
++    sid, body = source_memory(setup)
++    original = client.apply
++
++    def interleave(*args):
++        result = original(*args)
++        with store._connect() as db:
++            forgetting._redact(db, forgetting._plan(db, sid))
++        return result
++
++    client.apply = interleave
++    result = edits.apply(store, client, body)
++    assert result["status"] == "rejected" and result["errorCode"] == "memory_forgotten"
++    with store._connect() as db:
++        assert db.execute("SELECT desired FROM memory_edit_operations").fetchone()[0] is None
++
++
++def test_explicit_retry_conflict_after_lost_dispatch_releases_hold(setup):
++    store, client, remote = setup
++    remote.before_dispatch = True
++    value = edits.apply(store, client, BODY)
++    remote.before_dispatch = False
++    remote.revision += 1  # A different owner operation edited the record meanwhile.
++    result = edits.retry(
++        store, client, BODY.request_id, edits.Retry(expected_payload_hash=value["payloadHash"])
++    )
++    assert result["status"] == "rejected" and result["errorCode"] == "revision_conflict"
++    assert remote.applied == 0 and not memory_store.recall_held(store)
++    with store._connect() as db:
++        assert db.execute("SELECT desired FROM memory_edit_operations").fetchone()[0] is None
++
++
++@pytest.mark.parametrize("later", ["edit", "forget"])
++def test_prior_matching_commit_still_replays_after_later_changes(setup, later):
++    store, client, remote = setup
++    value = unresolved(setup)
++    if later == "edit":
++        remote.revision += 1
++        remote.text = "Another later edit"
++    else:
++        remote.memory_id = "deleted"
++    result = edits.retry(
++        store, client, BODY.request_id, edits.Retry(expected_payload_hash=value["payloadHash"])
++    )
++    assert result["status"] == "applied" and result["revision"] == 4
++    assert remote.applied == 1 and not memory_store.recall_held(store)
++
++
++def test_same_identity_target_and_revisions_different_text_cannot_false_acknowledge(setup):
++    store, client, remote = setup
++    remote.before_dispatch = True
++    value = edits.apply(store, client, BODY)
++    remote.before_dispatch = False
++    different = BODY.model_copy(update={"text": "Another writer's text"})
++    client.apply(
++        different.request_id, different.memory_id, different.expected_revision, different.text
++    )
++    assert edits.status(store, client, BODY.request_id)["status"] == "unknown"
++    assert memory_store.recall_held(store)
++    result = edits.retry(
++        store, client, BODY.request_id, edits.Retry(expected_payload_hash=value["payloadHash"])
++    )
++    assert result["status"] == "rejected" and result["errorCode"] == "revision_conflict"
++    assert remote.text == different.text and remote.applied == 1
++
++
++def test_receipt_without_payload_proof_keeps_unknown_on_put_and_get(setup):
++    store, client, remote = setup
++    original = client.apply
++
++    def old_service(*args):
++        receipt = original(*args)
++        receipt.pop("payload_hash")
++        return receipt
++
++    client.apply = old_service
++    assert edits.apply(store, client, BODY)["status"] == "unknown"
++    remote.receipts[BODY.request_id].pop("payload_hash")
++    assert edits.status(store, client, BODY.request_id)["status"] == "unknown"
++    assert memory_store.recall_held(store)
++
++
++def test_old_schema_source_forgetting_needs_no_new_runtime_start(setup):
++    from pi import forgetting
++
++    store, _client, _remote = setup
++    sid = store.create_session()
++    store.append_message(sid, "user", "A historical chat")
++    with store._connect() as db:
++        db.execute("DROP TABLE memory_edit_operations")
++        result = forgetting._redact(db, forgetting._plan(db, sid))
++    assert result
++    assert store.get_session(sid)["status"] == "forgotten"
++
++
++def test_preparing_turn_refuses_before_mutation(setup):
++    store, client, remote = setup
++    sid = store.create_session()
++    with store._connect() as db:
++        db.execute(
++            "INSERT INTO turn_submissions(request_id,requested_session_id,state,history_seq,created_at,updated_at) VALUES('preparing_request_001',?,'preparing',0,0,0)",
++            (sid,),
++        )
++    with pytest.raises(edits.EditError) as failure:
++        edits.apply(store, client, BODY)
++    assert failure.value.detail["code"] == "work_active"
++    assert remote.applied == 0 and edits.pending(store)["pending"] is None
++
++
++def test_saved_payload_tampering_cannot_change_exact_retry(setup):
++    store, client, remote = setup
++    result = unresolved(setup)
++    with store._connect() as db:
++        db.execute("UPDATE memory_edit_operations SET desired='Unapproved text'")
++    before = len(remote.calls)
++    with pytest.raises(edits.EditError):
++        edits.retry(
++            store, client, BODY.request_id, edits.Retry(expected_payload_hash=result["payloadHash"])
++        )
++    assert len(remote.calls) == before
++
++
++def test_new_edit_waits_for_existing_forget_hold(setup):
++    store, client, remote = setup
++    with store._connect() as db:
++        db.execute(
++            "INSERT INTO memory_forget_operations(request_id,memory_id,agent_id,destination,expected_revision,state) VALUES('forget_request_001','mem-2','companion',?,1,'pending')",
++            (client.destination,),
++        )
++    with pytest.raises(edits.EditError) as failure:
++        edits.apply(store, client, BODY)
++    assert failure.value.detail["code"] == "change_pending"
++    assert remote.applied == 0
++
++
++def test_delayed_original_snapshot_cannot_overlap_new_approval_after_status404(setup):
++    store, client, remote = setup
++    entered, release = Event(), Event()
++    original = client.memory
++
++    def held(identity):
++        snapshot = original(identity)
++        entered.set()
++        assert release.wait(5)
++        return snapshot
++
++    client.memory = held
++    with ThreadPoolExecutor(1) as pool:
++        future = pool.submit(edits.apply, store, client, BODY)
++        assert entered.wait(5)
++        try:
++            with pytest.raises(edits.EditError) as unknown:
++                edits.status(store, client, BODY.request_id)
++            assert unknown.value.status == 404
++            new = BODY.model_copy(update={"request_id": "new_approval_request_001"})
++            with pytest.raises(edits.EditError) as pending:
++                edits.apply(store, client, new)
++            assert pending.value.detail["code"] == "in_progress"
++        finally:
++            release.set()
++        assert future.result(5)["status"] == "applied"
++    with pytest.raises(edits.EditError) as stale:
++        edits.apply(store, client, new)
++    assert stale.value.detail["code"] == "revision_conflict" and remote.applied == 1
+diff --git a/tests/test_memory_edits_api.py b/tests/test_memory_edits_api.py
+new file mode 100644
+index 0000000..bca9c9a
+--- /dev/null
++++ b/tests/test_memory_edits_api.py
+@@ -0,0 +1,285 @@
++"""Owner/Gateway boundaries for text corrections; upstream memory is synthetic."""
++
++import hashlib
++from types import SimpleNamespace
++
++import httpx
++import pytest
++from fastapi.testclient import TestClient
++from test_memory_edits import BODY, setup  # noqa: F401 -- shared isolated fixture
++
++from gateway import mutation
++from gateway.api import Config, create_app
++from gateway.store import AuthStore
++from pi import api, browser_contract
++from pi import memory_edits as edits
++
++OWNER = "synthetic-owner-key-" + "o" * 32
++PREFIX = "/memory/corrections"
++
++
++@pytest.fixture
++def http(setup, monkeypatch):
++    store, client, _ = setup
++    monkeypatch.setattr(api.app.state, "store", store, raising=False)
++    monkeypatch.setattr(api.app.state, "admin_key", "synthetic-admin", raising=False)
++    monkeypatch.setattr(
++        api.app.state, "owner_key_hash", hashlib.sha256(OWNER.encode()).hexdigest(), raising=False
++    )
++    monkeypatch.setattr(api.app.state, "memory_corrections", client, raising=False)
++    monkeypatch.setattr(api.app.state, "memory", SimpleNamespace(client=client), raising=False)
++    return TestClient(api.app)
++
++
++def test_actual_owner_snapshot_apply_and_read_recovery(http, setup):
++    store, _, remote = setup
++    headers = {"X-Pi-Owner-Key": OWNER}
++    assert http.get(PREFIX + "/memories/mem-1").status_code == 401
++    assert (
++        http.get(PREFIX + "/memories/mem-1", headers={"X-Pi-Gateway-Key": "runtime"}).status_code
++        == 401
++    )
++    snapshot = http.get(PREFIX + "/memories/mem-1", headers=headers)
++    assert snapshot.status_code == 200 and snapshot.json()["sourceType"] == "inferred"
++    remote.lose = True
++    result = http.post(PREFIX, json=BODY.model_dump(), headers=headers)
++    assert result.status_code == 200 and result.json()["status"] == "unknown"
++    assert (
++        http.get(PREFIX + "/pending", headers=headers).json()["pending"]["requestId"]
++        == BODY.request_id
++    )
++    before = len(remote.calls)
++    response = http.get(PREFIX + "/" + BODY.request_id, headers=headers)
++    assert response.json()["status"] == "applied"
++    assert remote.calls[before:] == [("GET", "/runtime/corrections/" + BODY.request_id)]
++    assert edits.pending(store)["pending"] is None
++
++
++def test_status_local404_is_distinct_from_remote_missing_receipt(http, setup):
++    _, _, remote = setup
++    headers = {"X-Pi-Owner-Key": OWNER}
++    assert http.get(PREFIX + "/unknown_request_0001", headers=headers).status_code == 404
++    remote.before_dispatch = True
++    http.post(PREFIX, json=BODY.model_dump(), headers=headers)
++    result = http.get(PREFIX + "/" + BODY.request_id, headers=headers)
++    assert result.status_code == 200 and result.json()["status"] == "unknown"
++
++
++def test_exact_retry_after_dispatch_failure(http, setup):
++    _, _, remote = setup
++    headers = {"X-Pi-Owner-Key": OWNER}
++    remote.before_dispatch = True
++    value = http.post(PREFIX, json=BODY.model_dump(), headers=headers).json()
++    remote.before_dispatch = False
++    result = http.post(
++        PREFIX + "/" + BODY.request_id + "/retry",
++        json={"expected_payload_hash": value["payloadHash"]},
++        headers=headers,
++    )
++    assert result.json()["status"] == "applied" and remote.applied == 1
++
++
++@pytest.mark.parametrize(
++    "path", [PREFIX + "/pending", PREFIX + "/memories/mem-1", PREFIX + "/" + BODY.request_id]
++)
++def test_query_and_runtime_routes_fail_closed(http, path):
++    assert browser_contract.owner_allowed("GET", path)
++    assert not browser_contract.runtime_allowed("GET", path)
++    assert http.get(path + "?namespace=other", headers={"X-Pi-Owner-Key": OWNER}).status_code == 422
++
++
++@pytest.mark.parametrize("change", ["namespace", "destination", "missing"])
++def test_companion_namespace_and_endpoint_must_match(http, setup, monkeypatch, change):
++    _, client, remote = setup
++    memory = (
++        None
++        if change == "missing"
++        else SimpleNamespace(
++            agent_id="other" if change == "namespace" else client.agent_id,
++            http=SimpleNamespace(
++                base_url=httpx.URL(
++                    "http://other" if change == "destination" else "http://memorygate/"
++                )
++            ),
++        )
++    )
++    monkeypatch.setattr(api.app.state, "memory", SimpleNamespace(client=memory))
++    result = http.get(PREFIX + "/memories/mem-1", headers={"X-Pi-Owner-Key": OWNER})
++    assert result.status_code == 503 and result.json()["detail"]["code"] == "not_configured"
++    assert not remote.calls
++
++
++def test_pending_read_survives_missing_configuration_and_is_content_free(http, setup, monkeypatch):
++    _, _, remote = setup
++    remote.lose = True
++    headers = {"X-Pi-Owner-Key": OWNER}
++    http.post(PREFIX, json=BODY.model_dump(), headers=headers)
++    monkeypatch.setattr(api.app.state, "memory_corrections", None)
++    result = http.get(PREFIX + "/pending", headers=headers)
++    assert result.status_code == 200 and BODY.text not in result.text
++    assert set(result.json()["pending"]) == {
++        "requestId",
++        "memoryId",
++        "expectedRevision",
++        "payloadHash",
++        "status",
++    }
++
++
++def test_validation_never_echoes_text_and_raw_body_is_bounded(http):
++    headers = {"X-Pi-Owner-Key": OWNER}
++    value = http.post(
++        PREFIX, json={**BODY.model_dump(), "expected_revision": 2**63}, headers=headers
++    )
++    assert value.status_code == 422 and BODY.text not in value.text
++    value = http.post(PREFIX, content=b"x" * 128001, headers=headers)
++    assert value.status_code == 413 and len(value.content) < 200
++    assert (
++        http.post(PREFIX, json=BODY.model_dump(), headers=headers, params={"x": "y"}).status_code
++        == 422
++    )
++
++
++@pytest.mark.parametrize("text", [BODY.text, "\x01" * 16000], ids=["ordinary", "escaped-limit"])
++def test_gateway_uses_exact_owner_proof_and_never_runtime_key(tmp_path, monkeypatch, text):
++    from gateway import store as auth_module
++
++    monkeypatch.setattr(
++        auth_module,
++        "password_hash",
++        lambda value, salt: hashlib.sha256(salt + value.encode()).hexdigest(),
++    )
++    auth = AuthStore(tmp_path / "auth.db")
++    password, origin = "synthetic-owner-password", "https://localhost:8050"
++    auth.set_password(password)
++    approved = {**BODY.model_dump(), "text": text}
++    seen = []
++
++    def upstream(request):
++        seen.append(request)
++        return httpx.Response(200, json={"schemaVersion": 1})
++
++    with TestClient(
++        create_app(
++            Config(origin, str(auth.path), "http://pi:8050", "r" * 32, pi_owner_key=OWNER),
++            store=auth,
++            transport=httpx.MockTransport(upstream),
++        ),
++        base_url=origin,
++    ) as browser:
++        path = "/api/control/pi" + PREFIX
++        assert browser.get(path + "/pending").status_code == 401
++        csrf = browser.get("/auth/session").json()["csrf_token"]
++        login = browser.post(
++            "/auth/login",
++            json={"password": password},
++            headers={"Origin": origin, "X-CSRF-Token": csrf},
++        )
++        headers = {"Origin": origin, "X-CSRF-Token": login.json()["csrf_token"]}
++        assert browser.get(path + "/pending").status_code == 200
++        assert seen[-1].headers["x-pi-owner-key"] == OWNER
++        assert "x-pi-gateway-key" not in seen[-1].headers and "cookie" not in seen[-1].headers
++        assert browser.post(path, json=approved, headers=headers).status_code == 428
++        proof = browser.post(
++            "/auth/verify",
++            headers=headers,
++            json={
++                "password": password,
++                "operation": {"method": "POST", "path": path, "body": approved},
++            },
++        ).json()["verification_token"]
++        verified = {**headers, "X-Conker-Verification": proof}
++        assert (
++            browser.post(
++                path, json={**BODY.model_dump(), "text": "changed"}, headers=verified
++            ).status_code
++            == 428
++        )
++        response = browser.post(path, json=approved, headers=verified)
++        assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
++        assert browser.post(path, json=approved, headers=verified).status_code == 428
++        assert browser.get(path + "/pending?x=1").status_code == 422
++        assert browser.get("/api/pi" + PREFIX + "/pending").status_code == 403
++        assert len(seen) == 2
++
++
++def test_cli_mutations_preserve_forget_and_use_same_narrow_writer():
++    correct = mutation._resolve("memory", {"operation": "correct", **BODY.model_dump()})
++    assert (
++        correct.method == "POST" and correct.path == PREFIX and correct.payload == BODY.model_dump()
++    )
++    retry = mutation._resolve(
++        "memory",
++        {
++            "operation": "retry-correction",
++            "request_id": BODY.request_id,
++            "expected_payload_hash": "a" * 64,
++        },
++    )
++    assert retry.path == PREFIX + "/" + BODY.request_id + "/retry"
++    assert retry.payload == {"expected_payload_hash": "a" * 64}
++    forget = mutation._resolve(
++        "memory", {"operation": "forget", **BODY.model_dump(exclude={"text"})}
++    )
++    assert forget.path == "/memory/forget"
++    with pytest.raises(mutation.MutationError):
++        mutation._resolve(
++            "memory", {"operation": "correct", **BODY.model_dump(), "source_type": "stated"}
++        )
++
++
++@pytest.mark.parametrize(
++    "resource,path",
++    [
++        ("memory-edit:mem-1", PREFIX + "/memories/mem-1"),
++        ("memory-edit-pending", PREFIX + "/pending"),
++        ("memory-edit-status:" + BODY.request_id, PREFIX + "/" + BODY.request_id),
++    ],
++)
++def test_compiled_cli_inspection_uses_fixed_owner_reads(tmp_path, resource, path):
++    from gateway.inspection import inspect_resource
++
++    def upstream(request):
++        assert request.method == "GET" and request.url.path == path and not request.url.query
++        assert request.headers["X-Pi-Owner-Key"] == OWNER
++        assert "X-Pi-Gateway-Key" not in request.headers
++        return httpx.Response(200, json={"schemaVersion": 1})
++
++    config = Config(
++        "https://localhost:8050",
++        str(tmp_path / "auth.db"),
++        "http://pi:8050",
++        "r" * 32,
++        pi_owner_key=OWNER,
++    )
++    with httpx.Client(transport=httpx.MockTransport(upstream)) as client:
++        assert inspect_resource(config, resource, client) == {"schemaVersion": 1}
++
++
++@pytest.mark.parametrize(
++    "resource",
++    [
++        "memory-edit:../mem-1",
++        "memory-edit:mem-1\n",
++        "memory-edit-status:x",
++        "memory-edit-status:" + BODY.request_id + "?text=other",
++        "memory-edit-pending:other",
++    ],
++)
++def test_compiled_cli_inspection_rejects_unbounded_or_unknown_path(tmp_path, resource):
++    from gateway.inspection import InspectionError, inspect_resource
++
++    config = Config(
++        "https://localhost:8050",
++        str(tmp_path / "auth.db"),
++        "http://pi:8050",
++        "r" * 32,
++        pi_owner_key=OWNER,
++    )
++    with (
++        httpx.Client(
++            transport=httpx.MockTransport(lambda request: pytest.fail("No request"))
++        ) as client,
++        pytest.raises(InspectionError),
++    ):
++        inspect_resource(config, resource, client)
 diff --git a/tests/test_memory_forget.py b/tests/test_memory_forget.py
 index 0daeabb..3e4c806 100644
 --- a/tests/test_memory_forget.py

@@ -720,3 +720,15 @@ Native metadata is last-checked evidence with explicit Refresh/Check status. Rea
 Codex uses the same destination with `provider=codex`, separate provider lifetimes and Unarchived/Archived saved-history scopes. The observer reads Conker’s isolated profile; it cannot prove activity in another Codex process. Do not infer Running, Idle, Completed or Stopped from stored metadata or expose a runtime-inspection action. Pages are explicit snapshots: Refresh restarts paging, Load more retains prior rows, and Search loaded threads filters only loaded names, bounded previews, IDs and working directories. Errors retain matching rows with last-loaded wording; invalid cursors require Refresh, never an empty-success fallback. Provider/archive/owner/client changes abort reads and clear old inspection state. No full transcript or output is loaded or persisted.
 
 Codex detail reads are query-free, bounded to 35 seconds and bound to the exact canonical thread ID. Unnamed rows use a bounded preview fallback; shortened previews are labeled in detail. The exact `python scripts/conker.py native codex resume <id>` command is a manual action from the Conker repository and preserves native prompts and approvals. There are no Codex Stop, launch, approval or permission controls in this view. Native provider selection and all paging/retry controls remain accessible in the compact shared appbar and on mobile.
+
+Retained memory edits start in the Memory inspector and read a fresh, full Companion
+memory snapshot. The task dialog edits text only; source and confidence remain
+read-only. Revision checks and operation-bound owner verification protect each
+change. Draft text stays in the mounted editor and never enters browser storage.
+Owner, client, selection, editor-instance and source-forget changes retire reads
+and drafts. Reads stop after 35 seconds; mutation deadlines begin at dispatch
+after verification and allow 45 seconds. Unknown outcomes never replay. On reload,
+content-free pending metadata offers Check status; retry is a separate confirmed
+operation bound to the server-saved approved payload hash. Applied receipts distinguish
+saved text from indexing status. A missing receipt remains uncertain until an
+authoritative outcome is verified. Source conversations and memory permissions remain unchanged.

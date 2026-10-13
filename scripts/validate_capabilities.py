@@ -28,6 +28,7 @@ REQUIRED_CAPABILITIES = {
     "host-inventory",
     "jobs-schedules",
     "local-model-download",
+    "memory-corrections",
     "memory-exploration",
     "memory-forgetting",
     "model-configuration",

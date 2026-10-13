@@ -17,6 +17,14 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push('Revokes browser access only. Models, jobs and services keep running. Revoking this browser signs you out.')
     return { title, path, target, details }
   }
+  if (path === '/api/control/pi/memory/corrections' || /^\/api\/control\/pi\/memory\/corrections\/[A-Za-z0-9_-]{16,128}\/retry$/.test(path)) {
+    const retry = path.endsWith('/retry')
+    title = retry ? 'Retry approved memory change' : 'Edit retained memory'
+    target = retry ? `Correction ${parts[6]}` : typeof body.memory_id === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$(?![\s\S])/.test(body.memory_id) ? `Memory ${body.memory_id}` : 'Reviewed memory'
+    details.push(retry ? 'Retries only the exact previously approved text and revision saved on the server. It cannot substitute a new edit.' : `Replaces the reviewed memory text only if revision ${body.expected_revision} is still current.`)
+    details.push('The source conversation is kept. Source, confidence and memory permissions are unchanged.')
+    return { title, path, target, details }
+  }
   if (path.startsWith('/api/owner/mcp/')) {
     let endpoint = 'Saved MCP server'
     try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }

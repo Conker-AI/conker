@@ -150,7 +150,20 @@ memory; use **Forget this memory** to remove an existing reviewed record. Forget
 one memory keeps its source chat. If a deletion remains uncertain, the recovery
 control reconciles the same request and can complete that deletion; it does not
 choose a different record to delete.
-Editing a memory's text from this screen remains planned.
+To correct retained wording, select **Edit memory**. Conker loads the full current
+text and revision for review; it does not edit a shortened library preview.
+Save the change and complete owner verification. Editing changes the text of a
+Companion memory while preserving its source and confidence, including whether
+it was inferred. It keeps the source conversation. Other record kinds and
+namespaces remain read-only. Finish or stop active work before making a change.
+
+If saving is unconfirmed, **Check status** reads the original receipt without
+resending the edit. **Retry approved change** is a separate, explicit action that
+can send only the exact previously approved text. Recall pauses while that
+correction remains unresolved. A changed revision requires a fresh review;
+an unavailable read never proves that the previous edit failed. Closing the
+editor discards unsent text. Text being saved and search indexing being ready are
+separate results.
 
 For automatic recall across chats, open **Agents > Companion > Harness** and
 choose **Memory access > Across my chats**. Saving requires owner verification

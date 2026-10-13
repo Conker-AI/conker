@@ -107,6 +107,50 @@ def draft_path(target, task=None):
     return f"/drafts/{target}" + (f"/tasks/{task}" if task else "")
 
 
+def memory_edit_operation(args):
+    """Validate the exact correction before reading credentials or sending it."""
+    path, body = "/memory/corrections", None
+    if args.operation in {"show", "apply"}:
+        identity(
+            args.memory_id,
+            r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}",
+            "memory ID",
+            200,
+        )
+    if args.operation in {"apply", "status", "retry"}:
+        identity(args.request_id, r"[A-Za-z0-9_-]{16,128}", "request ID")
+    if args.operation == "show":
+        path += "/memories/" + args.memory_id
+    elif args.operation == "pending":
+        path += "/pending"
+    elif args.operation == "status":
+        path += "/" + args.request_id
+    elif args.operation == "retry":
+        identity(
+            args.expected_payload_hash,
+            r"[0-9a-f]{64}",
+            "reviewed correction payload hash",
+            64,
+        )
+        path += "/" + args.request_id + "/retry"
+        body = {"expected_payload_hash": args.expected_payload_hash}
+    elif args.operation == "apply":
+        if not 1 <= args.expected_revision <= 2147483646:
+            raise ValueError("Use the reviewed memory revision (1–2147483646).")
+        text = read_text(args.file, 64003, "Replacement memory text")
+        if not text.strip() or len(text) > 16000 or "\x00" in text:
+            raise ValueError(
+                "Replacement memory text must be nonblank, at most 16,000 characters, without NUL."
+            )
+        body = {
+            "request_id": args.request_id,
+            "memory_id": args.memory_id,
+            "expected_revision": args.expected_revision,
+            "text": text,
+        }
+    return path, body
+
+
 def draft_payload(path, target, revision):
     value = read_json(path, 65536)
     allowed = {"text", "model_id", "skill_ids", "think", "research_mode"}
@@ -335,7 +379,7 @@ def request(
         if maximum_bytes is not None:
             raw = response.read(maximum_bytes + 1)
             if len(raw) > maximum_bytes:
-                raise ValueError("The native session response exceeded its size limit.")
+                raise ValueError("The service response exceeded its size limit.")
             return json.loads(raw)
         return json.load(response)
 
@@ -381,6 +425,33 @@ def main():
         "memory-forget-pending",
         help="Inspect the saved identity of an unresolved memory forget request",
     )
+    memory_edit = commands.add_parser(
+        "memory-edit", help="Review and correct retained Companion memory text"
+    )
+    memory_edit_commands = memory_edit.add_subparsers(dest="operation", required=True)
+    memory_show = memory_edit_commands.add_parser(
+        "show", help="Read full authoritative text and its revision before editing"
+    )
+    memory_show.add_argument("memory_id")
+    memory_apply = memory_edit_commands.add_parser(
+        "apply", help="Apply exactly the reviewed UTF-8 text file and revision"
+    )
+    memory_apply.add_argument("memory_id")
+    memory_apply.add_argument("file", type=Path)
+    memory_apply.add_argument("--expected-revision", required=True, type=int)
+    memory_apply.add_argument("--request-id", required=True)
+    memory_edit_commands.add_parser(
+        "pending", help="Find unresolved correction identity without reading its text"
+    )
+    memory_status = memory_edit_commands.add_parser(
+        "status", help="Check the original receipt without sending an edit"
+    )
+    memory_status.add_argument("request_id")
+    memory_retry = memory_edit_commands.add_parser(
+        "retry", help="Explicitly resend only the exact previously approved correction"
+    )
+    memory_retry.add_argument("request_id")
+    memory_retry.add_argument("--expected-payload-hash", required=True)
     delivery = commands.add_parser(
         "memory-delivery", help="Read acknowledged memory delivery for saved messages"
     )
@@ -627,6 +698,9 @@ def main():
                 raise ValueError(
                     "Use --enabled together with --expected-digest to change access."
                 )
+    memory_edit_request = (
+        memory_edit_operation(args) if args.command == "memory-edit" else None
+    )
     config = read_config()
     if args.command == "native":
         native = config["native_providers"]
@@ -739,6 +813,31 @@ def main():
         value = request(config, "pi", f"/turns/{args.turn}/usage")
     elif args.command == "memory-forget-pending":
         value = request(config, "pi-owner", "/memory/forget-pending")
+    elif args.command == "memory-edit":
+        path, body = memory_edit_request
+        try:
+            value = request(
+                config,
+                "pi-owner",
+                path,
+                body,
+                timeout=45 if body is not None else 35,
+                maximum_bytes=128000,
+            )
+        except (HTTPError, OSError, ValueError) as exc:
+            if isinstance(exc, HTTPError):
+                exc.close()
+            if body is not None:
+                message = (
+                    "Memory correction was not confirmed. Check the original request with "
+                    f"memory-edit status {args.request_id}; no edit was automatically repeated."
+                )
+            else:
+                message = (
+                    "Memory correction evidence could not be read. "
+                    "Check the memory or request identity and try the read again."
+                )
+            raise ValueError(message) from None
     elif args.command == "memory-delivery":
         path = f"/sessions/{args.session}"
         if args.message is not None:
@@ -840,7 +939,13 @@ def main():
         if args.provider == "claude" and args.action == "login":
             body["billing"] = args.billing
         value = request(config, "providers", "/" + args.provider, body)
-    print(json.dumps(value, indent=2, ensure_ascii=args.command == "native-sessions"))
+    print(
+        json.dumps(
+            value,
+            indent=2,
+            ensure_ascii=args.command in {"native-sessions", "memory-edit"},
+        )
+    )
     return 0
 
 
