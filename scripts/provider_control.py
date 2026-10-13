@@ -24,6 +24,7 @@ from scripts.chatgpt_provider import (
     responses_payload,
 )
 from scripts.provider_paid_policy import PaidPolicy
+from scripts.provider_onboarding import ProviderOnboarding
 from scripts.provider_secrets import (
     PROVIDERS,
     REVISION,
@@ -207,7 +208,7 @@ class ProviderControl:
         return self.status()
 
 
-def handler(control: ProviderControl, chatgpt=None):
+def handler(control: ProviderControl, chatgpt=None, onboarding=None):
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -226,6 +227,8 @@ def handler(control: ProviderControl, chatgpt=None):
             self.wfile.write(content)
 
         def do_GET(self):
+            if self.path == "/provider-onboarding" and onboarding:
+                return self.respond(200, onboarding.status())
             if self.path == "/chatgpt" and chatgpt:
                 return self.respond(200, chatgpt.status())
             if self.path != "/providers":
@@ -236,9 +239,9 @@ def handler(control: ProviderControl, chatgpt=None):
                 self.respond(503, {"error": "provider_control_unavailable"})
 
         def do_POST(self):
-            if self.path not in {"/providers", "/chatgpt"} or (
+            if self.path not in {"/providers", "/chatgpt", "/provider-onboarding"} or (
                 self.path == "/chatgpt" and not chatgpt
-            ):
+            ) or (self.path == "/provider-onboarding" and not onboarding):
                 return self.respond(404, {"error": "unsupported_operation"})
             length = self.headers.get("Content-Length", "")
             if (
@@ -252,7 +255,9 @@ def handler(control: ProviderControl, chatgpt=None):
             try:
                 value = json.loads(self.rfile.read(int(length)).decode("utf-8"))
                 result = (
-                    chatgpt.apply(value)
+                    onboarding.apply(value)
+                    if self.path == "/provider-onboarding"
+                    else chatgpt.apply(value)
                     if self.path == "/chatgpt"
                     else control.apply(value)
                 )
@@ -393,7 +398,7 @@ def main():
     inference_socket.chmod(0o600)
     threading.Thread(target=inference_server.serve_forever, daemon=True).start()
     with socketserver.UnixStreamServer(
-        str(args.socket), handler(control, chatgpt)
+        str(args.socket), handler(control, chatgpt, ProviderOnboarding(control))
     ) as server:
         args.socket.chmod(0o600)
         try:
