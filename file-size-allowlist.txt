@@ -1,0 +1,15 @@
+# Files that were over the 600-line limit when scripts/check_file_sizes.py arrived.
+# Each may only shrink; delete its line once it is under the limit. Never add a line.
+dashboard/src/app/tools/tool-editor.tsx 962
+dashboard/src/app/tools/tool-fields.tsx 687
+dashboard/src/components/gateway/runtime-workspace.tsx 662  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
+dashboard/src/components/ui/sidebar.tsx 741  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
+dashboard/src/dev/fake-gateway.ts 1197  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
+dashboard/src/lib/api/fixture-adapter.ts 763
+dashboard/src/utils/shadcn-ui-theme-presets.ts 696
+dashboard/src/utils/tweakcn-theme-presets.ts 3422
+scripts/provider_secrets.py 748
+scripts/recovery.py 1772
+scripts/release_acceptance.py 974
+tests/test_cli_contract.py 959
+tests/test_recovery.py 1191

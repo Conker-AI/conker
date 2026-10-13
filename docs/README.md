@@ -22,4 +22,3 @@ and professional-engagement direction for future work.
 - [CLI inspection](reference/cli-inspection.md): bounded headless views of the live control plane
 - [Hosted provider credentials](reference/provider-credentials.md): stage, verify, activate and rotate keys
 - [Owner-terminal sidecar](reference/owner-terminal-sidecar.md): deferred isolation and deployment contract
-- [archive/](archive/): earlier plans, audits, research and concept notes. **Historical, not current.**

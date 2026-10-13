@@ -115,10 +115,4 @@ layouts, light/dark themes, keyboard interaction and browser console output.
 Keep temporary captures in ignored test output; curated documentation images live
 in [`../docs/images/`](../docs/images/).
 
-## Planned work
-
-- [Chat delivery plan](../docs/archive/chat-delivery-plan.md): proposed bounded frontend milestone.
-- [Interaction catalogue](../docs/archive/ai-chat-ui-inventory-2026-09-19.md): researched options, not a commitment to ship every pattern.
-- [Workspace proposal](../docs/archive/workspace-control-plan.md): future flows, teams, memory exploration and owner controls.
-
 The template's license is retained in [third-party notices](THIRD_PARTY_LICENSES/shadcn-dashboard-template.txt).

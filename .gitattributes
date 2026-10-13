@@ -10,4 +10,3 @@ conker     text eol=lf
 *.md       text eol=lf
 
 # Unified patch data requires a single-space prefix on empty context lines.
-scripts/patches/*.patch text eol=lf -whitespace

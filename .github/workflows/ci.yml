@@ -43,6 +43,10 @@ jobs:
       - name: Capability contract
         run: python scripts/validate_capabilities.py
 
+      - name: File sizes
+        # 600 lines per source file; files that were already larger may only shrink.
+        run: python scripts/check_file_sizes.py
+
       - name: Python lint
         run: python -m ruff check scripts tests
 

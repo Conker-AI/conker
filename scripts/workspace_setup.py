@@ -40,10 +40,6 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     except (ValueError, TypeError) as exc:
         raise SystemExit(str(exc)) from None
     source = (pi_source or Path(config["repositories"]["pi"])).resolve()
-    from workspace_patches import apply_bundle
-
-    if pi_source is None:
-        apply_bundle(source, "pi")
     if not all(
         (source / filename).is_file()
         for filename in (
@@ -56,15 +52,11 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
             "Select the Conker Pi checkout containing skills and MCP gateway support with --pi-source."
         )
     toolgate = (toolgate_source or Path(config["repositories"]["toolgate"])).resolve()
-    if toolgate_source is None:
-        apply_bundle(toolgate, "toolgate")
     if not (toolgate / "toolgate/executors/mcp_http.py").is_file():
         raise SystemExit("Select the ToolGate MCP checkout with --toolgate-source.")
     memorygate = (
         memorygate_source or Path(config["repositories"]["memorygate"])
     ).resolve()
-    if memorygate_source is None:
-        apply_bundle(memorygate, "memorygate")
     if not (memorygate / "services/api/app/services/lexical_retrieval.py").is_file():
         raise SystemExit(
             "Select the MemoryGate recall checkout with --memorygate-source."
