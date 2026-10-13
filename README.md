@@ -25,8 +25,8 @@ It remembers you, shows its work, and never acts without your say.</p>
 - **Asks before acting.** Actions go through one controlled gate. You approve the exact action, once.
 - **Stays yours.** Runs on your hardware, on your private network, with local models by default.
 
-> **Status:** early. The current source has 33 of 35 tracked capability families active;
-> live voice and the production owner terminal remain deferred. The current tree still needs
+> **Status:** early. The current source has 34 of 35 tracked capability families active;
+> the production owner terminal remains deferred. The current tree still needs
 > assembled Linux release acceptance before rollout. [Full status](docs/status.md)
 
 ## Try it locally

@@ -172,6 +172,28 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
     }
 
 
+STATUS_CLAIMS = {
+    "README.md": re.compile(r"has (\d+) of (\d+) tracked capability families active"),
+    "docs/status.md": re.compile(r"\*\*(\d+) tracked\s+capability families: (\d+) active and (\d+) deferred\*\*"),
+}
+
+
+def check_status_claims(summary: dict[str, object], root: Path = ROOT) -> None:
+    """The README and status page quote the matrix; a stale number is a false claim."""
+    expected = {
+        "README.md": (summary["active"], summary["capabilities"]),
+        "docs/status.md": (summary["capabilities"], summary["active"], summary["deferred"]),
+    }
+    for relative, pattern in STATUS_CLAIMS.items():
+        match = pattern.search((root / relative).read_text(encoding="utf-8"))
+        if match is None:
+            raise MatrixError(f"{relative} no longer states the capability counts; restore the sentence")
+        if tuple(map(int, match.groups())) != expected[relative]:
+            raise MatrixError(
+                f"{relative} claims {match.group(0)!r}; capabilities.json says {expected[relative]}"
+            )
+
+
 def load(path: Path = DEFAULT_MATRIX, root: Path = ROOT) -> dict[str, object]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -189,6 +211,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         result = load(args.matrix)
+        if args.matrix == DEFAULT_MATRIX:
+            check_status_claims(result)
     except MatrixError as exc:
         parser.error(str(exc))
     print(
