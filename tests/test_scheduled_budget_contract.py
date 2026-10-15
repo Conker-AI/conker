@@ -77,7 +77,7 @@ def test_paid_schedule_reserves_once_and_reconciles_without_replay(
             },
         )
 
-    monkeypatch.setattr(server.httpx, "post", provider)
+    monkeypatch.setattr(httpx, "post", provider)
     calls = []
     api = TestClient(server.app)
 
