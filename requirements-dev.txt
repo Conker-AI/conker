@@ -2,3 +2,8 @@ pytest==8.4.2
 cryptography==50.0.0
 python-dotenv==1.2.2
 ruff==0.16.6
+# The workspace provider scripts run in Pi's runtime; test them on the same pins
+# (Pi requirements.txt, plus the psutil that scripts/workspace.py installs).
+fastapi==0.138.2
+httpx==0.28.1
+psutil==7.2.0
