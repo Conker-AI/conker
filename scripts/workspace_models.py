@@ -140,8 +140,8 @@ def configuration_for(model, installed, roles):
 def initialize():
     settings = read_config()
     sys.path.insert(0, settings["repositories"]["pi"])
-    from pi import model_roles
-    from pi.store import Store
+    from pi.conversation.store import Store
+    from pi.models import roles as model_roles
 
     store = Store(settings["environments"]["pi"]["PI_DB_PATH"])
     try:

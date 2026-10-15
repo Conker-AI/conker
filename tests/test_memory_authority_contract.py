@@ -18,7 +18,7 @@ from app.models.agent_access_key import AgentAccessKey
 from app.models.memory import Memory
 from app.routes import runtime
 from app.services import auth_settings_service as keys
-from pi.memory import MemoryClient
+from pi.memory.service import MemoryClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

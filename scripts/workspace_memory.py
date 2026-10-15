@@ -175,7 +175,7 @@ def require_sources(config):
     if not isinstance(repositories, dict):
         raise TypeError("Local service source configuration needs review.")
     for repository, relative in (
-        ("pi", "pi/memory_corrections.py"),
+        ("pi", "pi/memory/corrections.py"),
         ("memorygate", "services/api/app/routes/corrections.py"),
     ):
         root = repositories.get(repository)

@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-from pi.owner_terminal import TerminalError
+from pi.owner.terminal import TerminalError
 
 
 class WindowsTerminal:

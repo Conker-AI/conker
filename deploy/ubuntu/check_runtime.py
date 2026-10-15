@@ -3,10 +3,10 @@ import json
 import os
 
 import httpx
-from pi.decision_provider import configured
-from pi.memory import MemoryClient
-from pi.memory_ranking import ConfiguredMemoryRanker
-from pi.store import Store
+from pi.conversation.store import Store
+from pi.memory.ranking import ConfiguredMemoryRanker
+from pi.memory.service import MemoryClient
+from pi.models.decision import configured
 
 memory = MemoryClient(os.environ["PI_MEMORYGATE_URL"], os.environ["PI_MEMORYGATE_INGEST_KEY"],
     os.environ["PI_MEMORYGATE_READ_KEY"], os.environ["PI_MEMORYGATE_AGENT_ID"], timeout=30)

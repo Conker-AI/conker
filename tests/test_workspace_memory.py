@@ -185,7 +185,7 @@ def test_existing_key_reuse_is_not_accepted_as_dedicated_capability(service, fie
 def sources(tmp_path, value):
     repositories = {}
     for name, relative in (
-        ("pi", "pi/memory_corrections.py"),
+        ("pi", "pi/memory/corrections.py"),
         ("memorygate", "services/api/app/routes/corrections.py"),
     ):
         root = tmp_path / name
