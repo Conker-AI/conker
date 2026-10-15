@@ -1,67 +1,66 @@
 # 1 · What Conker is
 
-**Conker is a personal AI companion you host yourself.** You talk to it; it remembers you; it
-notices what you keep doing and proposes to take it off your hands; nothing real happens without
-your approval.
+**Conker is a personal AI companion you host yourself.** Start with a conversation,
+choose the models it uses, and decide what it may remember or do. The connected
+browser app and host CLI work with the same saved conversations and service state.
 
-It runs on your own machine or server, is reached over a private network, and is built from small
-services that each do one job.
+The current local build supports chat, private saved drafts, memory inspection,
+tools, approvals, projects, agents, teams and scheduled work. Optional services
+add model routing, background thinking and speech. Availability depends on the
+installation; [Status](status.md) records what has actually been verified.
 
-## Why it exists
+## The core behavior
 
-The goal is to **give you back time**. The catch: supervising an AI also costs time — reading its
-suggestions, approving its actions, fixing its mistakes. So Conker is designed to be *quiet*:
+- **Talking stays available.** The talking model answers your messages. An explicit
+  **Think** request starts separate background analysis; you can keep talking,
+  cancel the analysis or bring its findings into the conversation yourself.
+- **Models have separate jobs.** Choose a talking model directly, or configure
+  Auto to choose among eligible models. Thinking, summarization and other roles
+  have separate settings. A router's choice is a decision to inspect, not proof
+  that it found the best model.
+- **Continuity is visible.** Chats, drafts and long-term memory are different
+  records. A saved message does not prove that memory accepted it. Receipts show
+  delivery, retrieval and recorded model/tool activity.
+- **Actions follow configured authority.** Conker tools pass through ToolGate's
+  grants and approval policy. An approval authorizes its exact action and
+  arguments; a model choice or subscription sign-in grants no tools.
+- **Failures remain visible.** An unavailable service, pending save or uncertain
+  operation needs its own recovery path. Reconnecting must not silently repeat
+  an action whose outcome is unknown.
 
-- It asks only when it must. Every notification spends your attention.
-- It learns from "no". Declining a proposal teaches it; it should not ask the same thing twice.
-- It gets quieter and more accurate over months. If it doesn't, it's broken.
+Local models run on your machine. Hosted models receive the context supplied to
+their selected role. Native Codex and Claude Code sessions have their own
+permissions and history; they are separate from ordinary Conker conversations.
 
-## The loop
+## The direction
 
-This is the whole product in one picture. Chat is how you talk to it; the loop is what it is for.
+Conker should reduce the work of supervising an assistant. Useful memory should
+make later conversations easier. Proposals should cite their evidence and leave
+you a clear choice. Declining one should help avoid repeated noise.
 
-```mermaid
-flowchart LR
-    A[What you do and say] --> B[Evidence<br/>recorded with its source]
-    B --> C[Patterns]
-    C --> D[Proposal<br/>'I noticed X, shall I do Y?']
-    D --> E{You decide}
-    E -- approve --> F[Action<br/>through ToolGate]
-    E -- decline --> G[Preference<br/>remembered]
-    F --> B
-    G --> C
-```
-
-## Promises
-
-| Conker will | Conker will never |
-|---|---|
-| Run on hardware you own and keep working offline with local models | Quietly send your life to a third party — you can always see which model answered |
-| Show what it believes about you, with the source and how sure it is | Be confidently wrong about you — it says "I don't know you well enough" |
-| Let you correct or forget any memory, and record that you did | Rewrite history — every turn and action is kept in order |
-| Ask before any action that can't be undone, for that exact action only | Offer "always allow" |
-| Show honest status: live, degraded, offline, preview… | Show a green badge for something that isn't actually working |
+Some of that loop is connected today, but long-term usefulness and routing quality
+still need evaluation. These are design goals, not guarantees of accurate memories,
+flawless answers or complete parity with every other harness.
 
 ## Words you'll see
 
-Only ten. Everything else is plain English.
-
 | Word | Meaning |
 |---|---|
-| **Owner** | You — the one person an install serves. |
-| **Companion** | The one assistant you talk to (named *Conker* by default; rename it). |
-| **Pi** | The engine that runs conversations, picks models and calls tools. |
-| **Gate** | A service that guards one boundary. There are three: **MemoryGate** (remembers), **ToolGate** (acts), **SystemGate** (observes the machine). |
-| **Gateway** | The login front door the browser talks to. |
-| **Evidence** | A permanent record that something happened, with its source. |
-| **Memory** | Something Conker believes about you, derived from evidence, with a confidence level. |
-| **Proposal** | Something Conker suggests doing, with the evidence behind it. |
-| **Approval** | Your yes to one exact action. Used once, then it expires. |
-| **Inbox** | Where proposals and approval requests wait for you. |
+| **Owner** | The person an installation serves. |
+| **Companion** | The supplied assistant profile, named Conker by default. |
+| **Pi** | Conker's conversation engine: turns, model selection and tool coordination. |
+| **Gateway** | The authenticated front door used by the browser. |
+| **ToolGate** | The service that checks grants and executes Conker tools. |
+| **MemoryGate** | The service that records evidence and retrieves long-term memory. |
+| **Evidence** | A source record used to support a memory or proposal. |
+| **Receipt** | A saved account of a request's outcome, including pending or failed outcomes. |
+| **Proposal** | Suggested work for you to consider; accepting it records your decision. |
+| **Approval** | Permission for one exact action under the configured policy. |
 
 ## Where to go next
 
-- How the pieces fit: [2 · How it works](2-how-it-works.md)
-- What each screen does: [3 · Using Conker](3-using.md)
-- Install it: [4 · Running Conker](4-running.md)
-- What actually works today: [Status](status.md)
+- [2 · How it works](2-how-it-works.md): the services and boundaries.
+- [3 · Using Conker](3-using.md): conversations, models, memory and recovery.
+- [Connected workspace](connected-workspace.md): run this local build.
+- [4 · Running Conker](4-running.md): deployment and host operations.
+- [Status](status.md): verified source behavior and release limitations.

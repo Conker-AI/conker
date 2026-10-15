@@ -27,10 +27,10 @@ export function createChatGPTClient(auth: Pick<GatewayAuthClient, 'request'>) {
   }
   return {
     async status(signal?: AbortSignal) { return parse(await auth.request('/api/host/chatgpt', { signal })) },
-    async apply(value: ChatGPTOperation, signal?: AbortSignal) {
+    async apply(value: ChatGPTOperation, signal?: AbortSignal, onDispatch?: () => void) {
       const result = operation.safeParse(value)
       if (!result.success) throw new GatewayError('validation')
-      return parse(await auth.request('/api/host/chatgpt', { method: 'POST', body: result.data, signal }), result.data.operation === 'login')
+      return parse(await auth.request('/api/host/chatgpt', { method: 'POST', body: result.data, signal, onDispatch }), result.data.operation === 'login')
     },
   }
 }

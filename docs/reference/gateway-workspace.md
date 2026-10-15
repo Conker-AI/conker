@@ -16,7 +16,32 @@ from product routes.
 
 Owner-password login, session verification, logout and failed-logout locking use the real gateway cookie/CSRF protocol. Password setup and recovery require the host CLI. The password is cleared from the form before the attempt; errors do not echo server bodies or credentials.
 
-The conversation workspace lists up to the latest 200 sessions, searches that loaded list, creates a session, reads saved messages and turn metadata, and submits one text turn. A returned automatic fork selects the actual destination. A receipt is not presented as a completed answer: saved detail is fetched separately. Forgotten and closed history is read-only; forgotten content is suppressed even if an inconsistent response includes it.
+The sidebar follows the latest 200 sessions through shared discovery. Chats reads
+compact pages from `GET /sessions/history`, searches full titles and summaries
+before its page limit, and exposes Load older and Refresh chats. Each page is a
+read snapshot; the loaded count is not a total. Search is literal and Unicode
+case-insensitive. Page size is 1–50, queries are at most 200 codepoints, and cursors
+are bound to the normalized query and the last record's stable ordering identity.
+Response previews are bounded and explicitly identify truncation. Private chats
+remain owner-readable here; this does not expand cross-source search eligibility.
+Forgotten records have no title or summary and are hidden by the interface.
+
+Global search applies a narrower conversation policy than owner history browsing.
+Title/summary and exact-message candidates must pass current settings, legacy setup
+defaults, immutable private-origin checks and the forgotten-session ledger before
+their result allowance is counted. Exact text is limited to retained user and
+assistant messages. Search never submits a turn or changes the selected model.
+When forgetting is discovered, the browser clears all search results and repeats
+the open query. Known session-linked results remain masked; opaque derived records
+require the source to recheck their eligibility. Authentication or workspace changes
+close search and clear its query. Failed reads retain page navigation and explicit
+retry; they do not start an automatic model-enabled retry loop.
+
+The conversation workspace creates a session, reads saved messages and turn
+metadata, and submits one text turn. A returned automatic fork selects the actual
+destination. A receipt is not presented as a completed answer: saved detail is
+fetched separately. Forgotten and closed history is read-only; forgotten content
+is suppressed even if an inconsistent response includes it.
 
 The new-conversation composer exposes the configured answer route before the first
 message. An explicit model choice is retained across session creation and included in
@@ -44,7 +69,11 @@ An open conversation exposes an explicit handoff dialog. It preserves the curren
 privacy, project and presentation settings, uses their latest revision, and changes
 only the agent for future turns; Pi refuses the write while work is unresolved.
 
-Drafts and uncertain mutation locks survive temporary same-session authentication checks in memory. A changed or lost authenticated identity clears that workspace. There is no local-storage transcript cache. Reload restores server history after signing in, not unsent drafts.
+Drafts and uncertain mutation locks survive temporary same-session authentication
+checks in memory. A changed or lost authenticated identity clears that workspace.
+There is no local-storage transcript cache. Reload restores saved history and
+acknowledged private server drafts after signing in; unacknowledged local edits
+are not guaranteed to survive.
 
 The Agents workspace uses Pi's durable, immutable profile revisions through the
 owner-control channel. Owners can create, edit, archive and restore bounded agent
@@ -52,7 +81,8 @@ profiles. The canonical Companion can be renamed and given new role and instruct
 text, but cannot be archived. Model, tool and memory references are selections only;
 they grant no execution authority and are not presented as validated references.
 
-The connected `/` route is the daily return surface. It derives bounded groups from
+The `/` route opens chat. The `/overview` route is the daily return surface and
+derives bounded groups from
 saved approvals, recorded tasks, durable sessions and non-executing proposals:
 Waiting for you, Continue work, Recent conversations, Completed and Suggested. It
 does not calculate engagement scores, invent urgency or infer work from missing

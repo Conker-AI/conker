@@ -21,7 +21,7 @@ const { GatewayError } = load('src/lib/gateway/transport.ts')
 const runtimeWorkspace = fs.readFileSync(path.join(root, 'src/components/gateway/runtime-workspace.tsx'), 'utf8')
 assert.match(runtimeWorkspace, /dispatched = true\s+if \(prepared\)[^\n]+open: false[^\n]+\n\s+setRejected/,
   'A dispatched task must reveal the streaming transcript and Stop control before waiting for the submission response')
-assert.match(runtimeWorkspace, /if \(!dispatched \|\| error instanceof RuntimeMutationError && error.outcome === 'rejected'\) \{\s+if \(prepared\)[^\n]+open: true/,
+assert.match(runtimeWorkspace, /if \(!dispatched \|\| error instanceof RuntimeMutationError && error.outcome === 'rejected' \|\| error instanceof GatewayError && \['validation', 'configuration', 'too-large'\]\.includes\(error.kind\)\) \{\s+if \(prepared\)[^\n]+open: true/,
   'A rejected task request must reopen its retained review without replaying the submission')
 const task = { id: 'tsk_one', sessionId: 'ses_one', revision: 3, status: 'planned', archivedAt: null, contentStatus: 'available', runIds: [], outcome: 'Write a café report', criteria: [{ id: 'criterion_one', text: 'Cite the sources' }] }
 const session = { id: 'ses_one', status: 'open', turns: [], pendingSubmissions: [] }

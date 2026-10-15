@@ -17,11 +17,45 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push('Revokes browser access only. Models, jobs and services keep running. Revoking this browser signs you out.')
     return { title, path, target, details }
   }
-  if (path === '/api/host/chatgpt') {
+  if (path === '/api/control/pi/memory/corrections' || /^\/api\/control\/pi\/memory\/corrections\/[A-Za-z0-9_-]{16,128}\/retry$/.test(path)) {
+    const retry = path.endsWith('/retry')
+    title = retry ? 'Retry approved memory change' : 'Edit retained memory'
+    target = retry ? `Correction ${parts[6]}` : typeof body.memory_id === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$(?![\s\S])/.test(body.memory_id) ? `Memory ${body.memory_id}` : 'Reviewed memory'
+    details.push(retry ? 'Retries only the exact previously approved text and revision saved on the server. It cannot substitute a new edit.' : `Replaces the reviewed memory text only if revision ${body.expected_revision} is still current.`)
+    details.push('The source conversation is kept. Source, confidence and memory permissions are unchanged.')
+    return { title, path, target, details }
+  }
+  if (path.startsWith('/api/owner/mcp/')) {
+    let endpoint = 'Saved MCP server'
+    try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }
+    target = parts[4] === 'tools' ? parts[5] : endpoint
+    const operation = parts.at(-1)
+    title = operation === 'discover' ? 'Discover MCP tools' : operation === 'import' ? 'Import MCP tool' : operation === 'access' ? (body.enabled ? 'Make MCP tool available in chats' : 'Remove MCP tool from chats') : (body.enabled ? 'Enable MCP tool' : 'Disable MCP tool')
+    details.push(operation === 'discover' ? 'Contacts this server to read its tool catalogue.' : operation === 'import' ? 'Saves the reviewed tool and input schema. Chat access is granted separately.' : operation === 'access' ? 'Changes access for this Conker chat runtime. Other callers keep their existing permissions.' : 'Changes availability for new tool calls.')
+    if (operation !== 'discover') details.push('Each execution still requires approval in the Inbox.')
+  }
+  else if (path === '/api/control/pi/skills/import' || /^\/api\/control\/pi\/skills\/.+\/state$/.test(path)) {
+    title = path.endsWith('/import') ? 'Import skill instructions' : body.enabled ? 'Enable skill' : 'Disable skill'
+    target = path.endsWith('/import') ? 'Reviewed SKILL.md source' : parts[5]
+    details.push('Skills apply only when selected for a message. They do not execute scripts or grant tool access. Earlier turns keep their saved instructions.')
+  }
+  else if (path === '/api/host/chatgpt') {
     target = 'ChatGPT subscription on this Conker server'
     title = body.operation === 'login' ? 'Sign in with ChatGPT' : body.operation === 'logout' ? 'Disconnect ChatGPT' : body.operation === 'cancel' ? 'Cancel ChatGPT sign-in' : 'Read ChatGPT models'
     details.push(body.operation === 'login' ? 'Starts OpenAI device-code sign-in. You authorize it on OpenAI, not by entering an API key. Credentials stay private on this server.' : body.operation === 'logout' ? 'Removes this server connection. Models using it stop answering until you reconnect; this does not revoke all OpenAI sessions.' : body.operation === 'cancel' ? 'Cancels this exact pending sign-in attempt.' : 'Reads the signed-in provider catalogue. It does not select a model or run inference.')
     details.push('Your Conker tool permissions and API-key spending policy are unchanged. ChatGPT plan limits still apply.')
+  }
+  else if (/^\/api\/host\/claude\/sessions\/[A-Za-z0-9][A-Za-z0-9_-]{0,99}\/stop$/.test(path)) {
+    title = 'Stop native Claude session'; target = `Claude session ${parts[5]}`
+    details.push('Requests stop for this exact Conker-owned background session. Completed changes are not undone. Native permissions and approvals are unchanged.')
+    if (typeof body.expectedIdentity === 'string' && /^[a-f0-9]{64}$/.test(body.expectedIdentity)) details.push(`Session identity: ${body.expectedIdentity}.`)
+    details.push('A successful request does not prove the process has stopped. Check status afterward; uncertain requests are never automatically repeated.')
+  }
+  else if (path === '/api/host/claude') {
+    target = 'Official Claude Code on this Conker host'
+    title = body.operation === 'login' ? 'Sign in with Claude Code' : body.operation === 'logout' ? 'Disconnect Claude Code' : 'Cancel Claude Code sign-in'
+    details.push(body.operation === 'login' ? `Starts the unmodified Claude Code sign-in flow using ${body.billing === 'api' ? 'Claude Console billing' : 'your Claude subscription'}. Complete authorization on the provider’s page.` : body.operation === 'logout' ? 'Ends this Conker connection. Models using it need sign-in again.' : 'Stops the pending native sign-in process.')
+    details.push('Credentials stay with Claude Code on this host. This operation does not grant tools or select a model.')
   }
   else if (path === '/api/host/providers') {
     if (body.operation === 'paid-policy' || body.operation === 'recover-paid-policy') {
@@ -68,7 +102,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   else if (path === '/api/control/pi/setup/rehearsal/finalize') { title = 'Finish first-run rehearsal'; target = 'Onboarding evidence'; details.push('Records a receipt only if a real conversation, memory review, and harmless approval flow are already proven.') }
   else if (/^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/.test(path)) { title = body.choice === 'accept' ? 'Keep Companion default' : body.choice === 'skip' ? 'Skip optional setup' : 'Include optional setup'; target = parts[6] === 'companion' ? 'Companion harness profile' : parts[6] === 'memory' ? 'Long-term memory' : 'Additional capabilities'; details.push(body.choice === 'accept' ? 'Accepts the current supplied Companion profile without changing its model, memory or tool authority.' : body.choice === 'skip' ? 'Records an owner choice to continue setup without this optional capability. It does not disable a configured service.' : 'Returns this optional capability to the guided setup path. It does not configure the service by itself.') }
   else if (/^\/api\/control\/pi\/sessions\/[A-Za-z0-9_-]+\/settings$/.test(path)) { title = 'Save conversation privacy'; target = `Conversation ${parts[5]}`; details.push('Changes settings for future turns. Existing messages are not erased.') }
-  else if (path === '/api/terminal') { title = 'Start owner terminal'; target = 'Isolated owner workspace'; details.push('Opens one short-lived shell in the operator-configured workspace.'); details.push('Commands and output are not added to Conker backups or history.') }
+  else if (path === '/api/terminal') { title = 'Start owner terminal'; target = 'Operator-configured owner workspace'; details.push('Opens one short-lived shell with the host account’s filesystem and command access. Native agents keep their own permission prompts.'); details.push('Commands and output are not added to Conker backups or history. Native apps may retain their own sessions.') }
   else if (path === '/api/pi/sessions') { title = 'Create a conversation'; target = 'New conversation'; details.push('Creates one persisted conversation.') }
   else if (/^\/api\/pi\/sessions\/.+\/turns$/.test(path)) { title = 'Send a conversation turn'; target = `Conversation ${parts[4]}`; if (typeof body.text === 'string') details.push(`${[...body.text].length.toLocaleString()} characters from your submitted draft.`); details.push('The runtime may call its configured model and tools.') }
   else if (/^\/api\/pi\/sessions\/.+\/fork$/.test(path)) { title = 'Fork a conversation'; target = `Conversation ${parts[4]}` }

@@ -1,96 +1,113 @@
 # 2 · How it works
 
-Conker is six small services plus a web dashboard. Each service lives in its own repository and can
-be used without the others.
+Conker separates the conversation engine from memory, tools and provider
+connections. The browser uses the authenticated Gateway. The host CLI can inspect
+and operate the same service state; it is not a separate conversation store.
 
 ## The pieces
 
 ```mermaid
 flowchart TB
-    You([You, on phone or PC]) -->|private network, HTTPS| GW[Gateway<br/>login and sessions]
-    GW --> Pi[Pi<br/>conversations, model choice, tool calls]
-    GW -->|your approvals| TG
-    Pi -->|remember and recall| MG[MemoryGate<br/>evidence and memories]
-    Pi -->|do something| TG[ToolGate<br/>tools, workflows, approvals]
-    Pi -->|check the machine| SG[SystemGate<br/>read-only health]
-    Pi -->|which model?| DS[Decisions<br/>optional, Laya]
-    Pi --> M[Models<br/>local Ollama or a hosted provider]
-    MG --> EM[Embeddings<br/>text to vectors]
-    MG --> DB[(PostgreSQL + Qdrant)]
-    TG --> World[Outside world<br/>mail, files, APIs]
+    You([Browser]) --> GW[Gateway: login and owner verification]
+    CLI[Host CLI] --> Pi[Pi: conversations and model roles]
+    GW --> Pi
+    GW --> TG[ToolGate: grants, actions and approvals]
+    Pi --> TG
+    Pi --> MG[MemoryGate: evidence and memory]
+    Pi --> Models[Local models or hosted provider adapters]
+    Pi --> Laya[Laya: optional model selection]
+    MG --> Stores[Memory stores]
+    MG --> Embeddings[Optional embeddings]
 ```
 
-| Service | Job | Never does |
-|---|---|---|
-| **Gateway** | Password login, browser sessions, serves the dashboard | Hand service keys to the browser |
-| **Pi** | Runs each conversation turn, picks a model, calls tools | Store memories or act on the world directly |
-| **MemoryGate** | Stores evidence, builds memories, finds relevant ones | Execute anything |
-| **ToolGate** | Runs tools and workflows, asks for approval, keeps receipts | Decide what you value |
-| **SystemGate** | Reports machine health (CPU, disk, containers, backups) | Run commands |
-| **Embeddings** | Turns text into vectors for meaning-based search | Keep any data |
-| **Decisions** *(optional)* | Picks between options with probabilities (routing, ranking) | Write answers or grant permissions |
+| Piece | Responsibility |
+|---|---|
+| **Gateway** | Browser login, authenticated requests, operation-bound owner verification and dashboard assets. Service credentials stay on the host. |
+| **Pi** | Durable conversations, submissions, drafts, context, model roles and execution coordination. |
+| **ToolGate** | Tool inventory, grants, workflows, approvals and execution receipts. |
+| **MemoryGate** | Evidence admission, retrieval, corrections and forgetting within its configured scope. |
+| **Provider runtime** | Inference and provider authentication. Subscription integrations use separate Conker-owned native runtime state. |
+| **Laya decisions** | Optional selection among configured choices. It cannot grant permissions or write the talking reply. |
+| **Embeddings / SystemGate / speech** | Optional semantic retrieval, read-only host observations and voice processing. Configuration and live readiness are separate. |
 
-**The one rule:** anything that touches the outside world goes through ToolGate. The browser only
-ever talks to the Gateway.
+## A message, start to finish
 
-## One message, start to finish
+1. The composer saves a private server draft and reports whether that save is
+   confirmed. Sending creates a tracked submission; a lost response can be checked
+   without sending the message again.
+2. Pi resolves the conversation's agent, privacy, model and allowed context for
+   the turn. An explicit model choice takes precedence over automatic routing.
+3. When memory is enabled, Pi requests permitted memories. The turn records the
+   retrieval result, including failures or an empty result.
+4. The talking model answers using that context. Any Conker tool request goes
+   through ToolGate. If approval is required, the turn pauses for that exact action.
+5. The answer, model selection, usage and tool outcomes are recorded. Eligible
+   messages have a separate memory-delivery receipt; delivery may still be pending
+   after the reply finishes.
 
-```mermaid
-sequenceDiagram
-    participant You
-    participant Gateway
-    participant Pi
-    participant MemoryGate
-    participant Model
-    participant ToolGate
-    You->>Gateway: "Plan my week"
-    Gateway->>Pi: turn (logged-in owner)
-    Pi->>MemoryGate: what's relevant?
-    MemoryGate-->>Pi: memories + their sources
-    Pi->>Model: context + your message + available tools
-    Model-->>Pi: answer, maybe a tool call
-    opt tool call
-        Pi->>ToolGate: run calendar.read
-        ToolGate-->>Pi: result + receipt
-    end
-    Pi->>MemoryGate: record evidence from this turn
-    Pi-->>You: answer, with what it read and did
-```
+Saved turn history is kept in order. Editing a prior message creates a fork
+rather than changing the old turn. Where policy permits, context compaction can
+continue in a linked child chat; some contexts require explicit owner review.
+Forgetting is an explicit deletion path, so ordered history does not mean
+retaining forgotten content forever.
 
-Every turn is saved in order and never edited. When a conversation gets too long, Pi closes it,
-writes a summary and continues in a linked child conversation.
+## Talking, thinking and Auto
 
-## When an action needs your approval
+Talking and background thinking have separate assignments and usage. Think is
+opt-in on a Companion message. Its findings are saved separately, run no tools,
+and enter a later talking message only when you choose to discuss them. Ordinary
+follow-up messages preserve the analysis; another Think request replaces
+unfinished work. Shared local capacity gives the talking reply priority.
 
-```mermaid
-sequenceDiagram
-    participant Pi
-    participant ToolGate
-    participant Inbox as Your Inbox
-    Pi->>ToolGate: send email to coach
-    ToolGate-->>Pi: needs approval (request id, expires in 5 min)
-    ToolGate->>Inbox: "Send this exact email?"
-    Inbox->>ToolGate: approve (after password check)
-    Pi->>ToolGate: resume the same action
-    ToolGate-->>Pi: sent + receipt
-```
+Auto uses the configured routing role and eligible answer models. Laya receives
+model descriptions and a bounded conversation projection; system instructions,
+recalled memory and tool payloads are excluded from that classifier input.
+Router failure follows the configured failure policy. The turn's routing receipt
+distinguishes selection, unavailable attempts and fallback. There is no measured
+guarantee that Auto always chooses the best model.
 
-An approval is bound to that exact action and its arguments. It works once. A replay or an expired
-approval is refused.
+Enabling a role does not install its model or verify provider access. Provider
+sign-in, model availability, role selection and successful inference are separate
+steps. See [model roles and native runtimes](harnesses-and-models-2026-10-09.md).
 
-## What may happen without asking
+## Privacy and memory
 
-| Kind of action | Example | Default |
-|---|---|---|
-| **Observe** | read, search, draft, propose | Free |
-| **Prepare** | build or stage something, not run it | Free |
-| **Act locally** | run a script, start a service | Asks |
-| **Act outward** | send, post, spend money | Asks, with hard limits |
+| Record or control | What it means |
+|---|---|
+| Saved chat | Pi retained the conversation. This alone says nothing about long-term memory. |
+| Saved draft | The server acknowledged this unsent version. Unacknowledged edits can still be lost on reload. |
+| Memory delivery | A separate receipt reports saved, filtered or pending delivery. Only a confirmed saved outcome proves admission to memory. |
+| Memory retrieval | A turn receipt says what retrieval supplied to that answer. A memory visible in the library may not have been retrieved. |
+| Chat privacy | Future-turn memory and assistant-tool choices. Turning them off does not delete existing messages or earlier memory. |
+| Forget | Removes the reviewed content through the relevant deletion path; unresolved requests remain visible. |
 
-You can loosen or tighten each kind separately. Why these choices were made: [decisions](adr/).
+Source policy is checked by the service that owns the source. Global search and
+cross-source context reuse enforce that policy. A chat's own context can still
+contain its memory-disabled messages when the harness is enabled. The owner's Chats
+directory can still open retained private chats; being readable by the owner
+does not make a chat eligible for automatic reuse elsewhere.
 
-## Where it runs
+## Actions and recovery
 
-Everything runs in Docker on one machine. Only the Gateway is reachable, and only from your private
-network (for example Tailscale). Databases and service APIs are not exposed. Local models keep
-conversations on the machine; if you add a hosted model, each turn shows which provider answered.
+Conker tool execution is constrained by grants and the installed approval policy.
+Some permitted reads or workflows can run without another prompt; actions that
+require approval pause in Inbox. Owner verification for changing settings is a
+different check from approval to execute a tool.
+
+An approval is bound to one action and its arguments. Expired or replayed approval
+cannot authorize another effect. If an action completed but the reply failed,
+recovery can request the reply without repeating the effect. If the outcome is
+unknown, check the recorded submission or receipt before trying again.
+
+Closing a browser tab does not stop server work. Stop and Cancel thinking are
+explicit operations; neither can undo completed tool effects or erase provider
+usage. Native Codex/Claude CLI sessions and the optional owner terminal run with
+their own host permissions, outside the ordinary Conker tool path.
+
+## Deployment boundaries
+
+The server deployment uses containers behind a private HTTPS Gateway. The local
+Windows workspace combines dedicated service processes with Docker-backed
+PostgreSQL; it is a different deployment profile. Optional services may be absent
+in either profile. A healthy local build does not establish assembled Linux release
+acceptance. See [Running Conker](4-running.md) and [Status](status.md).

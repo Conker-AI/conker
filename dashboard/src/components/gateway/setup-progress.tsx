@@ -327,21 +327,22 @@ function BoundaryReview({ client, expectedRevision, onRecorded }: { client: Gate
 }
 
 export function GatewaySetupProgress({ client }: { client: GatewayControlClient }) {
-  const { status, error, refresh } = useGatewaySetupStatus(client)
+  const { status, error, refreshing, refresh } = useGatewaySetupStatus(client, true, true)
   if (!status && !error) return <GatewayPageFrame><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></GatewayPageFrame>
-  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" actionsOnly /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" onClick={refresh}><RefreshCw />Try again</Button></GatewayPageFrame>
+  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" actionsOnly /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" disabled={refreshing} onClick={refresh}><RefreshCw />{refreshing ? 'Checking…' : 'Try again'}</Button></GatewayPageFrame>
 
   const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
   return <GatewayPageFrame>
     <div className="space-y-6">
-      <PageHeader title="Setup" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh setup" title="Refresh setup" onClick={refresh}><RefreshCw /></WorkspaceAction>} />
-      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
+      <PageHeader title="Setup" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh setup" title="Refresh setup" disabled={refreshing} onClick={refresh}><RefreshCw /></WorkspaceAction>} />
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 px-4 py-3 text-sm"><span>Conker could not refresh setup. This is the last verified result.</span><Button variant="outline" size="sm" disabled={refreshing} onClick={refresh}><RefreshCw />{refreshing ? 'Checking…' : 'Try again'}</Button></div>}
       <section aria-labelledby="setup-progress-title" className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 id="setup-progress-title" className="text-base leading-6 font-semibold">Setup progress</h2><span className="text-muted-foreground">{remainingRequired === 0 ? 'Required checks complete' : `${remainingRequired} required ${remainingRequired === 1 ? 'check' : 'checks'} remaining`}{attention > 0 ? ` · ${attention} ${attention === 1 ? 'item needs' : 'items need'} attention` : ''}</span></div>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 id="setup-progress-title" className="text-base leading-6 font-semibold">{error ? 'Last verified progress' : 'Setup progress'}</h2><span className="text-muted-foreground">{remainingRequired === 0 ? 'Required checks complete' : `${remainingRequired} required ${remainingRequired === 1 ? 'check' : 'checks'} remaining`}{attention > 0 ? ` · ${attention} ${attention === 1 ? 'item needs' : 'items need'} attention` : ''}</span></div>
           <span className="tabular-nums text-muted-foreground">{resolved} of {status.steps.length} resolved</span>
         </div>
         <Progress value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
+        <p className="text-xs leading-5 text-muted-foreground">These checks track setup choices and verification evidence. They do not measure whether a chat can answer now.</p>
       </section>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
         <section aria-labelledby="next-step-title" className="elevation-surface min-w-0 rounded-lg border bg-card p-4 text-card-foreground">
@@ -355,7 +356,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
             {current.id === 'boundaries' && <BoundaryReview client={client} expectedRevision={current.evidence[0]?.revision ?? 0} onRecorded={refresh} />}
             {current.id === 'protection' && <ProtectionControl client={client} onSaved={refresh} />}
             {current.id === 'rehearsal' && <RehearsalControl client={client} onRecorded={refresh} />}
-          </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">Setup is complete</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Required checks have current evidence, and your optional choices are saved.</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
+          </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">{error ? 'Setup was complete at the last check' : 'Setup is complete'}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{error ? 'Refresh setup to verify that its evidence is still current.' : 'Required checks have current evidence, and your optional choices are saved.'}</p></div><Button asChild><Link to="/chat"><MessageSquare />Open companion<ArrowRight /></Link></Button></div>}
         </section>
         <aside aria-labelledby="setup-steps-title" className="min-w-0 space-y-5 xl:sticky xl:top-6">
           <div><h2 id="setup-steps-title" className="text-base font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>

@@ -1,5 +1,10 @@
 import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
+import { parseSkills, validateSkillIds } from './skills'
+import type { GatewayDraftClient } from './drafts'
+import type { GatewayTurnUsageClient } from './turn-usage'
+import type { MemoryDelivery } from './memory-delivery'
+import type { GatewayHistoryClient } from './session-history'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -11,6 +16,7 @@ export type RuntimeMessage = {
   id: string; sessionId: string; sequence: number
   role: 'user' | 'assistant' | 'system' | 'tool'; createdAt: string
   agentId: string | null
+  memoryDelivery?: MemoryDelivery
   content: { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 }
 export type RuntimeMemory = {
@@ -27,10 +33,12 @@ export type RuntimeTurn = {
   approvalRequestId?: string | null; detail: string | null; action: { id: string; state: string; jobId: string | null } | null
   memory: RuntimeMemory
 }
+export type RuntimeThinking = { turnId: string; inputMessageId?: string | null; createdAt?: number | null; status: 'queued' | 'running' | 'completed' | 'canceled' | 'superseded' | 'failed' | 'interrupted' | 'skipped'; model: string | null; provider: string | null; result: string | null; detail: string | null }
 export type RuntimeSessionDetail = RuntimeSession & {
-  messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
+  thinking?: RuntimeThinking[]; messages: RuntimeMessage[]; turns: RuntimeTurn[]; memory: RuntimeMemory
   pendingSubmissions: RuntimePendingSubmission[]; pendingSubmissionsTruncated: boolean
 }
+export type RuntimeObservation = { sessionId: string; revision: number; active: boolean; forgotten: boolean }
 export type RuntimeTurnReceipt = {
   requestedSessionId: string; sessionId?: string; forkedFrom?: string
   turnId: string; status?: string; acted?: boolean
@@ -39,6 +47,7 @@ export type RuntimeTurnReceipt = {
 }
 export type RuntimeMessageRef = { messageId: string; purpose: 'input' | 'intermediate' | 'tool_result' | 'final'; actionId: string | null; sequence: number }
 export type RuntimeSubmission = {
+  skillIds?: string[]; modelId?: string | null; think?: boolean; draftRevision?: number | null; researchMode?: 'off' | 'web' | 'deep'
   requestId: string; requestedSessionId: string; sessionId: string | null; turnId: string | null; taskId: string | null
   inputMessageId: string | null; finalMessageId: string | null; messageRefs: RuntimeMessageRef[]
   state: 'preparing' | 'bound' | 'preparation_failed' | 'preparation_interrupted' | 'forgotten'
@@ -54,8 +63,8 @@ export class RuntimeMutationError extends Error {
   readonly sessionId?: string
   readonly gatewayKind: GatewayError['kind']
   constructor(error: GatewayError, sessionId?: string) {
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(error.kind) ||
-      (error.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(error.status))
+    const rejected = ['configuration', 'validation', 'too-large', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(error.kind) ||
+      error.code === 'draft_changed' || (error.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(error.status))
     super(rejected ? error.message : 'The operation outcome is uncertain. Refresh the conversation before deciding whether to try again.')
     this.name = 'RuntimeMutationError'
     this.outcome = rejected ? 'rejected' : 'unknown'
@@ -135,7 +144,7 @@ function memory(value: unknown): RuntimeMemory {
     blockedDelivery: count(row.blocked_delivery), pendingDeletion: count(row.pending_deletion),
     notices: array(row.notices, 32).map(item => text(item, 4096)), ...(retrieval ? { retrieval } : {}) }
 }
-function message(value: unknown, sessionId: string, forgotten = false): RuntimeMessage {
+function message(value: unknown, sessionId: string, forgotten: boolean, parseDelivery: (value: unknown) => MemoryDelivery): RuntimeMessage {
   const row = record(value)
   if (id(row.session_id) !== sessionId) return bad()
   const role = row.role
@@ -150,7 +159,12 @@ function message(value: unknown, sessionId: string, forgotten = false): RuntimeM
   if (sequence < 1) return bad()
   const agentId = row.agent_id === undefined || row.agent_id === null ? null : runtimeAgentId(row.agent_id)
   if (role !== 'assistant' && agentId !== null) return bad()
-  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId }
+  let memoryDelivery: MemoryDelivery | undefined
+  if (role === 'user' && content.kind === 'text' && row.memory_delivery != null) {
+    try { memoryDelivery = parseDelivery(row.memory_delivery) }
+    catch { memoryDelivery = { state: 'unavailable', reasonCode: 'invalid_receipt', admissionMethod: null, memoryId: null } }
+  }
+  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(memoryDelivery ? { memoryDelivery } : {}) }
 }
 function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn {
   const row = record(value)
@@ -162,6 +176,11 @@ function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn
     inputTokens: nullable(row.input_tokens, count), outputTokens: nullable(row.output_tokens, count),
     costUsd: nullable(row.cost_usd, number), detail: forgotten ? null : nullable(row.detail, text),
     action: action && { id: id(action.id), state: state(action.state), jobId: nullable(action.job_id, id) }, memory: memory(row.memory) }
+}
+function thinking(value: unknown, sessionId: string): RuntimeThinking {
+  const row = record(value)
+  if (id(row.session_id) !== sessionId || !['queued', 'running', 'completed', 'canceled', 'superseded', 'failed', 'interrupted', 'skipped'].includes(String(row.status))) return bad()
+  return { turnId: id(row.turn_id), inputMessageId: row.input_message_id == null ? null : id(row.input_message_id), createdAt: row.created_at == null ? null : number(row.created_at), status: row.status as RuntimeThinking['status'], model: nullable(row.model, text), provider: nullable(row.provider, text), result: row.status === 'completed' ? nullable(row.result, text) : null, detail: nullable(row.detail, text) }
 }
 function unique<T extends { id: string }>(rows: T[]): T[] {
   if (new Set(rows.map(row => row.id)).size !== rows.length) return bad()
@@ -196,7 +215,15 @@ export function parseRuntimeSubmission(value: unknown, requestId?: string, sessi
   if (failureCode !== null && !['preparation_failed', 'preparation_interrupted', 'task_fork_required', 'source_changed'].includes(String(failureCode))) return bad()
   const pendingText = contentStatus === 'forgotten' ? null : nullable(row.pending_text, value => text(value, 32_000))
   if (pendingText !== null && ([...pendingText].length > 16_000 || preparation === 'bound')) return bad()
-  return { requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
+  let skillIds: string[] = []
+  try { skillIds = contentStatus === 'forgotten' ? [] : validateSkillIds(row.skill_ids === undefined ? [] : array(row.skill_ids, 3).map(item => text(item, 64))) } catch { return bad() }
+  const modelId = contentStatus === 'forgotten' || row.model_id == null ? null : text(row.model_id, 200)
+  const think = contentStatus !== 'forgotten' && (row.think === undefined ? false : bool(row.think))
+  const draftRevision = contentStatus === 'forgotten' || row.draft_revision == null ? null : count(row.draft_revision)
+  if (draftRevision === 0) return bad()
+  const researchMode = contentStatus === 'forgotten' ? 'off' : row.research_mode ?? 'off'
+  if (!['off', 'web', 'deep'].includes(String(researchMode))) return bad()
+  return { skillIds, modelId, think, draftRevision, researchMode: researchMode as RuntimeSubmission['researchMode'], requestId: request, requestedSessionId: requestedSession, sessionId: effective, turnId, taskId: nullable(row.task_id, id), inputMessageId: input, finalMessageId: final, pendingText, failureCode: failureCode as RuntimeSubmission['failureCode'],
     messageRefs: refs, state: contentStatus === 'forgotten' ? 'forgotten' : preparation, status: state(row.status), acted: bool(row.acted), contentStatus,
     createdAt: date(row.created_at), updatedAt: date(row.updated_at) }
 }
@@ -209,7 +236,22 @@ function pendingSubmission(value: unknown, sessionId: string): RuntimePendingSub
 }
 
 export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  let draftClient: Promise<GatewayDraftClient> | undefined
+  const drafts = () => draftClient ??= import('./drafts').then(module => module.createGatewayDraftClient(auth))
+  let usageClient: Promise<GatewayTurnUsageClient> | undefined
+  const usage = () => usageClient ??= import('./turn-usage').then(module => module.createGatewayTurnUsageClient(auth))
+  let historyClient: Promise<GatewayHistoryClient> | undefined
+  const history = () => historyClient ??= import('./session-history').then(module => module.createGatewayHistoryClient(auth))
   return {
+    getSessionHistory: async (...args: Parameters<GatewayHistoryClient['list']>) => (await history()).list(...args),
+    getTurnUsage: async (...args: Parameters<GatewayTurnUsageClient['get']>) => (await usage()).get(...args),
+    drafts: {
+      load: async (...args: Parameters<GatewayDraftClient['load']>) => (await drafts()).load(...args),
+      save: async (...args: Parameters<GatewayDraftClient['save']>) => (await drafts()).save(...args),
+      start: async (...args: Parameters<GatewayDraftClient['start']>) => (await drafts()).start(...args),
+      checkStart: async (...args: Parameters<GatewayDraftClient['checkStart']>) => (await drafts()).checkStart(...args),
+    },
+    async listSkills(options: { signal?: AbortSignal } = {}) { return parseSkills(await auth.request('/api/pi/skills', options)) },
     /** Resumes a parked turn; returns its status afterwards when the server reports one. */
     async resumeTurn(turnId: string, options: { signal?: AbortSignal } = {}): Promise<string | null> {
       inputId(turnId)
@@ -231,13 +273,16 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (requestId.length < 16) throw new GatewayError('validation')
       return parseRuntimeSubmission(await auth.request(`/api/pi/turn-submissions/${requestId}`, options), requestId, requestedSessionId)
     },
-    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string } = {}): Promise<RuntimeSubmission> {
+    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[]; think?: boolean; draftRevision?: number; researchMode?: 'off' | 'web' | 'deep' } = {}): Promise<RuntimeSubmission> {
       inputId(sessionId); inputId(requestId)
       if (requestId.length < 16 || typeof userText !== 'string' || !userText.trim() || [...userText].length > 16_000 || (options.taskId === undefined) !== (options.taskExpectedRevision === undefined)) throw new GatewayError('validation')
       if (options.taskId !== undefined && (!inputId(options.taskId) || !Number.isSafeInteger(options.taskExpectedRevision) || options.taskExpectedRevision! < 1)) throw new GatewayError('validation')
       if (options.modelId !== undefined && (typeof options.modelId !== 'string' || !options.modelId.length || options.modelId.length > 200)) throw new GatewayError('validation')
+      const skillIds = validateSkillIds(options.skillIds ?? [])
+      if (options.think !== undefined && typeof options.think !== 'boolean') throw new GatewayError('validation')
+      if (options.draftRevision !== undefined && (!Number.isSafeInteger(options.draftRevision) || options.draftRevision < 1) || options.researchMode !== undefined && !['off', 'web', 'deep'].includes(options.researchMode)) throw new GatewayError('validation')
       try {
-        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.think ? { think: true } : {}), ...(options.draftRevision ? { draft_revision: options.draftRevision } : {}), ...(options.researchMode ? { research_mode: options.researchMode } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         const receipt = parseRuntimeSubmission(response.submission, requestId, sessionId)
         if (receipt.taskId !== (options.taskId ?? null)) return bad()
         return receipt
@@ -258,11 +303,32 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       const parsed = session(response)
       if (parsed.id !== sessionId) return bad()
       const forgotten = parsed.status === 'forgotten'
-      const messages = unique(array(response.messages).map(item => message(item, sessionId, forgotten)))
+      const { parseMemoryDelivery } = await import('./memory-delivery')
+      const messages = unique(array(response.messages).map(item => message(item, sessionId, forgotten, parseMemoryDelivery)))
       if (messages.some((item, index) => index > 0 && item.sequence <= messages[index - 1].sequence)) return bad()
       const pending = response.pending_submissions === undefined ? [] : array(response.pending_submissions, 100).map(value => pendingSubmission(value, sessionId))
       if (new Set(pending.map(row => row.requestId)).size !== pending.length) return bad()
-      return { ...parsed, messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
+      return { ...parsed, thinking: forgotten ? [] : array(response.thinking ?? [], 50).map(row => thinking(row, sessionId)), messages, turns: unique(array(response.turns).map(item => turn(item, sessionId, forgotten))), memory: memory(response.memory), pendingSubmissions: pending, pendingSubmissionsTruncated: response.pending_submissions_truncated === undefined ? false : bool(response.pending_submissions_truncated) }
+    },
+    async cancelThinking(sessionId: string, turnId: string, options: { signal?: AbortSignal } = {}) {
+      inputId(sessionId); inputId(turnId)
+      await auth.request(`/api/pi/sessions/${sessionId}/thinking/${turnId}/cancel`, { method: 'POST', body: {}, signal: options.signal })
+    },
+    async getThinking(sessionId: string, options: { signal?: AbortSignal } = {}) {
+      inputId(sessionId)
+      const response = await auth.request(`/api/pi/sessions/${sessionId}/thinking`, options)
+      if (response.schemaVersion !== 1 || response.session_id !== sessionId || !['available', 'forgotten'].includes(String(response.content_status))) return bad()
+      return { forgotten: response.content_status === 'forgotten', results: response.content_status === 'forgotten' ? [] : array(response.results, 50).map(row => thinking(row, sessionId)) }
+    },
+    async getObservation(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<RuntimeObservation> {
+      inputId(sessionId)
+      const response = await auth.request(`/api/pi/sessions/${sessionId}/observation`, options)
+      if (response.schemaVersion !== 1 || response.session_id !== sessionId || !Number.isSafeInteger(response.revision) || (response.revision as number) < 0 || typeof response.active !== 'boolean' || !['available', 'forgotten'].includes(String(response.content_status)) || response.content_status === 'forgotten' && response.active) return bad()
+      return { sessionId, revision: response.revision as number, active: response.active, forgotten: response.content_status === 'forgotten' }
+    },
+    async getMemoryDelivery(sessionId: string, options: { signal?: AbortSignal; messageId?: string } = {}) {
+      const { createMemoryDeliveryClient } = await import('./memory-delivery')
+      return createMemoryDeliveryClient(auth)(sessionId, options)
     },
     async createSession(title = '', options: { signal?: AbortSignal; agentId?: string; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean } } = {}): Promise<{ sessionId: string }> {
       if (typeof title !== 'string' || title.length > 1024) throw new GatewayError('validation')

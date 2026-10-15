@@ -22,10 +22,13 @@ REQUIRED_CAPABILITIES = {
     "calls-voice",
     "companion-editing",
     "conversations",
+    "reusable-skills",
+    "external-mcp-tools",
     "held-recovery",
     "host-inventory",
     "jobs-schedules",
     "local-model-download",
+    "memory-corrections",
     "memory-exploration",
     "memory-forgetting",
     "model-configuration",
@@ -113,8 +116,11 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
         )
         if any(not route.startswith("/") for route in routes + ui):
             raise MatrixError(f"{identity} routes must be absolute")
-        if any(not command.startswith("conker ") for command in commands):
-            raise MatrixError(f"{identity} CLI commands must start with 'conker '")
+        if any(
+            not command.startswith(("conker ", "python scripts/conker.py "))
+            for command in commands
+        ):
+            raise MatrixError(f"{identity} CLI commands must use a Conker launcher")
         if not requirements:
             raise MatrixError(f"{identity} must name a deployment requirement")
         if state == "active":

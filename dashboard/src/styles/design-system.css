@@ -46,7 +46,8 @@
   :root { --workspace-gutter:1rem; }
   .workspace-appbar-actions { max-width:50vw; }
   .workspace-route-actions { flex-wrap:wrap; justify-content:flex-end; }
-  .workspace-route-actions button, .workspace-route-actions a { min-height:2rem; height:auto; white-space:normal; }
+  .workspace-route-actions > div { min-width:0; flex-wrap:wrap; justify-content:flex-end; }
+  .workspace-route-actions button, .workspace-route-actions a { max-width:100%; min-height:2rem; height:auto; white-space:normal; }
   .workspace-search-dialog { width:calc(100% - 1rem); max-width:none; }
 }
 

@@ -1,7 +1,7 @@
 <p align="center"><img src="dashboard/public/conker.png" width="88" alt="Conker" /></p>
 <h1 align="center">Conker</h1>
 <p align="center"><b>A personal AI companion you host yourself.</b><br/>
-It remembers you, shows its work, and never acts without your say.</p>
+Talk to it, choose what it remembers, and review what it does.</p>
 <p align="center">
   <a href="docs/1-overview.md">Overview</a> ·
   <a href="docs/2-how-it-works.md">How it works</a> ·
@@ -20,18 +20,39 @@ It remembers you, shows its work, and never acts without your say.</p>
 
 ## What it does
 
-- **Talks and remembers.** Memories carry their source, and you can see why it knows something.
-- **Shows its work.** Every answer shows which memories, tools and model it used.
-- **Asks before acting.** Actions go through one controlled gate. You approve the exact action, once.
-- **Stays yours.** Runs on your hardware, on your private network, with local models by default.
+- **Talk and think separately.** Keep chatting while an optional thinking model analyzes a request in the background.
+- **Choose models by job.** Use a fixed talking model or configure Auto; give thinking and other roles their own models.
+- **Keep continuity.** Reopen saved chats and drafts, inspect memory sources, and check what was actually delivered to memory.
+- **Control actions.** Conker tools run through ToolGate's grants and approval policy. Required approvals apply to one exact action.
+- **Run locally.** Host the app and local models yourself, or explicitly connect a hosted provider or subscription runtime.
 
-> **Status:** early. The current source has 34 of 35 tracked capability families active;
+> **Status:** early. The current source has 37 of 38 tracked capability families active;
 > the production owner terminal remains deferred. The current tree still needs
 > assembled Linux release acceptance before rollout. [Full status](docs/status.md)
 
 ## Try it locally
 
-The real interface with demo data, no server needed. Needs Node.js 22.12 or newer:
+For the connected chat workspace in this branch, with real local
+conversations, memory and workflow services, follow
+[Connected workspace](docs/connected-workspace.md). Research and reconciled
+requirements are recorded in [the source review](docs/conker-research-2026-10-09.md).
+
+With Python 3.12, Node.js 22.12+, Docker and Ollama running:
+
+```sh
+ollama pull qwen2.5:3b
+python scripts/workspace.py install --model qwen2.5:3b
+python scripts/workspace.py up
+```
+
+Open https://localhost:18550. The private initial password is in
+`.local-run/gateway/initial-owner-password.txt`. The [run guide](docs/connected-workspace.md)
+describes stopping, rebuilding, password recovery and local-profile limitations.
+The optional [enhanced profile](docs/harnesses-and-models-2026-10-09.md)
+adds Laya routing, separate background thinking and native subscription sign-in.
+Connecting a provider does not select a model or prove that it can answer.
+
+For a separate interface preview with demo data and no server, use Node.js 22.12 or newer:
 
 ```sh
 git clone https://github.com/Conker-AI/conker.git
@@ -55,7 +76,7 @@ flowchart LR
     Pi --> M[Models<br/>local or hosted]
 ```
 
-Six small services, each in its own repository and usable on its own:
+Small services with their own repositories and standalone operation:
 [pi](https://github.com/Conker-AI/pi) ·
 [memorygate](https://github.com/Conker-AI/memorygate) ·
 [toolgate](https://github.com/Conker-AI/toolgate) ·

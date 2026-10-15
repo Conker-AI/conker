@@ -19,8 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
-SERVICES = {"memorygate": 8020, "toolgate": 8010, "pi": 8051,
+SERVICES = {"providers": 18570, "memorygate": 8020, "toolgate": 8010, "pi": 8051,
             "gateway": 8050, "decisions": 8060, "postgres": 55432}
+if CONFIG.is_file():
+    SERVICES.update(json.loads(CONFIG.read_text(encoding="utf-8")).get("ports", {}))
 
 
 def initialize():
@@ -76,6 +78,8 @@ def initialize():
                 "GATEWAY_DASHBOARD_DIR": str(ROOT / "dashboard/dist")},
         },
     }
+    from workspace_memory import prepare
+    config, _ = prepare(config)
     # Exclusive creation and owner-only permissions on POSIX. Windows follows
     # the user's profile ACL; this is local development, not a sandbox boundary.
     with CONFIG.open("x", encoding="utf-8") as stream:
@@ -117,9 +121,20 @@ def serve(name, config):
         from gateway.__main__ import create_certificate
         from gateway.api import Config, create_app
         certificate, key = create_certificate(STATE / "gateway", "localhost")
-        uvicorn.run(create_app(Config.environment()), host="127.0.0.1", port=SERVICES[name],
+        terminal_factory = None
+        if os.name == "nt" and config.get("native_terminal"):
+            from windows_terminal import WindowsTerminal
+            terminal_factory = lambda _shell, _label, _identity: WindowsTerminal(ROOT, config)
+        uvicorn.run(create_app(Config.environment(), terminal_factory=terminal_factory), host="127.0.0.1", port=SERVICES[name],
                     ssl_certfile=str(certificate), ssl_keyfile=str(key), proxy_headers=False,
                     access_log=False)
+    elif name == "providers":
+        from workspace_providers import create_app
+        app = create_app(config)
+        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=SERVICES[name], proxy_headers=False, access_log=False,
+                                             timeout_graceful_shutdown=5))
+        app.state.request_shutdown = lambda: setattr(server, "should_exit", True)
+        server.run()
     else:
         module = {"pi": "pi.api:app", "memorygate": "app.main:app",
                   "toolgate": "toolgate.api.server:app", "decisions": "server:create_app"}[name]
@@ -143,12 +158,14 @@ def main():
     if not args.service:
         parser.error("Select a service.")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    postgres_name = config.get("postgres_container", "conker-local-integration-postgres")
+    postgres_volume = config.get("postgres_volume", postgres_name)
     if args.command == "stop":
         if args.service == "postgres":
-            inspect = subprocess.run(["docker", "inspect", "conker-local-integration-postgres"], capture_output=True, check=True)
+            inspect = subprocess.run(["docker", "inspect", postgres_name], capture_output=True, check=True)
             if json.loads(inspect.stdout)[0]["Config"].get("Labels", {}).get("conker.local-integration") != "true":
                 raise SystemExit("Container ownership did not match.")
-            subprocess.run(["docker", "stop", "conker-local-integration-postgres"], check=True)
+            subprocess.run(["docker", "stop", postgres_name], check=True)
             return
         import psutil
         identity = int((STATE / args.service / "pid").read_text())
@@ -157,6 +174,11 @@ def main():
             command = process.cmdline()
             if str(Path(__file__).resolve()) not in command or command[-2:] != ["serve", args.service]:
                 raise SystemExit("Process identity no longer matches; nothing stopped.")
+            if args.service == "providers":
+                from provider_lifecycle import stop
+                stop(process, config, SERVICES[args.service], Path(__file__).resolve())
+                print("Stopped local providers; native background sessions retained.")
+                return
             children = process.children(recursive=True)
             for child in reversed(children):
                 child.terminate()
@@ -172,20 +194,24 @@ def main():
         env_path = STATE / "postgres/environment"
         with env_path.open("w", encoding="utf-8") as stream:
             stream.write("".join(f"{key}={value}\n" for key, value in config["environments"]["postgres"].items()))
-        existing = subprocess.run(["docker", "container", "inspect", "conker-local-integration-postgres"],
+        existing = subprocess.run(["docker", "container", "inspect", postgres_name],
                                   capture_output=True, check=False)
         if existing.returncode == 0:
             details = json.loads(existing.stdout)[0]
             if details["Config"].get("Labels", {}).get("conker.local-integration") != "true":
                 raise SystemExit("Container name is owned by another setup; refusing to change it.")
-            subprocess.run(["docker", "start", "conker-local-integration-postgres"], check=True)
+            configured_port = details.get("HostConfig", {}).get("PortBindings", {}).get("5432/tcp", [])
+            mounts = [mount.get("Name") for mount in details.get("Mounts", []) if mount.get("Destination") == "/var/lib/postgresql/data"]
+            if configured_port != [{"HostIp": "127.0.0.1", "HostPort": str(SERVICES["postgres"])}] or mounts != [postgres_volume]:
+                raise SystemExit("Existing PostgreSQL instance differs from this configuration; nothing changed.")
+            subprocess.run(["docker", "start", postgres_name], check=True)
         else:
             if listening(SERVICES["postgres"]):
                 raise SystemExit("PostgreSQL development port is already occupied.")
-            subprocess.run(["docker", "run", "--detach", "--name", "conker-local-integration-postgres",
+            subprocess.run(["docker", "run", "--detach", "--name", postgres_name,
                             "--label", "conker.local-integration=true", "--env-file", str(env_path),
-                            "--publish", "127.0.0.1:55432:5432", "--memory", "512m",
-                            "--volume", "conker-local-integration-postgres:/var/lib/postgresql/data",
+                            "--publish", f"127.0.0.1:{SERVICES['postgres']}:5432", "--memory", "512m",
+                            "--volume", f"{postgres_volume}:/var/lib/postgresql/data",
                             "postgres:16"], check=True)
         return
     if args.command == "serve":
@@ -193,7 +219,7 @@ def main():
     else:
         if listening(SERVICES[args.service]):
             raise SystemExit("Port already in use; no existing process was replaced.")
-        executable = config["decision_python"] if args.service == "decisions" else config["python"]
+        executable = config.get("python_by_service", {}).get(args.service) or (config["decision_python"] if args.service == "decisions" else config["python"])
         with (STATE / args.service / "service.log").open("ab") as log:
             process = subprocess.Popen([executable, str(Path(__file__).resolve()), "serve", args.service],
                 stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,

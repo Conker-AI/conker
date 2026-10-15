@@ -144,7 +144,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
       {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
         <h3 className="break-words text-sm leading-5 font-medium" title={title}>{title}</h3>
-        <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs leading-5 text-muted-foreground" title={descriptionTitle}>{description}</p>
+        <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs leading-5 text-muted-foreground wrap-anywhere" title={descriptionTitle}>{description}</p>
       </div>
       {trailing && <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs leading-5 text-muted-foreground tabular-nums">{trailing}</span>}
     </Link>
@@ -184,13 +184,13 @@ export function CollectionEmpty({ title, description, icon, onClear, clearLabel 
   </div>
 }
 
-export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, icon, filters, hint, children }: {
+export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, emptyContent, icon, filters, hint, children }: {
   query: string; onQueryChange: (value: string) => void; label: string; placeholder: string; count: number; unit: string;
-  emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; icon?: ReactNode; filters?: ReactNode; hint?: ReactNode; children: ReactNode
+  emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; emptyContent?: ReactNode; icon?: ReactNode; filters?: ReactNode; hint?: ReactNode; children: ReactNode
 }) {
   return <div className="min-w-0 space-y-(--collection-section-gap)">
     <CollectionToolbar search={<WorkspaceSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />} filters={filters} count={count} unit={unit} />
-    {count ? children : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
+    {count ? children : emptyContent !== undefined ? emptyContent : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
     {hint && <p className="max-w-prose text-xs leading-5 text-muted-foreground">{hint}</p>}
   </div>
 }

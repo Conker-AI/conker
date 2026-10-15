@@ -1,5 +1,205 @@
 # Conker dashboard design system
 
+## Chat-first companion — 9 October
+
+The owner chose a full product redesign around a reliable daily companion.
+Conversation is the starting place. The shell uses a single sidebar and a quiet
+working surface: New chat and Search Conker at the top, recent conversation
+history taking the remaining space, and Settings and account controls at the
+bottom. Work groups Overview, Approvals, Tasks, Runs, Schedules and the activity
+log. Memory stays directly visible. Library groups Projects, Artifacts, Agents,
+Skills, and Tools & workflows. The root path opens chat; the existing daily
+overview moves to `/overview` under Work. All session and capability deep links
+remain valid.
+
+`gatewayDestinations` and `gatewayPageNavigation` in the connected navigation
+module own the labels and sections used by the sidebar, global search, header,
+and open views. The mode rail and idle-as-ready footer are removed. Setup status
+comes from the setup service; an idle conversation says nothing about provider
+or tool readiness. System diagnostics remain available in the account menu.
+
+Setup's sidebar prompt and page share one authenticated, client-scoped read.
+Opening Setup refreshes its evidence; visible focus, reconnect and visibility
+events trigger at most one automatic read per 30 seconds, without a timer loop.
+Explicit refresh and saved setup choices can refresh immediately. A failed read
+shows status unavailable even after prior completion; retained page evidence is
+labeled as the last verified result. Leaving the authenticated workspace clears
+the shared cache and cancels pending reads. Setup counts describe first-run
+choices and evidence, separately from a chat's current ability to answer.
+
+Providers' Runtime readiness distinguishes a current response from a check in
+progress or an unavailable read. During refresh and failure, retained provider
+and model names are explicitly last-checked evidence; they never retain a Ready
+label. Reads have a 15-second deadline, an explicit retry, and owner-identity
+fences. Runtime readiness refresh leaves the model editor and its unsaved choices
+alone. Runtime health evidence is separate from the subscription connection
+card's cached status. Catalogue reads cannot overwrite a newer
+model-settings save, and authentication changes discard both kinds of evidence.
+
+Subscription cards distinguish checking, verified current status, owner verification,
+provider work and an unconfirmed outcome. Status reads time out after 15 seconds;
+provider-operation deadlines start only after owner verification, allowing 75 seconds
+for the host's bounded provider call. An unconfirmed operation is never replayed.
+Check status reads current evidence while retaining the earlier uncertainty notice.
+Only pending sign-ins poll: one read at a time, three seconds after completion, at
+most 20 reads while visible and online, then an explicit Check status. Same-login
+device codes and controls stay in place during reads and visibility pauses, labeled
+as last checked. Failed reads, changed login identity, authentication changes and
+teardown clear private sign-in content. Busy controls retain keyboard focus without
+accepting duplicate operations. Subscription status does not prove inference readiness.
+
+Open views are a secondary header disclosure, closed initially. Their optional
+strip retains navigation history, tab switching, pinning, closing, and dragging.
+Closing the last view opens New chat; closing a tab never cancels work. Tab
+identities stay in memory and omit message text, searches and content. Forgotten
+chats disappear from both history and open views immediately. The conversation
+context panel opens on request: beside the chat on desktop, in `DetailPanel`
+with native focus handling on mobile. Its source reads run only while visible.
+
+The sidebar, chat header and open-view titles share one recent chat list in the
+authenticated workspace. A visible, online workspace checks it
+every 15 seconds and on focus or reconnection. Background reads retain collection
+rows, search and keyboard focus; a failed read labels the retained list and offers
+Try again. Hidden/offline workspaces pause reads. Authentication changes and
+workspace resets discard the list and reject late responses. These reads never
+send messages, change drafts or resolve uncertain actions.
+
+Recent discovery contains at most 200 chats. Absence from that window never means
+deletion or forgetting and never closes an open view. Tabs retain navigation
+identity, with a generic Chat title when no current title is available; they do
+not retain a separate private title cache. Explicit forgotten records cross the
+shared privacy boundary before any list consumer can display them.
+
+Chats browses a separate compact directory, in pages of up to 50 records, so
+older conversations remain reachable. Search matches full stored titles and
+summaries before paging; displayed previews mark truncation. The count describes
+loaded chats, never the total history. Load older (or Load more results) appends
+the next page. Refresh chats replaces the loaded page chain with a fresh first
+page. Each page reflects its last read; the interface states this explicitly.
+Shared recent discovery can signal newer chats but never silently rewrites older
+pages. When the earlier discovery evidence is unknown, the notice asks to check
+for newer chats rather than claiming a new chat was found.
+
+Search remains mounted while results load, fail or become empty. Changing the
+query clears the previous results and cursor. Refresh failures preserve only
+the same query's results, with their stale-state explanation. Invalid cursors
+retire continuation and offer an explicit refresh. A page containing only
+forgotten records still exposes Load older when another page exists. Known
+forgotten records are masked immediately; authentication and workspace changes
+clear the directory and reject late replies. CollectionPanel's optional
+emptyContent slot lets these states retain the shared search and toolbar.
+CollectionRow descriptions wrap long unbroken text, including URLs and compact
+summary previews, without expanding the collection beyond its available width.
+
+`connected-workspace.css` owns these semantic shell roles. Use the existing theme
+and typeface, `--sidebar` for the navigation surface, `--background` for the work
+surface, and `--sidebar-primary` only for New chat and attention counts. Sidebar
+controls use `--control-height` (40px), primary and account rows use
+`--control-height-lg` (44px), and subordinate desktop links use
+`--control-height-sm` (32px). Mobile subordinate links return to 40px. Corners
+follow `--radius-md` / `--radius-sm`; custom themes and radius remain functional.
+History and expanded destinations have separate bounded scroll regions. Opening
+Work or Library closes the other group so history keeps its place. The
+header retains the shared appbar geometry; when its search slot is empty the
+conversation title and actions use the available width. Global search is always
+in the sidebar and appears in the header when the sidebar is hidden. Collection
+pages retain their own scoped search in that header slot.
+
+The mobile sidebar restores focus to its actual opener after dismissal, including
+keyboard shortcuts and its internal close control. Choosing a destination moves
+focus to the main content instead. Closing must not steal focus from another open
+dialog, a newer sidebar opening, or an authenticated workspace that has unmounted.
+
+This shell change preserves source-owned async, verification, permission and
+privacy contracts. Background thinking is an explicit per-message opt-in;
+automatic model choice belongs to the talking model. Composer behavior is owned
+by the runtime workspace rather than by navigation.
+
+Cancel thinking belongs to the specific background request. A newer Think
+request never inherits an earlier cancellation's pending state or error. Each
+cancellation and confirmation read has a 15-second deadline; an unconfirmed
+outcome offers Check thinking status, which only reads and never retries the
+cancellation. Talking and its draft remain independent. Authentication changes,
+workspace resets, selection changes, forgetting and teardown reject late replies.
+Another Think request replaces unfinished analysis; ordinary talking preserves it.
+
+Composer drafts save privately on the Conker server, separately from messages,
+model input and memory. A quiet status beneath either composer distinguishes
+loading, saving, saved, unsaved, offline and unconfirmed saves. Browser storage
+contains no draft text or options. Only an interrupted new-chat start's request
+identity, revision and browser-session identity may survive in session storage.
+Logout clears in-memory editors and that recovery identity; server drafts remain
+available after sign-in. Forgetting a chat clears its draft and pending content.
+
+Every draft has a server revision. Concurrent changes preserve the local editor
+and expose both versions with their model, skills, Think, research and new-chat
+privacy choices. Use saved version and Keep my edits require the shared
+`ConfirmationDialog`, bound to the exact versions shown. A newer change stops
+the choice. Unconfirmed saves are read back before another write; offline edits
+remain in memory with a leave-page warning until saved. Saved drafts do not
+trigger that warning by themselves.
+
+New chat remains an unsent draft until Send atomically promotes it to a chat.
+An interrupted creation recovers the same chat and leaves sending explicit.
+The uninterrupted first send requires the exact promoted draft; another tab's
+replacement never becomes an automatic message. Each send freezes its draft
+revision and options. Same-request retries reuse that snapshot, and consuming
+an older submitted revision preserves newer edits. Task requests keep their
+separate review and scope. Submission recovery is visible beside the composer,
+independent of draft-save status. Long recovery content scrolls within a bounded
+composer region on small screens.
+
+Chat code loads in its own module while the workspace remains mounted across
+navigation, retaining streams and recovery state. The production entry-size
+guard remains unchanged.
+
+Calls & usage is a shared, initially closed disclosure in chat Details,
+conversation context and recorded run details. Its component and authenticated
+read load only while opened on a visible surface. Closing, changing routes or
+forgetting the source cancels the read; authenticated session changes reject
+old responses. Usage is never retained in browser storage.
+
+Conversation and Background thinking have separate call lists and summaries.
+Complete metrics use the server's totals; incomplete metrics show a labeled
+known subtotal only when some calls reported that field. Otherwise they say
+Not reported. Empty lanes say No recorded calls. Older partial coverage and
+truncated call lists are explicit. Configured model, requested adapter route and
+provider-reported identity are distinct. Summed call time can include overlapping
+work and is never presented as elapsed turn time. Costs come only from reported
+measurements; the UI neither estimates subscription costs nor treats missing
+cost as zero. Model-selection reasons keep their existing separate disclosure.
+
+Saved user messages have a quiet, persistent memory receipt beneath their text,
+separate from hover-only message actions. Added to memory means a verified
+MemoryGate acknowledgement; chat persistence, model prose and scoring never
+create that claim. Filtered and excluded outcomes explicitly keep the chat.
+Original message privacy governs exclusion, and later forgetting masks earlier
+admission. The Remember starter only fills a request and never enables memory.
+
+Receipt reads are separate from transcript and submission recovery. Only the
+visible authenticated chat checks recent metadata, at most six reads in a
+bounded backoff cycle. Hidden pages, route changes, logout and forgetting cancel
+that cycle. Pending checks then pause with an explicit Check memory status
+action. Older messages use that action to read one exact receipt, without a
+request per historical message or reloading the transcript. Receipt state stays
+in memory; no text or receipts enter browser storage. Errors and explanations
+use fixed copy, with no delivery exception text or admission scores.
+
+Saved turn outcomes stay visible in the transcript after a reload. The latest
+failed, interrupted or stopped attempt has a compact outcome panel; older
+terminal attempts remain in Details after later work succeeds. Every still
+unresolved action remains visible. These panels use saved turn identity, never
+guess a message association from nearby text or timestamps. They distinguish
+no recorded tool action, recorded action and unconfirmed effects.
+
+Checking history only reads persisted state. Reply-only recovery is explicit
+and restricted to an acknowledged acted-without-reply state; approval
+continuation retains the existing review flow. Other uncertain outcomes link
+to the saved action and do not offer an unsafe generic Retry. Every callback
+rechecks current turn state, source privacy, selected chat, auth and operation
+locks. No outcome panel remains visible after source forgetting. Failure copy
+uses known public cases or a safe generic explanation, never provider errors.
+
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
 The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.
@@ -24,12 +224,12 @@ consequences; and whether it directs the user toward their intended action.
 | Loading / empty | `CollectionLoading` reflects search and rows, not decorative dashboard cards. Empty feedback names the state and provides the appropriate creation or filter recovery action. | Collection libraries, lazy workspaces, Activity |
 | Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | System diagnostics, Today, Inbox, Chat |
 
-Keep the main shell flat and the approved appbar geometry unchanged. Meaningful
+Keep the main shell flat and the shared appbar geometry consistent. Meaningful
 record headings remain; duplicate route headings do not. Search has one visible
 page entry point, with its current scope named by the field and scope menu.
 Expanded sidebar destinations have their own height-bounded scroll region;
-fixed navigation and profile do not shrink away, and recent lists retain room
-even in short desktop windows. This preserves the sidebar's existing appearance.
+fixed navigation and profile do not shrink away, and recent chat history retains
+room even in short desktop windows.
 Guidance about permission, expiry, model
 processing, provenance and recovery stays visible at the relevant action.
 Search/list hints can follow results; they do not compete with the find controls.
@@ -174,10 +374,22 @@ navigates to its actual source; search never executes work or changes authority.
 Abort obsolete queries, debounce typing and retain literal results when providers
 fail. Expose partial, unavailable and degraded coverage rather than inventing hits.
 
+Global search belongs to the authenticated workspace. Authentication or workspace
+identity changes close it and clear query and results. A shared forget notification
+immediately clears all record results and cancels earlier reads, then repeats the
+open query without moving focus. Known forgotten conversation identities and
+session-linked result URLs remain masked even in a newer stale source response.
+Opaque derived records expose no session identity; their renewed eligibility is
+owned by the source's privacy check, not inferred by the browser. Page commands
+remain usable when record reads fail. Settings, stage and pagination reads have
+deadlines; explicit retry keeps recovery available without an automatic retry loop.
+Whitespace-only changes preserve the current request and its results.
+
 Settings use verified writes with revision checks. Metadata and literal text need
 no provider; semantic retrieval and bounded `search-ranking` are opt-in. The model
-role owns its model, timeout and fallback. Current source adapters scan at most
-200 records; memory library text is limited to retained previews, and only
+role owns its model, timeout and fallback. Conversation metadata matches retained
+titles and summaries before the cap of 200 eligible results; other metadata
+adapters still use bounded scans. Memory library text is limited to retained previews, and only
 MemoryGate supplies a semantic index. Other sources have no semantic capability
 until their source-owned index adapters exist. Do not describe this as complete
 cross-source indexing. Private and forgotten origins remain excluded. No raw
@@ -471,6 +683,18 @@ The default illustrative dataset contains 50 fictional, read-only records across
 
 Research and integration boundaries are in [memory-workspace-research.md](https://github.com/Conker-AI/conker/blob/5e71ee97a09bb2d5a7fcef73c8bf8bff87229d29/docs/archive/memory-workspace-research.md). The canvas revision was reviewed in desktop dark/light and 390×844 mobile captures, including searchable selection, dock geometry, hierarchy and maximize/restore. The review found stale layout zoom and mobile point occlusion; both were corrected and visually rechecked. Build, design guard, affected lint, memory/layout, navigation and daily-overview checks passed. This verifies the frontend preview, not a production memory connection.
 
+## Memory forgetting and recovery
+
+Forgetting a live memory uses the shared `ConfirmationDialog`, showing the exact
+reviewed text and version before the owner confirms. Source conversations are
+kept. After an uncertain response, keep the same request identity and offer
+"Check same request"; do not silently generate a replacement deletion. Recovery
+reads content-free metadata from Pi on reload and requires an explicit confirmation
+before checking or completing the saved deletion. Keep metadata reads and mutation
+pending states distinct, and exclude one while the other is active. Successful
+forgetting clears the inspector and record deep link; late reads cannot restore
+either. No memory text or deletion intent is stored in browser storage.
+
 ## Tools workspace
 
 Tools extends the existing compact, full-width shadcn New York foundation without new theme or density tokens. One searchable library combines connector actions and workflows using `BaseLayout variant="collection"`, `DataTable` and responsive `RecordItem` rows. Keep one Tools sidebar destination; implementation type is a library filter, not separate Flows navigation.
@@ -482,3 +706,29 @@ Selection opens the shared nonmodal `WorkspaceInspector`, composed with `Overlay
 Test results and version/run history occupy an optional bottom panel. Only a receipt matching the exact current draft may color steps or supply their output; historical receipts remain inspectable with their earlier-draft/version notice. Source edits canonical JSON. Preserve invalid source and unapplied step arguments until explicit Apply/Discard, with validation beside the task and visible draft feedback. Creation uses `TaskDialogContent` and `FormActions`; deletion uses `ConfirmationDialog`.
 
 Keep local-preview and reload-reset boundaries visible. Fixture tests, credential references and preview publication do not imply external execution, real credentials, live MCP registration or scheduled jobs. The current graph supports bounded transformations and published child calls; arbitrary scripts, general loop bodies, joins, waits, retries, AI nodes and resumable workers remain deferred. [tools-workspace.md](../docs/archive/tools-workspace.md) owns the exact implemented scope and verification record. Check this surface in desktop light/dark and narrow layouts, including inspector and receipt-panel coexistence; use `npm run check:tools` and the shared design/build checks for relevant changes.
+
+API-key provider controls serialize status reads and mutations under the current owner and client lifetime. Status reads have a 15-second deadline; mutations have a 210-second deadline starting after owner verification at dispatch. Pending and failed reads label retained revisions and spending policy as last-checked evidence. A dispatched failure or timeout requires an explicit read-only status check before another action and retains the earlier-unconfirmed notice after that check; no operation is automatically replayed. Server revision, activation recovery and spending-policy guards remain authoritative.
+
+Each credential editor opening has a distinct identity. An unchanged successful status check can preserve its unsent in-memory key; changed provider evidence, owner/client replacement, closing, or submission clears it. Submission clears the key before password verification and never restores it after cancellation or failure; only the scoped in-flight request holds that value. Stale form/input/close callbacks cannot address a reopened editor. Refresh and recovery controls preserve keyboard focus; dialog closure restores the current opener or a live status action without taking focus from another dialog.
+
+Native sessions (`/system?tab=native-sessions`) is a System section with a Work shortcut and a Terminal link. The provider selector separates Conker-owned isolated Claude background sessions from saved Codex history and from Chats. Claude interactive native entries are not implied; truncation and omitted-entry counts are independent. Use the shared collection search and record rows, with `DetailPanel` for exact identity, working directory, native state and recovery. The attach command is a manual Conker-root CLI instruction, never automatically injected into a terminal; native permissions and approvals remain in Claude.
+
+Toolbar choices use `WorkspaceChoice`: a Select inline, a radio submenu in desktop overflow, and labeled radio groups directly in the mobile menu so choices stay within the viewport. Composite Select roots must not be slotted as menu items because they have no focusable DOM node. Provider changes restore focus only after the new provider commits, with owner, source and navigation-generation fences. Selecting the checked provider leaves navigation unchanged. Mobile route actions wrap inside their reserved width, keeping Open views independently reachable.
+
+Native metadata is last-checked evidence with explicit Refresh/Check status. Reads are bounded to 35 seconds and fenced by owner, client lifetime and selection; output is an explicit, identity-matched, bounded plain-text snapshot, cleared on source changes or failed identity reconciliation. No output polling or browser persistence. Stop uses `ConfirmationDialog` then owner verification for the exact ID and immutable identity, with a 45-second deadline beginning only at dispatch. Success means Stop requested, never stopped without a fresh read. Unknown outcomes require explicit status reconciliation and retain an uncertainty note; no Stop is automatically replayed. Closing the owner shell does not promise that independently supervised background native sessions have ended.
+
+Codex uses the same destination with `provider=codex`, separate provider lifetimes and Unarchived/Archived saved-history scopes. The observer reads Conker’s isolated profile; it cannot prove activity in another Codex process. Do not infer Running, Idle, Completed or Stopped from stored metadata or expose a runtime-inspection action. Pages are explicit snapshots: Refresh restarts paging, Load more retains prior rows, and Search loaded threads filters only loaded names, bounded previews, IDs and working directories. Errors retain matching rows with last-loaded wording; invalid cursors require Refresh, never an empty-success fallback. Provider/archive/owner/client changes abort reads and clear old inspection state. No full transcript or output is loaded or persisted.
+
+Codex detail reads are query-free, bounded to 35 seconds and bound to the exact canonical thread ID. Unnamed rows use a bounded preview fallback; shortened previews are labeled in detail. The exact `python scripts/conker.py native codex resume <id>` command is a manual action from the Conker repository and preserves native prompts and approvals. There are no Codex Stop, launch, approval or permission controls in this view. Native provider selection and all paging/retry controls remain accessible in the compact shared appbar and on mobile.
+
+Retained memory edits start in the Memory inspector and read a fresh, full Companion
+memory snapshot. The task dialog edits text only; source and confidence remain
+read-only. Revision checks and operation-bound owner verification protect each
+change. Draft text stays in the mounted editor and never enters browser storage.
+Owner, client, selection, editor-instance and source-forget changes retire reads
+and drafts. Reads stop after 35 seconds; mutation deadlines begin at dispatch
+after verification and allow 45 seconds. Unknown outcomes never replay. On reload,
+content-free pending metadata offers Check status; retry is a separate confirmed
+operation bound to the server-saved approved payload hash. Applied receipts distinguish
+saved text from indexing status. A missing receipt remains uncertain until an
+authoritative outcome is verified. Source conversations and memory permissions remain unchanged.

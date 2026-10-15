@@ -5,6 +5,7 @@ import { PanelLeftIcon } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import { createSidebarFocus } from "@/lib/sidebar-focus"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -35,9 +36,10 @@ type SidebarContextProps = {
   open: boolean
   setOpen: (open: boolean) => void
   openMobile: boolean
-  setOpenMobile: (open: boolean) => void
+  setOpenMobile: (open: boolean, focus?: 'opener' | 'content') => void
   isMobile: boolean
-  toggleSidebar: () => void
+  toggleSidebar: (opener?: HTMLElement) => void
+  restoreMobileFocus: (event: Event) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -58,6 +60,7 @@ function SidebarProvider({
   className,
   style,
   children,
+  ref,
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean
@@ -65,7 +68,15 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
-  const [openMobile, setOpenMobile] = React.useState(false)
+  const [openMobile, _setOpenMobile] = React.useState(false)
+  const wrapper = React.useRef<HTMLDivElement>(null)
+  React.useImperativeHandle(ref, () => wrapper.current!, [])
+  const [mobileFocus] = React.useState(createSidebarFocus)
+  const restoreMobileFocus = React.useCallback((event: Event) => mobileFocus.restore(event, () => wrapper.current), [mobileFocus])
+  const setOpenMobile = React.useCallback((open: boolean, focus: 'opener' | 'content' = 'opener') => {
+    mobileFocus.change(open, undefined, focus)
+    _setOpenMobile(open)
+  }, [mobileFocus])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -91,9 +102,12 @@ function SidebarProvider({
   )
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+  const toggleSidebar = React.useCallback((opener?: HTMLElement) => {
+    if (isMobile) {
+      const next = !mobileFocus.isOpen()
+      mobileFocus.change(next, opener); _setOpenMobile(next)
+    } else setOpen((open) => !open)
+  }, [isMobile, setOpen, mobileFocus])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -124,14 +138,16 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      restoreMobileFocus,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, restoreMobileFocus]
   )
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
+          ref={wrapper}
           data-slot="sidebar-wrapper"
           style={
             {
@@ -165,7 +181,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, restoreMobileFocus } = useSidebar()
 
   if (isMobile) {
     return (
@@ -181,6 +197,7 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          onCloseAutoFocus={restoreMobileFocus}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -189,7 +206,7 @@ function Sidebar({
           <div className="flex h-full w-full flex-col" onClickCapture={event => {
             const link = (event.target as HTMLElement).closest("a[href]")
             if (link && !event.defaultPrevented && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.getAttribute("target") !== "_blank") {
-              setOpenMobile(false)
+              setOpenMobile(false, 'content')
             }
           }}>{children}</div>
         </SheetContent>
@@ -263,7 +280,7 @@ function SidebarTrigger({
       className={cn("size-7", className)}
       onClick={(event) => {
         onClick?.(event)
-        toggleSidebar()
+        if (!event.defaultPrevented) toggleSidebar(event.currentTarget)
       }}
       {...props}
     >
@@ -282,7 +299,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       data-slot="sidebar-rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
+      onClick={() => toggleSidebar()}
       title="Toggle Sidebar"
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
@@ -301,6 +318,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
+      tabIndex={-1}
       data-slot="sidebar-inset"
       className={cn(
         "bg-background relative flex w-full min-w-0 flex-1 flex-col",

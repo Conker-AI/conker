@@ -1,119 +1,211 @@
 # 3 · Using Conker
 
-A short guide to each screen. **Live** means it works with the real backend. **Preview** means the
-screen is designed and clickable but uses sample data. Screens in preview say so on the page.
-Details are in [Status](status.md).
+This guide describes the connected chat workspace. A development preview uses
+simulated services; a connected installation reports real readiness and errors.
+Optional capabilities depend on the host configuration. [Status](status.md)
+records tested scope and remaining release work.
 
-## Signing in
+## Sign in and start a chat
 
-Open your Conker address (for example `https://your-server:8443`) and enter the owner password set on
-the server. Chatting needs no further password. Risky changes (approvals, settings, workflows) ask
-for it again, for that one change only ([ADR-0010](adr/0010-conversation-writes-are-session-bound.md)).
-Forgot it? Reset it on the server: see [4 · Running Conker](4-running.md#reset-the-password).
+Open your Conker address and enter the owner password. The local workspace uses
+`https://localhost:18550`; its initial password location and recovery commands are
+in [Connected workspace](connected-workspace.md). Chat messages use your signed-in
+session. Protected changes ask for owner verification for the exact operation.
 
-## The screens
+Conker opens at **New chat**. Choose an agent and model if needed, type a message
+and send it. **Chats** lists existing conversations; **Load older** reads another
+page. Its search matches saved titles and summaries. Global search with
+**Ctrl/Cmd+K** also offers page navigation and source-specific search results,
+including coverage notices when a source is incomplete or unavailable.
 
-### Companion and Chats: talk to it · **Live**
+The sidebar shows recent chats. Conversations created from another client appear
+on its next visible refresh. An open chat also checks for saved changes from
+other clients; delayed updates offer a read-only check. Refreshing does not resume
+or resend work.
 
-![A conversation showing what Conker read and a suggested plan](images/conversation.png)
+## Keep talking while Conker thinks
 
-- **Companion** is your ongoing conversation. **Chats** are separate topic conversations.
-- Under each answer you can open **what it did**: memories used, tools called, and which model
-  answered.
-- Answers appear as they are written; **Stop** ends one early and keeps what already happened.
-- Choose a model in the composer, or let routing pick one.
-- An action waiting for approval shows up as a card in the conversation, linked to the Inbox.
+In **Settings > General**, choose a **Talking model** and, optionally, a separate
+**Thinking model**. In a Companion chat, enable **Think** for the next message to
+request background analysis. Ordinary messages do not start it automatically.
 
-### Inbox: things waiting for you · **Live for approvals**
+The thinking card identifies the message being analyzed. You can continue talking,
+cancel that analysis, or read its findings when ready. **Discuss these findings**
+adds them to your draft for review and sending. A new Think request replaces
+unfinished analysis; an ordinary follow-up keeps it. Thinking runs no tools and
+uses its provider's allowance separately from the talking reply.
 
-- **Approval requests:** the exact action, its arguments and when it expires. Approve or deny.
-- **Proposals:** things Conker noticed in your messages and offers to take on, with the messages
-  that prompted each one. **Accept**, **Not now** (hidden for 30 days) or **Never suggest this**.
-  Accepting records your choice; nothing runs by itself. Turn it on by assigning a model to the
-  Proposals role in Settings.
+Choose a fixed model in the composer to override the default. **Auto** uses the
+configured router and eligible models; it is available only when routing is
+enabled. Open the saved turn details to inspect which model answered, routing
+attempts, fallback and available usage. A selected model is not proof of a
+successful response.
 
-### Home: overview · **Partly live**
+## Connect providers and assign roles
 
-![Home with requests needing attention and recent activity](images/home.png)
+**Settings > Providers** contains provider connections, the model catalogue and
+advanced role assignments. General keeps the common talking/thinking choices
+close at hand. Context selection, summarization, ranking and proposals can use
+their own configured roles.
 
-What needs your attention, recent activity and shortcuts. Sections that aren't connected yet say so.
+For the enhanced local profile, choose **Sign in with ChatGPT** or **Sign in with
+Claude subscription** and complete the displayed provider flow yourself. Native
+provider runtimes keep their credentials in separate Conker-owned directories.
+Existing desktop/CLI account stores are not imported. Sign-in does not select
+a model, grant tools or prove that the account can run a particular model.
+Inspect readiness, add the supported model to the catalogue, and choose its role.
+Provider allowance and availability still apply.
 
-### Memory: what it knows about you · **Live**
+If sign-in, cancellation or disconnect cannot be confirmed, use **Check status**.
+This reads the latest connection without repeating the operation. The earlier
+request may still have changed authorization. Automatic checks run only while a
+sign-in is pending and pause when the page is hidden, offline or their check limit
+is reached; the card offers a manual check. A ChatGPT device code belongs to one
+sign-in attempt and is not saved across page reloads.
 
-Search memories and see each one's source conversation. **Forget this memory** shows the exact text,
-then removes it everywhere Conker stored it (confirm with your password); the chat it came from
-stays until you forget that chat too. Correcting from this screen is planned. Search by meaning
-needs the Embeddings service; unavailability is reported rather than silently treated as a
-successful semantic match. Literal library search is a separate inspection path.
+**Runtime readiness > Refresh** checks provider status without changing your
+model draft. While a check is pending or unavailable, retained names are labeled
+as last checked. A stalled check offers **Try again** after 15 seconds. An
+OpenRouter catalogue can be cached, so its presence means **Configured, inference
+not verified**. An explicit model test in Setup verifies a response for the saved
+configuration; opening Settings does not run that test or spend inference usage.
 
-For automatic recall across new chats, open **Agents**, open the supplied **Companion**,
-select **Harness**, and choose **Memory access -> Across my chats**. Saving requires owner verification
-and applies to future turns. This explicit choice does not change tool permissions or grant
-other agents/team roles access. Memory-disabled chats remain excluded. The default remains
-**Current conversation**; a saved memory appearing in the library alone does not prove that
-it was supplied to an answer. Check the turn's memory receipt for retrieval status and count.
+API-key providers are a separate connection with their own spending controls.
+If saving a key or changing spending cannot be confirmed, use **Check status**
+in the API-key panel before another action. This reads the server without repeating the
+change; the earlier request may still finish. A refresh temporarily labels
+retained settings as last checked. Changing the owner or server connection clears
+an unsent key. See [Hosted provider credentials](reference/provider-credentials.md)
+for verification, activation and recovery.
 
-### Journal: what happened · **Partly live**
+Model-role calls through a subscription runtime remain distinct from a full
+native-agent session. For host CLI commands and installation requirements, see
+[Harnesses and model roles](harnesses-and-models-2026-10-09.md).
 
-Everything Conker did, in order: turns, tool calls, approvals, failures.
+## Inspect native sessions
 
-### Tools and workflows: what it can do · **Live**
+Open **Native sessions** in Work, or **System > Native sessions**, and choose a
+provider. This directory reads Conker's isolated native profiles and is separate
+from Chats and other CLI installations' history.
 
-See registered tools, and build workflows (branches, loops, steps) in the editor. Publish a workflow
-and allow the companion to use it. Runs that need approval pause in the Inbox.
+For **Codex**, choose **Unarchived** or **Archived**, then load more pages as
+needed. Search matches only loaded threads. Select a thread for saved metadata
+and a bounded preview. This connection cannot tell whether work is running in
+another Codex process; it does not display a live activity state.
 
-### Agents and Jobs · **Preview**
+Copy the exact resume command and run it manually from the Conker repository
+root to open that conversation in Codex. Resuming can run native work and keeps
+Codex's own permission prompts. Reading this page does not resume the thread.
 
-Agents behind the companion, and scheduled work. Designed, not yet connected.
+For **Claude Code**, inspect background sessions. Interactive Claude sessions are outside its scope;
+the page reports omitted entries and list truncation.
 
-### System: is the machine OK? · **Partly live**
+Select a session to check its current native state and working directory.
+**Read output** loads a bounded plain-text snapshot on request. It does not
+subscribe to a stream or save a transcript in Conker. Changing the selection
+or signing out clears the displayed output. A failed check labels retained
+information as last checked instead of claiming that the session disappeared.
 
-Service health is live. Terminal, files and some telemetry are samples.
+**Stop** asks for owner verification of that exact session. An acknowledged
+request means Stop was requested; check status to learn its current state.
+After a lost response, check status before considering another Stop. Conker
+does not repeat the operation automatically. Stopping cannot undo completed
+actions or provider usage.
 
-### Settings · **Live for models**
+The displayed attach command runs manually from the Conker repository root
+and uses the same isolated profile. Attaching can resume native work. Native
+permission and approval prompts remain in Claude; this view does not answer
+them. Closing a terminal does not establish that a background session stopped.
+See [Native sessions](reference/native-sessions.md) for CLI commands and limits.
 
-General contains profile, appearance, answers and ideas. **Providers** is its own
-Settings tab for connections, the model catalogue and role assignments. **Search**
-has its own tab too.
+## Drafts, Stop and recovery
 
-In **Settings > Providers > ChatGPT**, choose **Sign in with ChatGPT** and confirm
-the exact operation with your Conker owner password. Open the provided OpenAI link
-and enter the private one-time code there. This uses your ChatGPT/Codex subscription,
-not an OpenAI API key. OpenAI plan limits and model availability still apply.
-Device-code sign-in may need to be enabled in your ChatGPT security settings.
-Then read the available models, add your selected model to the catalogue, save,
-and choose it under General > Answers or in a chat. Connecting never changes
-defaults or background-role eligibility automatically.
+Unsent drafts save privately on the server with their model, skills, research
+mode and Think choice. The new-chat draft also retains agent, title and privacy.
+Watch the saved state beside the composer: reload restores acknowledged saves;
+an unconfirmed edit is not guaranteed to survive. Concurrent edits offer a choice
+between the saved version and this tab's version.
 
-Credentials and automatic refresh stay in a separate private Codex home on this
-server. Conker's tools still go through Pi and ToolGate; no Codex agent is started.
-Disconnect stops this connection without revoking other OpenAI sessions. API-key
-providers remain an optional, separate disclosure with their own spending switch.
-**Character Studio** (`Settings → Companion`) sets your companion's name, personality, style and
-voice. Voice cloning and 3D appearance are not connected yet.
+**Stop** interrupts the talking request. **Cancel thinking** targets background
+analysis. Closing a tab does neither. A completed tool action or provider usage
+cannot be undone by cancellation.
 
-### Calls · **Connected**
+After a lost send or action response, use the displayed status/recovery action
+before sending again. A saved submission may already exist. If a tool completed
+but the reply failed, **Ask only for the reply** can continue without rerunning
+the action. Approval requests link to Inbox; approve or deny the exact request,
+then continue the waiting turn when prompted.
 
-The call screen supports durable typed turns and bounded English voice turns when an
-operator has configured a compatible speech service. The browser captures PCM only
-after an explicit click; recordings and generated audio are discarded after the
-request or playback, while the transcript remains in the call conversation. Camera,
-continuous streaming, perception and incoming calls are not connected.
+## Memory and chat privacy
 
-First-run setup reports voice readiness inside **Connect capabilities** without asking
-for a provider key. Run `conker speech configure` on the Conker host for the guided
-URL, model, voice and hidden-key prompts, then refresh setup. `conker speech status`
-reports configuration only and never prints the credential; `conker speech disable`
-removes the host configuration and recreates Pi.
+Open **Memory** to inspect retained evidence and memories with their sources.
+A message saying “I remember” does not prove delivery. Check its **Added to memory**
+receipt and the answer's retrieval details. Pending delivery can be checked
+without resending the message.
 
-## Common tasks
+With memory enabled, a direct request beginning **“Remember that…”** or
+**“Запомни, что…”** asks to retain that statement. Quoted examples and questions
+do not force admission. **“Don't remember…”** excludes that statement from active
+memory; use **Forget this memory** to remove an existing reviewed record. Forgetting
+one memory keeps its source chat. If a deletion remains uncertain, the recovery
+control reconciles the same request and can complete that deletion; it does not
+choose a different record to delete.
+To correct retained wording, select **Edit memory**. Conker loads the full current
+text and revision for review; it does not edit a shortened library preview.
+Save the change and complete owner verification. Editing changes the text of a
+Companion memory while preserving its source and confidence, including whether
+it was inferred. It keeps the source conversation. Other record kinds and
+namespaces remain read-only. Finish or stop active work before making a change.
 
-| I want to… | Do this |
+If saving is unconfirmed, **Check status** reads the original receipt without
+resending the edit. **Retry approved change** is a separate, explicit action that
+can send only the exact previously approved text. Recall pauses while that
+correction remains unresolved. A changed revision requires a fresh review;
+an unavailable read never proves that the previous edit failed. Closing the
+editor discards unsent text. Text being saved and search indexing being ready are
+separate results.
+
+For automatic recall across chats, open **Agents > Companion > Harness** and
+choose **Memory access > Across my chats**. Saving requires owner verification
+and applies to future turns. The default is **Current conversation**. This choice
+does not grant tools or enable memory for other agents.
+
+The chat's **Incognito** control opens two independent future-message choices:
+
+- Turn off **Use memory** to stop recall and learning for those future messages.
+- Turn off **Use assistant tools** to disable the harness, including routing and
+  background thinking; choose an explicit answer model.
+
+Messages still stay in chat history. These switches do not delete earlier memory
+or make a hosted model local. Use the explicit forget action for retained content.
+Private chats remain available to their owner in Chats while source policy limits
+their reuse elsewhere.
+
+A fork carrying restricted context retains that restriction through linked
+summaries. Removing an exact pin does not make a summary independent of it.
+Start a new independent chat when you need a conversation without that context.
+
+## Where other work lives
+
+| Destination | Use it for |
 |---|---|
-| Ask something | Companion, type, Enter |
-| Start a separate topic | Chats, then **New chat** |
-| See why it said something | Open **what it did** under the answer |
-| Approve an action | Inbox, open the request, **Approve**, confirm your password |
-| Keep a conversation out of memory | Turn on **Incognito** for that chat |
-| Use a stronger model | Settings, Models: add a provider, then assign it to *answering* |
-| Let it run a workflow | Tools: publish the workflow, allow the companion to use it |
+| **Work / Overview** | Attention, active work and recent activity. |
+| **Inbox** | Tool approvals and proposals with evidence. Accepting a proposal records your choice; it does not execute it automatically. |
+| **Activity** | Tasks, runs and recorded events. |
+| **Library / Projects** | Project metadata and selected source links. |
+| **Artifacts** | Saved owner content and its versions. |
+| **Agents / Teams** | Durable profiles, model choices and granted capabilities; team definitions and runs. |
+| **Skills / Tools** | Reusable instructions, registered tools, workflow drafts, publication and runs. Instructions do not grant execution rights. |
+| **Schedules** | Configured jobs and recorded runs; execution needs the host scheduler. |
+| **System** | Diagnostics and configured host observations. The enhanced Windows owner terminal is a separate host-access surface; the production container terminal remains deferred. |
+| **Settings / Companion** | Character, speaking style and configured voice choices. Full 3D appearance and voice cloning are not connected. |
+
+Calls support durable typed turns and bounded English voice turns when a compatible
+speech service is configured. Microphone capture begins only after your click;
+audio is transient while transcripts remain in the call conversation. Camera,
+continuous streaming and incoming calls remain unconnected. Configure speech on
+the host with `conker speech configure`; inspect it with `conker speech status`.
+
+The host CLI and UI share many operations, but not complete parity. Downloads,
+backups, restoration and service lifecycle retain host-only paths. See
+[Running Conker](4-running.md) for those commands.

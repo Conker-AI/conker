@@ -4,9 +4,12 @@ export type Action<Args extends unknown[] = []> =
   | { availability: 'unsupported' | 'disabled'; reason: string }
   | { availability: 'enabled'; run: (...args: Args) => void | Promise<void> }
 export type MessageAction = 'copy' | 'link' | 'edit' | 'retry' | 'fork' | 'pin' | 'rateUp' | 'rateDown' | 'redact' | 'saveArtifact'
+export type MessageMemoryFeedback = { label: string; description: string; checking: boolean; refresh: Action }
+export type ChatTurnOutcome = { id: string; title: string; description: string; consequence: string; recordedAt: string; controls: { label: string; action: Action; primary?: boolean }[] }
 export type ChatMessage = {
   id: string; sessionId: string; sequence: number; role: 'user' | 'assistant' | 'system' | 'tool'
   createdAt: string; content: Content; agentId: string | null; agentName?: string; actions: Record<MessageAction, Action>
+  memory?: MessageMemoryFeedback
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'
@@ -33,6 +36,7 @@ export type ChatContract = {
   history: 'loading' | 'ready' | 'error'; notice: string | null; error: string | null
   draft: string; setDraft: Action<[text: string]>; send: Action; checkHistory: Action
   generation: Generation | null; submission: Submission
+  outcomes?: readonly ChatTurnOutcome[]
   /** URL focus is presentation state; routing remains in the wrapper. */
   focusedMessageId?: string | null
 }

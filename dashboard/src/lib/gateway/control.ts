@@ -4,15 +4,21 @@ import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
 import { createGatewayCharactersClient } from './characters'
-import { createGatewayHostInventoryClient } from './host-inventory'
+import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayTeamsClient } from './teams'
+import { createNativeSessionsClient } from './native-sessions'
+import { createMemoryCorrectionsClient } from './memory-corrections'
+import { createCodexSessionsClient } from './codex-sessions'
 import { createGatewayTerminalClient } from './terminal'
 import { createGatewayFilesystemClient } from './filesystem'
 import { createGatewayCallsClient } from './calls'
 import { createGatewaySearchClient } from './search'
 import { createProviderControlClient } from './provider-control'
 import { createBrowserSessionsClient } from './browser-sessions'
+import { createNativeClaudeClient } from './native-claude'
 import { createChatGPTClient } from './chatgpt'
+import { createGatewaySkillsClient } from './skills'
+import type { GatewayMcpClient } from './mcp'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -50,7 +56,7 @@ const configuration = z.object({
   models: z.array(z.object({ id: z.string().min(1).max(200), providerId: z.string().min(1).max(100), name: z.string().min(1).max(160),
     route: z.string().min(1).max(300), enabled: z.boolean(), routingDescription: short.default('') })).max(1000),
   defaultModelId: z.string().max(200).nullable(),
-  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }) }) }),
+  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ thinking: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }) }) }),
 })
 const projectSource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('conversation'), sessionId: identity }),
@@ -253,28 +259,56 @@ function match<T extends MemoryConnections | MemoryContent>(value: T, type: Memo
   return value
 }
 
-const forgetPreview = z.object({ memoryId: identity, revision: z.number().int().min(1), text: z.string().max(16000) })
-const forgetReceipt = z.object({ requestId: z.string(), memoryId: identity, status: z.literal('forgotten'), indexRemoval: z.string().nullable(), cachedPackagesCleared: count, sourceConversationKept: z.literal(true) })
+const forgetRevision = z.number().int().min(1).max(2147483646)
+const forgetPreview = z.object({ memoryId: identity, revision: forgetRevision, text: z.string().max(16000) })
+const forgetRequest = z.object({ requestId: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/), memoryId: identity, revision: forgetRevision }).strict()
+const forgetPending = z.object({ schemaVersion: z.literal(1), pending: forgetRequest.nullable() }).strict()
+const forgetReceipt = z.object({ requestId: forgetRequest.shape.requestId, memoryId: identity, status: z.literal('forgotten'), indexRemoval: z.string().nullable(), cachedPackagesCleared: count, sourceConversationKept: z.literal(true) })
 export type MemoryForgetPreview = z.infer<typeof forgetPreview>
 export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
+export type MemoryForgetRequest = z.infer<typeof forgetRequest>
+export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'memoryId' | 'revision'>): MemoryForgetRequest {
+  return parse(forgetRequest, { requestId: globalThis.crypto.randomUUID(), memoryId: preview.memoryId, revision: preview.revision }, true)
+}
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession'>, onCurrentSessionRevoked: () => void) {
+  const modelListeners = new Set<() => void>()
+  const modelsChanged = () => { for (const listener of modelListeners) listener() }
   return {
+    subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
     providerCredentials: createProviderControlClient(auth),
     chatgpt: createChatGPTClient(auth),
+    skills: createGatewaySkillsClient(auth),
+    mcp: {
+      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await import('./mcp')).createGatewayMcpClient(auth).list(...args) },
+      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await import('./mcp')).createGatewayMcpClient(auth).discover(...args) },
+      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await import('./mcp')).createGatewayMcpClient(auth).import(...args) },
+      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setEnabled(...args) },
+      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await import('./mcp')).createGatewayMcpClient(auth).access(...args) },
+      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setAccess(...args) },
+    },
+    claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),
     characters: createGatewayCharactersClient(auth),
-    hostInventory: createGatewayHostInventoryClient(auth),
+    hostInventory: {
+      async request(...args: Parameters<GatewayHostInventoryClient['request']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).request(...args) },
+      async inspect(...args: Parameters<GatewayHostInventoryClient['inspect']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).inspect(...args) },
+      async resume(...args: Parameters<GatewayHostInventoryClient['resume']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).resume(...args) },
+      async configured(...args: Parameters<GatewayHostInventoryClient['configured']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).configured(...args) },
+    },
     teams: createGatewayTeamsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),
     search: createGatewaySearchClient(auth),
     terminal: createGatewayTerminalClient(auth),
+    nativeSessions: createNativeSessionsClient(auth),
+    memoryCorrections: createMemoryCorrectionsClient(auth),
+    codexSessions: createCodexSessionsClient(auth),
     async diagnostics(signal?: AbortSignal): Promise<GatewayDiagnostics> {
       return parse(diagnostics, await auth.request('/api/diagnostics', { signal }))
     },
@@ -390,6 +424,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
         method: 'POST', body: { candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
       }))
       if (result.revision !== expectedRevision + 1 || result.configuration?.defaultModelId !== selected) throw new GatewayError('invalid-response')
+      modelsChanged()
       return result
     },
     async activateSetupModel(candidateId: string, expectedRevision: number, requestId: string, signal?: AbortSignal) {
@@ -399,6 +434,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
         method: 'POST', body: { requestId: request, candidateId: selected, expectedRevision: parse(count, expectedRevision, true) }, signal,
       }))
       if (result.revision !== expectedRevision + 1 || result.candidateId !== selected || result.probe.requestId !== request || result.probe.configurationRevision !== result.revision || result.probe.candidateId !== selected) throw new GatewayError('invalid-response')
+      modelsChanged()
       return result
     },
     async sessionSettings(id: string, signal?: AbortSignal): Promise<OwnerSessionSettings> {
@@ -422,7 +458,9 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     async saveModels(value: OwnerModelsConfiguration, expectedRevision: number, signal?: AbortSignal): Promise<OwnerModelSettings> {
       // Snapshot only public fields. Neither draft secrets nor unknown metadata can cross this boundary.
       const body = { expected_revision: parse(count, expectedRevision, true), configuration: parse(configuration, value, true) }
-      return parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { method: 'POST', body, signal }))
+      const result = parse(modelSettings, await auth.request('/api/control/pi/models/configuration', { method: 'POST', body, signal }))
+      modelsChanged()
+      return result
     },
     /** The exact current text and revision; forgetting succeeds only if it is still current. */
     async forgetPreview(id: string, signal?: AbortSignal): Promise<MemoryForgetPreview> {
@@ -430,11 +468,16 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       if (result.memoryId !== id) throw new GatewayError('invalid-response')
       return result
     },
-    /** Removes the memory everywhere it is stored. Asks for the owner password. */
-    async forgetMemory(preview: MemoryForgetPreview): Promise<MemoryForgetReceipt> {
-      const body = { request_id: globalThis.crypto.randomUUID(), memory_id: parse(identity, preview.memoryId, true), expected_revision: parse(z.number().int().min(1), preview.revision, true) }
-      const result = parse(forgetReceipt, await auth.request('/api/control/pi/memory/forget', { method: 'POST', body }))
-      if (result.memoryId !== preview.memoryId) throw new GatewayError('invalid-response')
+    /** Content-free durable recovery; does not retry or contact MemoryGate. */
+    async pendingMemoryForget(signal?: AbortSignal): Promise<MemoryForgetRequest | null> {
+      return parse(forgetPending, await auth.request('/api/control/pi/memory/forget-pending', { signal })).pending
+    },
+    /** Repeat only the same reviewed identity after an uncertain result. Owner verification still applies. */
+    async forgetMemory(request: MemoryForgetRequest, signal?: AbortSignal): Promise<MemoryForgetReceipt> {
+      const frozen = parse(forgetRequest, request, true)
+      const body = { request_id: frozen.requestId, memory_id: frozen.memoryId, expected_revision: frozen.revision }
+      const result = parse(forgetReceipt, await auth.request('/api/control/pi/memory/forget', { method: 'POST', body, signal }))
+      if (result.memoryId !== frozen.memoryId || result.requestId !== frozen.requestId) throw new GatewayError('invalid-response')
       return result
     },
     async library(options: { search?: string; type?: MemoryObjectKind; after?: string; limit?: number; signal?: AbortSignal } = {}): Promise<MemoryLibrary> {

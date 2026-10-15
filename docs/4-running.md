@@ -5,8 +5,8 @@ Pick one of three ways.
 | Way | For | Needs |
 |---|---|---|
 | [A · Preview](#a--preview-the-interface) | Looking around, UI work | Node.js 22.12+ |
-| [B · Server](#b--server-ubuntu) | Real daily use | Ubuntu, Docker, about 16 GB RAM |
-| [C · Local Windows stack](#c--local-windows-stack) | Backend development on Windows | Docker Desktop, Python 3.12, Ollama |
+| [B · Server](#b--server-ubuntu) | Container deployment; current release acceptance remains pending | Ubuntu, Docker, about 16 GB RAM |
+| [C · Local Windows stack](#c--local-windows-stack) | Connected local app and development | Docker Desktop, Python 3.12, Node.js 22.12+, Ollama |
 
 ## A · Preview the interface
 
@@ -357,31 +357,40 @@ back into service. See [recovery](reference/recovery.md).
 
 ## C · Local Windows stack
 
-From the repository root, with Docker Desktop and Ollama running:
+For the current connected workspace, from the repository root with Docker Desktop
+and Ollama running:
 
 ```powershell
-python scripts/local_stack.py init
-python scripts/local_stack.py start postgres
-python scripts/local_stack.py start memorygate
-python scripts/local_stack.py start toolgate
-python scripts/local_stack.py start decisions
-python scripts/local_stack.py start pi
-python scripts/local_stack.py start gateway
+ollama pull qwen2.5:3b
+python scripts/workspace.py install --model qwen2.5:3b
+python scripts/workspace.py up
 ```
 
-Open https://localhost:8050. State and logs are in `.local-run/`, which Git ignores. After
-`npm run build`, restart the gateway to serve the new build.
+Open https://localhost:18550. State and logs are in `.local-run/`, which Git ignores.
+The initial password is in `.local-run/gateway/initial-owner-password.txt`. To update
+the dashboard, stop this workspace, run `python scripts/workspace.py build`, then
+start it again. The launcher checks ownership and preserves the prior served build
+if publication fails.
 
-Details: [reference/local-windows.md](reference/local-windows.md).
+Full instructions and optional-service limits:
+[Connected workspace](connected-workspace.md). The older multi-repository backend
+harness is documented separately in [Local Windows reference](reference/local-windows.md);
+its ports and lifecycle commands are not interchangeable with this workspace.
 
 ## Models
 
-- **Default:** local models through Ollama, free and private. Small CPU models such as Qwen 2.5 3B
-  work but are weak.
-- **Better answers:** add a hosted provider with `conker providers set`, `verify` and
-  `activate`, then choose its model in Settings. Every turn shows which provider answered.
-- **Routing (optional):** the Laya decision service picks a model for each message. It takes about
-  2 GB RAM and about 0.3 s per decision on CPU, and only sees the latest message.
+- **Local:** models run through Ollama without a per-request provider charge.
+  Hardware, model size and task complexity affect response quality and latency.
+- **Hosted:** configure a provider, check availability and select its model. The
+  connected turn records which provider answered. Host API-key lifecycle commands
+  include `conker providers set`, `verify` and `activate`.
+- **Subscription runtimes:** the enhanced local profile connects native ChatGPT
+  and Claude Code sign-in separately from API keys. Connecting does not select or
+  verify a model. See [Harnesses and model roles](harnesses-and-models-2026-10-09.md).
+- **Auto and thinking:** optional Laya chooses among eligible answer models using
+  model descriptions and bounded conversation context. This is not a guarantee of
+  best-model selection or fixed latency. A separately assigned thinking model runs
+  only for explicit Think requests and uses its own provider allowance.
 
 Provider keys are host-only files, never browser settings or `.env` values. See
 [hosted provider credentials](reference/provider-credentials.md) for rotation,
@@ -389,7 +398,9 @@ interruption recovery, issuer revocation and backup behavior.
 
 ## Security in one paragraph
 
-Only the HTTPS gateway is reachable, and only from your private network. Services have no host
-ports. Containers get no Docker socket or host filesystem. Anyone in the host's `docker` group
-effectively has root. Hosted models, downloads and tools can still reach the internet. More detail:
+The server container profile exposes its HTTPS gateway for private-network access.
+The local workspace uses owned loopback listeners and dedicated host processes.
+The optional Windows owner terminal has host-account access, not container
+isolation. Anyone in the host's `docker` group effectively has root. Hosted
+models, downloads and tools can reach the internet. More detail:
 [browser authentication](reference/browser-auth.md).

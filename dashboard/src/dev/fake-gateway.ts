@@ -8,7 +8,7 @@ import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal }
+type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
 
 const now = () => Date.now() / 1000
 const iso = (seconds: number) => new Date(seconds * 1000).toISOString()
@@ -22,8 +22,8 @@ const previewSessions = {
   coach: `ses_${'3'.repeat(16)}`,
 }
 
-type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string }
-type Session = { id: string; title: string; created_at: number; messages: Message[]; turns: Json[] }
+type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json }
+type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
 
 const replies = [
   "Here's a simple plan for the week:\n\n1. **Monday:** revision block before school, 45 minutes.\n2. **Tuesday and Thursday:** judo, so keep homework light.\n3. **Friday:** hand in the physics worksheet.\n\nWant me to put these in your calendar?",
@@ -34,9 +34,14 @@ const replies = [
 function seed(): Session[] {
   const start = now() - 86400
   const session = (id: string, title: string, turns: [string, string][], offset: number): Session => ({
-    id, title, created_at: start + offset, turns: [],
+    id, title, created_at: start + offset, turns: turns.map((_, index) => ({
+      id: `trn_${offset}_${index}`, session_id: id, status: 'completed', acted: 0, started_at: start + offset + index * 120, ended_at: start + offset + index * 120 + 8,
+      provider: 'ollama', model: 'qwen2.5:3b', input_tokens: null, output_tokens: null, cost_usd: null, detail: null, action: null,
+      memory: { configured: false, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] },
+    })),
     messages: turns.flatMap(([ask, answer], index) => [
-      { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120 },
+      { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120,
+        memory_delivery: { state: id === previewSessions.week ? 'saved' : id === previewSessions.sky ? 'filtered' : 'excluded', reason_code: id === previewSessions.coach ? 'privacy_disabled' : null, admission_method: id === previewSessions.week ? 'signal' : id === previewSessions.sky ? 'filtered' : null, memory_id: id === previewSessions.week ? 'mem_judo' : null } },
       { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8 },
     ]),
   })
@@ -50,12 +55,39 @@ function seed(): Session[] {
 export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
+  const nativeRows = ['review_changes', 'waiting_input'].map((id, index) => ({ id, identity: (index ? 'b' : 'a').repeat(64), sessionId: `native_conversation_${index}`, name: index ? 'Review needs native input' : 'Review workspace changes', cwd: index ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', startedAt: Date.now() - (index + 1) * 60000, state: index ? 'blocked' : 'working', processStatus: index ? 'waiting' : 'busy', waitingFor: index ? 'permission_prompt' : null, canStop: true }))
+  const codexRows = Array.from({ length: 28 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, name: index === 0 ? 'Review the release checklist' : null, preview: index === 1 ? 'Inspect the native session metadata and preserve the exact owner-approved command. '.repeat(7).slice(0, 500) : `Saved review ${index + 1}: check the workspace changes before continuing.`, previewTruncated: index === 1, cwd: index === 1 ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', createdAt: Math.floor(Date.now() / 1000) - 7200 - index * 60, updatedAt: Math.floor(Date.now() / 1000) - index * 60, modelProvider: 'openai', source: index === 2 ? 'subAgent' : 'cli' }))
+  const corrections = new Map<string, Json>()
+  const correctionTexts = new Map<string, { revision: number; text: string }>()
+  if (globalThis.sessionStorage?.getItem('conker-fake-correction') === 'pending') corrections.set('correction_preview_saved', { schemaVersion: 1, requestId: 'correction_preview_saved', memoryId: 'mem_judo', previousRevision: 1, payloadHash: 'a'.repeat(64), status: 'unknown', revision: null, indexing: null, errorCode: null, cachedPackagesCleared: 0, sourceConversationKept: true })
+  const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
+  const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
+  const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
+  if (thinkingScenario) sessions[0].thinking = [{ session_id: sessions[0].id, turn_id: String(sessions[0].turns[0].id), input_message_id: sessions[0].messages[0].id, created_at: now(), status: 'running', provider: 'ollama', model: 'qwen2.5:7b', result: null, detail: null }]
+  if (globalThis.sessionStorage?.getItem('conker-fake-history') === 'paged') {
+    for (let index = 0; index < 115; index++) sessions.push({ id: `ses_history_${String(index).padStart(3, '0')}`, title: index === 70 ? `${'A long planning note '.repeat(20)}archived-keyword` : `Earlier conversation ${String(index + 1).padStart(3, '0')}`, ...(index === 70 ? { summary: `${'x'.repeat(400)} summary-keyword` } : {}), created_at: now() - 172800 - index * 60, messages: [], turns: [] })
+  }
+  const observations = new Map<string, { signature: string; revision: number }>()
+  // Reloadable, development-only saved outcomes. They never invoke a provider or tool.
+  const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
+  if (outcomeScenario) {
+    const session = sessions[0], turn = session.turns[0]
+    session.messages = session.messages.filter(message => message.role === 'user')
+    Object.assign(turn, { status: ({ unreplied: 'acted_no_reply', unknown: 'outcome_unknown', approval: 'awaiting_approval', 'interrupted-acted': 'interrupted' } as Record<string, string>)[outcomeScenario] ?? outcomeScenario,
+      acted: ['unreplied', 'interrupted-acted'].includes(outcomeScenario) ? 1 : 0,
+      detail: outcomeScenario === 'failed' ? 'The model requested an unavailable tool. This request was not executed.' : null,
+      action: ['unreplied', 'unknown', 'approval', 'interrupted-acted'].includes(outcomeScenario) ? { id: 'act_preview_outcome', state: outcomeScenario === 'unknown' ? 'outcome_unknown' : outcomeScenario === 'approval' ? 'awaiting_approval' : 'completed', job_id: null } : null,
+      approval_request_id: outcomeScenario === 'approval' ? 'req_email_coach' : null })
+  }
   let searchSettings: SearchSettings = { revision: 0, configuration: { sources: [...searchSources], exactText: true, semantic: false, reranking: false } }
   try {
     const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
     if (value && Number.isInteger(value.revision) && value.revision >= 0 && Array.isArray(value.configuration?.sources) && value.configuration.sources.every(source => searchSources.includes(source)) && typeof value.configuration.exactText === 'boolean') searchSettings = { revision: value.revision, configuration: { ...value.configuration, semantic: false, reranking: false } }
   } catch { /* Preview preferences are optional; malformed storage uses safe defaults. */ }
+  const composerDrafts = new Map<string, Json>()
+  const draftStarts = new Map<string, Json>()
+  const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
   const submissions = new Map<string, Json>()
   const streams = new Map<string, { text: string; stopped: boolean }>()
   let boundaryReceipt: Json | null = preview.setupStep === 'protection' || preview.setupStep === 'rehearsal' ? { step: 'boundaries', revision: 1, receiptId: 'preview-boundaries', source: 'conker.dashboard', subject: 'toolgate.policy', evidenceDigest: 'b'.repeat(64), completedAt: iso(now()), expiresAt: iso(now() + 86400), recordedAt: iso(now()), state: 'valid' } : null
@@ -92,6 +124,33 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     card('entity', 'ent_coach', 'Coach', 'Judo coach at the club; contacted by email about open mat.'),
     card('evidence', 'evi_week', 'Chat: Plan my week', 'Help me plan this week around school and judo.'),
   ]
+  // Synthetic metadata only: lets a lost-response recovery survive a preview reload.
+  // No memory text or real server state enters this development-only storage.
+  const forgetKey = 'conker-preview-forget'
+  type ForgetIntent = { requestId: string; memoryId: string; revision: number }
+  let pendingForget: ForgetIntent | null = null
+  const forgetReceipts = new Map<string, { intent: ForgetIntent; receipt: Json }>()
+  const deliveryReads = new Map<string, number>()
+  try {
+    const saved = JSON.parse(globalThis.sessionStorage?.getItem(forgetKey) ?? 'null') as ForgetIntent | null
+    if (saved && /^[A-Za-z0-9_-]{16,128}$/.test(saved.requestId) && saved.revision === 1 && memories.some(row => row.type === 'memory' && row.id === saved.memoryId)) {
+      pendingForget = { requestId: saved.requestId, memoryId: saved.memoryId, revision: 1 }
+      memories.splice(memories.findIndex(row => row.id === saved.memoryId), 1)
+    }
+  } catch { /* An isolated preview can run without session storage. */ }
+  function deliveryFor(message: Message, checking = false): Json {
+    const receipt = message.memory_delivery ?? { state: 'unavailable', reason_code: 'legacy_unknown', admission_method: null, memory_id: null }
+    const mode = globalThis.sessionStorage?.getItem('conker-fake-fail')
+    if (mode === 'memory-pending') return { state: 'pending', reason_code: 'retry_scheduled', admission_method: null, memory_id: null }
+    if (mode === 'memory-removed') return { state: 'removed', reason_code: 'forgotten', admission_method: null, memory_id: null }
+    if (mode === 'memory-unavailable') return { state: 'unavailable', reason_code: 'blocked', admission_method: null, memory_id: null }
+    if (receipt.memory_id === 'mem_judo' && !memories.some(row => row.id === 'mem_judo')) return { state: pendingForget ? 'pending' : 'removed', reason_code: pendingForget ? 'forget_pending' : 'forgotten', admission_method: null, memory_id: null }
+    if (checking && receipt.state === 'pending') {
+      const reads = (deliveryReads.get(message.id) ?? 0) + 1; deliveryReads.set(message.id, reads)
+      if (reads >= 2) message.memory_delivery = { state: 'saved', reason_code: null, admission_method: 'owner_requested', memory_id: `memory_${message.id}` }
+    }
+    return message.memory_delivery ?? receipt
+  }
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
     { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
@@ -277,6 +336,12 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   async function sendTurn(session: Session, body: Json): Promise<Json> {
     const requestId = String(body.request_id), text = String(body.text)
     const input: Message = { id: nextId('msg'), session_id: session.id, seq: session.messages.length + 1, role: 'user', content: text, created_at: now() }
+    const inputSettings = sessionSettings.get(session.id)?.settings as Json | undefined
+    const inputPrivacy = inputSettings?.privacy as Json | undefined
+    input.memory_delivery = inputPrivacy?.memoryDisabled ? { state: 'excluded', reason_code: 'privacy_disabled', admission_method: null, memory_id: null }
+      : inputSettings?.agentId && inputSettings.agentId !== 'companion' ? { state: 'excluded', reason_code: 'agent_excluded', admission_method: null, memory_id: null }
+      : /^remember\b/i.test(text) ? { state: 'pending', reason_code: 'queued', admission_method: null, memory_id: null }
+      : { state: 'filtered', reason_code: null, admission_method: 'filtered', memory_id: null }
     session.messages.push(input)
     if (session.messages.length === 1) session.title = text.slice(0, 48)
     // A message about email parks the turn on the owner, like a real email.send tool call.
@@ -322,6 +387,41 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, 120))
     let match: RegExpMatchArray | null
+    if ((match = path.match(/^\/api\/control\/pi\/drafts\/new\/start\/([A-Za-z0-9_-]+)$/)) && method === 'GET') return structuredClone(draftStarts.get(match[1]) ?? fail(404))
+    if (path === '/api/control/pi/drafts/new/start' && method === 'POST') {
+      const body = options.body ?? {}, requestId = String(body.request_id)
+      const prior = draftStarts.get(requestId)
+      if (prior) { if (prior.source_revision !== body.expected_revision) fail(409); return structuredClone(prior) }
+      const saved = composerDrafts.get('new') ?? emptyComposerDraft('new')
+      if (saved.revision !== body.expected_revision) fail(409)
+      if (!String(saved.text).trim()) fail(422)
+      const id = nextId('ses')
+      sessions.push({ id, title: String(saved.title || 'New chat'), created_at: now(), messages: [], turns: [] })
+      sessionSettings.set(id, { revision: 1, settings: { agentId: saved.agent_id || 'companion', privacy: { memoryDisabled: false, harnessDisabled: false, ...(saved.privacy as Json) } } })
+      composerDrafts.set(id, { ...saved, session_id: id, revision: 1 })
+      const receipt = { schemaVersion: 1, request_id: requestId, session_id: id, content_status: 'available', source_revision: saved.revision, draft_revision: 1 }
+      draftStarts.set(requestId, receipt)
+      composerDrafts.set('new', { ...emptyComposerDraft('new'), revision: Number(saved.revision) + 1, updated_at: now() })
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'draft-start') { globalThis.sessionStorage.removeItem('conker-fake-fail'); fail(503) }
+      return structuredClone(receipt)
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/drafts\/([A-Za-z0-9_-]+)(?:\/tasks\/([A-Za-z0-9_-]+))?$/))) {
+      const key = match[1] + (match[2] ? '/' + match[2] : '')
+      if (key !== 'new') find(match[1])
+      const mode = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (mode === 'drafts') fail(503)
+      let saved = composerDrafts.get(key) ?? emptyComposerDraft(key)
+      if (method === 'POST') {
+        if (mode === 'draft-conflict') { saved = { ...saved, text: 'Draft changed in another tab. Keep the revised meeting agenda.', revision: Number(saved.revision) + 1 }; composerDrafts.set(key, saved); globalThis.sessionStorage.removeItem('conker-fake-fail') }
+        const body = options.body ?? {}
+        if (body.expected_revision !== saved.revision) fail(409)
+        saved = { ...saved, ...body, revision: Number(saved.revision) + 1, updated_at: now() }
+        delete saved.expected_revision
+        composerDrafts.set(key, saved)
+      }
+      return structuredClone(saved)
+    }
+    if (method === 'GET' && ['/api/control/pi/search', '/api/control/pi/search/settings'].includes(path) && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'search') fail(503)
     if (path === '/api/control/pi/search/settings') {
       if (method === 'POST') {
         if (options.body?.expected_revision !== searchSettings.revision) fail(409)
@@ -385,7 +485,23 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       terminalLease = null
       return { closed: true }
     }
-    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).map(sessionRow) }
+    if (method === 'GET' && path === '/api/pi/sessions/history') {
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'history') fail(503)
+      const q = String(options.query?.q ?? '').trim().toLowerCase(), limit = Number(options.query?.limit ?? 50)
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(q)))].map(value => value.toString(16).padStart(2, '0')).join('')
+      const sorted = [...sessions].sort((a, b) => b.created_at - a.created_at || b.id.localeCompare(a.id))
+      const cursor = options.query?.cursor
+      const anchor = cursor === undefined ? null : sorted.find(row => `h1.${digest}.${row.id}` === cursor)
+      if (cursor !== undefined && !anchor) throw new GatewayError('http', 422, undefined, 'invalid_history_cursor')
+      const matches = sorted.filter(row => (!q || row.title.toLowerCase().includes(q) || row.summary?.toLowerCase().includes(q)) && (!anchor || row.created_at < anchor.created_at || row.created_at === anchor.created_at && row.id < anchor.id))
+      const page = matches.slice(0, limit)
+      return { schemaVersion: 1, results: page.map(row => ({ ...sessionRow(row), title: [...row.title].slice(0, 300).join(''), summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null, content_status: 'available', title_truncated: [...row.title].length > 300, summary_truncated: [...row.summary ?? ''].length > 400 })), next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null }
+    }
+    if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).slice(0, 200).map(session => {
+      const row = sessionRow(session)
+      // Search deliberately keeps its earlier data so the real UI's stale-result mask is exercised.
+      return session.id === previewSessions.week && globalThis.sessionStorage?.getItem('conker-fake-search-forgotten') === 'week' ? { ...row, status: 'forgotten', title: '', summary: null } : row
+    }) }
     if (method === 'POST' && path === '/api/pi/sessions') {
       // Failure-path switch: a first message containing [fail] makes creation fail with a server error.
       if (String(options.body?.title ?? '').includes('[fail]')) fail(503)
@@ -398,22 +514,77 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       sessionSettings.set(created.id, { revision: 1, settings: { agentId, privacy: { memoryDisabled: Boolean(privacy?.memoryDisabled), harnessDisabled: Boolean(privacy?.harnessDisabled) } } })
       return { session_id: created.id }
     }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/observation$/)) && method === 'GET') {
+      const item = find(match[1]), signature = JSON.stringify(item), before = observations.get(item.id)
+      const next = { signature, revision: (before?.revision ?? 0) + (before?.signature === signature ? 0 : 1) }
+      observations.set(item.id, next)
+      return { schemaVersion: 1, session_id: item.id, revision: next.revision, active: item.turns.some(turn => turn.status === 'running'), content_status: 'available' }
+    }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)$/)) && method === 'GET') {
       const item = find(match[1])
-      return { ...sessionRow(item), messages: item.messages, turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+      return { ...sessionRow(item), thinking: item.thinking ?? [], messages: item.messages.map(message => message.role === 'user' ? { ...message, memory_delivery: deliveryFor(message) } : message), turns: item.turns, memory, pending_submissions: [], pending_submissions_truncated: false }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/thinking\/([^/]+)\/cancel$/)) && method === 'POST') {
+      const item = find(match[1]), row = item.thinking?.find(row => row.turn_id === match![2])
+      if (!row) return fail(404)
+      if (thinkingScenario) return new Promise<Json>(() => { /* Simulate a lost cancellation response; no real work. */ })
+      row.status = 'canceled'
+      return { schemaVersion: 1 }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/thinking$/)) && method === 'GET') {
+      const item = find(match[1])
+      if (thinkingScenario && item.thinking?.[0]) item.thinking[0].status = 'canceled'
+      return { schemaVersion: 1, session_id: item.id, content_status: 'available', results: item.thinking ?? [] }
+    }
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)(?:\/messages\/([^/]+))?\/memory-delivery$/)) && method === 'GET') {
+      const rows = find(match[1]).messages.filter(message => message.role === 'user' && (!match![2] || message.id === match![2]))
+      if (match[2] && !rows.length) fail(404)
+      return { schemaVersion: 1, session_id: match[1], content_status: 'available', results: rows.slice(-100).map(message => ({ message_id: message.id, ...deliveryFor(message, true) })), truncated: rows.length > 100 }
     }
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/submissions$/))) return { results: [], next_cursor: null }
-    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') return sendTurn(find(match[1]), options.body ?? {})
+    if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') {
+      const body = options.body ?? {}, key = match[1], prior = submissions.get(String(body.request_id))
+      if (prior) return { submission: prior }
+      const saved = composerDrafts.get(key)
+      if (body.draft_revision !== undefined && (!saved || saved.revision !== body.draft_revision || saved.text !== body.text)) throw new GatewayError('http', 409, undefined, 'draft_changed')
+      const result = await sendTurn(find(key), body), receipt = result.submission as Json
+      Object.assign(receipt, { draft_revision: body.draft_revision ?? null, model_id: body.model_id ?? null, skill_ids: body.skill_ids ?? [], think: body.think ?? false, research_mode: body.research_mode ?? 'off' })
+      if (saved && composerDrafts.get(key)?.revision === body.draft_revision) composerDrafts.set(key, { ...emptyComposerDraft(key), revision: Number(saved.revision) + 1, updated_at: now() })
+      return result
+    }
     if ((match = path.match(/^\/api\/pi\/turn-submissions\/([^/]+)\/cancel$/))) {
       const stream = streams.get(match[1]); if (stream) stream.stopped = true
       return { request_id: match[1], state: 'bound' }
     }
     if ((match = path.match(/^\/api\/pi\/turn-submissions\/([^/]+)$/))) return submissions.get(match[1]) ?? fail(404)
+    if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/usage$/)) && method === 'GET') {
+      const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
+      const turn = owner.turns.find(item => item.id === match![1])!
+      const legacy = owner.id === previewSessions.sky
+      const attempts = [
+        { id: 'usage_01', lane: 'foreground', role: 'routing', provider_id: 'ollama-local', model_id: 'router', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at), ended_at: Number(turn.started_at) + 0.2, elapsed_ms: 200, input_tokens: 48, output_tokens: 8, cached_tokens: null, cost_usd: null },
+        { id: 'usage_02', lane: 'foreground', role: 'answer', provider_id: 'ollama-local', model_id: 'talking', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at) + 0.2, ended_at: Number(turn.started_at) + 2.4, elapsed_ms: 2200, input_tokens: 230, output_tokens: 80, cached_tokens: 0, cost_usd: null },
+        { id: 'usage_03', lane: 'thinking', role: 'thinking', provider_id: 'ollama-local', model_id: 'thinking', provider: 'ollama', model: 'qwen2.5:7b', actual_provider: null, actual_model: null, status: 'failed', failure_kind: 'preempted', started_at: Number(turn.started_at) + 0.4, ended_at: Number(turn.started_at) + 3, elapsed_ms: 2600, input_tokens: null, output_tokens: null, cached_tokens: null, cost_usd: null },
+      ]
+      const lane = (name: string) => {
+        const rows = attempts.filter(row => row.lane === name), fields = ['input_tokens', 'output_tokens', 'cached_tokens', 'cost_usd', 'summed_call_ms'] as const
+        const entries = fields.map(field => {
+          const values = rows.map(row => field === 'summed_call_ms' ? row.elapsed_ms : row[field]), missing = values.filter(value => value === null).length
+          return { field, known: values.reduce<number>((sum, value) => sum + (value ?? 0), 0), missing, complete: !legacy && missing === 0 }
+        })
+        return { attempt_count: rows.length, pending_count: 0, reported_count: rows.filter(row => row.status === 'reported').length, failed_count: rows.filter(row => row.status === 'failed').length,
+          totals: Object.fromEntries(entries.map(row => [row.field, row.complete ? row.known : null])), known_subtotal: Object.fromEntries(entries.map(row => [row.field, row.known])), complete: Object.fromEntries(entries.map(row => [row.field, row.complete])), unknown_counts: Object.fromEntries(entries.map(row => [row.field, row.missing])) }
+      }
+      return { schemaVersion: 1, turn_id: turn.id, session_id: owner.id, content_status: 'available', scope: 'turn_provider_attempts', coverage: legacy ? 'legacy_partial' : 'complete', foreground: lane('foreground'), thinking: lane('thinking'), attempts, attempts_truncated: false }
+    }
     if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/resume$/))) {
       const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
       const turn = owner.turns.find(item => item.id === match![1])!
       const decided = approvals.find(item => item.id === turn.approval_request_id)
-      if (turn.status === 'awaiting_approval' && decided?.status === 'approved') {
+      if (turn.status === 'acted_no_reply' && turn.acted === 1) {
+        owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'The recorded action is complete. This is the missing reply; the action was not repeated.', created_at: now() })
+        Object.assign(turn, { status: 'complete', ended_at: now() })
+      } else if (turn.status === 'awaiting_approval' && decided?.status === 'approved') {
         owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'Done. I sent the email to coach and will tell you when they reply.', created_at: now() })
         Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() })
       } else if (turn.status === 'awaiting_approval' && decided && decided.status !== 'pending') {
@@ -421,6 +592,11 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         Object.assign(turn, { status: 'complete', ended_at: now() })
       }
       return { turn_id: turn.id, session_id: owner.id, status: turn.status }
+    }
+    if ((match = path.match(/^\/api\/pi\/runs\/([^/]+)$/)) && method === 'GET') {
+      const session = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
+      const turn = session.turns.find(turn => turn.id === match![1])!
+      return { ...turn, acted: turn.acted === 1, task_ids: [], outputs: [], source: { kind: 'conversation', session_id: session.id }, provenance: 'recorded', content_status: 'available' }
     }
     if (path === '/api/pi/tasks' || path === '/api/pi/runs') return { results: [], next_cursor: null }
     if (path === '/api/pi/events') return { results: [], next_cursor: null }
@@ -723,15 +899,92 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         responseDigest: 'a'.repeat(64), completedAt: iso(now()), recordedAt: iso(now()),
       } }
     }
+    if ((path === '/api/host/chatgpt' || path === '/api/host/claude') && globalThis.sessionStorage?.getItem('conker-fake-subscription')) {
+      const scenario = globalThis.sessionStorage.getItem('conker-fake-subscription')
+      if (method === 'GET' && scenario === 'read-failure') return fail(503)
+      if (method === 'GET' && scenario === 'read-timeout') return new Promise<Json>(() => { /* Isolated status deadline fixture. */ })
+      if (method === 'GET' && scenario === 'slow-read') await new Promise(resolve => setTimeout(resolve, 5000))
+      if (method === 'POST') {
+        options.onDispatch?.()
+        if (scenario === 'operation-timeout') return new Promise<Json>(() => { /* Isolated dispatch deadline fixture. */ })
+        subscriptionStates.set(path, options.body?.operation === 'login' ? 'pending' : options.body?.operation === 'models' ? 'connected' : 'idle')
+        if (scenario === 'lost-response') return fail(503)
+      }
+      const current = scenario === 'connected' ? 'connected' : subscriptionStates.get(path) ?? 'idle'
+      const loginId = current === 'pending' ? `login_${'a'.repeat(32)}` : null
+      const common = { available: true, connected: current === 'connected', loginId, loginState: loginId ? 'pending' : 'idle', credentialsIncluded: false }
+      return path.endsWith('/chatgpt') ? { ...common, connectionId: common.connected ? `connection_${'a'.repeat(32)}` : null, plan: common.connected ? 'plus' : null, problem: null, models: [], catalogueComplete: false,
+        deviceCode: method === 'POST' && options.body?.operation === 'login' ? { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } : null,
+      } : { ...common, runtime: 'Claude Code', models: [], authorizationUrl: loginId ? 'https://claude.ai/oauth/authorize' : null }
+    }
+    if (path.startsWith('/api/host/codex/sessions')) {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-codex-sessions'), envelope = { schemaVersion: 1, provider: 'codex', scope: 'saved_threads', runtimeVisibility: 'observer_only' }
+      if (method !== 'GET') return fail(404)
+      if (scenario === 'unavailable') return fail(503)
+      if (scenario === 'timeout') return new Promise<Json>(() => { /* A development-only stalled read. */ })
+      const sourceRows = scenario === 'long' ? codexRows.map((row, index) => index === 0 ? { ...row, name: null, preview: '😀'.repeat(500), previewTruncated: true, cwd: `C:/work/${'long-directory-'.repeat(18)}`, updatedAt: Number.MAX_SAFE_INTEGER } : row) : codexRows
+      if (path === '/api/host/codex/sessions') {
+        const archived = options.query?.archived === true, limit = Number(options.query?.limit ?? 25), cursor = options.query?.cursor
+        if (scenario === 'page-error' && cursor) return fail(503)
+        if (scenario === 'cursor-error' && cursor) return fail(422)
+        if (cursor && cursor !== 'preview_page_2') return fail(422)
+        const rows = scenario === 'empty' ? [] : archived ? sourceRows.slice(-2) : sourceRows, start = cursor ? 25 : 0
+        return { ...envelope, archived, results: structuredClone(rows.slice(start, start + limit)), nextCursor: start + limit < rows.length ? 'preview_page_2' : null }
+      }
+      if (scenario === 'detail-error') return fail(404)
+      const row = sourceRows.find(row => row.id === path.split('/')[5]) ?? fail(404)
+      return { ...envelope, session: structuredClone(row) }
+    }
+    if (path.startsWith('/api/host/claude/sessions')) {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
+      if (scenario === 'unavailable') return fail(503)
+      if (scenario === 'read-timeout' && method === 'GET') return new Promise<Json>(() => { /* Isolated read deadline. */ })
+      const parts = path.split('/'), row = nativeRows.find(item => item.id === parts[5])
+      if (path === '/api/host/claude/sessions') return { schemaVersion: 1, provider: 'claude', scope: 'background_sessions', results: scenario === 'empty' ? [] : structuredClone(nativeRows), truncated: false, omittedCount: 1 }
+      if (!row) return fail(404)
+      if (path.endsWith('/output')) return { schemaVersion: 1, provider: 'claude', id: row.id, identity: row.identity, text: 'Claude native output snapshot\nReviewing workspace files…\n<untrusted text remains plain text>\n', truncated: true, outputPersisted: false }
+      if (path.endsWith('/stop') && method === 'POST') {
+        options.onDispatch?.()
+        if (options.body?.expectedIdentity !== row.identity) return fail(409)
+        if (scenario === 'stop-timeout') return new Promise<Json>(() => { /* Isolated dispatched Stop deadline. */ })
+        row.state = 'stopped'; row.processStatus = 'idle'; row.waitingFor = null; row.canStop = false
+        if (scenario === 'lost-response') return fail(503)
+        return { schemaVersion: 1, provider: 'claude', id: row.id, identity: row.identity, status: 'stop_requested', automaticReplay: false }
+      }
+      return { schemaVersion: 1, provider: 'claude', result: structuredClone(row) }
+    }
+    if (path === '/api/host/claude') return { available: false, connected: false, loginId: null, loginState: 'idle', authorizationUrl: null, credentialsIncluded: false, runtime: 'Claude Code', models: [] }
     if (path === '/api/host/chatgpt') {
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
     }
     if (path === '/api/host/providers') {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-credentials')
+      if (scenario) {
+        if (method === 'GET' && scenario === 'read-failure') return fail(503)
+        if (method === 'GET' && scenario === 'read-timeout') return new Promise<Json>(() => { /* Isolated read deadline, no external provider. */ })
+        if (method === 'GET' && scenario === 'slow-read') await new Promise(resolve => setTimeout(resolve, 2000))
+        if (method === 'POST') {
+          options.onDispatch?.()
+          if (scenario === 'operation-timeout') return new Promise<Json>(() => { /* Isolated dispatch deadline. */ })
+          if (options.body?.operation === 'paid-policy') credentialStatus.paidAllowed = options.body.enabled === true
+          if (options.body?.operation === 'stage') {
+            const record = credentialStatus.providers.find(row => row.id === options.body?.provider)
+            if (record) { record.stagedRevision = `credential_${'a'.repeat(32)}`; record.verificationStatus = 'unverified' }
+          }
+          if (scenario === 'lost-response') return fail(503)
+        }
+        return structuredClone(credentialStatus)
+      }
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { schemaVersion: 1, available: false, secretsIncluded: false, paidAllowed: null, policyRecoveryRequired: false, providers: [] }
     }
-    if (path === '/api/pi/models') return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
+    if (path === '/api/pi/models') {
+      const scenario = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (scenario === 'provider-readiness') return fail(503)
+      if (scenario === 'provider-readiness-timeout') return new Promise<Json>(() => { /* Isolated timeout fixture; no provider request. */ })
+      return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
+    }
     if (path === '/health') return { service: 'gateway', version: '0.1.0', status: 'ok', checked_at: iso(now()), age_seconds: 0,
       checks: { owner_login: { status: 'ok' }, runtime: { status: 'ok' }, owner_channel: { status: 'ok' } } }
     if (path === '/api/diagnostics') return {
@@ -811,6 +1064,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { step: 'rehearsal', revision: 1, receiptId: 'rehearsal-' + 'c'.repeat(64), source: 'conker.first-run-rehearsal', subject: 'owner.daily-workflow', evidenceDigest: 'c'.repeat(64), completedAt: iso(now()), expiresAt: iso(now() + 86400), recordedAt: iso(now()), state: 'valid' }
     }
     if (path === '/api/control/pi/setup/status') {
+      const setupScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')
+      if (setupScenario === 'setup-status') return fail(503)
       const memoryChoice = setupChoices.get('memory')?.choice
       const capabilitiesChoice = setupChoices.get('capabilities')?.choice
       const memoryPending = memoryChoice === 'undecided'
@@ -820,7 +1075,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const rehearsalPreview = preview.setupStep === 'rehearsal'
       const currentStep = rehearsalComplete ? null : !setupModelChosen ? 'model' : memoryPending ? 'memory' : capabilitiesPending ? 'capabilities' : rehearsalPreview ? 'rehearsal' : boundaryReceipt ? 'protection' : 'boundaries'
       const recommendedNextOperation = rehearsalComplete ? null : !setupModelChosen ? 'test_model' : memoryPending ? 'configure_memory' : capabilitiesPending ? 'configure_capabilities' : rehearsalPreview ? 'run_rehearsal' : boundaryReceipt ? 'verify_protection' : 'review_boundaries'
-      return {
+      const status = {
         schemaVersion: 1, workflow: 'first-run', state: rehearsalComplete ? 'complete' : 'in_progress', currentStep, recommendedNextOperation, generatedAt: iso(now()),
         steps: [
           ['security', 'complete', true, [], null, 'Owner access and durable storage are verified.'],
@@ -836,6 +1091,64 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
           ...(id === 'capabilities' ? [{ source: 'speech', status: 'missing', revision: null, detail: 'Voice is optional and not configured. Use conker speech configure on the host to enable it.' }] : []),
         ] })),
       }
+      return setupScenario === 'setup-complete' ? { ...status, state: 'complete', currentStep: null, recommendedNextOperation: null,
+        steps: status.steps.map(step => ({ ...step, state: step.state === 'skipped' ? 'skipped' : 'complete', blockingReasonCode: null,
+          evidence: [{ source: 'preview.complete', status: 'ok', revision: 1, detail: 'Synthetic completed setup evidence.' }] })) } : status
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/memories\/([^/]+)$/)) && method === 'GET') {
+      const item = memories.find(row => row.type === 'memory' && row.id === match![1])
+      if (!item) throw new GatewayError('http', 404, undefined, 'not_found')
+      return { schemaVersion: 1, memoryId: item.id, revision: correctionTexts.get(item.id)?.revision ?? 1, text: correctionTexts.get(item.id)?.text ?? item.preview, sourceType: 'conversation', confidence: 'high' }
+    }
+    if (path === '/api/control/pi/memory/corrections/pending' && method === 'GET') {
+      const value = [...corrections.values()].find(value => value.status === 'unknown' || value.status === 'applying')
+      return { schemaVersion: 1, pending: value ? { requestId: value.requestId, memoryId: value.memoryId, expectedRevision: value.previousRevision, payloadHash: value.payloadHash, status: value.status } : null }
+    }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/([A-Za-z0-9_-]+)(\/retry)?$/))) {
+      const value = corrections.get(match[1]); if (!value) throw new GatewayError('http', 404, undefined, 'not_found')
+      if (method === 'POST' && match[2]) { options.onDispatch?.(); Object.assign(value, { status: 'applied', revision: Number(value.previousRevision) + 1, indexing: 'indexed', cachedPackagesCleared: 1 }) }
+      return { ...value }
+    }
+    if (path === '/api/control/pi/memory/corrections' && method === 'POST') {
+      options.onDispatch?.()
+      const body = options.body!, id = String(body.memory_id), current = correctionTexts.get(id)?.revision ?? 1
+      if (body.expected_revision !== current) throw new GatewayError('http', 409, undefined, 'revision_conflict')
+      const lost = globalThis.sessionStorage?.getItem('conker-fake-correction') === 'lost-response'
+      const value = { schemaVersion: 1, requestId: String(body.request_id), memoryId: id, previousRevision: current, payloadHash: 'b'.repeat(64), status: lost ? 'unknown' : 'applied', revision: lost ? null : current + 1, indexing: lost ? null : 'indexed', errorCode: null, cachedPackagesCleared: lost ? 0 : 1, sourceConversationKept: true }
+      corrections.set(value.requestId, value)
+      if (lost) throw new GatewayError('network')
+      correctionTexts.set(id, { revision: current + 1, text: String(body.text) })
+      const item = memories.find(row => row.id === id); if (item) item.preview = String(body.text).slice(0, 400)
+      return { ...value }
+    }
+    if (path === '/api/control/pi/memory/forget-pending' && method === 'GET') return { schemaVersion: 1, pending: pendingForget ? { ...pendingForget } : null }
+    if ((match = path.match(/^\/api\/control\/pi\/memory\/forget\/([^/]+)$/)) && method === 'GET') {
+      const item = memories.find(row => row.type === 'memory' && row.id === match![1])
+      if (!item) throw new GatewayError('http', 404, undefined, 'not_found')
+      return { memoryId: item.id, revision: 1, text: item.preview }
+    }
+    if (path === '/api/control/pi/memory/forget' && method === 'POST') {
+      const body = options.body ?? {}, requestId = String(body.request_id ?? ''), memoryId = String(body.memory_id ?? ''), revision = Number(body.expected_revision)
+      if (!/^[A-Za-z0-9_-]{16,128}$/.test(requestId) || !memoryId || !Number.isSafeInteger(revision)) fail(422)
+      const intent = { requestId, memoryId, revision }, previous = forgetReceipts.get(requestId)
+      if (previous) {
+        if (previous.intent.memoryId !== memoryId || previous.intent.revision !== revision) throw new GatewayError('http', 409, undefined, 'request_conflict')
+        return previous.receipt
+      }
+      if (pendingForget && (pendingForget.requestId !== requestId || pendingForget.memoryId !== memoryId || pendingForget.revision !== revision)) throw new GatewayError('http', 409, undefined, 'forget_pending')
+      const index = memories.findIndex(row => row.type === 'memory' && row.id === memoryId)
+      if (!pendingForget && index < 0) throw new GatewayError('http', 404, undefined, 'not_found')
+      if (revision !== 1) throw new GatewayError('http', 409, undefined, 'revision_conflict')
+      if (index >= 0) memories.splice(index, 1)
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'forget-response') {
+        pendingForget = intent
+        try { globalThis.sessionStorage.setItem(forgetKey, JSON.stringify(intent)); globalThis.sessionStorage.removeItem('conker-fake-fail') } catch { /* In-memory recovery still works. */ }
+        throw new GatewayError('network')
+      }
+      const receipt = { requestId, memoryId, status: 'forgotten', indexRemoval: 'removed', cachedPackagesCleared: 1, sourceConversationKept: true }
+      forgetReceipts.set(requestId, { intent, receipt }); pendingForget = null
+      try { globalThis.sessionStorage?.removeItem(forgetKey) } catch { /* Preview storage is optional. */ }
+      return receipt
     }
     if (path === '/api/control/pi/memory/objects') {
       const search = String(options.query?.search ?? '').toLocaleLowerCase(), type = options.query?.object_type
@@ -876,5 +1189,9 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } })
   }
 
-  return { request, streamResponse }
+  const subscriptionVerificationEnabled = (path: string) => ['/api/host/chatgpt', '/api/host/claude'].includes(path) && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
+  const credentialVerificationEnabled = (path: string) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
+  const nativeSessionVerificationEnabled = (path: string) => /^\/api\/host\/claude\/sessions\/[^/]+\/stop$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
+  const correctionVerificationEnabled = (path: string) => /^\/api\/control\/pi\/memory\/corrections(?:\/[A-Za-z0-9_-]+\/retry)?$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-correction')
+  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled, correctionVerificationEnabled }
 }

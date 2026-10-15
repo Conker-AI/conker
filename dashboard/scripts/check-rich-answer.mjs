@@ -37,7 +37,7 @@ try {
         { role: 'routing', modelId: 'laya-router', actualModel: 'laya-english@1c5edc17', status: 'completed', decision: { inputScope, elapsed_ms: 18.2, confidence: 0.75, raw: 'PRIVATE_SENTINEL' }, raw: 'PRIVATE_SENTINEL' },
         { role: 'answer', modelId: 'local-answer', actualModel: 'qwen2.5:3b', status: 'completed' },
       ], raw: 'PRIVATE_SENTINEL' })
-      for (const value of ['configuration 5', label, '18 ms', 'Decision confidence 75%', 'qwen2.5:3b']) assert.ok(html.includes(value), value)
+      for (const value of ['configuration 5', label, '18 ms', 'Routing separation 75% (not correctness probability)', 'qwen2.5:3b']) assert.ok(html.includes(value), value)
       assert.ok(!html.includes('PRIVATE_SENTINEL'))
     }
     assert.ok(evidence({ modelConfigurationRevision: 1, attempts: [{ role: 'answer', modelId: 'local-answer', status: 'completed' }] }).includes('configuration 1'), 'Historical receipts remain visible')
@@ -46,6 +46,24 @@ try {
   check("Malformed or unsupported model evidence fails closed", () => {
     const attempt = { role: 'routing', modelId: 'laya-router', status: 'completed' }
     for (const value of ['not json', ' '.repeat(16001), { modelConfigurationRevision: -1, attempts: [] }, { modelConfigurationRevision: 1, attempts: Array(21).fill(attempt) }, { modelConfigurationRevision: 1, attempts: [{ ...attempt, decision: { inputScope: 'arbitrary-filesystem' } }] }, { modelConfigurationRevision: 1, attempts: [{ ...attempt, decision: { confidence: 1.1 } }] }]) assert.equal(evidence(value), '')
+  })
+  check("Reused routing evidence identifies the earlier decision without inventing another call or timing", () => {
+    const original = { role: 'routing', modelId: 'laya-router', actualModel: 'laya-english@1c5edc17', status: 'completed', decision: { inputScope: 'complexity-excerpt', elapsed_ms: 18.2, confidence: 0.75 } }
+    const reused = { ...original, status: 'reused', selectionReason: 'same_routing_input', decision: { inputScope: 'complexity-excerpt', confidence: 0.75, inputCharacters: 92, raw: 'PRIVATE_REUSE_SENTINEL' }, raw: 'PRIVATE_REUSE_SENTINEL' }
+    const html = evidence({ modelConfigurationRevision: 5, attempts: [original, reused] })
+    for (const value of ['routing · laya-english@1c5edc17 · reused', 'Reused the earlier routing decision for this turn; the routing input is unchanged. No additional classifier call.', 'Earlier decision · Marked request excerpt and complexity metrics', 'Routing separation 75% (not correctness probability)']) assert.ok(html.includes(value), value)
+    assert.equal(html.match(/18 ms/g)?.length, 1, 'Only the original classifier call reports elapsed time')
+    assert.ok(!html.includes('PRIVATE_REUSE_SENTINEL'))
+    assert.ok(!evidence({ modelConfigurationRevision: 5, attempts: [reused] }).includes(' ms'))
+    assert.ok(evidence({ modelConfigurationRevision: 5, attempts: [{ ...reused, decision: undefined }] }).includes('No additional classifier call.'), 'Optional historical decision metadata may be absent')
+    assert.ok(evidence({ modelConfigurationRevision: 5, attempts: [{ role: 'answer', modelId: 'local-answer', status: 'completed', selectionReason: 'single_eligible_model' }] }).includes('Only one eligible talking model'), 'Existing single-model receipts are unchanged')
+    for (const invalid of [
+      ...['answer', 'thinking', 'context-selection', 'summarization', 'memory-ranking', 'search-ranking', 'proposals'].map(role => ({ ...reused, role })),
+      { ...reused, selectionReason: undefined }, { ...reused, selectionReason: 'single_eligible_model' },
+      { ...reused, status: 'completed' }, { ...reused, status: 'unavailable' },
+      { ...reused, decision: { elapsed_ms: 0 } }, { ...reused, decision: { elapsed_ms: null } },
+      { ...reused, decision: { confidence: 1.1 } }, { ...reused, decision: { inputScope: 'arbitrary-filesystem' } },
+    ]) assert.equal(evidence({ modelConfigurationRevision: 5, attempts: [original, invalid] }), '', 'Malformed reuse evidence fails closed')
   })
 
   check("Unsafe protocols, control characters, credentials and protocol-relative URLs are rejected", () => {

@@ -56,11 +56,83 @@ The mapping is compiled into the gateway. The command does not accept URLs,
 paths, methods, headers, or credentials from the caller. It validates every route
 against a compiled Pi or ToolGate service contract, sends only the credential set
 for that route's authority, disables ambient proxies and redirects, and accepts
-only a JSON object. Responses are bounded to 8 MiB by default; only the three
-Companion character views use the existing isolated 66 MiB media envelope.
+only a JSON object. Responses are bounded to 8 MiB by default; memory correction
+views use a 128,000-byte envelope and the three Companion character views use
+the existing isolated 66 MiB media envelope.
 Upstream bodies are not included in errors.
 
 This is inspection and export coverage, not write parity. Mutations continue to
 use their typed owner operations, concurrency checks, approvals, and recovery
 contracts. Adding a write command requires using that same service operation; it
 must not create a second host-only implementation.
+
+In the local workspace, `python scripts/conker.py memory-forget-pending` reads
+Pi's owner-only `/memory/forget-pending` route directly. It reports the saved
+request ID, memory ID and revision of an unresolved forget operation, or `null`
+when none is pending. The response contains no memory text. This command only
+checks recovery status; it does not delete anything or retry a previous deletion.
+
+For programmatic deletion recovery, Pi's owner-authenticated `POST /memory/forget`
+accepts the original JSON body with `request_id`, `memory_id` and
+`expected_revision`. Do not replace any of those three fields after an uncertain
+outcome. Before a new deletion, the owner-authenticated
+`GET /memory/forget/MEMORY_ID` supplies the exact record and revision for review.
+The local CLI's generic `api pi` command uses the runtime credential and cannot
+perform these owner operations; use Memory's confirmation and recovery controls.
+The server rejects identity conflicts and preserves the source conversation.
+
+`python scripts/conker.py memory-delivery SESSION_ID` reads acknowledgements for
+the latest 100 saved user messages. Add `--message MESSAGE_ID` to inspect one older
+message. This is a content-free status read, with no ingestion or privacy change.
+
+## Correct retained memory text
+
+The local workspace's `memory-edit` commands use Pi's owner credential and the
+same Companion-only correction service as the Memory editor. First read the full
+authoritative text and revision. Save the exact replacement in a UTF-8 text file,
+then apply it with that revision and a new request identity:
+
+```powershell
+python scripts/conker.py memory-edit show MEMORY_ID
+python scripts/conker.py memory-edit apply MEMORY_ID correction.txt --expected-revision 3 --request-id memory_edit_20261010_001
+python scripts/conker.py memory-edit pending
+python scripts/conker.py memory-edit status memory_edit_20261010_001
+python scripts/conker.py memory-edit retry memory_edit_20261010_001 --expected-payload-hash SHA256
+```
+
+`MEMORY_ID`, revision `3` and `SHA256` are placeholders for reviewed server values.
+The replacement must be nonblank, at most 16,000 Unicode characters, and contain
+no NUL. Whitespace and line endings are preserved; an optional UTF-8 byte-order
+mark is omitted. Memory IDs are at most 200 ASCII characters, start with a letter
+or digit, and may include underscores, periods, colons and hyphens. Request IDs
+contain 16–128 ASCII letters, digits, underscores or hyphens. Reusing an identity
+for different text, revision or target is refused.
+
+`pending` returns recovery metadata without replacement text. `status` only
+checks the original receipt; it does not send a correction. A lost response is
+unconfirmed, and no CLI command automatically retries it. The separate `retry`
+command uses the original request ID and its exact lowercase payload hash from
+the saved recovery metadata. It cannot substitute new text. Review a new
+snapshot before authoring another change after a revision conflict.
+
+Corrections preserve the source conversation and the memory's provenance and
+confidence. The result distinguishes an applied text change from pending or
+degraded search indexing. Unresolved correction text is held privately on the
+server for explicit recovery and removed from its journal after a terminal
+outcome. Reads wait at most 35 seconds and writes 45 seconds, with bounded JSON
+responses; ending that wait does not cancel an in-flight server operation.
+
+The container CLI exposes the same typed operations:
+
+```sh
+conker inspect memory-edit:MEMORY_ID
+conker inspect memory-edit-pending
+conker inspect memory-edit-status:REQUEST_ID
+conker apply memory correction.json
+```
+
+For a new correction, the JSON file contains `operation: "correct"`,
+`request_id`, `memory_id`, `expected_revision`, and `text`. For explicit recovery,
+it contains only `operation: "retry-correction"`, `request_id`, and
+`expected_payload_hash`. These commands call the same owner service and do not
+accept a different memory namespace or destination.

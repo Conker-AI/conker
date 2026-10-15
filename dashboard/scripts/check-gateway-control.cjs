@@ -98,7 +98,13 @@ async function main() {
   const disabled = { enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }
   const configuration = { providers: [{ id: 'decisions', name: 'Local decisions', enabled: true, apiKeyDraft: 'NEVER SEND', endpoint: 'http://private' }], models: [], defaultModelId: null,
     roleSettings: { answerMode: 'manual', roles: { answer: disabled, routing: disabled, 'context-selection': disabled, summarization: disabled } } }
+  let modelChanges = 0
+  const unsubscribeModels = client.subscribeModels(() => { modelChanges++ })
   await client.saveModels(configuration, 0)
+  assert.equal(modelChanges, 1, 'Saved model choices invalidate mounted composer catalogues')
+  unsubscribeModels()
+  await assert.rejects(client.saveModels(configuration, -1), error => error.kind === 'validation')
+  assert.equal(modelChanges, 1, 'Rejected writes do not announce a new catalogue')
   const saved = calls.at(-1)
   assert.equal(saved[1].method, 'POST')
   assert.ok(!JSON.stringify(saved).includes('NEVER SEND'))

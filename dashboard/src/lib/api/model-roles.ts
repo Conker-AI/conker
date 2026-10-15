@@ -1,8 +1,8 @@
 import type { CatalogueModel, ModelsConfiguration } from "./model-catalogue"
 
-export const MODEL_ROLES = ["answer", "routing", "context-selection", "summarization", "memory-ranking", "proposals", "search-ranking"] as const
+export const MODEL_ROLES = ["answer", "thinking", "routing", "context-selection", "summarization", "memory-ranking", "proposals", "search-ranking"] as const
 export type ModelRole = typeof MODEL_ROLES[number]
-export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Answer", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking", proposals: "Proposals (daily pass)", "search-ranking": "Search ranking" }
+export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Talking / answers", thinking: "Background thinking", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking", proposals: "Proposals (daily pass)", "search-ranking": "Search ranking" }
 export type ModelRoleAssignment = {
   enabled: boolean
   /** Owner-assigned eligibility, not a verified capability claim. */
@@ -24,7 +24,7 @@ function enabledModels(configuration: ModelsConfiguration): CatalogueModel[] {
 export function createModelRoles(configuration: ModelsConfiguration): ModelRolesConfiguration {
   const defaultId = enabledModels(configuration).find(model => model.id === configuration.defaultModelId)?.id || null
   const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelId: null })
-  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty() } }
+  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, thinking: empty(), routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty() } }
 }
 
 /** Checks known IDs, owner eligibility and enabled routes; capabilities remain unverified. */
@@ -37,6 +37,8 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
     const assignment = value.roles[role]
     const label = MODEL_ROLE_LABELS[role]
     if (!assignment || typeof assignment.enabled !== "boolean" || !Array.isArray(assignment.eligibleModelIds) || assignment.eligibleModelIds.length > 200 || assignment.eligibleModelIds.some(id => typeof id !== "string" || !known.has(id)) || new Set(assignment.eligibleModelIds).size !== assignment.eligibleModelIds.length) { errors.push(`${label}: choose unique catalogue models for the eligible list.`); continue }
+    const decisionRoute = role === 'routing' ? 'model-routing' : role === 'memory-ranking' || role === 'search-ranking' ? role : null
+    if (configuration.models.some(model => assignment.eligibleModelIds.includes(model.id) && model.providerId === 'decisions' && model.route !== decisionRoute)) errors.push(`${label}: this decision classifier cannot perform this role.`)
     if (!Number.isSafeInteger(assignment.timeoutMs) || assignment.timeoutMs < 100 || assignment.timeoutMs > 120000) errors.push(`${label}: timeout must be 100–120,000 milliseconds.`)
     if (!["stop", "fallback"].includes(assignment.failure)) errors.push(`${label}: choose stop or explicit fallback on failure.`)
     for (const id of [assignment.modelId, assignment.fallbackModelId]) if (id !== null && (typeof id !== "string" || !known.has(id) || !assignment.eligibleModelIds.includes(id))) errors.push(`${label}: selected and fallback models must belong to its eligible list.`)
@@ -50,6 +52,9 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
   }
   if (value.answerMode === "manual" && value.roles.answer?.failure !== "stop") errors.push("A manual answer lock must stop on failure; it cannot silently switch models.")
   if (value.answerMode === "router" && (!value.roles.answer?.enabled || !value.roles.routing?.enabled)) errors.push("Router mode needs an enabled answer role and routing decision role.")
+  const routing = value.roles.routing
+  if (value.answerMode === 'router' && routing && configuration.models.some(model => model.providerId === 'decisions' && [routing.modelId, routing.fallbackModelId].includes(model.id)) && (value.roles.answer?.eligibleModelIds.length ?? 0) > 8) errors.push('Laya supports a shortlist of at most eight talking models.')
+  if (configuration.models.some(model => model.id === configuration.defaultModelId && model.providerId === 'decisions')) errors.push('A decision classifier cannot be the default talking model.')
   return errors
 }
 
