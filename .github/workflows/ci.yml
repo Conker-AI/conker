@@ -23,11 +23,17 @@ jobs:
       - name: Install
         run: pip install --quiet -r requirements-dev.txt
 
+      - name: Pinned releases
+        # The compatibility fixture is the ToolGate release Conker ships (versions.env), so the
+        # two cannot drift apart.
+        id: pins
+        run: echo "toolgate=v$(sed -n 's/^TOOLGATE_VERSION=//p' versions.env)" >> "$GITHUB_OUTPUT"
+
       - name: ToolGate compatibility fixture
         uses: actions/checkout@v4
         with:
           repository: Conker-AI/toolgate
-          ref: v0.2.2
+          ref: ${{ steps.pins.outputs.toolgate }}
           path: .test-gates/toolgate
 
       - name: Shell syntax
