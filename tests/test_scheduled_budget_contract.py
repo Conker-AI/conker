@@ -8,18 +8,18 @@ from contextlib import closing
 
 import pytest
 
-pytest.importorskip("pi.jobs", reason="Add the Pi checkout to PYTHONPATH")
+pytest.importorskip("pi.schedule.jobs", reason="Add the Pi checkout to PYTHONPATH")
 import httpx
 from fastapi.testclient import TestClient
 
 pytest.importorskip(
     "toolgate.api.server", reason="Add the ToolGate checkout to PYTHONPATH"
 )
-from pi import jobs
-from pi.job_execution import PublishedJobs
-from pi.job_worker import JobWorker
-from pi.store import Store
-from pi.toolgate import ToolGateClient
+from pi.actions.toolgate import ToolGateClient
+from pi.conversation.store import Store
+from pi.schedule import jobs
+from pi.schedule.job_execution import PublishedJobs
+from pi.schedule.job_worker import JobWorker
 from toolgate.api import server
 from toolgate.core import control_plane as cp
 from toolgate.core import publications, spending
@@ -77,7 +77,7 @@ def test_paid_schedule_reserves_once_and_reconciles_without_replay(
             },
         )
 
-    monkeypatch.setattr(server.httpx, "post", provider)
+    monkeypatch.setattr(httpx, "post", provider)
     calls = []
     api = TestClient(server.app)
 

@@ -24,14 +24,14 @@ def runtime(monkeypatch):
             "CONKER_TEST_PI_SOURCE", Path(__file__).resolve().parents[2] / "conker-pi"
         )
     )
-    if not (source / "pi/loop.py").is_file():
+    if not (source / "pi/turns/loop.py").is_file():
         pytest.skip("Set CONKER_TEST_PI_SOURCE for the Pi/host integration suite.")
     monkeypatch.syspath_prepend(str(source))
-    from pi.chatgpt_provider import ChatGPTProvider
-    from pi.loop import ActedWithoutReply, Loop
-    from pi.routing import Router
-    from pi.store import Store
-    from pi.toolgate import ApprovalRequired, Tool, ToolResult
+    from pi.actions.toolgate import ApprovalRequired, Tool, ToolResult
+    from pi.conversation.store import Store
+    from pi.models.chatgpt import ChatGPTProvider
+    from pi.models.routing import Router
+    from pi.turns.loop import ActedWithoutReply, Loop
 
     return (
         ChatGPTProvider,

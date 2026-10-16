@@ -136,7 +136,7 @@ def serve(name, config):
         app.state.request_shutdown = lambda: setattr(server, "should_exit", True)
         server.run()
     else:
-        module = {"pi": "pi.api:app", "memorygate": "app.main:app",
+        module = {"pi": "pi.api.server:app", "memorygate": "app.main:app",
                   "toolgate": "toolgate.api.server:app", "decisions": "server:create_app"}[name]
         uvicorn.run(module, host="127.0.0.1", port=SERVICES[name], factory=name == "decisions",
                     proxy_headers=False, access_log=False)

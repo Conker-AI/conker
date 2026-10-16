@@ -9,10 +9,10 @@ import os
 import tempfile
 from pathlib import Path
 
-from pi.decision_provider import DecisionProvider
-from pi.memory import Memory
-from pi.memory_store import context
-from pi.store import Store
+from pi.conversation.store import Store
+from pi.memory.service import Memory
+from pi.memory.store import context
+from pi.models.decision import DecisionProvider
 
 
 def main():

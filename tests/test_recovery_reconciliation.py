@@ -27,8 +27,8 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
     from app.models.deletion_receipt import DeletionReceipt
     from app.models.memory import Memory
     from app.services import deletion_recovery
-    from pi import forgetting, recovery_deletions
-    from pi.store import Store
+    from pi.conversation import forgetting, recovery_deletions
+    from pi.conversation.store import Store
     from qdrant_client import QdrantClient, models
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker

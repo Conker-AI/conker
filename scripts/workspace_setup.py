@@ -43,8 +43,8 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     if not all(
         (source / filename).is_file()
         for filename in (
-            "pi/background_thinking.py",
-            "pi/skills.py",
+            "pi/turns/thinking.py",
+            "pi/agents/skills.py",
             "gateway/mcp_control.py",
         )
     ):
