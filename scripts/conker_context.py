@@ -105,6 +105,22 @@ def register(commands):
         "state", choices=["active", "open", "resolved", "withdrawn"]
     )
 
+    compact = subparsers.add_parser("compact", help="Compact chat messages")
+    compact.add_argument("session")
+    compact.add_argument("summary_file", type=Path)
+    cover_group = compact.add_mutually_exclusive_group(required=True)
+    cover_group.add_argument(
+        "--cover", action="append", help="Message identity to cover (repeatable)"
+    )
+    cover_group.add_argument(
+        "--cover-file", type=Path, help="File with message identities, one per line"
+    )
+
+    compaction = subparsers.add_parser(
+        "compaction", help="Show current compaction status"
+    )
+    compaction.add_argument("session")
+
 
 def pi_call(request, config, path, body=None, *, query=None):
     """Make a Pi service call with consistent error handling."""
@@ -349,6 +365,57 @@ def operation(args, config, request):
         return pi_call(
             request, config, f"/context/{args.session}/items/{item}/state", body
         )
+
+    elif args.operation == "compact":
+        # Get and validate summary text
+        summary_text = _file_text(
+            args.summary_file,
+            "Summary file",
+            "Summaries are limited to 16000 characters.",
+        )
+
+        # Get and validate cover message IDs
+        if args.cover:
+            covers = args.cover
+        else:
+            cover_text = read_text(args.cover_file, 1_000_000, "Cover file")
+            covers = [line.strip() for line in cover_text.splitlines() if line.strip()]
+
+        if not covers:
+            raise ValueError("Provide at least one message to cover.")
+
+        if len(covers) > 10000:
+            raise ValueError("Cover at most 10000 messages.")
+
+        # Validate message IDs are distinct and within range
+        seen = set()
+        for cover_id in covers:
+            identity(cover_id, MESSAGE, "message identity")
+            if cover_id in seen:
+                raise ValueError("Cover each message once.")
+            seen.add(cover_id)
+
+        # Validate policy exists
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        if policy_response.get("policy") is None:
+            raise ValueError(
+                "Set context settings before compacting: context budget SESSION --window N --reserve N"
+            )
+
+        # Get current summary revision
+        summary_response = pi_call(request, config, f"/context/{args.session}/summary")
+
+        # Post compact request
+        body = {
+            "expected_policy_revision": policy_response["revision"],
+            "expected_summary_revision": summary_response["revision"],
+            "summary": summary_text,
+            "covers": covers,
+        }
+        return pi_call(request, config, f"/context/{args.session}/compact", body)
+
+    elif args.operation == "compaction":
+        return pi_call(request, config, f"/context/{args.session}/compaction")
 
     else:
         raise ValueError(f"Unknown context operation: {args.operation}")
