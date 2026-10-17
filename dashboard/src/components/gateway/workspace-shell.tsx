@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { BookOpen, ChevronLeft, ChevronRight, Pin, Plus, X } from 'lucide-react'
 import { BaseLayout } from '@/components/layouts/base-layout'
@@ -7,38 +7,16 @@ import { Button } from '@/components/ui/button'
 import { DetailPanel } from '@/components/design-system/overlays'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { GatewayRuntimeClient, RuntimeSessionDetail } from '@/lib/gateway/runtime'
+import { ConversationViewContent } from './conversation-views'
+import { conversationViewLabel, type ConversationView } from './conversation-view-list'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayError } from '@/lib/gateway/transport'
 import { closeTab, moveTab, visitTab, workspaceTab, type WorkspaceTab } from './workspace-tabs'
 import { ConnectedShellContext } from './workspace-shell-context'
 import { resolveGatewayRoute } from './navigation'
-import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { useSessionDiscovery } from './session-discovery-context'
 import '@/styles/connected-workspace.css'
-
-function ConversationReference({ detail, error, loading, onRetry, runtime, sourcePrivacy, active }: { detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void; runtime: GatewayRuntimeClient; sourcePrivacy: GatewaySourcePrivacyState; active: boolean }) {
-  return <div className="conker-reference-content" id="conker-conversation-context">
-      {loading ? <p role="status">Loading saved context…</p> : error ? <div role="alert"><p>{error}</p><Button variant="outline" size="sm" onClick={onRetry}>Try again</Button></div> : !detail ? <p>Start a conversation to see its model, memory, and recorded work here.</p> : <>
-        <h2>{detail.title || 'Untitled conversation'}</h2>
-        <p>{detail.messages.length} {detail.messages.length === 1 ? 'message' : 'messages'} · {detail.turns.length} {detail.turns.length === 1 ? 'turn' : 'turns'}</p>
-        <h3>Memory</h3>
-        <p>{detail.memory.configured ? 'Memory is configured' : 'Memory is not configured'}</p>
-        <p>{detail.memory.retrieval ? `${detail.memory.retrieval.records} records · ${detail.memory.retrieval.status}` : 'No retrieval evidence for this conversation yet.'}</p>
-        {detail.memory.notices.map((notice, index) => <p key={index}>{notice}</p>)}
-        <h3>Recorded turns</h3>
-        {!detail.turns.length && <p>No completed work yet.</p>}
-        {detail.turns.slice(-8).reverse().map(turn => <section key={turn.id} className="conker-receipt">
-          <strong>{turn.model || 'Model not recorded'}</strong>
-          <p>{turn.status.replaceAll('_', ' ')}{turn.acted ? ' · action recorded' : ''}</p>
-          <p>{turn.provider ?? 'Provider unknown'}</p>
-          {detail.status !== 'forgotten' && <TurnUsageDisclosure client={runtime} turnId={turn.id} sessionId={detail.id} sourcePrivacy={sourcePrivacy} active={active} refreshKey={`${turn.status}:${turn.endedAt}:${detail.thinking?.find(row => row.turnId === turn.id)?.status ?? ''}`} />}
-          {turn.detail && <p>{turn.detail}</p>}
-        </section>)}
-        <Link to="/memory">Explore memory and sources</Link>
-      </>}
-    </div>
-}
 
 export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, conversationState, sourcePrivacy }: {
   children: ReactNode; header: ReactNode; sidebar: ReactNode; runtime: GatewayRuntimeClient
@@ -49,7 +27,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const [tabs, setTabs] = useState<WorkspaceTab[]>(() => current ? [current] : [])
   const { rows: sessions } = useSessionDiscovery()
   const [tabsOpen, setTabsOpen] = useState(false)
-  const [referenceOpen, setReferenceOpen] = useState(false)
+  const [openView, setOpenView] = useState<ConversationView | null>(null)
   const [referenceRetry, setReferenceRetry] = useState(0)
   const [detail, setDetail] = useState<RuntimeSessionDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -61,7 +39,8 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const activeId = current?.id ?? ''
   const isMobile = useIsMobile()
   const onChat = resolveGatewayRoute(location.pathname) === 'chat'
-  const contextOpen = referenceOpen && onChat
+  const view = onChat ? openView : null
+  const contextOpen = view !== null
   useEffect(() => {
     let cancelled = false
     const incoming = workspaceTab(location.pathname, location.search)
@@ -102,9 +81,10 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     setTabs(result.tabs)
     if (result.next) go(result.next)
   }
-  const reference = <ConversationReference runtime={runtime} sourcePrivacy={sourcePrivacy} active={contextOpen} detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
-  const closeReference = () => { setReferenceOpen(false); document.querySelector<HTMLButtonElement>('[aria-label="Conversation context"]')?.focus() }
-  return <ConnectedShellContext.Provider value={{ tabsOpen, toggleTabs: () => setTabsOpen(value => !value), openViewCount: visibleTabs.length, contextOpen, toggleContext: () => setReferenceOpen(value => !value), showContext: onChat }}>
+  const reference = view && <ConversationViewContent view={view} runtime={runtime} sourcePrivacy={sourcePrivacy} active={contextOpen} detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
+  const viewLabel = view ? conversationViewLabel(view) : ''
+  const closeReference = () => { const closing = view; setOpenView(null); if (closing) document.querySelector<HTMLButtonElement>(`[data-conversation-view="${closing}"]`)?.focus() }
+  return <ConnectedShellContext.Provider value={{ tabsOpen, toggleTabs: () => setTabsOpen(value => !value), openViewCount: visibleTabs.length, view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat }}>
   <BaseLayout variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}
     beforeHeader={tabsOpen && <div id="conker-open-views" className="conker-tabbar">
       <div className="conker-history"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Go back"><ChevronLeft /></Button><Button variant="ghost" size="icon" onClick={() => navigate(1)} aria-label="Go forward"><ChevronRight /></Button></div>
@@ -123,9 +103,9 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
       <Button variant="ghost" size="icon" onClick={newChat} aria-label="New conversation"><Plus /></Button>
       <Button variant="ghost" size="icon" onClick={() => { setTabsOpen(false); document.querySelector<HTMLButtonElement>('[aria-label="Open views"]')?.focus() }} aria-label="Hide open views"><X /></Button>
     </div>}
-    reference={contextOpen && !isMobile ? <aside className="conker-reference" aria-label="Conversation context" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeReference() } }}><div className="conker-reference-heading"><h2>Conversation context</h2><Button variant="ghost" size="icon" onClick={closeReference} aria-label="Close context"><X /></Button></div>{reference}</aside> : null}>
+    reference={contextOpen && !isMobile ? <aside className="conker-reference" aria-label={viewLabel} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeReference() } }}><div className="conker-reference-heading"><h2>{viewLabel}</h2><Button variant="ghost" size="icon" onClick={closeReference} aria-label={`Close ${viewLabel}`}><X /></Button></div>{reference}</aside> : null}>
     <div id="conker-workspace-document" role={tabsOpen ? 'tabpanel' : undefined} aria-label={current ? title(current) : 'Workspace'} className="flex min-h-0 flex-1 flex-col">{children}</div>
   </BaseLayout>
-  {isMobile && <DetailPanel open={contextOpen} onOpenChange={setReferenceOpen} title="Conversation context" description="Models, memory and recorded work for this chat.">{reference}</DetailPanel>}
+  {isMobile && <DetailPanel open={contextOpen} onOpenChange={open => { if (!open) setOpenView(null) }} title={viewLabel} description="Saved records for this chat.">{reference}</DetailPanel>}
   </ConnectedShellContext.Provider>
 }

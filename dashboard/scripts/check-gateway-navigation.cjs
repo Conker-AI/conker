@@ -95,6 +95,12 @@ assert.doesNotMatch(shell, /WorkspaceRail|conker-statusbar|'Ready'/, 'Duplicate 
 assert.match(shell, /useSessionDiscovery\(\)/, 'Tabs share authenticated workspace discovery')
 assert.doesNotMatch(shell, /runtime\.listSessions/, 'Tabs must not fetch a second chat list')
 assert.match(shell, /DetailPanel open=\{contextOpen\}/, 'Mobile context must use the keyboard-safe shared inspector')
+const views = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-views.tsx'), 'utf8')
+const viewList = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-view-list.ts'), 'utf8')
+assert.deepEqual([...viewList.matchAll(/id: '([a-z]+)'/g)].map(match => match[1]), ['context', 'thinking', 'logs'], 'Conversation views are Context, Thinking and Logs, in that order')
+assert.match(header, /<ConversationViewStrip open=\{shell\.view\} onToggle=\{shell\.toggleView\} compact=\{isMobile\} \/>/, 'Phones fold the views strip into one menu')
+assert.match(views, /aria-pressed=\{open === id\}/, 'The open view is announced on its strip button')
+assert.doesNotMatch(views, /setTimeout|setInterval|Math\.random/, 'Views show saved records only; no timers or invented steps')
 const tools = fs.readFileSync(path.join(root, 'src/components/gateway/tools-inventory.tsx'), 'utf8')
 assert.match(tools, /Actions follow your saved permissions and approval rules/)
 assert.doesNotMatch(tools, /Anything that sends, spends or changes something still asks/,
