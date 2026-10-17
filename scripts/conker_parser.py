@@ -77,11 +77,11 @@ def build_parser(description):
     delivery = commands.add_parser(
         "memory-delivery", help="Read acknowledged memory delivery for saved messages"
     )
-    register_context(commands)
     delivery.add_argument("session")
     delivery.add_argument(
         "--message", help="Read one saved user message, including older history"
     )
+    register_context(commands)
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )
