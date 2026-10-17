@@ -7,6 +7,7 @@ import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
 import { createFakeProviderCredentials } from './fake-gateway-providers'
+import { fakeAutoSettings, fakeContext } from './fake-gateway-extras'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -960,11 +961,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
     }
     if (path === '/api/host/providers') return providerCredentials(method, options, fail)
-    if (path === '/api/pi/models/auto-settings' && method === 'POST') {
-      // Deterministic stand-in for the routing model: long or comparative asks are Hard; price-like asks research the web.
-      const text = String(options.body?.text ?? ''), hard = text.length > 80 || /compare|best|plan|why/i.test(text), web = /price|latest|best|news|today|buy/i.test(text)
-      return { complexity: hard ? 'hard' : 'easy', think: hard, research: web ? 'web' : 'off', reasons: { complexity: hard ? 'This needs careful comparison or planning.' : 'A short, direct question.', think: hard ? 'A background check of the trade-offs helps.' : 'No separate analysis needed.', research: web ? 'Current facts matter here.' : 'Answerable without the web.' }, modelId: 'jev-preview', configurationRevision: 1 }
-    }
+    if (path.startsWith('/api/control/pi/context/') && method === 'GET') return fakeContext(path, id => sessions.find(row => row.id === id)?.messages[0]?.id ?? null) ?? fail(404)
+    if (path === '/api/pi/models/auto-settings' && method === 'POST') return fakeAutoSettings(options.body)
     if (path === '/api/pi/models') {
       const scenario = globalThis.sessionStorage?.getItem('conker-fake-fail')
       if (scenario === 'provider-readiness') return fail(503)

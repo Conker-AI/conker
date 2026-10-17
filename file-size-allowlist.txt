@@ -4,7 +4,7 @@ dashboard/src/app/tools/tool-editor.tsx 962
 dashboard/src/app/tools/tool-fields.tsx 687
 dashboard/src/components/gateway/runtime-workspace.tsx 650  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
 dashboard/src/components/ui/sidebar.tsx 741  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
-dashboard/src/dev/fake-gateway.ts 1183  # raised once on 2026-10-13 to merge pre-guardrail work (feat/conker-daily-companion); restructure brings it back down
+dashboard/src/dev/fake-gateway.ts 1181  # raised once on 2026-10-13 to merge pre-guardrail work (feat(conker-daily-companion)); restructure brings it back down
 dashboard/src/lib/api/fixture-adapter.ts 763
 dashboard/src/utils/shadcn-ui-theme-presets.ts 696
 dashboard/src/utils/tweakcn-theme-presets.ts 3422

@@ -6,6 +6,7 @@ import type { GatewayTurnUsageClient } from './turn-usage'
 import type { AutoSettings } from './auto-settings'
 import type { MemoryDelivery } from './memory-delivery'
 import type { GatewayHistoryClient } from './session-history'
+import type { ContextSettings } from './context-read'
 
 /** Pi records, independent of the dashboard's preview Snapshot and simulated streams. */
 export type RuntimeSession = {
@@ -246,6 +247,8 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
   const usage = () => usageClient ??= import('./turn-usage').then(module => module.createGatewayTurnUsageClient(auth))
   let autoClient: Promise<ReturnType<typeof import('./auto-settings').createAutoSettingsClient>> | undefined
   const auto = () => autoClient ??= import('./auto-settings').then(module => module.createAutoSettingsClient(auth))
+  let contextReadClient: Promise<ReturnType<typeof import('./context-read').createContextReadClient>> | undefined
+  const contextRead = () => contextReadClient ??= import('./context-read').then(module => module.createContextReadClient(auth))
   let historyClient: Promise<GatewayHistoryClient> | undefined
   const history = () => historyClient ??= import('./session-history').then(module => module.createGatewayHistoryClient(auth))
   return {
@@ -305,6 +308,7 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
     },
     /** Auto mode: the routing model proposes settings for a draft; nothing is saved or granted. */
     async proposeSettings(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal } = {}): Promise<AutoSettings> { return (await auto()).propose(text, options) },
+    async readContext(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<ContextSettings> { return (await contextRead()).read(sessionId, options) },
     async getSession(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<RuntimeSessionDetail> {
       inputId(sessionId)
       const response = await auth.request(`/api/pi/sessions/${sessionId}`, { ...(options.signal ? { signal: options.signal } : {}) })
