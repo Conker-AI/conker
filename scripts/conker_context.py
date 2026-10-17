@@ -16,6 +16,10 @@ RULES = {
     "retrieve": "retrieve",
     "summarize": "allow-summary",
 }
+BUDGET_RULE = (
+    "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller "
+    "than the window, and other input of 0 or more."
+)
 NO_SETTINGS = "This chat has no context settings yet. Start with: context budget SESSION --window N --reserve N"
 
 
@@ -104,15 +108,12 @@ def pi_call(request, config, path, body=None):
 def _file_text(path, label, limit_message):
     """Read file text with size limit and strip exactly one trailing line ending."""
     text = read_text(path, 64000, label)
-    if len(text) > 16000:
-        raise ValueError(limit_message)
-
-    # Remove exactly one trailing line ending
     if text.endswith("\r\n"):
         text = text[:-2]
     elif text.endswith("\n"):
         text = text[:-1]
-
+    if len(text) > 16000:
+        raise ValueError(limit_message)
     return text
 
 
@@ -145,7 +146,6 @@ def operation(args, config, request):
         return pi_call(request, config, f"/context/{args.session}", body)
 
     elif args.operation == "instructions":
-        # Validate inputs
         if args.file and args.clear:
             raise ValueError("Give an instructions file or --clear.")
         if not args.file and not args.clear:
@@ -160,7 +160,6 @@ def operation(args, config, request):
                 "Session instructions are limited to 16000 characters.",
             )
 
-        # Get current policy
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
             raise ValueError(NO_SETTINGS)
@@ -171,26 +170,17 @@ def operation(args, config, request):
         return pi_call(request, config, f"/context/{args.session}", body)
 
     elif args.operation == "budget":
-        # Validate budget parameters
         if not (2 <= args.window <= 10000000):
-            raise ValueError(
-                "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller than the window, and other input of 0 or more."
-            )
+            raise ValueError(BUDGET_RULE)
         if args.reserve < 1 or args.reserve >= args.window:
-            raise ValueError(
-                "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller than the window, and other input of 0 or more."
-            )
+            raise ValueError(BUDGET_RULE)
         if args.other is not None and args.other < 0:
-            raise ValueError(
-                "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller than the window, and other input of 0 or more."
-            )
+            raise ValueError(BUDGET_RULE)
 
-        # Get current policy
         policy_response = pi_call(request, config, f"/context/{args.session}")
         policy = policy_response.get("policy")
 
         if policy is None:
-            # Create new policy with budget
             policy = {
                 "sessionInstructions": "",
                 "messagePolicies": {},
@@ -201,11 +191,8 @@ def operation(args, config, request):
                 },
             }
         else:
-            # Update budget in existing policy
             policy = copy.deepcopy(policy)
-            budget = policy.get("budget", {})
-            if budget is None:
-                budget = {}
+            budget = policy["budget"]
             budget["contextWindowTokens"] = args.window
             budget["outputReserveTokens"] = args.reserve
             if args.other is not None:
@@ -243,29 +230,24 @@ def operation(args, config, request):
         )
 
     elif args.operation == "fork":
-        # Validate and load summary
         text = _file_text(
             args.file, "Summary file", "Summaries are limited to 16000 characters."
         )
 
-        # Validate request ID
         request_id = args.request_id
         if request_id:
             identity(request_id, r"[A-Za-z0-9_-]{16,128}", "fork request identity")
         else:
             request_id = "fork_" + uuid.uuid4().hex
 
-        # Get policy to check revision
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response["revision"] == 0:
             raise ValueError("Fork needs saved context settings; set them first.")
 
-        # Get last message ID
         session_response = pi_call(request, config, f"/sessions/{args.session}")
         messages = session_response.get("messages", [])
         last_message_id = messages[-1]["id"] if messages else None
 
-        # Create fork
         body = {
             "expected_revision": policy_response["revision"],
             "expected_last_message_id": last_message_id,
