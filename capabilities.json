@@ -29,9 +29,9 @@
     },
     {
       "id": "conversations", "name": "Conversation sessions and turns", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/pi/sessions", "/api/pi/sessions/{id}", "/api/pi/sessions/{id}/turns"], "uiRoutes": ["/chat", "/chats", "/companion"], "cliCommands": ["conker inspect sessions"],
+      "gatewayRoutes": ["/api/pi/sessions", "/api/pi/sessions/{id}", "/api/pi/sessions/{id}/turns"], "uiRoutes": ["/chat", "/chats", "/companion"], "cliCommands": ["conker inspect sessions", "python scripts/conker.py context show SESSION", "python scripts/conker.py context rule SESSION MESSAGE RULE", "python scripts/conker.py context instructions SESSION FILE", "python scripts/conker.py context budget SESSION --window N --reserve N", "python scripts/conker.py context summary-edit SESSION FILE", "python scripts/conker.py context summary-restore SESSION REVISION", "python scripts/conker.py context fork SESSION FILE"],
       "deploymentRequirements": ["pi_data", "PI_GATEWAY_KEY_SHA256", "PI_MODEL"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/sessions/${sessionId}/turns"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/chat': 'chat',\n  '/chats': 'chats',\n  '/companion': 'chat'"}, {"path": "docker-compose.yml", "contains": "PI_DB_PATH: /data/pi.db"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/runtime.ts", "contains": "/api/pi/sessions/${sessionId}/turns"}, {"path": "dashboard/src/components/gateway/navigation.ts", "contains": "'/chat': 'chat',\n  '/chats': 'chats',\n  '/companion': 'chat'"}, {"path": "docker-compose.yml", "contains": "PI_DB_PATH: /data/pi.db"}, {"path": "conker", "contains": "cmd_inspect"}, {"path": "scripts/conker_context.py", "contains": "/summary/restore"}]
     },
     {
       "id": "turn-recovery", "name": "Turn cancellation, resume and submission reconciliation", "authority": "pi", "state": "active",

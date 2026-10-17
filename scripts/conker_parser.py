@@ -3,6 +3,8 @@
 import argparse
 from pathlib import Path
 
+from conker_context import register as register_context
+
 
 def build_parser(description):
     parser = argparse.ArgumentParser(description=description)
@@ -75,6 +77,7 @@ def build_parser(description):
     delivery = commands.add_parser(
         "memory-delivery", help="Read acknowledged memory delivery for saved messages"
     )
+    register_context(commands)
     delivery.add_argument("session")
     delivery.add_argument(
         "--message", help="Read one saved user message, including older history"
