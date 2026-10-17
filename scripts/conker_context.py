@@ -71,10 +71,10 @@ def register(commands):
     fork.add_argument("--request-id")
 
 
-def pi_call(request, config, path, body=None):
+def pi_call(request, config, path, body=None, *, query=None):
     """Make a Pi service call with consistent error handling."""
     try:
-        return request(config, "pi", path, body, timeout=660)
+        return request(config, "pi", path, body, query=query, timeout=660)
     except HTTPError as exc:
         if 400 <= exc.code <= 499:
             try:
