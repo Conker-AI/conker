@@ -105,7 +105,9 @@ def register(commands):
         "state", choices=["active", "open", "resolved", "withdrawn"]
     )
 
-    compact = subparsers.add_parser("compact", help="Compact chat messages")
+    compact = subparsers.add_parser(
+        "compact", help="Fold reviewed messages into a reviewed summary"
+    )
     compact.add_argument("session")
     compact.add_argument("summary_file", type=Path)
     cover_group = compact.add_mutually_exclusive_group(required=True)
@@ -117,7 +119,7 @@ def register(commands):
     )
 
     compaction = subparsers.add_parser(
-        "compaction", help="Show current compaction status"
+        "compaction", help="Show which messages the summary covers and which are folded"
     )
     compaction.add_argument("session")
 
@@ -367,14 +369,12 @@ def operation(args, config, request):
         )
 
     elif args.operation == "compact":
-        # Get and validate summary text
         summary_text = _file_text(
             args.summary_file,
             "Summary file",
             "Summaries are limited to 16000 characters.",
         )
 
-        # Get and validate cover message IDs
         if args.cover:
             covers = args.cover
         else:
@@ -387,7 +387,6 @@ def operation(args, config, request):
         if len(covers) > 10000:
             raise ValueError("Cover at most 10000 messages.")
 
-        # Validate message IDs are distinct and within range
         seen = set()
         for cover_id in covers:
             identity(cover_id, MESSAGE, "message identity")
@@ -395,17 +394,14 @@ def operation(args, config, request):
                 raise ValueError("Cover each message once.")
             seen.add(cover_id)
 
-        # Validate policy exists
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
             raise ValueError(
                 "Set context settings before compacting: context budget SESSION --window N --reserve N"
             )
 
-        # Get current summary revision
         summary_response = pi_call(request, config, f"/context/{args.session}/summary")
 
-        # Post compact request
         body = {
             "expected_policy_revision": policy_response["revision"],
             "expected_summary_revision": summary_response["revision"],
