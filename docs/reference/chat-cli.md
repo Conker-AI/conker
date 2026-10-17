@@ -20,7 +20,11 @@ Every chat feature the dashboard offers has a command here; this page grows with
 
 `context summary-draft SESSION [--focus TEXT]` - Create a draft summary without saving it; review it and save with context summary-edit.
 
-Writes check the revision and never retry automatically. Use context budget first when a chat has no settings.
+`context compact SESSION SUMMARY_FILE (--cover MESSAGE ... | --cover-file IDS_FILE)` - Compact messages using a reviewed summary; cover up to 10000 distinct messages by ID or from a file.
+
+`context compaction SESSION` - Show current compaction status and covered messages.
+
+Writes check the revision and never retry automatically. Use context budget first when a chat has no settings. The usual flow: context summary-draft to propose, save the summary, then context compact to fold messages.
 
 ## Output
 
