@@ -67,15 +67,17 @@ assert.doesNotMatch(workspaceSource, /new-chat-composer"[^\n]+autoFocus/,
   'The new-chat composer must not unconditionally open a mobile keyboard')
 assert.match(workspaceSource, /matchMedia\('\(pointer: fine\) and \(min-width: 768px\)'\)/,
   'Desktop fine-pointer devices may still receive convenient composer focus')
-assert.match(workspaceSource, /GatewayModelPicker compact[^\n]+[\s\S]*NewChatPrivacyControl[^\n]+[\s\S]*aria-label="Voice call unavailable before the first message"[\s\S]*aria-label="Video calls unavailable"[\s\S]*NewChatVoiceControl[^\n]+[\s\S]*aria-label="Send message"/,
+assert.match(workspaceSource, /GatewayModelPicker compact[^\n]+[\s\S]*NewChatPrivacyControl[^\n]+[\s\S]*<NewChatMediaPlaceholders \/>[\s\S]*NewChatVoiceControl[^\n]+[\s\S]*aria-label="Send message"/,
   'The first-message composer toolbar must keep identity, privacy, call, dictation and send controls together')
-assert.match(workspaceSource, /starters\.map\(item => <Tooltip key=\{item\.label\}>[\s\S]*aria-label=\{item\.label\}/,
+const extrasSource = fs.readFileSync(path.join(__dirname, '../src/components/gateway/new-chat-extras.tsx'), 'utf8')
+assert.match(extrasSource, /aria-label="Voice call unavailable before the first message"[\s\S]*aria-label="Video calls unavailable"/, 'Call and video placeholders stay honest about being unavailable')
+assert.match(extrasSource, /starters\.map\(item => <Tooltip key=\{item\.label\}>[\s\S]*aria-label=\{item\.label\}/,
   'Icon-only conversation starters must keep accessible names and hover help')
 assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyControl|to="\/tools"[\s\S]{0,500}NewChatPrivacyControl/,
   'Global Memory and Tools destinations must not masquerade as per-chat composer controls')
 assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,
   'An open conversation must expose an explicit future-turn agent handoff')
-assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode\)/,
+assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode, Boolean\(modeHints\.current\.new\?\.isAnalysis\)\)/,
   'First-message options and exact draft revision cross atomic session promotion')
 assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? composer\?\.modelId/)
 assert.match(workspaceSource, /client.submitRequest\([^\n]+\.\.\.requestOptions/,

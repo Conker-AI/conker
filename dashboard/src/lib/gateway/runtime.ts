@@ -3,6 +3,7 @@ import { GatewayError, gatewayError } from './transport'
 import { parseSkills, validateSkillIds } from './skills'
 import type { GatewayDraftClient } from './drafts'
 import type { GatewayTurnUsageClient } from './turn-usage'
+import type { AutoSettings } from './auto-settings'
 import type { MemoryDelivery } from './memory-delivery'
 import type { GatewayHistoryClient } from './session-history'
 
@@ -240,6 +241,8 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
   const drafts = () => draftClient ??= import('./drafts').then(module => module.createGatewayDraftClient(auth))
   let usageClient: Promise<GatewayTurnUsageClient> | undefined
   const usage = () => usageClient ??= import('./turn-usage').then(module => module.createGatewayTurnUsageClient(auth))
+  let autoClient: Promise<ReturnType<typeof import('./auto-settings').createAutoSettingsClient>> | undefined
+  const auto = () => autoClient ??= import('./auto-settings').then(module => module.createAutoSettingsClient(auth))
   let historyClient: Promise<GatewayHistoryClient> | undefined
   const history = () => historyClient ??= import('./session-history').then(module => module.createGatewayHistoryClient(auth))
   return {
@@ -273,16 +276,16 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       if (requestId.length < 16) throw new GatewayError('validation')
       return parseRuntimeSubmission(await auth.request(`/api/pi/turn-submissions/${requestId}`, options), requestId, requestedSessionId)
     },
-    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[]; think?: boolean; draftRevision?: number; researchMode?: 'off' | 'web' | 'deep' } = {}): Promise<RuntimeSubmission> {
+    async submitRequest(sessionId: string, userText: string, requestId: string, options: { signal?: AbortSignal; taskId?: string; taskExpectedRevision?: number; modelId?: string; skillIds?: string[]; think?: boolean; draftRevision?: number; researchMode?: 'off' | 'web' | 'deep'; isAnalysis?: boolean } = {}): Promise<RuntimeSubmission> {
       inputId(sessionId); inputId(requestId)
       if (requestId.length < 16 || typeof userText !== 'string' || !userText.trim() || [...userText].length > 16_000 || (options.taskId === undefined) !== (options.taskExpectedRevision === undefined)) throw new GatewayError('validation')
       if (options.taskId !== undefined && (!inputId(options.taskId) || !Number.isSafeInteger(options.taskExpectedRevision) || options.taskExpectedRevision! < 1)) throw new GatewayError('validation')
       if (options.modelId !== undefined && (typeof options.modelId !== 'string' || !options.modelId.length || options.modelId.length > 200)) throw new GatewayError('validation')
       const skillIds = validateSkillIds(options.skillIds ?? [])
-      if (options.think !== undefined && typeof options.think !== 'boolean') throw new GatewayError('validation')
+      if (options.think !== undefined && typeof options.think !== 'boolean' || options.isAnalysis !== undefined && typeof options.isAnalysis !== 'boolean') throw new GatewayError('validation')
       if (options.draftRevision !== undefined && (!Number.isSafeInteger(options.draftRevision) || options.draftRevision < 1) || options.researchMode !== undefined && !['off', 'web', 'deep'].includes(options.researchMode)) throw new GatewayError('validation')
       try {
-        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.think ? { think: true } : {}), ...(options.draftRevision ? { draft_revision: options.draftRevision } : {}), ...(options.researchMode ? { research_mode: options.researchMode } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+        const response = await auth.request(`/api/pi/sessions/${sessionId}/turns`, { method: 'POST', body: { text: userText, request_id: requestId, ...(options.modelId ? { model_id: options.modelId } : {}), ...(skillIds.length ? { skill_ids: skillIds } : {}), ...(options.think ? { think: true } : {}), ...(options.draftRevision ? { draft_revision: options.draftRevision } : {}), ...(options.researchMode ? { research_mode: options.researchMode } : {}), ...(options.isAnalysis ? { is_analysis: true } : {}), ...(options.taskId ? { task_id: options.taskId, task_expected_revision: options.taskExpectedRevision } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
         const receipt = parseRuntimeSubmission(response.submission, requestId, sessionId)
         if (receipt.taskId !== (options.taskId ?? null)) return bad()
         return receipt
@@ -297,6 +300,8 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       const response = await auth.request('/api/pi/sessions', { query: { limit: 200 }, ...(options.signal ? { signal: options.signal } : {}) })
       return unique(array(response.results, 200).map(session))
     },
+    /** Auto mode: the routing model proposes settings for a draft; nothing is saved or granted. */
+    async proposeSettings(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal } = {}): Promise<AutoSettings> { return (await auto()).propose(text, options) },
     async getSession(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<RuntimeSessionDetail> {
       inputId(sessionId)
       const response = await auth.request(`/api/pi/sessions/${sessionId}`, { ...(options.signal ? { signal: options.signal } : {}) })

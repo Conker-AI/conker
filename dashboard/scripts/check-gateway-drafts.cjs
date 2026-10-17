@@ -168,7 +168,7 @@ async function main() {
   clearDraftStart()
   const source = fs.readFileSync(path.join(root, 'src/components/gateway/runtime-workspace.tsx'), 'utf8')
   assert.match(source, /finishChatStart\(receipt, false\)/, 'Recovered starts never auto-send a new turn request')
-  assert.match(source, /draftController\.flush\(id\)[\s\S]*createRequestOptions\(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode\)/)
+  assert.match(source, /draftController\.flush\(id\)[\s\S]*createRequestOptions\(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode, Boolean\(modeHints\.current\[id\]\?\.isAnalysis\)\)/)
   assert.doesNotMatch(fs.readFileSync(path.join(root, 'src/components/gateway/draft-controller.ts'), 'utf8'), /localStorage|sessionStorage|indexedDB/, 'Draft content remains private server state plus transient memory')
   console.log('Private draft client, transport, CAS conflicts, uncertain-save reconciliation, concurrent edits, exact consumption, auth/forget fences, privacy inheritance and start recovery checks passed.')
 }
