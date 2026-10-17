@@ -10,6 +10,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+from conker_context import operation as context_operation
 from conker_inputs import (
     MCP_ID,
     SKILL_ID,
@@ -166,7 +167,7 @@ def main():
                 "observed native session identity",
                 64,
             )
-    if args.command in {"chat", "show", "thinking", "memory-delivery"}:
+    if args.command in {"chat", "show", "thinking", "memory-delivery", "context"}:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "memory-delivery" and args.message is not None:
         identity(args.message, r"[A-Za-z0-9_-]{1,128}", "message ID")
@@ -429,6 +430,8 @@ def main():
             "/models/configuration",
             read_json(args.save) if args.save else None,
         )
+    elif args.command == "context":
+        value = context_operation(args, config, request)
     elif args.command == "api":
         value = request(
             config,
