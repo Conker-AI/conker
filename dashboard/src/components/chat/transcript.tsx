@@ -47,6 +47,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
         })}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>}
       <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>
+      {message.details && <span className="text-muted-foreground">· {message.details}</span>}
     </div>
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
   </article>
