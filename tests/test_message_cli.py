@@ -381,6 +381,152 @@ def test_versions_and_select(invoke, capsys):
     assert "That message is not a version of this answer." in capsys.readouterr().err
 
 
+def test_judge_posts_with_optional_fields_and_prints_request_id(invoke, capsys):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {
+            "request_id": "judge_1234567890abcdef",
+            "judgeModelId": "judge_model",
+            "scores": [
+                {"message_id": "msg_1", "score": 0.8, "reason": "Good answer"},
+                {"message_id": "msg_2", "score": 0.6, "reason": "Okay answer"},
+            ],
+            "winner": "msg_1",
+            "excluded": [],
+            "replayed": False,
+        }
+    ]
+    assert (
+        run(
+            "judge",
+            "ses_a",
+            "root_msg",
+            "--model",
+            "judge_model",
+            "--request-id",
+            "judge_1234567890abcdef",
+        )
+        == 0
+    )
+    assert len(calls) == 1
+    check_headers(0)
+    assert (
+        calls[0][0].full_url
+        == "http://127.0.0.1:18551/sessions/ses_a/response-families/root_msg/judge"
+    )
+    body = json.loads(calls[0][0].data)
+    assert body["request_id"] == "judge_1234567890abcdef"
+    assert body["model_id"] == "judge_model"
+    assert body["rubric"] == ""
+    output = capsys.readouterr()
+    assert "Request id: judge_1234567890abcdef" in output.err
+
+
+def test_judge_without_model_omits_model_id(invoke, capsys):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {
+            "request_id": "judge_abcdef1234567890",
+            "judgeModelId": "default_judge",
+            "scores": [],
+            "winner": None,
+            "excluded": [],
+            "replayed": False,
+        }
+    ]
+    assert run("judge", "ses_a", "root_msg") == 0
+    assert len(calls) == 1
+    check_headers(0)
+    body = json.loads(calls[0][0].data)
+    assert "model_id" not in body
+    assert body["request_id"].startswith("judge_")
+    output = capsys.readouterr()
+    assert "Request id: judge_" in output.err
+
+
+def test_judge_with_rubric_file(invoke, tmp_path):
+    run, calls, _, state, _check_headers = invoke
+    rubric_file = tmp_path / "rubric.txt"
+    rubric_file.write_text("Clarity and accuracy are important.\n")
+    state["responses"] = [
+        {
+            "request_id": "judge_rubric123",
+            "judgeModelId": "judge_model",
+            "scores": [],
+            "winner": None,
+            "excluded": [],
+            "replayed": False,
+        }
+    ]
+    assert run("judge", "ses_a", "root_msg", "--rubric", str(rubric_file)) == 0
+    assert len(calls) == 1
+    body = json.loads(calls[0][0].data)
+    assert body["rubric"] == "Clarity and accuracy are important."
+
+
+def test_judge_validation_exits_without_request(invoke, capsys):
+    run, calls, _, _state, _ = invoke
+    assert run("judge", "ses_a", "root_msg", "--model", "") == 1
+    assert len(calls) == 0
+    assert "Use a model ID of 1 to 200 characters." in capsys.readouterr().err
+
+    calls.clear()
+    assert run("judge", "ses_a", "root_msg", "--request-id", "short") == 1
+    assert len(calls) == 0
+
+
+def test_judgements_gets_results(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {"results": [{"request_id": "judge_1", "winner": "msg_1", "scores": []}]}
+    ]
+    assert run("judgements", "ses_a", "root_msg") == 0
+    assert len(calls) == 1
+    check_headers(0)
+    assert (
+        calls[0][0].full_url
+        == "http://127.0.0.1:18551/sessions/ses_a/response-families/root_msg/judgements"
+    )
+
+
+def test_vote_posts_vote(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [{"root_message_id": "root_msg", "votes": {"msg_1": "up"}}]
+    assert run("vote", "ses_a", "root_msg", "msg_1", "up") == 0
+    assert len(calls) == 1
+    check_headers(0)
+    assert (
+        calls[0][0].full_url
+        == "http://127.0.0.1:18551/sessions/ses_a/response-families/root_msg/vote"
+    )
+    body = json.loads(calls[0][0].data)
+    assert body["message_id"] == "msg_1"
+    assert body["vote"] == "up"
+
+
+def test_votes_gets_votes(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {"root_message_id": "root_msg", "votes": {"msg_1": "up", "msg_2": "down"}}
+    ]
+    assert run("votes", "ses_a", "root_msg") == 0
+    assert len(calls) == 1
+    check_headers(0)
+    assert (
+        calls[0][0].full_url
+        == "http://127.0.0.1:18551/sessions/ses_a/response-families/root_msg/votes"
+    )
+
+
+def test_judge_rubric_limit_validation(invoke, tmp_path, capsys):
+    run, calls, _, _state, _ = invoke
+    rubric_file = tmp_path / "long_rubric.txt"
+    rubric_file.write_text("x" * 2001)
+    assert run("judge", "ses_a", "root_msg", "--rubric", str(rubric_file)) == 1
+    assert len(calls) == 0
+    assert "Rubrics are limited to 2000 characters." in capsys.readouterr().err
+
+
 def test_invalid_session_exits_without_config_read(invoke):
     run, calls, config_reads, _state, _ = invoke
     assert run("list", "../x") == 1

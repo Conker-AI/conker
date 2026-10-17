@@ -18,7 +18,23 @@ Every chat feature the dashboard offers has a command here; this page grows with
 
 `context fork SESSION FILE [--request-id ID]` - Create a new chat from a summary; prints a request_id to repeat safely.
 
+`context summary-draft SESSION [--focus TEXT]` - Create a draft summary without saving it; review it and save with context summary-edit.
+
 Writes check the revision and never retry automatically. Use context budget first when a chat has no settings.
+
+## Output
+
+`output show SESSION` - Show current output settings.
+
+`output set SESSION [--format F] [--length L] [--language TAG]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB).
+
+## Names
+
+`title show SESSION` - Show the chat's name and whether you or Jev set it.
+
+`title set SESSION TEXT` - Name the chat yourself (1-60 characters, one line). Jev never renames it on its own afterwards.
+
+`title auto SESSION` - Ask Jev to name the chat now. Unnamed chats are also named automatically after their first answer.
 
 ## Messages
 
@@ -35,3 +51,11 @@ Writes check the revision and never retry automatically. Use context budget firs
 `message versions SESSION ROOT` - Show all versions of an answer.
 
 `message select SESSION ROOT MESSAGE` - Select a version to show.
+
+`message judge SESSION ROOT [--model MODEL] [--rubric FILE] [--request-id ID]` - A blind judge scores the answer versions (never its own model's) with an optional rubric; prints the request id first, and the same --request-id replays without paying twice.
+
+`message judgements SESSION ROOT` - Show judgement results.
+
+`message vote SESSION ROOT MESSAGE {up,down,winner,clear}` - Your vote on an answer version; it outweighs the judge.
+
+`message votes SESSION ROOT` - Show votes.

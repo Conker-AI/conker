@@ -70,6 +70,12 @@ def register(commands):
     fork.add_argument("file", type=Path)
     fork.add_argument("--request-id")
 
+    summary_draft = subparsers.add_parser(
+        "summary-draft", help="Create a draft summary without saving it"
+    )
+    summary_draft.add_argument("session")
+    summary_draft.add_argument("--focus")
+
 
 def pi_call(request, config, path, body=None, *, query=None):
     """Make a Pi service call with consistent error handling."""
@@ -105,14 +111,14 @@ def pi_call(request, config, path, body=None, *, query=None):
         raise
 
 
-def _file_text(path, label, limit_message):
+def _file_text(path, label, limit_message, limit=16000):
     """Read file text with size limit and strip exactly one trailing line ending."""
     text = read_text(path, 64000, label)
     if text.endswith("\r\n"):
         text = text[:-2]
     elif text.endswith("\n"):
         text = text[:-1]
-    if len(text) > 16000:
+    if len(text) > limit:
         raise ValueError(limit_message)
     return text
 
@@ -257,6 +263,13 @@ def operation(args, config, request):
         response = pi_call(request, config, f"/context/{args.session}/fork", body)
         response["request_id"] = request_id
         return response
+
+    elif args.operation == "summary-draft":
+        focus = args.focus or ""
+        if len(focus) > 500:
+            raise ValueError("Focus text is limited to 500 characters.")
+        body = {"focus": focus}
+        return pi_call(request, config, f"/context/{args.session}/summary/draft", body)
 
     else:
         raise ValueError(f"Unknown context operation: {args.operation}")

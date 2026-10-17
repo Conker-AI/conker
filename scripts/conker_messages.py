@@ -63,6 +63,27 @@ def register(commands):
     select.add_argument("root")
     select.add_argument("message")
 
+    judge = subparsers.add_parser("judge", help="Judge answer versions")
+    judge.add_argument("session")
+    judge.add_argument("root")
+    judge.add_argument("--model")
+    judge.add_argument("--rubric", type=Path)
+    judge.add_argument("--request-id")
+
+    judgements = subparsers.add_parser("judgements", help="Show judgement results")
+    judgements.add_argument("session")
+    judgements.add_argument("root")
+
+    vote = subparsers.add_parser("vote", help="Vote for an answer")
+    vote.add_argument("session")
+    vote.add_argument("root")
+    vote.add_argument("message")
+    vote.add_argument("vote", choices=["up", "down", "winner", "clear"])
+
+    votes = subparsers.add_parser("votes", help="Show votes")
+    votes.add_argument("session")
+    votes.add_argument("root")
+
 
 def operation(args, config, request):
     """Run one message subcommand and return the value to print."""
@@ -199,6 +220,60 @@ def operation(args, config, request):
         return pi_call(
             request, config, f"/sessions/{s}/response-families/{root}/select", body
         )
+
+    elif args.operation == "judge":
+        root = args.root
+        identity(root, MESSAGE, "root message identity")
+
+        request_id = args.request_id
+        if request_id:
+            identity(request_id, REQUEST, "judge request identity")
+        else:
+            request_id = "judge_" + uuid.uuid4().hex
+
+        body = {"request_id": request_id, "rubric": ""}
+
+        if args.model is not None:
+            model = args.model
+            if not (1 <= len(model) <= 200):
+                raise ValueError("Use a model ID of 1 to 200 characters.")
+            body["model_id"] = model
+
+        if args.rubric:
+            body["rubric"] = _file_text(
+                args.rubric,
+                "Rubric file",
+                "Rubrics are limited to 2000 characters.",
+                limit=2000,
+            )
+
+        print(f"Request id: {request_id}", file=sys.stderr)
+        return pi_call(
+            request, config, f"/sessions/{s}/response-families/{root}/judge", body
+        )
+
+    elif args.operation == "judgements":
+        root = args.root
+        identity(root, MESSAGE, "root message identity")
+        return pi_call(
+            request, config, f"/sessions/{s}/response-families/{root}/judgements"
+        )
+
+    elif args.operation == "vote":
+        root = args.root
+        m = args.message
+        identity(root, MESSAGE, "root message identity")
+        identity(m, MESSAGE, "message identity")
+
+        body = {"message_id": m, "vote": args.vote}
+        return pi_call(
+            request, config, f"/sessions/{s}/response-families/{root}/vote", body
+        )
+
+    elif args.operation == "votes":
+        root = args.root
+        identity(root, MESSAGE, "root message identity")
+        return pi_call(request, config, f"/sessions/{s}/response-families/{root}/votes")
 
     else:
         raise ValueError(f"Unknown message operation: {args.operation}")
