@@ -180,7 +180,8 @@ def main():
         "memory-delivery",
         "context",
         "message",
-        "chat-settings",
+        "output",
+        "title",
     }:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "memory-delivery" and args.message is not None:
@@ -448,7 +449,7 @@ def main():
         value = context_operation(args, config, request)
     elif args.command == "message":
         value = message_operation(args, config, request)
-    elif args.command == "chat-settings":
+    elif args.command in {"output", "title"}:
         value = chat_operation(args, config, request)
     elif args.command == "api":
         value = request(

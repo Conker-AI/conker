@@ -24,17 +24,17 @@ Writes check the revision and never retry automatically. Use context budget firs
 
 ## Output
 
-`chat-settings output show SESSION` - Show current output settings.
+`output show SESSION` - Show current output settings.
 
-`chat-settings output set SESSION [--format F] [--length L] [--language TAG]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB).
+`output set SESSION [--format F] [--length L] [--language TAG]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB).
 
 ## Names
 
-`chat-settings title show SESSION` - Show current title.
+`title show SESSION` - Show the chat's name and whether you or Jev set it.
 
-`chat-settings title set SESSION TEXT` - Set title (1-60 characters, one line).
+`title set SESSION TEXT` - Name the chat yourself (1-60 characters, one line). Jev never renames it on its own afterwards.
 
-`chat-settings title auto SESSION` - Generate title automatically.
+`title auto SESSION` - Ask Jev to name the chat now. Unnamed chats are also named automatically after their first answer.
 
 ## Messages
 
@@ -52,10 +52,10 @@ Writes check the revision and never retry automatically. Use context budget firs
 
 `message select SESSION ROOT MESSAGE` - Select a version to show.
 
-`message judge SESSION ROOT [--model MODEL] [--rubric FILE] [--request-id ID]` - Judge answer versions with optional model and rubric; prints the request id first.
+`message judge SESSION ROOT [--model MODEL] [--rubric FILE] [--request-id ID]` - A blind judge scores the answer versions (never its own model's) with an optional rubric; prints the request id first, and the same --request-id replays without paying twice.
 
 `message judgements SESSION ROOT` - Show judgement results.
 
-`message vote SESSION ROOT MESSAGE {up,down,winner,clear}` - Vote for an answer.
+`message vote SESSION ROOT MESSAGE {up,down,winner,clear}` - Your vote on an answer version; it outweighs the judge.
 
 `message votes SESSION ROOT` - Show votes.

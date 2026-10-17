@@ -231,8 +231,6 @@ def operation(args, config, request):
         else:
             request_id = "judge_" + uuid.uuid4().hex
 
-        print(f"Request id: {request_id}", file=sys.stderr)
-
         body = {"request_id": request_id, "rubric": ""}
 
         if args.model is not None:
@@ -249,6 +247,7 @@ def operation(args, config, request):
                 limit=2000,
             )
 
+        print(f"Request id: {request_id}", file=sys.stderr)
         return pi_call(
             request, config, f"/sessions/{s}/response-families/{root}/judge", body
         )

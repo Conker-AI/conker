@@ -54,9 +54,7 @@ def invoke(monkeypatch):
     monkeypatch.setattr(cli, "build_opener", opener)
 
     def run(*arguments):
-        monkeypatch.setattr(
-            sys, "argv", ["conker.py", "chat-settings", *map(str, arguments)]
-        )
+        monkeypatch.setattr(sys, "argv", ["conker.py", *map(str, arguments)])
         return cli.cli()
 
     return run, calls, config_reads, state, check_headers
@@ -177,3 +175,54 @@ def test_invalid_session_exits_without_config_read(invoke):
     run, calls, config_reads, _state, _ = invoke
     assert run("output", "show", "../x") == 1
     assert not calls and not config_reads
+
+
+def test_summary_draft_posts_focus_and_returns_draft(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {
+            "summary": "Draft summary",
+            "messageIds": ["msg_1", "msg_2"],
+            "truncated": False,
+            "earlierSummaryIncluded": False,
+            "summaryRevision": 1,
+            "modelId": "model_x",
+            "configurationRevision": 2,
+        }
+    ]
+    assert (
+        run("context", "summary-draft", "ses_a", "--focus", "Focus on key points") == 0
+    )
+    assert len(calls) == 1
+    check_headers(0)
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/context/ses_a/summary/draft"
+    body = json.loads(calls[0][0].data)
+    assert body["focus"] == "Focus on key points"
+
+
+def test_summary_draft_without_focus_uses_empty_string(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {
+            "summary": "Draft summary",
+            "messageIds": ["msg_1"],
+            "truncated": False,
+            "earlierSummaryIncluded": True,
+            "summaryRevision": 1,
+            "modelId": "model_x",
+            "configurationRevision": 2,
+        }
+    ]
+    assert run("context", "summary-draft", "ses_a") == 0
+    assert len(calls) == 1
+    check_headers(0)
+    body = json.loads(calls[0][0].data)
+    assert body["focus"] == ""
+
+
+def test_summary_draft_focus_validation_exits_without_request(invoke, capsys):
+    run, calls, _, _state, _ = invoke
+    focus = "x" * 501
+    assert run("context", "summary-draft", "ses_a", "--focus", focus) == 1
+    assert len(calls) == 0
+    assert "Focus text is limited to 500 characters." in capsys.readouterr().err
