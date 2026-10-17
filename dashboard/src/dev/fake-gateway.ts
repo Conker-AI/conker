@@ -6,6 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
+import { createFakeProviderCredentials } from './fake-gateway-providers'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -60,7 +61,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const corrections = new Map<string, Json>()
   const correctionTexts = new Map<string, { revision: number; text: string }>()
   if (globalThis.sessionStorage?.getItem('conker-fake-correction') === 'pending') corrections.set('correction_preview_saved', { schemaVersion: 1, requestId: 'correction_preview_saved', memoryId: 'mem_judo', previousRevision: 1, payloadHash: 'a'.repeat(64), status: 'unknown', revision: null, indexing: null, errorCode: null, cachedPackagesCleared: 0, sourceConversationKept: true })
-  const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
+  const providerCredentials = createFakeProviderCredentials()
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
   const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
@@ -958,26 +959,11 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
     }
-    if (path === '/api/host/providers') {
-      const scenario = globalThis.sessionStorage?.getItem('conker-fake-credentials')
-      if (scenario) {
-        if (method === 'GET' && scenario === 'read-failure') return fail(503)
-        if (method === 'GET' && scenario === 'read-timeout') return new Promise<Json>(() => { /* Isolated read deadline, no external provider. */ })
-        if (method === 'GET' && scenario === 'slow-read') await new Promise(resolve => setTimeout(resolve, 2000))
-        if (method === 'POST') {
-          options.onDispatch?.()
-          if (scenario === 'operation-timeout') return new Promise<Json>(() => { /* Isolated dispatch deadline. */ })
-          if (options.body?.operation === 'paid-policy') credentialStatus.paidAllowed = options.body.enabled === true
-          if (options.body?.operation === 'stage') {
-            const record = credentialStatus.providers.find(row => row.id === options.body?.provider)
-            if (record) { record.stagedRevision = `credential_${'a'.repeat(32)}`; record.verificationStatus = 'unverified' }
-          }
-          if (scenario === 'lost-response') return fail(503)
-        }
-        return structuredClone(credentialStatus)
-      }
-      if (method !== 'GET') throw new GatewayError('dependency', 503)
-      return { schemaVersion: 1, available: false, secretsIncluded: false, paidAllowed: null, policyRecoveryRequired: false, providers: [] }
+    if (path === '/api/host/providers') return providerCredentials(method, options, fail)
+    if (path === '/api/pi/models/auto-settings' && method === 'POST') {
+      // Deterministic stand-in for the routing model: long or comparative asks are Hard; price-like asks research the web.
+      const text = String(options.body?.text ?? ''), hard = text.length > 80 || /compare|best|plan|why/i.test(text), web = /price|latest|best|news|today|buy/i.test(text)
+      return { complexity: hard ? 'hard' : 'easy', think: hard, research: web ? 'web' : 'off', reasons: { complexity: hard ? 'This needs careful comparison or planning.' : 'A short, direct question.', think: hard ? 'A background check of the trade-offs helps.' : 'No separate analysis needed.', research: web ? 'Current facts matter here.' : 'Answerable without the web.' }, modelId: 'jev-preview', configurationRevision: 1 }
     }
     if (path === '/api/pi/models') {
       const scenario = globalThis.sessionStorage?.getItem('conker-fake-fail')

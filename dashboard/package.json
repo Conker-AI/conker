@@ -35,6 +35,7 @@
     "check:tasks": "node scripts/check-tasks.cjs",
     "check:search": "node scripts/check-gateway-search.cjs && node scripts/check-universal-search-lifecycle.cjs",
     "check:context-policy": "node scripts/check-context-policy.cjs",
+    "check:composer-modes": "node scripts/check-composer-modes.cjs",
     "check:conversation-context": "node scripts/check-conversation-context.cjs",
     "check:model-roles": "node scripts/check-model-roles.cjs",
     "check:provider-control": "node scripts/check-provider-control.cjs && node scripts/check-subscription-recovery.cjs",
