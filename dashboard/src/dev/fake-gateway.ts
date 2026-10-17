@@ -23,7 +23,7 @@ const previewSessions = {
   coach: `ses_${'3'.repeat(16)}`,
 }
 
-type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json }
+type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string }
 type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
 
 const replies = [
@@ -43,7 +43,7 @@ function seed(): Session[] {
     messages: turns.flatMap(([ask, answer], index) => [
       { id: `msg_${(offset + index * 2 + 1).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 1, role: 'user' as const, content: ask, created_at: start + offset + index * 120,
         memory_delivery: { state: id === previewSessions.week ? 'saved' : id === previewSessions.sky ? 'filtered' : 'excluded', reason_code: id === previewSessions.coach ? 'privacy_disabled' : null, admission_method: id === previewSessions.week ? 'signal' : id === previewSessions.sky ? 'filtered' : null, memory_id: id === previewSessions.week ? 'mem_judo' : null } },
-      { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8 },
+      { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8, turn_id: `trn_${offset}_${index}` },
     ]),
   })
   return [
@@ -374,7 +374,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       return { turn_id: turnId, session_id: session.id, status: 'cancelled', acted: false, message: null, submission: receipt }
     }
     const agentId = String((sessionSettings.get(session.id)?.settings as Json | undefined)?.agentId ?? 'companion')
-    const final: Message = { id: nextId('msg'), session_id: session.id, seq: session.messages.length + 1, role: 'assistant', content: answer, created_at: now(), agent_id: agentId }
+    const final: Message = { id: nextId('msg'), session_id: session.id, seq: session.messages.length + 1, role: 'assistant', content: answer, created_at: now(), agent_id: agentId, turn_id: turnId }
     session.messages.push(final)
     record('complete')
     const receipt = submission(requestId, session, turnId, input, final, 'complete')

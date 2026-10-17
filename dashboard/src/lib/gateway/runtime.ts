@@ -17,6 +17,8 @@ export type RuntimeMessage = {
   id: string; sessionId: string; sequence: number
   role: 'user' | 'assistant' | 'system' | 'tool'; createdAt: string
   agentId: string | null
+  /** The turn that consumed or produced this message, when Pi recorded one. */
+  turnId?: string
   memoryDelivery?: MemoryDelivery
   content: { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 }
@@ -160,12 +162,13 @@ function message(value: unknown, sessionId: string, forgotten: boolean, parseDel
   if (sequence < 1) return bad()
   const agentId = row.agent_id === undefined || row.agent_id === null ? null : runtimeAgentId(row.agent_id)
   if (role !== 'assistant' && agentId !== null) return bad()
+  const turnId = row.turn_id === undefined || row.turn_id === null ? null : id(row.turn_id)
   let memoryDelivery: MemoryDelivery | undefined
   if (role === 'user' && content.kind === 'text' && row.memory_delivery != null) {
     try { memoryDelivery = parseDelivery(row.memory_delivery) }
     catch { memoryDelivery = { state: 'unavailable', reasonCode: 'invalid_receipt', admissionMethod: null, memoryId: null } }
   }
-  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(memoryDelivery ? { memoryDelivery } : {}) }
+  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(turnId ? { turnId } : {}), ...(memoryDelivery ? { memoryDelivery } : {}) }
 }
 function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn {
   const row = record(value)
