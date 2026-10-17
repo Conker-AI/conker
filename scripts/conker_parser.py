@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from conker_context import register as register_context
+from conker_messages import register as register_message
 
 
 def build_parser(description):
@@ -82,6 +83,7 @@ def build_parser(description):
         "--message", help="Read one saved user message, including older history"
     )
     register_context(commands)
+    register_message(commands)
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )

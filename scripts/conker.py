@@ -25,6 +25,7 @@ from conker_inputs import (
     read_text,
     secret_reference,
 )
+from conker_messages import operation as message_operation
 from conker_parser import build_parser
 from workspace import read_config
 
@@ -50,6 +51,10 @@ def request(
     if query is not None:
         if service == "pi" and path == "/sessions/history" and body is None:
             encoded = urlencode(history_query(query))
+        elif service == "pi" and path.endswith("/branch-history") and body is None:
+            encoded = urlencode(
+                {key: query[key] for key in ("limit", "cursor") if key in query}
+            )
         elif service == "providers" and path == "/codex/sessions" and body is None:
             from native_codex_sessions import list_query
 
@@ -167,7 +172,14 @@ def main():
                 "observed native session identity",
                 64,
             )
-    if args.command in {"chat", "show", "thinking", "memory-delivery", "context"}:
+    if args.command in {
+        "chat",
+        "show",
+        "thinking",
+        "memory-delivery",
+        "context",
+        "message",
+    }:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "memory-delivery" and args.message is not None:
         identity(args.message, r"[A-Za-z0-9_-]{1,128}", "message ID")
@@ -432,6 +444,8 @@ def main():
         )
     elif args.command == "context":
         value = context_operation(args, config, request)
+    elif args.command == "message":
+        value = message_operation(args, config, request)
     elif args.command == "api":
         value = request(
             config,
