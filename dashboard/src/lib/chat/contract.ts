@@ -10,6 +10,8 @@ export type ChatMessage = {
   id: string; sessionId: string; sequence: number; role: 'user' | 'assistant' | 'system' | 'tool'
   createdAt: string; content: Content; agentId: string | null; agentName?: string; actions: Record<MessageAction, Action>
   memory?: MessageMemoryFeedback
+  /** Saved turn facts for a reply: model, duration and cost. */
+  details?: string
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'
