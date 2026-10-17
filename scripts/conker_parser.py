@@ -185,6 +185,9 @@ def build_parser(description):
         type=Path,
         help="JSON update containing expected_revision and configuration",
     )
+    commands.add_parser(
+        "profiles", help="Read-only model profiles from recorded outcomes"
+    )
     auth = commands.add_parser("auth")
     auth.add_argument("provider", choices=["chatgpt", "claude"])
     auth.add_argument(
