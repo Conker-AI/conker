@@ -12,6 +12,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 from conker_chat import operation as chat_operation
 from conker_context import operation as context_operation
+from conker_context import pi_call as context_pi_call
 from conker_inputs import (
     MCP_ID,
     SKILL_ID,
@@ -445,6 +446,8 @@ def main():
             "/models/configuration",
             read_json(args.save) if args.save else None,
         )
+    elif args.command == "profiles":
+        value = context_pi_call(request, config, "/models/profiles")
     elif args.command == "context":
         value = context_operation(args, config, request)
     elif args.command == "message":

@@ -84,6 +84,20 @@ def register(commands):
     votes.add_argument("session")
     votes.add_argument("root")
 
+    fact_check = subparsers.add_parser(
+        "fact-check", help="Check the claims in this answer"
+    )
+    fact_check.add_argument("session")
+    fact_check.add_argument("message")
+    fact_check.add_argument("--model")
+    fact_check.add_argument("--request-id")
+
+    fact_checks = subparsers.add_parser(
+        "fact-checks", help="Show fact-check results for this answer"
+    )
+    fact_checks.add_argument("session")
+    fact_checks.add_argument("message")
+
 
 def operation(args, config, request):
     """Run one message subcommand and return the value to print."""
@@ -274,6 +288,29 @@ def operation(args, config, request):
         root = args.root
         identity(root, MESSAGE, "root message identity")
         return pi_call(request, config, f"/sessions/{s}/response-families/{root}/votes")
+
+    elif args.operation == "fact-check":
+        m = args.message
+        identity(m, MESSAGE, "message identity")
+        request_id = args.request_id
+        if request_id:
+            identity(request_id, REQUEST, "fact-check request identity")
+        else:
+            request_id = "check_" + uuid.uuid4().hex
+        if args.model is not None:
+            model = args.model
+            if not (1 <= len(model) <= 200):
+                raise ValueError("Use a model ID of 1 to 200 characters.")
+        print(f"Request id: {request_id}", file=sys.stderr)
+        body = {"request_id": request_id}
+        if args.model is not None:
+            body["model_id"] = model
+        return pi_call(request, config, f"/sessions/{s}/messages/{m}/fact-check", body)
+
+    elif args.operation == "fact-checks":
+        m = args.message
+        identity(m, MESSAGE, "message identity")
+        return pi_call(request, config, f"/sessions/{s}/messages/{m}/fact-checks")
 
     else:
         raise ValueError(f"Unknown message operation: {args.operation}")

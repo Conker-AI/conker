@@ -59,3 +59,21 @@ Writes check the revision and never retry automatically. Use context budget firs
 `message vote SESSION ROOT MESSAGE {up,down,winner,clear}` - Your vote on an answer version; it outweighs the judge.
 
 `message votes SESSION ROOT` - Show votes.
+
+`message fact-check SESSION MESSAGE [--model MODEL] [--request-id ID]` - Check the claims in this answer; prints the request id first, and the same --request-id replays without paying twice.
+
+`message fact-checks SESSION MESSAGE` - Show fact-check results for this answer.
+
+## Context Items
+
+`context decide SESSION TEXT [--cite MESSAGE ...] [--replaces ITEM]` - Add a decision to the chat context; at most 10 distinct message cites, text 1-500 characters.
+
+`context thread SESSION TEXT [--cite MESSAGE ...]` - Add a thread to the chat context; at most 10 distinct message cites, text 1-500 characters.
+
+`context items SESSION` - List context items for a chat.
+
+`context item-state SESSION ITEM {active,open,resolved,withdrawn}` - Change a context item's state.
+
+## Model Profiles
+
+`profiles` - Read-only model profiles from recorded outcomes.

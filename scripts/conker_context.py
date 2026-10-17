@@ -2,6 +2,7 @@
 
 import copy
 import json
+import re
 import uuid
 from pathlib import Path
 from urllib.error import HTTPError
@@ -21,6 +22,7 @@ BUDGET_RULE = (
     "than the window, and other input of 0 or more."
 )
 NO_SETTINGS = "This chat has no context settings yet. Start with: context budget SESSION --window N --reserve N"
+ITEM_TEXT_ERROR = "Use 1-500 characters of text."
 
 
 def register(commands):
@@ -75,6 +77,33 @@ def register(commands):
     )
     summary_draft.add_argument("session")
     summary_draft.add_argument("--focus")
+
+    decide = subparsers.add_parser("decide", help="Add a decision to the chat context")
+    decide.add_argument("session")
+    decide.add_argument("text")
+    decide.add_argument(
+        "--cite", action="append", default=[], help="Message identity (repeatable)"
+    )
+    decide.add_argument("--replaces", help="Decision item to replace")
+
+    thread = subparsers.add_parser("thread", help="Add a thread to the chat context")
+    thread.add_argument("session")
+    thread.add_argument("text")
+    thread.add_argument(
+        "--cite", action="append", default=[], help="Message identity (repeatable)"
+    )
+
+    items = subparsers.add_parser("items", help="List context items for a chat")
+    items.add_argument("session")
+
+    item_state = subparsers.add_parser(
+        "item-state", help="Change a context item's state"
+    )
+    item_state.add_argument("session")
+    item_state.add_argument("item")
+    item_state.add_argument(
+        "state", choices=["active", "open", "resolved", "withdrawn"]
+    )
 
 
 def pi_call(request, config, path, body=None, *, query=None):
@@ -270,6 +299,56 @@ def operation(args, config, request):
             raise ValueError("Focus text is limited to 500 characters.")
         body = {"focus": focus}
         return pi_call(request, config, f"/context/{args.session}/summary/draft", body)
+
+    elif args.operation in ("decide", "thread"):
+        text = args.text.strip()
+        if not 1 <= len(text) <= 500 or any(ord(c) < 32 and c != "\n" for c in text):
+            raise ValueError(ITEM_TEXT_ERROR)
+        cites = args.cite
+        if len(cites) > 10:
+            raise ValueError("Use at most 10 cites.")
+        if len(set(cites)) != len(cites):
+            raise ValueError("Cites must be distinct.")
+        for cite in cites:
+            identity(cite, MESSAGE, "cite message identity")
+        if (
+            args.operation == "decide"
+            and args.replaces
+            and not re.fullmatch(r"^dec_[0-9a-f]{16}$", args.replaces)
+        ):
+            raise ValueError(
+                "Use a decision item identity (dec_ followed by 16 hex digits)."
+            )
+        kind = "decision" if args.operation == "decide" else "thread"
+        items_response = pi_call(request, config, f"/context/{args.session}/items")
+        body = {
+            "expected_revision": items_response["revision"],
+            "kind": kind,
+            "text": text,
+            "author": "owner",
+            "cites": cites,
+        }
+        if args.operation == "decide" and args.replaces:
+            body["replaces"] = args.replaces
+        return pi_call(request, config, f"/context/{args.session}/items", body)
+
+    elif args.operation == "items":
+        return pi_call(request, config, f"/context/{args.session}/items")
+
+    elif args.operation == "item-state":
+        item = args.item
+        if not re.fullmatch(r"^(dec|thr)_[0-9a-f]{16}$", item):
+            raise ValueError(
+                "Use an item identity (dec_ or thr_ followed by 16 hex digits)."
+            )
+        items_response = pi_call(request, config, f"/context/{args.session}/items")
+        body = {
+            "expected_revision": items_response["revision"],
+            "state": args.state,
+        }
+        return pi_call(
+            request, config, f"/context/{args.session}/items/{item}/state", body
+        )
 
     else:
         raise ValueError(f"Unknown context operation: {args.operation}")
