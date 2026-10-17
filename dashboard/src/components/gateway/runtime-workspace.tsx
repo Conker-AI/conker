@@ -48,7 +48,7 @@ import { NewChatPrivacyControl, type NewChatPrivacy } from './new-chat-privacy-c
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
 import { SendIcon } from '@/components/icons/animated/icons'
-import { ConversationStarters, ModeControl, NewChatMediaPlaceholders, TemplateInput, TemplatePicker, useTemplateActive } from './composer-parts'
+import { chooseTemplate, ConversationStarters, ModeControl, NewChatMediaPlaceholders, TemplateInput, TemplatePicker, useTemplateActive } from './composer-parts'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
@@ -310,7 +310,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     await draftController.consumed('new', receipt.sourceRevision!)
     if (workspace.getState().epoch !== epoch || !activeRef.current) return
     if (original) setSessionAgents(current => ({ ...current, [receipt.sessionId]: original.agentId ?? 'companion' }))
-    openSession(receipt.sessionId); clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setStartMissing(false); void refreshList()
+    openSession(receipt.sessionId); clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setStartMissing(false); void refreshList(); chooseTemplate('new', null)
     if (send && original && saved.base.revision === receipt.draftRevision && sameDraft(saved.value, original, receipt.sessionId)) {
       workspace.setState({ operation: null })
       await dispatchSubmission(receipt.sessionId, original.text, createTurnRequestId(), undefined, undefined, undefined, undefined, undefined, saved.base)
@@ -454,7 +454,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...requestOptions }))
       if (workspace.getState().epoch !== epoch) return
       if (prepared) workspace.setState({ taskIntent: null })
-      await acceptSubmission(id, text, receipt, taskBinding, requestOptions)
+      await acceptSubmission(id, text, receipt, taskBinding, requestOptions); chooseTemplate(id, null)
     } catch (error) {
       if (workspace.getState().epoch !== epoch) return
       if (error instanceof RuntimeMutationError && error.outcome === 'rejected' && error.status === 409 && !taskBinding) void draftController.load(id)

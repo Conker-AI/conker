@@ -18,6 +18,12 @@ assert.equal((workspaceSource.match(/<TemplatePicker /g) || []).length, 2, "Exac
 assert.equal((workspaceSource.match(/<TemplateInput /g) || []).length, 2, "Exactly two <TemplateInput> elements")
 assert.doesNotMatch(workspaceSource, /from '.\/new-chat-extras'/, "No direct import from ./new-chat-extras")
 assert.doesNotMatch(workspaceSource, /from '.\/mode-control'/, "No direct import from ./mode-control")
+assert.match(workspaceSource, /void refreshList\(\); chooseTemplate\('new', null\)/, "runtime-workspace.tsx clears template on new chat")
+assert.match(workspaceSource, /await acceptSubmission\(id, text, receipt, taskBinding, requestOptions\); chooseTemplate\(id, null\)/, "runtime-workspace.tsx clears template after submission")
+
+// composer-parts.ts checks
+const partsSource = fs.readFileSync(path.join(root, "src/components/gateway/composer-parts.ts"), "utf8")
+assert.match(partsSource, /export { chooseTemplate/, "composer-parts.ts exports chooseTemplate")
 
 // template-store.ts checks
 const storeSource = fs.readFileSync(path.join(root, "src/components/gateway/template-store.ts"), "utf8")
