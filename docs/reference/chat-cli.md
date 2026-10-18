@@ -95,3 +95,7 @@ Writes check the revision and never retry automatically. Use context budget firs
 ## Model Profiles
 
 `profiles` - Read-only model profiles from recorded outcomes.
+
+## Inbox
+
+`inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data.
