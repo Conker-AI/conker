@@ -13,6 +13,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 from conker_chat import operation as chat_operation
 from conker_context import operation as context_operation
 from conker_context import pi_call
+from conker_inbox import operation as inbox_operation
 from conker_inputs import (
     MCP_ID,
     SKILL_ID,
@@ -29,7 +30,6 @@ from conker_inputs import (
 )
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
-from conker_today import operation as today_operation
 from workspace import read_config
 
 
@@ -449,8 +449,8 @@ def main():
         )
     elif args.command == "profiles":
         value = pi_call(request, config, "/models/profiles")
-    elif args.command == "today":
-        return today_operation(args, config, request)
+    elif args.command == "inbox":
+        return inbox_operation(args, config, request)
     elif args.command == "context":
         value = context_operation(args, config, request)
     elif args.command == "message":

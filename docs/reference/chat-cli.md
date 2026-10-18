@@ -82,6 +82,6 @@ Writes check the revision and never retry automatically. Use context budget firs
 
 `profiles` - Read-only model profiles from recorded outcomes.
 
-## Today
+## Inbox
 
-`today [--json]` - What the companion brings the owner each day. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data.
+`inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data.

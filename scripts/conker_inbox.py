@@ -1,4 +1,4 @@
-"""Today command: what the companion brings the owner each day."""
+"""Inbox command: everything that happened and everything that needs the owner."""
 
 import json
 import sys
@@ -9,10 +9,10 @@ from conker_context import pi_call
 
 
 def register(commands):
-    today = commands.add_parser(
-        "today", help="What the companion brings the owner each day"
+    inbox = commands.add_parser(
+        "inbox", help="Everything that happened and everything that needs you"
     )
-    today.add_argument("--json", action="store_true", help="Output raw JSON")
+    inbox.add_argument("--json", action="store_true", help="Output raw JSON")
 
 
 def _emit(text):
@@ -22,7 +22,7 @@ def _emit(text):
 
 
 def operation(args, config, request):
-    value = pi_call(request, config, "/today")
+    value = pi_call(request, config, "/inbox")
     _emit(
         json.dumps(value, indent=2, ensure_ascii=False) if args.json else render(value)
     )
@@ -30,13 +30,13 @@ def operation(args, config, request):
 
 
 def render(value):
-    """Render today's data as plain text."""
+    """Render inbox data as plain text."""
     day = value["day"]
     date = day["date"]
     tz = day["timeZone"]
 
     lines = []
-    lines.append(f"Today · {date} ({tz})")
+    lines.append(f"Inbox · {date} ({tz})")
     lines.append("")
 
     # Needs you section

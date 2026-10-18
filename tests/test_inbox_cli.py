@@ -1,4 +1,4 @@
-"""Today CLI tests: what the companion brings the owner each day."""
+"""Inbox CLI tests: everything that happened and everything that needs the owner."""
 
 import io
 import json
@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import conker as cli
-from conker_today import render
+from conker_inbox import render
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def invoke(monkeypatch):
     return run, calls, config_reads, state, check_headers
 
 
-def test_today_json_calls_pi_endpoint(invoke):
+def test_inbox_json_calls_pi_endpoint(invoke):
     run, calls, _, state, check_headers = invoke
     state["responses"] = [
         {
@@ -118,14 +118,14 @@ def test_today_json_calls_pi_endpoint(invoke):
             "counts": {"needsYou": 1, "handled": 1, "upcoming": 1},
         }
     ]
-    assert run("today", "--json") == 0
+    assert run("inbox", "--json") == 0
     assert len(calls) == 1
     check_headers(0)
-    assert calls[0][0].full_url == "http://127.0.0.1:18551/today"
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/inbox"
     assert calls[0][0].data is None
 
 
-def test_today_renders_example_data():
+def test_inbox_renders_example_data():
     value = {
         "generatedAt": 1792240794.5,
         "day": {
@@ -190,7 +190,7 @@ def test_today_renders_example_data():
                 f"Time not at column 54 in line: {line!r}"
             )
 
-    expected = """Today · 2026-10-17 (Asia/Jerusalem)
+    expected = """Inbox · 2026-10-17 (Asia/Jerusalem)
 
 Needs you (1)
   ! Trip planning: approve calendar.create           since 04:20
@@ -204,7 +204,7 @@ This week:    30 answers · 9 actions · 5 tasks · 3 jobs · $0.2000"""
     assert result == expected
 
 
-def test_today_renders_empty_data():
+def test_inbox_renders_empty_data():
     value = {
         "generatedAt": 1792240794.5,
         "day": {
@@ -234,7 +234,7 @@ def test_today_renders_empty_data():
         "counts": {"needsYou": 0, "handled": 0, "upcoming": 0},
     }
 
-    expected = """Today · 2026-10-17 (Asia/Jerusalem)
+    expected = """Inbox · 2026-10-17 (Asia/Jerusalem)
 
 Needs you (0)
   nothing
@@ -248,7 +248,7 @@ This week:    0 answers · 0 actions · 0 tasks · 0 jobs · $0.0000"""
     assert render(value) == expected
 
 
-def test_today_urgent_attention_gets_exclamation(invoke, capsys):
+def test_inbox_urgent_attention_gets_exclamation(invoke, capsys):
     run, _calls, _, state, _ = invoke
     state["responses"] = [
         {
@@ -288,12 +288,12 @@ def test_today_urgent_attention_gets_exclamation(invoke, capsys):
             "counts": {"needsYou": 1, "handled": 0, "upcoming": 0},
         }
     ]
-    assert run("today") == 0
+    assert run("inbox") == 0
     output = capsys.readouterr()
     assert "! Urgent matter: pending" in output.out
 
 
-def test_today_suggestion_gets_question_mark(invoke, capsys):
+def test_inbox_suggestion_gets_question_mark(invoke, capsys):
     run, _calls, _, state, _ = invoke
     state["responses"] = [
         {
@@ -327,12 +327,12 @@ def test_today_suggestion_gets_question_mark(invoke, capsys):
             "counts": {"needsYou": 1, "handled": 0, "upcoming": 0},
         }
     ]
-    assert run("today") == 0
+    assert run("inbox") == 0
     output = capsys.readouterr()
     assert "? Consider this option" in output.out
 
 
-def test_today_time_on_another_day_shows_weekday():
+def test_inbox_time_on_another_day_shows_weekday():
 
     # Create a value with an upcoming item on a different day
     value = {
@@ -375,13 +375,13 @@ def test_today_time_on_another_day_shows_weekday():
     assert "Tue 08:20" in result
 
 
-def test_today_pi_refusal_exits(invoke, capsys):
+def test_inbox_pi_refusal_exits(invoke, capsys):
     run, _calls, _, state, _ = invoke
     body = b'{"detail": {"code": "forbidden", "message": "Owner access required."}}'
     state["responses"] = [
         HTTPError("http://private", 403, "Forbidden", {}, io.BytesIO(body))
     ]
-    assert run("today") == 1
+    assert run("inbox") == 1
     assert (
         "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
     )
