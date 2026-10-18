@@ -6,6 +6,7 @@ from pathlib import Path
 from conker_chat import register as register_chat
 from conker_context import register as register_context
 from conker_messages import register as register_message
+from conker_today import register as register_today
 
 
 def build_parser(description):
@@ -86,6 +87,7 @@ def build_parser(description):
     register_context(commands)
     register_message(commands)
     register_chat(commands)
+    register_today(commands)
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )
