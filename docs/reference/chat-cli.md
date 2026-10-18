@@ -78,6 +78,20 @@ Writes check the revision and never retry automatically. Use context budget firs
 
 `context item-state SESSION ITEM {active,open,resolved,withdrawn}` - Change a context item's state.
 
+## Files
+
+`files upload SESSION PATH [--type MIME]` - Upload a file to a chat session; MIME type is auto-detected if not provided.
+
+`files list SESSION` - List all attachments in a chat session.
+
+`files show SESSION ID` - Show details for a specific attachment.
+
+`files download SESSION ID [--output PATH]` - Download an attachment; writes to the attachment's name in current directory or specified path. Refuses to overwrite existing files.
+
+`files remove SESSION ID` - Remove an attachment (only if not yet sent in a message).
+
+`chat SESSION TEXT --attach ID [--attach ID ...]` - Send a message with file attachments; attachment IDs must match the pattern `attachment_` followed by 32 hex characters.
+
 ## Model Profiles
 
 `profiles` - Read-only model profiles from recorded outcomes.
