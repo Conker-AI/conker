@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -13,6 +14,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 from conker_chat import operation as chat_operation
 from conker_context import operation as context_operation
 from conker_context import pi_call
+from conker_files import operation as files_operation
 from conker_inbox import operation as inbox_operation
 from conker_inputs import (
     MCP_ID,
@@ -38,8 +40,23 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+ATTACHMENT_UPLOAD = re.compile(r"/sessions/[A-Za-z0-9_-]{1,128}/attachments")
+
+
 def request(
-    config, service, path, body=None, *, query=None, timeout=660, maximum_bytes=None
+    config,
+    service,
+    path,
+    body=None,
+    *,
+    query=None,
+    timeout=660,
+    maximum_bytes=None,
+    data=None,
+    content_type=None,
+    query_params=None,
+    raw_response=False,
+    method=None,
 ):
     if service not in {"providers", "toolgate-owner", "pi-owner", "toolgate", "pi"}:
         raise ValueError("Choose a configured Conker service.")
@@ -50,6 +67,15 @@ def request(
         or any(ord(character) < 32 for character in path)
     ):
         raise ValueError("Use a service-relative path without query or fragment.")
+
+    if data is not None and body is not None:
+        raise ValueError("data and body are exclusive")
+
+    if query_params is not None and (
+        service != "pi" or not ATTACHMENT_UPLOAD.fullmatch(path)
+    ):
+        raise ValueError("query_params only allowed for Pi attachment uploads")
+
     suffix = ""
     if query is not None:
         if service == "pi" and path == "/sessions/history" and body is None:
@@ -78,6 +104,8 @@ def request(
                 "Structured query options are only for reading chat or Codex history."
             )
         suffix = "?" + encoded if encoded else ""
+    elif query_params is not None:
+        suffix = "?" + urlencode(query_params)
     if service == "providers":
         origin, headers = (
             "http://127.0.0.1:18570",
@@ -116,15 +144,21 @@ def request(
             "http://127.0.0.1:18551",
             {"X-Pi-Key": config["environments"]["pi"]["PI_ADMIN_KEY"]},
         )
-    headers["Content-Type"] = "application/json"
-    data = (
-        json.dumps(body, ensure_ascii=False).encode("utf-8")
-        if body is not None
-        else None
-    )
+    if data is not None:
+        headers["Content-Type"] = content_type or "application/octet-stream"
+    else:
+        headers["Content-Type"] = "application/json"
+        data = (
+            json.dumps(body, ensure_ascii=False).encode("utf-8")
+            if body is not None
+            else None
+        )
     with build_opener(ProxyHandler({}), NoRedirect()).open(
-        Request(origin + path + suffix, data=data, headers=headers), timeout=timeout
+        Request(origin + path + suffix, data=data, headers=headers, method=method),
+        timeout=timeout,
     ) as response:
+        if raw_response:
+            return response.read()
         if maximum_bytes is not None:
             raw = response.read(maximum_bytes + 1)
             if len(raw) > maximum_bytes:
@@ -184,6 +218,7 @@ def main():
         "message",
         "output",
         "title",
+        "files",
     }:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
     if args.command == "memory-delivery" and args.message is not None:
@@ -304,27 +339,40 @@ def main():
     elif args.command == "show":
         value = request(config, "pi", f"/sessions/{args.session}")
     elif args.command == "chat":
+        chat_body = {
+            "text": args.text,
+            "request_id": args.request_id or uuid.uuid4().hex,
+            **({"model_id": args.model} if args.model else {}),
+            **({"skill_ids": args.skill} if args.skill else {}),
+            **({"think": True} if args.think else {}),
+            **(
+                {"draft_revision": args.draft_revision}
+                if args.draft_revision is not None
+                else {}
+            ),
+            **(
+                {"research_mode": args.research_mode}
+                if args.research_mode != "off"
+                else {}
+            ),
+        }
+
+        if args.attach:
+            for attach_id in args.attach:
+                identity(attach_id, r"attachment_[0-9a-f]{32}", "attachment identity")
+            seen = set()
+            unique_attachments = []
+            for attach_id in args.attach:
+                if attach_id not in seen:
+                    seen.add(attach_id)
+                    unique_attachments.append(attach_id)
+            chat_body["attachment_ids"] = unique_attachments
+
         value = request(
             config,
             "pi",
             f"/sessions/{args.session}/turns",
-            {
-                "text": args.text,
-                "request_id": args.request_id or uuid.uuid4().hex,
-                **({"model_id": args.model} if args.model else {}),
-                **({"skill_ids": args.skill} if args.skill else {}),
-                **({"think": True} if args.think else {}),
-                **(
-                    {"draft_revision": args.draft_revision}
-                    if args.draft_revision is not None
-                    else {}
-                ),
-                **(
-                    {"research_mode": args.research_mode}
-                    if args.research_mode != "off"
-                    else {}
-                ),
-            },
+            chat_body,
         )
     elif args.command == "draft":
         if args.operation == "start":
@@ -457,6 +505,8 @@ def main():
         value = message_operation(args, config, request)
     elif args.command in {"output", "title"}:
         value = chat_operation(args, config, request)
+    elif args.command == "files":
+        value = files_operation(args, config, request)
     elif args.command == "api":
         value = request(
             config,

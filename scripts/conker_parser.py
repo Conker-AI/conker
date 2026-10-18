@@ -5,6 +5,7 @@ from pathlib import Path
 
 from conker_chat import register as register_chat
 from conker_context import register as register_context
+from conker_files import register as register_files
 from conker_inbox import register as register_inbox
 from conker_messages import register as register_message
 
@@ -85,6 +86,7 @@ def build_parser(description):
         "--message", help="Read one saved user message, including older history"
     )
     register_context(commands)
+    register_files(commands)
     register_message(commands)
     register_chat(commands)
     register_inbox(commands)
@@ -134,6 +136,12 @@ def build_parser(description):
         action="append",
         default=[],
         help="Select a saved skill (up to three)",
+    )
+    chat.add_argument(
+        "--attach",
+        action="append",
+        default=[],
+        help="Attach a file by its ID (repeatable)",
     )
     skills = commands.add_parser("skills", help="Manage reusable SKILL.md instructions")
     skill_commands = skills.add_subparsers(dest="operation", required=True)

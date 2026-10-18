@@ -124,10 +124,10 @@ def register(commands):
     compaction.add_argument("session")
 
 
-def pi_call(request, config, path, body=None, *, query=None):
+def pi_call(request, config, path, body=None, *, query=None, **kwargs):
     """Make a Pi service call with consistent error handling."""
     try:
-        return request(config, "pi", path, body, query=query, timeout=660)
+        return request(config, "pi", path, body, query=query, timeout=660, **kwargs)
     except HTTPError as exc:
         if 400 <= exc.code <= 499:
             try:
