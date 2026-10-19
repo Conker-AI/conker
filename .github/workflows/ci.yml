@@ -146,20 +146,15 @@ jobs:
           pip install --quiet -r gates/toolgate/toolgate/requirements.txt
 
       - name: Cross-gate contracts
+        # From Conker's root, so its tests import scripts.* as they do locally.
+        working-directory: conker
         env:
           PYTHONPATH: ${{ github.workspace }}/gates/pi:${{ github.workspace }}/gates/toolgate:${{ github.workspace }}/gates/memorygate/services/api
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/gates/toolgate
           CONKER_TEST_PI_SOURCE: ${{ github.workspace }}/gates/pi
         run: |
           set -o pipefail
-          python -m pytest -q -rs -p no:cacheprovider \
-            conker/tests/test_memory_authority_contract.py \
-            conker/tests/test_scheduled_budget_contract.py \
-            conker/tests/test_recovery_reconciliation.py \
-            conker/tests/test_subscription_continuation.py \
-            "conker/tests/test_recovery.py::test_current_toolgate_rejects_restored_approval" \
-            "conker/tests/test_recovery.py::test_restored_vault_opens_with_actual_toolgate" \
-            gates/memorygate/integrations/test_pi_memory.py | tee pytest.out
+          python -m pytest -q -rs -p no:cacheprovider             tests/test_memory_authority_contract.py             tests/test_scheduled_budget_contract.py             tests/test_recovery_reconciliation.py             tests/test_subscription_continuation.py             "tests/test_recovery.py::test_current_toolgate_rejects_restored_approval"             "tests/test_recovery.py::test_restored_vault_opens_with_actual_toolgate"             ../gates/memorygate/integrations/test_pi_memory.py | tee pytest.out
           if grep -q "^SKIPPED" pytest.out; then
             echo "::error::A cross-gate test skipped; every one must run here."
             exit 1
