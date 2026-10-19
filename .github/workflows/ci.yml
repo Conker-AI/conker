@@ -95,3 +95,72 @@ jobs:
         env:
           CONKER_RECOVERY_DOCKER: "1"
         run: python -m pytest tests/test_recovery_docker.py -q
+
+  cross-gate:
+    # The tests that import Pi, ToolGate and MemoryGate together, run against the gate commits
+    # Conker pins (scripts/workspace-sources.json). Run only by hand, they once rotted for weeks
+    # because every one of them skips when a gate is missing; here a skip fails the job.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: conker
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pinned gates
+        id: pins
+        run: |
+          for gate in pi toolgate memorygate; do
+            echo "$gate=$(jq -r ".$gate" conker/scripts/workspace-sources.json)" >> "$GITHUB_OUTPUT"
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Conker-AI/pi
+          ref: ${{ steps.pins.outputs.pi }}
+          path: gates/pi
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Conker-AI/toolgate
+          ref: ${{ steps.pins.outputs.toolgate }}
+          path: gates/toolgate
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Conker-AI/memorygate
+          ref: ${{ steps.pins.outputs.memorygate }}
+          path: gates/memorygate
+
+      - name: Install every gate's pins
+        # One interpreter for all three. They agree on every shared pin except a cryptography patch
+        # release, so they are installed in turn rather than resolved together.
+        run: |
+          pip install --quiet -r conker/requirements-dev.txt
+          pip install --quiet -r gates/pi/requirements.txt
+          pip install --quiet -r gates/memorygate/services/api/requirements.txt
+          pip install --quiet -r gates/toolgate/toolgate/requirements.txt
+
+      - name: Cross-gate contracts
+        env:
+          PYTHONPATH: ${{ github.workspace }}/gates/pi:${{ github.workspace }}/gates/toolgate:${{ github.workspace }}/gates/memorygate/services/api
+          CONKER_TEST_TOOLGATE: ${{ github.workspace }}/gates/toolgate
+          CONKER_TEST_PI_SOURCE: ${{ github.workspace }}/gates/pi
+        run: |
+          set -o pipefail
+          python -m pytest -q -rs -p no:cacheprovider \
+            conker/tests/test_memory_authority_contract.py \
+            conker/tests/test_scheduled_budget_contract.py \
+            conker/tests/test_recovery_reconciliation.py \
+            conker/tests/test_subscription_continuation.py \
+            "conker/tests/test_recovery.py::test_current_toolgate_rejects_restored_approval" \
+            "conker/tests/test_recovery.py::test_restored_vault_opens_with_actual_toolgate" \
+            gates/memorygate/integrations/test_pi_memory.py | tee pytest.out
+          if grep -q "^SKIPPED" pytest.out; then
+            echo "::error::A cross-gate test skipped; every one must run here."
+            exit 1
+          fi
