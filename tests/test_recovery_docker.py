@@ -106,7 +106,7 @@ def live_stack(tmp_path):
     try:
         docker.run(*compose, "up", "-d")
         postgres = docker.run(*compose, "ps", "-q", "postgres").stdout.decode().strip()
-        recovery.wait_postgres(docker, postgres)
+        recovery_restore.wait_postgres(docker, postgres)
         seed = tmp_path / "seed.sql"
         seed.write_text(
             "CREATE TABLE ai_runtime_settings(id TEXT,api_key_encrypted TEXT);\n"
@@ -170,7 +170,7 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
     assert restored["State"]["Running"] is False
     # The only restarted process is the isolated database, never Pi or a gate.
     docker.run("start", postgres)
-    recovery.wait_postgres(docker, postgres)
+    recovery_restore.wait_postgres(docker, postgres)
     rows = docker.run(
         "exec",
         postgres,
