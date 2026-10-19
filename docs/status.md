@@ -13,6 +13,20 @@ product surface exists; it does not imply UI/CLI parity or current-server rollou
 
 ## Current source
 
+### Every chat feature from the terminal (13 to 19 October)
+
+Each chat feature now has a command, listed in [Chat CLI](reference/chat-cli.md): context settings,
+rules, summaries, forks and compaction; decisions and open threads; output format, length and
+language; chat names; message branches, retries, comparisons, version selection, blind judging,
+votes and fact checks; files attached to a chat; model profiles; and `inbox`, which shows what needs
+the owner, what was handled and what is coming. Paid actions print their request id first and are
+never repeated automatically; compare, judge and fact-check replay safely with the same id. Shared
+files are kept on disk without a size limit.
+
+Behind them, Pi's code moved into packages, and every Pi refusal has one shape,
+`{"detail": {"code", "message"}}`. The dashboard gained conversation views, composer modes with
+Auto proposals, message details and prompt templates; it is the next thing to be redesigned.
+
 ### Correct retained memory from CLI and UI (10 October)
 
 Memory's inspector now offers an editor that reads the full authoritative text
