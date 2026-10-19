@@ -13,7 +13,13 @@ import pytest
 from test_recovery import (
     installed as installed,  # noqa: PLC0414 - register the shared pytest fixture
 )
-from test_recovery import recovery, recovery_data
+from test_recovery import (
+    recovery,
+    recovery_data,
+    recovery_layout,
+    recovery_restore,
+    recovery_snapshot,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -153,10 +159,10 @@ def test_manifest_cannot_hide_gateway_by_removing_image_and_archive(installed):
     del manifest["images"]["gateway"]
     del manifest["stores"]["gateway"]
     (snapshot / "gateway.tar").unlink()
-    manifest["files"] = recovery.inventory(snapshot)
-    recovery.write_json(snapshot / "manifest.json", manifest)
+    manifest["files"] = recovery_snapshot.inventory(snapshot)
+    recovery_layout.write_json(snapshot / "manifest.json", manifest)
     with pytest.raises(recovery.RecoveryError, match="services and image"):
-        recovery.verify_snapshot(snapshot)
+        recovery_snapshot.verify_snapshot(snapshot)
 
 
 def test_pre_gateway_snapshot_still_restores_under_hold(
@@ -173,8 +179,8 @@ def test_pre_gateway_snapshot_still_restores_under_hold(
 
     monkeypatch.setattr(engine, "json", legacy_json)
     snapshot = recovery.backup(root, None, engine)
-    assert "gateway" not in recovery.verify_snapshot(snapshot)["stores"]
-    state = recovery.restore(snapshot, tmp_path / "legacy-restored", engine)
+    assert "gateway" not in recovery_snapshot.verify_snapshot(snapshot)["stores"]
+    state = recovery_restore.restore(snapshot, tmp_path / "legacy-restored", engine)
     assert state["status"] == "held" and state["applications_started"] is False
 
 

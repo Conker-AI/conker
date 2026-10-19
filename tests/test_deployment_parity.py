@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import recovery
+import recovery_layout
 from release_manifest import parse_env
 
 
@@ -102,15 +102,15 @@ def test_both_layouts_mount_speech_credentials_without_exposing_them(tmp_path):
     assert "PI_SPEECH_KEY" not in ubuntu["pi"]
     assert "./state/speech/speech.key:/run/secrets/speech:ro" in manifest["services"]["pi"]["volumes"]
     assert (tmp_path / "state/speech/speech.key").read_bytes() == b""
-    assert "/run/secrets/speech" in recovery.UBUNTU_PROFILE.excluded_mounts["pi"]
+    assert "/run/secrets/speech" in recovery_layout.UBUNTU_PROFILE.excluded_mounts["pi"]
 
 
 def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
     manifest, environment = ubuntu_deployment(tmp_path)
     services = manifest["services"]
 
-    assert set(services) == recovery.UBUNTU_SERVICES
-    for service, destination in recovery.UBUNTU_STORES.items():
+    assert set(services) == recovery_layout.UBUNTU_SERVICES
+    for service, destination in recovery_layout.UBUNTU_STORES.items():
         declared = {
             volume.split(":", 2)[1]
             for volume in services[service].get("volumes", [])

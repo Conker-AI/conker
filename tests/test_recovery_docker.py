@@ -11,7 +11,14 @@ import os
 import uuid
 
 import pytest
-from test_recovery import ROOT, Engine, operator_review, recovery
+from test_recovery import (
+    ROOT,
+    Engine,
+    recovery,
+    recovery_layout,
+    recovery_restore,
+)
+from test_recovery_review import operator_review
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("CONKER_RECOVERY_DOCKER") != "1",
@@ -40,7 +47,7 @@ def live_stack(tmp_path):
     (root / "versions.env").write_text("# fixture uses resolved image references\n")
     project = "conker-drill-" + uuid.uuid4().hex[:12]
     services = {}
-    for service in recovery.SERVICES:
+    for service in recovery_layout.SERVICES:
         spec = {
             "image": gate_image,
             "network_mode": "none",
@@ -51,12 +58,12 @@ def live_stack(tmp_path):
             ],
             "volumes": [],
         }
-        if service in recovery.STORES:
+        if service in recovery_layout.STORES:
             spec["volumes"].append(
                 {
                     "type": "bind",
                     "source": str(data.volumes["original-" + service]),
-                    "target": recovery.STORES[service],
+                    "target": recovery_layout.STORES[service],
                 }
             )
         if service == "toolgate":
@@ -151,7 +158,7 @@ def live_stack(tmp_path):
 def test_real_backup_restore_and_interruption(live_stack, tmp_path):
     root, docker, gate_image, approval = live_stack
     snapshot = recovery.backup(root, None, docker)
-    state = recovery.restore(snapshot, tmp_path / "recovered-normal", docker)
+    state = recovery_restore.restore(snapshot, tmp_path / "recovered-normal", docker)
     assert state["vault_values_verified"] == 1
     assert state["memory_provider_key_verified"] is True
     assert approval in state["invalidated_requests"]
@@ -203,10 +210,10 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
     )
     review_path = tmp_path / "operator-review.json"
     operator_review(state, review_path)
-    recovery.review_recovery(tmp_path / "recovered-normal", review_path)
-    ready = recovery.prove_service_ready(tmp_path / "recovered-normal", docker)
+    recovery_restore.review_recovery(tmp_path / "recovered-normal", review_path)
+    ready = recovery_restore.prove_service_ready(tmp_path / "recovered-normal", docker)
     assert ready["status"] == "service_ready"
-    assert (tmp_path / "recovered-normal" / recovery.HOLD_FILE).is_file()
+    assert (tmp_path / "recovered-normal" / recovery_layout.HOLD_FILE).is_file()
 
     class Interrupted(recovery.Docker):
         def run(self, *args, **kwargs):
@@ -218,9 +225,9 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
             return result
 
     with pytest.raises(KeyboardInterrupt):
-        recovery.restore(snapshot, tmp_path / "recovered-interrupted", Interrupted())
+        recovery_restore.restore(snapshot, tmp_path / "recovered-interrupted", Interrupted())
     interrupted = json.loads(
-        (tmp_path / "recovered-interrupted" / recovery.HOLD_FILE).read_text()
+        (tmp_path / "recovered-interrupted" / recovery_layout.HOLD_FILE).read_text()
     )
     assert interrupted["status"] == "interrupted"
     assert interrupted["applications_started"] is False
