@@ -18,7 +18,9 @@ def test_runtime_key_lives_in_a_persistent_service_volume():
 
 
 def test_recovery_does_not_exempt_an_unmanaged_runtime_key_mount():
-    recovery = (ROOT / "scripts" / "recovery.py").read_text(encoding="utf-8")
+    recovery = "".join(
+        path.read_text(encoding="utf-8") for path in (ROOT / "scripts").glob("recovery*.py")
+    )
 
     assert '"memorygate": {"/data/runtime-fernet.key"}' not in recovery
     assert "MemoryGate runtime key persistence needs migration" not in recovery

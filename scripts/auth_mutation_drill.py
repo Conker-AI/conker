@@ -23,14 +23,14 @@ CASES = [
     ),
     (
         "gateway-store-omitted",
-        "scripts/recovery.py",
+        "scripts/recovery_layout.py",
         'REPOSITORY_STORES = {\n    "gateway": "/auth",\n',
         "REPOSITORY_STORES = {\n",
         RESTORE,
     ),
     (
         "restored-browser-sessions-revived",
-        "scripts/recovery.py",
+        "scripts/recovery_restore.py",
         'if "gateway" in manifest["stores"]:',
         "if False:",
         RESTORE,

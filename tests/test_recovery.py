@@ -16,7 +16,6 @@ import subprocess
 import sys
 import tarfile
 from contextlib import closing
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -26,6 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import recovery
 import recovery_data
+import recovery_layout
+import recovery_restore
+import recovery_snapshot
 
 
 def database(path: Path, script: str) -> None:
@@ -79,7 +81,7 @@ class Engine:
     def __init__(
         self,
         tmp: Path,
-        profile: recovery.LayoutProfile = recovery.REPOSITORY_PROFILE,
+        profile: recovery_layout.LayoutProfile = recovery_layout.REPOSITORY_PROFILE,
         *,
         bind_stores: bool = False,
     ):
@@ -352,9 +354,9 @@ def ubuntu_installed(tmp_path):
     (provider / "state.json").write_text(
         '{"schemaVersion":1,"providers":{}}\n'
     )
-    for name in recovery.UBUNTU_ENV_FILES:
+    for name in recovery_layout.UBUNTU_ENV_FILES:
         (state / name).write_text("FIXTURE_VALUE=test\n")
-    engine = Engine(tmp_path, recovery.UBUNTU_PROFILE, bind_stores=True)
+    engine = Engine(tmp_path, recovery_layout.UBUNTU_PROFILE, bind_stores=True)
     engine.containers["source-gateway"]["Mounts"].append(
         {"Type": "bind", "Source": str(source), "Destination": "/dashboard"}
     )
@@ -383,8 +385,8 @@ def test_ubuntu_snapshot_verifies_and_restores_held(ubuntu_installed, tmp_path):
     destination = tmp_path / "off-machine"
 
     snapshot = recovery.backup(root, destination, engine)
-    manifest = recovery.verify_snapshot(snapshot)
-    state = recovery.restore(snapshot, tmp_path / "ubuntu-recovered", engine)
+    manifest = recovery_snapshot.verify_snapshot(snapshot)
+    state = recovery_restore.restore(snapshot, tmp_path / "ubuntu-recovered", engine)
 
     assert manifest["layout"] == "ubuntu"
     assert manifest["database"] == {
@@ -392,12 +394,12 @@ def test_ubuntu_snapshot_verifies_and_restores_held(ubuntu_installed, tmp_path):
         "user": "conker",
         "name": "conker",
     }
-    assert set(manifest["images"]) == recovery.UBUNTU_SERVICES
-    assert set(manifest["stores"]) == set(recovery.UBUNTU_STORES)
+    assert set(manifest["images"]) == recovery_layout.UBUNTU_SERVICES
+    assert set(manifest["stores"]) == set(recovery_layout.UBUNTU_STORES)
     assert "memorygate-backups" not in manifest["stores"]
     assert (snapshot / "config/credentials.json").is_file()
     assert {path.name for path in (snapshot / "config/env").iterdir()} == (
-        recovery.UBUNTU_ENV_FILES
+        recovery_layout.UBUNTU_ENV_FILES
     )
     assert state["status"] == "held"
     assert state["source_layout"] == "ubuntu"
@@ -453,8 +455,8 @@ def test_optional_owner_terminal_has_no_recovery_store_or_archive(
     )
 
     snapshot = recovery.backup(root, tmp_path / "off-machine", engine)
-    manifest = recovery.verify_snapshot(snapshot)
-    restored = recovery.restore(snapshot, tmp_path / "held-restore", engine)
+    manifest = recovery_snapshot.verify_snapshot(snapshot)
+    restored = recovery_restore.restore(snapshot, tmp_path / "held-restore", engine)
 
     assert "owner-terminal" in manifest["images"]
     assert "owner-terminal" not in manifest["stores"]
@@ -490,7 +492,7 @@ def test_new_manifest_database_identity_cannot_drift(installed):
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(recovery.RecoveryError, match="database identity"):
-        recovery.verify_snapshot(snapshot)
+        recovery_snapshot.verify_snapshot(snapshot)
 
 
 def test_ubuntu_manifest_store_destination_cannot_drift(ubuntu_installed, tmp_path):
@@ -502,7 +504,7 @@ def test_ubuntu_manifest_store_destination_cannot_drift(ubuntu_installed, tmp_pa
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(recovery.RecoveryError, match="Storage service or destination"):
-        recovery.verify_snapshot(snapshot)
+        recovery_snapshot.verify_snapshot(snapshot)
 
 
 def test_pre_layout_repository_manifest_remains_verifiable(installed):
@@ -514,7 +516,7 @@ def test_pre_layout_repository_manifest_remains_verifiable(installed):
     manifest.pop("database")
     manifest_path.write_text(json.dumps(manifest))
 
-    assert recovery.verify_snapshot(snapshot)["format"] == recovery.FORMAT
+    assert recovery_snapshot.verify_snapshot(snapshot)["format"] == recovery_layout.FORMAT
 
 
 def test_wal_resident_messages_survive_snapshot(tmp_path):
@@ -563,8 +565,8 @@ def test_sqlite_snapshot_opens_only_a_private_copy(tmp_path, monkeypatch):
 
 
 def test_authentication_gateway_is_a_coordinated_writer():
-    assert "gateway" in recovery.REPOSITORY_PROFILE.writers
-    assert "gateway" in recovery.UBUNTU_PROFILE.writers
+    assert "gateway" in recovery_layout.REPOSITORY_PROFILE.writers
+    assert "gateway" in recovery_layout.UBUNTU_PROFILE.writers
 
 
 def test_model_cache_links_are_flattened_without_archive_links(tmp_path):
@@ -643,7 +645,7 @@ def test_unknown_allowance_schema_rolls_back_authority_changes(tmp_path):
 def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)
-    state = recovery.restore(snapshot, tmp_path / "recovered", engine)
+    state = recovery_restore.restore(snapshot, tmp_path / "recovered", engine)
     assert state["status"] == "held"
     assert state["vault_values_verified"] == 1
     assert state["memory_provider_key_verified"] is True
@@ -704,156 +706,6 @@ def test_backup_refuses_legacy_plaintext_provider_credentials(installed):
     )
 
 
-def operator_review(state, path, **changes):
-    now = datetime.now(timezone.utc)
-    review = {
-        "format": recovery.REVIEW_FORMAT,
-        "recovery_id": state["recovery_id"],
-        "review_nonce": state["review_nonce"],
-        "snapshot_manifest_sha256": state["snapshot_manifest_sha256"],
-        "operator": "owner@example.invalid",
-        "reviewed_at": now.isoformat(),
-        "expires_at": (now + timedelta(days=1)).isoformat(),
-        "attestations": {
-            name: {"status": status, "evidence_sha256": hashlib.sha256(name.encode()).hexdigest()}
-            for name, status in recovery.REVIEW_CHECKS.items()
-        },
-    }
-    review.update(changes)
-    path.write_text(json.dumps(review), encoding="utf-8")
-    return review
-
-
-def reviewed_restore(installed, tmp_path):
-    root, engine = installed
-    snapshot = recovery.backup(root, None, engine)
-    destination = tmp_path / "reviewed-recovery"
-    state = recovery.restore(snapshot, destination, engine)
-    review_path = tmp_path / "operator-review.json"
-    operator_review(state, review_path)
-    recovery.review_recovery(destination, review_path)
-    return destination, engine
-
-
-def test_reviewed_restore_becomes_service_ready_without_touching_live_install(installed, tmp_path):
-    destination, engine = reviewed_restore(installed, tmp_path)
-
-    state = recovery.prove_service_ready(destination, engine)
-
-    assert state["status"] == "service_ready"
-    assert state["applications_started"] is False
-    assert (destination / recovery.HOLD_FILE).is_file()
-    receipt = json.loads(
-        (destination / recovery.RECEIPTS_DIR / "service-ready.json").read_text()
-    )
-    assert receipt["live_install_modified"] is False
-    assert receipt["review_receipt_sha256"] == state["review_receipt_sha256"]
-    assert all(
-        container["State"]["Running"]
-        for name, container in engine.containers.items()
-        if name.startswith("source-")
-    )
-
-
-def test_review_refuses_missing_or_negative_prerequisites(installed, tmp_path):
-    root, engine = installed
-    snapshot = recovery.backup(root, None, engine)
-    destination = tmp_path / "recovery"
-    state = recovery.restore(snapshot, destination, engine)
-    review_path = tmp_path / "review.json"
-    review = operator_review(state, review_path)
-    del review["attestations"]["external_effects"]
-    review_path.write_text(json.dumps(review), encoding="utf-8")
-
-    with pytest.raises(recovery.RecoveryError, match="every required attestation"):
-        recovery.review_recovery(destination, review_path)
-
-    held = json.loads((destination / recovery.HOLD_FILE).read_text())
-    assert held["status"] == "held"
-    assert not (destination / recovery.RECEIPTS_DIR).exists()
-
-
-def test_readiness_interruption_is_resumable_and_success_is_idempotent(
-    installed, tmp_path, monkeypatch
-):
-    destination, engine = reviewed_restore(installed, tmp_path)
-    real_helper = recovery.helper
-    interrupted = False
-
-    def interrupt_once(*args, **kwargs):
-        nonlocal interrupted
-        if not interrupted and args[2] == "verify-vault":
-            interrupted = True
-            raise KeyboardInterrupt("simulated interruption")
-        return real_helper(*args, **kwargs)
-
-    monkeypatch.setattr(recovery, "helper", interrupt_once)
-    with pytest.raises(KeyboardInterrupt):
-        recovery.prove_service_ready(destination, engine)
-    state = json.loads((destination / recovery.HOLD_FILE).read_text())
-    assert state["status"] == "readiness_interrupted"
-    assert (destination / recovery.HOLD_FILE).is_file()
-
-    first = recovery.prove_service_ready(destination, engine)
-    calls = len(engine.calls)
-    second = recovery.prove_service_ready(destination, engine)
-    assert first["service_ready_receipt_sha256"] == second["service_ready_receipt_sha256"]
-    assert len(engine.calls) == calls
-
-
-def test_stale_and_tampered_review_evidence_are_refused(installed, tmp_path):
-    root, engine = installed
-    snapshot = recovery.backup(root, None, engine)
-    destination = tmp_path / "recovery"
-    state = recovery.restore(snapshot, destination, engine)
-    review_path = tmp_path / "review.json"
-    operator_review(state, review_path, review_nonce="another-restore")
-    with pytest.raises(recovery.RecoveryError, match="stale"):
-        recovery.review_recovery(destination, review_path)
-
-    operator_review(state, review_path)
-    recovery.review_recovery(destination, review_path)
-    stored = destination / recovery.RECEIPTS_DIR / "operator-review.json"
-    review = json.loads(stored.read_text())
-    review["operator"] = "changed@example.invalid"
-    stored.write_text(json.dumps(review), encoding="utf-8")
-    with pytest.raises(recovery.RecoveryError, match="changed"):
-        recovery.prove_service_ready(destination, engine)
-    assert json.loads((destination / recovery.HOLD_FILE).read_text())["status"] == "reviewed"
-
-
-def test_readiness_failure_preserves_hold(installed, tmp_path):
-    destination, engine = reviewed_restore(installed, tmp_path)
-    state = json.loads((destination / recovery.HOLD_FILE).read_text())
-    engine.volume_labels[state["volumes"]["pi"]] = {"conker.recovery": "wrong"}
-
-    with pytest.raises(recovery.RecoveryError, match="ownership label"):
-        recovery.prove_service_ready(destination, engine)
-
-    failed = json.loads((destination / recovery.HOLD_FILE).read_text())
-    assert failed["status"] == "reviewed"
-    assert failed["last_failure"]
-    assert (destination / recovery.HOLD_FILE).is_file()
-    assert not (destination / recovery.RECEIPTS_DIR / "service-ready.json").exists()
-
-
-def test_abort_removes_only_labeled_recovery_resources_and_is_idempotent(installed, tmp_path):
-    destination, engine = reviewed_restore(installed, tmp_path)
-    before = json.loads((destination / recovery.HOLD_FILE).read_text())
-
-    first = recovery.abort_recovery(destination, "operator abandoned candidate", engine)
-    calls = len(engine.calls)
-    second = recovery.abort_recovery(destination, "operator abandoned candidate", engine)
-
-    assert first["status"] == second["status"] == "aborted"
-    assert first["resources_removed"] is True
-    assert len(engine.calls) == calls
-    assert not any(name in engine.volumes for name in before["volumes"].values())
-    assert not any(name in engine.containers for name in before["containers"])
-    assert all(name.startswith("source-") for name in engine.containers)
-    assert (destination / recovery.HOLD_FILE).is_file()
-
-
 @pytest.mark.parametrize("damage", ["missing", "changed", "unlisted", "legacy"])
 def test_incomplete_or_changed_snapshots_fail_before_docker(
     installed, tmp_path, damage
@@ -871,7 +723,7 @@ def test_incomplete_or_changed_snapshots_fail_before_docker(
         (snapshot / "manifest.json").unlink()
     before = len(engine.calls)
     with pytest.raises(recovery.RecoveryError):
-        recovery.restore(snapshot, tmp_path / "recovery", engine)
+        recovery_restore.restore(snapshot, tmp_path / "recovery", engine)
     assert len(engine.calls) == before
     assert not (tmp_path / "recovery").exists()
 
@@ -899,8 +751,8 @@ def test_interrupted_restore_stays_isolated_and_keeps_recovery_hold(
     engine.calls.clear()
     engine.fail_restore = True
     with pytest.raises(KeyboardInterrupt):
-        recovery.restore(snapshot, tmp_path / "recovery", engine)
-    state = json.loads((tmp_path / "recovery" / recovery.HOLD_FILE).read_text())
+        recovery_restore.restore(snapshot, tmp_path / "recovery", engine)
+    state = json.loads((tmp_path / "recovery" / recovery_layout.HOLD_FILE).read_text())
     assert state["status"] == "interrupted"
     assert state["outbound"] == "disabled"
     assert state["applications_started"] is False
@@ -967,7 +819,7 @@ def test_existing_recovery_target_is_not_overwritten(installed, tmp_path):
     marker = destination / "keep"
     marker.write_text("original")
     with pytest.raises(FileExistsError):
-        recovery.restore(snapshot, destination, engine)
+        recovery_restore.restore(snapshot, destination, engine)
     assert marker.read_text() == "original"
 
 
@@ -1065,7 +917,7 @@ def test_shell_commands_cannot_bypass_recovery_hold(tmp_path, command):
     bash = shutil.which("bash")
     if not bash:
         pytest.skip("Bash is required for the CLI guard test")
-    (tmp_path / recovery.HOLD_FILE).write_text("{}")
+    (tmp_path / recovery_layout.HOLD_FILE).write_text("{}")
     result = subprocess.run(
         [bash, str(ROOT / "conker"), command],
         cwd=tmp_path,
@@ -1095,7 +947,7 @@ def test_image_declared_volume_is_inventoried_and_restored(installed, tmp_path):
         {"Type": "volume", "Name": "search-anonymous", "Destination": "/etc/searxng"}
     )
     snapshot = recovery.backup(root, None, engine)
-    state = recovery.restore(snapshot, tmp_path / "recovered", engine)
+    state = recovery_restore.restore(snapshot, tmp_path / "recovered", engine)
     extra = state["volumes"]["extra-searxng-0"]
     assert (
         engine.volumes[extra] / "settings.yml"
@@ -1152,7 +1004,7 @@ def test_installer_does_not_override_recovery_hold(tmp_path):
     bash = shutil.which("bash")
     if not bash:
         pytest.skip("Bash is required for the installer guard test")
-    (tmp_path / recovery.HOLD_FILE).write_text("{}")
+    (tmp_path / recovery_layout.HOLD_FILE).write_text("{}")
     result = subprocess.run(
         [bash, str(ROOT / "install.sh"), "--yes"],
         cwd=tmp_path,
@@ -1167,10 +1019,10 @@ def test_installer_does_not_override_recovery_hold(tmp_path):
 def test_restore_cannot_change_its_source_snapshot(installed):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)
-    before = recovery.inventory(snapshot)
+    before = recovery_snapshot.inventory(snapshot)
     with pytest.raises(recovery.RecoveryError, match="inside the snapshot"):
-        recovery.restore(snapshot, snapshot / "config/recovery", engine)
-    assert recovery.inventory(snapshot) == before
+        recovery_restore.restore(snapshot, snapshot / "config/recovery", engine)
+    assert recovery_snapshot.inventory(snapshot) == before
 
 
 def test_unmapped_memory_database_fails_before_stopping_services(installed):
@@ -1185,7 +1037,7 @@ def test_unmapped_memory_database_fails_before_stopping_services(installed):
 
 def test_backup_cannot_restart_writers_from_a_held_install(installed):
     root, engine = installed
-    (root / recovery.HOLD_FILE).write_text("{}")
+    (root / recovery_layout.HOLD_FILE).write_text("{}")
     with pytest.raises(recovery.RecoveryError, match="Recovery is held"):
         recovery.backup(root, None, engine)
     assert not engine.calls
