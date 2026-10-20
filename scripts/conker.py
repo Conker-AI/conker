@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from conker_chat import operation as chat_operation
+from conker_config import config_operation
 from conker_context import operation as context_operation
 from conker_context import pi_call
 from conker_files import operation as files_operation
@@ -531,6 +532,8 @@ def main():
         value = {"plans": plans}
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
+    elif args.command == "config":
+        return config_operation(args, config, request)
     elif args.command == "context":
         value = context_operation(args, config, request)
     elif args.command == "message":
