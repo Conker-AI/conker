@@ -153,6 +153,8 @@ python scripts/conker.py auth chatgpt login
 python scripts/conker.py auth chatgpt status
 python scripts/conker.py auth claude login
 python scripts/conker.py auth claude status
+python scripts/conker.py limits
+python scripts/conker.py limits claude
 python scripts/conker.py native codex
 python scripts/conker.py native claude
 python scripts/conker.py api pi /agents
@@ -169,6 +171,13 @@ content is suppressed. Each page reflects when it was read, not an immutable
 snapshot of the entire history. `show SESSION_ID` reads the full retained chat.
 For scripts needing the earlier raw recent-list response, use
 `python scripts/conker.py api pi /sessions`; that HTTP contract is unchanged.
+
+`limits` shows how much of each subscription is left: for ChatGPT and Claude, every window the
+provider reports (the 5-hour window, the weekly window and any model-specific ones) as
+`usedPercent` and `leftPercent`, with `resetsAt`. ChatGPT's figures come from the Codex runtime
+(`account/rateLimits/read`), Claude's from Claude Code's own `/usage`, which runs no model and has no
+tools; both use Conker's isolated sign-ins. A plan that is signed out, unreadable or not run by this
+installation is listed as unavailable with a reason, never as zero. Nothing here estimates money.
 
 `models --save` accepts the same revision-bound update as the UI, containing
 `expected_revision` and `configuration`. `api pi` and `api toolgate` expose service

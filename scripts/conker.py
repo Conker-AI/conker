@@ -497,6 +497,23 @@ def main():
         )
     elif args.command == "profiles":
         value = pi_call(request, config, "/models/profiles")
+    elif args.command == "limits":
+        plans = []
+        for provider in [args.provider] if args.provider else ["chatgpt", "claude"]:
+            try:
+                plans.append(request(config, "providers", f"/{provider}/limits"))
+            except HTTPError as exc:
+                if exc.code != 404:
+                    raise
+                # This installation does not run that subscription's runtime.
+                plans.append(
+                    {
+                        "provider": provider,
+                        "available": False,
+                        "problem": "not_configured",
+                    }
+                )
+        value = {"plans": plans}
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
     elif args.command == "context":

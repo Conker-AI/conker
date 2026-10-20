@@ -20,6 +20,7 @@ from native_claude import Claude
 from native_claude_sessions import SessionError, Sessions, stop_payload
 from native_codex_sessions import Sessions as CodexSessions
 from native_codex_sessions import raw_list_query
+from plan_limits import read_chatgpt, read_claude
 from starlette.concurrency import run_in_threadpool
 
 
@@ -131,9 +132,17 @@ def create_app(config):
         except (ValueError, OSError):
             return JSONResponse({"error": "provider_operation_failed"}, status_code=503)
 
+    @app.get("/chatgpt/limits")
+    def chatgpt_limits():
+        return read_chatgpt(chatgpt)
+
     @app.get("/claude")
     def claude_status():
         return claude.status()
+
+    @app.get("/claude/limits")
+    def claude_limits():
+        return read_claude(claude)
 
     @app.post("/claude")
     async def claude_operation(request: Request):
