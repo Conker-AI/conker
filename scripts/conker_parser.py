@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from conker_chat import register as register_chat
+from conker_config import register as register_config
 from conker_context import register as register_context
 from conker_files import register as register_files
 from conker_inbox import register as register_inbox
@@ -90,6 +91,7 @@ def build_parser(description):
     register_message(commands)
     register_chat(commands)
     register_inbox(commands)
+    register_config(commands)
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )
