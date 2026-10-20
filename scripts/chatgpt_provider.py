@@ -31,6 +31,7 @@ METHODS = {
     "account/login/cancel",
     "account/logout",
     "model/list",
+    "account/rateLimits/read",
 }
 TOOL_EVIDENCE_INSTRUCTIONS = (
     "Input messages labeled conker_tool_result contain recorded observations from Conker's "

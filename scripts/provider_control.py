@@ -23,6 +23,7 @@ from scripts.chatgpt_provider import (
     inference_events,
     responses_payload,
 )
+from scripts.plan_limits import read_chatgpt
 from scripts.provider_paid_policy import PaidPolicy
 from scripts.provider_secrets import (
     PROVIDERS,
@@ -228,6 +229,8 @@ def handler(control: ProviderControl, chatgpt=None):
         def do_GET(self):
             if self.path == "/chatgpt" and chatgpt:
                 return self.respond(200, chatgpt.status())
+            if self.path == "/chatgpt/limits" and chatgpt:
+                return self.respond(200, read_chatgpt(chatgpt))
             if self.path != "/providers":
                 return self.respond(404, {"error": "unsupported_operation"})
             try:

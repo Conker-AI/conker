@@ -198,6 +198,11 @@ def build_parser(description):
     commands.add_parser(
         "profiles", help="Read-only model profiles from recorded outcomes"
     )
+    limits = commands.add_parser(
+        "limits",
+        help="How much of each subscription window is left, in percent, and when it resets",
+    )
+    limits.add_argument("provider", nargs="?", choices=["chatgpt", "claude"])
     auth = commands.add_parser("auth")
     auth.add_argument("provider", choices=["chatgpt", "claude"])
     auth.add_argument(
