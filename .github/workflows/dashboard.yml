@@ -39,7 +39,7 @@ jobs:
       - name: API types match the pinned Pi
         env:
           PI_DOCS: ${{ github.workspace }}/pinned-pi/docs
-        run: npm run check:api-types
+        run: npm run api:types:check
       - run: npm run lint
       - run: npm run design:check:test
       - run: npm run build

@@ -63,7 +63,7 @@
     "check:codex-sessions": "node scripts/check-codex-sessions.cjs",
     "check:memory-corrections": "node scripts/check-memory-corrections.cjs",
     "api:types": "node scripts/api-types.mjs",
-    "check:api-types": "node scripts/api-types.mjs --check"
+    "api:types:check": "node scripts/api-types.mjs --check"
   },
   "dependencies": {
     "@animateicons/react": "^0.6.0",
