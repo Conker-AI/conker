@@ -148,6 +148,7 @@ python scripts/conker.py draft start-status MY_UNIQUE_REQUEST_ID
 python scripts/conker.py draft show SESSION_ID
 python scripts/conker.py draft clear SESSION_ID --expected-revision 1
 python scripts/conker.py models
+python scripts/conker.py definitions --kind template --search research
 python scripts/conker.py models --save role-update.json
 python scripts/conker.py auth chatgpt login
 python scripts/conker.py auth chatgpt status
@@ -171,6 +172,10 @@ content is suppressed. Each page reflects when it was read, not an immutable
 snapshot of the entire history. `show SESSION_ID` reads the full retained chat.
 For scripts needing the earlier raw recent-list response, use
 `python scripts/conker.py api pi /sessions`; that HTTP contract is unchanged.
+
+`definitions` lists agents, teams, team templates, skills, cron jobs and projects in one shape
+(kind, name, description, state, revision, times, and the kind's own route). `--kind`, `--search` and
+`--archived` filter it; each kind keeps its own commands for details and changes.
 
 `limits` shows how much of each subscription is left: for ChatGPT and Claude, every window the
 provider reports (the 5-hour window, the weekly window and any model-specific ones) as

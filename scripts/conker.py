@@ -81,6 +81,14 @@ def request(
     if query is not None:
         if service == "pi" and path == "/sessions/history" and body is None:
             encoded = urlencode(history_query(query))
+        elif service == "pi" and path == "/definitions" and body is None:
+            encoded = urlencode(
+                {
+                    key: query[key]
+                    for key in ("kind", "search", "archived")
+                    if key in query
+                }
+            )
         elif service == "pi" and path.endswith("/branch-history") and body is None:
             encoded = urlencode(
                 {key: query[key] for key in ("limit", "cursor") if key in query}
@@ -498,6 +506,13 @@ def main():
         )
     elif args.command == "profiles":
         value = pi_call(request, config, "/models/profiles")
+    elif args.command == "definitions":
+        query = {"archived": "true" if args.archived else "false"}
+        if args.kind:
+            query["kind"] = args.kind
+        if args.search:
+            query["search"] = args.search
+        value = pi_call(request, config, "/definitions", query=query)
     elif args.command == "limits":
         plans = []
         for provider in [args.provider] if args.provider else ["chatgpt", "claude"]:

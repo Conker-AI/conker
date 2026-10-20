@@ -200,6 +200,17 @@ def build_parser(description):
     commands.add_parser(
         "profiles", help="Read-only model profiles from recorded outcomes"
     )
+    definitions = commands.add_parser(
+        "definitions",
+        help="Agents, teams, templates, skills, cron jobs and projects in one list",
+    )
+    definitions.add_argument(
+        "--kind", choices=["agent", "team", "template", "skill", "job", "project"]
+    )
+    definitions.add_argument("--search", help="Text to find in names and descriptions")
+    definitions.add_argument(
+        "--archived", action="store_true", help="Include archived ones"
+    )
     limits = commands.add_parser(
         "limits",
         help="How much of each subscription window is left, in percent, and when it resets",
