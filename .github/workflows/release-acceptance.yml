@@ -50,8 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: python -m pip install pytest==8.3.5
@@ -67,7 +67,7 @@ jobs:
       group: conker-assembled-release-acceptance
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           clean: true
       - name: Run exact published image matrix
@@ -77,7 +77,7 @@ jobs:
         run: python3 scripts/release_acceptance.py --require-conversation
       - name: Retain acceptance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: assembled-release-acceptance-${{ github.run_id }}
           path: release-acceptance-evidence/
