@@ -57,6 +57,8 @@ flawless answers or complete parity with every other harness.
 | **Proposal** | Suggested work for you to consider; accepting it records your decision. |
 | **Approval** | Permission for one exact action under the configured policy. |
 
+Every other word, in plain language: [Glossary](reference/glossary.md).
+
 ## Where to go next
 
 - [2 · How it works](2-how-it-works.md): the services and boundaries.
