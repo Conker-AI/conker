@@ -56,6 +56,10 @@ def render(value):
                 line = f"  {marker} {title}"
             elif item["kind"] == "attention":
                 line = f"  {marker} {title}: {item.get('status', '')}"
+            elif item["kind"] == "plan" and item.get("resetsAt"):
+                line = (
+                    f"  {marker} {title}, resets {_format_reset(item['resetsAt'], tz)}"
+                )
             else:
                 line = f"  {marker} {title}"
 
@@ -125,6 +129,15 @@ def _needs_you_marker(item):
             return "-"
     else:
         return "-"
+
+
+def _format_reset(value, tz):
+    """An ISO reset time as the owner's local weekday and time."""
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return moment.astimezone(ZoneInfo(tz)).strftime("%a %H:%M")
+    except (ValueError, KeyError):
+        return value
 
 
 def _truncate_title(title, max_length):

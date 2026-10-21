@@ -276,13 +276,17 @@ def inference_handler(control):
             pass
 
         def do_GET(self):
-            if self.path != "/status":
+            if self.path not in {"/status", "/limits"}:
                 self.send_error(404)
                 return
-            value = control.status()
-            content = json.dumps(
-                {"connected": value["connected"], "available": value["available"]}
-            ).encode()
+            if self.path == "/limits":
+                # Plan usage in percent, for Pi's alerts; it reads nothing else.
+                content = json.dumps(read_chatgpt(control)).encode()
+            else:
+                value = control.status()
+                content = json.dumps(
+                    {"connected": value["connected"], "available": value["available"]}
+                ).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(content)))

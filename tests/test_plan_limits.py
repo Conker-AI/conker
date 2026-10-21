@@ -268,3 +268,88 @@ def test_cli_lists_both_plans_and_marks_a_missing_runtime(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["conker.py", "limits", "chatgpt"])
     assert cli.cli() == 0
     assert asked == [("providers", "/chatgpt/limits", None)]
+
+
+def test_pi_reads_plan_usage_only_with_its_inference_key(tmp_path):
+    config = {
+        "native_providers": {
+            "state": str(tmp_path),
+            "codex": str(tmp_path / "absent"),
+            "claude": str(tmp_path / "absent"),
+            "control_key": "c" * 32,
+            "inference_key": "i" * 32,
+        }
+    }
+    control_key = {"Authorization": "Bearer " + "c" * 32}
+    inference_key = {"Authorization": "Bearer " + "i" * 32}
+    with TestClient(create_app(config)) as client:
+        for path, provider in (
+            ("/inference/limits", "chatgpt"),
+            ("/inference/claude/limits", "claude"),
+        ):
+            assert client.get(path).status_code == 401
+            assert client.get(path, headers=control_key).status_code == 401
+            assert client.get(path, headers=inference_key).json() == {
+                "provider": provider,
+                "available": False,
+                "problem": "runtime_unavailable",
+            }
+
+
+def test_the_inference_socket_serves_plan_usage_and_status_only():
+    from http.server import ThreadingHTTPServer
+    from urllib.error import HTTPError
+    from urllib.request import urlopen
+
+    from scripts.provider_control import inference_handler
+
+    class Rpc:
+        def call(self, method, params):
+            return (
+                {"account": {"type": "chatgpt"}} if method == "account/read" else CODEX
+            )
+
+    control = SimpleNamespace(
+        rpc=Rpc(),
+        lock=threading.Lock(),
+        status=lambda: {"connected": True, "available": True},
+    )
+    server = ThreadingHTTPServer(("127.0.0.1", 0), inference_handler(control))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    origin = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        with urlopen(origin + "/limits", timeout=10) as response:
+            assert json.load(response)["windows"][0]["leftPercent"] == 81
+        with urlopen(origin + "/status", timeout=10) as response:
+            assert json.load(response) == {"connected": True, "available": True}
+        try:
+            urlopen(origin + "/chatgpt", timeout=10)
+            raise AssertionError("only status and limits are served")
+        except HTTPError as error:
+            assert error.code == 404
+    finally:
+        server.shutdown()
+
+
+def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
+    import conker as cli
+
+    asked = []
+
+    def request(config, service, path, body=None, **_):
+        asked.append((service, path, body))
+        return {"ok": True}
+
+    monkeypatch.setattr(cli, "read_config", dict)
+    monkeypatch.setattr(cli, "request", request)
+    alert = "plan_" + "a" * 32
+    for arguments in (["--alerts"], ["--dismiss", alert]):
+        monkeypatch.setattr(sys, "argv", ["conker.py", "limits", *arguments])
+        assert cli.cli() == 0
+    assert asked == [
+        ("pi", "/plans/usage", None),
+        ("pi", f"/plans/alerts/{alert}/dismiss", {}),
+    ]
+    monkeypatch.setattr(sys, "argv", ["conker.py", "limits", "--dismiss", "../x"])
+    assert cli.cli() == 1
+    assert "conker limits --alerts" in capsys.readouterr().err

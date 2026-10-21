@@ -186,6 +186,15 @@ def create_app(config):
         status = claude.status()
         return {key: status[key] for key in ("available", "connected")}
 
+    # Plan usage in percent, for Pi's alerts; the same readings as the owner's limits routes.
+    @app.get("/inference/limits")
+    def inference_limits():
+        return read_chatgpt(chatgpt)
+
+    @app.get("/inference/claude/limits")
+    def claude_inference_limits():
+        return read_claude(claude)
+
     @app.post("/inference/responses")
     async def responses(request: Request):
         try:

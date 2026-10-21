@@ -78,6 +78,14 @@ retained settings as last checked. Changing the owner or server connection clear
 an unsent key. See [Hosted provider credentials](reference/provider-credentials.md)
 for verification, activation and recovery.
 
+**How much of a plan is left.** `python scripts/conker.py limits` shows each ChatGPT
+and Claude plan window in percent, with its reset time. It costs no model call. Pi
+also checks every 15 minutes. When a window passes your level (`plans.alert_percent`,
+default 80), the Inbox gets a heads-up, and a reset line when the window resets.
+`limits --alerts` lists Pi's readings and open alerts. `limits --dismiss ID` hides
+one alert until its window resets. Turn the alerts off with
+`conker config set plans.alerts off`.
+
 Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see
 [Harnesses and model roles](harnesses-and-models-2026-10-09.md).

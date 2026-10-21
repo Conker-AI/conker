@@ -385,3 +385,44 @@ def test_inbox_pi_refusal_exits(invoke, capsys):
     assert (
         "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
     )
+
+
+def test_a_plan_alert_shows_when_its_window_resets():
+    zero = {
+        "answers": 0,
+        "actions": 0,
+        "tasksCompleted": 0,
+        "jobsCompleted": 0,
+        "costUsd": 0.0,
+    }
+    value = {
+        "generatedAt": 1792240794.5,
+        "day": {
+            "date": "2026-10-21",
+            "timeZone": "Asia/Jerusalem",
+            "startsAt": 1792188000.0,
+        },
+        "needsYou": [
+            {
+                "kind": "plan",
+                "id": "plan_" + "a" * 32,
+                "title": "ChatGPT weekly limit 84% used",
+                "since": 1792240000.0,
+                "usedPercent": 84,
+                "resetsAt": "2026-10-23T09:00:00Z",
+            }
+        ],
+        "handled": [
+            {
+                "kind": "plan-reset",
+                "title": "Claude 5-hour limit reset",
+                "at": 1792240500.0,
+            }
+        ],
+        "upcoming": [],
+        "impact": {"today": zero, "week": zero},
+        "counts": {"needsYou": 1, "handled": 1, "upcoming": 0},
+    }
+    text = render(value)
+    assert "- ChatGPT weekly limit 84% used, resets Fri 12:00" in text
+    assert "✓ Claude 5-hour limit reset" in text
