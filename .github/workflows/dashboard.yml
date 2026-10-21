@@ -2,10 +2,10 @@ name: Dashboard
 
 on:
   pull_request:
-    paths: ["dashboard/**", ".github/workflows/dashboard.yml"]
+    paths: ["dashboard/**", ".github/workflows/dashboard.yml", "scripts/workspace-sources.json"]
   push:
     branches: [main]
-    paths: ["dashboard/**", ".github/workflows/dashboard.yml"]
+    paths: ["dashboard/**", ".github/workflows/dashboard.yml", "scripts/workspace-sources.json"]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,20 @@ jobs:
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
       - run: npm ci
+      # The generated API types must match the Pi this Conker pins (scripts/workspace-sources.json).
+      - name: Pinned Pi
+        id: pin
+        run: echo "pi=$(jq -r .pi ../scripts/workspace-sources.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: Conker-AI/pi
+          ref: ${{ steps.pin.outputs.pi }}
+          path: pinned-pi
+          sparse-checkout: docs
+      - name: API types match the pinned Pi
+        env:
+          PI_DOCS: ${{ github.workspace }}/pinned-pi/docs
+        run: npm run api:types:check
       - run: npm run lint
       - run: npm run design:check:test
       - run: npm run build

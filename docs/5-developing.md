@@ -63,6 +63,9 @@ npm run check:gateway      # if you touched live/gateway code
 - All data goes through the `ConkerClient` interface (`src/lib/api`). Fixture mode and gateway mode
   are separate, and gateway mode never falls back to sample data.
 - Check affected screens at phone width and desktop width, in light and dark themes.
+- Types for Pi's and the gateway's APIs are generated, not written: `src/lib/api/generated/*.d.ts`
+  come from Pi's OpenAPI documents (`npm run api:types`, with the pinned Pi beside this repo). CI
+  fails when they differ from the Pi in `scripts/workspace-sources.json`.
 
 ## Backend services
 
