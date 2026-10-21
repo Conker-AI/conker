@@ -19,6 +19,8 @@ on:
       - "scripts/terminal_workspace.py"
       - "tests/test_release_acceptance.py"
       - "tests/test_recovery.py"
+      - "tests/test_recovery_ubuntu.py"
+      - "tests/recovery_fakes.py"
       - "docs/reference/release-acceptance.md"
       - "versions.env"
   push:
@@ -40,6 +42,8 @@ on:
       - "scripts/terminal_workspace.py"
       - "tests/test_release_acceptance.py"
       - "tests/test_recovery.py"
+      - "tests/test_recovery_ubuntu.py"
+      - "tests/recovery_fakes.py"
       - "docs/reference/release-acceptance.md"
       - "versions.env"
   release:
