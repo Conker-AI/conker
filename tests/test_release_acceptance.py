@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
-from scripts.release_acceptance import (
+# The gate runs as `python3 scripts/release_acceptance.py`, so its modules import each other flat.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from release_acceptance import AcceptanceGate
+from release_checks import (
     EVIDENCE_SCHEMA,
     SETUP_STEP_IDS,
     AcceptanceError,
-    AcceptanceGate,
     Completed,
     Evidence,
     assert_complete_setup,
