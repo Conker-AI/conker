@@ -21,6 +21,7 @@ and professional-engagement direction for future work.
 - [Capability matrix](reference/capability-matrix.md): executable UI, CLI, gateway and deployment coverage
 - [Glossary](reference/glossary.md): every kind of thing in plain words, and the other names code uses
 - [Settings](reference/settings.md): every setting, its default and its home; `conker config`
+- [Workflow builder](reference/workflow-builder.md): describe a workflow in words, review the draft, publish it
 - [CLI inspection](reference/cli-inspection.md): bounded headless views of the live control plane
 - [Chat CLI](reference/chat-cli.md): every chat feature from the terminal, starting with context settings
 - [Hosted provider credentials](reference/provider-credentials.md): stage, verify, activate and rotate keys

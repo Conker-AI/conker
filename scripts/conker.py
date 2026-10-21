@@ -33,6 +33,8 @@ from conker_inputs import (
 )
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
+from conker_workflows import workflow_operation
+from plan_limits import read_plans
 from workspace import read_config
 
 
@@ -88,6 +90,10 @@ def request(
                     for key in ("kind", "search", "archived")
                     if key in query
                 }
+            )
+        elif service == "toolgate-owner" and path == "/v2/owner/editor-capabilities":
+            encoded = urlencode(
+                {key: query[key] for key in ("kind", "limit", "after") if key in query}
             )
         elif service == "pi" and path.endswith("/branch-history") and body is None:
             encoded = urlencode(
@@ -514,22 +520,9 @@ def main():
             query["search"] = args.search
         value = pi_call(request, config, "/definitions", query=query)
     elif args.command == "limits":
-        plans = []
-        for provider in [args.provider] if args.provider else ["chatgpt", "claude"]:
-            try:
-                plans.append(request(config, "providers", f"/{provider}/limits"))
-            except HTTPError as exc:
-                if exc.code != 404:
-                    raise
-                # This installation does not run that subscription's runtime.
-                plans.append(
-                    {
-                        "provider": provider,
-                        "available": False,
-                        "problem": "not_configured",
-                    }
-                )
-        value = {"plans": plans}
+        value = read_plans(request, config, args.provider)
+    elif args.command == "workflow":
+        value = workflow_operation(args, config, request)
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
     elif args.command == "config":

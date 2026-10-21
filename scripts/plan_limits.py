@@ -13,6 +13,7 @@ import math
 import re
 import subprocess
 from datetime import UTC, datetime
+from urllib.error import HTTPError
 
 MAX_OUTPUT = 1_000_000
 # A local command: Claude Code reads the plan's usage itself and makes no model call. Nothing else
@@ -254,3 +255,19 @@ def read_claude(runtime):
     if result.returncode != 0:
         return unavailable("claude", "provider_request_failed")
     return claude(result.stdout[: MAX_OUTPUT + 1])
+
+
+def read_plans(request, config, provider=None) -> dict:
+    """`conker limits`: each subscription's plan usage, through its runtime's limits route."""
+    plans = []
+    for name in [provider] if provider else ["chatgpt", "claude"]:
+        try:
+            plans.append(request(config, "providers", f"/{name}/limits"))
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+            # This installation does not run that subscription's runtime.
+            plans.append(
+                {"provider": name, "available": False, "problem": "not_configured"}
+            )
+    return {"plans": plans}
