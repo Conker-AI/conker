@@ -2068,6 +2068,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow-drafts/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft
+         * @description A proposed editor workflow for review; saves nothing.
+         */
+        post: operations["draft_workflow_drafts_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/context/{session_id}/compact": {
         parameters: {
             query?: never;
@@ -4928,6 +4948,50 @@ export interface components {
             /** Costnotice */
             costNotice: string;
         };
+        /** Capability */
+        Capability: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "tool" | "workflow";
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Inputs */
+            inputs?: components["schemas"]["CapabilityInput"][];
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
+        };
+        /** CapabilityInput */
+        CapabilityInput: {
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @default string
+             */
+            type: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
         /** Case */
         Case: {
             /** Name */
@@ -5450,6 +5514,16 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** Exchange */
+        Exchange: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "builder";
+            /** Content */
+            content: string;
+        };
         /** Fields */
         Fields: {
             /** Name */
@@ -5694,6 +5768,7 @@ export interface components {
              */
             execution: "not-triggered";
         };
+        JsonValue: unknown;
         /** Judge */
         Judge: {
             /** Request Id */
@@ -7253,6 +7328,23 @@ export interface components {
              * @constant
              */
             acknowledgeCurrentCallMayOvershoot: true;
+        };
+        /** Request */
+        pi__agents__workflow_drafts__Request: {
+            /** Description */
+            description: string;
+            /** Draftid */
+            draftId?: string | null;
+            /** Conversation */
+            conversation?: components["schemas"]["Exchange"][];
+            /** Capabilities */
+            capabilities?: components["schemas"]["Capability"][];
+            /** Previous */
+            previous?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            } | null;
+            /** Issues */
+            issues?: string[];
         };
         /** Privacy */
         pi__calls__call_models__Privacy: {
@@ -12397,6 +12489,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["pi__context__summary_draft__Request"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_workflow_drafts_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["pi__agents__workflow_drafts__Request"];
             };
         };
         responses: {

@@ -158,7 +158,7 @@ jobs:
           CONKER_TEST_PI_SOURCE: ${{ github.workspace }}/gates/pi
         run: |
           set -o pipefail
-          python -m pytest -q -rs -p no:cacheprovider             tests/test_memory_authority_contract.py             tests/test_scheduled_budget_contract.py             tests/test_settings_registry_contract.py             tests/test_recovery_reconciliation.py             tests/test_subscription_continuation.py             "tests/test_recovery.py::test_current_toolgate_rejects_restored_approval"             "tests/test_recovery.py::test_restored_vault_opens_with_actual_toolgate"             ../gates/memorygate/integrations/test_pi_memory.py | tee pytest.out
+          python -m pytest -q -rs -p no:cacheprovider             tests/test_memory_authority_contract.py             tests/test_scheduled_budget_contract.py             tests/test_settings_registry_contract.py             tests/test_workflow_drafts_contract.py             tests/test_recovery_reconciliation.py             tests/test_subscription_continuation.py             "tests/test_recovery.py::test_current_toolgate_rejects_restored_approval"             "tests/test_recovery.py::test_restored_vault_opens_with_actual_toolgate"             ../gates/memorygate/integrations/test_pi_memory.py | tee pytest.out
           if grep -q "^SKIPPED" pytest.out; then
             echo "::error::A cross-gate test skipped; every one must run here."
             exit 1

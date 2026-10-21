@@ -69,7 +69,7 @@ the code or an older screen uses another name for it, that name appears under
 | Word | Meaning |
 |---|---|
 | **Tool** | One action Conker can take, such as reading a folder or calling a web service. Tools live in ToolGate. |
-| **Workflow** | Fixed steps that chain tools together. You write and publish it; agents can run a published workflow but cannot change it. |
+| **Workflow** | Fixed steps that chain tools together. You write it, or the [builder](workflow-builder.md) drafts it from your words, and you publish it. Agents can run a published workflow but cannot change it. |
 | **Job** | A tool or workflow that runs on a schedule: daily, weekly or every few hours. |
 | **Task** | A to-do with an outcome and what counts as done: planned, in progress, blocked, completed or cancelled. Making a task never starts work by itself. |
 | **Run** | One time something actually ran: a turn, a job, a team or a workflow. |
