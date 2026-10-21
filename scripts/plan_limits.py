@@ -271,3 +271,17 @@ def read_plans(request, config, provider=None) -> dict:
                 {"provider": name, "available": False, "problem": "not_configured"}
             )
     return {"plans": plans}
+
+
+ALERT_ID = re.compile(r"plan_[0-9a-f]{32}")
+
+
+def limits_operation(args, config, request, pi_call) -> dict:
+    """`conker limits`: usage now, Pi's recorded readings and open alerts, or dismiss one alert."""
+    if args.dismiss:
+        if not ALERT_ID.fullmatch(args.dismiss):
+            raise ValueError("Use a plan alert id from: conker limits --alerts")
+        return pi_call(request, config, f"/plans/alerts/{args.dismiss}/dismiss", {})
+    if args.alerts:
+        return pi_call(request, config, "/plans/usage")
+    return read_plans(request, config, args.provider)

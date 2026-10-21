@@ -218,6 +218,14 @@ def build_parser(description):
         help="How much of each subscription window is left, in percent, and when it resets",
     )
     limits.add_argument("provider", nargs="?", choices=["chatgpt", "claude"])
+    limits.add_argument(
+        "--alerts",
+        action="store_true",
+        help="Pi's latest readings and the plan alerts still open",
+    )
+    limits.add_argument(
+        "--dismiss", metavar="ALERT_ID", help="Hide one alert until its window resets"
+    )
     auth = commands.add_parser("auth")
     auth.add_argument("provider", choices=["chatgpt", "claude"])
     auth.add_argument(

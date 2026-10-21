@@ -144,6 +144,64 @@
       ]
     },
     {
+      "id": "plans.alerts",
+      "title": "Plan usage alerts",
+      "description": "A heads-up in the Inbox when a ChatGPT or Claude plan passes your level, and when it resets. Checked every 15 minutes.",
+      "scope": "global",
+      "tier": "basic",
+      "type": "toggle",
+      "default": true,
+      "home": {
+        "service": "pi",
+        "path": "/owner/preferences",
+        "key": "preferences",
+        "field": "planAlerts.enabled"
+      },
+      "effect": "live",
+      "keywords": [
+        "subscription",
+        "limits",
+        "usage",
+        "chatgpt",
+        "claude",
+        "inbox"
+      ],
+      "related": [
+        "plans.alert_percent"
+      ]
+    },
+    {
+      "id": "plans.alert_percent",
+      "title": "Plan alert level",
+      "description": "How much of a plan window may be used before the alert, in percent.",
+      "scope": "global",
+      "tier": "basic",
+      "type": "number",
+      "default": 80,
+      "home": {
+        "service": "pi",
+        "path": "/owner/preferences",
+        "key": "preferences",
+        "field": "planAlerts.percent"
+      },
+      "effect": "live",
+      "keywords": [
+        "subscription",
+        "limits",
+        "usage",
+        "threshold"
+      ],
+      "dependsOn": {
+        "id": "plans.alerts",
+        "value": true
+      },
+      "related": [
+        "plans.alerts"
+      ],
+      "min": 50,
+      "max": 100
+    },
+    {
       "id": "companion.daily_budget.suggestions",
       "title": "Suggestions per day",
       "description": "How many suggestions the Companion may make each day.",

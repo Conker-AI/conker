@@ -111,6 +111,7 @@ PREFERENCES = {
     "urgency": "meaningful",
     "dailyBudget": {"suggestions": 4, "researchMinutes": 30, "costCents": 0},
     "idleTimeoutMinutes": 15,
+    "planAlerts": {"enabled": True, "percent": 80},
 }
 
 

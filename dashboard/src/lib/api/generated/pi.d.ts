@@ -470,6 +470,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plans/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage
+         * @description The latest reading of each plan window and the alerts still open.
+         */
+        get: operations["usage_plans_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/alerts/{alert_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description Hide an alert until its window resets.
+         */
+        post: operations["dismiss_plans_alerts__alert_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/characters/{agent_id}": {
         parameters: {
             query?: never;
@@ -6040,6 +6080,7 @@ export interface components {
             dailyBudget: components["schemas"]["DailyBudget"];
             /** Idletimeoutminutes */
             idleTimeoutMinutes: number;
+            planAlerts?: components["schemas"]["PlanAlerts"];
         };
         /** Phase */
         Phase: {
@@ -6050,6 +6091,13 @@ export interface components {
             state: "missing" | "complete" | "awaiting_owner" | "outcome_unknown" | "refused" | "invalid_policy";
             /** Detail */
             detail: string;
+        };
+        /** PlanAlerts */
+        PlanAlerts: {
+            /** Enabled */
+            enabled: boolean;
+            /** Percent */
+            percent: number;
         };
         /** Policy */
         "Policy-Input": {
@@ -8785,6 +8833,72 @@ export interface operations {
                 "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_plans_usage_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_plans_alerts__alert_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path: {
+                alert_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

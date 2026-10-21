@@ -34,7 +34,7 @@ from conker_inputs import (
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
 from conker_workflows import workflow_operation
-from plan_limits import read_plans
+from plan_limits import limits_operation
 from workspace import read_config
 
 
@@ -520,7 +520,7 @@ def main():
             query["search"] = args.search
         value = pi_call(request, config, "/definitions", query=query)
     elif args.command == "limits":
-        value = read_plans(request, config, args.provider)
+        value = limits_operation(args, config, request, pi_call)
     elif args.command == "workflow":
         value = workflow_operation(args, config, request)
     elif args.command == "inbox":
