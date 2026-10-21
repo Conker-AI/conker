@@ -9,6 +9,5 @@ dashboard/src/lib/api/fixture-adapter.ts 763
 dashboard/src/utils/shadcn-ui-theme-presets.ts 696
 dashboard/src/utils/tweakcn-theme-presets.ts 3422
 scripts/provider_secrets.py 748
-scripts/release_acceptance.py 974
 tests/test_cli_contract.py 959
 tests/test_recovery.py 1043
