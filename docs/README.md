@@ -19,6 +19,7 @@ and professional-engagement direction for future work.
 - [reference/](reference/): detailed guides and contracts (auth, recovery, module contract, design
   language, the gateway protocols, the full philosophy)
 - [Capability matrix](reference/capability-matrix.md): executable UI, CLI, gateway and deployment coverage
+- [Glossary](reference/glossary.md): every kind of thing in plain words, and the other names code uses
 - [Settings](reference/settings.md): every setting, its default and its home; `conker config`
 - [CLI inspection](reference/cli-inspection.md): bounded headless views of the live control plane
 - [Chat CLI](reference/chat-cli.md): every chat feature from the terminal, starting with context settings
