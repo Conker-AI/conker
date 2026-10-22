@@ -143,9 +143,13 @@ class Services:
 
 def draft(services, answers=(), **values):
     replies = list(answers)
-    args = Namespace(
-        operation="draft", description="Weather in Tel Aviv", id=None, **values
-    )
+    values = {
+        "description": "Weather in Tel Aviv",
+        "id": None,
+        "all_tools": False,
+        **values,
+    }
+    args = Namespace(operation="draft", **values)
     return workflows.draft(
         args, {}, services, answer=lambda question: replies.pop(0) if replies else ""
     )
@@ -169,7 +173,7 @@ def test_a_question_then_a_valid_draft_is_saved_unpublished():
     first, second = (call[2] for call in services.to("/workflow-drafts/draft"))
     assert [item["id"] for item in first["capabilities"]] == ["weather-now", "news"]
     assert first["capabilities"][0]["inputs"] == [
-        {"name": "city", "type": "string", "required": True}
+        {"name": "city", "type": "string", "required": True, "description": ""}
     ]
     assert second["conversation"] == [
         {"role": "builder", "content": "Which city?"},
@@ -309,3 +313,128 @@ def test_output_the_model_mangled_is_retried_once_with_the_reason():
     assert result["valid"]
     with pytest.raises(ValueError, match="unusable"):
         draft(Services([refused(502, mangled), refused(502, mangled)]))
+
+
+def catalogue_item(identity, name, description, authorization="auto"):
+    return {
+        "id": identity,
+        "kind": "tool",
+        "name": name,
+        "description": description,
+        "inputs": [
+            {
+                "name": "query",
+                "type": "string",
+                "required": True,
+                "description": "q" * 300,
+            }
+        ],
+        "version": 1,
+        "authorization": authorization,
+    }
+
+
+CATALOGUE = [
+    catalogue_item("research.search", "Web search", "Search the web for pages"),
+    catalogue_item(
+        "system.inventory", "Host inventory", "Disks, processes and containers"
+    ),
+    catalogue_item(
+        "system.process-control",
+        "Process control",
+        "Stop processes",
+        "owner_confirmation",
+    ),
+    catalogue_item("approval.test-echo", "Echo", "Returns its input"),
+]
+
+
+def test_only_tools_that_share_words_with_the_request_are_offered():
+    chosen = workflows.relevant(
+        CATALOGUE, "Check free space on my disk and list running processes"
+    )
+    assert [item["id"] for item in chosen] == [
+        "system.inventory",
+        "system.process-control",
+    ]
+    assert [item["id"] for item in workflows.relevant(CATALOGUE, "xyzzy plugh")] == [
+        item["id"] for item in CATALOGUE
+    ]
+    many = [
+        catalogue_item(f"search-{n}", "Search", "Search the web") for n in range(20)
+    ]
+    assert len(workflows.relevant(many, "search the web")) == workflows.TOOLS
+
+
+def test_the_model_gets_compact_capabilities_without_authorization():
+    item = workflows.compact({**CATALOGUE[0], "description": "d" * 900})
+    assert "authorization" not in item and len(item["description"]) == 240
+    assert len(item["inputs"][0]["description"]) == 100
+
+
+def test_steps_say_which_tools_ask_you_first():
+    document = {
+        "nodes": [
+            {"label": "Start", "type": "input", "config": {}},
+            {
+                "label": "Stop it",
+                "type": "tool_call",
+                "config": {"tool": "system.process-control"},
+            },
+            {
+                "label": "Search",
+                "type": "tool_call",
+                "config": {"tool": "research.search"},
+            },
+        ]
+    }
+    assert workflows.steps(document, {"system.process-control"}) == [
+        "Start (input)",
+        "Stop it (tool_call) -> tool system.process-control, asks you first",
+        "Search (tool_call) -> tool research.search",
+    ]
+
+
+def test_all_tools_offers_the_whole_catalogue(monkeypatch):
+    monkeypatch.setattr(workflows, "capabilities", lambda request, config: CATALOGUE)
+    services = Services(
+        [{"reply": "What should it do?", "ready": False, "document": None}]
+    )
+    for all_tools, expected in ((False, 1), (True, 4)):
+        with pytest.raises(ValueError, match="The builder asks"):
+            draft(services, description="Search the web", all_tools=all_tools)
+        sent = services.to("/workflow-drafts/draft")[-1][2]["capabilities"]
+        assert len(sent) == expected
+        services.drafts.append(
+            {"reply": "What should it do?", "ready": False, "document": None}
+        )
+
+
+def test_questions_from_the_model_cannot_drive_the_terminal(monkeypatch, capsys):
+    monkeypatch.setattr(workflows.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda prompt: "Tel Aviv")
+    assert workflows.ask("\x1b]52;c;cGF5bG9hZA==\x07Which city?\x1b[2J") == "Tel Aviv"
+    shown = capsys.readouterr().err
+    assert "\x1b" not in shown and "\x07" not in shown
+    assert shown.startswith("\\x1b]52;c;cGF5bG9hZA==\\x07Which city?\\x1b[2J")
+
+
+def test_rare_shared_words_count_more_than_common_ones():
+    catalogue = [
+        catalogue_item(f"research.{name}", f"{name} search", "Searches")
+        for name in "abcdefg"
+    ]
+    catalogue.append(catalogue_item("research.web", "Web search", "Searches the web"))
+    assert (
+        workflows.relevant(catalogue, "search the web", limit=1)[0]["id"]
+        == "research.web"
+    )
+
+
+def test_validation_issues_name_their_step():
+    assert workflows.problem(
+        {"message": "Use a valid reference.", "node_id": "fetch"}
+    ) == ("Step fetch: Use a valid reference.")
+    assert workflows.problem(
+        {"message": "Use exactly one Input node.", "node_id": None}
+    ) == ("Use exactly one Input node.")

@@ -12,6 +12,7 @@ import uuid
 
 import pytest
 from test_recovery import (
+    APPROVALS,
     ROOT,
     Engine,
     recovery,
@@ -132,10 +133,9 @@ def live_stack(tmp_path):
                 input=stream,
             )
         gate = docker.run(*compose, "ps", "-q", "toolgate").stdout.decode().strip()
-        create = (
-            "from toolgate.core import control_plane as cp; "
-            "r=cp.create_verification_request('echo','fixture','agent','tool','echo',{},1,900,'agent-id'); "
-            "cp.decide_request(r['id'],'approved','owner'); print(r['id'])"
+        create = APPROVALS + (
+            "r=approvals.create_verification_request('echo','fixture','agent','tool','echo',{},1,900,'agent-id'); "
+            "approvals.decide_request(r['id'],'approved','owner'); print(r['id'])"
         )
         approval = (
             docker.run("exec", gate, "python", "-c", create).stdout.decode().strip()
@@ -185,9 +185,9 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
     ).stdout.decode()
     assert "persisted memory" in rows and "recovery_held" in rows
     docker.run("stop", postgres)
-    check_approval = (
-        "import sys; from toolgate.core import control_plane as cp; "
-        "allowed,_=cp.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id'); "
+    check_approval = APPROVALS + (
+        "import sys; "
+        "allowed,_=approvals.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id'); "
         "assert not allowed; assert cp.settings()['lockdown']"
     )
     docker.run(

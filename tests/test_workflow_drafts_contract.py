@@ -116,3 +116,16 @@ def test_draft_ids_made_from_names_are_editor_identities(name):
         {**MODEL_DRAFT, "name": name[:100]}, CAPABILITIES, None
     )
     EditorDocument.model_validate(document)
+
+
+def test_the_builders_example_is_a_valid_editor_document():
+    import json
+
+    text = workflow_drafts.INSTRUCTIONS
+    example = json.loads(text[text.rindex('{"reply"') : text.index('\nWhen "issues"')])
+    capability = workflow_drafts.Capability(id="web.lookup", kind="tool", name="Lookup")
+    document, issues = workflow_drafts.normalize(
+        example["document"], [capability], "example"
+    )
+    assert issues == []
+    assert validate_graph(EditorDocument.model_validate(document)) == []

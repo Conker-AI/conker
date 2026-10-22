@@ -7,16 +7,20 @@ workflows you already have, and you review the draft before anything runs.
 python scripts/conker.py workflow draft "Every morning, get the weather for Tel Aviv and tell me if I need an umbrella"
 ```
 
-1. Conker lists your active tools and published workflows from ToolGate and sends them to Pi with
-   your description.
+1. Conker lists your active tools and published workflows from ToolGate and sends Pi the ones
+   that share words with your description, at most 8, shortened. Words few tools share count
+   more than words most of them share. `--all-tools` sends all of them, which a slow local model
+   may not read within Pi's time limit.
 2. If a detail is missing, the builder asks one question. Answer it in the terminal. In a script
    with no terminal, the command stops and prints the question; add the answer to the
    description and run it again.
 3. The draft is saved in ToolGate's workflow editor and validated. If Pi or ToolGate finds a
    problem, such as a step using a tool you do not have or a step left unconnected, the builder
-   fixes it, up to two times.
+   fixes it, up to two times. Each problem names its step. Output the model garbled is retried
+   once.
 4. The command prints the steps, the inputs, what the workflow does (`read`, `prepare` or
-   `write`) and whether it is valid. Nothing is published.
+   `write`) and whether it is valid. Steps whose tool asks you before it runs say so; that comes
+   from ToolGate, not from the model. Nothing is published.
 
 Then review and publish:
 

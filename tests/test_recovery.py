@@ -366,6 +366,16 @@ def test_existing_recovery_target_is_not_overwritten(installed, tmp_path):
     assert marker.read_text() == "original"
 
 
+# ToolGate moved requests and verifications to toolgate.core.approvals; released images predate it.
+APPROVALS = """
+from toolgate.core import control_plane as cp
+try:
+    from toolgate.core import approvals
+except ImportError:
+    approvals = cp
+"""
+
+
 def test_current_toolgate_rejects_restored_approval(tmp_path):
     gate = Path(os.environ.get("CONKER_TEST_TOOLGATE", ROOT.parent / "gates/toolgate"))
     if not (gate / "toolgate/core/control_plane.py").exists():
@@ -378,10 +388,9 @@ def test_current_toolgate_rejects_restored_approval(tmp_path):
         "PYTHONDONTWRITEBYTECODE": "1",
         "TOOLGATE_DATA_DIR": str(tmp_path),
     }
-    create = """
-from toolgate.core import control_plane as cp
-r = cp.create_verification_request('Run echo','test','agent','tool','echo',{},1,900,'agent-id')
-cp.decide_request(r['id'],'approved','owner')
+    create = APPROVALS + """
+r = approvals.create_verification_request('Run echo','test','agent','tool','echo',{},1,900,'agent-id')
+approvals.decide_request(r['id'],'approved','owner')
 print(r['id'])
 """
     result = subprocess.run(
@@ -393,10 +402,9 @@ print(r['id'])
     )
     request = result.stdout.strip()
     recovery_data.invalidate_approvals(tmp_path / "toolgate.db")
-    consume = """
+    consume = APPROVALS + """
 import sys
-from toolgate.core import control_plane as cp
-allowed, reason = cp.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id')
+allowed, reason = approvals.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id')
 assert not allowed, 'restored approval executed'
 assert cp.settings()['lockdown'] is True
 """
