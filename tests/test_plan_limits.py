@@ -248,7 +248,7 @@ def test_cli_lists_both_plans_and_marks_a_missing_runtime(monkeypatch, capsys):
             raise HTTPError(path, 404, "missing", {}, None)
         return plan_limits.chatgpt(CODEX)
 
-    monkeypatch.setattr(cli, "read_config", dict)
+    monkeypatch.setattr(cli, "read_config", lambda: {"native_providers": {}})
     monkeypatch.setattr(cli, "request", request)
     monkeypatch.setattr(sys, "argv", ["conker.py", "limits"])
     assert cli.cli() == 0
@@ -353,3 +353,21 @@ def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["conker.py", "limits", "--dismiss", "../x"])
     assert cli.cli() == 1
     assert "conker limits --alerts" in capsys.readouterr().err
+
+
+def test_a_workspace_without_subscription_runtimes_reports_not_configured(
+    monkeypatch, capsys
+):
+    import conker as cli
+
+    def request(*_args, **_options):
+        raise AssertionError("no runtime to ask")
+
+    monkeypatch.setattr(cli, "read_config", lambda: {"environments": {}})
+    monkeypatch.setattr(cli, "request", request)
+    monkeypatch.setattr(sys, "argv", ["conker.py", "limits"])
+    assert cli.cli() == 0
+    assert json.loads(capsys.readouterr().out)["plans"] == [
+        {"provider": name, "available": False, "problem": "not_configured"}
+        for name in ("chatgpt", "claude")
+    ]

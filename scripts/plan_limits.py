@@ -261,6 +261,12 @@ def read_plans(request, config, provider=None) -> dict:
     """`conker limits`: each subscription's plan usage, through its runtime's limits route."""
     plans = []
     for name in [provider] if provider else ["chatgpt", "claude"]:
+        if "native_providers" not in config:
+            # A workspace installed without subscription runtimes (no `enhance`).
+            plans.append(
+                {"provider": name, "available": False, "problem": "not_configured"}
+            )
+            continue
         try:
             plans.append(request(config, "providers", f"/{name}/limits"))
         except HTTPError as exc:
