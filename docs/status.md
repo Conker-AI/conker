@@ -7,11 +7,47 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **10 October 2026**. The current tree has **38 tracked
-capability families: 37 active and 1 deferred**. Active means at least one real
+Last source verification: **22 October 2026**, on a Windows workspace (below). The tree has **41 tracked
+capability families: 40 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### Workflow builder, plan alerts, settings and a local run-through (20 to 22 October)
+
+**Verified on a running workspace** (Windows, `python scripts/workspace.py install` and `up` from
+the pinned sources, local model qwen2.5:3b in Ollama, 21 and 22 October):
+
+- All five services started and answered. `check_local_workflow.py` published nested editor
+  workflows through the real ToolGate: both branches, a loop, a calculation and a replay passed,
+  and its temporary grants were removed.
+- A chat turn went through Pi to the local model and back with its memory delivery receipt.
+  Memory search by meaning reported itself degraded, because that workspace ran no embeddings
+  service; exact-word search worked.
+- `conker workflow draft` turned "search the web for a topic and return what you found" into a
+  valid editor workflow on the first try in 93 seconds, over the whole tool catalogue (with the
+  worked example Pi's instructions gained that day). `publish`
+  created version 1 with owner confirmation, and publishing a stale revision was refused.
+- `definitions`, `config get`, `limits`, `limits --alerts` and `inbox` answered from the live
+  services. That workspace had no subscription runtime, so `limits` reported both plans as not
+  configured.
+
+**Built and tested, not yet seen against a live subscription or on the server:**
+
+- [Workflow builder](reference/workflow-builder.md): Pi drafts and saves nothing; ToolGate stores
+  and validates; only the owner publishes. A cross-gate test checks Pi's drafts against ToolGate's
+  editor rules and publish path.
+- Plan usage alerts: Pi reads each subscription runtime's usage every 15 minutes and puts a
+  "limit N% used" item in the Inbox at the owner's level (`plans.alert_percent`, default 80), and a
+  line when the window resets. Readings are percentages; no model call.
+- [Settings](reference/settings.md): `conker config list|get|set|reset` over one registry of 26
+  settings, each checked against Pi's own models.
+- `conker definitions`: agents, teams, templates, skills, jobs and projects in one list.
+
+**Hardening:** ToolGate refuses to replace a tool or workflow through `POST` without the version it
+saw. Every Pi route is tested against missing and wrong-scope keys. A MemoryGate read key cannot
+read another agent's memories. The workflow builder's input is bounded and its model text cannot
+carry terminal control characters. The dashboard's dependency audit is clean.
 
 ### Every chat feature from the terminal (13 to 19 October)
 
