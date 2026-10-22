@@ -7,11 +7,50 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **22 October 2026**, on a Windows workspace (below). The tree has **41 tracked
+Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **41 tracked
 capability families: 40 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### First-run wizard, weekly security check, workflow offers and a module release (22 to 23 October)
+
+**Released:** Pi 0.6.0, ToolGate 0.5.0, MemoryGate 0.5.0, SystemGate 0.4.0 and Embeddings 0.1.4 are
+tagged and published. Each publish workflow succeeded, each `ghcr.io/conker-ai/<module>:<version>`
+manifest resolves anonymously, and `versions.env` pins them. No server has been updated to them
+yet, and no release-acceptance evidence bundle exists for them.
+
+**Verified on a running workspace** (Windows, the pinned sources at those release commits, local
+model qwen2.5:3b in Ollama, 23 October):
+
+- All seven services started and answered, and a chat turn answered through Pi.
+- "Every morning tell me the weather in Tel Aviv" and "Remind me every Monday to water the plants"
+  each put "Draft a workflow from your message?" in the Inbox, and the companion mentioned it.
+  The first run made no offer, because it was gated on the companion's own tool grants (none in
+  that workspace); offers now depend on the owner having tools. The small model at first promised
+  to act every morning itself, and its instruction now says plainly that it cannot.
+- `conker workflow accept` reached the builder. On this CPU-only model drafting did not complete:
+  before Pi's builder wait was raised it stopped at the 120-second answer limit, and after it one
+  call answered in about 2¾ minutes with an unusable draft while another ran past 10 minutes. A
+  larger or hosted model is needed for reliable drafts on this machine.
+
+**Built and tested, not yet seen on a server:**
+
+- `conker setup` with no arguments: a guided first run over Pi's setup status, one plain question
+  at a time, running the same `conker setup run STEP` commands scripts use. The installer offers it
+  at the end of an interactive install. Its tests drive a simulated Pi through the whole run and
+  the real launcher against a fake deployment.
+- [Workflow offers](reference/workflow-builder.md): Pi makes the offer from a pattern check of the
+  owner's own message before the model runs. The companion gets no tool, and accepting drafts
+  exactly as `from-chat` does.
+- The workflow builder waits up to 10 minutes for the model; chat answers keep their limit.
+
+**Hardening:** A weekly security check in all six repositories audits what each one ships (pip-audit,
+npm audit) every Monday and whenever dependencies change. Its first runs found published
+advisories, now fixed: Pillow 13.0.0 and pypdf 6.21.2 in Pi, certifi in MemoryGate, and the ToolGate
+and MemoryGate dashboards' build dependencies. The optional decisions sidecar's PyTorch and
+Transformers advisories are reported without failing the check: it loads one pinned local
+checkpoint, which requests cannot change. Upgrading it needs verification with that checkpoint.
 
 ### Workflow builder, plan alerts, settings and a local run-through (20 to 22 October)
 
