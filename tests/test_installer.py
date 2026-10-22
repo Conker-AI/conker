@@ -493,6 +493,13 @@ def test_the_backup_directory_is_named_twice(install):
     assert result.returncode == 0
 
 
+def test_the_guided_setup_is_offered_only_to_a_person_at_a_terminal():
+    finish = (ROOT / "install.sh").read_text().split("finish()")[1].split("\n}")[0]
+    offer = finish.split('[ "$ASSUME_YES" -eq 0 ] && [ -t 0 ] && [ -t 1 ]')
+    assert len(offer) == 2 and 'bash "$ROOT/conker" setup' in offer[1]
+    assert "./conker setup" in offer[0]  # unattended installs still learn the command
+
+
 def test_help_explains_itself_without_docker(install, tmp_path):
     result = install("--help")
     for flag in ("--yes", "--dry-run", "--check"):

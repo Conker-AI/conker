@@ -32,8 +32,11 @@ cd conker
 ./install.sh
 ```
 
-Review the installer prompts and private-network configuration. Keep the owner
-password private. A browser preview is not a connected installation and cannot
+Review the installer prompts and private-network configuration. At the end the
+installer offers `./conker setup`, a guided first run that asks one plain question at
+a time: your browser password, the companion, the answer model, memory, tools and their
+limits, backups, and a short test run. Stop it with Ctrl+C and run it again to continue
+where you left off. Keep the owner password private. A browser preview is not a connected installation and cannot
 prove memory, tools or scheduled work. The source-built layout below is an
 alternative; do not mix the two layouts over the same stores.
 
@@ -50,8 +53,8 @@ your private network with Tailscale Serve.
    ```sh
    docker compose -f compose.json up -d
    ```
-4. Download the configured local models, then choose and test the answer model in the
-   Setup screen. For a headless install:
+4. Download the configured local models, then run `conker setup` for the guided first
+   run, or choose and test the answer model in the Setup screen. For a scripted install:
    ```sh
    conker setup models
    conker setup run model local-answer
@@ -108,6 +111,7 @@ conker speech status         # secret-free host speech readiness
 conker speech configure      # guided host-only speech setup with hidden key input
 conker speech disable        # remove speech configuration and recreate Pi
 conker apply tools tool.json # save, publish, grant, or durably run a workflow
+conker setup                  # guided first run; it continues where you left off
 conker setup status           # verified first-run state and next operation
 conker setup run companion --accept # keep the supplied durable harness profile
 conker setup models           # candidates, readiness, data location, and cost notice
