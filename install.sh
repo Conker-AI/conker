@@ -794,7 +794,7 @@ finish() {
 
     say ""
     say "  ${BOLD}Open:${OFF}  ${BLUE}${url}${OFF}"
-    info "First set your browser password on this host: ./conker auth setup"
+    info "First-run setup, starting with your browser password: ./conker setup"
     info "Trust this installation's local TLS certificate before signing in; see docs/reference/browser-auth.md."
     info "The connected dashboard is served by the authenticated gateway."
     say ""
@@ -809,6 +809,14 @@ finish() {
     info "Conker is bound to this machine only. Nothing is reachable from the"
     info "internet. To use it from your phone or laptop:  ./conker tailscale"
     say ""
+    if [ "$ASSUME_YES" -eq 0 ] && [ -t 0 ] && [ -t 1 ]; then
+        if ask_yes_no "Walk through first-run setup now, one question at a time?" y; then
+            bash "$ROOT/conker" setup || info "Continue any time with:  ./conker setup"
+        else
+            info "When you are ready:  ./conker setup"
+        fi
+        say ""
+    fi
 }
 
 # ============================================================================

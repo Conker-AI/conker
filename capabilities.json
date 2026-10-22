@@ -96,8 +96,8 @@
     },
     {
       "id": "setup-status", "name": "Verified first-run setup projection", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/control/pi/setup/status", "/api/control/pi/setup/models", "/api/control/pi/setup/models/activate", "/api/control/pi/setup/choices/{companion|memory|capabilities}"], "uiRoutes": ["/setup"], "cliCommands": ["conker setup status", "conker inspect setup", "conker setup models", "conker setup run companion --accept", "conker setup run model CANDIDATE_ID", "conker setup run memory --skip|--include", "conker setup run capabilities --skip|--include"], "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/setup/models/activate"}, {"path": "conker", "contains": "set-setup-model"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "Use and test model"}]
+      "gatewayRoutes": ["/api/control/pi/setup/status", "/api/control/pi/setup/models", "/api/control/pi/setup/models/activate", "/api/control/pi/setup/choices/{companion|memory|capabilities}"], "uiRoutes": ["/setup"], "cliCommands": ["conker setup", "conker setup status", "conker inspect setup", "conker setup models", "conker setup run companion --accept", "conker setup run model CANDIDATE_ID", "conker setup run memory --skip|--include", "conker setup run capabilities --skip|--include"], "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/setup/models/activate"}, {"path": "conker", "contains": "set-setup-model"}, {"path": "scripts/setup_wizard.py", "contains": "one plain question at a time"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "Use and test model"}]
     },
     {
       "id": "setup-evidence-receipts", "name": "Verified setup evidence and owner rehearsal", "authority": "pi", "state": "active",

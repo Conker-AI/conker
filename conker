@@ -303,6 +303,14 @@ cmd_setup() {
     local action=${1:-}
     shift || true
     case "$action" in
+        ''|wizard)
+            [ "$#" -eq 0 ] || { printf 'Use conker setup with no arguments for the guided first run.\n' >&2; exit 2; }
+            command -v python3 >/dev/null 2>&1 || {
+                printf 'Python 3.11+ is required for the setup wizard. Install python3, then retry.\n' >&2
+                exit 1
+            }
+            exec python3 "$SOURCE_ROOT/scripts/setup_wizard.py" --launcher "$SOURCE_ROOT/conker"
+            ;;
         status)
             [ "$#" -eq 0 ] || { printf 'Use conker setup status.\n' >&2; exit 2; }
             setup_status
@@ -418,7 +426,7 @@ print(json.dumps({"destination": os.environ["DESTINATION"], "retentionCopies": i
             esac
             ;;
         *)
-            printf 'Use conker setup status|models|protection|rehearsal, conker setup configure protection, or conker setup run STEP.\n' >&2
+            printf 'Use conker setup for the guided first run, conker setup status|models|protection|rehearsal, conker setup configure protection, or conker setup run STEP.\n' >&2
             exit 2
             ;;
     esac
@@ -789,6 +797,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}
   ${BOLD}update${OFF}      Stage, verify and roll back a pinned release${limited}
+  ${BOLD}setup${OFF}       Guided first run, one plain question at a time
   ${BOLD}setup${OFF} status
               Show the same verified first-run state used by the UI
   ${BOLD}setup${OFF} rehearsal

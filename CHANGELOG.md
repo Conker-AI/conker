@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Guided first run:** `conker setup` walks a new installation through Pi's verified
+  setup steps one plain question at a time: browser password, companion, answer model,
+  memory, tools and their limits, backups and the short test run. It runs the same
+  `conker setup run STEP` commands scripts use, lets Pi decide whether each step took,
+  approves only the test run's own harmless request, and continues where it stopped.
+  The installer offers it at the end of an interactive install.
 - **Live-journey patch release:** pin Pi 0.5.1 and MemoryGate 0.4.1, and bind the
   dashboard build to its exact tree. Cancelled requests are annotated in replayable
   model context; Companion can explicitly opt into admitted cross-chat memory
