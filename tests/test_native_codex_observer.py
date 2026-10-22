@@ -227,7 +227,9 @@ def test_observer_timeout_never_kills_an_independent_child(tmp_path):
     try:
         with (
             pytest.raises(native.SessionError),
-            sessions._command(["-c", code], time.monotonic() + 1) as command,
+            # Long enough for two interpreters to start on a loaded machine: the child must have
+            # spawned its grandchild and written the marker before the observer times out.
+            sessions._command(["-c", code], time.monotonic() + 8) as command,
         ):
             command.call("initialize", {})
         pid, created = json.loads(marker.read_text())
