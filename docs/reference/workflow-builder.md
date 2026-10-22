@@ -48,6 +48,21 @@ it clears the Inbox item; `workflow dismiss ID` clears it without publishing. On
 messages work. The companion never makes a workflow on its own, so text pasted into a chat cannot
 start one. Forgetting the chat removes the Inbox item; the draft stays, as your own work.
 
+## When you ask in chat
+
+Ask the companion for something recurring ("every morning tell me the weather in Tel Aviv",
+"remind me every Monday ...", "make me a workflow that ..."; English or Russian) and it says it
+put an offer in your Inbox: "Draft a workflow from your message? ...". To accept:
+
+```bash
+python scripts/conker.py workflow accept wfo_...
+```
+
+That drafts from your message exactly as `from-chat` does, and the draft takes the offer's
+place in the Inbox. `workflow dismiss wfo_...` declines it. Pi makes the offer from your own
+message only, before the model answers; nothing the model writes, and no web page or tool
+result, can make one. Nothing is drafted until you accept, and nothing runs until you publish.
+
 ## What the builder cannot do
 
 - Use a tool or workflow you do not have. It says so instead.
