@@ -64,6 +64,24 @@ DOCUMENT = {
 }
 
 
+CHAT = {
+    "messages": [
+        {
+            "id": "msg_owner",
+            "role": "user",
+            "content": "Every morning tell me the weather in Tel Aviv",
+        },
+        {"id": "msg_reply", "role": "assistant", "content": "I can draft that."},
+        {
+            "id": "msg_gone",
+            "role": "user",
+            "content": None,
+            "content_status": "forgotten",
+        },
+    ]
+}
+
+
 def ready(document=DOCUMENT, issues=()):
     return {
         "reply": "Reads the weather.",
@@ -108,6 +126,12 @@ class Services:
                 if not after
                 else {"items": [{**TOOLS[0], "id": "news"}], "next_after": None}
             )
+        if path.startswith("/sessions/"):
+            return CHAT
+        if path == "/workflow-proposals":
+            return {"id": "wfp_" + "1" * 32, **body}
+        if path == "/workflow-proposals/published":
+            return {"draftId": body["draftId"], "closed": 1}
         if path == "/workflow-drafts/draft":
             reply = self.drafts.pop(0)
             if isinstance(reply, Exception):
@@ -256,6 +280,7 @@ def test_publish_names_the_reviewed_revision_and_asks_before_runs_by_default():
         "expected_revision": 2,
         "expected_publication_version": 3,
         "authorization": "owner_confirmation",
+        "inbox": {"draftId": "morning-weather", "closed": 1},
     }
 
 
@@ -438,3 +463,77 @@ def test_validation_issues_name_their_step():
     assert workflows.problem(
         {"message": "Use exactly one Input node.", "node_id": None}
     ) == ("Use exactly one Input node.")
+
+
+def from_chat(services, message="msg_owner", **values):
+    args = Namespace(
+        operation="from-chat",
+        session="ses_1",
+        message=message,
+        id=None,
+        all_tools=False,
+        **values,
+    )
+    return workflows.workflow_operation(args, {}, services)
+
+
+def test_a_chat_message_becomes_a_draft_waiting_in_the_inbox():
+    services = Services([ready()])
+    result = from_chat(services)
+    assert services.to("/workflow-drafts/draft")[0][2]["description"] == (
+        "Every morning tell me the weather in Tel Aviv"
+    )
+    assert result["valid"] and result["inbox"] == {
+        "id": "wfp_" + "1" * 32,
+        "sessionId": "ses_1",
+        "messageId": "msg_owner",
+        "draftId": "morning-weather",
+        "name": "Morning weather",
+        "valid": True,
+    }
+
+
+@pytest.mark.parametrize(
+    "message,error",
+    [
+        ("msg_reply", "only from your own messages"),
+        ("msg_gone", "only from your own messages"),
+        ("msg_missing", "not in that chat"),
+        ("../x", "ids that show prints"),
+    ],
+)
+def test_only_the_owners_own_messages_become_drafts(message, error):
+    services = Services([])
+    with pytest.raises(ValueError, match=error):
+        from_chat(services, message=message)
+    assert services.to("/workflow-drafts/draft") == [] and services.saved == {}
+
+
+def test_a_draft_that_was_not_saved_is_not_put_in_the_inbox():
+    services = Services([ready(issues=["Step x uses 'y'"])] * 3)
+    result = from_chat(services)
+    assert not result["saved"] and "inbox" not in result
+    assert services.to("/workflow-proposals") == []
+
+
+def test_a_publish_stands_even_if_pi_does_not_confirm_the_inbox():
+    def request(config, service, path, body=None, **options):
+        if path.endswith("/publications"):
+            return {"items": []}
+        if service == "pi":
+            raise OSError("connection refused")
+        return {"draft_id": "flow", **body}
+
+    args = Namespace(
+        operation="publish", id="flow", expected_revision=1, authorization="auto"
+    )
+    result = workflows.workflow_operation(args, {}, request)
+    assert result["draft_id"] == "flow" and result["inbox"]["closed"] is None
+
+
+def test_dismissing_needs_an_inbox_item_id():
+    services = Services([])
+    with pytest.raises(ValueError, match="wfp_"):
+        workflows.workflow_operation(
+            Namespace(operation="dismiss", proposal="flow"), {}, services
+        )
