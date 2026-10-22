@@ -52,6 +52,14 @@ def register(commands):
     )
 
 
+class Refused(ValueError):
+    """A service's refusal, with its code when it gave one."""
+
+    def __init__(self, message: str, code: str | None = None):
+        super().__init__(message)
+        self.code = code
+
+
 def refusal(exc: HTTPError, service: str) -> ValueError:
     """The service's own refusal message instead of a bare status."""
     try:
@@ -62,8 +70,9 @@ def refusal(exc: HTTPError, service: str) -> ValueError:
         exc.close()
     detail = body.get("detail") if isinstance(body, dict) else None
     if isinstance(detail, dict) and isinstance(detail.get("message"), str):
-        return ValueError(
-            f"{service} refused this ({detail.get('code')}): {detail['message']}"
+        return Refused(
+            f"{service} refused this ({detail.get('code')}): {detail['message']}",
+            detail.get("code"),
         )
     if isinstance(detail, list) and detail and isinstance(detail[0], dict):
         return ValueError(
@@ -80,6 +89,17 @@ def call(request, config, service, path, body=None, *, changes=False, **options)
         if changes and exc.code >= 500:
             raise
         raise refusal(exc, "Pi" if service.startswith("pi") else "ToolGate") from None
+
+
+def builder(request, config, body: dict) -> dict:
+    """One draft from Pi. Output the model mangled is retried once, telling it what was wrong."""
+    try:
+        return call(request, config, "pi", "/workflow-drafts/draft", body)
+    except Refused as exc:
+        if exc.code != "unusable":
+            raise
+        retry = {**body, "issues": [*body.get("issues", []), str(exc)][-20:]}
+        return call(request, config, "pi", "/workflow-drafts/draft", retry)
 
 
 def ask(question: str) -> str:
@@ -165,13 +185,7 @@ def draft(args, config, request, answer=ask) -> dict:
         body["draftId"] = args.id
     conversation = []
     for _ in range(QUESTIONS + 1):
-        result = call(
-            request,
-            config,
-            "pi",
-            "/workflow-drafts/draft",
-            {**body, "conversation": conversation},
-        )
+        result = builder(request, config, {**body, "conversation": conversation})
         if result["ready"]:
             break
         reply = answer(result["reply"])
@@ -211,11 +225,9 @@ def draft(args, config, request, answer=ask) -> dict:
             issues = [item["message"] for item in check["issues"]]
         if not issues or attempt == REPAIRS:
             break
-        repair = call(
+        repair = builder(
             request,
             config,
-            "pi",
-            "/workflow-drafts/draft",
             {
                 **body,
                 "draftId": identity,

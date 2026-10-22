@@ -36,7 +36,8 @@ def main():
         snapshot = db.execute("SELECT prefix FROM turn_context_inputs WHERE turn_id=?", (args.turn_id,)).fetchone()
         assert snapshot and all(r["id"] in snapshot[0] for r in records), "Answer context is missing retrieved records"
     payload = {"query": package["query"], "scope": "selected", "memory_ids": [r["id"] for r in records], "max_items": 8}
-    request = urllib.request.Request("http://127.0.0.1:8020/runtime/context",
+    port = config.get("ports", {}).get("memorygate", 8020)  # the workspace launcher moves ports
+    request = urllib.request.Request(f"http://127.0.0.1:{port}/runtime/context",
         data=json.dumps(payload).encode(), headers={"Content-Type": "application/json",
         "X-MemoryGate-Key": env["PI_MEMORYGATE_READ_KEY"], "X-Agent-Id": env["PI_MEMORYGATE_AGENT_ID"]})
     with urllib.request.urlopen(request, timeout=10) as response:

@@ -83,12 +83,14 @@ def run(request):
 def main():
     config = json.loads((ROOT / '.local-run/configuration.json').read_text())
     gateway = config['environments']['gateway']
+    # The workspace launcher moves every port; the older local stack used 8010.
+    port = config.get('ports', {}).get('toolgate', 8010)
     headers = {'Content-Type': 'application/json',
                'X-ToolGate-Owner-Key': gateway['GATEWAY_TOOLGATE_OWNER_KEY'],
                'X-ToolGate-Execution-Key': config['environments']['pi']['PI_TOOLGATE_KEY']}
 
     def request(path, body=None):
-        req = urllib.request.Request('http://127.0.0.1:8010/v2/owner/editor-drafts/' + path,
+        req = urllib.request.Request(f'http://127.0.0.1:{port}/v2/owner/editor-drafts/' + path,
             headers=headers, data=None if body is None else json.dumps(body).encode())
         with urllib.request.urlopen(req, timeout=15) as response:
             return json.load(response)

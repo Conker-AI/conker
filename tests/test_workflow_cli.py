@@ -293,3 +293,19 @@ def test_the_capability_query_sends_only_known_options(monkeypatch):
     )
     url = urlsplit(sent[0].full_url)
     assert parse_qs(url.query) == {"kind": ["tool"], "limit": ["100"], "after": ["a"]}
+
+
+def test_output_the_model_mangled_is_retried_once_with_the_reason():
+    mangled = {
+        "code": "unusable",
+        "message": "The draft could not be used: the model did not return JSON.",
+    }
+    services = Services([refused(502, mangled), ready()])
+    result = draft(services)
+    retry = services.to("/workflow-drafts/draft")[1][2]
+    assert retry["issues"] == [
+        "Pi refused this (unusable): The draft could not be used: the model did not return JSON."
+    ]
+    assert result["valid"]
+    with pytest.raises(ValueError, match="unusable"):
+        draft(Services([refused(502, mangled), refused(502, mangled)]))
