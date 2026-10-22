@@ -28,6 +28,11 @@ the pinned sources, local model qwen2.5:3b in Ollama, 21 and 22 October):
   valid editor workflow on the first try in 93 seconds, over the whole tool catalogue (with the
   worked example Pi's instructions gained that day). `publish`
   created version 1 with owner confirmation, and publishing a stale revision was refused.
+- `workflow from-chat` turned a chat message into a valid draft in 84 seconds; the Inbox showed
+  "Workflow draft ready", publishing cleared it, and the companion's own reply was refused.
+- With `python scripts/workspace.py meaning-search` (the embeddings service and a Qdrant index), a
+  memory saved as "favourite hiking spot is the Banias waterfall" came back for "suggest a place for
+  my weekend outdoor trip" with no word in common and retrieval `ok`.
 - `definitions`, `config get`, `limits`, `limits --alerts` and `inbox` answered from the live
   services. That workspace had no subscription runtime, so `limits` reported both plans as not
   configured.
