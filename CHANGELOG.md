@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Weekly security check:** `.github/workflows/security.yml` audits the dashboard's npm
+  packages and the decisions sidecar's pins against the public advisory databases each
+  Monday and whenever they change. Each module repository runs the same check on what it
+  ships.
 - **Guided first run:** `conker setup` walks a new installation through Pi's verified
   setup steps one plain question at a time: browser password, companion, answer model,
   memory, tools and their limits, backups and the short test run. It runs the same

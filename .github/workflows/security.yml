@@ -1,0 +1,57 @@
+name: Weekly security check
+
+# New vulnerabilities are published for code nobody touched, and CI only looks when code
+# changes. This checks every dependency this repository ships against the public advisory
+# databases each Monday and whenever those dependencies change, and fails loudly: a red run,
+# which GitHub emails to whoever last edited this schedule. GitHub pauses schedules in public
+# repositories after 60 days without a commit; "Run workflow" on the Actions tab resumes it.
+
+on:
+  schedule:
+    - cron: "57 5 * * 1"
+  pull_request:
+    paths:
+      - ".github/workflows/security.yml"
+      - "dashboard/package.json"
+      - "dashboard/package-lock.json"
+      - "services/decisions/requirements.txt"
+  workflow_dispatch:
+
+# Read-only token: the check reads code and public advisories; it writes nothing.
+permissions:
+  contents: read
+
+jobs:
+  dashboard:
+    name: Dashboard dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.11.1"
+
+      - name: npm packages, moderate advisories and above
+        working-directory: dashboard
+        run: npm audit --audit-level=moderate
+
+  decisions:
+    name: Decisions sidecar dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Pinned packages
+        # The exact pins only: resolving them would download the full PyTorch build. The optional
+        # sidecar pins its model runtime to the checkpoint it was verified with, so its findings
+        # are reviewed by hand: they show here without turning the run red.
+        continue-on-error: true
+        run: |
+          python -m pip install --quiet pip-audit==2.10.1
+          grep -E '^[A-Za-z0-9_.-]+==' services/decisions/requirements.txt > "$RUNNER_TEMP/decisions.txt"
+          pip-audit --no-deps --disable-pip --progress-spinner off -r "$RUNNER_TEMP/decisions.txt"
