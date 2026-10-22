@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Module release:** pin Pi 0.6.0, ToolGate 0.5.0, MemoryGate 0.5.0, SystemGate 0.4.0 and
+  Embeddings 0.1.4, which carry everything the connected workspace has used since the
+  0.5.6 pins (see each module's changelog). `conker update` moves a server to them with
+  its staged, health-checked rollback.
 - **Weekly security check:** `.github/workflows/security.yml` audits the dashboard's npm
   packages and the decisions sidecar's pins against the public advisory databases each
   Monday and whenever they change. Each module repository runs the same check on what it
