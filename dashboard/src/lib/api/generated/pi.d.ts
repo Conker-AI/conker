@@ -510,6 +510,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listing
+         * @description Drafts made from chat messages that still wait for the owner.
+         */
+        get: operations["listing_workflow_proposals_get"];
+        put?: never;
+        /**
+         * Record
+         * @description Link one of the owner's messages to the editor draft made from it.
+         */
+        post: operations["record_workflow_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow-proposals/published": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Published
+         * @description The owner published this draft; its Inbox items are done.
+         */
+        post: operations["published_workflow_proposals_published_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow-proposals/{proposal_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description Remove a draft from the Inbox without publishing it.
+         */
+        post: operations["dismiss_workflow_proposals__proposal_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/characters/{agent_id}": {
         parameters: {
             query?: never;
@@ -6368,6 +6432,11 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** Published */
+        Published: {
+            /** Draftid */
+            draftId: string;
+        };
         /** QueueRevision */
         QueueRevision: {
             /** Expected Revision */
@@ -6440,6 +6509,19 @@ export interface components {
             expiresAt?: string | null;
             /** Expectedrevision */
             expectedRevision: number;
+        };
+        /** Record */
+        Record: {
+            /** Sessionid */
+            sessionId: string;
+            /** Messageid */
+            messageId: string;
+            /** Draftid */
+            draftId: string;
+            /** Name */
+            name: string;
+            /** Valid */
+            valid: boolean;
         };
         /** Rename */
         Rename: {
@@ -8898,6 +8980,144 @@ export interface operations {
             };
             path: {
                 alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_workflow_proposals_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_workflow_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Record"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    published_workflow_proposals_published_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Published"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_workflow_proposals__proposal_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
             };
             cookie?: never;
         };
