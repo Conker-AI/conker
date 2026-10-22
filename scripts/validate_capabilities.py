@@ -52,6 +52,9 @@ REQUIRED_CAPABILITIES = {
     "tool-workflow-authoring",
     "turn-recovery",
     "verified-backup",
+    "settings-registry",
+    "definitions-list",
+    "plan-usage",
 }
 FIELDS = {
     "id",

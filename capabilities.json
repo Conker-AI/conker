@@ -89,10 +89,10 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "auth.request('/api/pi/tools'"}, {"path": "dashboard/src/components/gateway/tools-inventory.tsx", "contains": "client.tools(controller.signal)"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
-      "id": "tool-workflow-authoring", "name": "Tool and workflow drafts, publication and runs", "authority": "toolgate", "state": "active",
-      "gatewayRoutes": ["/api/owner/editor-drafts", "/api/owner/editor-drafts/{id}/publish", "/api/owner/editor-drafts/{id}/runs"], "uiRoutes": ["/tools?view=drafts"], "cliCommands": ["conker inspect tool-drafts", "conker inspect tool-draft DRAFT_ID", "conker inspect tool-validation DRAFT_ID", "conker inspect tool-publications DRAFT_ID", "conker inspect tool-runs DRAFT_ID", "conker inspect tool-access DRAFT_ID VERSION DIGEST", "conker apply tools FILE"],
+      "id": "tool-workflow-authoring", "name": "Tool and workflow drafts, drafting from a description, publication and runs", "authority": "toolgate", "state": "active",
+      "gatewayRoutes": ["/api/owner/editor-drafts", "/api/owner/editor-drafts/{id}/publish", "/api/owner/editor-drafts/{id}/runs"], "uiRoutes": ["/tools?view=drafts"], "cliCommands": ["conker inspect tool-drafts", "conker inspect tool-draft DRAFT_ID", "conker inspect tool-validation DRAFT_ID", "conker inspect tool-publications DRAFT_ID", "conker inspect tool-runs DRAFT_ID", "conker inspect tool-access DRAFT_ID VERSION DIGEST", "conker apply tools FILE", "python scripts/conker.py workflow draft TEXT", "python scripts/conker.py workflow show ID", "python scripts/conker.py workflow publish ID --expected-revision N"],
       "deploymentRequirements": ["GATEWAY_TOOLGATE_OWNER_KEY", "GATEWAY_TOOLGATE_EXECUTION_KEY", "toolgate_data"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/editor-drafts.ts", "contains": "`${path(id)}/publish`"}, {"path": "dashboard/src/components/gateway/tool-drafts.tsx", "contains": "Agent access is unchanged."}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/editor-drafts.ts", "contains": "`${path(id)}/publish`"}, {"path": "dashboard/src/components/gateway/tool-drafts.tsx", "contains": "Agent access is unchanged."}, {"path": "scripts/conker_workflows.py", "contains": "/workflow-drafts/draft"}]
     },
     {
       "id": "setup-status", "name": "Verified first-run setup projection", "authority": "pi", "state": "active",
@@ -223,6 +223,24 @@
       "cliCommands": ["conker providers status", "conker providers set PROVIDER", "conker providers verify PROVIDER", "conker providers discard PROVIDER REVISION", "conker providers activate PROVIDER REVISION", "conker providers recover PROVIDER REVISION", "conker providers record-revoked PROVIDER REVISION --issuer-confirmed", "conker providers spending status|on|off|recover", "conker providers install-ui-control"],
       "deploymentRequirements": ["Linux systemd user provider-control worker", "private Gateway-only Unix socket", "operation-bound password proof", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi and decision sidecar recreation", "held recovery credential reconciliation"],
       "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "provider_restart_runtime"}, {"path": "dashboard/src/components/gateway/provider-credentials.tsx", "contains": "Save key"}, {"path": "scripts/recovery_backup.py", "contains": "config/provider-state.json"}]
+    },
+    {
+      "id": "settings-registry", "name": "Every setting from one registry, read and changed in its own home", "authority": "pi", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["python scripts/conker.py config list", "python scripts/conker.py config get ID", "python scripts/conker.py config set ID VALUE", "python scripts/conker.py config reset ID"],
+      "deploymentRequirements": ["settings-registry.json", "Pi admin key"],
+      "evidence": [{"path": "scripts/conker_config.py", "contains": "def config_operation"}, {"path": "docs/reference/settings.md", "contains": "plans.alert_percent"}]
+    },
+    {
+      "id": "definitions-list", "name": "One list of agents, teams, templates, skills, jobs and projects", "authority": "pi", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["python scripts/conker.py definitions", "python scripts/conker.py definitions --kind KIND --search TEXT"],
+      "deploymentRequirements": ["Pi admin key", "pi_data"],
+      "evidence": [{"path": "scripts/conker_parser.py", "contains": "\"definitions\""}, {"path": "scripts/conker.py", "contains": "\"/definitions\""}]
+    },
+    {
+      "id": "plan-usage", "name": "Subscription plan usage in percent, with Inbox alerts", "authority": "pi", "state": "active",
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["python scripts/conker.py limits", "python scripts/conker.py limits --alerts", "python scripts/conker.py limits --dismiss ALERT_ID"],
+      "deploymentRequirements": ["ChatGPT or Claude subscription runtime", "Pi admin key"],
+      "evidence": [{"path": "scripts/plan_limits.py", "contains": "def limits_operation"}, {"path": "scripts/workspace_providers.py", "contains": "/inference/claude/limits"}, {"path": "scripts/conker_inbox.py", "contains": "_format_reset"}]
     }
   ]
 }
