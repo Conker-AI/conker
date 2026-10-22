@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 DRAFT_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 PROPOSAL_ID = re.compile(r"wfp_[0-9a-f]{32}")
+OFFER_ID = re.compile(r"wfo_[0-9a-f]{32}")
 EDITOR = "/v2/owner/editor-drafts/"
 QUESTIONS = 4  # rounds of builder questions before asking for a fuller description
 REPAIRS = 2  # rounds of fixing what Pi or ToolGate found wrong
@@ -88,11 +89,20 @@ def register(commands):
     chat.add_argument(
         "--all-tools", action="store_true", help="Offer every tool to the model"
     )
+    accept = operations.add_parser(
+        "accept",
+        help="Accept Pi's offer to draft a workflow from your chat message",
+    )
+    accept.add_argument("offer", help="The Inbox item's id (wfo_...)")
+    accept.add_argument("--id", help="Draft id; made from its name if omitted")
+    accept.add_argument(
+        "--all-tools", action="store_true", help="Offer every tool to the model"
+    )
     dismiss = operations.add_parser(
         "dismiss",
-        help="Take a draft made from chat out of the Inbox without publishing",
+        help="Take a draft made from chat, or an offer, out of the Inbox",
     )
-    dismiss.add_argument("proposal", help="The Inbox item's id (wfp_...)")
+    dismiss.add_argument("proposal", help="The Inbox item's id (wfp_... or wfo_...)")
     operations.add_parser("list", help="Saved workflow drafts")
     show = operations.add_parser(
         "show", help="One draft: its steps and whether it is valid"
@@ -438,17 +448,27 @@ def workflow_operation(args, config, request) -> dict:
         return draft(args, config, request)
     if args.operation == "from-chat":
         return from_chat(args, config, request)
-    if args.operation == "dismiss":
-        if not PROPOSAL_ID.fullmatch(args.proposal):
-            raise ValueError("Use an Inbox item id that starts with wfp_.")
-        return call(
-            request,
-            config,
-            "pi",
-            f"/workflow-proposals/{args.proposal}/dismiss",
-            {},
-            changes=True,
+    if args.operation == "accept":
+        if not OFFER_ID.fullmatch(args.offer):
+            raise ValueError("Use an Inbox item id that starts with wfo_.")
+        offer = call(request, config, "pi", f"/workflow-proposals/offers/{args.offer}")
+        if offer.get("state") != "open":
+            raise ValueError("That offer was already accepted or dismissed.")
+        chat = SimpleNamespace(
+            session=offer["sessionId"],
+            message=offer["messageId"],
+            id=args.id,
+            all_tools=args.all_tools,
         )
+        return from_chat(chat, config, request)
+    if args.operation == "dismiss":
+        if OFFER_ID.fullmatch(args.proposal):
+            path = f"/workflow-proposals/offers/{args.proposal}/dismiss"
+        elif PROPOSAL_ID.fullmatch(args.proposal):
+            path = f"/workflow-proposals/{args.proposal}/dismiss"
+        else:
+            raise ValueError("Use an Inbox item id that starts with wfp_ or wfo_.")
+        return call(request, config, "pi", path, {}, changes=True)
     if args.operation == "list":
         return call(request, config, "toolgate-owner", EDITOR.rstrip("/"))
     if not DRAFT_ID.fullmatch(args.id):

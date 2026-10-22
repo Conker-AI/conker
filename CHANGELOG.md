@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Workflow offers from chat:** when you ask the companion for something recurring, Pi
+  puts an offer in the Inbox; `conker workflow accept wfo_...` drafts from that message as
+  `from-chat` does, and `workflow dismiss wfo_...` declines it. Needs Pi with offers
+  (pi#52).
 - **Weekly security check:** `.github/workflows/security.yml` audits the dashboard's npm
   packages and the decisions sidecar's pins against the public advisory databases each
   Monday and whenever they change. Each module repository runs the same check on what it

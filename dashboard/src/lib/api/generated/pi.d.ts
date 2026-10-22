@@ -534,6 +534,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflow-proposals/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Offers
+         * @description Offers Pi made to draft a workflow from one of the owner's messages.
+         */
+        get: operations["offers_workflow_proposals_offers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow-proposals/offers/{offer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Offer
+         * @description One offer: which chat and message to draft from.
+         */
+        get: operations["offer_workflow_proposals_offers__offer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflow-proposals/offers/{offer_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Offer
+         * @description Decline an offer; nothing was drafted.
+         */
+        post: operations["dismiss_offer_workflow_proposals_offers__offer_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow-proposals/published": {
         parameters: {
             query?: never;
@@ -9052,6 +9112,106 @@ export interface operations {
                 "application/json": components["schemas"]["Record"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offers_workflow_proposals_offers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offer_workflow_proposals_offers__offer_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_offer_workflow_proposals_offers__offer_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

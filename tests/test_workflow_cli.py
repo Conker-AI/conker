@@ -114,6 +114,7 @@ class Services:
             list(publications),
         )
         self.calls = []
+        self.offer_state = "open"
 
     def __call__(self, config, service, path, body=None, **options):
         self.calls.append((service, path, body, options))
@@ -130,6 +131,9 @@ class Services:
             return CHAT
         if path == "/workflow-proposals":
             return {"id": "wfp_" + "1" * 32, **body}
+        if path.startswith("/workflow-proposals/offers/"):
+            state = "dismissed" if path.endswith("/dismiss") else self.offer_state
+            return {"sessionId": "ses_1", "messageId": "msg_owner", "state": state}
         if path == "/workflow-proposals/published":
             return {"draftId": body["draftId"], "closed": 1}
         if path == "/workflow-drafts/draft":
@@ -537,3 +541,28 @@ def test_dismissing_needs_an_inbox_item_id():
         workflows.workflow_operation(
             Namespace(operation="dismiss", proposal="flow"), {}, services
         )
+
+
+def test_accepting_an_offer_drafts_from_its_message():
+    services = Services([ready()])
+    args = Namespace(operation="accept", offer="wfo_" + "2" * 32, id=None, all_tools=False)
+    result = workflows.workflow_operation(args, {}, services)
+    assert services.to("/workflow-drafts/draft")[0][2]["description"] == (
+        "Every morning tell me the weather in Tel Aviv"
+    )
+    assert result["inbox"]["messageId"] == "msg_owner"
+
+
+def test_a_closed_or_malformed_offer_drafts_nothing():
+    services = Services([])
+    services.offer_state = "dismissed"
+    accept = Namespace(operation="accept", offer="wfo_" + "2" * 32, id=None, all_tools=False)
+    with pytest.raises(ValueError, match="already accepted or dismissed"):
+        workflows.workflow_operation(accept, {}, services)
+    with pytest.raises(ValueError, match="wfo_"):
+        workflows.workflow_operation(Namespace(**{**vars(accept), "offer": "x"}), {}, services)
+    assert services.to("/workflow-drafts/draft") == []
+    dismissed = workflows.workflow_operation(
+        Namespace(operation="dismiss", proposal="wfo_" + "2" * 32), {}, services
+    )
+    assert dismissed["state"] == "dismissed"
