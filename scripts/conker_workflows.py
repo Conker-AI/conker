@@ -16,6 +16,45 @@ EDITOR = "/v2/owner/editor-drafts/"
 QUESTIONS = 4  # rounds of builder questions before asking for a fuller description
 REPAIRS = 2  # rounds of fixing what Pi or ToolGate found wrong
 CAPABILITIES = 200
+TOOLS = 8  # matching tools sent to the model; a small local model reads about 20 tokens a second
+STOP = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "that",
+    "this",
+    "then",
+    "into",
+    "when",
+    "what",
+    "your",
+    "you",
+    "are",
+    "was",
+    "its",
+    "all",
+    "any",
+    "get",
+    "give",
+    "gives",
+    "return",
+    "returns",
+    "find",
+    "found",
+    "list",
+    "show",
+    "tell",
+    "make",
+    "use",
+    "using",
+    "each",
+    "every",
+    "about",
+}
+# Terminal control characters (C0 except tab and newline, DEL, C1) in text from a model.
+CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
 def register(commands):
@@ -27,6 +66,11 @@ def register(commands):
         "draft", help="Describe a workflow; the talking model drafts it for review"
     )
     draft.add_argument("description", help="What the workflow should do, in your words")
+    draft.add_argument(
+        "--all-tools",
+        action="store_true",
+        help="Offer every tool to the model, not only the ones matching the description",
+    )
     draft.add_argument(
         "--id",
         help="Draft id (letters, digits, - and _); made from its name if omitted",
@@ -105,7 +149,8 @@ def builder(request, config, body: dict) -> dict:
 def ask(question: str) -> str:
     if not sys.stdin.isatty():
         return ""
-    print(question, file=sys.stderr)
+    # Model text: show control characters as escapes rather than let them drive the terminal.
+    print(CONTROL.sub(lambda m: f"\\x{ord(m.group()):02x}", question), file=sys.stderr)
     try:
         return input("> ").strip()
     except EOFError:
@@ -139,6 +184,7 @@ def capabilities(request, config) -> list[dict]:
                             if field.get("name")
                         ],
                         "version": max(1, int(item.get("version") or 1)),
+                        "authorization": str(item.get("authorization") or "auto"),
                     }
                 )
             after = page.get("next_after")
@@ -147,7 +193,60 @@ def capabilities(request, config) -> list[dict]:
     return found[:CAPABILITIES]
 
 
-def steps(document: dict) -> list[str]:
+def words(text: str) -> set[str]:
+    """Lowercase word stems: `disks` and `disk` match, short and common words do not count."""
+    found = set()
+    for word in re.findall(r"[a-z0-9]+", text.lower()):
+        word = word[:-1] if len(word) > 4 and word.endswith("s") else word
+        if len(word) >= 3 and word not in STOP:
+            found.add(word)
+    return found
+
+
+def relevant(available: list[dict], text: str, limit: int = TOOLS) -> list[dict]:
+    """The capabilities whose id, name, description or inputs share words with the request.
+
+    The model reads every capability it is offered; a slow local model cannot read all of them
+    within Pi's time limit. When nothing matches, every capability is offered.
+    """
+    wanted = words(text)
+    vocabulary = [
+        words(" ".join([item["id"], item["name"], item["description"]]))
+        | words(" ".join(field["name"] for field in item["inputs"]))
+        for item in available
+    ]
+    # A word most tools share ("search") says less than one only a few have ("web").
+    spread = {word: sum(word in own for own in vocabulary) for word in wanted}
+    scored = []
+    for index, (item, own) in enumerate(zip(available, vocabulary, strict=True)):
+        if shared := wanted & own:
+            scored.append((-sum(1 / spread[word] for word in shared), index, item))
+    return [item for *_, item in sorted(scored)[:limit]] or available
+
+
+def compact(item: dict) -> dict:
+    """What the model needs from a capability, in fewer words; never its authorization."""
+    return {
+        "id": item["id"],
+        "kind": item["kind"],
+        "name": item["name"],
+        "description": item["description"][:240],
+        "inputs": [
+            {
+                **{
+                    key: field[key]
+                    for key in ("name", "type", "required")
+                    if key in field
+                },
+                "description": str(field.get("description", ""))[:100],
+            }
+            for field in item["inputs"]
+        ],
+        "version": item["version"],
+    }
+
+
+def steps(document: dict, asks: set[str] = frozenset()) -> list[str]:
     lines = []
     for node in document["nodes"]:
         config = node["config"]
@@ -155,8 +254,16 @@ def steps(document: dict) -> list[str]:
             "tool_call": f" -> tool {config.get('tool')}",
             "workflow_call": f" -> workflow {config.get('toolId')} v{config.get('version')}",
         }.get(node["type"], "")
+        if config.get("tool") in asks or config.get("toolId") in asks:
+            target += ", asks you first"
         lines.append(f"{node['label']} ({node['type']}){target}")
     return lines
+
+
+def problem(issue: dict) -> str:
+    """A validation issue, naming its step so the builder knows where to look."""
+    step = issue.get("node_id")
+    return f"Step {step}: {issue['message']}" if step else issue["message"]
 
 
 def exists(request, config, identity: str) -> bool:
@@ -180,7 +287,12 @@ def draft(args, config, request, answer=ask) -> dict:
         raise ValueError(
             "ToolGate lists no active tools or published workflows to build from."
         )
-    body = {"description": args.description, "capabilities": available}
+    offered = available if args.all_tools else relevant(available, args.description)
+    asks = {item["id"] for item in available if item["authorization"] != "auto"}
+    body = {
+        "description": args.description,
+        "capabilities": [compact(item) for item in offered],
+    }
     if args.id:
         body["draftId"] = args.id
     conversation = []
@@ -222,7 +334,7 @@ def draft(args, config, request, answer=ask) -> dict:
             check = call(
                 request, config, "toolgate-owner", EDITOR + identity + "/validation"
             )
-            issues = [item["message"] for item in check["issues"]]
+            issues = [problem(item) for item in check["issues"]]
         if not issues or attempt == REPAIRS:
             break
         repair = builder(
@@ -249,7 +361,8 @@ def draft(args, config, request, answer=ask) -> dict:
         "name": document["name"],
         "effect": document["effect"],
         "inputs": [field["name"] for field in document["inputs"]],
-        "steps": steps(document),
+        "steps": steps(document, asks),
+        "toolsOffered": len(offered),
         "issues": issues,
         "modelId": result["modelId"],
         "next": (
@@ -277,6 +390,11 @@ def workflow_operation(args, config, request) -> dict:
             "items"
         ]
         document = record["document"]
+        asks = {
+            item["id"]
+            for item in capabilities(request, config)
+            if item["authorization"] != "auto"
+        }
         return {
             "draft": args.id,
             "revision": record["revision"],
@@ -286,10 +404,10 @@ def workflow_operation(args, config, request) -> dict:
             "agentVisible": document["agentVisible"],
             "inputs": document["inputs"],
             "outputs": document["outputs"],
-            "steps": steps(document),
+            "steps": steps(document, asks),
             "nodes": document["nodes"],
             "valid": check["graph_valid"],
-            "issues": [item["message"] for item in check["issues"]],
+            "issues": [problem(item) for item in check["issues"]],
             "publications": published,
         }
     published = call(request, config, "toolgate-owner", path + "/publications")["items"]
