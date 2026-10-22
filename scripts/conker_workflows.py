@@ -9,9 +9,12 @@ from __future__ import annotations
 import json
 import re
 import sys
+from types import SimpleNamespace
 from urllib.error import HTTPError
 
 DRAFT_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}")
+CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
+PROPOSAL_ID = re.compile(r"wfp_[0-9a-f]{32}")
 EDITOR = "/v2/owner/editor-drafts/"
 QUESTIONS = 4  # rounds of builder questions before asking for a fuller description
 REPAIRS = 2  # rounds of fixing what Pi or ToolGate found wrong
@@ -75,6 +78,21 @@ def register(commands):
         "--id",
         help="Draft id (letters, digits, - and _); made from its name if omitted",
     )
+    chat = operations.add_parser(
+        "from-chat",
+        help="Turn one of your chat messages into a workflow draft; it waits in the Inbox",
+    )
+    chat.add_argument("session", help="The chat")
+    chat.add_argument("message", help="Your message in it, as show lists it")
+    chat.add_argument("--id", help="Draft id; made from its name if omitted")
+    chat.add_argument(
+        "--all-tools", action="store_true", help="Offer every tool to the model"
+    )
+    dismiss = operations.add_parser(
+        "dismiss",
+        help="Take a draft made from chat out of the Inbox without publishing",
+    )
+    dismiss.add_argument("proposal", help="The Inbox item's id (wfp_...)")
     operations.add_parser("list", help="Saved workflow drafts")
     show = operations.add_parser(
         "show", help="One draft: its steps and whether it is valid"
@@ -373,9 +391,64 @@ def draft(args, config, request, answer=ask) -> dict:
     }
 
 
+def from_chat(args, config, request, answer=ask) -> dict:
+    """Draft from one of the owner's own messages, then record it for the Inbox."""
+    if not CHAT_ID.fullmatch(args.session) or not CHAT_ID.fullmatch(args.message):
+        raise ValueError("Use the chat and message ids that show prints.")
+    chat = call(request, config, "pi", f"/sessions/{args.session}")
+    message = next(
+        (item for item in chat.get("messages", []) if item.get("id") == args.message),
+        None,
+    )
+    if message is None:
+        raise ValueError("That message is not in that chat.")
+    text = message.get("content")
+    if (
+        message.get("role") != "user"
+        or message.get("content_status") == "forgotten"
+        or not isinstance(text, str)
+    ):
+        raise ValueError("Make workflows only from your own messages.")
+    if not 1 <= len(text.strip()) <= 4000:
+        raise ValueError("Use a message of 1 to 4,000 characters.")
+    request_args = SimpleNamespace(
+        description=text.strip(), id=args.id, all_tools=args.all_tools
+    )
+    result = draft(request_args, config, request, answer)
+    if result["saved"]:
+        result["inbox"] = call(
+            request,
+            config,
+            "pi",
+            "/workflow-proposals",
+            {
+                "sessionId": args.session,
+                "messageId": args.message,
+                "draftId": result["draft"],
+                "name": result["name"][:100],
+                "valid": result["valid"],
+            },
+            changes=True,
+        )
+    return result
+
+
 def workflow_operation(args, config, request) -> dict:
     if args.operation == "draft":
         return draft(args, config, request)
+    if args.operation == "from-chat":
+        return from_chat(args, config, request)
+    if args.operation == "dismiss":
+        if not PROPOSAL_ID.fullmatch(args.proposal):
+            raise ValueError("Use an Inbox item id that starts with wfp_.")
+        return call(
+            request,
+            config,
+            "pi",
+            f"/workflow-proposals/{args.proposal}/dismiss",
+            {},
+            changes=True,
+        )
     if args.operation == "list":
         return call(request, config, "toolgate-owner", EDITOR.rstrip("/"))
     if not DRAFT_ID.fullmatch(args.id):
@@ -411,7 +484,7 @@ def workflow_operation(args, config, request) -> dict:
             "publications": published,
         }
     published = call(request, config, "toolgate-owner", path + "/publications")["items"]
-    return call(
+    result = call(
         request,
         config,
         "toolgate-owner",
@@ -425,3 +498,19 @@ def workflow_operation(args, config, request) -> dict:
         },
         changes=True,
     )
+    try:
+        result["inbox"] = call(
+            request,
+            config,
+            "pi",
+            "/workflow-proposals/published",
+            {"draftId": args.id},
+            changes=True,
+        )
+    except (ValueError, OSError):
+        # Published either way; only the Inbox item may stay until it is dismissed by hand.
+        result["inbox"] = {
+            "closed": None,
+            "note": "Pi did not confirm the Inbox update.",
+        }
+    return result

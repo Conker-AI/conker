@@ -33,6 +33,21 @@ python scripts/conker.py workflow publish morning-weather --expected-revision 1
 lets it run without asking. Every tool it calls still keeps its own grants and approvals.
 `workflow list` shows all saved drafts.
 
+## From a chat message
+
+Write what you want in a chat, then turn that message into a workflow:
+
+```bash
+python scripts/conker.py show SESSION
+python scripts/conker.py workflow from-chat SESSION MESSAGE_ID
+```
+
+It drafts from your message exactly as `draft` does, saves the draft for review, and puts
+"Workflow draft ready: <name>" in your Inbox ("to fix" when ToolGate found problems). Publishing
+it clears the Inbox item; `workflow dismiss ID` clears it without publishing. Only your own
+messages work. The companion never makes a workflow on its own, so text pasted into a chat cannot
+start one. Forgetting the chat removes the Inbox item; the draft stays, as your own work.
+
 ## What the builder cannot do
 
 - Use a tool or workflow you do not have. It says so instead.
