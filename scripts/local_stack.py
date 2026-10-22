@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
 SERVICES = {"providers": 18570, "memorygate": 8020, "toolgate": 8010, "pi": 8051,
-            "gateway": 8050, "decisions": 8060, "postgres": 55432}
+            "gateway": 8050, "decisions": 8060, "postgres": 55432, "embeddings": 8030,
+            "qdrant": 6333}
 if CONFIG.is_file():
     SERVICES.update(json.loads(CONFIG.read_text(encoding="utf-8")).get("ports", {}))
 
@@ -110,7 +111,7 @@ def serve(name, config):
         path = Path(config["repositories"]["pi"])
     elif name == "memorygate":
         path = Path(config["repositories"][name]) / "services/api"
-    elif name == "toolgate":
+    elif name in {"toolgate", "embeddings"}:
         path = Path(config["repositories"][name])
     else:
         path = ROOT / "services/decisions"
@@ -137,9 +138,33 @@ def serve(name, config):
         server.run()
     else:
         module = {"pi": "pi.api.server:app", "memorygate": "app.main:app",
-                  "toolgate": "toolgate.api.server:app", "decisions": "server:create_app"}[name]
+                  "toolgate": "toolgate.api.server:app", "decisions": "server:create_app",
+                  "embeddings": "embeddings.main:app"}[name]
         uvicorn.run(module, host="127.0.0.1", port=SERVICES[name], factory=name == "decisions",
                     proxy_headers=False, access_log=False)
+
+
+def qdrant(command, config):
+    """The workspace's Qdrant index: one labelled container, its own volume, loopback only."""
+    name, volume = config["qdrant_container"], config["qdrant_volume"]
+    existing = subprocess.run(["docker", "container", "inspect", name], capture_output=True, check=False)
+    if existing.returncode == 0:
+        details = json.loads(existing.stdout)[0]
+        if details["Config"].get("Labels", {}).get("conker.local-integration") != "true":
+            raise SystemExit("Container name is owned by another setup; refusing to change it.")
+        ports = details.get("HostConfig", {}).get("PortBindings", {}).get("6333/tcp", [])
+        mounts = [mount.get("Name") for mount in details.get("Mounts", []) if mount.get("Destination") == "/qdrant/storage"]
+        if ports != [{"HostIp": "127.0.0.1", "HostPort": str(SERVICES["qdrant"])}] or mounts != [volume]:
+            raise SystemExit("Existing Qdrant instance differs from this configuration; nothing changed.")
+        subprocess.run(["docker", "stop" if command == "stop" else "start", name], check=True)
+    elif command == "start":
+        if listening(SERVICES["qdrant"]):
+            raise SystemExit("Qdrant development port is already occupied.")
+        subprocess.run(["docker", "run", "--detach", "--name", name,
+                        "--label", "conker.local-integration=true",
+                        "--publish", f"127.0.0.1:{SERVICES['qdrant']}:6333", "--memory", "512m",
+                        "--volume", f"{volume}:/qdrant/storage",
+                        config["meaning_search"]["qdrant_image"]], check=True)
 
 
 def main():
@@ -160,6 +185,9 @@ def main():
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     postgres_name = config.get("postgres_container", "conker-local-integration-postgres")
     postgres_volume = config.get("postgres_volume", postgres_name)
+    if args.service == "qdrant":
+        qdrant(args.command, config)
+        return
     if args.command == "stop":
         if args.service == "postgres":
             inspect = subprocess.run(["docker", "inspect", postgres_name], capture_output=True, check=True)

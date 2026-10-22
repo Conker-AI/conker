@@ -65,6 +65,23 @@ memory namespace. It preserves existing credentials and refuses conflicting or
 partial configurations. The configuration status does not prove a running service
 has accepted the credential; verify the record preview in Memory after startup.
 
+### Search memories by meaning
+
+Without it, memory search on this computer matches exact words. To search by meaning, as the
+server does, pull the server's embedding model and turn it on while the workspace is stopped:
+
+```powershell
+ollama pull qwen3-embedding:0.6b
+python scripts/workspace.py down
+python scripts/workspace.py meaning-search
+python scripts/workspace.py up
+```
+
+This adds two services that `up`, `down` and `status` manage: the pinned embeddings service on
+port 18530, and a Qdrant index in its own labelled Docker container and volume on 127.0.0.1:16333
+(the image digest pinned in `versions.env`). MemoryGate gets both addresses and one new key.
+Memories saved earlier are indexed once both answer. `status` shows `meaning search: configured`.
+
 The backend repositories are pinned in `scripts/workspace-sources.json` and
 cloned beneath the ignored `.local-run/sources` directory. Each has its own
 Python environment so conflicting dependency pins do not get silently combined.

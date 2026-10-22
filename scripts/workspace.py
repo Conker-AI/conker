@@ -22,7 +22,13 @@ STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
 ORDER = ("postgres", "memorygate", "toolgate", "pi", "gateway")
 PORTS = {"memorygate": 18520, "toolgate": 18510, "pi": 18551,
-         "gateway": 18550, "decisions": 18560, "providers": 18570, "postgres": 55542}
+         "gateway": 18550, "decisions": 18560, "providers": 18570, "postgres": 55542,
+         "embeddings": 18530, "qdrant": 16333}
+# Docker-run services: config keys for the container and volume, the published port, the data mount.
+CONTAINERS = {
+    "postgres": ("PostgreSQL", "postgres_container", "postgres_volume", "5432/tcp", "/var/lib/postgresql/data"),
+    "qdrant": ("Qdrant", "qdrant_container", "qdrant_volume", "6333/tcp", "/qdrant/storage"),
+}
 ORIGIN = "https://localhost:18550"
 
 
@@ -56,40 +62,14 @@ def install(model):
     run("docker", "info", "--format", "{{.ServerVersion}}")
     STATE.mkdir(exist_ok=True)
     pins = json.loads((ROOT / "scripts/workspace-sources.json").read_text())
-    sources = STATE / "sources"
-    sources.mkdir(exist_ok=True)
-    pythons = {}
-    for name, revision in pins.items():
-        source = sources / name
-        fresh = not source.exists()
-        if fresh:
-            run("git", "clone", "--no-checkout", f"https://github.com/Conker-AI/{name}.git", source)
-        at_pin = not fresh and run("git", "rev-parse", "HEAD", cwd=source, capture=True) == revision
-        if not at_pin:
-            if not fresh and run("git", "status", "--porcelain", cwd=source, capture=True):
-                raise SystemExit(f"Pinned source {name} has local changes; refusing to replace it.")
-            if not fresh:
-                run("git", "fetch", "--quiet", "origin", cwd=source)
-            run("git", "checkout", "--detach", revision, cwd=source)
-        if run("git", "rev-parse", "HEAD", cwd=source, capture=True) != revision:
-            raise SystemExit(f"Source identity check failed for {name}.")
-        env = STATE / "runtimes" / name
-        if not interpreter(env).exists():
-            run(sys.executable, "-m", "venv", env)
-        requirements = source / {"pi": "requirements.txt", "toolgate": "toolgate/requirements.txt", "memorygate": "services/api/requirements.txt"}[name]
-        # uvloop intentionally has no Windows wheel; uvicorn uses its asyncio backend.
-        lines = [line for line in requirements.read_text().splitlines() if not (os.name == "nt" and line.startswith("uvloop=="))]
-        platform_requirements = STATE / f"{name}-requirements.txt"
-        platform_requirements.write_text("\n".join(lines) + "\n")
-        run(interpreter(env), "-m", "pip", "install", "--disable-pip-version-check", "-r", platform_requirements, "psutil==7.2.0")
-        pythons[name] = str(interpreter(env))
+    pythons = {name: prepare_source(name, revision) for name, revision in pins.items()}
     # Reuse the established scoped-key configuration and service launcher.
     import local_stack
     local_stack.initialize()
     config = json.loads(CONFIG.read_text())
     config.update(workspace_schema=1, ports=PORTS, python=pythons["pi"],
                   python_by_service={**pythons, "gateway": pythons["pi"]},
-                  repositories={name: str(sources / name) for name in pins})
+                  repositories={name: str(STATE / "sources" / name) for name in pins})
     instance = "conker-workspace-" + hashlib.sha256(str(ROOT).encode()).hexdigest()[:10]
     config.update(postgres_container=instance, postgres_volume=instance)
     envs = config["environments"]
@@ -112,6 +92,39 @@ def install(model):
     initialize_owner(config)
     build()
     print(f"Installed. Start with: python scripts/workspace.py up\nOpen {ORIGIN}")
+
+
+REQUIREMENTS = {"pi": "requirements.txt", "toolgate": "toolgate/requirements.txt",
+                "memorygate": "services/api/requirements.txt", "embeddings": "requirements.txt"}
+
+
+def prepare_source(name, revision):
+    """The pinned checkout of one repository and its own environment; returns its interpreter."""
+    sources = STATE / "sources"
+    sources.mkdir(parents=True, exist_ok=True)
+    source = sources / name
+    fresh = not source.exists()
+    if fresh:
+        run("git", "clone", "--no-checkout", f"https://github.com/Conker-AI/{name}.git", source)
+    at_pin = not fresh and run("git", "rev-parse", "HEAD", cwd=source, capture=True) == revision
+    if not at_pin:
+        if not fresh and run("git", "status", "--porcelain", cwd=source, capture=True):
+            raise SystemExit(f"Pinned source {name} has local changes; refusing to replace it.")
+        if not fresh:
+            run("git", "fetch", "--quiet", "origin", cwd=source)
+        run("git", "checkout", "--detach", revision, cwd=source)
+    if run("git", "rev-parse", "HEAD", cwd=source, capture=True) != revision:
+        raise SystemExit(f"Source identity check failed for {name}.")
+    env = STATE / "runtimes" / name
+    if not interpreter(env).exists():
+        run(sys.executable, "-m", "venv", env)
+    requirements = source / REQUIREMENTS[name]
+    # uvloop intentionally has no Windows wheel; uvicorn uses its asyncio backend.
+    lines = [line for line in requirements.read_text().splitlines() if not (os.name == "nt" and line.startswith("uvloop=="))]
+    platform_requirements = STATE / f"{name}-requirements.txt"
+    platform_requirements.write_text("\n".join(lines) + "\n")
+    run(interpreter(env), "-m", "pip", "install", "--disable-pip-version-check", "-r", platform_requirements, "psutil==7.2.0")
+    return str(interpreter(env))
 
 
 def initialize_owner(config):
@@ -162,7 +175,8 @@ def wait_health(service, seconds=50):
     else:
         import ssl
         context = ssl.create_default_context(cafile=str(STATE / "gateway/tls.crt")) if service == "gateway" else None
-        url = ORIGIN + "/health" if service == "gateway" else f"http://127.0.0.1:{PORTS[service]}/health"
+        path = "/readyz" if service == "qdrant" else "/health"
+        url = ORIGIN + "/health" if service == "gateway" else f"http://127.0.0.1:{PORTS[service]}{path}"
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 return None
@@ -189,31 +203,36 @@ def port_listening(service):
 
 
 def postgres_state(config, listening):
+    return container_state(config, listening, "postgres")
+
+
+def container_state(config, listening, service):
     """Inspect the named container even while its published port is closed."""
+    label, container, volume, port, mount = CONTAINERS[service]
     try:
-        name = config["postgres_container"]
+        name = config[container]
         names = run("docker", "container", "ls", "--all", "--filter", f"name={name}",
                     "--format", "{{.Names}}", capture=True, timeout=15)
         if name not in names.splitlines():
             if listening:
-                raise SystemExit("PostgreSQL port is occupied by an unrelated process.")
+                raise SystemExit(f"{label} port is occupied by an unrelated process.")
             return "stopped"
         details = json.loads(run("docker", "inspect", name, capture=True, timeout=15))[0]
-        ports = details.get("HostConfig", {}).get("PortBindings", {}).get("5432/tcp", [])
-        volumes = [mount.get("Name") for mount in details.get("Mounts", []) if mount.get("Destination") == "/var/lib/postgresql/data"]
+        ports = details.get("HostConfig", {}).get("PortBindings", {}).get(port, [])
+        volumes = [item.get("Name") for item in details.get("Mounts", []) if item.get("Destination") == mount]
         if not (details["Config"].get("Labels", {}).get("conker.local-integration") == "true"
-                and ports == [{"HostIp": "127.0.0.1", "HostPort": str(PORTS["postgres"])}]
-                and volumes == [config["postgres_volume"]]):
-            raise SystemExit("PostgreSQL container does not belong to this workspace.")
+                and ports == [{"HostIp": "127.0.0.1", "HostPort": str(PORTS[service])}]
+                and volumes == [config[volume]]):
+            raise SystemExit(f"{label} container does not belong to this workspace.")
         running = details["State"]["Running"]
         restarting = details["State"].get("Restarting", False)
         if type(running) is not bool or type(restarting) is not bool:
             raise ValueError("Invalid container state")
         if listening and not (running or restarting):
-            raise SystemExit("PostgreSQL port is not owned by the stopped workspace container.")
+            raise SystemExit(f"{label} port is not owned by the stopped workspace container.")
         return "listening" if listening else "starting" if running or restarting else "stopped"
     except (KeyError, IndexError, TypeError, ValueError, OSError, subprocess.SubprocessError):
-        raise SystemExit("Could not inspect the workspace PostgreSQL container; nothing changed.") from None
+        raise SystemExit(f"Could not inspect the workspace {label} container; nothing changed.") from None
 
 
 PROCESS_INSPECTION = """
@@ -254,8 +273,8 @@ except psutil.Error:
 def service_state(config, service):
     """Separate verified process ownership from listener and health evidence."""
     listening = port_listening(service)
-    if service == "postgres":
-        return postgres_state(config, listening)
+    if service in CONTAINERS:
+        return container_state(config, listening, service)
     pid_file = STATE / service / "pid"
     if not pid_file.exists():
         if listening:
@@ -291,9 +310,8 @@ def owned_listener(config, service):
 
 
 def main():
-    global ORDER
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "enhance", "memory-corrections", "up", "down", "status", "build", "password"])
+    parser.add_argument("command", choices=["install", "enhance", "memory-corrections", "meaning-search", "up", "down", "status", "build", "password"])
     parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
     parser.add_argument("--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development")
     parser.add_argument("--memorygate-source", type=Path, help="Explicit MemoryGate checkout for local development")
@@ -310,12 +328,21 @@ def main():
         from workspace_setup import configure_memory_corrections
         configure_memory_corrections(config)
         return
+    if args.command == "meaning-search":
+        from workspace_search import enable
+        enable(config)
+        return
     if args.command == "enhance":
         from workspace_setup import enhance
         enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
         return
+    # Computed per call, never stored: a second call in one process must not add services twice.
+    order = ORDER
     if config.get("native_providers"):
-        ORDER = ("postgres", "memorygate", "toolgate", "decisions", "providers", "pi", "gateway")
+        order = ("postgres", "memorygate", "toolgate", "decisions", "providers", "pi", "gateway")
+    if config.get("meaning_search"):
+        # MemoryGate needs its index and the embeddings service before it starts.
+        order = (order[0], "qdrant", "embeddings", *order[1:])
     if args.command == "password":
         # Owner-interactive recovery; no password travels in process arguments.
         env = {**os.environ, "PYTHONPATH": config["repositories"]["pi"]}
@@ -323,7 +350,7 @@ def main():
     elif args.command == "up":
         if not (ROOT / "dashboard/dist/index.html").is_file():
             raise SystemExit("Build the dashboard first: python scripts/workspace.py build")
-        for service in ORDER:
+        for service in order:
             if not owned_process(config, service):
                 launch(config, "start", service)
             # TLS certificate is created by the gateway at startup.
@@ -338,20 +365,23 @@ def main():
             print(f"{service}: responding")
         print(f"Conker is available at {ORIGIN}. Review System for dependency readiness.")
     elif args.command == "down":
-        for service in reversed(ORDER):
+        for service in reversed(order):
             if owned_process(config, service):
                 launch(config, "stop", service)
                 if owned_process(config, service):
                     raise SystemExit(f"{service} did not stop; inspect its process before changing runtimes. Data retained.")
         print("Workspace stopped. All data retained.")
     else:
-        for service in ORDER:
+        for service in order:
             state = service_state(config, service)
             label = {"stopped": "stopped", "starting": "running; port not listening (starting or unhealthy)",
                      "listening": "running; listening (inspect System for health)"}[state]
             print(f"{service}: {label}")
         from workspace_memory import status as memory_correction_status
         print("memory corrections: " + memory_correction_status(config))
+        search = config.get("meaning_search")
+        print("meaning search: " + (f"configured ({search['model']})" if search else
+                                     "not configured; python scripts/workspace.py meaning-search"))
 
 
 if __name__ == "__main__":
