@@ -92,6 +92,14 @@ Writes check the revision and never retry automatically. Use context budget firs
 
 `chat SESSION TEXT --attach ID [--attach ID ...]` - Send a message with file attachments; attachment IDs must match the pattern `attachment_` followed by 32 hex characters.
 
+## Model Roles
+
+`models` - Show the model catalogue and which model plays each role.
+
+`models --role ROLE --model MODEL` - Point one role at one model and switch it on; everything else
+stays as saved. `models --role ROLE --off` switches it off. Example: `models --role drafting
+--model MODEL` lets the workflow builder use a stronger model while chat stays on yours.
+
 ## Model Profiles
 
 `profiles` - Read-only model profiles from recorded outcomes.

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A model for drafting:** `conker models --role drafting --model ID` gives the workflow
+  builder its own model (Pi's new `drafting` role) while chat keeps its own;
+  `--role ROLE --off` switches a role off. The dashboard now keeps model roles it does not
+  list when it saves, so a role set from the command line is never switched off by the page.
 - **Module release:** pin Pi 0.6.0, ToolGate 0.5.0, MemoryGate 0.5.0, SystemGate 0.4.0 and
   Embeddings 0.1.4, which carry everything the connected workspace has used since the
   0.5.6 pins (see each module's changelog). `conker update` moves a server to them with

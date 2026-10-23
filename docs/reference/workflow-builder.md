@@ -63,6 +63,19 @@ place in the Inbox. `workflow dismiss wfo_...` declines it. Pi makes the offer f
 message only, before the model answers; nothing the model writes, and no web page or tool
 result, can make one. Nothing is drafted until you accept, and nothing runs until you publish.
 
+## A model for drafting
+
+The builder uses your talking model unless you give it one of its own. A small local model can
+chat well and still draft badly; give drafting a stronger one while chat stays local:
+
+```bash
+python scripts/conker.py models --role drafting --model MODEL_ID
+python scripts/conker.py models --role drafting --off
+```
+
+It is used only when you ask for a draft, sees only your request and the capability list, and
+waits up to 10 minutes. A hosted model costs what that provider charges per draft.
+
 ## What the builder cannot do
 
 - Use a tool or workflow you do not have. It says so instead.

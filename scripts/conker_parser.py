@@ -199,6 +199,10 @@ def build_parser(description):
         type=Path,
         help="JSON update containing expected_revision and configuration",
     )
+    models.add_argument("--role", help="Point one model role at one model, e.g. drafting")
+    choice = models.add_mutually_exclusive_group()
+    choice.add_argument("--model", help="The model ID for --role, as conker models lists it")
+    choice.add_argument("--off", action="store_true", help="Switch --role off")
     commands.add_parser(
         "profiles", help="Read-only model profiles from recorded outcomes"
     )
