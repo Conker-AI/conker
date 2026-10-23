@@ -32,7 +32,8 @@ DIGEST = re.compile(r"[0-9a-f]{64}")
 TEST_TOOL = "approval.test-echo"  # the rehearsal's harmless tool; it only echoes back
 AUTHORIZATION = {
     "owner_confirmation": "asks you first",
-    "ai_review": "a reviewer model checks it first",
+    # ToolGate retired its reviewer model; it treats ai_review exactly like owner confirmation.
+    "ai_review": "asks you first",
     "auto": "runs without asking",
 }
 ROUNDS = 40  # every round runs one command; this bounds a step that never advances

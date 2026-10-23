@@ -275,7 +275,8 @@ def test_the_owner_sees_how_each_tool_is_authorized_before_accepting():
     with pytest.raises(wizard.Stop):
         owner.wizard().review_boundaries()
     assert "Delete files (asks you first)" in owner.text
-    assert "Web search (a reviewer model checks it first)" in owner.text
+    # ai_review waits for the owner too: ToolGate has no reviewer model.
+    assert "Web search (asks you first)" in owner.text
     assert "System status (runs without asking)" in owner.text
     assert not any(call[:3] == ("setup", "run", "boundaries") for call in conker.calls)
 
