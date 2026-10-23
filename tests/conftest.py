@@ -53,9 +53,8 @@ def ubuntu_cli(tmp_path: Path):
         "import json, sys\nprint(json.dumps(sys.argv[1:]))\n",
         encoding="utf-8",
     )
-    shutil.copy2(
-        ROOT / "scripts/provider_secrets.py", companion / "scripts/provider_secrets.py"
-    )
+    for name in ("provider_secrets.py", "provider_records.py"):
+        shutil.copy2(ROOT / "scripts" / name, companion / "scripts" / name)
     shutil.copy2(ROOT / "scripts/speech_config.py", companion / "scripts/speech_config.py")
     shutil.copy2(ROOT / "scripts/setup_wizard.py", companion / "scripts/setup_wizard.py")
     cli.chmod(cli.stat().st_mode | stat.S_IXUSR)
