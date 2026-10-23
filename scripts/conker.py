@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+import conker_models
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
 from conker_context import operation as context_operation
@@ -503,6 +504,10 @@ def main():
             if args.cancel
             else request(config, "pi", f"/sessions/{args.session}/thinking")
         )
+    elif args.command == "models" and args.role:
+        if bool(args.model) == args.off or args.save:
+            raise ValueError("Use --role ROLE with exactly one of --model ID or --off.")
+        value = conker_models.set_role(request, config, args.role, None if args.off else args.model)
     elif args.command == "models":
         value = request(
             config,

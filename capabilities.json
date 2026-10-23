@@ -61,7 +61,7 @@
     },
     {
       "id": "model-configuration", "name": "Model catalogue and role configuration", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/pi/models", "/api/control/pi/models/configuration"], "uiRoutes": ["/settings"], "cliCommands": ["conker inspect models", "conker apply models FILE"], "deploymentRequirements": ["PI_MODEL", "PI_OLLAMA_URL", "PI_OWNER_KEY_SHA256"],
+      "gatewayRoutes": ["/api/pi/models", "/api/control/pi/models/configuration"], "uiRoutes": ["/settings"], "cliCommands": ["conker inspect models", "conker apply models FILE", "python scripts/conker.py models --role ROLE --model MODEL_ID|--off"], "deploymentRequirements": ["PI_MODEL", "PI_OLLAMA_URL", "PI_OWNER_KEY_SHA256"],
       "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "/api/control/pi/models/configuration"}, {"path": "dashboard/src/components/gateway/workspace.tsx", "contains": "modelsActive"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {

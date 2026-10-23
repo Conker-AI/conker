@@ -98,6 +98,10 @@ async function main() {
   const disabled = { enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }
   const configuration = { providers: [{ id: 'decisions', name: 'Local decisions', enabled: true, apiKeyDraft: 'NEVER SEND', endpoint: 'http://private' }], models: [], defaultModelId: null,
     roleSettings: { answerMode: 'manual', roles: { answer: disabled, routing: disabled, 'context-selection': disabled, summarization: disabled } } }
+  // A role this page does not list (drafting) survives a read, so saving the page keeps it.
+  const drafting = { enabled: true, eligibleModelIds: ['strong'], modelId: 'strong', timeoutMs: 120000, failure: 'stop', fallbackModelId: null }
+  result = { revision: 2, configuration: { ...configuration, roleSettings: { ...configuration.roleSettings, roles: { ...configuration.roleSettings.roles, drafting } } } }
+  assert.deepEqual((await client.models()).configuration.roleSettings.roles.drafting, drafting)
   let modelChanges = 0
   const unsubscribeModels = client.subscribeModels(() => { modelChanges++ })
   await client.saveModels(configuration, 0)

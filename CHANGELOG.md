@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A model for drafting:** `conker models --role drafting --model ID` gives the workflow
+  builder its own model (Pi's new `drafting` role) while chat keeps its own;
+  `--role ROLE --off` switches a role off. The dashboard now keeps model roles it does not
+  list when it saves, so a role set from the command line is never switched off by the page.
 - **Clean images:** the weekly security check scans every image `versions.env` pins with
   Trivy. Its first run moved ToolGate and MemoryGate to 0.5.1 (their images no longer carry
   the base image's setuptools and wheel) and the third-party pins to PostgreSQL 16.15,
