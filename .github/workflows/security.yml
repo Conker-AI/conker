@@ -85,6 +85,8 @@ jobs:
 
       - name: Third-party images, as versions.env pins them
         # Their fixes are upstream; a finding here means moving that digest to a fixed release.
+        # Runs even when Conker's own images failed, so one run shows everything.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           pin() { sed -n "s/^$1=//p" versions.env; }
