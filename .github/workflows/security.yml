@@ -15,6 +15,7 @@ on:
       - "dashboard/package.json"
       - "dashboard/package-lock.json"
       - "services/decisions/requirements.txt"
+      - "versions.env"
   workflow_dispatch:
 
 # Read-only token: the check reads code and public advisories; it writes nothing.
@@ -55,3 +56,43 @@ jobs:
           python -m pip install --quiet pip-audit==2.10.1
           grep -E '^[A-Za-z0-9_.-]+==' services/decisions/requirements.txt > "$RUNNER_TEMP/decisions.txt"
           pip-audit --no-deps --disable-pip --progress-spinner off -r "$RUNNER_TEMP/decisions.txt"
+
+  images:
+    name: Released images
+    runs-on: ubuntu-latest
+    env:
+      # Trivy 0.75.0, pinned by digest like every image an owner runs.
+      TRIVY: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Conker's own images, as versions.env pins them
+        # Each image's Linux and Python packages. Only problems that already have a fix fail the
+        # run: rebuilding or updating clears them, so each one is something to act on.
+        run: |
+          pin() { sed -n "s/^$1=//p" versions.env; }
+          status=0
+          for image in pi:"$(pin PI_VERSION)" toolgate:"$(pin TOOLGATE_VERSION)" \
+              memorygate:"$(pin MEMORYGATE_VERSION)" systemgate:"$(pin SYSTEMGATE_VERSION)" \
+              embeddings:"$(pin EMBEDDINGS_VERSION)"; do
+            echo "::group::ghcr.io/conker-ai/$image"
+            docker run --rm -v trivy-cache:/root/.cache "$TRIVY" image --quiet --scanners vuln \
+              --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 \
+              "ghcr.io/conker-ai/$image" || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+
+      - name: Third-party images, as versions.env pins them
+        # Their fixes are upstream; a finding here means moving that digest to a fixed release.
+        continue-on-error: true
+        run: |
+          pin() { sed -n "s/^$1=//p" versions.env; }
+          status=0
+          for key in POSTGRES_IMAGE QDRANT_IMAGE OLLAMA_IMAGE SEARXNG_IMAGE; do
+            echo "::group::$(pin "$key")"
+            docker run --rm -v trivy-cache:/root/.cache "$TRIVY" image --quiet --scanners vuln \
+              --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "$(pin "$key")" || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
