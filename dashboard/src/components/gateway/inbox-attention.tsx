@@ -2,12 +2,16 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useStore } from 'zustand'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
-import type { GatewayRuntimeWorkspaceState } from './runtime-state'
+import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { InboxAttentionContext } from '@/lib/workspace-chrome'
+import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 
-/** One read of the Inbox count for the whole shell, refreshed on navigation and after chat work. */
-export function InboxAttentionProvider({ owner, conversationState, children }: {
-  owner: GatewayOwnerClient; conversationState: GatewayRuntimeWorkspaceState; children: ReactNode
+/**
+ * One read of the Inbox count for the whole shell: decisions waiting for the owner plus open ideas,
+ * the same things Home counts. Refreshed on navigation and after chat work.
+ */
+export function InboxAttentionProvider({ owner, proposals, conversationState, children }: {
+  owner: GatewayOwnerClient; proposals: GatewayProposalClient; conversationState: GatewayRuntimeWorkspaceState; children: ReactNode
 }) {
   const location = useLocation()
   const selected = useStore(conversationState, value => value.selected)
@@ -18,10 +22,13 @@ export function InboxAttentionProvider({ owner, conversationState, children }: {
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    owner.listRequests({ limit: 50 }).then(result => {
-      if (!controller.signal.aborted) setCount(result.results.filter(row => row.status === 'pending' && row.reviewable).length)
-    }).catch(() => { if (!controller.signal.aborted) setCount(null) })
-  }, [owner])
+    void Promise.allSettled([owner.listRequests({ limit: 50 }), proposals.list({ signal: controller.signal })]).then(([decisions, ideas]) => {
+      if (controller.signal.aborted) return
+      if (decisions.status === 'rejected' && ideas.status === 'rejected') { setCount(null); return }
+      setCount((decisions.status === 'fulfilled' ? decisions.value.results.filter(row => row.status === 'pending' && row.reviewable).length : 0)
+        + (ideas.status === 'fulfilled' ? ideas.value.filter(item => item.state === 'open').length : 0))
+    })
+  }, [owner, proposals])
   useEffect(() => {
     let cancelled = false
     if (!operation) queueMicrotask(() => { if (!cancelled) refresh() })
