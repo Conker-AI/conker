@@ -1,11 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { X } from 'lucide-react'
 import { LayoutFrame } from '@/components/layouts/layout-frame'
-import { Button } from '@/components/ui/button'
-import { DetailPanel } from '@/components/design-system/overlays'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { InlineDetails } from '@/components/design-system/overlays'
 import type { GatewayRuntimeClient, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { ConversationViewContent } from './conversation-views'
 import { conversationViewLabel, type ConversationView } from './conversation-view-list'
@@ -28,7 +25,6 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const [loading, setLoading] = useState(false)
   const operation = useStore(conversationState, state => state.operation)
   const forgotten = useStore(sourcePrivacy, state => state.sessionIds)
-  const isMobile = useIsMobile()
   const onChat = resolveGatewayRoute(location.pathname) === 'chat'
   const view = onChat ? openView : null
   const contextOpen = view !== null
@@ -48,11 +44,13 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const reference = view && <ConversationViewContent view={view} runtime={runtime} sourcePrivacy={sourcePrivacy} active={contextOpen} detail={referenceSession && detail?.id === referenceSession ? detail : null} error={error} loading={loading} onRetry={() => setReferenceRetry(value => value + 1)} />
   const viewLabel = view ? conversationViewLabel(view) : ''
   const closeReference = () => { const closing = view; setOpenView(null); if (closing) document.querySelector<HTMLButtonElement>(`[data-conversation-view="${closing}"]`)?.focus() }
-  return <ConnectedShellContext.Provider value={{ view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat }}>
-  <LayoutFrame variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}
-    reference={contextOpen && !isMobile ? <aside className="conker-reference" aria-label={viewLabel} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeReference() } }}><div className="conker-reference-heading"><h2>{viewLabel}</h2><Button variant="ghost" size="icon" onClick={closeReference} aria-label={`Close ${viewLabel}`}><X /></Button></div>{reference}</aside> : null}>
+  // Views open in place under the chat bar (owner: no side windows), on every screen size.
+  const panel = <InlineDetails open={contextOpen} onOpenChange={open => { if (!open) closeReference() }} title={viewLabel} description="Saved records for this chat.">
+    <div className="max-h-[45dvh] min-h-0 overflow-y-auto">{reference}</div>
+  </InlineDetails>
+  return <ConnectedShellContext.Provider value={{ view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat, panel }}>
+  <LayoutFrame variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}>
     <div id="conker-workspace-document" className="flex min-h-0 flex-1 flex-col">{children}</div>
   </LayoutFrame>
-  {isMobile && <DetailPanel open={contextOpen} onOpenChange={open => { if (!open) setOpenView(null) }} title={viewLabel} description="Saved records for this chat.">{reference}</DetailPanel>}
   </ConnectedShellContext.Provider>
 }
