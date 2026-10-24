@@ -39,13 +39,13 @@ export function InlineError({ error, onRetry, title, description, retryOnReconne
     <AlertTitle>{title ?? failureTitle(error)}</AlertTitle>
     <AlertDescription>
       <p>{description ?? loadFailureDescription(error)}</p>
-      <details className="text-xs">
+      {error != null && <details className="text-xs">
         <summary className="w-fit cursor-pointer select-none rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">Details</summary>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>{failure ? `${failure.kind}${failure.status ? ` · HTTP ${failure.status}` : ''}` : 'browser error'}</span>
           <CopyErrorDetails error={error} size="sm" />
         </div>
-      </details>
+      </details>}
     </AlertDescription>
     {canRetry && <AlertAction>
       <Button type="button" size="sm" variant="outline" loading={busy} onClick={() => void retry()}><RotateCcw />Try again</Button>
