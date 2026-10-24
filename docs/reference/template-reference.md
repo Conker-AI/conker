@@ -1,41 +1,39 @@
-# Conker's template authority
+# Conker's UI kit authority
 
-The owner designated [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template) as the shared UI authority on September 16, 2026. Use its components with Conker's content and features. Preserve Conker's custom appbar and sidebar controls.
+On 24 October 2026 the owner chose [coss ui](https://coss.com/ui) (the Cal.com design system, built on
+[Base UI](https://base-ui.com) and Tailwind CSS v4) as Conker's UI kit, replacing the shadcnstore template
+chosen on 16 September. He picked it for its outlined, layered surfaces after comparing it with
+shadcn-admin, Untitled UI, Catalyst and Intent UI. Its license is AGPL-3.0, so every Conker repository
+moved to AGPL-3.0-only the same day.
 
-Reference reviewed: `65fc11224e96d56a62e224a58f7ed590aea5ac24`, the upstream HEAD at review time. Use the **Vite version**. The implementation takes precedence over generic documentation examples: the source uses Tailwind v4 with OKLCH variables, while some documentation still illustrates older HSL conventions.
+Pinned source: [cosscom/ui](https://github.com/cosscom/ui) at `3d8ca28e7d90123e9e0f44665944dc240b026ccb`,
+installed through the shadcn registry (`@coss/style`). Docs for each component, with examples:
+`https://coss.com/ui/docs/components/<name>` (Markdown: append `.md`). Map of all docs:
+<https://coss.com/ui/llms.txt>.
 
-## Where to learn and copy
+## Where things live
 
-| Need | Upstream source | Conker owner |
+| Need | coss ui | Conker owner |
 | --- | --- | --- |
-| Colors, foreground pairs, radius and type variables | [index.css](https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/index.css) | `dashboard/src/index.css` |
-| Buttons, fields, menus, tabs, dialogs and other primitives | [components/ui](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/components/ui) | Same directory in the dashboard |
-| Presets, radius, light/dark, color editor and CSS imports | [theme-customizer](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/components/theme-customizer) | Existing customizer plus persistent preferences and mounted `ThemeRuntime` |
-| Applying preset/imported values | [use-theme-manager.ts](https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/hooks/use-theme-manager.ts) | Existing hook and theme provider |
-| Sidebar variants, collapse and side | [ui/sidebar.tsx](https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/components/ui/sidebar.tsx) | Existing sidebar/context; retain Conker's mobile and right-inset fixes |
-| Tables, sorting, filtering, selection and pagination | [data-table.tsx](https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/components/data-table.tsx) | Existing DataTable with shared CollectionSearch |
-| Charts and tooltips | [ui/chart.tsx](https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/components/ui/chart.tsx) | Existing Recharts wrapper; retain installed-version TypeScript fixes |
-| Application composition examples | [app directory](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version/src/app) | Reuse suitable patterns with ConkerClient data and Conker routes |
+| Colors, radius, fonts, animations | `@coss/style` (neutral colors, Inter, toast and skeleton keyframes) | `dashboard/src/index.css` |
+| Buttons, fields, menus, tabs, dialogs, sheets, toasts and the other primitives | `@coss/ui` (53 primitives on Base UI) | `dashboard/src/components/ui/` |
+| Framed groups of panels (the layered look) | `frame`, `card` with `CardFrame` | same directory |
+| Empty, loading and error states | `empty`, `skeleton`, `spinner`, `alert`, `toast` | same directory, composed by the resilience components |
+| Chat input | `composer` (+ `src/lib/composer-*`, `src/hooks/use-composer-editor`) | same directory |
+| Dropdown menus | `menu` (also exported as `DropdownMenu*` through `ui/dropdown-menu.tsx`) | same directory |
 
-All **39 upstream UI primitives** are present; Conker has 41 including its extensions. Keep the full primitive API, variants and Radix interactions. Existing preset libraries, theme imports, color editing, radius, light/dark/system handling, three sidebar variants, three collapse modes and both sidebar positions remain available. Tests cover the actual controls; documentation feature lists alone are not proof of behavior.
+The calendar primitive is not installed (it needs a date-picker dependency Conker does not use yet).
+`ui/chart.tsx` and `ui/loading-spinner.tsx` are Conker's own.
 
-Application demos and landing pages remain source references in the repository. They are not substitutes for Conker's real routes, data or chat behavior, and their presence does not imply a connected backend. Use the available table/chart/form/application patterns when implementing Conker features instead of inventing another component library.
+## Rules
 
-## Explicit Conker adaptations
+- Use the coss primitive; do not restyle it per route. Base UI composes with the `render` prop
+  (`<Button render={<Link to="/x" />}>Open</Button>`), not Radix's `asChild`.
+- Colors come from the semantic tokens (`primary`, `muted`, `success`, `success-foreground`, `info`, …).
+  Text in a status color uses the `-foreground` token (`text-success-foreground`), fills use the base
+  token with opacity as the primitives do.
+- `dashboard/scripts/template-foundation.json` records every class recipe of the installed primitives;
+  the design guard allows them only in their owning file. Re-generate it when coss ui is updated.
 
-- Green primary/foreground and focus colors are the default Conker theme choice. Presets and imports can replace them. Standard shadcn color roles remain direct variables.
-- Keep compact density, full-width gutters, 40px collection search, 64px minimum rows and small appbar controls. Collections use the documented compact heading/16px rhythm; forms and overviews retain their own composition. Shared primitive dimensions still use Conker's density tokens; do not enlarge every screen to match a demo page.
-- Keep custom navigation, brand/theme-control placement, contextual conversation rail, drafts, voice, message actions, command search and ConkerClient fixtures.
-- Keep complete padded photo portraits, custom scrollbars and the terminal's deliberately black command area.
-- Keep the existing readable secondary-text value and the destructive button foreground pair. Warning and success are small semantic extensions, used with labels.
-- The native color picker converts supported CSS colors to hex for its swatch, while keeping the original value in its text field. It follows the actual active theme, including OKLCH presets and mode changes.
-
-These adaptations do not authorize another palette, a second theme provider or per-route replacements for shared controls.
-
-## Enforcing the reference
-
-`dashboard/scripts/template-foundation.json` pins the revision and records the upstream color recipes by owning primitive. The design guard permits those exact recipes in their owners, rejects arbitrary route colors, and checks direct Tailwind-to-shadcn color mappings. Never remove a valid upstream opacity recipe merely to satisfy an invented blanket rule; never use that exception to scatter new tones across routes.
-
-For a future change: inspect the relevant upstream file, reuse the local primitive, preserve its API, adapt only the Conker-specific content/behavior, then review desktop/mobile and light/dark consumers. Update the recorded reference deliberately when adopting a new upstream revision.
-
-The upstream MIT notice is retained in `dashboard/THIRD_PARTY_LICENSES/shadcn-dashboard-template.txt`.
+The previous template's MIT notice stays in `dashboard/THIRD_PARTY_LICENSES/` for the code that remains
+from it.
