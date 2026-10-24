@@ -1,69 +1,36 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { GatewayProposalClient, Proposal, ProposalDecision } from '@/lib/gateway/proposals'
-import { gatewayError } from '@/lib/gateway/transport'
+import { InboxCard } from '@/components/inbox/inbox-card'
+import type { Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayConversationLink } from './navigation'
 
-const decided: Record<ProposalDecision, string> = { accept: 'Accepted. Nothing runs until you set it up or approve an action.', decline: 'Declined. Conker will hold this idea back for 30 days.', never: 'Got it. Conker will not suggest this idea again; if a reworded version appears, decline it too.' }
+const age = (seconds: number) => {
+  const minutes = Math.max(0, Math.floor((Date.now() - seconds * 1000) / 60000))
+  return minutes < 60 ? `${Math.max(1, minutes)} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
+}
 
-/** Proposals from the nightly pass: what Conker noticed, why, and what approving would mean. */
-export function ProposalsPanel({ client, active }: { client: GatewayProposalClient; active: boolean }) {
-  const [items, setItems] = useState<Proposal[] | null>(null)
-  const [pending, setPending] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
-  const mounted = useRef(true)
-  const load = useCallback(async () => {
-    try { const rows = await client.list(); if (mounted.current) { setItems(rows); setError(null) } }
-    catch (failure) { if (mounted.current) setError(gatewayError(failure).message) }
-  }, [client])
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  useEffect(() => {
-    let cancelled = false
-    if (active) queueMicrotask(() => { if (!cancelled) void load() })
-    return () => { cancelled = true }
-  }, [active, load])
-
-  async function decide(item: Proposal, decision: ProposalDecision) {
-    setPending(item.id); setError(null); setNotice(null)
-    try {
-      await client.decide(item.id, decision)
-      if (!mounted.current) return
-      setItems(rows => rows?.filter(row => row.id !== item.id) ?? rows)
-      setNotice(decided[decision])
-    } catch (failure) {
-      if (mounted.current) setError(`${gatewayError(failure).message} Refresh to see the saved decision.`)
-    } finally { if (mounted.current) setPending(null) }
-  }
-
-  return <section aria-labelledby="proposals-heading" className="flex flex-col gap-4">
-    <div className="flex items-center justify-between gap-2">
-      <h2 id="proposals-heading" className="text-base font-medium">Ideas from Conker</h2>
-      <Button size="icon" variant="ghost" aria-label="Refresh ideas" title="Refresh ideas" disabled={pending !== null} onClick={() => void load()}><RefreshCw /></Button>
+/** An idea from the nightly pass as one Inbox card: what Conker noticed, why, and what accepting means. */
+export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
+  item: Proposal; pending: boolean; failure: string | null; onDecide: (decision: ProposalDecision) => void; onLater?: () => void
+}) {
+  return <InboxCard icon={<Lightbulb />} title={item.title} summary={item.suggestion}
+    meta={<><span>Idea</span><span>· {age(item.createdAt)}</span></>}
+    primary={<Button type="button" size="sm" className="rounded-full" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>}
+    onLater={onLater}
+    footer={failure && <p role="alert" className="text-sm text-destructive-foreground">{failure}</p>}>
+    <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
+    <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground">Why</p>
+      {item.evidence.length ? <ul className="flex flex-col gap-2">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available
+        ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link>
+        : <span>This message was forgotten.</span>}</li>)}</ul>
+        : <p className="text-muted-foreground">No cited messages are available.</p>}
     </div>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    {items === null && !error && <p role="status" className="text-sm text-muted-foreground">Loading ideas...</p>}
-    {items?.length === 0 && <p className="text-sm text-muted-foreground">No new ideas for now. Conker looks once a day, after a model is chosen for Proposals in Settings.</p>}
-    {items?.map(item => <Card key={item.id} className="min-w-0" aria-labelledby={`proposal-${item.id}`}>
-      <CardHeader><CardTitle><h3 id={`proposal-${item.id}`} className="break-words [overflow-wrap:anywhere]">{item.title}</h3></CardTitle></CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm leading-6 [overflow-wrap:anywhere]">
-        <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
-        <p>{item.suggestion}</p>
-        <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
-        <Accordion><AccordionItem value="why"><AccordionTrigger>Why</AccordionTrigger><AccordionContent>
-          <ul className="flex flex-col gap-3">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link> : <span>This message was forgotten.</span>}</li>)}</ul>
-          {!item.evidence.length && <p className="text-muted-foreground">No cited messages are available.</p>}
-        </AccordionContent></AccordionItem></Accordion>
-      </CardContent>
-      <CardFooter className="flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap">
-        <Button disabled={pending !== null} onClick={() => void decide(item, 'accept')}>Accept</Button>
-        <Button variant="outline" disabled={pending !== null} onClick={() => void decide(item, 'decline')}>Not now</Button>
-        <Button size="sm" variant="ghost" disabled={pending !== null} onClick={() => void decide(item, 'never')}>Never suggest this</Button>
-      </CardFooter>
-    </Card>)}
-  </section>
+    <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="outline" disabled={pending} onClick={() => onDecide('decline')}>Not now (30 days)</Button>
+      <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onDecide('never')}>Never suggest this</Button>
+    </div>
+  </InboxCard>
 }
