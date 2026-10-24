@@ -79,8 +79,7 @@ export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: R
       <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-2">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col">
-            <SidebarMenuButton size="lg" asChild tooltip="Open companion" className="min-w-0 flex-1 gap-3 group-data-[collapsible=icon]:flex-none">
-              <Link to="/companion" aria-label="Conker companion screen">
+            <SidebarMenuButton size="lg" tooltip="Open companion" className="min-w-0 flex-1 gap-3 group-data-[collapsible=icon]:flex-none" render={<Link to="/companion" aria-label="Conker companion screen" />}>
                 <CompanionPortrait portrait="/conker.png" name="Conker" className="size-8 rounded-lg" />
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">Conker</span>
@@ -88,8 +87,7 @@ export function AppSidebar({ ownerName, inboxCount, accountFooter, ...props }: R
                     Your companion
                   </span>
                 </div>
-              </Link>
-            </SidebarMenuButton>
+              </SidebarMenuButton>
             <ModeToggle />
           </SidebarMenuItem>
         </SidebarMenu>

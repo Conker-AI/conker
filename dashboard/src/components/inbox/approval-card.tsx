@@ -55,7 +55,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
         <p className="text-sm leading-6 text-muted-foreground">Permission only: allow this exact action once before expiry. Nothing runs automatically. Confirm with your owner password, then return to the chat to continue.</p>
         <div className="flex gap-2 sm:justify-end"><Button className="min-w-0 flex-1 sm:min-w-32 sm:flex-none" disabled={busy || !eligibility.approve} onClick={() => onDecide('approved')}>Allow once</Button><Button className="min-w-0 flex-1 sm:min-w-32 sm:flex-none" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected')}>Don&apos;t allow</Button></div>
       </>}
-      <Accordion type="single" collapsible><AccordionItem value="technical"><AccordionTrigger>Technical details</AccordionTrigger><AccordionContent><div className="flex flex-col gap-3 text-sm">
+      <Accordion><AccordionItem value="technical"><AccordionTrigger>Technical details</AccordionTrigger><AccordionContent><div className="flex flex-col gap-3 text-sm">
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 break-words"><dt>Request ID</dt><dd className="break-all">{request.id}</dd><dt>Type</dt><dd>{request.action.subjectType ?? 'Unavailable'}</dd><dt>Subject ID</dt><dd className="break-all">{request.action.subjectId ?? 'Unavailable'}</dd><dt>Version</dt><dd>{request.action.version ?? 'Unavailable'}</dd><dt>Origin verified</dt><dd>{request.approval.originValid ? 'Yes' : 'No'}</dd><dt>Status</dt><dd>{humanize(request.status)}</dd></dl>
         <p>Created {timestamp(request.createdAt)} · Updated {timestamp(request.updatedAt)}</p>
         {request.approval.expiresAt && <p>Expires {timestamp(request.approval.expiresAt)}</p>}

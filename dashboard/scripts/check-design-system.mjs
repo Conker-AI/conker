@@ -201,8 +201,8 @@ function selfTest() {
     assert.equal(check('const tone = "bg-muted/40"', "src/components/companion-portrait.tsx")[0]?.rule, "semantic-tone")
   })
   test("template recipes are allowed only in their owning primitive", () => {
-    assert.deepEqual(check('const tone = "dark:hover:bg-accent/50"', "src/components/ui/button.tsx"), [])
-    assert.equal(check('const tone = "dark:hover:bg-accent/50"', "src/components/ui/card.tsx")[0]?.rule, "semantic-tone")
+    assert.deepEqual(check('const tone = "hover:bg-accent/50"', "src/components/ui/button.tsx"), [])
+    assert.equal(check('const tone = "hover:bg-accent/50"', "src/components/ui/card.tsx")[0]?.rule, "semantic-tone")
     assert.equal(check('const tone = "bg-purple-500"', "src/components/ui/button.tsx")[0]?.rule, "semantic-color")
   })
   test("template token aliases cannot be redirected to mixed surfaces", () => {

@@ -33,6 +33,6 @@ export function TurnFailureGuidance({ status, detail, hasAction }: { status: str
       ? 'The configured model route could not answer. Check model availability in Settings, or select an available answer model in the composer before sending a new message.'
       : 'This turn stopped before completing its answer. Review the saved turn and service status before sending another request.'}</p>
     {hasAction && <p>Review the action outcome first. Sending again could repeat work.</p>}
-    {modelUnavailable && <Button asChild variant="outline" size="sm"><Link to="/settings">Review models</Link></Button>}
+    {modelUnavailable && <Button variant="outline" size="sm" render={<Link to="/settings" />}>Review models</Button>}
   </div>
 }

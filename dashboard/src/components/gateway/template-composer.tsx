@@ -11,10 +11,10 @@ export function TemplatePicker({ draftKey, disabled }: { draftKey: string; disab
   const entry = useTemplateEntry(draftKey)
   const template = entry ? findTemplate(entry.templateId) : null
   return <DropdownMenu>
-    <DropdownMenuTrigger asChild><Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Prompt template: ${template ? template.name : "none"}`}><LayoutTemplate className="size-4" />{template ? template.name : "Template"}</Button></DropdownMenuTrigger>
+    <DropdownMenuTrigger render={<Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Prompt template: ${template ? template.name : "none"}`} />}><LayoutTemplate className="size-4" />{template ? template.name : "Template"}</DropdownMenuTrigger>
     <DropdownMenuContent align="start">
-      {builtinTemplates.map(t => <DropdownMenuItem key={t.id} onSelect={() => chooseTemplate(draftKey, t.id)}><div><div>{t.name}</div><div className="text-xs text-muted-foreground">{t.description}</div></div></DropdownMenuItem>)}
-      {active && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => chooseTemplate(draftKey, null)}>No template</DropdownMenuItem></>}
+      {builtinTemplates.map(t => <DropdownMenuItem key={t.id} onClick={() => chooseTemplate(draftKey, t.id)}><div><div>{t.name}</div><div className="text-xs text-muted-foreground">{t.description}</div></div></DropdownMenuItem>)}
+      {active && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => chooseTemplate(draftKey, null)}>No template</DropdownMenuItem></>}
     </DropdownMenuContent>
   </DropdownMenu>
 }

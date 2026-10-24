@@ -16,5 +16,5 @@ export function StudioField({ label, hint, value, onChange, multiline = true, pl
 }
 export function AssetPicker({ label, value, assets, onChange }: { label: string; value: string | null; assets: CharacterAsset[]; onChange: (value: string | null) => void }) {
   const id = useId()
-  return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Select value={value || "main"} onValueChange={next => onChange(next === "main" ? null : next)}><SelectTrigger id={id} className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Main portrait</SelectItem>{assets.map(asset => <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>)}</SelectContent></Select></div>
+  return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Select value={value || "main"} onValueChange={next => { if (next !== null) onChange(next === "main" ? null : next) }} items={[{ value: "main", label: "Main portrait" }, ...assets.map((asset) => ({ value: asset.id, label: asset.name }))]}><SelectTrigger id={id} className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="main">Main portrait</SelectItem>{assets.map(asset => <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>)}</SelectContent></Select></div>
 }

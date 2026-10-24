@@ -23,14 +23,13 @@ export function ConversationIncognito({ privacy, busy, onChange, onInspect, scop
   const mode = [privacy.memoryDisabled && "No memory", privacy.harnessDisabled && "No harness"].filter(Boolean).join(" · ") || "Off"
 
   return <Dialog open={open} onOpenChange={setOpen}>
-    <Tooltip><TooltipTrigger asChild><DialogTrigger asChild>
-      <Button variant={active ? "secondary" : "ghost"} size="icon" className={cn("relative size-(--control-height-sm) shrink-0", active && "text-primary ring-1 ring-inset ring-primary/60")} aria-label={`Incognito: ${mode}`}>
+    <Tooltip><TooltipTrigger render={<DialogTrigger render={<Button variant={active ? "secondary" : "ghost"} size="icon" className={cn("relative size-(--control-height-sm) shrink-0", active && "text-primary ring-1 ring-inset ring-primary/60")} aria-label={`Incognito: ${mode}`} />} />}>
         <HatGlasses />
         {active && <span aria-hidden="true" className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />}
-      </Button>
-    </DialogTrigger></TooltipTrigger><TooltipContent>Incognito · {mode}</TooltipContent></Tooltip>
-    <TaskDialogContent title={<span className="flex items-center gap-2"><HatGlasses className="size-5" />Incognito</span>} description={`Choose what to exclude from this ${scope}.`} onCloseAutoFocus={event => {
-      if (inspect.current) { event.preventDefault(); inspect.current = false; onInspect() }
+      </TooltipTrigger><TooltipContent>Incognito · {mode}</TooltipContent></Tooltip>
+    <TaskDialogContent title={<span className="flex items-center gap-2"><HatGlasses className="size-5" />Incognito</span>} description={`Choose what to exclude from this ${scope}.`} finalFocus={() => {
+      if (inspect.current) { inspect.current = false; onInspect(); return false }
+      return true
     }}>
       <OverlayBody>
       <div className="divide-y rounded-lg border px-4">

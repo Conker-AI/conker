@@ -102,14 +102,14 @@ export function WorkspaceSearch({ onSubmit, ...props }: Omit<CollectionSearchPro
   }, [id, setOwner])
   if (!chrome) return <CollectionSearch {...props} />
   if (!chrome.search) return null
-  const scope = openAll && <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Search scope" title="Search scope"><ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+  const scope = openAll && <DropdownMenu><DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Search scope" title="Search scope" />}><ChevronDown /></DropdownMenuTrigger><DropdownMenuContent align="end">
     <DropdownMenuLabel>Search scope</DropdownMenuLabel><DropdownMenuItem disabled>{props.label}</DropdownMenuItem>
-    <DropdownMenuItem onSelect={() => { const opener = chrome.compactSearch ? trigger.current : input.current; setExpanded(false); openAll(typeof props.value === 'string' ? props.value.slice(0, 200) : '', opener) }}>Search all Conker</DropdownMenuItem>
+    <DropdownMenuItem onClick={() => { const opener = chrome.compactSearch ? trigger.current : input.current; setExpanded(false); openAll(typeof props.value === 'string' ? props.value.slice(0, 200) : '', opener) }}>Search all Conker</DropdownMenuItem>
   </DropdownMenuContent></DropdownMenu>
   const field = <form className="min-w-0 w-full" role="search" onSubmit={event => { event.preventDefault(); event.stopPropagation(); onSubmit?.(); setExpanded(false) }}>
     <CollectionSearch {...props} ref={input} enterKeyHint="search" compact={!chrome.compactSearch} trailing={scope} />
   </form>
-  return createPortal(chrome.compactSearch ? <Popover open={expanded} onOpenChange={setExpanded}><PopoverTrigger asChild><Button ref={trigger} type="button" variant="ghost" size="icon" className="workspace-search-trigger" aria-label={props.label} title={props.label}><Search /></Button></PopoverTrigger><PopoverContent align="center" className="w-[min(26.25rem,calc(100vw-2rem))] p-2">{field}</PopoverContent></Popover> : field, chrome.search)
+  return createPortal(chrome.compactSearch ? <Popover open={expanded} onOpenChange={setExpanded}><PopoverTrigger render={<Button ref={trigger} type="button" variant="ghost" size="icon" className="workspace-search-trigger" aria-label={props.label} title={props.label} />}><Search /></PopoverTrigger><PopoverContent align="center" className="w-[min(26.25rem,calc(100vw-2rem))] p-2">{field}</PopoverContent></Popover> : field, chrome.search)
 }
 
 /** Filters and results belong together; the page search is owned by workspace chrome. */

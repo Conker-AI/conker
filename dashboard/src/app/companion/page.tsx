@@ -48,7 +48,7 @@ export default function CompanionPage() {
     navigate(location.pathname, { replace: true, state: null })
   }, [companionSession, location.key, location.pathname, location.state, navigate])
 
-  if (!companionSession) return <BaseLayout title="Companion" description="Your main AI workspace."><CollectionEmpty title="Your companion conversation is unavailable" description="Open Chats to find an existing conversation, or reload the dashboard." /><Button asChild variant="outline" className="self-start"><Link to="/chat">Open chats</Link></Button></BaseLayout>
+  if (!companionSession) return <BaseLayout title="Companion" description="Your main AI workspace."><CollectionEmpty title="Your companion conversation is unavailable" description="Open Chats to find an existing conversation, or reload the dashboard." /><Button variant="outline" className="self-start" render={<Link to="/chat" />}>Open chats</Button></BaseLayout>
 
   return <BaseLayout variant="conversation">
     <Conversation key={companionSession.id} session={companionSession} companionWorkspace intro={CompanionCheckIn} reference={<DailyContext />} />

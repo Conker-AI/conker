@@ -13,31 +13,13 @@ export function WorkspaceInspector({ title, description, onClose, children, labe
   </aside>
 }
 
-/** Remember the initiating control even when a menu opened the overlay. */
-function useOverlayFocus() {
-  const origin = useRef<HTMLElement | null>(null)
-  return {
-    onOpenAutoFocus: () => {
-      const active = document.activeElement
-      origin.current = active instanceof HTMLElement ? active : null
-    },
-    onCloseAutoFocus: (event: Event) => {
-      event.preventDefault()
-      requestAnimationFrame(() => {
-        // A dialog may be handing off to an inspector. Do not steal its focus.
-        if (document.querySelector('[role="dialog"][data-state="open"]')) return
-        if (origin.current?.isConnected) origin.current.focus()
-      })
-    },
-  }
-}
-
-/** Focused creation/configuration. Children own a scroll body and action footer. */
-export function TaskDialogContent({ title, description, size = "default", className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }: Omit<ComponentProps<typeof DialogContent>, "title"> & {
+/** Focused creation/configuration. Children own a scroll body and action footer.
+ * Base UI returns focus to the control that opened the overlay and leaves it alone when another
+ * overlay took it, so callers only pass `initialFocus` / `finalFocus` to change that. */
+export function TaskDialogContent({ title, description, size = "default", className, children, ...props }: Omit<ComponentProps<typeof DialogContent>, "title"> & {
   title: ReactNode; description: ReactNode; size?: "default" | "wide"
 }) {
-  const focus = useOverlayFocus()
-  return <DialogContent {...props} onOpenAutoFocus={event => { focus.onOpenAutoFocus(); onOpenAutoFocus?.(event) }} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="task-dialog" className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", size === "wide" && "sm:max-w-2xl", className)}>
+  return <DialogContent {...props} data-pattern="task-dialog" className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", size === "wide" && "sm:max-w-2xl", className)}>
     <DialogHeader className="shrink-0 border-b p-5 pr-14 text-left">
       <DialogTitle className="break-words leading-6">{title}</DialogTitle>
       <DialogDescription className="leading-5">{description}</DialogDescription>
@@ -61,13 +43,12 @@ export function FormActions({ children, description, inset = false, className }:
 }
 
 /** Reference/details preserve the page's place; multi-field forms use TaskDialogContent. */
-export function DetailPanel({ open, onOpenChange, title, description, children, onCloseAutoFocus, busy = false }: {
+export function DetailPanel({ open, onOpenChange, title, description, children, finalFocus, busy = false }: {
   open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; description: ReactNode;
-  children: ReactNode; onCloseAutoFocus?: ComponentProps<typeof SheetContent>["onCloseAutoFocus"]; busy?: boolean
+  children: ReactNode; finalFocus?: ComponentProps<typeof SheetContent>["finalFocus"]; busy?: boolean
 }) {
-  const focus = useOverlayFocus()
   return <Sheet open={open} onOpenChange={next => { if (!busy) onOpenChange(next) }}>
-    <SheetContent {...focus} closeButtonDisabled={busy} onCloseAutoFocus={onCloseAutoFocus ?? focus.onCloseAutoFocus} data-pattern="detail-panel" className="w-full gap-0 overflow-hidden sm:max-w-xl">
+    <SheetContent closeProps={{ disabled: busy }} finalFocus={finalFocus} data-pattern="detail-panel" className="w-full gap-0 overflow-hidden sm:max-w-xl">
       <SheetHeader className="shrink-0 border-b p-5 pr-14">
         <SheetTitle className="break-words leading-6">{title}</SheetTitle>
         <SheetDescription className="leading-5">{description}</SheetDescription>
@@ -77,16 +58,14 @@ export function DetailPanel({ open, onOpenChange, title, description, children, 
   </Sheet>
 }
 
-export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, onCloseAutoFocus, actionVariant = "destructive" }: {
+export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, finalFocus, actionVariant = "destructive" }: {
   open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string; children?: ReactNode;
   actionLabel: string; pending: boolean; error?: string | null; onConfirm: () => void | Promise<void>;
-  onCloseAutoFocus?: ComponentProps<typeof DialogContent>["onCloseAutoFocus"]; actionVariant?: "default" | "destructive"
+  finalFocus?: ComponentProps<typeof DialogContent>["finalFocus"]; actionVariant?: "default" | "destructive"
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
   return <Dialog open={open} onOpenChange={next => { if (!pending) onOpenChange(next) }}>
-    <TaskDialogContent title={title} description={description} showCloseButton={!pending}
-      onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus() }}
-      {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}>
+    <TaskDialogContent title={title} description={description} showCloseButton={!pending} initialFocus={cancel} finalFocus={finalFocus}>
       {(children || error) && <OverlayBody>{children}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>}
       <FormActions inset>
         <Button ref={cancel} type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>Cancel</Button>

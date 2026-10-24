@@ -73,10 +73,10 @@ function AnswerTable({ children, rows, markdown }: { children: ReactNode; rows: 
       <span className="text-xs text-muted-foreground">Table</span>
       <div className="flex flex-wrap items-center justify-end gap-1">
         <CopyAction text={markdown} />
-        <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" size="sm" variant="ghost" aria-label="Table export options"><Download /><ChevronDown /></Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => { void navigator.clipboard.writeText(csv).then(() => setCopyStatus("CSV copied"), () => setCopyStatus("Clipboard unavailable. Download CSV instead.")) }}>Copy as CSV</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadAnswerFile(csv, "table.csv", "text/csv;charset=utf-8")}>Download CSV</DropdownMenuItem></DropdownMenuContent>
+        <DropdownMenu><DropdownMenuTrigger render={<Button type="button" size="sm" variant="ghost" aria-label="Table export options" />}><Download /><ChevronDown /></DropdownMenuTrigger>
+          <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => { void navigator.clipboard.writeText(csv).then(() => setCopyStatus("CSV copied"), () => setCopyStatus("Clipboard unavailable. Download CSV instead.")) }}>Copy as CSV</DropdownMenuItem><DropdownMenuItem onClick={() => downloadAnswerFile(csv, "table.csv", "text/csv;charset=utf-8")}>Download CSV</DropdownMenuItem></DropdownMenuContent>
         </DropdownMenu>
-        <Dialog><DialogTrigger asChild><Button type="button" size="sm" variant="ghost" aria-label="Expand table" title="Expand table"><Maximize2 /></Button></DialogTrigger>
+        <Dialog><DialogTrigger render={<Button type="button" size="sm" variant="ghost" aria-label="Expand table" title="Expand table" />}><Maximize2 /></DialogTrigger>
           <TaskDialogContent size="wide" title="Response table" description="Scroll to inspect every column. CSV exports neutralize spreadsheet formulas."><OverlayBody><div className="rich-answer answer-table-scroll" tabIndex={0} aria-label="Expanded table">{table}</div><div className="mt-4 flex flex-wrap gap-2"><CopyAction text={markdown} label="Copy Markdown" /><CopyAction text={csv} label="Copy CSV" /><Button size="sm" variant="outline" onClick={() => downloadAnswerFile(csv, "table.csv", "text/csv;charset=utf-8")}><Download />Download CSV</Button></div></OverlayBody></TaskDialogContent>
         </Dialog>
       </div>
@@ -90,11 +90,11 @@ function Citation({ id, children, citations, onOpenSource }: { id: string; child
   const source = citations.find(item => item.id === id)
   const href = safeAnswerUrl(source?.href)
   const [open, setOpen] = useState(false)
-  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button type="button" className="answer-citation" aria-label={source ? `Source: ${source.label}` : "Source unavailable"}>{children}</button></PopoverTrigger>
-    <PopoverContent className="max-h-[min(24rem,var(--radix-popover-content-available-height))] max-w-[calc(100vw-2rem)] space-y-3 overflow-y-auto [overflow-wrap:anywhere]" align="start">
+  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger render={<button type="button" className="answer-citation" aria-label={source ? `Source: ${source.label}` : "Source unavailable"} />}>{children}</PopoverTrigger>
+    <PopoverContent className="max-h-[min(24rem,var(--available-height))] max-w-[calc(100vw-2rem)] space-y-3 overflow-y-auto [overflow-wrap:anywhere]" align="start">
       <p className="text-sm font-medium">{source?.label || "Source unavailable"}</p>
       <p className="text-xs leading-5 text-muted-foreground">{source?.excerpt || (source ? "No excerpt was supplied for this source." : "This response refers to a source whose details were not supplied.")}</p>
-      {source && <div className="flex flex-wrap gap-2">{onOpenSource && <Button size="sm" variant="outline" onClick={() => { setOpen(false); onOpenSource(id) }}>View source</Button>}{href && <Button size="sm" variant="ghost" asChild><a href={href} target="_blank" rel="noopener noreferrer">Open link<ExternalLink /></a></Button>}</div>}
+      {source && <div className="flex flex-wrap gap-2">{onOpenSource && <Button size="sm" variant="outline" onClick={() => { setOpen(false); onOpenSource(id) }}>View source</Button>}{href && <Button size="sm" variant="ghost" render={<a href={href} target="_blank" rel="noopener noreferrer" />}>Open link<ExternalLink /></Button>}</div>}
     </PopoverContent>
   </Popover>
 }

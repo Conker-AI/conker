@@ -72,7 +72,7 @@ export function Choice({
   onChange: (v: string) => void;
 }) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={value => { if (value !== null) onChange(value) }} items={[...options.map((option) => ({ value: option, label: option }))]}>
       <SelectTrigger aria-label={label} className="w-full">
         <SelectValue />
       </SelectTrigger>
@@ -114,17 +114,14 @@ function ValueInput({
         }}
       />
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
+        <PopoverTrigger render={<Button
             variant="outline"
             size="icon"
             className="shrink-0"
             aria-label={`Choose source for ${label.toLowerCase()}`}
-            title="Choose an input or previous result"
-          >
+            title="Choose an input or previous result" />}>
             <Braces />
-          </Button>
-        </PopoverTrigger>
+          </PopoverTrigger>
         <PopoverContent
           align="end"
           className="w-80 max-w-[calc(100vw-2rem)] p-0"
@@ -139,7 +136,7 @@ function ValueInput({
                 <CommandItem
                   key={source.path}
                   value={`${source.path} ${source.label}`}
-                  onSelect={() => {
+                  onClick={() => {
                     onChange(source.path);
                     setOpen(false);
                   }}
@@ -270,7 +267,8 @@ export function NodeFields({
           <Field label="Published tool">
             {capabilityPicker ? capabilityPicker(node, onChange) : <Select
               value={`${node.config.toolId}@${node.config.version}`}
-              onValueChange={(v) => {
+              items={records.flatMap(r => r.published.map(p => ({ value: `${r.id}@${p.version}`, label: `${p.definition.name} · v${p.version}` })))}
+              onValueChange={v => { if (v === null) return;
                 const [toolId, version] = v.split("@");
                 onChange({
                   ...node,
@@ -645,9 +643,7 @@ function ConfigurationFields({ definition, onChange, registryTools, tickets, liv
               }
             />
           </Field>
-          {!live && <Button variant="link" asChild>
-            <Link to="/settings?tab=connections">Manage connections</Link>
-          </Button>}
+          {!live && <Button variant="link" render={<Link to="/settings?tab=connections" />}>Manage connections</Button>}
         </ReferenceSection>
         <ReferenceSection title="Execution limits">
           {(

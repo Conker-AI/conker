@@ -110,7 +110,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   return <GatewayPageFrame className="h-full">
     <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
-      {requestId ? <div className="flex items-center justify-between gap-3"><Button asChild size="sm" variant="ghost"><Link to="/inbox"><ArrowLeft />Inbox</Link></Button>{refreshButton}</div>
+      {requestId ? <div className="flex items-center justify-between gap-3"><Button size="sm" variant="ghost" render={<Link to="/inbox" />}><ArrowLeft />Inbox</Button>{refreshButton}</div>
         : (rows.length > 0 || query) && <WorkspaceSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
@@ -121,7 +121,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
           {!loading && !error && pendingRows.length === 0 && <p className="text-sm text-muted-foreground">{query ? 'No matching requests.' : "You're all caught up."}</p>}
         </WorkspaceSection>
         {proposals && <ProposalsPanel client={proposals} active={active} />}
-        <Accordion type="single" collapsible><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
+        <Accordion><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
           {!earlierRows.length && <p className="text-sm text-muted-foreground">{query ? 'No matching earlier requests.' : 'No earlier requests.'}</p>}
           {cursor && <Button variant="outline" disabled={loading || busy} onClick={() => void load(true, cursor)}>Load older requests</Button>}

@@ -9,7 +9,7 @@ export function DailyNews({ news, compact = false }: { news: DailyBriefing["news
     <p className="text-sm font-medium">A little more perspective.</p>
     <p className="text-sm leading-6 text-muted-foreground">AI breakthroughs, world news, and the stories worth your time will appear here with their sources.</p>
     <p className="text-xs leading-5 text-muted-foreground">Live news is not connected. No headlines have been fetched.</p>
-    <Button variant="outline" size="sm" asChild><Link to="/settings?tab=connections">View connections<ArrowUpRight /></Link></Button>
+    <Button variant="outline" size="sm" render={<Link to="/settings?tab=connections" />}>View connections<ArrowUpRight /></Button>
   </div>
   if (!news.items.length) return <p className="text-sm leading-6 text-muted-foreground">No stories in this briefing. Check back when the next update arrives.</p>
   return <div className="space-y-3">

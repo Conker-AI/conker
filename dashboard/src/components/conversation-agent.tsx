@@ -23,11 +23,11 @@ export function ConversationAgent({ session }: { session: Session }) {
   const displayName = current?.kind === "companion" ? data.profile.name : session.agent
 
   return <Dialog open={open} onOpenChange={value => { setOpen(value); if (value) { setSelected(current?.id || ""); setError("") } }}>
-    <DialogTrigger asChild><Button variant="ghost" size="icon" className="size-8 shrink-0 p-0" aria-label={`Choose agent: ${displayName}`} title={`Chatting with ${displayName} · Choose agent`}><AgentIdentityPortrait name={session.agent} /></Button></DialogTrigger>
+    <DialogTrigger render={<Button variant="ghost" size="icon" className="size-8 shrink-0 p-0" aria-label={`Choose agent: ${displayName}`} title={`Chatting with ${displayName} · Choose agent`} />}><AgentIdentityPortrait name={session.agent} /></DialogTrigger>
     <TaskDialogContent title={hasMessages ? "Hand off this chat" : "Who would you like to talk to?"} description={hasMessages ? "The next agent receives this chat’s history. Earlier replies keep their original author, and your Incognito settings stay in place." : "Choose an agent for this topic. You can hand the conversation over later."}>
       <OverlayBody>
       <RadioGroup value={selected} onValueChange={setSelected} disabled={busy} aria-label="Conversation agent" className="gap-2">
-        {data.agents.filter(agent => !agent.archivedAt).map(agent => <Label key={agent.id} htmlFor={`agent-${agent.id}`} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
+        {data.agents.filter(agent => !agent.archivedAt).map(agent => <Label key={agent.id} htmlFor={`agent-${agent.id}`} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-checked:border-primary has-data-checked:bg-muted">
           <AgentIdentityPortrait name={agent.name} /><span className="min-w-0 flex-1"><span className="block text-sm">{agent.kind === "companion" ? data.profile.name : agent.name}</span><span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{agent.kind === "companion" ? "Ideas, questions, research, and everyday help" : agent.role}</span></span><RadioGroupItem id={`agent-${agent.id}`} value={agent.id} />
         </Label>)}
       </RadioGroup>

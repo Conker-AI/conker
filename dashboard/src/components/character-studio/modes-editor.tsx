@@ -8,7 +8,7 @@ import type { CharacterMode, CharacterStudio } from "@/lib/api/character"
 export function ModesEditor({ value, onChange }: { value: CharacterStudio["modes"]; onChange: (value: CharacterStudio["modes"]) => void }) {
   return <div className="space-y-6">
     <StudioSection title="Expression & modes" description="One character, two ways to communicate. The useful answer stays at the center.">
-      <div className="space-y-2"><Label htmlFor="default-character-mode">Default for new companion conversations</Label><Select value={value.default} onValueChange={mode => onChange({ ...value, default: mode as CharacterMode })}><SelectTrigger id="default-character-mode" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="focus">Focus</SelectItem><SelectItem value="character">Character</SelectItem></SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="default-character-mode">Default for new companion conversations</Label><Select value={value.default} onValueChange={mode => { if (mode !== null) onChange({ ...value, default: mode as CharacterMode }) }} items={[{ value: "focus", label: "Focus" }, { value: "character", label: "Character" }]}><SelectTrigger id="default-character-mode" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="focus">Focus</SelectItem><SelectItem value="character">Character</SelectItem></SelectContent></Select></div>
       <p className="text-sm leading-6 text-muted-foreground">Switch modes from the conversation menu. It changes future delivery; tools, memory and permissions keep their own settings.</p>
     </StudioSection>
     {(["focus", "character"] as const).map(mode => {

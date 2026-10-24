@@ -34,13 +34,13 @@ export function SystemRuntime({ section }: { section: RuntimeSection }) {
     return () => { active = false; unsubscribe() }
   }, [])
   const inspect = useCallback((item: Selection) => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSelection(item); setError("") }, [])
-  const restoreFocus = (event: Event) => {
-    event.preventDefault()
+  const restoreFocus = () => {
     requestAnimationFrame(() => {
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      if (document.querySelector('[role="dialog"][data-open]')) return
       const target = returnFocus.current
       ;(target?.isConnected ? target : region.current)?.focus()
     })
+    return false
   }
   const perform = async (action: () => Promise<unknown>, message: string) => {
     if (busy) return false
@@ -77,7 +77,7 @@ export function SystemRuntime({ section }: { section: RuntimeSection }) {
     {!snapshot ? <p role="status" className="text-sm text-muted-foreground">{error ? "Runtime preview unavailable." : "Loading runtime preview…"}</p> : <DataTable columns={columns} data={rows} itemLabel={section} searchColumn="name" searchPlaceholder={`Search ${section}…`} filters={[{ column: "status", title: "Status", options: (section === "ports" ? ["Listening", "Inactive"] : ["Running", "Stopped"]).map(value => ({ label: value, value })) }]} toolbarAction={section === "ports" ? <Button onClick={() => openEditor("new")} disabled={busy}><Plus />New mapping</Button> : undefined} renderItem={item => <RecordItem title={item.name} description={item.description} onOpen={() => inspect(item)} leading={<Icon className="size-4" />} meta={<><Badge variant="outline">{item.status}</Badge><span>{item.detail}</span></>} />} />}
     <p role="status" className="text-xs text-muted-foreground">{feedback || "Open an item to inspect its relationships and available preview actions. Resource values are illustrative, not live metrics."}</p>
     {!!snapshot?.receipts.length && <ReferenceSection title="Recent preview actions"><ol className="divide-y">{snapshot.receipts.slice(0, 5).map(receipt => <li key={receipt.id} className="py-2 text-sm"><p>{receipt.action} · {receipt.targetName}</p><time className="text-xs text-muted-foreground" dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time></li>)}</ol></ReferenceSection>}
-    <DetailPanel open={!!selection && !editor && !confirmation} onOpenChange={open => { if (!open) setSelection(null) }} title={name} description="Sample runtime record · no live host connection" busy={busy} onCloseAutoFocus={restoreFocus}>
+    <DetailPanel open={!!selection && !editor && !confirmation} onOpenChange={open => { if (!open) setSelection(null) }} title={name} description="Sample runtime record · no live host connection" busy={busy} finalFocus={restoreFocus}>
       {selectedRow && <div className="flex shrink-0 flex-wrap gap-2 border-b px-5 py-3">
         {port ? port.containerId ? <><Button size="sm" variant="outline" disabled={busy} onClick={() => openEditor(port)}>Edit mapping</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => { setError(""); setConfirmation({ target: selectedRow, action: "remove" }) }}>Remove mapping</Button></> : <span className="text-xs text-muted-foreground">Host listener is read-only.</span> : process && !process.controlTarget?.actions.length ? <span className="text-xs text-muted-foreground">Inspect-only process. No managed lifecycle target is configured.</span> : <><Button size="sm" variant="outline" disabled={busy || (!!process && !process.controlTarget?.actions.includes(selectedRow.status === "Running" ? "stop" : "start"))} onClick={() => act(selectedRow, selectedRow.status === "Running" ? "stop" : "start")}>{selectedRow.status === "Running" ? "Stop preview" : "Start preview"}</Button><Button size="sm" variant="outline" disabled={busy || (!!process && !process.controlTarget?.actions.includes("restart"))} onClick={() => act(selectedRow, "restart")}>Restart preview</Button></>}
       </div>}
@@ -90,7 +90,7 @@ export function SystemRuntime({ section }: { section: RuntimeSection }) {
       let saved: RuntimePort | undefined
       if (await perform(async () => { saved = await client.savePort(input, editor === "new" ? undefined : editor.id) }, "Port mapping saved in preview. No network binding changed.")) { setEditor(null); if (saved) setSelection({ kind: "ports", id: saved.id }) }
     }} />}
-    <ConfirmationDialog open={!!confirmation} onOpenChange={open => { if (!open) setConfirmation(null) }} title={confirmation?.action === "remove" ? "Remove preview mapping?" : "Stop this preview item?"} description={confirmation?.action === "remove" ? "Remove only this simulated binding. The container and process remain unchanged." : "The related sample process, container, and ports will become inactive. No host operation will run."} actionLabel={confirmation?.action === "remove" ? "Remove mapping" : "Stop preview"} pending={busy} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => {
+    <ConfirmationDialog open={!!confirmation} onOpenChange={open => { if (!open) setConfirmation(null) }} title={confirmation?.action === "remove" ? "Remove preview mapping?" : "Stop this preview item?"} description={confirmation?.action === "remove" ? "Remove only this simulated binding. The container and process remain unchanged." : "The related sample process, container, and ports will become inactive. No host operation will run."} actionLabel={confirmation?.action === "remove" ? "Remove mapping" : "Stop preview"} pending={busy} error={error} finalFocus={restoreFocus} onConfirm={async () => {
       if (!confirmation) return
       const target = confirmation.target
       const action = confirmation.action === "remove" ? () => client.removePort(target.id) : () => client.act(target.kind === "containers" ? "container" : "process", target.id, "stop")

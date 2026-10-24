@@ -35,10 +35,10 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
     <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {moreActions.length > 0 && <DropdownMenu>
-        <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="More message actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
+        <DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="More message actions" />}><MoreHorizontal /></DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuGroup>{moreActions.map(kind => {
           const action = message.actions[kind]
-          return <DropdownMenuItem key={kind} disabled={action.availability !== 'enabled'} title={action.availability === 'disabled' ? action.reason : undefined} onSelect={() => void invoke(action, kind)}>
+          return <DropdownMenuItem key={kind} disabled={action.availability !== 'enabled'} title={action.availability === 'disabled' ? action.reason : undefined} onClick={() => void invoke(action, kind)}>
             <span className="flex min-w-0 flex-col gap-1">
               <span>{labels[kind]}</span>
               {action.availability === 'disabled' && <span className="max-w-60 whitespace-normal text-xs text-muted-foreground">{action.reason}</span>}

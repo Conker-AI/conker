@@ -48,10 +48,10 @@ export function ConversationHistory({ sessionId, focusedMessageId, children }: {
     }}>
       <div ref={content} className={`${conversationColumn} space-y-6 py-6`}>{children}</div>
     </div>
-    {showLatest && <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none"><Tooltip><TooltipTrigger asChild><Button type="button" size="icon" variant="outline" className="pointer-events-auto rounded-full bg-background shadow-sm" aria-label="Jump to latest message" onClick={() => {
+    {showLatest && <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none"><Tooltip><TooltipTrigger render={<Button type="button" size="icon" variant="outline" className="pointer-events-auto rounded-full bg-background shadow-sm" aria-label="Jump to latest message" onClick={() => {
       following.current = true
       if (viewport.current) viewport.current.scrollTop = viewport.current.scrollHeight
       setShowLatest(false)
-    }}><ArrowDown /></Button></TooltipTrigger><TooltipContent>Latest message</TooltipContent></Tooltip></div>}
+    }} />}><ArrowDown /></TooltipTrigger><TooltipContent>Latest message</TooltipContent></Tooltip></div>}
   </div>
 }

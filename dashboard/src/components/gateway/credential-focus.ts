@@ -19,8 +19,8 @@ export function useCredentialFocus(source: object, scope: number, authStore: Gat
       const origin = operation.current
       if (!origin) { stop(); return }
       if (!valid(origin) || phase === 'inactive') { operation.current = null; stop(); return }
-      const containing = origin.node.closest('[role="dialog"][data-state="open"]')
-      if ([...document.querySelectorAll('[role="dialog"][data-state="open"]')].some(node => node !== containing)) return
+      const containing = origin.node.closest('[role="dialog"][data-open]')
+      if ([...document.querySelectorAll('[role="dialog"][data-open]')].some(node => node !== containing)) return
       if (phase === 'awaiting-verification' || phase === 'working') return
       if (document.activeElement === document.body) {
         const destination = origin.node.isConnected ? origin.node : target.current
@@ -41,14 +41,18 @@ export function useCredentialFocus(source: object, scope: number, authStore: Gat
     const owner = authStore.getState().session?.sessionId, node = document.activeElement
     return owner && node instanceof HTMLElement && node !== document.body ? { source, scope, owner, node } : null
   }
-  return { operation: () => { operation.current = capture() }, dialog: () => { const origin = capture(); dialog.current = origin; setClosingOrigin(origin) }, closeDialog(event: Event) {
-    event.preventDefault()
-    if (!closingOrigin || dialog.current !== closingOrigin) return
+  return { operation: () => { operation.current = capture() }, dialog: () => { const origin = capture(); dialog.current = origin; setClosingOrigin(origin) }, closeDialog() {
+    // Base UI asks while the closing dialog is still in the page; decide once it is gone.
+    if (!closingOrigin || dialog.current !== closingOrigin) return false
+    const origin = closingOrigin
     dialog.current = null; setClosingOrigin(null)
-    if (!valid(closingOrigin) || document.querySelector('[role="dialog"][data-state="open"]')) return
-    const active = document.activeElement
-    if (active !== document.body && active instanceof HTMLElement && active.isConnected) return
-    const destination = closingOrigin.node.isConnected ? closingOrigin.node : target.current
-    destination?.focus()
+    requestAnimationFrame(() => {
+      if (!valid(origin) || document.querySelector('[role="dialog"][data-open]')) return
+      const active = document.activeElement
+      if (active !== document.body && active instanceof HTMLElement && active.isConnected) return
+      const destination = origin.node.isConnected ? origin.node : target.current
+      destination?.focus()
+    })
+    return false
   } }
 }

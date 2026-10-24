@@ -86,7 +86,7 @@ export function SystemOverview() {
             Services
           </h2>
           <DataTable columns={columns} data={services} paginate={false} itemLabel="services"
-            toolbarAction={<Button asChild size="sm" variant="outline"><Link to="/settings?tab=connections">Connections</Link></Button>}
+            toolbarAction={<Button size="sm" variant="outline" render={<Link to="/settings?tab=connections" />}>Connections</Button>}
             renderItem={service => <RecordItem title={service.name} description={service.purpose}
               meta={<><StatusBadge tone={service.status === "Live" ? "live" : "warning"}>{service.status}</StatusBadge><span>Version {service.version}</span><span className="basis-full leading-5">{service.evidence}</span></>} />} />
         </section>
@@ -101,9 +101,7 @@ export function SystemOverview() {
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               {system.recoveryDetail}
             </p>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/jobs">View jobs</Link>
-            </Button>
+            <Button variant="outline" size="sm" render={<Link to="/jobs" />}>View jobs</Button>
           </CardContent>
         </Card>
       </div>

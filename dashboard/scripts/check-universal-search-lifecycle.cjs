@@ -118,24 +118,28 @@ async function deadlineAndStageCases() {
 }
 async function componentCases() {
   const h = harness(); await first(h, ['private'])
-  const code = ts.transpileModule(fs.readFileSync(path.join(root, 'src/components/gateway/universal-search.tsx'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  const jsx = (type, props) => ({ type, props }), module = { exports: {} }, navigations = []
-  new Function('require', 'module', 'exports', code)(name => {
+  const transpile = file => ts.transpileModule(fs.readFileSync(path.join(root, 'src/components/gateway', file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  const jsx = (type, props) => ({ type, props }), module = { exports: {} }, dialog = { exports: {} }, navigations = []
+  // The palette is lazily loaded; the harness renders it in place of the lazy element.
+  const LazyDialog = props => dialog.exports.default(props)
+  const load = target => new Function('require', 'module', 'exports', target === module ? transpile('universal-search.tsx') : transpile('universal-search-dialog.tsx'))(name => {
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
-    if (name === 'react') return { useRef: () => ({ current: null }), useEffect: () => {} }
+    if (name === 'react') return { useRef: () => ({ current: null }), useEffect: () => {}, useState: initial => [initial, () => {}], lazy: () => LazyDialog, Suspense: 'Suspense' }
     if (name === 'react-router-dom') return { useNavigate: () => href => navigations.push(href) }
     if (name === './use-universal-search') return { useUniversalSearch: () => ({ ...h.store.getState(), search: h }) }
     if (name === './universal-search-state') return { searchStages: ['metadata', 'text', 'semantic'] }
     if (name === './navigation') return { gatewayCommandDestinations: [{ title: 'Needle page', path: '/settings' }] }
     if (name === '@/lib/workspace-chrome') return { UniversalSearchContext: { Provider: 'Provider' } }
     return new Proxy({}, { get: (_, key) => key })
-  }, module, module.exports)
+  }, target, target.exports)
+  load(module); load(dialog)
   let tree
   const render = () => { tree = module.exports.UniversalSearchProvider({}) }
-  function find(type) { const found = []; const visit = node => { if (!node || typeof node !== 'object') return; if (node.type === type) found.push(node); [node.props?.children].flat(Infinity).forEach(visit) }; visit(tree); return found }
+  const rendered = new WeakMap()
+  function find(type) { const found = []; const visit = node => { if (!node || typeof node !== 'object') return; if (typeof node.type === 'function') { if (!rendered.has(node)) rendered.set(node, node.type(node.props)); return visit(rendered.get(node)) } if (node.type === type) found.push(node); [node.props?.children].flat(Infinity).forEach(visit) }; visit(tree); return found }
   render(); const record = find('CommandItem').find(item => item.props.value === 'private')
-  h.privacy.getState().markForgotten(['private']); record.props.onSelect(); assert.deepEqual(navigations, [], 'A stale activation closure must recheck the current result identity')
-  render(); assert.equal(find('CommandInput')[0].props.value, 'needle'); assert.equal(find('CommandDialog')[0].props.open, true)
+  h.privacy.getState().markForgotten(['private']); record.props.onClick(); assert.deepEqual(navigations, [], 'A stale activation closure must recheck the current result identity')
+  render(); assert.equal(find('Command')[0].props.value, 'needle'); assert.equal(find('CommandDialog')[0].props.open, true)
   assert.equal(find('CommandItem').some(item => item.props.value === 'private'), false)
   h.store.setState({ pending: false, error: 'settings' }); render()
   const footer = find('div').find(node => node.props.onKeyDown), events = []
@@ -150,7 +154,7 @@ async function componentCases() {
   find('Button').find(button => Array.isArray(button.props.children) && button.props.children.includes('Search settings')).props.onClick()
   assert.deepEqual(navigations, ['/settings?tab=search'], 'Search settings has its exact route, independently of the selected page command')
   navigations.length = 0; h.setOpen(true); render()
-  find('CommandItem').find(item => item.props.value === 'page:/settings').props.onSelect(); assert.deepEqual(navigations, ['/settings'], 'Page commands remain usable without record results')
+  find('CommandItem').find(item => item.props.value === 'page:/settings').props.onClick(); assert.deepEqual(navigations, ['/settings'], 'Page commands remain usable without record results')
   finish(h)
 }
 async function main() { await privacyCases(); await queryCases(); await lifetimeCases(); await deadlineAndStageCases(); await componentCases(); console.log('Global search lifecycle passed: synchronous privacy clearing, known-source masking, stale activation/read fences, auth/epoch/deadline recovery, pagination, stage policy and whitespace continuity.') }

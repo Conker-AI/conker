@@ -131,11 +131,11 @@ async function focusCases(h){
  class Element{isConnected=true;closest(){return panel}focus(){global.document.activeElement=this}}
  const body=new Element(),target=new Element();global.HTMLElement=Element;global.document={body,activeElement:body,querySelectorAll:()=>[panel]};global.requestAnimationFrame=run=>frames.push(run)
  try{
-  h.button('Stop session').props.ref.current=target;h.button('Stop session').props.onClick();await h.settle();const oldClose=h.node('confirmation').props.onCloseAutoFocus;
-  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.onCloseAutoFocus({preventDefault(){}});await h.settle();frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,target,'Imperative confirmation Cancel restores its opener');
-  global.document.activeElement=panel;h.button('Stop session').props.onClick();await h.settle();oldClose({preventDefault(){}});assert.equal(frames.length,0,'An older close cannot consume a newer review origin');
-  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.onCloseAutoFocus({preventDefault(){}});await h.settle();frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,target,'Nested dialog trap fallback restores the actual Stop action');h.button('Stop session').props.onClick();await h.settle();
-  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.onCloseAutoFocus({preventDefault(){}});await h.settle();const other=new Element();global.document.activeElement=other;frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,other,'Closing confirmation does not steal other control focus');
+  h.button('Stop session').props.ref.current=target;h.button('Stop session').props.onClick();await h.settle();const oldClose=h.node('confirmation').props.finalFocus;
+  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.finalFocus();await h.settle();frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,target,'Imperative confirmation Cancel restores its opener');
+  global.document.activeElement=panel;h.button('Stop session').props.onClick();await h.settle();oldClose();assert.equal(frames.length,0,'An older close cannot consume a newer review origin');
+  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.finalFocus();await h.settle();frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,target,'Nested dialog trap fallback restores the actual Stop action');h.button('Stop session').props.onClick();await h.settle();
+  h.node('confirmation').props.onOpenChange(false);await h.settle();h.node('confirmation').props.finalFocus();await h.settle();const other=new Element();global.document.activeElement=other;frames.splice(0).forEach(run=>run());assert.equal(global.document.activeElement,other,'Closing confirmation does not steal other control focus');
  }finally{Object.assign(global,prior)}
 }
 async function components(){

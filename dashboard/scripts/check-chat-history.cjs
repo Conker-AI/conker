@@ -55,7 +55,8 @@ function historyHarness() {
   function visit(node, callback) {
     if (!node || typeof node !== 'object') return
     callback(node)
-    for (const child of [node.props?.children].flat()) visit(child, callback)
+    // Base UI composes controls through `render`, so the rendered element can live there.
+    for (const child of [node.props?.children, node.props?.render].flat()) visit(child, callback)
   }
   function render(next = props) {
     props = next; cursor = 0

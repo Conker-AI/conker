@@ -47,7 +47,7 @@ export default function AgentsPage() {
           itemLabel="agents"
           renderItem={agent => <RecordItem title={agent.name} description={agent.role} leading={<AgentIdentityPortrait name={agent.name} />} onOpen={() => open(agent)}
             meta={<><StatusBadge tone={!agent.archivedAt && agent.status === "active" ? "live" : "neutral"}>{agent.archivedAt ? "Archived" : agent.status === "active" ? "Active" : "Idle"}</StatusBadge><span>{agent.model}</span><span>{agent.grants} sample grants · {agent.cost}</span></>}
-            actions={!agent.archivedAt && <Button size="sm" variant="outline" asChild><Link to={`/chat/new?agent=${agent.id}`}><SquarePen />New chat</Link></Button>} />}
+            actions={!agent.archivedAt && <Button size="sm" variant="outline" render={<Link to={`/chat/new?agent=${agent.id}`} />}><SquarePen />New chat</Button>} />}
           searchColumn="name"
           searchPlaceholder="Search agents…"
         />
@@ -55,16 +55,16 @@ export default function AgentsPage() {
       <DetailPanel open={!!selected} busy={pending} onOpenChange={open => { if (!open) setSelectedId(null) }} title={selected?.name ?? "Agent details"} description={selected?.role ?? "Agent details"}>
         {selected && <><OverlayBody>
           <ReferenceSection title="Agent"><div className="flex items-center gap-3"><AgentIdentityPortrait name={selected.name} /><StatusBadge tone={selected.status === "active" ? "live" : "neutral"}>{selected.status === "active" ? "Active" : "Idle"}</StatusBadge></div><dl className="grid grid-cols-2 gap-3"><div><dt className="text-xs text-muted-foreground">Sample model</dt><dd>{selected.model}</dd></div><div><dt className="text-xs text-muted-foreground">Recorded cost</dt><dd>{selected.cost}</dd></div><div><dt className="text-xs text-muted-foreground">Standing grants</dt><dd>{selected.grants}</dd></div></dl><p className="text-xs text-muted-foreground">Fixture status. Conversation model choices come from Settings.</p></ReferenceSection>
-          {selected.kind === "companion" && <Button size="sm" variant="outline" asChild><Link to="/companion"><MessageCircle />Open companion</Link></Button>}
+          {selected.kind === "companion" && <Button size="sm" variant="outline" render={<Link to="/companion" />}><MessageCircle />Open companion</Button>}
           {selected.kind === "agent" && <ReferenceSection title="Configuration"><p className="text-sm">Version {selected.version || 0} · {selected.configuration?.toolIds.length || 0} tools selected · {selected.configuration?.memory.scope || "conversation"} memory</p><p className="text-xs text-muted-foreground">Selection is configuration only, never an execution grant. {references.length ? `Referenced by ${references.join(", ")}; archive preserves these records.` : "No references. This agent can be deleted."}</p>{selected.archivedAt && <StatusBadge>Archived</StatusBadge>}</ReferenceSection>}
           <ReferenceSection title="Recent conversations" icon={<MessageCircle />}>
             {history.length ? <ul className="divide-y">{history.map(session => <li key={session.id}><Link to={`/chat/${session.id}`} className="block rounded-md py-3 hover:underline focus-visible:outline-2 focus-visible:outline-ring"><span className="block font-medium">{session.title}</span><span className="text-xs text-muted-foreground">{session.updated}</span></Link></li>)}</ul> : <p className="text-muted-foreground">No conversations yet. Start one with this agent.</p>}
           </ReferenceSection>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         </OverlayBody><FormActions inset>
-          {selected.kind === "companion" && <Button asChild variant="outline"><Link to="/settings/companion"><Settings />Edit companion</Link></Button>}
-          {selected.kind === "agent" && <><Button disabled={pending || references.length > 0} variant="outline" onClick={() => { setDeleting(selected); setSelectedId(null); setError("") }}><Trash2 />Delete</Button><Button disabled={pending} variant="outline" onClick={async () => { const success = await mutate(() => conkerClient.archiveAgent(selected.id, !selected.archivedAt), selected.archivedAt ? "Agent restored in preview." : "Agent archived in preview. History retained."); if (!success) setError(useConkerStore.getState().error); else setError("") }}><Archive />{selected.archivedAt ? "Restore" : "Archive"}</Button>{!selected.archivedAt && <Button asChild variant="outline"><Link to={`/agents/${selected.id}/edit`}><Settings />Edit agent</Link></Button>}</>}
-          {!selected.archivedAt && <Button asChild><Link to={`/chat/new?agent=${selected.id}`}><SquarePen />New chat</Link></Button>}
+          {selected.kind === "companion" && <Button variant="outline" render={<Link to="/settings/companion" />}><Settings />Edit companion</Button>}
+          {selected.kind === "agent" && <><Button disabled={pending || references.length > 0} variant="outline" onClick={() => { setDeleting(selected); setSelectedId(null); setError("") }}><Trash2 />Delete</Button><Button disabled={pending} variant="outline" onClick={async () => { const success = await mutate(() => conkerClient.archiveAgent(selected.id, !selected.archivedAt), selected.archivedAt ? "Agent restored in preview." : "Agent archived in preview. History retained."); if (!success) setError(useConkerStore.getState().error); else setError("") }}><Archive />{selected.archivedAt ? "Restore" : "Archive"}</Button>{!selected.archivedAt && <Button variant="outline" render={<Link to={`/agents/${selected.id}/edit`} />}><Settings />Edit agent</Button>}</>}
+          {!selected.archivedAt && <Button render={<Link to={`/chat/new?agent=${selected.id}`} />}><SquarePen />New chat</Button>}
         </FormActions></>}
       </DetailPanel>
       {creating && <CreateAgent onClose={() => setCreating(false)} onCreated={id => { setCreating(false); navigate(`/agents/${id}/edit`) }} />}

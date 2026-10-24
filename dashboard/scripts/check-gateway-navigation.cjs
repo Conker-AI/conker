@@ -69,7 +69,7 @@ const header = fs.readFileSync(path.join(root, 'src/components/gateway/header.ts
 const sidebar = fs.readFileSync(path.join(root, 'src/components/gateway/chat-sidebar.tsx'), 'utf8')
 const workspace = fs.readFileSync(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
 assert.match(header, /UniversalSearchTrigger/)
-const search = fs.readFileSync(path.join(root, 'src/components/gateway/universal-search.tsx'), 'utf8')
+const search = fs.readFileSync(path.join(root, 'src/components/gateway/universal-search-dialog.tsx'), 'utf8')
 assert.match(search, /gatewayCommandDestinations/)
 assert.doesNotMatch(header, /Object\.values\(appNavigation\)/)
 assert.match(header, /gatewayPageNavigation/)
@@ -195,8 +195,7 @@ new Function('module', 'exports', 'document', 'window', 'HTMLElement', 'requestA
 const focus = focusModule.exports.createSidebarFocus()
 function closeSidebar(destination) {
   focus.change(false, undefined, destination)
-  const event = new Event('closeAutoFocus', { cancelable: true }); focus.restore(event, () => mountedRoot)
-  assert.equal(event.defaultPrevented, true, 'The explicit return target replaces Radix missing-trigger fallback')
+  assert.equal(focus.restore(() => mountedRoot), false, 'The explicit return target replaces the Base UI missing-trigger fallback')
 }
 function flushFrames() { for (const frame of frames.splice(0)) frame() }
 focus.change(true, opener); closeSidebar(); flushFrames(); assert.equal(focused, opener, 'Escape/outside/close button return to the actual opener')
@@ -215,7 +214,7 @@ for (const patch of [{ isConnected: false }, { disabled: true }, { hidden: true 
   focus.change(true, opener); closeSidebar(); flushFrames(); assert.equal(focused, content, 'Unavailable openers fall back to the current main content')
 }
 const sidebarPrimitive = fs.readFileSync(path.join(root, 'src/components/ui/sidebar.tsx'), 'utf8')
-assert.match(sidebarPrimitive, /onCloseAutoFocus=\{restoreMobileFocus\}/)
+assert.match(sidebarPrimitive, /finalFocus=\{restoreMobileFocus\}/)
 assert.match(sidebarPrimitive, /if \(!event\.defaultPrevented\) toggleSidebar\(event\.currentTarget\)/, 'Prevented opener actions must not open the sidebar')
 assert.match(sidebarPrimitive, /<main\s+tabIndex=\{-1\}/, 'Navigation content accepts programmatic focus without adding a Tab stop')
 assert.match(sidebar, /setOpenMobile\(false, 'content'\)/, 'New chat and destination actions explicitly hand focus to content')

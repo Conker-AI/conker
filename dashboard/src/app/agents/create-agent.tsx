@@ -30,7 +30,7 @@ export function CreateAgent({ onClose, onCreated }: { onClose: () => void; onCre
     if (saved) { creationDraft = null; onCreated(id) }
     else setError(useConkerStore.getState().error || "Could not create this agent.")
   }
-  return <><Dialog open onOpenChange={open => { if (!open) close() }}><TaskDialogContent title="New agent" description="Create a specialist in this preview. Changes reset on reload. Configure tools and memory after creation." size="wide" showCloseButton={!pending} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (pending) event.preventDefault() }}>
+  return <><Dialog open onOpenChange={open => { if (!open) close() }} disablePointerDismissal><TaskDialogContent title="New agent" description="Create a specialist in this preview. Changes reset on reload. Configure tools and memory after creation." size="wide" showCloseButton={!pending}>
     <form onSubmit={event => void submit(event)} className="flex min-h-0 flex-col"><OverlayBody><fieldset disabled={pending}><AgentFields value={value} onChange={setValue} /></fieldset>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody><FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={close}>Cancel</Button><Button disabled={pending} type="submit">{pending ? "Creating…" : "Create preview agent"}</Button></FormActions></form>
   </TaskDialogContent></Dialog><ConfirmationDialog open={discarding} onOpenChange={setDiscarding} title="Discard this agent draft?" description="The name, instructions and model selection entered here will be discarded." actionLabel="Discard draft" pending={false} onConfirm={() => { creationDraft = null; onClose() }} /></>
 }

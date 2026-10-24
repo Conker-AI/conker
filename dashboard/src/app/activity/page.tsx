@@ -60,13 +60,13 @@ export default function ActivityPage() {
   const selected = selectedTask ?? selectedRun ?? selectedEvent
   const agentName = (id: string) => data.agents.find(agent => agent.id === id)?.name ?? "Unavailable agent"
   const rememberFocus = () => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }
-  const restoreFocus = (event: Event) => {
-    event.preventDefault()
+  const restoreFocus = () => {
     requestAnimationFrame(() => {
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      if (document.querySelector('[role="dialog"][data-open]')) return
       const target = returnFocus.current
       ;(target?.isConnected ? target : newButton.current)?.focus()
     })
+    return false
   }
   const select = (kind: "task" | "run" | "event", id: string) => {
     rememberFocus(); setFormError("")
@@ -101,7 +101,7 @@ export default function ActivityPage() {
     if (taskFilter === "archived") return !!task.archivedAt
     return !task.archivedAt && (taskFilter === "active" ? !isTerminal(task.status) : isTerminal(task.status))
   })
-  const filterControl = <Select value={taskFilter} onValueChange={setTaskFilter}><SelectTrigger size="sm" aria-label="Filter tasks" className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active tasks</SelectItem><SelectItem value="history">Completed / cancelled</SelectItem><SelectItem value="archived">Archived tasks</SelectItem><SelectItem value="all">All tasks</SelectItem></SelectContent></Select>
+  const filterControl = <Select value={taskFilter} onValueChange={value => { if (value !== null) setTaskFilter(value) }} items={[{ value: "active", label: "Active tasks" }, { value: "history", label: "Completed / cancelled" }, { value: "archived", label: "Archived tasks" }, { value: "all", label: "All tasks" }]}><SelectTrigger size="sm" aria-label="Filter tasks" className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active tasks</SelectItem><SelectItem value="history">Completed / cancelled</SelectItem><SelectItem value="archived">Archived tasks</SelectItem><SelectItem value="all">All tasks</SelectItem></SelectContent></Select>
   const unknownSelection = (params.has("task") || params.has("event") || params.has("run") && toolState !== "loading") && !selected
 
   return <BaseLayout variant="collection" title="Activity" description="Track outcomes, inspect attempts, and follow the records they leave." status={<Badge variant="outline">Preview</Badge>} actions={<Button ref={newButton} onClick={create} disabled={pending}><Plus />New task</Button>}>
@@ -114,10 +114,10 @@ export default function ActivityPage() {
     <RouteSection value="runs"><div className="space-y-4">
       {toolState === "loading" && <p role="status" className="text-xs text-muted-foreground">Loading tool run history…</p>}
       {toolState === "error" && <div role="alert" className="space-y-2 rounded-md border p-3"><p className="text-sm">Tool run history is unavailable. {tools.length ? "Showing the last loaded tool records." : "Conversation and job records remain available."}</p><p className="text-xs text-muted-foreground">{toolError}</p><Button size="sm" variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Retry tool history</Button></div>}
-      {activity.runs.length ? <RunsTable runs={activity.runs} open={run => select("run", run.id)} /> : <CollectionEmpty title="No attempts recorded" description="Conversation activity, job history and local tool tests appear here when their sources provide a record." action={<Button asChild variant="outline"><Link to="/chat">Open conversations</Link></Button>} />}
+      {activity.runs.length ? <RunsTable runs={activity.runs} open={run => select("run", run.id)} /> : <CollectionEmpty title="No attempts recorded" description="Conversation activity, job history and local tool tests appear here when their sources provide a record." action={<Button variant="outline" render={<Link to="/chat" />}>Open conversations</Button>} />}
     </div></RouteSection>
     <RouteSection value="events"><div className="space-y-4">{params.get("actor") && params.get("actor") !== "all" && <div className="flex flex-wrap items-center gap-3 text-sm"><span>Actor: {params.get("actor")}</span><Button size="sm" variant="outline" onClick={() => { const next = new URLSearchParams(params); next.delete("actor"); setParams(next, { replace: true }) }}>Show all actors</Button></div>}{activity.events.length ? <EventsTable events={activity.events.filter(event => !params.get("actor") || params.get("actor") === "all" || event.actor === params.get("actor"))} open={event => select("event", event.id)} /> : <CollectionEmpty title="No events recorded" description="Journal entries, supplied receipts and your task changes appear here. Thinking displays do not create execution events." />}</div></RouteSection>
-    <DetailPanel open={!!selected && !dialog && !creating} busy={pending} onOpenChange={open => { if (!open) closeDetails() }} title={selectedTask?.outcome ?? selectedRun?.label ?? selectedEvent?.label ?? "Activity details"} description={selectedTask ? "Task tracking · owner-reported preview" : selectedRun ? "Source attempt and supplied outputs" : "Event detail and original source"} onCloseAutoFocus={restoreFocus}>
+    <DetailPanel open={!!selected && !dialog && !creating} busy={pending} onOpenChange={open => { if (!open) closeDetails() }} title={selectedTask?.outcome ?? selectedRun?.label ?? selectedEvent?.label ?? "Activity details"} description={selectedTask ? "Task tracking · owner-reported preview" : selectedRun ? "Source attempt and supplied outputs" : "Event detail and original source"} finalFocus={restoreFocus}>
       {selectedTask && <TaskDetails task={selectedTask} tasks={data.tasks} runs={activity.runs} agentName={agentName(selectedTask.agentId)} sessionTitle={data.sessions.find(session => session.id === selectedTask.sessionId)?.title ?? "Open linked conversation"} pending={pending} error={formError} edit={() => openDialog({ kind: "edit", task: selectedTask })} review={status => openDialog({ kind: "review", task: selectedTask, status })} archive={async () => {
         const saved = await mutate(() => conkerClient.tasks.archive(selectedTask.id, !selectedTask.archivedAt, selectedTask.revision), selectedTask.archivedAt ? "Preview task restored." : "Preview task archived; history retained.")
         setFormError(saved ? "" : useConkerStore.getState().error)
@@ -125,7 +125,7 @@ export default function ActivityPage() {
       {!selectedTask && selectedRun && <RunDetails run={selectedRun} runs={activity.runs} events={activity.events} tasks={data.tasks} />}
       {!selectedTask && !selectedRun && selectedEvent && <EventDetails event={selectedEvent} />}
     </DetailPanel>
-    <Dialog open={creating || !!dialog} onOpenChange={open => { if (!open) closeDialog() }}><TaskDialogContent size="wide" title={creating ? "New task" : dialog?.kind === "edit" ? "Edit task" : dialog?.kind === "review" ? `Review status: ${taskLabels[dialog.status]}` : "Task"} description={creating ? "Describe the desired outcome. Creating a task does not start execution." : "Record your intent and review. Drafts are kept when you close this dialog."} showCloseButton={!pending} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onCloseAutoFocus={restoreFocus}>
+    <Dialog open={creating || !!dialog} onOpenChange={open => { if (!open) closeDialog() }} disablePointerDismissal><TaskDialogContent size="wide" title={creating ? "New task" : dialog?.kind === "edit" ? "Edit task" : dialog?.kind === "review" ? `Review status: ${taskLabels[dialog.status]}` : "Task"} description={creating ? "Describe the desired outcome. Creating a task does not start execution." : "Record your intent and review. Drafts are kept when you close this dialog."} showCloseButton={!pending} finalFocus={restoreFocus}>
       {(creating || dialog?.kind === "edit") && <TaskEditor key={creating ? `new:${initialSessionId ?? ""}:${initialAgentId ?? ""}` : `edit:${dialog?.task.id}`} task={!creating && dialog?.kind === "edit" ? dialog.task : undefined} initialSessionId={initialSessionId} initialAgentId={initialAgentId} agents={data.agents} sessions={data.sessions} tasks={data.tasks} runs={activity.runs} pending={pending} error={formError || (invalidPrefill ? "The supplied conversation or agent is unavailable. Choose valid references before saving." : "")} onCancel={closeDialog} onSave={async (input, revision) => {
         let savedId = ""
         const saved = await mutate(async () => { const task = creating ? await conkerClient.tasks.create(input) : await conkerClient.tasks.update(dialog!.task.id, input, revision!); savedId = task.id }, creating ? "Task created in preview. No execution started." : "Task updated in preview.")

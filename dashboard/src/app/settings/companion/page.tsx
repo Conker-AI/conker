@@ -95,7 +95,7 @@ export default function CharacterStudioPage() {
         <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button>
       </FormActions>
     </div>
-    <Dialog open={importOpen} onOpenChange={open => { if (!reading) setImportOpen(open) }}><TaskDialogContent title="Import character" description="Bring in a Conker package or the text from a Character Card V2/V3 JSON." onPointerDownOutside={event => event.preventDefault()}>
+    <Dialog open={importOpen} onOpenChange={open => { if (!reading) setImportOpen(open) }} disablePointerDismissal><TaskDialogContent title="Import character" description="Bring in a Conker package or the text from a Character Card V2/V3 JSON.">
       <OverlayBody><div className="space-y-2"><Label htmlFor="character-import">Character JSON file</Label><Input id="character-import" type="file" accept="application/json,.json" disabled={reading} onChange={async event => {
         const file = event.target.files?.[0]; event.target.value = ""; if (!file) return
         setIncoming(null); setImportError(""); setReading(true)

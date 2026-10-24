@@ -22,9 +22,7 @@ export default function NotFoundPage() {
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
+            <Button render={<Link to="/" />}>Back to Home</Button>
           </CardFooter>
         </Card>
       </div>

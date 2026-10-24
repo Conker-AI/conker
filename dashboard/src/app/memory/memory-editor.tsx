@@ -29,7 +29,7 @@ export function MemoryEditor({ memory, onClose, onSaved }: { memory?: Memory; on
       else setError(useConkerStore.getState().error || "Could not save. Try again.")
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Check the fields and try again.") }
   }
-  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose() }}><TaskDialogContent title={memory ? "Edit memory" : "New memory"} description="Preview only · changes stay in this tab and reset on reload. Original sources are never changed." size="wide" showCloseButton={!pending} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (pending) event.preventDefault() }}>
+  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose() }} disablePointerDismissal><TaskDialogContent title={memory ? "Edit memory" : "New memory"} description="Preview only · changes stay in this tab and reset on reload. Original sources are never changed." size="wide" showCloseButton={!pending}>
     <form onSubmit={event => void submit(event)} className="flex min-h-0 flex-col">
       <OverlayBody><fieldset disabled={pending} className="space-y-5">
         <div className="space-y-2"><Label htmlFor="memory-title">Title</Label><Input id="memory-title" value={title} onChange={event => setTitle(event.target.value)} required maxLength={100} /></div>

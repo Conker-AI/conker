@@ -101,8 +101,8 @@ export default function SettingsPage() {
             <p className="text-sm leading-6 text-muted-foreground">This is an open fixture preview. Authentication and password changes need a backend; no password is stored.</p>
             <OwnerPreferencesEditor section="account" />
             <div className="flex flex-wrap gap-3">
-              <Button variant="outline" asChild><Link to="/setup">Preview first-run setup</Link></Button>
-              <Button variant="outline" asChild><Link to="/login">Preview login</Link></Button>
+              <Button variant="outline" render={<Link to="/setup" />}>Preview first-run setup</Button>
+              <Button variant="outline" render={<Link to="/login" />}>Preview login</Button>
             </div>
           </CardContent>
         </Card>

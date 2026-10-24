@@ -85,7 +85,9 @@ export function ToolTestPanel({
         <div className="tool-test-content">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={version} onValueChange={setVersion}>
+              <Select value={version} onValueChange={value => { if (value !== null) setVersion(value) }} items={[{ value: "draft", label: "Current draft" }, ...record.published.map((p) => ({ value: String(p.version), label: <>
+                      Preview v{p.version}
+                    </> }))]}>
                 <SelectTrigger aria-label="Test version" className="w-40">
                   <SelectValue />
                 </SelectTrigger>

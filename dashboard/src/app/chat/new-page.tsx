@@ -36,6 +36,6 @@ export default function NewChatPage() {
   }, [agentId, location.state, navigate])
 
   return <BaseLayout variant="conversation"><div className="flex flex-1 flex-col justify-end gap-4 px-4 pb-4 sm:px-6 lg:px-8">
-    {error || !agentId ? <div role="alert" className="space-y-3 py-6"><p>{error || "No agents are available yet."}</p><Button asChild variant="outline"><Link to="/agents">Choose an agent</Link></Button></div> : <><p role="status" className="text-sm text-muted-foreground">Opening your chat…</p><Skeleton className="h-28 w-full rounded-xl" /></>}
+    {error || !agentId ? <div role="alert" className="space-y-3 py-6"><p>{error || "No agents are available yet."}</p><Button variant="outline" render={<Link to="/agents" />}>Choose an agent</Button></div> : <><p role="status" className="text-sm text-muted-foreground">Opening your chat…</p><Skeleton className="h-28 w-full rounded-xl" /></>}
   </div></BaseLayout>
 }

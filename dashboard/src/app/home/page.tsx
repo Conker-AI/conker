@@ -34,15 +34,15 @@ export default function HomePage() {
   ]
 
   return <BaseLayout title="Home" description="Your agents, their work, and what needs your attention." status={preview && <Badge variant="outline">Preview data</Badge>} actions={<>
-    <Button variant="outline" asChild><Link to="/chat/new"><SquarePen aria-hidden="true" />New chat</Link></Button>
-    <Button asChild><Link to="/companion"><MessageSquare aria-hidden="true" />Open companion</Link></Button>
+    <Button variant="outline" render={<Link to="/chat/new" />}><SquarePen aria-hidden="true" />New chat</Button>
+    <Button render={<Link to="/companion" />}><MessageSquare aria-hidden="true" />Open companion</Button>
   </>}>
     <div className="home-overview flex min-w-0 flex-col gap-(--page-section-gap)">
       <div className="grid min-w-0 items-start gap-(--page-section-gap) xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-(--page-section-gap)">
           <OverviewSection priority title="Needs your attention"
             description={pendingTickets.length ? `${pendingTickets.length} ${pendingTickets.length === 1 ? "request is" : "requests are"} waiting for your decision.` : "No requests waiting for your decision."}
-            action={<Button size="sm" variant="outline" asChild><Link to="/inbox">Review inbox<ArrowUpRight aria-hidden="true" /></Link></Button>}>
+            action={<Button size="sm" variant="outline" render={<Link to="/inbox" />}>Review inbox<ArrowUpRight aria-hidden="true" /></Button>}>
               {pendingTickets.length ? <ul className="divide-y divide-border">{pendingTickets.slice(0, 3).map(ticket => <CollectionRow key={ticket.id}
                 to={`/inbox/${ticket.id}`} title={ticket.request} leading={<AgentIdentityPortrait name={ticket.agent} />}
                 description={<><span className="max-w-24 shrink-0 truncate">{ticket.agent}</span><span aria-hidden="true">·</span><span className="min-w-0 truncate">{ticket.service}</span></>}
@@ -50,7 +50,7 @@ export default function HomePage() {
                 : <div className="flex items-start gap-3 py-5"><CheckCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" /><p className="text-sm leading-6 text-muted-foreground">You’re all caught up. Decisions from your agents will appear here.</p></div>}
           </OverviewSection>
 
-          <OverviewSection title="Recent activity" action={<Button size="sm" variant="ghost" asChild><Link to="/activity?tab=events">Activity<ArrowUpRight aria-hidden="true" /></Link></Button>}>
+          <OverviewSection title="Recent activity" action={<Button size="sm" variant="ghost" render={<Link to="/activity?tab=events" />}>Activity<ArrowUpRight aria-hidden="true" /></Button>}>
               <ul className="divide-y divide-border">{recentActivity.map(entry => {
                 const [date, ...time] = activityTime(entry.time, data.dailyBriefing.date, preview).split(" · ")
                 return <CollectionRow key={entry.id} to={entry.source} title={entry.event}
@@ -73,7 +73,7 @@ export default function HomePage() {
               </Link>)}
             </div>
           </OverviewSection>
-          <OverviewSection title="Your agents" action={<Button size="sm" variant="ghost" asChild><Link to="/agents">All agents<ArrowUpRight aria-hidden="true" /></Link></Button>}>
+          <OverviewSection title="Your agents" action={<Button size="sm" variant="ghost" render={<Link to="/agents" />}>All agents<ArrowUpRight aria-hidden="true" /></Button>}>
               <ul className="divide-y divide-border">{data.agents.slice(0, 3).map(agent => <CollectionRow key={agent.id}
                 to={agent.kind === "companion" ? "/companion" : `/chat/new?agent=${encodeURIComponent(agent.id)}`}
                 title={agent.kind === "companion" ? companionName : agent.name} leading={<AgentIdentityPortrait name={agent.name} />}
@@ -82,7 +82,7 @@ export default function HomePage() {
               {!data.agents.length && <p className="py-5 text-sm leading-6 text-muted-foreground">No agents in this workspace yet.</p>}
           </OverviewSection>
 
-          <OverviewSection title="Continue a conversation" action={<Button size="sm" variant="ghost" asChild><Link to="/chat">Chats<ArrowUpRight aria-hidden="true" /></Link></Button>}>
+          <OverviewSection title="Continue a conversation" action={<Button size="sm" variant="ghost" render={<Link to="/chat" />}>Chats<ArrowUpRight aria-hidden="true" /></Button>}>
               <ul className="divide-y divide-border">{recentSessions.map(session => <CollectionRow key={session.id}
                 to={`/chat/${session.id}`} title={session.title} leading={<AgentIdentityPortrait name={session.agent} />}
                 description={<span className="min-w-0 truncate">{session.agent} · {session.subtitle}</span>}
@@ -93,7 +93,7 @@ export default function HomePage() {
       </div>
 
       <div className="border-t pt-6"><OverviewSection title="System status" description={preview ? "Sample service checks. Live connections are not active." : "Latest recorded service checks."}
-        action={<div className="flex flex-wrap gap-1"><Button size="sm" variant="ghost" asChild><Link to="/settings?tab=connections"><Plug aria-hidden="true" />Connections</Link></Button><Button size="sm" variant="ghost" asChild><Link to="/system">System<ArrowUpRight aria-hidden="true" /></Link></Button></div>}>
+        action={<div className="flex flex-wrap gap-1"><Button size="sm" variant="ghost" render={<Link to="/settings?tab=connections" />}><Plug aria-hidden="true" />Connections</Button><Button size="sm" variant="ghost" render={<Link to="/system" />}>System<ArrowUpRight aria-hidden="true" /></Button></div>}>
           <ul className="grid divide-y divide-border lg:grid-cols-3 lg:divide-x lg:divide-y-0">{data.services.map(service => <li key={service.name} className="min-w-0">
             <Link to="/system" className="flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
               <div className="min-w-0"><p className="text-sm font-medium">{service.name}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{service.purpose}</p></div>

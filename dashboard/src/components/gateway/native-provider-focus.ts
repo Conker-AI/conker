@@ -21,7 +21,7 @@ export function useNativeProviderFocus(source: object, authStore: GatewayAuthSto
     requestAnimationFrame(() => {
       const auth = authStore.getState(), current = lifetime.current
       if (!current.active || current.commit !== commit || current.version !== captured.version || current.provider !== captured.provider || auth.phase !== 'authenticated' || auth.pending || auth.logoutUnconfirmed || auth.session?.sessionId !== captured.owner) return
-      if (document.querySelector('[role="dialog"][data-state="open"], [role="menu"][data-state="open"], [role="listbox"][data-state="open"]')) return
+      if (document.querySelector('[role="dialog"][data-open], [role="menu"][data-open], [role="listbox"][data-open]')) return
       if (document.activeElement !== document.body && document.activeElement instanceof HTMLElement && document.activeElement.isConnected) return
       const toolbar = document.querySelector('[role="toolbar"][aria-label="Workspace actions"]')
       const target = toolbar?.querySelector<HTMLElement>('[aria-label="Native provider"]') ?? toolbar?.querySelector<HTMLElement>('[aria-label="More workspace actions"]')

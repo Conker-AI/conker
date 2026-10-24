@@ -7,6 +7,7 @@ import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+import { createSidebarFocus } from "@/lib/sidebar-focus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,9 +60,11 @@ export type SidebarContextProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
   openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
+  /** `content` hands focus to the page after navigating instead of back to the opener. */
+  setOpenMobile: (open: boolean, focus?: "opener" | "content") => void;
   isMobile: boolean;
-  toggleSidebar: () => void;
+  toggleSidebar: (opener?: HTMLElement) => void;
+  restoreMobileFocus: () => false;
 };
 
 export const SidebarContext: React.Context<SidebarContextProps | null> =
@@ -90,14 +93,35 @@ export function SidebarProvider({
   onOpenChange?: (open: boolean) => void;
 }): React.ReactElement {
   const isMobile = useMediaQuery("max-md");
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [openMobile, _setOpenMobile] = React.useState(false);
+  // Conker: the mobile sheet has triggers outside it, so it returns focus itself.
+  const wrapper = React.useRef<HTMLDivElement>(null);
+  const [mobileFocus] = React.useState(createSidebarFocus);
+  const restoreMobileFocus = React.useCallback(
+    () => mobileFocus.restore(() => wrapper.current),
+    [mobileFocus],
+  );
+  const setOpenMobile = React.useCallback(
+    (next: boolean, focus?: "opener" | "content") => {
+      mobileFocus.change(next, undefined, focus);
+      _setOpenMobile(next);
+    },
+    [mobileFocus],
+  );
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
+  // Conker is a client-only app, so the saved state is read back from the cookie here.
+  const [_open, _setOpen] = React.useState(() => {
+    const saved = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+      ?.split("=")[1];
+    return saved === undefined ? defaultOpen : saved === "true";
+  });
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
-    async (value: boolean | ((value: boolean) => boolean)) => {
+    (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
       if (setOpenProp) {
         setOpenProp(openState);
@@ -105,21 +129,22 @@ export function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      await cookieStore.set({
-        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-        name: SIDEBAR_COOKIE_NAME,
-        path: "/",
-        value: String(openState),
-      });
+      // This sets the cookie to keep the sidebar state (document.cookie works in every browser).
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`;
     },
     [setOpenProp, open],
   );
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen]);
+  const toggleSidebar = React.useCallback(
+    (opener?: HTMLElement) => {
+      if (!isMobile) return setOpen((open) => !open);
+      const next = !mobileFocus.isOpen();
+      mobileFocus.change(next, opener);
+      _setOpenMobile(next);
+    },
+    [isMobile, setOpen, mobileFocus],
+  );
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -146,12 +171,13 @@ export function SidebarProvider({
       isMobile,
       open,
       openMobile,
+      restoreMobileFocus,
       setOpen,
       setOpenMobile,
       state,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, restoreMobileFocus],
   );
 
   return (
@@ -162,6 +188,7 @@ export function SidebarProvider({
           className,
         )}
         data-slot="sidebar-wrapper"
+        ref={wrapper}
         style={
           {
             "--sidebar-width": SIDEBAR_WIDTH,
@@ -189,7 +216,7 @@ export function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }): React.ReactElement {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, restoreMobileFocus } = useSidebar();
 
   if (collapsible === "none") {
     return (
@@ -208,8 +235,9 @@ export function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet onOpenChange={setOpenMobile} open={openMobile} {...props}>
+      <Sheet onOpenChange={(open) => setOpenMobile(open)} open={openMobile} {...props}>
         <SheetPopup
+          finalFocus={restoreMobileFocus}
           className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
           data-mobile="true"
           data-sidebar="sidebar"
@@ -293,7 +321,7 @@ export function SidebarTrigger({
       data-slot="sidebar-trigger"
       onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
         onClick?.(event);
-        toggleSidebar();
+        if (!event.defaultPrevented) toggleSidebar(event.currentTarget);
       }}
       size="icon"
       variant="ghost"
@@ -325,7 +353,7 @@ export function SidebarRail({
       )}
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      onClick={toggleSidebar}
+      onClick={() => toggleSidebar()}
       tabIndex={-1}
       title="Toggle Sidebar"
       type="button"
@@ -340,6 +368,7 @@ export function SidebarInset({
 }: React.ComponentProps<"main">): React.ReactElement {
   return (
     <main
+      tabIndex={-1}
       className={cn(
         "relative flex w-full flex-1 flex-col bg-background",
         "md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm/5",

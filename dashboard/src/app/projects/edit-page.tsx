@@ -46,7 +46,7 @@ function ProjectEditor({ client, snapshot, project }: ProjectScreenProps & { pro
   }
   return <>
     <div className="flex flex-wrap items-center gap-2">
-      <Button asChild variant="outline"><Link to="/projects">Back to projects</Link></Button>
+      <Button variant="outline" render={<Link to="/projects" />}>Back to projects</Button>
       <Button variant="outline" disabled={pending || dirty} onClick={() => void change(() => client.archive(project.id, !project.archivedAt, project.revision), project.archivedAt ? "Project restored in preview." : "Project archived. All source records and references are retained.")}>{project.archivedAt ? "Restore project" : "Archive project"}</Button>
       {project.archivedAt && !project.links.length && <Button variant="outline" disabled={pending} onClick={() => setDeleting(true)}>Delete empty project</Button>}
     </div>

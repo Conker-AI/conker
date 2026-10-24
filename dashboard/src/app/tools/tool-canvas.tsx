@@ -67,7 +67,7 @@ function StepNode({ data }: NodeProps<CanvasNode>) {
           </span>
         </div>
         {data.status === "completed" && (
-          <Check className="ml-auto size-4 text-success" />
+          <Check className="ml-auto size-4 text-success-foreground" />
         )}
       </div>
       <div className="tool-step-detail">
