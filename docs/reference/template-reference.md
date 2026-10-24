@@ -19,10 +19,10 @@ installed through the shadcn registry (`@coss/style`). Docs for each component, 
 | Buttons, fields, menus, tabs, dialogs, sheets, toasts and the other primitives | `@coss/ui` (53 primitives on Base UI) | `dashboard/src/components/ui/` |
 | Framed groups of panels (the layered look) | `frame`, `card` with `CardFrame` | same directory |
 | Empty, loading and error states | `empty`, `skeleton`, `spinner`, `alert`, `toast` | same directory, composed by the resilience components |
-| Chat input | `composer` (+ `src/lib/composer-*`, `src/hooks/use-composer-editor`) | same directory |
 | Dropdown menus | `menu` (also exported as `DropdownMenu*` through `ui/dropdown-menu.tsx`) | same directory |
 
-The calendar primitive is not installed (it needs a date-picker dependency Conker does not use yet).
+The calendar, drawer and composer primitives are not installed yet (Conker does not use them; add them
+from the registry when a screen needs them).
 `ui/chart.tsx` and `ui/loading-spinner.tsx` are Conker's own.
 
 ## Rules

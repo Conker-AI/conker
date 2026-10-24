@@ -7,7 +7,7 @@ import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
-import { createSidebarFocus } from "@/lib/sidebar-focus";
+import { savedSidebarOpen, useMobileSidebar } from "@/hooks/use-mobile-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,7 +19,6 @@ import {
   SheetPopup,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipPopup,
@@ -93,32 +92,12 @@ export function SidebarProvider({
   onOpenChange?: (open: boolean) => void;
 }): React.ReactElement {
   const isMobile = useMediaQuery("max-md");
-  const [openMobile, _setOpenMobile] = React.useState(false);
-  // Conker: the mobile sheet has triggers outside it, so it returns focus itself.
-  const wrapper = React.useRef<HTMLDivElement>(null);
-  const [mobileFocus] = React.useState(createSidebarFocus);
-  const restoreMobileFocus = React.useCallback(
-    () => mobileFocus.restore(() => wrapper.current),
-    [mobileFocus],
-  );
-  const setOpenMobile = React.useCallback(
-    (next: boolean, focus?: "opener" | "content") => {
-      mobileFocus.change(next, undefined, focus);
-      _setOpenMobile(next);
-    },
-    [mobileFocus],
-  );
+  // Conker: the mobile sheet returns focus itself (hooks/use-mobile-sidebar.ts).
+  const { openMobile, setOpenMobile, toggleMobile, restoreMobileFocus, wrapper } = useMobileSidebar();
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  // Conker is a client-only app, so the saved state is read back from the cookie here.
-  const [_open, _setOpen] = React.useState(() => {
-    const saved = document.cookie
-      .split("; ")
-      .find((cookie) => cookie.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
-      ?.split("=")[1];
-    return saved === undefined ? defaultOpen : saved === "true";
-  });
+  const [_open, _setOpen] = React.useState(() => savedSidebarOpen(SIDEBAR_COOKIE_NAME, defaultOpen));
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -137,13 +116,8 @@ export function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(
-    (opener?: HTMLElement) => {
-      if (!isMobile) return setOpen((open) => !open);
-      const next = !mobileFocus.isOpen();
-      mobileFocus.change(next, opener);
-      _setOpenMobile(next);
-    },
-    [isMobile, setOpen, mobileFocus],
+    (opener?: HTMLElement) => (isMobile ? toggleMobile(opener) : setOpen((open) => !open)),
+    [isMobile, setOpen, toggleMobile],
   );
 
   // Adds a keyboard shortcut to toggle the sidebar.
@@ -663,44 +637,6 @@ export function SidebarMenuBadge({
       data-slot="sidebar-menu-badge"
       {...props}
     />
-  );
-}
-
-export function SidebarMenuSkeleton({
-  className,
-  showIcon = false,
-  ...props
-}: React.ComponentProps<"div"> & {
-  showIcon?: boolean;
-}): React.ReactElement {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
-
-  return (
-    <div
-      className={cn("flex h-8 items-center gap-2 rounded-lg px-2", className)}
-      data-sidebar="menu-skeleton"
-      data-slot="sidebar-menu-skeleton"
-      {...props}
-    >
-      {showIcon && (
-        <Skeleton
-          className="size-4 rounded-lg"
-          data-sidebar="menu-skeleton-icon"
-        />
-      )}
-      <Skeleton
-        className="h-4 max-w-(--skeleton-width) flex-1"
-        data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as React.CSSProperties
-        }
-      />
-    </div>
   );
 }
 
