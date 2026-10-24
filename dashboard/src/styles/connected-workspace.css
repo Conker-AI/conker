@@ -20,8 +20,6 @@
 .conker-step-thought::before{content:"↳";margin-right:.375rem;color:var(--muted-foreground)}
 .conker-workspace .workspace-appbar-row:has(.workspace-appbar-search:empty){grid-template-columns:minmax(0,1fr) auto}
 .conker-workspace .workspace-appbar-search:empty{display:none}
-.conker-reference{width:clamp(16rem,25vw,22rem);flex-shrink:0;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--background)}
-.conker-reference-heading{display:flex;min-height:var(--appbar-height);align-items:center;justify-content:space-between;gap:.5rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);font-size:.875rem;font-weight:550}
 .conker-reference-content{min-height:0;overflow:auto;padding:1.5rem;font-size:.875rem;line-height:1.6;overflow-wrap:anywhere}
 .conker-reference-content h2{font-size:1rem;font-weight:600;margin-bottom:.5rem}
 .conker-reference-content h3{font-size:.8125rem;font-weight:600;margin-top:1.75rem;margin-bottom:.5rem}

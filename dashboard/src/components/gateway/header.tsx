@@ -16,10 +16,10 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
   const shell = useConnectedShell()
   const { isMobile, state } = useSidebar()
   const navigate = useNavigate()
-  return <WorkspaceAppbar context={context ?? <AppbarBreadcrumbs crumbs={[{ title: page.title, to: location.pathname }]} />}
+  return <><WorkspaceAppbar context={context ?? <AppbarBreadcrumbs crumbs={[{ title: page.title, to: location.pathname }]} />}
     search={isMobile || state === 'collapsed' ? <UniversalSearchTrigger /> : undefined}
     actions={<>{children}{shell?.showViews && <div className="conker-shell-actions">
       <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} compact={isMobile} />
     </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly data-ask-conker aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
-    toolbar={toolbar} sections={<>{sections}<AppbarSections activeSection={page.activeSection} sections={page.sections} /></>} />
+    toolbar={toolbar} sections={<>{sections}<AppbarSections activeSection={page.activeSection} sections={page.sections} /></>} />{shell?.panel}</>
 }

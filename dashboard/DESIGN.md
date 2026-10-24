@@ -54,7 +54,8 @@ the list (Tools, Skills, MCP tools, native and Codex sessions); data tables (Act
 the page flow above the table. The heading takes focus, Escape, the close button or choosing the item
 again closes it, and focus returns to the item. `InlineDetails` keeps DetailPanel's `open` /
 `onOpenChange` contract. Dialogs remain for focused creation and confirmation (TaskDialogContent,
-ConfirmationDialog). The chat's context views are the last side panel and move with the chat pass.
+ConfirmationDialog). The chat's views (Context, Thinking, Logs) open the same way, directly under the chat bar, on every
+screen size.
 On a phone the page's main action (`keepVisible`, e.g. New task) stays in the top bar and replaces the
 generic Ask Conker button; every other page action sits in the "…" menu, so the bar keeps one line.
 
