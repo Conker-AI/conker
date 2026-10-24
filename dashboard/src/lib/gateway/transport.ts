@@ -218,6 +218,13 @@ async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): P
     return value
   } catch { throw new GatewayError('invalid-response') }
 }
+/** Tells the connection banner whether the server answered, without the transport importing UI state. */
+function reportReachability(reachable: boolean) {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('conker:gateway-reachability', { detail: reachable }))
+  }
+}
+
 export function createGatewayTransport(options: { origin?: string; fetch?: typeof fetch } = {}) {
   const origin = options.origin ?? (typeof window !== 'undefined' ? window.location.origin : '')
   try {
@@ -238,6 +245,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
           method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'audio/wav', 'X-CSRF-Token': csrfToken }, body: payload,
           signal, credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error', referrerPolicy: 'same-origin',
         })
+        reportReachability(true)
         if (response.redirected || (response.status >= 300 && response.status < 400) || (response.url && new URL(response.url).origin !== origin)) throw new GatewayError('invalid-response')
         if (!response.ok) {
           await response.body?.cancel().catch(() => undefined)
@@ -246,6 +254,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         return await responseObject(response, GATEWAY_AUDIO_RESPONSE_LIMIT)
       } catch (error) {
         if (error instanceof GatewayError) throw error
+        if (!signal?.aborted) reportReachability(false)
         throw new GatewayError(signal?.aborted ? 'aborted' : 'network')
       }
     },
@@ -282,6 +291,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
           method, headers, body, signal: options.signal, credentials: 'same-origin',
           mode: 'same-origin', cache: 'no-store', redirect: 'error', referrerPolicy: 'same-origin',
         })
+        reportReachability(true)
         if (response.redirected || (response.status >= 300 && response.status < 400)) throw new GatewayError('invalid-response')
         if (response.url && new URL(response.url).origin !== origin) throw new GatewayError('invalid-response')
         if (!response.ok) {
@@ -314,6 +324,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : correctionRoute.test(path) ? path.includes('/memories/') ? 256 * 1024 : GATEWAY_JSON_LIMIT : path === '/api/pi/sessions/history' ? GATEWAY_HISTORY_LIMIT : codexSessionsRoute.test(path) ? path === codexSessionsPath ? 2 * 1024 * 1024 : GATEWAY_JSON_LIMIT : nativeSessionsRoute.test(path) ? path === '/api/host/claude/sessions' ? 1024 * 1024 : path.endsWith('/output') ? 512 * 1024 : GATEWAY_JSON_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {
         if (error instanceof GatewayError) throw error
+        if (!options.signal?.aborted) reportReachability(false)
         throw new GatewayError(options.signal?.aborted ? 'aborted' : 'network')
       }
     },

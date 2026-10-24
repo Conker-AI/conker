@@ -5,6 +5,10 @@ import { SidebarConfigProvider } from '@/contexts/sidebar-context'
 import { lazy, Suspense, useEffect } from 'react'
 import { initGTM } from '@/utils/analytics'
 import { runtimeMode } from '@/lib/runtime-mode'
+import { ToastProvider } from '@/components/ui/toast'
+import { ErrorBoundary } from '@/components/resilience/error-boundary'
+import { CrashScreen } from '@/components/resilience/error-fallbacks'
+import { AppLoading } from '@/components/resilience/skeletons'
 
 // Get basename from environment (for deployment) or use empty string for development
 const basename = import.meta.env.VITE_BASENAME || ''
@@ -23,10 +27,12 @@ function App() {
   return (
     <div className="font-sans antialiased">
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ToastProvider>
         <SidebarConfigProvider>
           <ThemeRuntime />
+          <ErrorBoundary fallback={props => <CrashScreen {...props} />}>
           <Router basename={basename}>
-            <Suspense fallback={<main className="p-6" role="status">Opening Conker…</main>}>
+            <Suspense fallback={<AppLoading />}>
               {runtimeMode === 'fixture' && GatewayPreview
                 ? legacyFixtureShell && FixtureWorkspace ? <FixtureWorkspace /> : <GatewayPreview />
                 : runtimeMode === 'gateway'
@@ -34,7 +40,9 @@ function App() {
                   : <main className="p-6" role="alert">Invalid dashboard mode. Set VITE_CONKER_MODE to gateway or fixture and rebuild.</main>}
             </Suspense>
           </Router>
+          </ErrorBoundary>
         </SidebarConfigProvider>
+        </ToastProvider>
       </ThemeProvider>
     </div>
   )

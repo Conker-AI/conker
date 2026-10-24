@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Copy, Download, ExternalLink, Network, Pencil, Plus, Trash2, Maximize2, Minimize2, FolderTree, SlidersHorizontal } from "lucide-react"
-import { toast } from "sonner"
+import { notifyDone, notifyFailure } from "@/components/resilience/notify"
 import { useConker, useConkerStore } from "@/lib/api/store"
 import { conkerClient } from "@/lib/api"
 import type { Memory } from "@/lib/api/models"
@@ -78,7 +78,7 @@ export default function MemoryPage() {
     navigate({ pathname: "/memory", search: next.toString() }, { replace: true })
   }
   const clear = () => { const next = new URLSearchParams(location.search); if (location.hash) next.set("data", "sample"); next.delete("q"); next.delete("category"); navigate({ pathname: "/memory", search: next.toString() }, { replace: true }) }
-  const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); toast.success("Record copied") } catch { toast.error("Could not copy. Select the record text to copy it manually.") } }
+  const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); notifyDone("Record copied") } catch { notifyFailure("Couldn’t copy", "Select the record text to copy it manually.") } }
   return <BaseLayout variant="canvas">
     <div ref={workspaceRef} className={`memory-workspace${expanded ? " memory-workspace-expanded" : ""}`}>
       <div className="memory-workspace-toolbar">
