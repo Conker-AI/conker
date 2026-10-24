@@ -43,7 +43,8 @@ action and never retries by itself. Failed loads show inline errors and the summ
 Long lists follow the approved prototype (v4): a narrow page with one card that holds its own search
 on top, one line per item (icon, a title that says what it is, a muted sub-line, a time) and a
 footer for paging and end-of-list notes. The shared pieces are `ListCard` and `ListLine` in the
-design system; Chats uses them first, Cron jobs and the other lists follow. The page-level search in
+design system; Chats and Cron jobs use them (Cron jobs adds All / Enabled / Paused chips and a short
+next-run time), and the other lists follow. The page-level search in
 the top bar stays for pages without a list card.
 
 ## Chat-first companion — 9 October
