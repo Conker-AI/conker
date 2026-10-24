@@ -1,10 +1,10 @@
 import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { Menu, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
-import { WorkspaceChromeContext, useWorkspaceChrome } from '@/lib/workspace-chrome'
+import { WorkspaceChromeContext, useInboxAttention, useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { cn } from '@/lib/utils'
 
 type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
@@ -69,9 +69,11 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
 
 /** One frame serves collection pages, conversations and graph workspaces. */
 export function WorkspaceAppbar({ context, search, actions, sections, toolbar }: WorkspaceAppbarProps) {
-  const { isMobile, state } = useSidebar()
+  const { isMobile, state, toggleSidebar } = useSidebar()
   // Keep the mobile opener mounted behind the modal so dismissal can restore its focus.
   const showSidebarTrigger = isMobile || state === 'collapsed'
+  // The phone's menu button carries the Inbox count so nothing that needs the owner hides in the drawer.
+  const menuCount = useInboxAttention()
   const chrome = useWorkspaceChrome()
   const header = useRef<HTMLElement>(null)
   const setCompactSearch = chrome?.setCompactSearch
@@ -88,7 +90,14 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
   return <header ref={header} data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
     <div className="workspace-appbar-row">
       <div className="workspace-appbar-context">
-        {showSidebarTrigger && <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand sidebar" title="Expand sidebar" />}
+        {showSidebarTrigger && (isMobile
+          // A phone gets the familiar menu button, carrying the Inbox count (owner, 23 October).
+          ? <div className="relative shrink-0">
+            <Button type="button" variant="ghost" size="icon" data-slot="sidebar-trigger" className="workspace-sidebar-trigger" aria-label={`Menu${menuCount ? `, ${menuCount} waiting for you` : ''}`} title="Menu"
+              onClick={event => { if (!event.defaultPrevented) toggleSidebar(event.currentTarget) }}><Menu /></Button>
+            {!!menuCount && <span aria-hidden="true" className="pointer-events-none absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">{menuCount}</span>}
+          </div>
+          : <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand the sidebar" title="Expand the sidebar" />)}
         {context}
         <div ref={chrome?.setSummary} className="workspace-appbar-summary shrink-0" />
       </div>

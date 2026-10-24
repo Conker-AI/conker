@@ -15,30 +15,40 @@ export type GatewayRoute =
   | 'settings'
   | 'companion-settings'
 
-/** The connected product's labels and destinations have one source of truth. */
+/**
+ * The connected product's labels and destinations have one source of truth. Sidebar groups follow
+ * the owner-approved structure (prototype v7): Overview (Home, Inbox, Chats), Workspace (Projects,
+ * Memory, Agents, Tools, Cron jobs) and System (Server, Settings). `more` places stay reachable
+ * through search and links on the pages that own them.
+ */
 export const gatewayDestinations = [
-  { id: 'chat', route: 'chat', title: 'New chat', path: '/chat', group: 'chat' },
-  { id: 'chats', route: 'chats', title: 'All chats', path: '/chats', group: 'chat' },
-  { id: 'today', route: 'today', title: 'Overview', path: '/overview', group: 'work' },
-  { id: 'inbox', route: 'inbox', title: 'Approvals', path: '/inbox', group: 'work' },
-  { id: 'tasks', route: 'activity', title: 'Tasks', path: '/activity', group: 'work' },
-  { id: 'runs', route: 'activity', title: 'Runs', path: '/activity?tab=runs', group: 'work' },
-  { id: 'jobs', route: 'jobs', title: 'Schedules', path: '/jobs', group: 'work' },
-  { id: 'events', route: 'activity', title: 'Activity log', path: '/activity?tab=events', group: 'work' },
-  { id: 'memory', route: 'memory', title: 'Memory', path: '/memory', group: 'memory' },
-  { id: 'projects', route: 'projects', title: 'Projects', path: '/projects', group: 'library' },
-  { id: 'artifacts', route: 'artifacts', title: 'Artifacts', path: '/artifacts', group: 'library' },
-  { id: 'agents', route: 'agents', title: 'Agents', path: '/agents', group: 'library' },
-  { id: 'skills', route: 'agents', title: 'Skills', path: '/agents?tab=skills', group: 'library' },
-  { id: 'tools', route: 'tools', title: 'Tools & workflows', path: '/tools', group: 'library' },
-  { id: 'settings', route: 'settings', title: 'Settings', path: '/settings', group: 'settings' },
-  { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'settings' },
-  { id: 'system', route: 'system', title: 'System & diagnostics', path: '/system', group: 'settings' },
-  { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'work' },
-  { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'settings' },
-] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: string }[]
+  { id: 'today', route: 'today', title: 'Home', path: '/overview', group: 'overview' },
+  { id: 'inbox', route: 'inbox', title: 'Inbox', path: '/inbox', group: 'overview' },
+  { id: 'chats', route: 'chats', title: 'Chats', path: '/chats', group: 'overview' },
+  { id: 'projects', route: 'projects', title: 'Projects', path: '/projects', group: 'workspace' },
+  { id: 'memory', route: 'memory', title: 'Memory', path: '/memory', group: 'workspace' },
+  { id: 'agents', route: 'agents', title: 'Agents', path: '/agents', group: 'workspace' },
+  { id: 'tools', route: 'tools', title: 'Tools', path: '/tools', group: 'workspace' },
+  { id: 'jobs', route: 'jobs', title: 'Cron jobs', path: '/jobs', group: 'workspace' },
+  { id: 'system', route: 'system', title: 'Server', path: '/system', group: 'system' },
+  { id: 'settings', route: 'settings', title: 'Settings', path: '/settings', group: 'system' },
+  { id: 'chat', route: 'chat', title: 'New chat', path: '/chat', group: 'more' },
+  { id: 'tasks', route: 'activity', title: 'Tasks', path: '/activity', group: 'more' },
+  { id: 'runs', route: 'activity', title: 'Runs', path: '/activity?tab=runs', group: 'more' },
+  { id: 'events', route: 'activity', title: 'Activity log', path: '/activity?tab=events', group: 'more' },
+  { id: 'artifacts', route: 'artifacts', title: 'Artifacts', path: '/artifacts', group: 'more' },
+  { id: 'skills', route: 'agents', title: 'Skills', path: '/agents?tab=skills', group: 'more' },
+  { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'more' },
+  { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'more' },
+  { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'more' },
+] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: 'overview' | 'workspace' | 'system' | 'more' }[]
 export type GatewayDestination = typeof gatewayDestinations[number]
-export const gatewaySidebarDestinations = gatewayDestinations.filter(item => item.group !== 'settings' && item.id !== 'chat')
+export const gatewaySidebarGroups = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'workspace', label: 'Workspace' },
+  { id: 'system', label: 'System' },
+] as const
+export const gatewaySidebarDestinations = gatewayDestinations.filter(item => item.group !== 'more')
 export const gatewayCommandDestinations = gatewayDestinations
 
 const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string])[]>> = {
@@ -76,7 +86,7 @@ export function gatewayViewTitle(pathname: string, search: string): string {
 }
 
 const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
-  '/': 'chat',
+  '/': 'today',
   '/overview': 'today',
   '/setup': 'setup',
   '/chat': 'chat',

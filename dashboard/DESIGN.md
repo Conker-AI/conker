@@ -1,5 +1,18 @@
 # Conker dashboard design system
 
+## Shell and places (24 October; supersedes the 9 October shell below)
+
+The owner-approved structure (prototype v7, conker-ui brief): a floating sidebar with **Ask Conker**
+(new chat) and **Search** (Ctrl/Cmd+K) on top, then places only, in three groups: Overview (Home,
+Inbox, Chats), Workspace (Projects, Memory, Agents, Tools, Cron jobs) and System (Server, which
+folds open to its sections, and Settings). No chat history, profile badge, help or status links in
+the sidebar; Sign out and Appearance live in Settings, unfinished setup shows at the top of Home.
+`/` opens Home, the glance-and-go screen. Tasks, Runs, the activity log, Artifacts, Skills, Native
+sessions and Setup stay reachable from search and from the pages that own them. One main view: the
+open-views tab strip is gone. On a phone the top bar has the menu button (carrying the Inbox count),
+the page name, Search and Ask Conker; the menu opens the same places. Desktop collapses the sidebar
+to icons with tooltips. Source of truth: `src/components/gateway/navigation.ts`.
+
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.

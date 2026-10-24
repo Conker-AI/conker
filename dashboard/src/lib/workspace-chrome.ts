@@ -10,3 +10,7 @@ type Chrome = {
 export const WorkspaceChromeContext = createContext<Chrome | null>(null)
 export function useWorkspaceChrome() { return useContext(WorkspaceChromeContext) }
 export const UniversalSearchContext = createContext<((query?: string, opener?: HTMLElement | null) => void) | null>(null)
+
+/** Decisions waiting for the owner (null while unknown); every appbar's phone menu button shows it. */
+export const InboxAttentionContext = createContext<number | null>(null)
+export function useInboxAttention() { return useContext(InboxAttentionContext) }

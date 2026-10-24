@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Monitor, Moon, Sun, Trash2, Upload } from 'lucide-react'
+import { Check, LogOut, Monitor, Moon, Sun, Trash2, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { GatewayControlClient, OwnerModelSettings } from '@/lib/gateway/control'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import { BrowserSessions } from './browser-sessions'
 
 const IDEAS_DOCS = 'https://github.com/Conker-AI/pi/blob/main/docs/proposals.md#turning-it-on'
 
-export function GatewayModelsSettings({ client }: { client: GatewayControlClient }) {
+export function GatewayModelsSettings({ client, onSignOut }: { client: GatewayControlClient; onSignOut?: () => void }) {
   const profile = useOwnerProfile()
   const [profileName, setProfileName] = useState(profile.name)
   const [profileError, setProfileError] = useState('')
@@ -115,5 +115,8 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       <p className="text-xs text-muted-foreground">Uses the selected provider’s allowance independently of replies. Another Think request replaces unfinished findings.</p>
     </WorkspaceSection>
     <BrowserSessions client={client} />
+    {onSignOut && <WorkspaceSection title="Sign out" description="Ends this browser’s session. Your chats and settings stay on your server.">
+      <div><Button type="button" variant="outline" onClick={onSignOut}><LogOut />Sign out of this browser</Button></div>
+    </WorkspaceSection>}
   </div></GatewayPageFrame>
 }
