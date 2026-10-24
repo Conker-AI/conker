@@ -47,6 +47,17 @@ design system; Chats and Cron jobs use them (Cron jobs adds All / Enabled / Paus
 next-run time), and the other lists follow. The page-level search in
 the top bar stays for pages without a list card.
 
+## Details open in place (25 October)
+
+No side windows (owner, 24 October). Choosing an item opens `InlineDetails` directly under it in
+the list (Tools, Skills, MCP tools, native and Codex sessions); data tables (Activity) open it in
+the page flow above the table. The heading takes focus, Escape, the close button or choosing the item
+again closes it, and focus returns to the item. `InlineDetails` keeps DetailPanel's `open` /
+`onOpenChange` contract. Dialogs remain for focused creation and confirmation (TaskDialogContent,
+ConfirmationDialog). The chat's context views are the last side panel and move with the chat pass.
+On a phone the page's main action (`keepVisible`, e.g. New task) stays in the top bar and replaces the
+generic Ask Conker button; every other page action sits in the "…" menu, so the bar keeps one line.
+
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.

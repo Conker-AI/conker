@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Cable, RefreshCw } from 'lucide-react'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, DetailPanel, FormActions, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, InlineDetails, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -75,7 +75,7 @@ function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: Gatew
     } catch (cause) { if (mounted.current) setError(message(cause)) }
     finally { busy.current = false; if (mounted.current) setPending(false) }
   }
-  return <DetailPanel open onOpenChange={open => { if (!open) onClose() }} busy={pending} title={tool.name} description={tool.description || 'Imported MCP tool'}>
+  return <InlineDetails onClose={onClose} busy={pending} title={tool.name} description={tool.description || 'Imported MCP tool'}>
     <OverlayBody>
       <ReferenceSection title="Chat access"><p>{access ? access.enabled ? 'Available to this Conker chat runtime.' : 'Not available in chats yet.' : 'Checking access…'}</p><p className="text-xs text-muted-foreground">Each call requires approval in the Inbox. {tool.status === 'disabled' && 'This tool is disabled for all new calls.'}</p></ReferenceSection>
       <ReferenceSection title="Server"><p className="break-all">{tool.url}</p><p>Remote tool: {tool.tool_name}</p><p>{tool.secret_ref ? `Vault reference: ${tool.secret_ref}` : 'No credential reference'}</p></ReferenceSection>
@@ -83,7 +83,7 @@ function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: Gatew
       {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive">{error}</p><Button variant="outline" disabled={pending} onClick={onReload}>Reload saved tool</Button></div>}
     </OverlayBody>
     <FormActions inset><Button variant="outline" disabled={pending} onClick={() => void change('state')}>{tool.status === 'active' ? 'Disable tool' : 'Enable tool'}</Button><Button disabled={pending || !access || (tool.status !== 'active' && !access.enabled)} onClick={() => void change('access')}>{pending ? 'Saving…' : access?.enabled ? 'Remove from chats' : 'Make available in chats'}</Button></FormActions>
-  </DetailPanel>
+  </InlineDetails>
 }
 
 export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
@@ -95,16 +95,19 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
   useEffect(() => { const controller = new AbortController(), generation = ++listGeneration.current; client.list(controller.signal).then(value => { if (!controller.signal.aborted && generation === listGeneration.current) { setTools(value); setError('') } }).catch(cause => { if (!controller.signal.aborted && generation === listGeneration.current) setError(message(cause)) }); return () => controller.abort() }, [client, reload])
   function saved(value: McpTool) { listGeneration.current++; setTools(current => [...(current ?? []).filter(item => item.id !== value.id), value].sort((a, b) => a.name.localeCompare(b.name))); setConnecting(false); setParams({ view: 'mcp', tool: value.id }); setNotice(`Saved ${value.name}.`) }
   const rows = (tools ?? []).filter(tool => `${tool.name} ${tool.url} ${tool.description}`.toLowerCase().includes(query.toLowerCase()))
+  // Details open in place under the chosen tool; choosing it again closes them.
+  const details = selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
+  const shown = !!selected && rows.some(tool => tool.id === selected.id)
   return <GatewayPageFrame className="space-y-4">
-    <PageHeader actionsOnly title="MCP tools" density="compact" actions={<><WorkspaceAction render={<Link to="/tools" />}>All tools</WorkspaceAction><WorkspaceAction iconOnly aria-label="Refresh MCP tools" onClick={() => setReload(value => value + 1)}><RefreshCw /></WorkspaceAction><WorkspaceAction onClick={() => setConnecting(true)}><Cable />Connect server</WorkspaceAction></>} />
+    <PageHeader actionsOnly title="MCP tools" density="compact" actions={<><WorkspaceAction render={<Link to="/tools" />}>All tools</WorkspaceAction><WorkspaceAction iconOnly aria-label="Refresh MCP tools" onClick={() => setReload(value => value + 1)}><RefreshCw /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setConnecting(true)}><Cable />Connect server</WorkspaceAction></>} />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!tools && !error && <CollectionLoading label="Loading MCP tools…" />}
     {tools && <CollectionPanel query={query} onQueryChange={setQuery} label="Search MCP tools" placeholder="Search tools or servers…" count={rows.length} unit={rows.length === 1 ? 'tool' : 'tools'} emptyTitle={query ? 'No matching MCP tools' : 'Connect your first MCP server'} emptyDescription={query ? 'Try another tool name or server.' : 'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'} emptyAction={!query && <Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
-      <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={`/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
+      <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
     </CollectionPanel>}
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     <p className="text-xs text-muted-foreground">MCP calls use your existing tool approvals and execution history. Public HTTPS servers are supported; local stdio servers and MCP OAuth are not yet available.</p>
-    {selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />}
+    {!shown && details}
     <Dialog open={connecting} onOpenChange={open => { if (!connectingBusy) setConnecting(open) }} disablePointerDismissal={connectingBusy}>{connecting && <TaskDialogContent title="Connect MCP server" description="Discover and review tools before adding them to Conker." size="wide"><McpConnect client={client} onSaved={saved} onBusy={setConnectingBusy} onCancel={() => setConnecting(false)} /></TaskDialogContent>}</Dialog>
   </GatewayPageFrame>
 }

@@ -132,3 +132,7 @@
 
 /* Portaled search/count must not leave an empty content toolbar behind. */
 [data-slot="collection-toolbar"]:not(:has(> :not(:empty))) { display:none; }
+
+/* Phone top bar: a page with its own main action shows that instead of the generic Ask Conker
+   button (Ask Conker stays in the menu), so the bar keeps one line. */
+.workspace-appbar:has([data-keep-visible]) [data-ask-conker] { display: none; }

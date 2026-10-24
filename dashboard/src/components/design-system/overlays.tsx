@@ -1,4 +1,4 @@
-import { useRef, type ComponentProps, type ReactNode } from "react"
+import { useEffect, useRef, type ComponentProps, type ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,52 @@ export function FormActions({ children, description, inset = false, className }:
   return <div data-pattern="form-actions" className={cn("flex shrink-0 flex-wrap items-center justify-end gap-3 border-t", inset ? "p-5" : "pt-4", className)}>
     {description && <div className="mr-auto min-w-0 text-xs leading-5 text-muted-foreground">{description}</div>}
     <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">{children}</div>
+  </div>
+}
+
+/**
+ * Details open in place, under the item that was chosen (owner, 24 October: no side windows). The
+ * heading takes focus so the details are read first; Escape, the close button or choosing the item
+ * again closes them, and focus goes back to the item.
+ */
+export function InlineDetails({ open = true, onOpenChange, onClose, ...props }: {
+  title: ReactNode; description?: ReactNode; busy?: boolean; children: ReactNode
+  /** Same contract as DetailPanel, so a screen can switch without changing its state. */
+  open?: boolean; onOpenChange?: (open: boolean) => void; onClose?: () => void
+}) {
+  return open ? <InlineDetailsBody {...props} onClose={() => { onClose?.(); onOpenChange?.(false) }} /> : null
+}
+
+function InlineDetailsBody({ title, description, onClose, busy = false, children }: {
+  title: ReactNode; description?: ReactNode; onClose: () => void; busy?: boolean; children: ReactNode
+}) {
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    const node = heading.current
+    const region = node?.closest<HTMLElement>('[data-slot="inline-details"]')
+    // Return focus to the item that owns these details (its expandable control), else to where it was.
+    const owner = region?.parentElement?.closest<HTMLElement>('li, [data-pattern="record-item"]')?.querySelector<HTMLElement>('[aria-expanded]') ?? null
+    const origin = owner ?? (document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null)
+    node?.focus({ preventScroll: true })
+    region?.scrollIntoView({ block: "nearest" })
+    return () => {
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        if (origin?.isConnected && (!active || active === document.body)) origin.focus({ preventScroll: true })
+      })
+    }
+  }, [])
+  return <div data-slot="inline-details" role="region" aria-label={typeof title === "string" ? title : undefined}
+    onKeyDown={event => { if (event.key === "Escape" && !busy && !event.defaultPrevented) { event.stopPropagation(); onClose() } }}
+    className="mx-2 mb-3 mt-1 flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground sm:mx-3">
+    <div className="flex items-start gap-3 border-b px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <h3 ref={heading} tabIndex={-1} className="break-words font-medium leading-6 outline-none">{title}</h3>
+        {description && <p className="text-sm leading-5 text-muted-foreground">{description}</p>}
+      </div>
+      <Button type="button" size="icon-sm" variant="ghost" aria-label="Close details" title="Close details" disabled={busy} onClick={onClose}><X /></Button>
+    </div>
+    {children}
   </div>
 }
 
