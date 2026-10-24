@@ -81,7 +81,7 @@ type CollectionSearchProps = Omit<ComponentProps<typeof Input>, "className" | "t
 
 export function CollectionSearch({ label, compact = false, trailing, ...props }: CollectionSearchProps & { compact?: boolean; trailing?: ReactNode }) {
   return <div data-slot="collection-search" className="relative w-full min-w-0">
-    <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+    <Search className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
     <Input {...props} type="search" aria-label={label} autoComplete="off" className={cn("rounded-lg pl-11 shadow-none", compact ? "h-(--control-height-sm)" : "h-(--collection-search-height)", trailing ? "pr-10" : "pr-4")} />
     {trailing && <div className="absolute top-1/2 right-1 -translate-y-1/2">{trailing}</div>}
   </div>

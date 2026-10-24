@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 
 export { PageHeader, WorkspaceAction, WorkspaceSection, OverviewSection, PageTabs, PageTabsList, PageTabsTrigger, PageTabsContent, CollectionSearch, WorkspaceSearch, CollectionToolbar, CollectionLoading, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
 export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, WorkspaceInspector, ConfirmationDialog } from "./overlays"
+export { ListCard, ListLine } from "./list-card"
 export { WorkspaceChoice } from "./workspace-chrome"
 
 /** URL-addressed page content. Navigation is rendered once in SiteHeader. */

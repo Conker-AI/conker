@@ -130,13 +130,15 @@ function componentCases() {
   const find = type => { const matches = []; function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === type) matches.push(node); [node.props?.children].flat(Infinity).forEach(visit) }; visit(tree); return matches }
   const render = () => { tree = module.exports.GatewayChatsWorkspace({ conversationState: {}, sourcePrivacy: {} }) }
   for (const patch of [{}, { pending: null, error: 'query' }, { pending: null, error: 'read' }, { loaded: true, error: null, rows: [row('a')], nextCursor: cursor('a') }, { pending: 'refresh' }, { pending: null, error: 'refresh' }]) {
-    state = { ...state, ...patch }; render(); assert.equal(find('CollectionPanel').length, 1); assert.equal(find('CollectionPanel')[0].props.query, 'kept search')
+    state = { ...state, ...patch }; render(); assert.equal(find('ListCard').length, 1); assert.equal(find('ListCard')[0].props.query, 'kept search')
   }
   state = { ...state, query: '', rows: [{ ...row('gone'), forgotten: true }], nextCursor: cursor('gone'), error: null }; render()
-  assert.equal(find('CollectionPanel')[0].props.count, 0); assert.equal(find('CollectionPanel')[0].props.emptyTitle, 'No visible chats on this page')
-  assert.ok(find('Button').some(button => button.props.children === 'Load older' && !button.props['aria-disabled']))
-  const primitives = fs.readFileSync(path.join(root, 'src/components/design-system/primitives.tsx'), 'utf8')
-  assert.match(primitives, /emptyContent !== undefined \? emptyContent : <CollectionEmpty/)
+  assert.equal(find('ListCard')[0].props.count, 0); assert.equal(find('ListCard')[0].props.emptyTitle, 'No visible chats on this page')
+  const footer = find('ListCard')[0].props.footer, footerButtons = []
+  ;(function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === 'Button') footerButtons.push(node); [node.props?.children].flat(Infinity).forEach(visit) })(footer)
+  assert.ok(footerButtons.some(button => button.props.children === 'Load older' && !button.props['aria-disabled']))
+  const listCard = fs.readFileSync(path.join(root, 'src/components/design-system/list-card.tsx'), 'utf8')
+  assert.match(listCard, /emptyContent !== undefined \? <div className="p-4">\{emptyContent\}<\/div>\s*: <CollectionEmpty/)
 }
 async function main() { await clientCases(); await controllerCases(); componentCases(); console.log('Paged chat directory parser/transport, query/cursor generations, page retention, evidence ordering, privacy/lifetime/deadline and mounted collection tests passed.') }
 main().catch(error => { console.error(error); process.exitCode = 1 })
