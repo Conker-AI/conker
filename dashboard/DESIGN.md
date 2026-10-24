@@ -13,6 +13,18 @@ open-views tab strip is gone. On a phone the top bar has the menu button (carryi
 the page name, Search and Ask Conker; the menu opens the same places. Desktop collapses the sidebar
 to icons with tooltips. Source of truth: `src/components/gateway/navigation.ts`.
 
+## Home (24 October)
+
+Glance and go (prototype v7): a greeting, unfinished setup if any, then an asymmetric bento where
+tile size follows priority. **Needs you** (largest: at most three decisions, then ideas, with the
+true total and a link to Inbox), **Plan allowance** (shows "Not connected yet" until the server
+reports plan usage), **Coming up** (next enabled cron jobs), **Conker’s work** (runs today and a
+14-day bar chart; it says when only the latest 100 runs were counted), **Completed**, **Decided by
+you** (today) and **Quick actions**. Six columns on wide screens, two on tablets, one on phones (no
+holes). Every tile has its own loading, failure ("Not loaded" + Try again) and render-error state; a
+failed source never shows as empty. The Inbox count everywhere is decisions plus open ideas, the
+same things Home counts. Model: `home-model.ts`, checked by `check:gateway` (check-gateway-today).
+
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.

@@ -1,0 +1,29 @@
+/* Home bento (prototype v7, owner-approved): tile size follows priority. "Needs you" is largest,
+   the work chart and completed list are wide, figures are small; spans are uneven and leave no holes. */
+.home-overview { container-type: inline-size; }
+
+.home-bento {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-areas:
+    "needs needs needs needs plan plan"
+    "needs needs needs needs coming coming"
+    "work work work done done done"
+    "decided quick quick done done done";
+}
+
+@container (max-width: 1000px) {
+  .home-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "needs needs" "plan coming" "work work" "done done" "decided quick";
+  }
+}
+
+@container (max-width: 560px) {
+  .home-bento {
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "needs" "coming" "work" "done" "decided" "quick" "plan";
+  }
+}
