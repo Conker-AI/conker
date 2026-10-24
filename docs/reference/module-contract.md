@@ -72,7 +72,7 @@ different facts, and merging them is how a dashboard starts lying.
 | `docker-compose.yml` | Runs standalone for development, composes into the whole for real use. |
 | `CHANGELOG.md` | Honest versioning, so replacing a module has visible consequences. |
 | `.gitattributes` | `* text=auto eol=lf`. These run on Linux; a CRLF in an entrypoint is a "bad interpreter" failure nothing on Windows surfaces. |
-| `LICENSE` | MIT. A public repository without one is under default copyright and nobody may legally use it. |
+| `LICENSE` | AGPL-3.0 (version 3 only), the official text unchanged. A public repository without one is under default copyright and nobody may legally use it. |
 | Config | One precedence everywhere: **environment → file → default**, documented. |
 | Errors | One shape across every service, so the dashboard renders failures uniformly. |
 | Secure by default | No key configured means the service **refuses to start**, exiting with an error naming the exact fix. It never falls back to open. |
