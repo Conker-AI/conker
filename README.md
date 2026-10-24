@@ -12,7 +12,7 @@ Talk to it, choose what it remembers, and review what it does.</p>
 <p align="center">
   <a href="https://github.com/Conker-AI/conker/actions/workflows/ci.yml"><img src="https://github.com/Conker-AI/conker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/Conker-AI/conker/actions/workflows/dashboard.yml"><img src="https://github.com/Conker-AI/conker/actions/workflows/dashboard.yml/badge.svg" alt="Dashboard" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 license" /></a>
   <img src="https://img.shields.io/badge/self--hosted-yes-e36b2c" alt="Self-hosted" />
 </p>
 
@@ -103,4 +103,4 @@ and Radix.
 
 ## License and security
 
-[MIT](LICENSE). Found a vulnerability? Please report it privately: [security policy](SECURITY.md).
+[AGPL-3.0](LICENSE), version 3 only. Copyright (C) 2026 alexeybe1kin. Releases published before 24 October 2026 were under MIT and stay under MIT. Found a vulnerability? Please report it privately: [security policy](SECURITY.md).
