@@ -736,3 +736,26 @@ content-free pending metadata offers Check status; retry is a separate confirmed
 operation bound to the server-saved approved payload hash. Applied receipts distinguish
 saved text from indexing status. A missing receipt remains uncertain until an
 authoritative outcome is verified. Source conversations and memory permissions remain unchanged.
+
+## Failure, loading and connection states (24 October)
+
+Job: when something goes wrong the owner always knows what happened, that nothing else broke, and
+the one next step. Code: `src/components/resilience/`, `src/lib/connection-store.ts`.
+
+| Situation | What he sees | Next step |
+| --- | --- | --- |
+| The whole app failed to render | `CrashScreen`: "Conker hit a problem", data is on the server | Reload Conker, Try again, Copy details |
+| A newer build replaced a page's files | "Conker was updated" (app or page) | Reload Conker |
+| One page failed | `WorkspaceError` in place; sidebar and header keep working; clears on navigation | Try again, Reload Conker, Copy details |
+| One tile failed | `SectionError` inside the tile | Try again |
+| A read failed | `InlineError`: kind-specific title and next step, Details with kind and HTTP status | Try again; network and dependency failures refresh by themselves once the server answers |
+| Part of a page failed | "Some sections didn’t update"; failed sections say "Not loaded", never "nothing here" | Try again |
+| Offline or server unreachable | `ConnectionBanner`, one muted line above the page; checks again by itself, no countdown | Retry now; "Back online." for 3 s when it returns |
+| Page or list loading | Skeleton of the layout, revealed after 300 ms | — |
+| A background action failed | Error toast that stays until dismissed, with Try again; never the only place it shows | Try again |
+
+Rules: a read may retry by itself; a write never does (an interrupted write is an unknown outcome,
+shown with the warning style). Copied details never contain the server address, query strings,
+tokens or record contents. Timing values are in the conker-ui rationale ledger (Loading placeholder,
+Reconnect, Back-online note, Failure toasts). In development, `?preview-failure=network`,
+`dependency` or `partial` (or `window.conkerPreview.fail(...)`) forces these states in the preview.

@@ -6,7 +6,11 @@ import { lazy, Suspense, useCallback, useLayoutEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
-import { CollectionLoading, PageHeader } from '@/components/design-system/primitives'
+import { PageHeader } from '@/components/design-system/primitives'
+import { ErrorBoundary } from '@/components/resilience/error-boundary'
+import { WorkspaceError } from '@/components/resilience/error-fallbacks'
+import { ChatSkeleton, PageSkeleton } from '@/components/resilience/skeletons'
+import { ConnectionBanner } from '@/components/resilience/connection-banner'
 import { GatewayChatSidebar } from './chat-sidebar'
 import { GatewayPrivacyControl } from './privacy-control'
 import { GatewayHeader } from './header'
@@ -50,9 +54,8 @@ const GatewayFilesystemWorkspace = lazy(() => import('./filesystem-workspace').t
 const GatewayNativeSessionsPage = lazy(() => import('./native-sessions-page').then(module => ({ default: module.GatewayNativeSessionsPage })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
 
-const workspaceFallback = <div className="min-h-0 flex-1 p-4 sm:p-6" aria-busy="true">
-  <CollectionLoading label="Opening workspace…" />
-</div>
+const workspaceFallback = <PageSkeleton label="Opening workspace…" />
+const workspaceError = (props: Parameters<typeof WorkspaceError>[0]) => <WorkspaceError {...props} />
 
 export function GatewayWorkspace({ runtime, activity, authStore, conversationState, activityState, sourcePrivacy, control, owner, ownerState, proposals, badge }: {
   /** A short marker shown beside the name, e.g. that this is a preview with sample data. */
@@ -86,7 +89,8 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat and Memory own their header so their controls stay with workspace state.
   return <SessionDiscoveryProvider runtime={runtime} authStore={authStore} workspace={conversationState} privacy={sourcePrivacy}><UniversalSearchProvider client={control.search} authStore={authStore} workspace={conversationState} sourcePrivacy={sourcePrivacy}><WorkspaceChromeProvider><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
-    <Suspense fallback={workspaceFallback}>
+    <ConnectionBanner probe={() => control.gatewayHealth()} />
+    <ErrorBoundary resetKeys={[location.pathname, location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
@@ -100,16 +104,16 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
       {artifactsActive && <GatewayArtifactsWorkspace control={control} activity={activity} />}
       {jobsActive && <GatewayJobsWorkspace control={control} />}
-    </Suspense>
+    </Suspense></ErrorBoundary>
     {!supported && <div className="space-y-3 p-6"><PageHeader title="This workspace is not connected yet" density="compact" /><p className="text-sm text-muted-foreground">The live gateway currently connects today, conversations, projects, artifacts, jobs, activity, approvals, agents, memory, tools, models and diagnostics.</p><Button variant="outline" render={<Link to="/chat" />}>Open live conversations</Button></div>}
-    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><Suspense fallback={chatActive ? workspaceFallback : null}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></div>
-    {activityActive && <Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
+    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><ErrorBoundary resetKeys={[session]} fallback={workspaceError}><Suspense fallback={chatActive ? <ChatSkeleton /> : null}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></ErrorBoundary></div>
+    {activityActive && <ErrorBoundary resetKeys={[location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
       if (conversationState.getState().operation) return
       activityState.setState({ notice: null })
       const prior = conversationState.getState().taskIntent
       const intent = prior ? { ...prior, open: true } : { taskId: task.id, sessionId: task.sessionId, open: true }
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
-    }} /></div></Suspense>}
+    }} /></div></Suspense></ErrorBoundary>}
   </ConnectedWorkspaceShell></WorkspaceChromeProvider></UniversalSearchProvider></SessionDiscoveryProvider>
 }

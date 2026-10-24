@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUpRight, Bot, CheckCheck, CircleAlert, Clock3, Lightbulb, MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
 import { Link } from 'react-router-dom'
 import { CollectionRow, OverviewSection, PageHeader, WorkspaceAction } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
@@ -9,7 +11,6 @@ import type { GatewayOwnerClient, OwnerRequest } from '@/lib/gateway/owner'
 import type { GatewayProposalClient, Proposal } from '@/lib/gateway/proposals'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import { gatewayError } from '@/lib/gateway/transport'
 import { buildTodaySnapshot } from './today-model'
 import { GatewayPageFrame } from './page-frame'
 import '@/app/home/home.css'
@@ -35,11 +36,11 @@ function EmptyAction({ icon, title, description, action }: { icon: ReactNode; ti
 }
 
 export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: Props) {
-  const [data, setData] = useState(empty), [loading, setLoading] = useState(true), [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState(empty), [loading, setLoading] = useState(true), [failure, setFailure] = useState<{ error: unknown; partial: boolean; missing: Set<'requests' | 'tasks' | 'sessions' | 'proposals'> } | null>(null)
   const generation = useRef(0)
   const load = useCallback(async (signal?: AbortSignal) => {
     const current = ++generation.current
-    setLoading(true); setError(null)
+    setLoading(true); setFailure(null)
     const results = await Promise.allSettled([
       owner.listRequests({ limit: 50, signal }), activity.listTasks({ limit: 50, signal }), runtime.listSessions({ signal }), proposals.list({ signal }),
     ])
@@ -51,7 +52,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: P
       proposals: results[3].status === 'fulfilled' ? results[3].value : current.proposals,
     }))
     const failures = results.filter(item => item.status === 'rejected')
-    if (failures.length) setError(failures.length === results.length ? gatewayError((failures[0] as PromiseRejectedResult).reason).message : 'Some updates could not be loaded. The available sections are still current.')
+    if (failures.length) setFailure({ error: (failures[0] as PromiseRejectedResult).reason, partial: failures.length < results.length, missing: new Set((['requests', 'tasks', 'sessions', 'proposals'] as const).filter((_, index) => results[index].status === 'rejected')) })
     if (current === generation.current) setLoading(false)
   }, [activity, owner, proposals, runtime])
   useEffect(() => {
@@ -60,30 +61,33 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: P
     return () => { active = false; controller.abort() }
   }, [load])
   const today = buildTodaySnapshot(data)
+  // A section whose source failed says so instead of claiming it is empty.
+  const unknown = (source: 'requests' | 'tasks' | 'sessions' | 'proposals') => !!failure?.missing.has(source)
+  const notLoaded = <EmptyLine>Not loaded. Use Try again above.</EmptyLine>
   return <GatewayPageFrame>
     <div className="home-overview flex w-full min-w-0 flex-col gap-6">
       <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction render={<Link to="/chat" />}><SquarePen />New chat</WorkspaceAction></>} />
-      {error && <p role="alert" className="flex items-start gap-2 rounded-lg border bg-muted p-3 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" />{error}</p>}
-      {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <p role="status" className="text-sm text-muted-foreground">Loading today…</p>}
+      {failure && <InlineError error={failure.error} onRetry={() => load()} {...(failure.partial ? { title: 'Some sections didn’t update', description: 'The sections shown are current. Try again to load the rest.' } : {})} />}
+      {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <ListSkeleton rows={4} label="Loading today…" />}
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <div className="min-w-0 space-y-6">
-          <OverviewSection priority={today.waiting.length > 0} title="Waiting for you" description={today.waiting.length ? `${today.waiting.length} ${today.waiting.length === 1 ? 'decision needs' : 'decisions need'} your review before anything continues.` : 'Nothing needs your decision.'} action={<Button size="sm" variant="outline" render={<Link to="/inbox" />}>{today.waiting.length === 1 ? 'Review request' : 'Open inbox'}<ArrowUpRight /></Button>}>
+          <OverviewSection priority={today.waiting.length > 0} title="Waiting for you" description={today.waiting.length ? `${today.waiting.length} ${today.waiting.length === 1 ? 'decision needs' : 'decisions need'} your review before anything continues.` : unknown('requests') ? 'Couldn’t check for decisions.' : 'Nothing needs your decision.'} action={<Button size="sm" variant="outline" render={<Link to="/inbox" />}>{today.waiting.length === 1 ? 'Review request' : 'Open inbox'}<ArrowUpRight /></Button>}>
             {today.waiting.length ? <ul className="divide-y divide-border">{today.waiting.map(item => <CollectionRow key={item.id} to={`/inbox?request=${encodeURIComponent(item.id)}`} title={item.title || 'Review this action'} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><CircleAlert className="size-4 text-warning-foreground" /></span>} descriptionTitle={item.details} description={<span className="line-clamp-2">{item.details || `${item.actor} is waiting for your decision.`}</span>} trailing={<span>{when(item.updatedAt)}</span>} />)}</ul>
-              : <div className="flex items-start gap-3 py-5"><CheckCheck className="mt-0.5 size-5 shrink-0 text-success-foreground" /><p className="text-sm leading-6 text-muted-foreground">You’re caught up. New approval requests will appear here.</p></div>}
+              : unknown('requests') ? notLoaded : <div className="flex items-start gap-3 py-5"><CheckCheck className="mt-0.5 size-5 shrink-0 text-success-foreground" /><p className="text-sm leading-6 text-muted-foreground">You’re caught up. New approval requests will appear here.</p></div>}
           </OverviewSection>
           <OverviewSection title="Continue work" action={<Button size="sm" variant="ghost" render={<Link to="/activity" />}>All activity<ArrowUpRight /></Button>}>
-            {today.activeTasks.length ? <ul className="divide-y divide-border">{today.activeTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<Clock3 className="size-4 text-muted-foreground" />} description={<span className="min-w-0 truncate">{task.criteria.length} completion {task.criteria.length === 1 ? 'check' : 'checks'}</span>} trailing={<StatusBadge tone={task.status === 'blocked' ? 'warning' : 'neutral'}>{taskStatus(task.status)}</StatusBadge>} />)}</ul> : !loading && <EmptyAction icon={<SquarePen className="size-4" />} title="Nothing in progress" description="Start with a conversation when an idea is ready to become work." action={<Button size="sm" variant="outline" render={<Link to="/chat" />}>Start a chat</Button>} />}
+            {today.activeTasks.length ? <ul className="divide-y divide-border">{today.activeTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<Clock3 className="size-4 text-muted-foreground" />} description={<span className="min-w-0 truncate">{task.criteria.length} completion {task.criteria.length === 1 ? 'check' : 'checks'}</span>} trailing={<StatusBadge tone={task.status === 'blocked' ? 'warning' : 'neutral'}>{taskStatus(task.status)}</StatusBadge>} />)}</ul> : unknown('tasks') ? notLoaded : !loading && <EmptyAction icon={<SquarePen className="size-4" />} title="Nothing in progress" description="Start with a conversation when an idea is ready to become work." action={<Button size="sm" variant="outline" render={<Link to="/chat" />}>Start a chat</Button>} />}
           </OverviewSection>
           <OverviewSection title="Continue a conversation" action={<Button size="sm" variant="ghost" render={<Link to="/chats" />}>All chats<ArrowUpRight /></Button>}>
-            {today.conversations.length ? <ul className="divide-y divide-border">{today.conversations.map(session => <CollectionRow key={session.id} to={`/chat?session=${encodeURIComponent(session.id)}`} title={session.title || 'New chat'} leading={<MessageSquare className="size-4 text-muted-foreground" />} description={<span className="min-w-0 truncate">{session.summary || 'Continue this conversation'}</span>} trailing={<span>{when(session.createdAt)}</span>} />)}</ul> : !loading && <EmptyAction icon={<MessageSquare className="size-4" />} title="No conversations yet" description="Your recent conversations will stay within reach here." action={<Button size="sm" variant="outline" render={<Link to="/chat" />}>New chat</Button>} />}
+            {today.conversations.length ? <ul className="divide-y divide-border">{today.conversations.map(session => <CollectionRow key={session.id} to={`/chat?session=${encodeURIComponent(session.id)}`} title={session.title || 'New chat'} leading={<MessageSquare className="size-4 text-muted-foreground" />} description={<span className="min-w-0 truncate">{session.summary || 'Continue this conversation'}</span>} trailing={<span>{when(session.createdAt)}</span>} />)}</ul> : unknown('sessions') ? notLoaded : !loading && <EmptyAction icon={<MessageSquare className="size-4" />} title="No conversations yet" description="Your recent conversations will stay within reach here." action={<Button size="sm" variant="outline" render={<Link to="/chat" />}>New chat</Button>} />}
           </OverviewSection>
         </div>
         <div className="min-w-0 space-y-6">
           <OverviewSection title="Suggested" description="Ideas from your conversations. Nothing runs until you choose." action={<Button size="sm" variant="ghost" render={<Link to="/inbox" />}>Review all<ArrowUpRight /></Button>}>
-            {today.suggestions.length ? <ul className="divide-y divide-border">{today.suggestions.map(item => <CollectionRow key={item.id} to="/inbox" title={item.title} leading={<Lightbulb className="size-4 text-muted-foreground" />} description={<span className="line-clamp-2">{item.suggestion}</span>} trailing={<span>{when(item.createdAt)}</span>} />)}</ul> : !loading && <EmptyLine>Nothing useful to suggest right now.</EmptyLine>}
+            {today.suggestions.length ? <ul className="divide-y divide-border">{today.suggestions.map(item => <CollectionRow key={item.id} to="/inbox" title={item.title} leading={<Lightbulb className="size-4 text-muted-foreground" />} description={<span className="line-clamp-2">{item.suggestion}</span>} trailing={<span>{when(item.createdAt)}</span>} />)}</ul> : unknown('proposals') ? notLoaded : !loading && <EmptyLine>Nothing useful to suggest right now.</EmptyLine>}
           </OverviewSection>
           <OverviewSection title="Completed" action={<Button size="sm" variant="ghost" render={<Link to="/activity?tab=tasks" />}>Task history<ArrowUpRight /></Button>}>
-            {today.completedTasks.length ? <ul className="divide-y divide-border">{today.completedTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<CheckCheck className="size-4 text-success-foreground" />} description={<span>{task.completedCriterionIds.length}/{task.criteria.length} checks recorded</span>} trailing={<span>{when(task.updatedAt)}</span>} />)}</ul> : !loading && <EmptyLine>No completed tasks yet.</EmptyLine>}
+            {today.completedTasks.length ? <ul className="divide-y divide-border">{today.completedTasks.map(task => <CollectionRow key={task.id} to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} title={task.outcome} leading={<CheckCheck className="size-4 text-success-foreground" />} description={<span>{task.completedCriterionIds.length}/{task.criteria.length} checks recorded</span>} trailing={<span>{when(task.updatedAt)}</span>} />)}</ul> : unknown('tasks') ? notLoaded : !loading && <EmptyLine>No completed tasks yet.</EmptyLine>}
           </OverviewSection>
           <div className="border-t pt-5"><Button variant="ghost" className="justify-start" render={<Link to="/agents" />}><Bot />Manage agents<ArrowUpRight /></Button></div>
         </div>

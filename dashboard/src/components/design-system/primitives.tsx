@@ -12,6 +12,7 @@ import { WorkspaceRouteActions } from './workspace-chrome'
 import { UniversalSearchContext } from '@/lib/workspace-chrome'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import '@/components/resilience/resilience.css'
 export { WorkspaceAction } from './workspace-chrome'
 
 
@@ -128,7 +129,7 @@ export function CollectionToolbar({ search, filters, actions, count, unit = "rec
 
 export function CollectionLoading({ label }: { label: string }) {
   const chrome = useWorkspaceChrome()
-  return <div role="status" aria-label={label} className="min-w-0 space-y-4">
+  return <div role="status" aria-label={label} className="conker-reveal min-w-0 space-y-4">
     <span className="sr-only">{label}</span>
     {!chrome && <Skeleton className="h-(--collection-search-height) w-full sm:max-w-[26.25rem]" />}
     <div className="divide-y border-y">{[0, 1, 2].map(row => <div key={row} className="flex min-h-(--collection-row-height) items-center gap-3 px-4 py-3"><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-3 w-1/2" /></div><Skeleton className="h-3 w-16" /></div>)}</div>

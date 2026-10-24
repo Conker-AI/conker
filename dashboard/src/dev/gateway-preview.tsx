@@ -18,9 +18,31 @@ import { createGatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayAuthState } from '@/lib/gateway/auth-store'
 import type { GatewayAuthClient } from '@/lib/gateway/auth'
 import { createGatewayVerificationStore, describeGatewayOperation } from '@/lib/gateway/verification'
-import { snapshotGatewayOperation } from '@/lib/gateway/transport'
+import { GatewayError, snapshotGatewayOperation } from '@/lib/gateway/transport'
+import { GATEWAY_REACHABILITY_EVENT } from '@/lib/connection-store'
 import { GatewayOperationVerification } from '@/components/auth/gateway-verification'
 import { createFakeGateway } from './fake-gateway'
+
+type PreviewFailure = 'network' | 'dependency' | 'partial' | null
+
+/**
+ * Failure states for checking the UI: `?preview-failure=network|dependency|partial`, or at runtime
+ * `window.conkerPreview.fail('network')` and `fail(null)` to recover.
+ */
+const failure = (() => {
+  const requested = new URLSearchParams(window.location.search).get('preview-failure')
+  // One state for the page: React may build the preview services twice in development.
+  const state = { mode: (requested === 'network' || requested === 'dependency' || requested === 'partial' ? requested : null) as PreviewFailure }
+  Object.assign(window, { conkerPreview: { fail: (mode: PreviewFailure) => { state.mode = mode } } })
+  return state
+})()
+
+function failIfAsked(path: string) {
+  const report = (reachable: boolean) => window.dispatchEvent(new CustomEvent(GATEWAY_REACHABILITY_EVENT, { detail: reachable }))
+  if (failure.mode === 'network') { report(false); throw new GatewayError('network') }
+  report(true)
+  if (failure.mode === 'dependency' || failure.mode === 'partial' && /^\/api\/(owner|pi\/proposals)/.test(path)) throw new GatewayError('dependency', 503)
+}
 
 function services() {
   const requestedSetup = new URLSearchParams(window.location.search).get('preview-setup')
@@ -28,6 +50,7 @@ function services() {
   const fake = createFakeGateway({ setupStep })
   const verification = createGatewayVerificationStore()
   const auth = { request: async (path, options = {}) => {
+    failIfAsked(path)
     if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path) || fake.correctionVerificationEnabled(path))) {
       await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)
     }
