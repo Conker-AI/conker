@@ -69,7 +69,7 @@ while (pending.length) {
 
 // The coss ui kit is vendored whole at a pinned revision (docs/reference/template-reference.md), so
 // primitives a screen does not use yet are not dead Conker code.
-const vendored = (file) => file.startsWith("components/ui/") || file === "hooks/use-composer-editor.ts" || /^lib\/composer-[a-z]+\.ts$/.test(file)
+const vendored = (file) => file.startsWith("components/ui/")
 
 const unreachable = files
   .filter((file) => !file.endsWith(".d.ts"))

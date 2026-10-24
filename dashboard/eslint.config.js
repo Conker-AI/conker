@@ -28,7 +28,7 @@ export default tseslint.config([
   {
     // coss ui files are vendored unchanged (docs/reference/template-reference.md); they predate the
     // React Compiler rules, so only those rules are relaxed here.
-    files: ['src/components/ui/**/*.tsx', 'src/hooks/use-composer-editor.ts', 'src/lib/composer-*.ts'],
+    files: ['src/components/ui/**/*.tsx'],
     rules: {
       'react-hooks/refs': 'off',
       'react-hooks/purity': 'off',
