@@ -116,7 +116,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   const active = visible.filter(item => item.archived_at === null), archived = visible.filter(item => item.archived_at !== null)
   return <GatewayPageFrame>
     <div className="space-y-6">
-      <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<WorkspaceAction onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
+      <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
       <CollectionPanel query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={visible.length} unit={visible.length === 1 ? 'agent' : 'agents'} emptyTitle={query ? 'No matching agents' : 'No agents yet'} emptyDescription={query ? 'Try a different name or role.' : 'Create an agent for a focused kind of work.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
         <div className="space-y-5">
           <CollectionSection title="Active agents">

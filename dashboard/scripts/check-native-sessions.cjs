@@ -95,8 +95,8 @@ async function transportCases(){
  response={text:'x'.repeat(512*1024)};await assert.rejects(()=>transport.request('/api/host/claude/sessions/native_A/output'),e=>e.kind==='response-too-large')
  const {describeGatewayOperation}=loader()('src/lib/gateway/verification.ts');const review=describeGatewayOperation(snapshotGatewayOperation('/api/host/claude/sessions/native_A/stop',{expectedIdentity:'a'.repeat(64)}));assert.match(review.target,/native_A/);assert.match(review.details.join(' '),/not prove the process has stopped/)
 }
-const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children), ...walk(node.props?.action), ...walk(node.props?.actions)]
-const text = node => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join('') : node?.props ? text(node.props.children) : ''
+const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children), ...walk(node.props?.action), ...walk(node.props?.actions), ...walk(node.props?.details)]
+const text = node => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join('') : node?.props ? text(node.props.children) + text(node.props.details) : ''
 function componentHarness() {
   const slots = [], effects = [], subscriptions = new Map(); let cursor = 0, dirty = false, tree
   const hooks = {
@@ -106,7 +106,7 @@ function componentHarness() {
     useEffect(effect, deps) { const i = cursor++, old = slots[i]; if (!old || !deps || deps.some((value, index) => value !== old.deps[index])) { slots[i] = { deps, effect }; effects.push(() => { old?.cleanup?.(); slots[i].cleanup = effect() }) } },
   }
   hooks.useLayoutEffect = hooks.useEffect
-  const mocks = {react:hooks,'react-router-dom':{Link:'a'},'lucide-react':{Copy:'svg',RefreshCw:'svg',Square:'svg',TerminalSquare:'svg'},'@/components/ui/button':{Button:'button'},'@/components/status-badge':{StatusBadge:'badge'},'@/components/reference-section':{ReferenceSection:'section'},'./page-frame':{GatewayPageFrame:'main'},'@/components/design-system':{CollectionLoading:'loading',CollectionPanel:'collection',CollectionSection:'section',ConfirmationDialog:'confirmation',DetailPanel:'detail',OverlayBody:'div',PageHeader:'header',RecordItem:'record',WorkspaceAction:'button'},zustand:{useStore(store){if(!subscriptions.has(store))subscriptions.set(store,store.subscribe(()=>{dirty=true}));return store.getState()}}}
+  const mocks = {react:hooks,'react-router-dom':{Link:'a'},'lucide-react':{Copy:'svg',RefreshCw:'svg',Square:'svg',TerminalSquare:'svg'},'@/components/ui/button':{Button:'button'},'@/components/status-badge':{StatusBadge:'badge'},'@/components/reference-section':{ReferenceSection:'section'},'./page-frame':{GatewayPageFrame:'main'},'@/components/design-system':{CollectionLoading:'loading',CollectionPanel:'collection',CollectionSection:'section',ConfirmationDialog:'confirmation',InlineDetails:'detail',OverlayBody:'div',PageHeader:'header',RecordItem:'record',WorkspaceAction:'button'},zustand:{useStore(store){if(!subscriptions.has(store))subscriptions.set(store,store.subscribe(()=>{dirty=true}));return store.getState()}}}
   const Component=loader(mocks)('src/components/gateway/native-sessions-workspace.tsx').GatewayNativeSessionsWorkspace
   const authStore=createStore(()=>owner('A')),reads=[],writes=[],catalogues=[]
   const service={list(signal){const call={kind:'list',signal,...deferred()};reads.push(call);return call.promise},get(id,signal){const call={kind:'get',id,signal,...deferred()};reads.push(call);return call.promise},output(row,signal){const call={kind:'output',row,signal,...deferred()};reads.push(call);return call.promise},stop(row,signal,onDispatch){const call={row,signal,onDispatch,...deferred()};writes.push(call);return call.promise}}

@@ -20,6 +20,6 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
     search={isMobile || state === 'collapsed' ? <UniversalSearchTrigger /> : undefined}
     actions={<>{children}{shell?.showViews && <div className="conker-shell-actions">
       <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} compact={isMobile} />
-    </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
+    </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly data-ask-conker aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
     toolbar={toolbar} sections={<>{sections}<AppbarSections activeSection={page.activeSection} sections={page.sections} /></>} />
 }

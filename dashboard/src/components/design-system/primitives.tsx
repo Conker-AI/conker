@@ -136,11 +136,13 @@ export function CollectionLoading({ label }: { label: string }) {
   </div>
 }
 
-export function CollectionRow({ to, title, description, descriptionTitle, leading, trailing }: {
+export function CollectionRow({ to, title, description, descriptionTitle, leading, trailing, expanded, details }: {
   to: string; title: string; description: ReactNode; descriptionTitle?: string; leading?: ReactNode; trailing?: ReactNode
+  /** Set when the row can open its details in place; `details` renders under it. */
+  expanded?: boolean; details?: ReactNode
 }) {
   return <li>
-    <Link data-slot="collection-row" to={to}
+    <Link data-slot="collection-row" to={to} aria-expanded={expanded}
       className="group flex min-h-(--collection-row-height) min-w-0 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
       {leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}
       <div className="min-w-0 flex-1">
@@ -149,6 +151,7 @@ export function CollectionRow({ to, title, description, descriptionTitle, leadin
       </div>
       {trailing && <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs leading-5 text-muted-foreground tabular-nums">{trailing}</span>}
     </Link>
+    {details}
   </li>
 }
 
@@ -165,14 +168,17 @@ export function CollectionSection({ title, icon, children, contained = false }: 
 }
 
 /** Compact record for responsive tables. One container owns the divided list. */
-export function RecordItem({ title, lang, description, leading, meta, actions, onOpen, selected = false }: {
+export function RecordItem({ title, lang, description, leading, meta, actions, onOpen, selected = false, details }: {
   title: string; lang?: string; description?: ReactNode; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode; onOpen?: () => void; selected?: boolean
+  /** Details opened in place under this record. */
+  details?: ReactNode
 }) {
   const summary = <>{leading && <span className="shrink-0" aria-hidden="true">{leading}</span>}<span className="min-w-0 flex-1"><span lang={lang} className="block text-sm font-medium break-words">{title}</span>{description && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>}</span></>
   return <div data-pattern="record-item" className={cn("min-h-(--collection-row-height) min-w-0 space-y-3 p-4", selected && "bg-accent text-accent-foreground")}>
-    {onOpen ? <button type="button" aria-current={selected ? true : undefined} onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">{summary}</button> : <div className="flex min-w-0 items-start gap-3">{summary}</div>}
+    {onOpen ? <button type="button" aria-current={selected ? true : undefined} aria-expanded={details !== undefined ? selected : undefined} onClick={onOpen} className="flex w-full min-w-0 items-start gap-3 rounded-md text-left outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">{summary}</button> : <div className="flex min-w-0 items-start gap-3">{summary}</div>}
     {meta && <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">{meta}</div>}
     {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    {details && <div className="-mx-4 -mb-4">{details}</div>}
   </div>
 }
 

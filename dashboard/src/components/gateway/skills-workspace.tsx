@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BookOpen, FileUp, RefreshCw } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, DetailPanel, FormActions, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
+import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, InlineDetails, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
 import { ReferenceSection } from '@/components/reference-section'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -92,18 +92,21 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
   }
   const visible = (rows ?? []).filter(row => `${row.name} ${row.description}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
   const selected = record?.id === selectedId ? record : null
-  return <GatewayPageFrame>
-    <div className="space-y-6">
-      <PageHeader actionsOnly title="Skills" description="Reusable instructions you explicitly choose for a message." density="compact" actions={<WorkspaceAction onClick={() => { setNotice(null); setEditor({ replacing: null }) }}><FileUp />Import skill</WorkspaceAction>} />
-      {!rows && !error ? <CollectionLoading label="Loading skills…" /> : error ? <div className="space-y-3"><p role="alert" className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Reload skills</Button></div> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search skills" placeholder="Search skills…" count={visible.length} unit={visible.length === 1 ? 'skill' : 'skills'} emptyTitle={query ? 'No matching skills' : 'No skills yet'} emptyDescription={query ? 'Try another name or description.' : 'Import a SKILL.md file, then choose it beside the model in your chat.'} emptyAction={!query && <Button onClick={() => setEditor({ replacing: null })}><FileUp />Import skill</Button>} icon={<BookOpen />} hint="Enabled skills are available in the chat picker. They apply only when you select them; importing never runs scripts or grants tool access.">
-        <CollectionSection title="Your skills">{visible.map(row => <CollectionRow key={row.id} to={`/agents?tab=skills&skill=${encodeURIComponent(row.id)}`} title={row.name} description={row.description} leading={<BookOpen className="size-5 text-muted-foreground" />} trailing={<><StatusBadge tone={row.enabled ? 'live' : 'neutral'}>{row.enabled ? 'Enabled' : 'Disabled'}</StatusBadge><span>Revision {row.revision}</span></>} />)}</CollectionSection>
-      </CollectionPanel>}
-      {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    </div>
-    <DetailPanel open={!!selectedId && !editor} onOpenChange={open => { if (!open) closeDetail() }} busy={pending} title={selected?.name ?? 'Skill source'} description={selected?.description ?? 'Inspect the saved instructions before selecting them in a chat.'}>
+  // Details open in place under the chosen skill; choosing it again closes them.
+  const details = !!selectedId && !editor && <InlineDetails busy={pending} onClose={closeDetail} title={selected?.name ?? 'Skill source'} description={selected?.description ?? 'Inspect the saved instructions before selecting them in a chat.'}>
       <OverlayBody>{!selected && !detailError && <p role="status">Loading source…</p>}{selected && <><ReferenceSection title="Availability"><p>{selected.enabled ? 'Available in the chat skill picker.' : 'Disabled for new messages.'}</p><p className="text-xs text-muted-foreground">Revision {selected.revision}. Earlier turns retain the revision used for that turn.</p></ReferenceSection><ReferenceSection title="SKILL.md"><pre className="whitespace-pre-wrap break-words rounded-md border bg-muted p-3 font-mono text-xs">{selected.markdown}</pre></ReferenceSection><ReferenceSection title="Integrity"><p className="break-all font-mono text-xs">SHA-256 {selected.sha256}</p></ReferenceSection></>}{detailError && <div className="space-y-2"><p role="alert" className="text-sm text-destructive">{detailError}</p><Button variant="outline" disabled={pending} onClick={() => setReload(value => value + 1)}>Reload saved source</Button></div>}</OverlayBody>
       {selected && <FormActions inset><Button variant="outline" disabled={pending} onClick={() => void toggle(selected)}>{pending ? 'Saving…' : selected.enabled ? 'Disable skill' : 'Enable skill'}</Button><Button disabled={pending} onClick={() => setEditor({ replacing: selected })}>Replace source</Button></FormActions>}
-    </DetailPanel>
+  </InlineDetails>
+  const shown = !!selectedId && visible.some(row => row.id === selectedId)
+  return <GatewayPageFrame>
+    <div className="space-y-6">
+      <PageHeader actionsOnly title="Skills" description="Reusable instructions you explicitly choose for a message." density="compact" actions={<WorkspaceAction keepVisible onClick={() => { setNotice(null); setEditor({ replacing: null }) }}><FileUp />Import skill</WorkspaceAction>} />
+      {!rows && !error ? <CollectionLoading label="Loading skills…" /> : error ? <div className="space-y-3"><p role="alert" className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Reload skills</Button></div> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search skills" placeholder="Search skills…" count={visible.length} unit={visible.length === 1 ? 'skill' : 'skills'} emptyTitle={query ? 'No matching skills' : 'No skills yet'} emptyDescription={query ? 'Try another name or description.' : 'Import a SKILL.md file, then choose it beside the model in your chat.'} emptyAction={!query && <Button onClick={() => setEditor({ replacing: null })}><FileUp />Import skill</Button>} icon={<BookOpen />} hint="Enabled skills are available in the chat picker. They apply only when you select them; importing never runs scripts or grants tool access.">
+        <CollectionSection title="Your skills">{visible.map(row => <CollectionRow key={row.id} to={row.id === selectedId ? '/agents?tab=skills' : `/agents?tab=skills&skill=${encodeURIComponent(row.id)}`} expanded={row.id === selectedId} details={row.id === selectedId && details} title={row.name} description={row.description} leading={<BookOpen className="size-5 text-muted-foreground" />} trailing={<><StatusBadge tone={row.enabled ? 'live' : 'neutral'}>{row.enabled ? 'Enabled' : 'Disabled'}</StatusBadge><span>Revision {row.revision}</span></>} />)}</CollectionSection>
+      </CollectionPanel>}
+      {!shown && details}
+      {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
+    </div>
     <Dialog open={!!editor} onOpenChange={open => { if (!open && !editorPending) setEditor(null) }}>{editor && <TaskDialogContent title={editor.replacing ? `Replace ${editor.replacing.name}` : 'Import a skill'} description="Review the instructions that will be available for your chats." size="wide" showCloseButton={!editorPending}><SkillImport client={client} replacing={editor.replacing} onSaved={saved} onCancel={() => setEditor(null)} onPending={setEditorPending} /></TaskDialogContent>}</Dialog>
   </GatewayPageFrame>
 }

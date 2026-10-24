@@ -9,11 +9,13 @@ import { cn } from '@/lib/utils'
 
 type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
   emphasis?: 'quiet' | 'primary'; iconOnly?: boolean; menuItem?: boolean
+  /** The page's main action: it stays in the phone top bar instead of the "…" menu. */
+  keepVisible?: boolean
 }
 
 /** Routine toolbar commands are quiet; only an explicit commitment earns primary emphasis. */
-export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem = false, className, ...props }: WorkspaceActionProps) {
-  return <Button {...props} data-slot="workspace-action" size={iconOnly && !menuItem ? 'icon' : 'sm'}
+export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem = false, keepVisible, className, ...props }: WorkspaceActionProps) {
+  return <Button {...props} data-slot="workspace-action" data-keep-visible={keepVisible || undefined} size={iconOnly && !menuItem ? 'icon' : 'sm'}
     variant={iconOnly || menuItem ? 'ghost' : emphasis === 'primary' ? 'default' : 'outline'}
     className={cn(emphasis === 'quiet' && 'shadow-none', !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'), menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none', className)} />
 }
@@ -62,8 +64,11 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
     return () => observer.disconnect()
   }, [])
   const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
-  return <div ref={group}>{items.length < 2 || !compact ? children : <>{items[items.length - 1]}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
-    {items.slice(0, -1).map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean }>(item) ? item.type === WorkspaceChoice ? cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile }) : <DropdownMenuItem key={index} disabled={item.props.disabled} render={cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })} /> : item)}
+  // On a phone only the page's main action stays out of the menu, so the page name keeps its room.
+  const kept = isMobile ? items.filter(item => isValidElement<{ keepVisible?: boolean; emphasis?: string }>(item) && (item.props.keepVisible || item.props.emphasis === 'primary')).slice(-1) : items.slice(-1)
+  const menu = items.filter(item => !kept.includes(item))
+  return <div ref={group}>{items.length < 2 || !compact ? children : <>{kept}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
+    {menu.map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean }>(item) ? item.type === WorkspaceChoice ? cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile }) : <DropdownMenuItem key={index} disabled={item.props.disabled} render={cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })} /> : item)}
   </DropdownMenuContent></DropdownMenu></>}</div>
 }
 
