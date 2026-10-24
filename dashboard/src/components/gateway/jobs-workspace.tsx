@@ -3,8 +3,9 @@ import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, History, Play, 
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
+import { ConfirmationDialog, ListCard, ListLine, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { createJobRunRequestId, GatewayJobMutationError, type GatewayJob, type GatewayScheduledRun, type GatewayScheduledRunStatus } from '@/lib/gateway/jobs'
@@ -25,6 +26,10 @@ function describeTiming(job: GatewayJob) {
 }
 function when(seconds: number, timeZone?: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short', ...(timeZone ? { timeZone } : {}) }).format(new Date(seconds * 1000))
+}
+/** Short form for list lines: no year, so the name keeps the room on a phone. */
+function soon(seconds: number, timeZone?: string) {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', ...(timeZone ? { timeZone } : {}) }).format(new Date(seconds * 1000))
 }
 
 function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; control: GatewayControlClient; onChanged: (job: GatewayJob) => void }) {
@@ -71,7 +76,7 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
     finally { setPending(false) }
   }
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={job.definition.name} description="A pinned schedule definition with redacted run evidence." density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" render={<Link to="/jobs" />}><ArrowLeft />Jobs</Button><Button variant="outline" disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</Button><Button disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</Button></div>} /></div>
+    <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={job.definition.name} description="A pinned schedule definition with redacted run evidence." density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" render={<Link to="/jobs" />}><ArrowLeft />Cron jobs</Button><Button variant="outline" disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</Button><Button disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</Button></div>} /></div>
     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="max-w-4xl space-y-8">
       <section className="space-y-4" aria-labelledby="job-definition-heading"><div className="flex flex-wrap items-center gap-2"><h2 id="job-definition-heading" className="text-lg font-semibold">Schedule</h2><Badge variant={job.definition.enabled ? 'default' : 'secondary'}>{job.definition.state === 'enabled' ? 'Enabled' : 'Paused'}</Badge></div>
         <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Timing</dt><dd className="mt-1">{describeTiming(job)} · {job.definition.timeZone}</dd></div><div><dt className="text-xs text-muted-foreground">Next slot</dt><dd className="mt-1">{job.definition.enabled ? when(job.nextAt, job.definition.timeZone) : 'Paused; no automatic run will be admitted'}</dd></div><div><dt className="text-xs text-muted-foreground">Agent reference</dt><dd className="mt-1 break-all">{job.definition.agentId}</dd></div><div><dt className="text-xs text-muted-foreground">Overlap policy</dt><dd className="mt-1">Skip while an earlier run is unresolved</dd></div></dl>
@@ -92,21 +97,31 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const location = useLocation(), navigate = useNavigate(), match = location.pathname.match(/^\/jobs\/(job_[0-9a-f]{32})$/)
   const [jobs, setJobs] = useState<GatewayJob[] | null>(null), [details, setDetails] = useState<Record<string, GatewayJob>>({})
   const [query, setQuery] = useState(''), [filter, setFilter] = useState<'all' | 'enabled' | 'paused'>('all'), [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null)
-  const load = useCallback(async () => { setLoading(true); setError(null); try { setJobs((await control.jobs.list({ limit: 100 })).results) } catch (cause) { setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
-  useEffect(() => { let active = true; control.jobs.list({ limit: 100 }).then(page => active && setJobs(page.results)).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control])
+  const [listError, setListError] = useState<unknown>(null)
+  const load = useCallback(async () => { setLoading(true); setError(null); setListError(null); try { setJobs((await control.jobs.list({ limit: 100 })).results) } catch (cause) { setListError(cause); setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
+  useEffect(() => { let active = true; control.jobs.list({ limit: 100 }).then(page => active && setJobs(page.results)).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } }); return () => { active = false } }, [control])
   const selected = match ? details[match[1]] : undefined
   useEffect(() => { if (!match || selected) return; let active = true; control.jobs.get(match[1]).then(item => active && setDetails(current => ({ ...current, [item.id]: item }))).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control, match, selected])
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="space-y-4 p-6">{error ? <><PageHeader title="Schedule unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/jobs')}>Back to jobs</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading schedule…</p>}</div>
+    return <div className="space-y-4 p-6">{error ? <><PageHeader title="Schedule unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/jobs')}>Back to cron jobs</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading schedule…</p>}</div>
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.instructions} ${job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  return <GatewayPageFrame><div className="space-y-6"><PageHeader actionsOnly title="Jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<WorkspaceAction iconOnly aria-label="Refresh jobs" title="Refresh jobs" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction>} />
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {!jobs && !error ? <CollectionLoading label="Loading jobs…" /> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search jobs" placeholder="Search schedules…" count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
-      filters={<Select value={filter} onValueChange={value => { if (value !== null) setFilter(value as typeof filter) }} items={[{ value: "all", label: "All schedules" }, { value: "enabled", label: "Enabled" }, { value: "paused", label: "Paused" }]}><SelectTrigger className="w-44" aria-label="Filter jobs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All schedules</SelectItem><SelectItem value="enabled">Enabled</SelectItem><SelectItem value="paused">Paused</SelectItem></SelectContent></Select>}
-      hint="Targets and inputs can only come from pinned server publications. This view never grants authority."
-      emptyTitle={query ? 'No matching schedules' : 'No connected schedules'} emptyDescription={query ? 'Try another name or pinned target.' : 'Schedules appear here after they are created from an authoritative published procedure.'} icon={<CalendarClock />}><CollectionSection title={filter === 'all' ? 'Schedules' : filter === 'enabled' ? 'Enabled schedules' : 'Paused schedules'}>{visible.map(job => <CollectionRow key={job.id} to={`/jobs/${job.id}`} title={job.definition.name} description={`${describeTiming(job)} · ${job.definition.timeZone} · ${job.definition.target.id}`} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><History className="size-4" /></span>} trailing={<><span>{job.definition.state === 'enabled' ? 'Enabled' : 'Paused'}</span><span>Revision {job.revision}</span></>} />)}</CollectionSection></CollectionPanel>}
+  const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
+  const chip = (value: typeof filter, text: string, count: number) => <Button key={value} type="button" size="sm" variant={filter === value ? 'secondary' : 'ghost'} aria-pressed={filter === value} className="rounded-full" onClick={() => setFilter(value)}>
+    {text}<span className="tabular-nums text-muted-foreground">{count}</span>
+  </Button>
+  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
+    {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}
+    {error && (jobs ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Cron jobs didn’t load" onRetry={() => load()} />)}
+    {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard query={query} onQueryChange={setQuery} label="Search cron jobs" placeholder="Search schedules…" count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
+      filters={<>{chip('all', 'All', jobs.length)}{chip('enabled', 'Enabled', enabled)}{chip('paused', 'Paused', jobs.length - enabled)}</>}
+      emptyTitle={query ? 'No matching schedules' : filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={query ? 'Try another name or pinned target.' : 'Schedules appear here after they are created from an authoritative published procedure.'} icon={<CalendarClock />}>
+      {visible.map(job => <ListLine key={job.id} to={`/jobs/${job.id}`} icon={<History />} title={job.definition.name}
+        sub={`${describeTiming(job)} · ${job.definition.timeZone}`} meta={job.definition.enabled ? `Next ${soon(job.nextAt, job.definition.timeZone)}` : 'Paused'} />)}
+    </ListCard>}
+    <p className="text-xs text-muted-foreground">Targets and inputs can only come from pinned server publications. This view never grants authority.</p>
   </div></GatewayPageFrame>
 }
