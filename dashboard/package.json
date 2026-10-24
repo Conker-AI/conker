@@ -16,7 +16,6 @@
     "check:template-composer": "node scripts/check-template-composer.cjs",
     "check:workspace-primitives": "node scripts/check-workspace-primitives.mjs",
     "check:resilience": "node scripts/check-resilience.mjs",
-    "check:workspace-tabs": "node scripts/check-workspace-tabs.cjs",
     "check:daily-overview": "node scripts/check-daily-overview.cjs",
     "check:character": "node scripts/check-character.cjs",
     "check:tools": "node scripts/check-tool-workspace.cjs",

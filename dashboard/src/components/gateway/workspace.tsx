@@ -11,7 +11,8 @@ import { ErrorBoundary } from '@/components/resilience/error-boundary'
 import { WorkspaceError } from '@/components/resilience/error-fallbacks'
 import { ChatSkeleton, PageSkeleton } from '@/components/resilience/skeletons'
 import { ConnectionBanner } from '@/components/resilience/connection-banner'
-import { GatewayChatSidebar } from './chat-sidebar'
+import { GatewaySidebar } from './gateway-sidebar'
+import { InboxAttentionProvider } from './inbox-attention'
 import { GatewayPrivacyControl } from './privacy-control'
 import { GatewayHeader } from './header'
 import { WorkspaceChromeProvider } from '@/components/design-system/workspace-chrome'
@@ -88,7 +89,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
   // Chat and Memory own their header so their controls stay with workspace state.
-  return <SessionDiscoveryProvider runtime={runtime} authStore={authStore} workspace={conversationState} privacy={sourcePrivacy}><UniversalSearchProvider client={control.search} authStore={authStore} workspace={conversationState} sourcePrivacy={sourcePrivacy}><WorkspaceChromeProvider><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewayChatSidebar owner={owner} control={control} conversationState={conversationState} sourcePrivacy={sourcePrivacy} onSignOut={() => void signOut()} badge={badge} />}>
+  return <SessionDiscoveryProvider runtime={runtime} authStore={authStore} workspace={conversationState} privacy={sourcePrivacy}><UniversalSearchProvider client={control.search} authStore={authStore} workspace={conversationState} sourcePrivacy={sourcePrivacy}><WorkspaceChromeProvider><InboxAttentionProvider owner={owner} conversationState={conversationState}><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewaySidebar conversationState={conversationState} badge={badge} />}>
     <ConnectionBanner probe={() => control.gatewayHealth()} />
     <ErrorBoundary resetKeys={[location.pathname, location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
@@ -98,7 +99,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />}
-      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} authStore={authStore} /> : <GatewayModelsSettings client={control} />}</div>}
+      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} authStore={authStore} /> : <GatewayModelsSettings client={control} onSignOut={() => void signOut()} />}</div>}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
@@ -115,5 +116,5 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
     }} /></div></Suspense></ErrorBoundary>}
-  </ConnectedWorkspaceShell></WorkspaceChromeProvider></UniversalSearchProvider></SessionDiscoveryProvider>
+  </ConnectedWorkspaceShell></InboxAttentionProvider></WorkspaceChromeProvider></UniversalSearchProvider></SessionDiscoveryProvider>
 }

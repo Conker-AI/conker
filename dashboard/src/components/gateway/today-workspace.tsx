@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUpRight, Bot, CheckCheck, CircleAlert, Clock3, Lightbulb, MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
+import { ArrowUpRight, Bot, CheckCheck, ChevronRight, CircleAlert, CircleDashed, Clock3, Lightbulb, MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { Link } from 'react-router-dom'
@@ -12,6 +12,8 @@ import type { GatewayProposalClient, Proposal } from '@/lib/gateway/proposals'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { buildTodaySnapshot } from './today-model'
+import { summarizeSetup } from './setup-presentation'
+import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
 import '@/app/home/home.css'
 
@@ -35,7 +37,7 @@ function EmptyAction({ icon, title, description, action }: { icon: ReactNode; ti
   </div>
 }
 
-export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: Props) {
+export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, control }: Props) {
   const [data, setData] = useState(empty), [loading, setLoading] = useState(true), [failure, setFailure] = useState<{ error: unknown; partial: boolean; missing: Set<'requests' | 'tasks' | 'sessions' | 'proposals'> } | null>(null)
   const generation = useRef(0)
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -61,12 +63,21 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals }: P
     return () => { active = false; controller.abort() }
   }, [load])
   const today = buildTodaySnapshot(data)
+  // Unfinished setup is the first thing to fix; it disappears once verified setup is complete.
+  const { status: setupStatus, error: setupError } = useGatewaySetupStatus(control)
+  const setupSummary = setupStatus && setupStatus.state !== 'complete' ? summarizeSetup(setupStatus) : null
   // A section whose source failed says so instead of claiming it is empty.
   const unknown = (source: 'requests' | 'tasks' | 'sessions' | 'proposals') => !!failure?.missing.has(source)
   const notLoaded = <EmptyLine>Not loaded. Use Try again above.</EmptyLine>
   return <GatewayPageFrame>
     <div className="home-overview flex w-full min-w-0 flex-col gap-6">
-      <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction render={<Link to="/chat" />}><SquarePen />New chat</WorkspaceAction></>} />
+      <PageHeader actionsOnly title="Today" description="Pick up where you left off and handle the few things that need you." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh today" title="Refresh today" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction></>} />
+      {(setupSummary || setupError) && <Link to="/setup" className="flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+        <CircleDashed className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="min-w-0 flex-1"><span className="block truncate font-medium">{setupError ? 'Review setup status' : setupSummary?.attention ? 'Setup needs attention' : 'Finish setup'}</span>
+          <span className="block truncate text-muted-foreground">{setupError ? 'Status unavailable' : setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Checking setup…'}</span></span>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>}
       {failure && <InlineError error={failure.error} onRetry={() => load()} {...(failure.partial ? { title: 'Some sections didn’t update', description: 'The sections shown are current. Try again to load the rest.' } : {})} />}
       {loading && !data.sessions.length && !data.tasks.length && !data.requests.length && <ListSkeleton rows={4} label="Loading today…" />}
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">

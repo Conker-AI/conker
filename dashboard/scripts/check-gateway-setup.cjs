@@ -181,7 +181,8 @@ async function main() {
     const transport = await fs.readFile(path.join(root, 'src/lib/gateway/transport.ts'), 'utf8')
     const workspace = await fs.readFile(path.join(root, 'src/components/gateway/workspace.tsx'), 'utf8')
     const gatewayNavigation = await fs.readFile(path.join(root, 'src/components/gateway/navigation.ts'), 'utf8')
-    const sidebar = await fs.readFile(path.join(root, 'src/components/gateway/chat-sidebar.tsx'), 'utf8')
+    // Unfinished setup is shown at the top of Home (the sidebar holds places only).
+    const sidebar = await fs.readFile(path.join(root, 'src/components/gateway/today-workspace.tsx'), 'utf8')
     const progress = await fs.readFile(path.join(root, 'src/components/gateway/setup-progress.tsx'), 'utf8')
     const presentation = await fs.readFile(path.join(root, 'src/components/gateway/setup-presentation.ts'), 'utf8')
     const today = await fs.readFile(path.join(root, 'src/components/gateway/today-workspace.tsx'), 'utf8')
@@ -204,11 +205,11 @@ async function main() {
     assert.match(workspace, /params\.get\('tab'\) === 'harness'[\s\S]*GatewayAgentsWorkspace/,
       'Companion harness configuration must be reachable from the connected shell')
     assert.match(sidebar, /setupStatus\.state !== 'complete'/,
-      'Completed setup must remove the temporary sidebar prompt')
+      'Completed setup must remove the Home setup prompt')
     assert.match(sidebar, /to="\/setup"[\s\S]*setupSummary\.resolved/,
-      'Incomplete setup must expose truthful progress and a continuation above the profile')
+      'Incomplete setup must expose truthful progress and a continuation on Home')
     assert.doesNotMatch(today, /SetupReadinessPrompt/,
-      'Today must not duplicate the sidebar setup prompt')
+      'Home shows one setup line, not the full readiness panel')
     assert.match(progress, /Mounted destination[\s\S]*Copies to keep[\s\S]*Save backup policy/,
       'Protection must collect one typed off-machine destination and retention policy')
     assert.match(progress, /conker setup run protection/,

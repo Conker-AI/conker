@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { PanelsTopLeft } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { AppbarBreadcrumbs, AppbarSections } from '@/components/appbar-navigation'
 import { WorkspaceAction, WorkspaceAppbar } from '@/components/design-system/workspace-chrome'
 import { useSidebar } from '@/components/ui/sidebar'
@@ -14,11 +15,11 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
   const page = gatewayPageNavigation(location.pathname, location.search)
   const shell = useConnectedShell()
   const { isMobile, state } = useSidebar()
+  const navigate = useNavigate()
   return <WorkspaceAppbar context={context ?? <AppbarBreadcrumbs crumbs={[{ title: page.title, to: location.pathname }]} />}
     search={isMobile || state === 'collapsed' ? <UniversalSearchTrigger /> : undefined}
-    actions={<>{children}{shell && <div className="conker-shell-actions">
-      <WorkspaceAction iconOnly aria-label="Open views" title={`Open views (${shell.openViewCount})`} aria-expanded={shell.tabsOpen} aria-controls="conker-open-views" onClick={shell.toggleTabs}><PanelsTopLeft /></WorkspaceAction>
-      {shell.showViews && <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} compact={isMobile} />}
-    </div>}</>}
+    actions={<>{children}{shell?.showViews && <div className="conker-shell-actions">
+      <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} compact={isMobile} />
+    </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
     toolbar={toolbar} sections={<>{sections}<AppbarSections activeSection={page.activeSection} sections={page.sections} /></>} />
 }

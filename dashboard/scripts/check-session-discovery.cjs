@@ -13,7 +13,6 @@ function load(relative) {
 const { createSessionDiscovery } = load('src/components/gateway/session-discovery.ts')
 const { createGatewayRuntimeWorkspaceState } = load('src/components/gateway/runtime-state.ts')
 const { createGatewaySourcePrivacyState } = load('src/components/gateway/source-privacy.ts')
-const { workspaceTab } = load('src/components/gateway/workspace-tabs.ts')
 const { createStore } = require('zustand/vanilla')
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 async function flush() { for (let n = 0; n < 24; n++) await Promise.resolve() }
@@ -121,12 +120,10 @@ async function controllerCases() {
 }
 
 function collectionCases() {
-  const tab = workspaceTab('/chat', '?session=chat_a')
-  assert.equal(tab.title, 'Chat'); assert.equal(tab.sessionId, 'chat_a')
   const shell = fs.readFileSync(path.join(root, 'src/components/gateway/workspace-shell.tsx'), 'utf8')
-  assert.match(shell, /tabs\.filter\(tab => !tab\.sessionId \|\| !forgotten\.includes\(tab\.sessionId\)\)/)
-  assert.doesNotMatch(shell, /setTabs\([^\n]+sessions|title: session\.title|title:.*session\?\.title/, 'Open tabs retain navigation, never a private title cache beyond the discovery window')
-  for (const name of ['chat-sidebar', 'workspace-shell', 'runtime-workspace']) {
+  assert.match(shell, /!forgotten\.includes\(requested\)/, 'The chat context panel never opens a forgotten conversation')
+  assert.doesNotMatch(shell, /\.listSessions\(|title: session\.title/, 'The shell keeps no private title cache')
+  for (const name of ['runtime-workspace']) {
     const content = fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')
     assert.match(content, /useSessionDiscovery\(\)/); assert.doesNotMatch(content, /\.listSessions\(/, `${name} must not create a duplicate discovery request`)
   }
