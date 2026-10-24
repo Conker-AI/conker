@@ -25,6 +25,19 @@ holes). Every tile has its own loading, failure ("Not loaded" + Try again) and r
 failed source never shows as empty. The Inbox count everywhere is decisions plus open ideas, the
 same things Home counts. Model: `home-model.ts`, checked by `check:gateway` (check-gateway-today).
 
+## Inbox (25 October)
+
+Willow-style, as the owner asked: one card per item (never rows inside one box), decisions first,
+then ideas. Each card has a full-sentence title, the one-line summary, a muted meta line (kind,
+source, age, expiry or "Outcome not confirmed") and one pill for the likely action — **Allow once**
+(still confirmed with the owner password, which shows exactly what is allowed) or **Accept** — plus
+an X for "not now". X moves the item to **Later** in this browser with Undo; nothing is decided and
+a permission still expires on its own. Tapping the card opens its details in place (arguments, note,
+Don't allow, Not now for 30 days, Never suggest this, Technical details). Filter chips (All,
+Decisions, Ideas) on top; no text box. An uncertain decision shows the warning style with a Check
+action and never retries by itself. Failed loads show inline errors and the summary says so, never
+"All clear". Earlier keeps the decided and expired requests.
+
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.

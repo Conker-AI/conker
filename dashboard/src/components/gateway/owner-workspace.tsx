@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, CheckCheck, RefreshCw } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
-import { ProposalsPanel } from './proposals-panel'
-import { WorkspaceSearch, CollectionRow, CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
+import { IdeaCard } from './proposals-panel'
+import { useProposals } from './proposals-state'
+import { CollectionRow, CollectionSection, PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
+import { useLater } from '@/components/inbox/later'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -18,8 +23,13 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
-  const [selected, setSelected] = useState<OwnerRequest | null>(null), [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<OwnerRequest | null>(null)
   const [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [filter, setFilter] = useState<'all' | 'decisions' | 'ideas'>('all')
+  const [undo, setUndo] = useState<{ key: string; title: string } | null>(null)
+  const ideas = useProposals(proposals, active && !requestId)
+  const { isLater, later, restore } = useLater()
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
   const selectedId = useRef(requestId)
@@ -34,7 +44,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   useEffect(() => { mounted.current = true; const pending = controllers.current; return () => { mounted.current = false; for (const controller of pending) controller.abort() } }, [])
   const load = useCallback(async (more = false, nextCursor?: string | null, checkedId = requestId) => {
     const ticket = ++generation.current, epoch = state.getState().epoch
-    setLoading(true); setError(null); setNotice(null)
+    setLoading(true); setError(null); setNotice(null); setLoadError(null)
     try {
       if (checkedId) {
         const row = await request(signal => client.getRequest(checkedId, { signal }))
@@ -57,7 +67,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
         setRows(values => more ? [...new Map([...values, ...page.results].map(row => [row.id, row])).values()] : page.results)
         setCursor(page.nextCursor)
       }
-    } catch (failure) { if (mounted.current && ticket === generation.current && epoch === state.getState().epoch) setError(gatewayError(failure).message) }
+    } catch (failure) { if (mounted.current && ticket === generation.current && epoch === state.getState().epoch) setLoadError(failure) }
     finally { if (mounted.current && ticket === generation.current && epoch === state.getState().epoch) setLoading(false) }
   }, [client, request, requestId, state])
   useEffect(() => {
@@ -96,37 +106,81 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
       if (!(failure instanceof OwnerDecisionError) || failure.outcome !== 'rejected') state.setState(value => ({ attempts: { ...value.attempts, [id]: { status, note: submittedNote, checked: false, conflict: failure instanceof OwnerDecisionError && failure.outcome === 'conflict' } } }))
     } finally { if (state.getState().epoch === epoch) state.setState({ pendingId: null }) }
   }
-  const filtered = rows.filter(row => `${row.title} ${row.actor} ${row.status} ${row.action.subjectId ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const earlier = (row: OwnerRequest) => row.status !== 'pending' || ownerDecisionEligibility(row, now).expired
   // Keep uncertain attempts visible until the owner checks their saved outcome.
-  const pendingRows = filtered.filter(row => !earlier(row) || retained.attempts[row.id])
-  const earlierRows = filtered.filter(row => earlier(row) && !retained.attempts[row.id])
+  const pendingRows = rows.filter(row => !earlier(row) || retained.attempts[row.id])
+  const earlierRows = rows.filter(row => earlier(row) && !retained.attempts[row.id])
+  const decisionKey = (id: string) => `decision:${id}`, ideaKey = (id: string) => `idea:${id}`
+  const nowDecisions = pendingRows.filter(row => retained.attempts[row.id] || !isLater(decisionKey(row.id)))
+  const laterDecisions = pendingRows.filter(row => !retained.attempts[row.id] && isLater(decisionKey(row.id)))
+  const nowIdeas = (ideas.items ?? []).filter(item => !isLater(ideaKey(item.id)))
+  const laterIdeas = (ideas.items ?? []).filter(item => isLater(ideaKey(item.id)))
+  const showDecisions = filter !== 'ideas', showIdeas = filter !== 'decisions'
+  const needsCount = nowDecisions.length + nowIdeas.length
+  const today = new Date(now).toDateString()
+  const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
+  const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
   const card = (row: OwnerRequest, detail = false) => <ApprovalCard key={row.id} request={row} now={now} detail={detail}
     note={retained.notes[row.id] ?? ''} attempt={retained.attempts[row.id]} busy={busy || loading} processing={retained.pendingId === row.id}
     onNote={note => state.setState(value => ({ notes: { ...value.notes, [row.id]: note } }))}
     onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
-    onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }} />
-  const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh requests'} title={requestId ? 'Check saved request' : 'Refresh requests'} disabled={loading || busy} onClick={() => void load()}><RefreshCw /></WorkspaceAction>
+    onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
+    onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
+  const refresh = () => { void load(); if (!requestId) void ideas.load() }
+  const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
+  const chip = (value: typeof filter, text: string, count: number) => <Button key={value} type="button" size="sm" variant={filter === value ? 'secondary' : 'ghost'} aria-pressed={filter === value} className="rounded-full" onClick={() => setFilter(value)}>
+    {text}<span className="tabular-nums text-muted-foreground">{count}</span>
+  </Button>
+  const laterCount = (showDecisions ? laterDecisions.length : 0) + (showIdeas ? laterIdeas.length : 0)
   return <GatewayPageFrame className="h-full">
-    <div className="flex w-full min-w-0 max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
-      {requestId ? <div className="flex items-center justify-between gap-3"><Button size="sm" variant="ghost" render={<Link to="/inbox" />}><ArrowLeft />Inbox</Button>{refreshButton}</div>
-        : (rows.length > 0 || query) && <WorkspaceSearch value={query} onChange={event => setQuery(event.target.value)} label="Search loaded requests" placeholder="Search requests…" />}
+      {requestId ? <div className="flex items-center justify-between gap-3"><Button size="sm" variant="ghost" render={<Link to="/inbox" />}><ArrowLeft />Inbox</Button>{refreshButton}</div> : <>
+        <div className="flex flex-col gap-3">
+          {/* A failed load is never summarized as "All clear". */}
+          <p className="text-sm text-muted-foreground">{loadError !== null || ideas.error !== null ? 'Part of your Inbox didn’t load' : needsCount ? `${needsCount} ${needsCount === 1 ? 'needs' : 'need'} you` : 'All clear'}{loadError === null && <> · {decidedToday} decided today</>}</p>
+          {loadError === null && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
+            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length)}{chip('ideas', 'Ideas', nowIdeas.length)}
+          </div>}
+        </div>
+      </>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
-      {error && <p role="alert" className="text-sm text-destructive">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
-      {loading && <p role="status" className="text-sm text-muted-foreground">Loading saved requests…</p>}
-      {requestId ? current && card(current, true) : <>
-        <WorkspaceSection title="Waiting for your decision" divided={false}>
-          {pendingRows.map(row => card(row))}
-          {!loading && !error && pendingRows.length === 0 && <p className="text-sm text-muted-foreground">{query ? 'No matching requests.' : "You're all caught up."}</p>}
-        </WorkspaceSection>
-        {proposals && <ProposalsPanel client={proposals} active={active} />}
+      {ideas.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{ideas.notice}</p>}
+      {undo && !requestId && <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Moved “{undo.title}” to Later.
+        <Button type="button" size="xs" variant="outline" onClick={() => { restore(undo.key); setUndo(null) }}>Undo</Button></p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
+      {loadError !== null && <InlineError error={loadError} onRetry={() => load()} />}
+      {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
+        {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
+        {loading && !rows.length && <ListSkeleton rows={3} label="Loading your Inbox…" />}
+        {(showDecisions && nowDecisions.length > 0) || (showIdeas && nowIdeas.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
+          {showDecisions && nowDecisions.map(row => card(row))}
+          {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
+            onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
+        </section> : !loading && loadError === null && <Empty className="py-10 md:py-14">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><CheckCheck className="text-success-foreground" /></EmptyMedia>
+            <EmptyTitle>{filter === 'all' ? 'Nothing needs you' : filter === 'decisions' ? 'No decisions waiting' : 'No new ideas'}</EmptyTitle>
+            <EmptyDescription>{filter === 'ideas' ? 'Conker looks once a day, after a model is chosen for Proposals in Settings.' : `You decided ${decidedToday} today. New requests from Conker appear here.`}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>}
+        {laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
+          <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>
+          <ul className="flex flex-col divide-y rounded-xl border">
+            {[...(showDecisions ? laterDecisions.map(row => ({ key: decisionKey(row.id), title: row.title || 'Review this action', kind: 'Permission' })) : []),
+              ...(showIdeas ? laterIdeas.map(item => ({ key: ideaKey(item.id), title: item.title, kind: 'Idea' })) : [])].map(item => <li key={item.key} className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
+              <span className="min-w-0 flex-1 truncate">{item.title}</span><span className="shrink-0 text-xs text-muted-foreground">{item.kind}</span>
+              <Button type="button" size="xs" variant="ghost" onClick={() => restore(item.key)}>Bring back</Button>
+            </li>)}
+          </ul>
+          <p className="text-xs text-muted-foreground">Later only reorders your Inbox. Nothing is decided, and a permission still expires on its own.</p>
+        </section>}
         <Accordion><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
-          {!earlierRows.length && <p className="text-sm text-muted-foreground">{query ? 'No matching earlier requests.' : 'No earlier requests.'}</p>}
+          {!earlierRows.length && <p className="text-sm text-muted-foreground">No earlier requests.</p>}
           {cursor && <Button variant="outline" disabled={loading || busy} onClick={() => void load(true, cursor)}>Load older requests</Button>}
         </AccordionContent></AccordionItem></Accordion>
-        <p className="text-xs text-muted-foreground">Search covers loaded requests. Decisions do not automatically continue a paused run.</p>
+        <p className="text-xs text-muted-foreground">Decisions do not automatically continue a paused run.</p>
       </>}
     </div>
   </GatewayPageFrame>
