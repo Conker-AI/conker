@@ -53,49 +53,38 @@ export function NavMain({
         {items.map((item) => (
           <Collapsible
             key={item.title}
-            asChild
             defaultOpen={shouldBeOpen(item)}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
+            className="group/collapsible" render={<SidebarMenuItem />}>
               {item.items?.length ? (
                 <>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} className="cursor-pointer">
+                  <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} className="cursor-pointer" />}>
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
+                    </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {item.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild className="cursor-pointer" isActive={location.pathname === subItem.url}>
-                            <Link 
+                          <SidebarMenuSubButton className="cursor-pointer" isActive={location.pathname === subItem.url} render={<Link 
                               to={subItem.url}
                               target={(item.title === "Auth Pages" || item.title === "Errors") ? "_blank" : undefined}
-                              rel={(item.title === "Auth Pages" || item.title === "Errors") ? "noopener noreferrer" : undefined}
-                            >
+                              rel={(item.title === "Auth Pages" || item.title === "Errors") ? "noopener noreferrer" : undefined} />}>
                               <span>{subItem.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
+                            </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </>
               ) : (
-                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer" isActive={location.pathname === item.url || (item.url !== "/" && location.pathname.startsWith(item.url + "/"))}>
-                  <NavLink to={item.url} end={item.url === "/"}>
+                <SidebarMenuButton tooltip={item.title} className="cursor-pointer" isActive={location.pathname === item.url || (item.url !== "/" && location.pathname.startsWith(item.url + "/"))} render={<NavLink to={item.url} end={item.url === "/"} />}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
-                  </NavLink>
-                </SidebarMenuButton>
+                  </SidebarMenuButton>
               )}
               {item.badge !== undefined && item.badge > 0 && <SidebarMenuBadge aria-label={`${item.badge} requests need you`}>{item.badge}</SidebarMenuBadge>}
-            </SidebarMenuItem>
-          </Collapsible>
+            </Collapsible>
         ))}
       </SidebarMenu>
     </SidebarGroup>

@@ -7,7 +7,7 @@ export function restoreSubscriptionFocus(action: ActionFocus, source: object, au
   const auth = authStore.getState()
   if (action.source !== source || auth.phase !== 'authenticated' || auth.pending || auth.logoutUnconfirmed || auth.session?.sessionId !== action.owner || phase === 'inactive') return true
   if (action.node.isConnected) return phase === 'current'
-  if (document.querySelector('[role="dialog"][data-state="open"]')) return false
+  if (document.querySelector('[role="dialog"][data-open]')) return false
   if (document.activeElement === document.body && target?.isConnected) target.focus()
   return true
 }

@@ -41,8 +41,8 @@ export function MemoryCorrection({ control, focusTarget }: { control: MemoryCorr
         {recovery && notice === 'not-recorded' && <Button size="sm" variant="outline" aria-disabled={!!busy} className="aria-disabled:opacity-50" onClick={() => { if (!busy) void controller.reviewNew(recovery) }}>Review a new edit</Button>}
       </div>}
     </section>}
-    <Dialog open={!!editor} onOpenChange={open => { if (!open) controller.close(editor) }}>
-      <TaskDialogContent title="Edit memory" description="Change the retained text. The source conversation, source type, confidence and memory permissions stay the same." showCloseButton={!pending} onOpenAutoFocus={() => focus.dialog()} onCloseAutoFocus={focus.closeDialog} onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onPointerDownOutside={event => { if (pending) event.preventDefault() }}>
+    <Dialog open={!!editor} onOpenChange={open => { if (!open) controller.close(editor) }} disablePointerDismissal={pending}>
+      <TaskDialogContent title="Edit memory" description="Change the retained text. The source conversation, source type, confidence and memory permissions stay the same." showCloseButton={!pending} initialFocus={() => { focus.dialog(); return true }} finalFocus={focus.closeDialog}>
         <form className="flex min-h-0 flex-col" onSubmit={event => { event.preventDefault(); if (valid) { focus.operation(); void controller.apply(editor) } }}>
           <OverlayBody>
             {previousUnconfirmed && <p className="text-sm text-muted-foreground">The earlier request is unconfirmed and may still arrive. This review reads the current memory; saving needs a new owner approval.</p>}
@@ -59,7 +59,7 @@ export function MemoryCorrection({ control, focusTarget }: { control: MemoryCorr
         </form>
       </TaskDialogContent>
     </Dialog>
-    <ConfirmationDialog open={!!currentReview} onOpenChange={open => { if (!open) setReview(null) }} title="Retry approved memory change?" description="This sends only the exact text and revision already approved and saved on the server. It does not use a new edit. The earlier operation may already have completed." actionLabel="Retry approved change" actionVariant="default" pending={pending} onCloseAutoFocus={focus.closeDialog} onConfirm={async () => { if (!currentReview || busy || !ready) return; focus.operation(); await controller.retry(currentReview.identity); setReview(value => value === currentReview ? null : value) }}>
+    <ConfirmationDialog open={!!currentReview} onOpenChange={open => { if (!open) setReview(null) }} title="Retry approved memory change?" description="This sends only the exact text and revision already approved and saved on the server. It does not use a new edit. The earlier operation may already have completed." actionLabel="Retry approved change" actionVariant="default" pending={pending} finalFocus={focus.closeDialog} onConfirm={async () => { if (!currentReview || busy || !ready) return; focus.operation(); await controller.retry(currentReview.identity); setReview(value => value === currentReview ? null : value) }}>
       {currentReview && <p className="break-all text-sm">Memory {currentReview.identity.memoryId} · reviewed revision {currentReview.identity.expectedRevision}</p>}
     </ConfirmationDialog>
   </>

@@ -224,12 +224,11 @@ export default function ToolsPage() {
         open={creating}
         onOpenChange={(v) => {
           if (!busy) setCreating(v);
-        }}
+        }} disablePointerDismissal
       >
         <TaskDialogContent
           title="New tool"
           description="Start with a workflow or a connector action. Both live in this library."
-          onInteractOutside={(e) => e.preventDefault()}
         >
           <form
             onSubmit={(e) => {

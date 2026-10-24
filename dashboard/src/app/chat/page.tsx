@@ -41,7 +41,7 @@ function ChatListPanel({ agentView = false, archived = false, query, onQueryChan
     icon={<MessageCircle />}
     emptyTitle={searching ? agentView ? "No agent sessions found" : "No conversations found" : archived ? "No archived conversations" : agentView ? "Your agent sessions will appear here" : "Your conversations will appear here"}
     emptyDescription={searching ? "Try a different title, topic, or agent name." : archived ? "Archive a conversation from its menu to keep it here." : agentView ? "Agents appear here after their first conversation." : "Start a conversation with your companion or choose another agent."}
-    emptyAction={!archived && <Button asChild><Link to={agentView ? "/agents" : "/chat/new"}>{agentView ? "Choose an agent" : "New chat"}</Link></Button>}>
+    emptyAction={!archived && <Button render={<Link to={agentView ? "/agents" : "/chat/new"} />}>{agentView ? "Choose an agent" : "New chat"}</Button>}>
     {children}
   </CollectionPanel>
 }

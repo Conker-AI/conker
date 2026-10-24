@@ -7,7 +7,7 @@ type ActionFocus = { turnId: string; node: HTMLButtonElement }
 function restoreThinkingActionFocus(action: ActionFocus, turnId: string | undefined, disabled: boolean, status: HTMLParagraphElement | null) {
   if (disabled || action.turnId !== turnId) return true
   if (action.node.isConnected) return false
-  if (document.activeElement === document.body && status?.isConnected && !document.querySelector('[role="dialog"][data-state="open"]')) status.focus()
+  if (document.activeElement === document.body && status?.isConnected && !document.querySelector('[role="dialog"][data-open]')) status.focus()
   return true
 }
 

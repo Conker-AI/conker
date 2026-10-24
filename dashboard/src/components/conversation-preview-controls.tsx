@@ -6,7 +6,7 @@ import { activityScenarios } from "@/lib/api/activity-fixtures"
 export function ConversationPreviewControls({ value, onChange, disabled = false }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   return <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
     <Label htmlFor="conversation-preview-scenario" className="text-xs">Development preview</Label>
-    <Select value={value || "ordinary"} onValueChange={next => onChange(next === "ordinary" ? "" : next)} disabled={disabled}>
+    <Select value={value || "ordinary"} onValueChange={next => { if (next !== null) onChange(next === "ordinary" ? "" : next) }} disabled={disabled} items={[{ value: "ordinary", label: "Ordinary sample reply" }, { value: "rich-answer", label: "Rich answer blocks" }, { value: "slow-response", label: "Long response for queue and scroll checks" }, { value: "service-disconnected", label: "Disconnected service" }, ...activityScenarios.map((item) => ({ value: item.id, label: item.label }))]}>
       <SelectTrigger id="conversation-preview-scenario" className="w-full sm:w-64"><SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value="ordinary">Ordinary sample reply</SelectItem>

@@ -424,15 +424,12 @@ export function ToolEditor({
           {liveRun ? 'Run' : 'Test'}
         </Button>
         <Popover>
-          <PopoverTrigger asChild>
-            <Button
+          <PopoverTrigger render={<Button
               variant="outline"
               size="icon"
-              aria-label="More tool actions"
-            >
+              aria-label="More tool actions" />}>
               <ChevronDown />
-            </Button>
-          </PopoverTrigger>
+            </PopoverTrigger>
           <PopoverContent align="end" className="flex flex-col gap-2">
             <Button
               variant="outline"
@@ -527,12 +524,10 @@ export function ToolEditor({
             <div className="tools-canvas-column">
               <div className="tools-build-controls">
                 <Popover open={palette} onOpenChange={setPalette}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
+                  <PopoverTrigger render={<Button variant="outline" size="sm" />}>
                       <Plus />
                       Add step
-                    </Button>
-                  </PopoverTrigger>
+                    </PopoverTrigger>
                   <PopoverContent align="start" className="space-y-3">
                     <CollectionSearch
                       label="Search steps"

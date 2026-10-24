@@ -162,7 +162,8 @@ function guards() {
  value.policyRecoveryRequired=true;for(const op of [verify,activate,recover,revoke,paid])assert.equal(allowed(value,op),false);assert.equal(allowed(value,{operation:'recover-paid-policy'}),true)
 }
 function focusCases() {
- const previous={document:global.document,HTMLElement:global.HTMLElement,MutationObserver:global.MutationObserver,setTimeout:global.setTimeout,clearTimeout:global.clearTimeout}
+ const previous={document:global.document,HTMLElement:global.HTMLElement,MutationObserver:global.MutationObserver,setTimeout:global.setTimeout,clearTimeout:global.clearTimeout,requestAnimationFrame:global.requestAnimationFrame}
+ const frames=[];global.requestAnimationFrame=run=>frames.push(run);const flush=()=>frames.splice(0).forEach(run=>run())
  const slots=[],effects=[],timers=new Map();let cursor=0,observer=null,next=0,source={},scope=0,phase='current',result,open=[]
  class Node {constructor(name,dialog=null){this.name=name;this.isConnected=true;this.dialog=dialog}focus(){global.document.activeElement=this}closest(){return this.dialog}}
  const body=new Node('body'),editor=new Node('editor'),verify=new Node('verify'),input=new Node('key',editor),button=new Node('save',editor),refresh=new Node('refresh'),opener=new Node('connect'),other=new Node('other')
@@ -172,18 +173,18 @@ function focusCases() {
  const hooks={useRef(initial){const i=cursor++;return slots[i]??={current:initial}},useState(initial){const i=cursor++;slots[i]??={value:initial};return[slots[i].value,value=>{slots[i].value=value}]},useLayoutEffect(effect){const i=cursor++;effects.push(()=>{slots[i]?.cleanup?.();slots[i]={cleanup:effect()}})}}
  const hook=loader({react:hooks})('src/components/gateway/credential-focus.ts').useCredentialFocus,authStore=createStore(()=>owner('A'))
  const render=()=>{cursor=0;result=hook(source,scope,authStore,phase,{current:refresh});effects.splice(0).forEach(run=>run())}
- const closeEvent=()=>({preventDefault(){}}),tick=()=>{observer?.();for(const[id,run]of timers){timers.delete(id);run()}}
+ const tick=()=>{observer?.();for(const[id,run]of timers){timers.delete(id);run()}}
  try {
-  render();opener.focus();result.dialog();render();const oldClose=result.closeDialog;body.focus();result.closeDialog(closeEvent());assert.equal(document.activeElement,opener)
-  opener.focus();result.dialog();render();const stale=result.closeDialog;result.dialog();render();body.focus();stale(closeEvent());assert.equal(document.activeElement,body,'Old dialog close cannot restore newer origin')
-  result.closeDialog(closeEvent());assert.equal(document.activeElement,opener)
+  render();opener.focus();result.dialog();render();const oldClose=result.closeDialog;body.focus();result.closeDialog();flush();assert.equal(document.activeElement,opener)
+  opener.focus();result.dialog();render();const stale=result.closeDialog;result.dialog();render();body.focus();stale();flush();assert.equal(document.activeElement,body,'Old dialog close cannot restore newer origin')
+  result.closeDialog();flush();assert.equal(document.activeElement,opener)
   for(const trigger of [button,input]){
    trigger.focus();result.operation();phase='awaiting-verification';open=[editor,verify];render();phase='current';render();body.focus();open=[editor];tick();assert.equal(document.activeElement,trigger,'Verification cancellation restores actual connected editor action');assert.equal(observer,null,'Settled restoration disconnects its observer');assert.equal(timers.size,0)
   }
   button.focus();result.operation();phase='working';open=[editor,verify];render();phase='current';render();other.focus();open=[editor];tick();assert.equal(document.activeElement,other,'No stealing another control focus');assert.equal(observer,null)
   button.focus();result.operation();phase='working';open=[editor,verify];render();scope++;phase='current';render();body.focus();open=[];tick();assert.equal(document.activeElement,body,'Owner epoch invalidates retained operation focus')
-  opener.focus();result.dialog();render();scope++;render();body.focus();result.closeDialog(closeEvent());assert.equal(document.activeElement,body)
-  oldClose(closeEvent());assert.equal(document.activeElement,body)
+  opener.focus();result.dialog();render();scope++;render();body.focus();result.closeDialog();flush();assert.equal(document.activeElement,body)
+  oldClose();flush();assert.equal(document.activeElement,body)
  }finally{slots.forEach(slot=>slot?.cleanup?.());Object.assign(global,previous)}
 }
 ;(async()=>{guards();focusCases();await lifecycle();await editor();await components();console.log('Credential recovery: controller, editor identity, component, policy and lifecycle cases passed')})().catch(error=>{console.error(error);process.exitCode=1})

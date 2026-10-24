@@ -132,7 +132,7 @@ export function DataTable<TData, TValue>({
         )}
         </>} actions={<>
           {toolbarAction}
-          {renderItem && data.length > 0 && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} onValueChange={value => {
+          {renderItem && data.length > 0 && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} items={[{ value: "default", label: "Default order" }, ...table.getAllColumns().filter(column => column.getCanSort()).flatMap(column => [{ value: `${column.id}:asc`, label: `${column.id.replace(/([A-Z])/g, " $1")} · ascending` }, { value: `${column.id}:desc`, label: `${column.id.replace(/([A-Z])/g, " $1")} · descending` }])]} onValueChange={value => { if (value === null) return;
             if (value === "default") setSorting([])
             else { const [id, direction] = value.split(":"); setSorting([{ id, desc: direction === "desc" }]) }
           }}><SelectTrigger size="sm" aria-label="Sort records"><SelectValue /></SelectTrigger><SelectContent>

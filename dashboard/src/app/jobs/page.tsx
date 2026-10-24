@@ -51,13 +51,13 @@ export default function JobsPage() {
     setPanel({ ...next, returnToDetails: panel?.mode === "view" })
   }
   const closeForm = () => setPanel(panel?.returnToDetails ? { mode: "view", id: panel.id } : null)
-  const restoreFocus = (event: Event) => {
-    event.preventDefault()
+  const restoreFocus = () => {
     requestAnimationFrame(() => {
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      if (document.querySelector('[role="dialog"][data-open]')) return
       const target = returnFocus.current
       ;(target?.isConnected ? target : newButton.current)?.focus()
     })
+    return false
   }
   const clearFilters = () => { setQuery(""); setFilter("all") }
   const filtered = jobs.filter(job => {
@@ -102,7 +102,7 @@ export default function JobsPage() {
   }
   const filters = <>
     {(query || filter !== "all") && <Button size="sm" variant="ghost" onClick={clearFilters}>Clear filters</Button>}
-    <Select value={filter} onValueChange={setFilter}>
+    <Select value={filter} onValueChange={value => { if (value !== null) setFilter(value) }} items={[{ value: "all", label: "All jobs" }, { value: "Scheduled", label: "Scheduled" }, { value: "Paused", label: "Paused" }, { value: "failed", label: "Last run failed" }]}>
       <SelectTrigger size="sm" aria-label="Filter jobs" className="w-36"><SelectValue /></SelectTrigger>
       <SelectContent><SelectItem value="all">All jobs</SelectItem><SelectItem value="Scheduled">Scheduled</SelectItem><SelectItem value="Paused">Paused</SelectItem><SelectItem value="failed">Last run failed</SelectItem></SelectContent>
     </Select>
@@ -119,19 +119,18 @@ export default function JobsPage() {
       <p role="status" className="min-h-4 text-xs text-muted-foreground">{feedback || "Open a job for instructions and run history. Schedule times use each job’s time zone."}</p>
     </div>
     <DetailPanel open={panel?.mode === "view"} onOpenChange={open => { if (!open) setPanel(null) }} busy={pending}
-      title={selected?.name ?? "Job details"} description="Configuration and run history · frontend preview" onCloseAutoFocus={restoreFocus}>
+      title={selected?.name ?? "Job details"} description="Configuration and run history · frontend preview" finalFocus={restoreFocus}>
       {selected && <JobDetails job={selected} agentName={agentName(selected.agentId)} controls={controls} selectedRunId={params.get("run") ?? undefined} />}
     </DetailPanel>
-    <Dialog open={panel?.mode === "create" || panel?.mode === "edit"} onOpenChange={open => { if (!open && !pending) closeForm() }}>
-      <TaskDialogContent size="wide" title={panel?.mode === "edit" ? "Edit job" : "New job"} description="Choose the task, agent, and schedule." showCloseButton={!pending}
-        onInteractOutside={event => event.preventDefault()} onCloseAutoFocus={restoreFocus}>
+    <Dialog open={panel?.mode === "create" || panel?.mode === "edit"} onOpenChange={open => { if (!open && !pending) closeForm() }} disablePointerDismissal>
+      <TaskDialogContent size="wide" title={panel?.mode === "edit" ? "Edit job" : "New job"} description="Choose the task, agent, and schedule." showCloseButton={!pending} finalFocus={restoreFocus}>
         {error && <p role="alert" className="px-5 pt-4 text-sm text-destructive">{error}</p>}
         {(panel?.mode === "create" || panel?.mode === "edit" && selected) && <JobEditor key={`${panel.mode}-${panel.id ?? "new"}`} job={panel.mode === "edit" ? selected : undefined} agents={agents} pending={pending} onSave={save} onCancel={closeForm} />}
       </TaskDialogContent>
     </Dialog>
     <ConfirmationDialog open={panel?.mode === "delete"} onOpenChange={open => { if (!open) closeForm() }} title="Delete job?"
       description="Remove this job and its run history from the preview. It will return when you reload the app."
-      actionLabel="Delete job" pending={pending} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => {
+      actionLabel="Delete job" pending={pending} error={error} finalFocus={restoreFocus} onConfirm={async () => {
         if (selected && await mutate(() => conkerClient.deleteJob(selected.id))) { setPanel(null); setFeedback("Job removed from this preview.") }
       }}><p className="text-sm font-medium break-words">{selected?.name}</p></ConfirmationDialog>
   </BaseLayout>

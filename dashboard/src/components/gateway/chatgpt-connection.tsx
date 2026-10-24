@@ -27,7 +27,7 @@ export function ChatGPTConnection({ client, authStore, onModels }: { client: Gat
       {value.deviceCode && value.loginId && <div className="space-y-3 rounded-lg border p-4">
         <p className="text-sm">Enter this one-time code on OpenAI to authorize this Conker server.</p>
         <p className="break-all font-mono text-lg" aria-label="OpenAI device code">{value.deviceCode.userCode}</p>
-        <Button variant="outline" asChild><a href={value.deviceCode.verificationUrl} target="_blank" rel="noreferrer noopener"><ExternalLink />Continue on OpenAI</a></Button>
+        <Button variant="outline" render={<a href={value.deviceCode.verificationUrl} target="_blank" rel="noreferrer noopener" />}><ExternalLink />Continue on OpenAI</Button>
         <p className="text-xs text-muted-foreground">This sign-in attempt expires 15 minutes after it starts. Keep this code private. Device-code sign-in may need to be enabled in your ChatGPT security settings.</p>
       </div>}
       {!value.deviceCode && value.loginState === 'pending' && <p className="text-sm text-muted-foreground">A sign-in attempt is already pending. Its code is not retained in the browser; cancel it to start a new attempt.</p>}

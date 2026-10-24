@@ -95,11 +95,33 @@ export function ThemeTab({
           </Button>
         </div>
 
-        <Select value={selectedTheme} onValueChange={(value) => {
+        <Select value={selectedTheme} onValueChange={value => { if (value === null) return;
           setSelectedTheme(value)
           setSelectedTweakcnTheme("") // Clear tweakcn selection
                 setImportedTheme(null) // Clear imported theme
-        }}>
+        }} items={[...colorThemes.map((theme) => ({ value: theme.value, label: <>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.primary }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.secondary }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.accent }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.muted }}
+                      />
+                    </div>
+                    <span>{theme.name}</span>
+                  </div>
+                </> }))]}>
           <SelectTrigger aria-label="Theme preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Shadcn Theme" />
           </SelectTrigger>
@@ -147,11 +169,33 @@ export function ThemeTab({
           </Button>
         </div>
 
-        <Select value={selectedTweakcnTheme} onValueChange={(value) => {
+        <Select value={selectedTweakcnTheme} onValueChange={value => { if (value === null) return;
           setSelectedTweakcnTheme(value)
           setSelectedTheme("") // Clear shadcn selection
                 setImportedTheme(null) // Clear imported theme
-        }}>
+        }} items={[...tweakcnThemes.map((theme) => ({ value: theme.value, label: <>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.primary }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.secondary }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.accent }}
+                      />
+                      <div
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: theme.preset.styles.light.muted }}
+                      />
+                    </div>
+                    <span>{theme.name}</span>
+                  </div>
+                </> }))]}>
           <SelectTrigger aria-label="Tweakcn preset" className="w-full cursor-pointer">
             <SelectValue placeholder="Choose Tweakcn Theme" />
           </SelectTrigger>
@@ -263,7 +307,7 @@ export function ThemeTab({
       </div>
 
       {/* Accent & token colors Section */}
-      <Accordion type="single" collapsible className="w-full border-b rounded-lg">
+      <Accordion className="w-full border-b rounded-lg">
         <AccordionItem value="brand-colors" className="border border-border rounded-lg overflow-hidden">
           <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-accent transition-colors">
             <Label className="text-sm font-medium cursor-pointer">Accent & token colors</Label>

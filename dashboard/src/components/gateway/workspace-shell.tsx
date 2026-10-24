@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { BookOpen, ChevronLeft, ChevronRight, Pin, Plus, X } from 'lucide-react'
-import { BaseLayout } from '@/components/layouts/base-layout'
+import { LayoutFrame } from '@/components/layouts/layout-frame'
 import { Button } from '@/components/ui/button'
 import { DetailPanel } from '@/components/design-system/overlays'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -85,7 +85,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const viewLabel = view ? conversationViewLabel(view) : ''
   const closeReference = () => { const closing = view; setOpenView(null); if (closing) document.querySelector<HTMLButtonElement>(`[data-conversation-view="${closing}"]`)?.focus() }
   return <ConnectedShellContext.Provider value={{ tabsOpen, toggleTabs: () => setTabsOpen(value => !value), openViewCount: visibleTabs.length, view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat }}>
-  <BaseLayout variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}
+  <LayoutFrame variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}
     beforeHeader={tabsOpen && <div id="conker-open-views" className="conker-tabbar">
       <div className="conker-history"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Go back"><ChevronLeft /></Button><Button variant="ghost" size="icon" onClick={() => navigate(1)} aria-label="Go forward"><ChevronRight /></Button></div>
       <div className="conker-tabs" ref={tablist} role="tablist" aria-label="Open workspace tabs">
@@ -105,7 +105,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
     </div>}
     reference={contextOpen && !isMobile ? <aside className="conker-reference" aria-label={viewLabel} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeReference() } }}><div className="conker-reference-heading"><h2>{viewLabel}</h2><Button variant="ghost" size="icon" onClick={closeReference} aria-label={`Close ${viewLabel}`}><X /></Button></div>{reference}</aside> : null}>
     <div id="conker-workspace-document" role={tabsOpen ? 'tabpanel' : undefined} aria-label={current ? title(current) : 'Workspace'} className="flex min-h-0 flex-1 flex-col">{children}</div>
-  </BaseLayout>
+  </LayoutFrame>
   {isMobile && <DetailPanel open={contextOpen} onOpenChange={open => { if (!open) setOpenView(null) }} title={viewLabel} description="Saved records for this chat.">{reference}</DetailPanel>}
   </ConnectedShellContext.Provider>
 }

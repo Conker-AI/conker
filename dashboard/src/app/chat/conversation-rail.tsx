@@ -199,7 +199,7 @@ export function ConversationRail({ session, children }: { session: Session; chil
     if (!wide || !rail?.open) return
     const escape = (event: KeyboardEvent) => {
       // A nested context editor owns Escape; keep the rail and its draft mounted.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      if (document.querySelector('[role="dialog"][data-open]')) return
       if (event.key === "Escape" && !event.defaultPrevented) { close(session.id); restoreFocus() }
     }
     document.addEventListener("keydown", escape)
@@ -215,5 +215,5 @@ export function ConversationRail({ session, children }: { session: Session; chil
     </div>
     {body}
   </aside> : null
-  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" data-view={rail?.view} onCloseAutoFocus={event => { event.preventDefault(); restoreFocus() }} className="w-full gap-0 overflow-hidden bg-background text-foreground sm:max-w-sm"><SheetHeader className="shrink-0 border-b bg-card pr-12"><SheetTitle className="flex items-center gap-2 text-sm"><Icon className="size-4 text-muted-foreground" />{title}</SheetTitle><SheetDescription className="truncate text-xs" title={context}>{context}</SheetDescription>{selected && <p className={`line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</SheetHeader>{body}</SheetContent></Sheet>
+  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" data-view={rail?.view} finalFocus={() => { restoreFocus(); return false }} className="w-full gap-0 overflow-hidden bg-background text-foreground sm:max-w-sm"><SheetHeader className="shrink-0 border-b bg-card pr-12"><SheetTitle className="flex items-center gap-2 text-sm"><Icon className="size-4 text-muted-foreground" />{title}</SheetTitle><SheetDescription className="truncate text-xs" title={context}>{context}</SheetDescription>{selected && <p className={`line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</SheetHeader>{body}</SheetContent></Sheet>
 }

@@ -26,23 +26,20 @@ export function JobActions({ job, controls }: { job: Job; controls: JobControls 
         {job.status === "Paused" ? <Play /> : <Pause />}{job.status === "Paused" ? "Resume" : "Pause"}
       </Button>
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
+      <DropdownMenuTrigger render={<Button
           disabled={pending}
           variant="ghost"
           size="icon"
           className="size-8"
-          aria-label={`Actions for ${job.name}`}
-        >
+          aria-label={`Actions for ${job.name}`} />}>
           <MoreHorizontal />
-        </Button>
-      </DropdownMenuTrigger>
+        </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={() => controls.edit(job)}><Pencil />Edit job</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => controls.open(job)}><History />Details & run history</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => controls.duplicate(job)}><Copy />Duplicate</DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={() => controls.remove(job)}><Trash2 />Delete job</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => controls.edit(job)}><Pencil />Edit job</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => controls.open(job)}><History />Details & run history</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => controls.duplicate(job)}><Copy />Duplicate</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={() => controls.remove(job)}><Trash2 />Delete job</DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

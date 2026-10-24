@@ -60,5 +60,5 @@ export const agentColumns = (open: (agent: Agent) => void): ColumnDef<Agent>[] =
       )
     },
   },
-  { id: "chat", header: "", enableHiding: false, cell: ({ row }) => row.original.archivedAt ? null : <Button asChild variant="outline" size="sm"><Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`}><SquarePen />New chat</Link></Button> },
+  { id: "chat", header: "", enableHiding: false, cell: ({ row }) => row.original.archivedAt ? null : <Button variant="outline" size="sm" render={<Link to={`/chat/new?agent=${encodeURIComponent(row.original.id)}`} aria-label={`New chat with ${row.original.name}`} />}><SquarePen />New chat</Button> },
 ]

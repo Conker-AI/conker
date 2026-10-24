@@ -10,8 +10,8 @@ import { conversationViews, type ConversationView } from './conversation-view-li
 
 export function ConversationViewStrip({ open, onToggle, compact }: { open: ConversationView | null; onToggle: (view: ConversationView) => void; compact: boolean }) {
   // Phones fold the strip into one button so the conversation title keeps its room.
-  if (compact) return <DropdownMenu><DropdownMenuTrigger asChild><WorkspaceAction iconOnly aria-label="Conversation views" title="Conversation views"><Layers /></WorkspaceAction></DropdownMenuTrigger>
-    <DropdownMenuContent align="end" aria-label="Conversation views">{conversationViews.map(({ id, label, icon: Icon }) => <DropdownMenuItem key={id} data-conversation-view={id} onSelect={() => onToggle(id)}><Icon aria-hidden="true" />{label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+  if (compact) return <DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="Conversation views" title="Conversation views" />}><Layers /></DropdownMenuTrigger>
+    <DropdownMenuContent align="end" aria-label="Conversation views">{conversationViews.map(({ id, label, icon: Icon }) => <DropdownMenuItem key={id} data-conversation-view={id} onClick={() => onToggle(id)}><Icon aria-hidden="true" />{label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
   return <div className="conker-view-strip" role="group" aria-label="Conversation views">
     {conversationViews.map(({ id, label, icon: Icon }) => <button key={id} type="button" data-conversation-view={id} aria-label={label} title={label}
       aria-pressed={open === id} aria-controls={open === id ? 'conker-conversation-view' : undefined} onClick={() => onToggle(id)}><Icon aria-hidden="true" /></button>)}

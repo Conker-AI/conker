@@ -37,20 +37,21 @@ export function GatewayNativeSessionsWorkspace({ client, authStore, providerCont
     await controller.stop(captured.target)
     setReview(value => value === captured ? null : value)
   }
-  function restoreStopFocus(event: Event) {
-    event.preventDefault(); const captured = focusReview
-    if (!captured || focusOrigin.current !== captured) return
+  function restoreStopFocus() {
+    const captured = focusReview
+    if (!captured || focusOrigin.current !== captured) return false
     focusOrigin.current = null; setFocusReview(null)
     requestAnimationFrame(() => {
       const latest = current.current, auth = authStore.getState(), target = stopButton.current
       if (latest.review || captured.controller !== latest.controller || captured.scope !== latest.scope || latest.selected?.id !== captured.target.id || latest.selected.identity !== captured.target.identity || auth.phase !== 'authenticated' || auth.pending || auth.logoutUnconfirmed || !target?.isConnected) return
       const panel = target.closest('[role="dialog"]')
-      if ([...document.querySelectorAll('[role="dialog"][data-state="open"]')].some(dialog => dialog !== panel)) return
+      if ([...document.querySelectorAll('[role="dialog"][data-open]')].some(dialog => dialog !== panel)) return
       if (document.activeElement === document.body || document.activeElement === panel || !(document.activeElement instanceof HTMLElement) || !document.activeElement.isConnected) target.focus()
     })
+    return false
   }
   return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Native sessions" description="Claude Code background sessions owned by Conker. These are separate from your chats and text-only model roles." density="compact" actions={<>{providerControl}<WorkspaceAction asChild><Link to="/system?tab=terminal"><TerminalSquare />Terminal</Link></WorkspaceAction><WorkspaceAction aria-disabled={!!state.pending || !state.active} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending && state.active) void controller.list() }}><RefreshCw />{state.pending === 'list' ? 'Checking…' : 'Refresh sessions'}</WorkspaceAction></>} />
+    <PageHeader actionsOnly title="Native sessions" description="Claude Code background sessions owned by Conker. These are separate from your chats and text-only model roles." density="compact" actions={<>{providerControl}<WorkspaceAction render={<Link to="/system?tab=terminal" />}><TerminalSquare />Terminal</WorkspaceAction><WorkspaceAction aria-disabled={!!state.pending || !state.active} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending && state.active) void controller.list() }}><RefreshCw />{state.pending === 'list' ? 'Checking…' : 'Refresh sessions'}</WorkspaceAction></>} />
     <p className="text-sm leading-6 text-muted-foreground">Conker-owned Claude Code background sessions. These are separate from your chats and text-only model roles.</p>
     {!state.active && <p role="status" className="text-sm text-muted-foreground">Sign in to inspect native sessions.</p>}
     {state.listError && <p role="status" className="text-sm text-muted-foreground">Native sessions could not be checked. Refresh sessions to try again. Any retained rows are from the last successful check.</p>}
@@ -72,6 +73,6 @@ export function GatewayNativeSessionsWorkspace({ client, authStore, providerCont
         <ReferenceSection title="Stop native work"><p className="text-xs">Stop applies to this exact background session. It does not undo completed changes or change native permissions.</p><Button ref={stopButton} size="sm" variant="outline" aria-disabled={!canStop} className="aria-disabled:opacity-50" onClick={() => { if (canStop) { const next = { controller, scope: state.scope, target: selected }; focusOrigin.current = next; setFocusReview(next); setReview(next) } }}><Square />Stop session</Button></ReferenceSection>
       </>}</OverlayBody>
     </DetailPanel>
-    <ConfirmationDialog open={!!activeReview} onOpenChange={open => { if (!open) setReview(null) }} title="Stop this native Claude session?" description="Completed changes are not undone. Conker will ask for owner verification before requesting Stop." actionLabel="Request stop" pending={operationPending} onConfirm={stop} onCloseAutoFocus={restoreStopFocus}>{activeReview && <p className="break-all text-sm">Session: {activeReview.target.id}<br />Working directory: {activeReview.target.cwd}</p>}</ConfirmationDialog>
+    <ConfirmationDialog open={!!activeReview} onOpenChange={open => { if (!open) setReview(null) }} title="Stop this native Claude session?" description="Completed changes are not undone. Conker will ask for owner verification before requesting Stop." actionLabel="Request stop" pending={operationPending} onConfirm={stop} finalFocus={restoreStopFocus}>{activeReview && <p className="break-all text-sm">Session: {activeReview.target.id}<br />Working directory: {activeReview.target.cwd}</p>}</ConfirmationDialog>
   </div></GatewayPageFrame>
 }

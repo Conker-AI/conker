@@ -51,7 +51,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-agentId`}>Agent</Label>
-        <Select value={value.agentId} onValueChange={next => set("agentId", next)} disabled={pending}>
+        <Select value={value.agentId} onValueChange={next => { if (next !== null) set("agentId", next) }} disabled={pending} items={[...agents.filter(agent => agent.archivedAt && agent.id === value.agentId).map((agent) => ({ value: agent.id, label: <>{agent.name} · Archived</> })), ...availableAgents.map((agent) => ({ value: agent.id, label: agent.name }))]}>
           <SelectTrigger id={`${id}-agentId`} className="w-full" aria-invalid={!!errors.agentId} aria-describedby={describedBy("agentId")}><SelectValue placeholder="Choose an agent" /></SelectTrigger>
           <SelectContent>{agents.filter(agent => agent.archivedAt && agent.id === value.agentId).map(agent => <SelectItem key={agent.id} value={agent.id} disabled>{agent.name} · Archived</SelectItem>)}{availableAgents.map(agent => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectContent>
         </Select>
@@ -59,14 +59,14 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
       </div>
       <div className="space-y-3 border-t pt-5">
         <Label htmlFor={`${id}-timing`}>Schedule</Label>
-        <Select value={value.timing.kind} onValueChange={kind => set("timing", { ...value.timing, kind: kind as JobInput["timing"]["kind"] })} disabled={pending}>
+        <Select value={value.timing.kind} onValueChange={kind => { if (kind !== null) set("timing", { ...value.timing, kind: kind as JobInput["timing"]["kind"] }) }} disabled={pending} items={[{ value: "daily", label: "Every day" }, { value: "weekly", label: "Every week" }, { value: "interval", label: "Every few hours" }]}>
           <SelectTrigger id={`${id}-timing`} className="w-full" aria-invalid={!!errors.timing} aria-describedby={describedBy("timing")}><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="daily">Every day</SelectItem><SelectItem value="weekly">Every week</SelectItem><SelectItem value="interval">Every few hours</SelectItem></SelectContent>
         </Select>
         <div className="grid gap-3 sm:grid-cols-2">
           {value.timing.kind === "weekly" && <div className="space-y-2">
             <Label htmlFor={`${id}-day`}>Day</Label>
-            <Select value={String(value.timing.day)} onValueChange={day => set("timing", { ...value.timing, day: Number(day) })} disabled={pending}>
+            <Select value={String(value.timing.day)} onValueChange={day => { if (day !== null) set("timing", { ...value.timing, day: Number(day) }) }} disabled={pending} items={[...weekdays.map((day, index) => ({ value: String(index), label: day }))]}>
               <SelectTrigger id={`${id}-day`} className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{weekdays.map((day, index) => <SelectItem key={day} value={String(index)}>{day}</SelectItem>)}</SelectContent>
             </Select>
@@ -80,7 +80,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
           </div>}
         <div className="space-y-2">
           <Label htmlFor={`${id}-timeZone`}>Time zone</Label>
-          <Select value={value.timeZone} onValueChange={zone => set("timeZone", zone)} disabled={pending}>
+          <Select value={value.timeZone} onValueChange={zone => { if (zone !== null) set("timeZone", zone) }} disabled={pending} items={[...Array.from(new Set([...jobTimeZones, value.timeZone])).map((zone) => ({ value: zone, label: zone }))]}>
             <SelectTrigger id={`${id}-timeZone`} className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>{Array.from(new Set([...jobTimeZones, value.timeZone])).map(zone => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent>
           </Select>

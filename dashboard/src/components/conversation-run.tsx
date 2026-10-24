@@ -37,7 +37,7 @@ export function RunStepDetail({ step, run }: { step: ActivityStep; run?: Run }) 
     {step.plan && <><ol aria-label="Supplied plan" className="space-y-1">{step.plan.slice(0, 40).map(item => <li key={item.id} className="flex items-start gap-2"><span className="min-w-0 flex-1">{item.label}</span><span className="shrink-0">{item.status}</span></li>)}</ol>{step.plan.length > 40 && <p>{step.plan.length - 40} additional checklist items omitted from this preview.</p>}</>}
     {step.record && <pre tabIndex={0} aria-label={`${step.toolName || step.label} public input and result`} className="max-h-60 overflow-auto rounded-md bg-muted p-3 text-foreground">{formatActivityRecord(step.record)}</pre>}
     {step.source && (source ? <a href={source} className="inline-flex min-h-8 items-center underline underline-offset-4" {...(source.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>Open source: {step.source.label}{source.startsWith("http") ? " (new tab)" : ""}</a> : <p>Source unavailable: {step.source.label}</p>)}
-    {step.approvalId && <Button asChild variant="outline" size="sm"><Link to={`/inbox/${encodeURIComponent(step.approvalId)}`}>Review request in Inbox</Link></Button>}
+    {step.approvalId && <Button variant="outline" size="sm" render={<Link to={`/inbox/${encodeURIComponent(step.approvalId)}`} />}>Review request in Inbox</Button>}
     {step.receipt && <div>
       <p className="font-medium text-foreground">{step.receipt.label}</p>
       {step.receipt.kind === "diff" && <p>{step.receipt.added !== undefined && step.receipt.removed !== undefined ? `${step.receipt.added} added · ${step.receipt.removed} removed · supplied diff` : "Diff counts unavailable"}</p>}
@@ -79,7 +79,7 @@ export function ConversationRun({ run: suppliedRun, profile, mode = "focus", mot
       {active || run.status === "complete" ? <ConversationActivity profile={profile} mode={mode} phase={run.phase} status={run.status} compact motion={motion} /> : <StatusIcon aria-hidden="true" className={`size-3.5 shrink-0 ${run.status === "failed" ? "text-destructive" : ""}`} />}
       <span className={`min-w-0 [overflow-wrap:anywhere] ${active ? "font-medium text-foreground" : ""}`}>{label}</span>
       <Elapsed run={run} />
-      <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 transition-transform group-data-[state=open]/run:rotate-90 motion-reduce:transition-none" />
+      <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 transition-transform group-data-panel-open/run:rotate-90 motion-reduce:transition-none" />
       {run.provenance !== "live" && <span className="ml-1 text-[11px] text-muted-foreground">Preview</span>}
     </CollapsibleTrigger>
     <CollapsibleContent>

@@ -54,7 +54,7 @@ export function ProposalsPanel({ client, active }: { client: GatewayProposalClie
         <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
         <p>{item.suggestion}</p>
         <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
-        <Accordion type="single" collapsible><AccordionItem value="why"><AccordionTrigger>Why</AccordionTrigger><AccordionContent>
+        <Accordion><AccordionItem value="why"><AccordionTrigger>Why</AccordionTrigger><AccordionContent>
           <ul className="flex flex-col gap-3">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link> : <span>This message was forgotten.</span>}</li>)}</ul>
           {!item.evidence.length && <p className="text-muted-foreground">No cited messages are available.</p>}
         </AccordionContent></AccordionItem></Accordion>

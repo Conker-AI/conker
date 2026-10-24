@@ -3,6 +3,7 @@ import { ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandItem } from '@/components/ui/command'
+import { isQueryEdit } from '@/lib/command-query'
 import type { GatewayEditorDrafts, EditorCapability } from '@/lib/gateway/editor-drafts'
 import type { ToolNode } from '@/lib/tool-workspace'
 
@@ -41,12 +42,10 @@ export function GatewayCapabilityPicker({ client, node, onChange }: { client: Ga
     onChange({ ...node, config: { ...node.config, ...(kind === 'workflow' ? { toolId: item.id, version: item.version } : { tool: item.id }) } })
   }
   const details = selected?.id === identity ? selected : page?.items.find(item => item.id === identity)
-  return <div className="space-y-2"><Popover open={open} onOpenChange={value => { setOpen(value); if (value) { setPage(null); setError(''); setLoading(true) } }}><PopoverTrigger asChild>
-    <Button variant="outline" role="combobox" aria-label={kind === 'workflow' ? 'Published workflow to call' : 'Registered tool to call'} aria-expanded={open} className="w-full justify-between gap-2"><span className="truncate">{details?.name || identity || 'Choose a capability'}{kind === 'workflow' && node.config.version ? ` · v${node.config.version}` : ''}</span><ChevronsUpDown className="shrink-0" /></Button>
-  </PopoverTrigger><PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start"><Command shouldFilter={false}>
-    <CommandInput value={query} maxLength={100} onValueChange={value => { setQuery(value); setPage(null); setError(''); setLoading(true) }} placeholder={`Search registered ${kind === 'workflow' ? 'workflows' : 'tools'}…`} />
+  return <div className="space-y-2"><Popover open={open} onOpenChange={value => { setOpen(value); if (value) { setPage(null); setError(''); setLoading(true) } }}><PopoverTrigger render={<Button variant="outline" role="combobox" aria-label={kind === 'workflow' ? 'Published workflow to call' : 'Registered tool to call'} aria-expanded={open} className="w-full justify-between gap-2" />}><span className="truncate">{details?.name || identity || 'Choose a capability'}{kind === 'workflow' && node.config.version ? ` · v${node.config.version}` : ''}</span><ChevronsUpDown className="shrink-0" /></PopoverTrigger><PopoverContent className="w-[var(--anchor-width)] p-0" align="start"><Command value={query} onValueChange={(value, details) => { if (!isQueryEdit(details.reason)) return; setQuery(value); setPage(null); setError(''); setLoading(true) }}>
+    <CommandInput maxLength={100} placeholder={`Search registered ${kind === 'workflow' ? 'workflows' : 'tools'}…`} />
     <CommandList aria-label="Registered capabilities">
-      {page?.items.map(item => <CommandItem key={item.id} value={item.id} onSelect={() => choose(item)} className="items-start"><div className="min-w-0"><p className="font-medium">{item.name}{kind === 'workflow' ? ` · v${item.version}` : ''}</p><p className="truncate text-xs text-muted-foreground">{item.id}</p>{item.description && <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>}</div></CommandItem>)}
+      {page?.items.map(item => <CommandItem key={item.id} value={item.id} onClick={() => choose(item)} className="items-start"><div className="min-w-0"><p className="font-medium">{item.name}{kind === 'workflow' ? ` · v${item.version}` : ''}</p><p className="truncate text-xs text-muted-foreground">{item.id}</p>{item.description && <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>}</div></CommandItem>)}
       {loading && <p role="status" className="p-3 text-xs text-muted-foreground">Loading…</p>}
       {!loading && page?.items.length === 0 && <p className="p-3 text-xs text-muted-foreground">No matching registered capabilities.</p>}
       {error && <div className="p-3"><p role="alert" className="text-xs text-destructive">{error}</p><Button size="sm" variant="ghost" onClick={() => setRetry(value => value + 1)}>Retry</Button></div>}

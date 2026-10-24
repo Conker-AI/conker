@@ -32,11 +32,7 @@ export function GatewayOperationVerification({ store, authStore }: { store: Gate
   const challenge = useStore(store, state => state.challenge)
   const auth = useStore(authStore)
   const visible = auth.phase === 'authenticated' && !auth.pending && !auth.logoutUnconfirmed && gatewaySessionUnlocked(auth.session)
-  return <Dialog open={visible && !!challenge} onOpenChange={open => { if (!open) store.getState().cancel() }}><TaskDialogContent title={challenge?.title ?? 'Verify operation'} description="Confirm the target, then verify your owner password." onInteractOutside={event => event.preventDefault()} onOpenAutoFocus={event => {
-    // Wait for Radix to pause the underlying dialog's focus scope before focusing.
-    event.preventDefault()
-    document.getElementById('gateway-operation-password')?.focus()
-  }}>
+  return <Dialog open={visible && !!challenge} onOpenChange={open => { if (!open) store.getState().cancel() }} disablePointerDismissal><TaskDialogContent title={challenge?.title ?? 'Verify operation'} description="Confirm the target, then verify your owner password." initialFocus={() => document.getElementById('gateway-operation-password') ?? true}>
     {challenge && visible && <VerificationForm key={challenge.id} store={store} />}
   </TaskDialogContent></Dialog>
 }

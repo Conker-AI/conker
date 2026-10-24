@@ -95,7 +95,7 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
 
     {catalogue?.mode === 'configured' && <section className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-end">
       <label className="grid gap-1.5 text-sm font-medium">Configured root
-        <Select value={selectedRoot} onValueChange={chooseRoot}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{catalogue.roots.map(item => <SelectItem key={item.id} value={item.id}>{item.id}</SelectItem>)}</SelectContent></Select>
+        <Select value={selectedRoot} onValueChange={value => { if (value !== null) chooseRoot(value) }} items={[...catalogue.roots.map((item) => ({ value: item.id, label: item.id }))]}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{catalogue.roots.map(item => <SelectItem key={item.id} value={item.id}>{item.id}</SelectItem>)}</SelectContent></Select>
       </label>
       <div className="min-w-0"><p className="text-xs text-muted-foreground">Operator path</p><p className="mt-1 truncate font-mono text-sm" title={root?.path}>{root?.path}</p></div>
     </section>}

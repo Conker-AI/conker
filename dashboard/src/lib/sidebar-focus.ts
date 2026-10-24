@@ -1,4 +1,4 @@
-/** The mobile sidebar has external triggers, so Radix cannot infer its return target. */
+/** The mobile sidebar has external triggers, so Base UI cannot infer its return target. */
 export function createSidebarFocus() {
   let open = false, generation = 0, href = '', destination: 'opener' | 'content' = 'opener'
   let opener: HTMLElement | null = null
@@ -13,13 +13,13 @@ export function createSidebarFocus() {
       if (open !== next) generation++
       open = next
     },
-    restore(event: Event, root: () => HTMLElement | null) {
-      event.preventDefault()
+    /** Base UI `finalFocus`: always returns false because focus is moved here, a frame later. */
+    restore(root: () => HTMLElement | null): false {
       const ticket = generation, wrapper = root()
       requestAnimationFrame(() => {
         if (ticket !== generation || open || !wrapper?.isConnected || root() !== wrapper) return
         // Search or another dialog may own focus after this sidebar closes.
-        const dialog = document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')
+        const dialog = document.querySelector('[role="dialog"][data-open], [role="alertdialog"][data-open]')
         if (dialog) {
           if (usable(opener) && dialog.contains(opener) && !dialog.contains(document.activeElement)) opener.focus({ preventScroll: true })
           return
@@ -28,6 +28,7 @@ export function createSidebarFocus() {
         const target = destination === 'content' || window.location.href !== href ? content : usable(opener) ? opener : content
         if (usable(target)) target.focus({ preventScroll: true })
       })
+      return false
     },
   }
 }

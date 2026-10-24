@@ -20,10 +20,8 @@ export function SystemTerminal() {
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" aria-label="Project context" title="Project context"><Info /></Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto">
+          <PopoverTrigger render={<Button variant="ghost" size="icon" className="size-8" aria-label="Project context" title="Project context" />}><Info /></PopoverTrigger>
+          <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] max-h-[var(--available-height)] overflow-y-auto">
             <p className="font-medium">Project context</p>
             <p className="mt-1 text-xs text-muted-foreground">Sample snapshot · not live repository data</p>
             <dl className="my-4 space-y-3">
@@ -66,10 +64,10 @@ export function SystemTerminal() {
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         {!fullscreen && workbench}
         <DialogContent showCloseButton={false}
-          className="top-0 left-0 flex h-dvh max-h-none w-screen max-w-none overflow-hidden translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-card p-0 shadow-none duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:max-w-none"
-          onCloseAutoFocus={event => {
-            event.preventDefault()
+          className="top-0 left-0 flex h-dvh max-h-none w-screen max-w-none overflow-hidden translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-card p-0 shadow-none duration-0 transition-none sm:max-w-none"
+          finalFocus={() => {
             requestAnimationFrame(() => fullscreenButton.current?.focus())
+            return false
           }}>
           <DialogTitle className="sr-only">Terminal fullscreen</DialogTitle>
           <DialogDescription className="sr-only">Terminal output. Press Escape to return to the dashboard.</DialogDescription>

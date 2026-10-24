@@ -16,7 +16,7 @@ export function GatewayAgentPicker({ client, value, onChange, disabled, compact 
   const agents = useMemo(() => profiles?.filter(agent => agent.archived_at === null) ?? [], [profiles])
   const selected = agents.find(agent => agent.id === value)
   if (compact) return <ComposerSelectField error={error ? `Agent list unavailable. ${error}` : undefined}>
-    <Select value={selected?.id ?? value} disabled={disabled || !profiles || agents.length === 0} onValueChange={onChange}>
+    <Select value={selected?.id ?? value} disabled={disabled || !profiles || agents.length === 0} onValueChange={value => { if (value !== null) onChange(value) }} items={[...agents.map((agent) => ({ value: agent.id, label: agent.configuration.name }))]}>
       <ComposerSelectTrigger aria-label="Conversation agent" className="max-w-40">
         <SelectValue placeholder="Loading agents…">{selected?.configuration.name}</SelectValue>
       </ComposerSelectTrigger>
@@ -26,7 +26,7 @@ export function GatewayAgentPicker({ client, value, onChange, disabled, compact 
     </Select>
   </ComposerSelectField>
   return <div className="space-y-1">
-    <Select value={selected?.id ?? value} disabled={disabled || !profiles || agents.length === 0} onValueChange={onChange}>
+    <Select value={selected?.id ?? value} disabled={disabled || !profiles || agents.length === 0} onValueChange={value => { if (value !== null) onChange(value) }} items={[...agents.map((agent) => ({ value: agent.id, label: agent.configuration.name }))]}>
       <SelectTrigger aria-label="Conversation agent" className="w-64 max-w-full">
         <SelectValue placeholder="Loading agents…">{selected?.configuration.name}</SelectValue>
       </SelectTrigger>

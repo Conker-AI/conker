@@ -43,8 +43,7 @@ export function DataTableFacetedFilter<TData, TValue>({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="border-dashed cursor-pointer">
+      <PopoverTrigger render={<Button variant="outline" size="sm" className="border-dashed cursor-pointer" />}>
           <PlusCircle />
           {title}
           {selectedValues?.size > 0 && (
@@ -80,8 +79,7 @@ export function DataTableFacetedFilter<TData, TValue>({
               </div>
             </>
           )}
-        </Button>
-      </PopoverTrigger>
+        </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder={title} />
@@ -93,7 +91,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 return (
                   <CommandItem
                     key={option.value}
-                    onSelect={() => {
+                    onClick={() => {
                       if (isSelected) {
                         selectedValues.delete(option.value)
                       } else {
@@ -139,7 +137,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
-                    onSelect={() => column?.setFilterValue(undefined)}
+                    onClick={() => column?.setFilterValue(undefined)}
                     className="justify-center text-center cursor-pointer"
                   >
                     Clear filters

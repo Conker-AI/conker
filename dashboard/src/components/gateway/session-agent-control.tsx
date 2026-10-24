@@ -39,7 +39,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
     <Dialog open={open} onOpenChange={value => { if (!pending) setOpen(value) }}><TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
       <OverlayBody><div className="space-y-4">
         <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">
-          {profiles.map(agent => <Label key={agent.id} htmlFor={`live-agent-${agent.id}`} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-muted">
+          {profiles.map(agent => <Label key={agent.id} htmlFor={`live-agent-${agent.id}`} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-data-checked:border-primary has-data-checked:bg-muted">
             <Bot className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{agent.configuration.name}</span><span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{agent.configuration.role}</span></span>
             <RadioGroupItem id={`live-agent-${agent.id}`} value={agent.id} />

@@ -43,8 +43,9 @@ async function main() {
   const count = calls.length
   for (const query of ['', '   ', 'x'.repeat(201)]) await assert.rejects(client.query(query, 'text'))
   assert.equal(calls.length, count, 'invalid requests must not reach transport')
-  const ui = fs.readFileSync(path.join(root, 'src/components/gateway/universal-search.tsx'), 'utf8')
-  assert.match(ui, /shouldFilter=\{false\}/, 'cmdk must not hide backend semantic matches')
+  const ui = ['universal-search.tsx', 'universal-search-dialog.tsx'].map(file => fs.readFileSync(path.join(root, 'src/components/gateway', file), 'utf8')).join('\n')
+  assert.doesNotMatch(ui, /<Command\s[^>]*\b(items|filter)=/, 'The command list must not filter away backend semantic matches')
+  assert.match(ui, /isQueryEdit\(details\.reason\)/, 'Only typing edits the query; picking a result must not replace it')
   assert.match(ui, /selectRecord\(item\.id\)/, 'Activation must resolve the current result after privacy invalidation')
   console.log('Gateway search passed: strict DTOs, exact message links, privacy-safe projections, verification, cancellation boundaries and explicit stage gating.')
 }

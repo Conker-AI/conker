@@ -71,8 +71,8 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
-      <TaskDialogContent size="wide" title="Import theme" description="Paste :root (light) and .dark theme blocks with CSS variables. The theme follows your selected appearance mode." onInteractOutside={event => event.preventDefault()}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true} disablePointerDismissal>
+      <TaskDialogContent size="wide" title="Import theme" description="Paste :root (light) and .dark theme blocks with CSS variables. The theme follows your selected appearance mode.">
         <OverlayBody>
           <div className="space-y-2">
             <Label htmlFor="theme-css">Theme CSS</Label>

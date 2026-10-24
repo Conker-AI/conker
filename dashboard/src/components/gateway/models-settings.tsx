@@ -77,7 +77,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <OwnerAvatar className="size-16" />
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild><label className="cursor-pointer"><Upload />Choose photo<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { choosePhoto(event.target.files?.[0]); event.target.value = '' }} /></label></Button>
+          <Button variant="outline" size="sm" render={<label className="cursor-pointer" />}><Upload />Choose photo<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { choosePhoto(event.target.files?.[0]); event.target.value = '' }} /></Button>
           {profile.avatar && <Button variant="ghost" size="sm" onClick={() => saveOwnerProfile({ ...profile, avatar: '' })}><Trash2 />Remove photo</Button>}
           <p className="w-full text-xs text-muted-foreground">Stored only in this browser · PNG, JPEG, or WebP · 512 KB max</p>
         </div>
@@ -96,7 +96,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     <WorkspaceSection title="Talking model" description="Replies to you while the thinking model works independently. Auto lets your configured router choose from eligible models for each request.">
       <div className="space-y-2">
         <Label htmlFor="answer-model">Answers come from</Label>
-        <Select value={saved?.roleSettings.answerMode === 'router' ? '__auto__' : answering ?? ''} disabled={pending || !enabled.length} onValueChange={chooseAnswerModel}>
+        <Select value={saved?.roleSettings.answerMode === 'router' ? '__auto__' : answering ?? ''} disabled={pending || !enabled.length} onValueChange={value => { if (value !== null) chooseAnswerModel(value) }} items={[{ value: "__auto__", label: "Auto · choose for each request" }, ...enabled.filter(model => model.providerId !== 'decisions').map((model) => ({ value: model.id, label: <>{model.name} · {saved?.providers.find(provider => provider.id === model.providerId)?.name}</> }))]}>
           <SelectTrigger id="answer-model" className="w-full min-w-0"><SelectValue placeholder={saved?.roleSettings.answerMode === 'router' ? 'Chosen automatically for each message' : enabled.length ? 'Choose a model' : 'No models set up yet'} /></SelectTrigger>
           <SelectContent><SelectItem value="__auto__" disabled={!saved?.roleSettings.roles.routing.enabled}>Auto · choose for each request</SelectItem>{enabled.filter(model => model.providerId !== 'decisions').map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {saved?.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent>
         </Select>
@@ -108,7 +108,7 @@ export function GatewayModelsSettings({ client }: { client: GatewayControlClient
     <WorkspaceSection title={<Label htmlFor="ideas-switch" className="text-base font-semibold">Ideas from Conker</Label>} description={<>Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></>} action={<Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />} />
     <WorkspaceSection title="Thinking model" description="Analyzes the conversation in the background. Keep talking, cancel it, or bring its findings back into the chat. No tools run in this lane.">
       <Label htmlFor="thinking-model">Background analysis comes from</Label>
-      <Select value={thinker?.enabled ? thinker.modelId ?? '__off__' : '__off__'} disabled={pending} onValueChange={setThinker}>
+      <Select value={thinker?.enabled ? thinker.modelId ?? '__off__' : '__off__'} disabled={pending} onValueChange={value => { if (value !== null) setThinker(value) }} items={[{ value: "__off__", label: "Off" }, ...enabled.filter(model => model.providerId !== 'decisions').map((model) => ({ value: model.id, label: model.name }))]}>
         <SelectTrigger id="thinking-model" className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent><SelectItem value="__off__">Off</SelectItem>{enabled.filter(model => model.providerId !== 'decisions').map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent>
       </Select>

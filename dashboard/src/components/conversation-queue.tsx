@@ -51,13 +51,13 @@ export function ConversationQueue({ queue, busy, activeEntryId, onPause, onResum
           {entry.researchMode && entry.researchMode !== "off" && <p className="mt-1 text-xs text-muted-foreground">{researchLabel(entry.researchMode)} · Preview</p>}
           <p className="mt-1 truncate text-xs text-muted-foreground">{entry.modelLabel} · {privacyLabel(entry)}{entry.sentMessageId ? " · Saved; reply pending" : ""}</p>
         </div>
-        <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0" disabled={busy || activeEntryId === entry.id} aria-label={`Edit queued message ${index + 1}`} onClick={() => { onPause(); setText(entry.text); setEditingId(entry.id) }}><Pencil /></Button></TooltipTrigger><TooltipContent>Edit queued message</TooltipContent></Tooltip>
-        <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0" disabled={busy || activeEntryId === entry.id} aria-label={`Remove queued message ${index + 1}`} onClick={() => onRemove(entry.id)}><X /></Button></TooltipTrigger><TooltipContent>Remove from queue</TooltipContent></Tooltip>
+        <Tooltip><TooltipTrigger render={<Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0" disabled={busy || activeEntryId === entry.id} aria-label={`Edit queued message ${index + 1}`} onClick={() => { onPause(); setText(entry.text); setEditingId(entry.id) }} />}><Pencil /></TooltipTrigger><TooltipContent>Edit queued message</TooltipContent></Tooltip>
+        <Tooltip><TooltipTrigger render={<Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0" disabled={busy || activeEntryId === entry.id} aria-label={`Remove queued message ${index + 1}`} onClick={() => onRemove(entry.id)} />}><X /></TooltipTrigger><TooltipContent>Remove from queue</TooltipContent></Tooltip>
       </li>)}
     </ol>
     {queue.entries.length >= MAX_QUEUED_TURNS && <p role="status" className="border-t px-3 py-2 text-xs text-muted-foreground">Queue full. Edit or remove a message to make room.</p>}
-    <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditingId(null) }}>
-      <TaskDialogContent title="Edit queued message" description="This changes an unsent turn, not the response being written." onInteractOutside={event => event.preventDefault()}>
+    <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditingId(null) }} disablePointerDismissal>
+      <TaskDialogContent title="Edit queued message" description="This changes an unsent turn, not the response being written.">
         <form className="flex min-h-0 flex-col" onSubmit={event => { event.preventDefault(); if (editing && canSave && onEdit(editing.id, text)) setEditingId(null) }}>
           <OverlayBody className="space-y-4">
             {editing?.researchMode && editing.researchMode !== "off" && <p className="text-xs text-muted-foreground">{researchLabel(editing.researchMode)} · Preview · retained with this queued message</p>}

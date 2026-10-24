@@ -17,11 +17,9 @@ export function AppbarBreadcrumbs({ crumbs, className }: Pick<Navigation, "crumb
           ...(index ? [<BreadcrumbSeparator key={`${crumb.to}-separator`} className="shrink-0" />] : []),
           <BreadcrumbItem key={crumb.to} className={current ? "min-w-0" : "shrink-0"}>
             {current ? <BreadcrumbPage className="truncate font-medium" title={crumb.title}>{crumb.title}</BreadcrumbPage>
-              : <BreadcrumbLink asChild className="inline-flex min-h-(--control-height) items-center rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-                <Link to={crumb.to} aria-label={crumb.title} title={crumb.title}>
+              : <BreadcrumbLink className="inline-flex min-h-(--control-height) items-center rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" render={<Link to={crumb.to} aria-label={crumb.title} title={crumb.title} />}>
                   {crumb.title}
-                </Link>
-              </BreadcrumbLink>}
+                </BreadcrumbLink>}
           </BreadcrumbItem>,
         ]
       })}
@@ -32,11 +30,9 @@ export function AppbarBreadcrumbs({ crumbs, className }: Pick<Navigation, "crumb
 export function AppbarActions({ actions }: Pick<Navigation, "actions">) {
   if (!actions.length) return null
   return <nav aria-label="Related pages" className="flex shrink-0 items-center gap-1">
-    {actions.map(action => <Button key={action.to} variant="ghost" size="icon" asChild>
-      <Link to={action.to} aria-label={action.label} title={action.label}>
+    {actions.map(action => <Button key={action.to} variant="ghost" size="icon" render={<Link to={action.to} aria-label={action.label} title={action.label} />}>
         {action.icon === "message" ? <MessageCircle aria-hidden="true" /> : action.icon === "new-chat" ? <SquarePen aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
-      </Link>
-    </Button>)}
+      </Button>)}
   </nav>
 }
 

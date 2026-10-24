@@ -43,7 +43,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const focusComposer = useRef(false)
   const focusReference = useRef(false)
   const actionGroup = useRef<HTMLDivElement>(null)
-  const restoreFocus = (event: Event) => { event.preventDefault(); actionGroup.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus() }
+  const restoreFocus = () => { actionGroup.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(); return false }
   const navigate = useNavigate()
   const busy = pending || !!streaming || !!session.archived
   const assistant = message.role === "assistant"
@@ -79,28 +79,29 @@ export function MessageActions({ session, message }: { session: Session; message
       </>}
       <ActionButton label={copied === "link" ? "Link copied" : "Share message"} disabled={message.redacted} onClick={() => void copy(`${location.origin}${session.id === mainId ? "/companion" : `/chat/${session.id}`}#${encodeURIComponent(message.id)}`, "link")}>{copied === "link" ? <Check /> : <Share2 />}</ActionButton>
     <DropdownMenu>
-      <DropdownMenuTrigger asChild><ActionButton label="More message actions"><MoreHorizontal /></ActionButton></DropdownMenuTrigger>
-      <DropdownMenuContent align={assistant ? "start" : "end"} className="w-56" onCloseAutoFocus={event => {
-        if (focusComposer.current) { event.preventDefault(); focusComposer.current = false; document.getElementById("message-composer")?.focus() }
-        if (focusReference.current) { event.preventDefault(); focusReference.current = false }
+      <DropdownMenuTrigger render={<ActionButton label="More message actions" />}><MoreHorizontal /></DropdownMenuTrigger>
+      <DropdownMenuContent align={assistant ? "start" : "end"} className="w-56" finalFocus={() => {
+        if (focusComposer.current) { focusComposer.current = false; document.getElementById("message-composer")?.focus(); return false }
+        if (focusReference.current) { focusReference.current = false; return false }
+        return true
       }}>
-        {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={() => { setReply(session.id, message.id); focusComposer.current = true }}><CornerUpLeft />Reply</DropdownMenuItem>}
-        <DropdownMenuItem disabled={busy || message.redacted} onSelect={async () => {
+        {assistant && <DropdownMenuItem disabled={busy || message.redacted} onClick={() => { setReply(session.id, message.id); focusComposer.current = true }}><CornerUpLeft />Reply</DropdownMenuItem>}
+        <DropdownMenuItem disabled={busy || message.redacted} onClick={async () => {
           let fork: Session | undefined
           if (await mutate(async () => { fork = await conkerClient.forkConversation(session.id, message.id) })) {
             if (fork) navigate(`/chat/${fork.id}`)
           }
         }}><GitFork />Fork from here</DropdownMenuItem>
-        {assistant ? <DropdownMenuSub><DropdownMenuSubTrigger disabled={busy || message.redacted || !models.length}><RotateCcw />Retry with model</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 max-w-72 overflow-y-auto">{models.map(model => <DropdownMenuItem key={model.id} onSelect={() => void retry(session.id, message.id, model.id)}>{model.name}<span className="ml-auto text-xs text-muted-foreground">{model.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub> : <DropdownMenuItem disabled={message.redacted || !message.text || !speech.supported} onSelect={speak}><Volume2 />{speech.active ? "Stop reading" : "Read aloud"}</DropdownMenuItem>}
+        {assistant ? <DropdownMenuSub><DropdownMenuSubTrigger disabled={busy || message.redacted || !models.length}><RotateCcw />Retry with model</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 max-w-72 overflow-y-auto">{models.map(model => <DropdownMenuItem key={model.id} onClick={() => void retry(session.id, message.id, model.id)}>{model.name}<span className="ml-auto text-xs text-muted-foreground">{model.providerId}</span></DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub> : <DropdownMenuItem disabled={message.redacted || !message.text || !speech.supported} onClick={speak}><Volume2 />{speech.active ? "Stop reading" : "Read aloud"}</DropdownMenuItem>}
         <DropdownMenuSeparator />
-        {assistant && <DropdownMenuItem disabled={busy || message.redacted || message.status !== "complete" || !message.text} onSelect={() => setSavingArtifact(true)}><FileBox />Save to artifacts</DropdownMenuItem>}
-        {artifacts.length > 0 && <DropdownMenuSub><DropdownMenuSubTrigger><FileBox />Open artifact</DropdownMenuSubTrigger><DropdownMenuSubContent>{artifacts.map(artifact => <DropdownMenuItem key={artifact.id} onSelect={() => { useConversationWorkspace.getState().closeRail(session.id); useArtifactWorkspace.getState().open(session.id, artifact.id) }}>{artifact.title}</DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub>}
-        <DropdownMenuItem disabled={busy || message.redacted} onSelect={() => void update({ pinned: !message.pinned })}><Pin />{message.pinned ? "Unpin message" : "Pin message"}</DropdownMenuItem>
-        {assistant && <DropdownMenuItem disabled={busy || message.redacted} onSelect={edit}><Pencil />Edit message</DropdownMenuItem>}
-        <DropdownMenuItem disabled={busy || message.redacted} variant="destructive" onSelect={() => setDialog("redact")}><Trash2 />Delete / redact</DropdownMenuItem>
+        {assistant && <DropdownMenuItem disabled={busy || message.redacted || message.status !== "complete" || !message.text} onClick={() => setSavingArtifact(true)}><FileBox />Save to artifacts</DropdownMenuItem>}
+        {artifacts.length > 0 && <DropdownMenuSub><DropdownMenuSubTrigger><FileBox />Open artifact</DropdownMenuSubTrigger><DropdownMenuSubContent>{artifacts.map(artifact => <DropdownMenuItem key={artifact.id} onClick={() => { useConversationWorkspace.getState().closeRail(session.id); useArtifactWorkspace.getState().open(session.id, artifact.id) }}>{artifact.title}</DropdownMenuItem>)}</DropdownMenuSubContent></DropdownMenuSub>}
+        <DropdownMenuItem disabled={busy || message.redacted} onClick={() => void update({ pinned: !message.pinned })}><Pin />{message.pinned ? "Unpin message" : "Pin message"}</DropdownMenuItem>
+        {assistant && <DropdownMenuItem disabled={busy || message.redacted} onClick={edit}><Pencil />Edit message</DropdownMenuItem>}
+        <DropdownMenuItem disabled={busy || message.redacted} variant="destructive" onClick={() => setDialog("redact")}><Trash2 />Delete / redact</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => { focusReference.current = true; openRail(session.id, "explain", message.id) }}><Info />Message info</DropdownMenuItem>
-        <DropdownMenuItem disabled={message.redacted} onSelect={() => { focusReference.current = true; openRail(session.id, "source", message.id) }}><FileSearch />Open source</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { focusReference.current = true; openRail(session.id, "explain", message.id) }}><Info />Message info</DropdownMenuItem>
+        <DropdownMenuItem disabled={message.redacted} onClick={() => { focusReference.current = true; openRail(session.id, "source", message.id) }}><FileSearch />Open source</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     </div>
@@ -109,9 +110,9 @@ export function MessageActions({ session, message }: { session: Session; message
       {message.edited && <span>Edited</span>}{message.pinned && <Pin className="size-3" aria-label="Pinned" />}
     </div>
     {savingArtifact && <SaveResponseArtifact sessionId={session.id} message={message} onClose={() => setSavingArtifact(false)} />}
-    <Dialog open={dialog === "edit"} onOpenChange={open => { if (!open && !pending) setDialog(null) }}>
+    <Dialog open={dialog === "edit"} onOpenChange={open => { if (!open && !pending) setDialog(null) }} disablePointerDismissal>
       <TaskDialogContent title={editNeedsFork ? "Edit in a new fork" : "Edit message"} description={editNeedsFork ? "Later replies used the original words. Save this edit in a new conversation ending here; the existing conversation stays intact." : "Edits are marked in this preview. They do not regenerate the conversation or repeat tools."}
-        onCloseAutoFocus={restoreFocus} onInteractOutside={event => event.preventDefault()} showCloseButton={!pending}>
+        finalFocus={restoreFocus} showCloseButton={!pending}>
         <form className="flex min-h-0 flex-col" onSubmit={async event => {
           event.preventDefault()
           if (!editNeedsFork) { if (await update({ text })) setDialog(null); return }
@@ -131,7 +132,7 @@ export function MessageActions({ session, message }: { session: Session; message
     </Dialog>
     <ConfirmationDialog open={dialog === "redact"} onOpenChange={open => { if (!open) setDialog(null) }} title="Redact this message?"
       description="The text and its source are removed from this conversation. A redacted marker remains. Existing forks are separate copies."
-      actionLabel="Redact message" pending={busy} error={error} onCloseAutoFocus={restoreFocus} onConfirm={async () => { if (await update({ redacted: true })) setDialog(null) }}>
+      actionLabel="Redact message" pending={busy} error={error} finalFocus={restoreFocus} onConfirm={async () => { if (await update({ redacted: true })) setDialog(null) }}>
       <p className="line-clamp-3 text-sm text-muted-foreground">{message.text}</p>
     </ConfirmationDialog>
   </div>

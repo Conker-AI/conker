@@ -17,7 +17,7 @@ export function SaveResponseArtifact({ sessionId, message, onClose }: { sessionI
   const [error, setError] = useState("")
   const tasks = useConker(data => data.tasks).filter(task => task.sessionId === sessionId && !task.archivedAt)
   const { pending, mutate } = useConkerStore()
-  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose() }}><TaskDialogContent title="Save response to artifacts" description="Copy the response text and citations with version history. Activity and interactive cards stay in the original conversation. Preview copies reset on reload." showCloseButton={!pending} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (pending) event.preventDefault() }}>
+  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose() }} disablePointerDismissal><TaskDialogContent title="Save response to artifacts" description="Copy the response text and citations with version history. Activity and interactive cards stay in the original conversation. Preview copies reset on reload." showCloseButton={!pending}>
     <form className="flex min-h-0 flex-col" onSubmit={async event => {
       event.preventDefault()
       let artifactId: string | undefined

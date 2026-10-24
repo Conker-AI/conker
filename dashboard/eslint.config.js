@@ -25,4 +25,16 @@ export default tseslint.config([
     files: ['src/components/ui/**/*.tsx', 'src/contexts/**/*.tsx'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
+  {
+    // coss ui files are vendored unchanged (docs/reference/template-reference.md); they predate the
+    // React Compiler rules, so only those rules are relaxed here.
+    files: ['src/components/ui/**/*.tsx'],
+    rules: {
+      'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+    },
+  },
 ])

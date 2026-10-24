@@ -44,11 +44,9 @@ export function NavUser({
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
+          <DropdownMenuTrigger render={<SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
-            >
+              className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground cursor-pointer" />}>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg">
                 <Avatar><AvatarFallback>AL</AvatarFallback></Avatar>
               </div>
@@ -59,10 +57,9 @@ export function NavUser({
                 </span>
               </div>
               <EllipsisVertical className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
+            </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--anchor-width) min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -82,25 +79,19 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/companion">
+              <DropdownMenuItem render={<Link to="/settings" />}><Settings />Settings</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" render={<Link to="/settings/companion" />}>
                   <CircleUser />
                   Companion settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/system">
+                </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" render={<Link to="/system" />}>
                   <Server />
                   System
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/inbox">
+                </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" render={<Link to="/inbox" />}>
                   <BellDot />
                   Inbox
-                </Link>
-              </DropdownMenuItem>
+                </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             {footer ?? <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Local fixture · no account connection</DropdownMenuLabel>}
