@@ -43,9 +43,11 @@ action and never retries by itself. Failed loads show inline errors and the summ
 Long lists follow the approved prototype (v4): a narrow page with one card that holds its own search
 on top, one line per item (icon, a title that says what it is, a muted sub-line, a time) and a
 footer for paging and end-of-list notes. The shared pieces are `ListCard` and `ListLine` in the
-design system; Chats and Cron jobs use them (Cron jobs adds All / Enabled / Paused chips and a short
-next-run time), and the other lists follow. The page-level search in
-the top bar stays for pages without a list card.
+design system; Chats, Cron jobs, Projects, Artifacts and Agents use them. Filters are `FilterChip`s
+with counts under the search (Cron jobs: All / Enabled / Paused; Inbox the same way); Archived
+chips appear only once something is archived, so an empty filter never shows. While a list loads it
+shows `ListSkeleton`; if it fails, `InlineError` takes the card's place and refreshes itself when
+the server answers again. The page-level search in the top bar stays for pages without a list card.
 
 ## Details open in place (25 October)
 

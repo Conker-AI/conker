@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Archive, ArrowLeft, FolderKanban, Link2, Plus, RefreshCw, RotateCcw, Save, Unlink } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSearch, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent } from '@/components/design-system'
+import { CollectionSearch, ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent } from '@/components/design-system'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -144,11 +146,12 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
   const location = useLocation(), navigate = useNavigate(), match = location.pathname.match(/^\/projects\/(project_[0-9a-f]{32})$/)
   const createRequested = new URLSearchParams(location.search).get('create') === '1'
   const [projects, setProjects] = useState<GatewayProject[] | null>(null), [query, setQuery] = useState(''), [error, setError] = useState<string | null>(null), [creating, setCreating] = useState(createRequested), [loading, setLoading] = useState(false)
+  const [filter, setFilter] = useState<'active' | 'archived'>('active'), [listError, setListError] = useState<unknown>(null)
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try { setProjects((await control.projects.list({ limit: 200 })).results) } catch (cause) { setError(gatewayError(cause).message) } finally { setLoading(false) }
+    setLoading(true); setError(null); setListError(null)
+    try { setProjects((await control.projects.list({ limit: 200 })).results) } catch (cause) { setListError(cause); setError(gatewayError(cause).message) } finally { setLoading(false) }
   }, [control])
-  useEffect(() => { let active = true; control.projects.list({ limit: 200 }).then(page => active && setProjects(page.results)).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control])
+  useEffect(() => { let active = true; control.projects.list({ limit: 200 }).then(page => active && setProjects(page.results)).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } }); return () => { active = false } }, [control])
   const selected = match ? projects?.find(item => item.id === match[1]) : undefined
   useEffect(() => {
     if (!match || !projects || selected) return
@@ -165,14 +168,23 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
     if (selected) return <ProjectEditor key={selected.id} project={selected} control={control} runtime={runtime} activity={activity} onChanged={update} />
     return <div className="space-y-4 p-6">{error ? <><PageHeader title="Project unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/projects')}>Back to projects</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading project…</p>}</div>
   }
-  const visible = (projects ?? []).filter(item => `${item.name} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  const active = visible.filter(item => item.archivedAt === null), archived = visible.filter(item => item.archivedAt !== null)
-  return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Projects" description="Keep related chats, tasks and guidance together without changing their permissions." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh projects" title="Refresh projects" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New project</WorkspaceAction></>} />
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {!projects && !error ? <CollectionLoading label="Loading projects…" /> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search projects" placeholder="Search projects…" count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'} emptyTitle={query ? 'No matching projects' : 'No projects yet'} emptyDescription={query ? 'Try a different name or description.' : 'Create a project to keep guidance and related work together.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
-      <div className="space-y-5"><CollectionSection title="Active projects">{active.map(item => <CollectionRow key={item.id} to={`/projects/${item.id}`} title={item.name} description={item.description || 'No description'} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><FolderKanban className="size-4" /></span>} trailing={<><span>{item.links.length} {item.links.length === 1 ? 'reference' : 'references'}</span><span>Revision {item.revision}</span></>} />)}</CollectionSection>{!!archived.length && <CollectionSection title="Archived">{archived.map(item => <CollectionRow key={item.id} to={`/projects/${item.id}`} title={item.name} description={item.description || 'No description'} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><Archive className="size-4" /></span>} trailing={<span>Read-only</span>} />)}</CollectionSection>}</div>
-    </CollectionPanel>}
+  const matches = (projects ?? []).filter(item => `${item.name} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+  const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length
+  // Archived projects get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const visible = matches.filter(item => (item.archivedAt !== null) === (showing === 'archived'))
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <PageHeader actionsOnly title="Projects" description="Keep related chats, tasks and guidance together without changing their permissions." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh projects" title="Refresh projects" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New project</WorkspaceAction></>} />
+    {error && (projects ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Projects didn’t load" onRetry={() => load()} />)}
+    {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard query={query} onQueryChange={setQuery} label="Search projects" placeholder="Search projects…" count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'}
+      filters={archivedCount ? <>{chip('active', 'Active', projects.length - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
+      emptyTitle={query ? 'No matching projects' : !projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
+      emptyDescription={query ? 'Try a different name or description.' : !projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
+      emptyAction={query ? undefined : <Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
+      {visible.map(item => <ListLine key={item.id} to={`/projects/${item.id}`} icon={item.archivedAt === null ? <FolderKanban /> : <Archive />} title={item.name} sub={item.description || 'No description'}
+        meta={item.archivedAt === null ? `${item.links.length} ${item.links.length === 1 ? 'reference' : 'references'}` : 'Read-only'} />)}
+    </ListCard>}
     <CreateProjectDialog client={control.projects} open={creating || createRequested} onOpenChange={setCreateOpen} onCreated={project => { update(project); setCreating(false); navigate(`/projects/${project.id}`) }} />
   </div></GatewayPageFrame>
 }

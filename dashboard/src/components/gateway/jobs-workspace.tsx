@@ -3,7 +3,7 @@ import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, History, Play, 
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ConfirmationDialog, ListCard, ListLine, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
+import { ConfirmationDialog, FilterChip, ListCard, ListLine, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
@@ -109,9 +109,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.instructions} ${job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
-  const chip = (value: typeof filter, text: string, count: number) => <Button key={value} type="button" size="sm" variant={filter === value ? 'secondary' : 'ghost'} aria-pressed={filter === value} className="rounded-full" onClick={() => setFilter(value)}>
-    {text}<span className="tabular-nums text-muted-foreground">{count}</span>
-  </Button>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
     <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
     {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}

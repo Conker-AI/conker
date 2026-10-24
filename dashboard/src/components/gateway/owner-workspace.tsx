@@ -6,6 +6,7 @@ import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { IdeaCard } from './proposals-panel'
 import { useProposals } from './proposals-state'
 import { CollectionRow, CollectionSection, PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
+import { FilterChip } from '@/components/design-system/list-card'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { useLater } from '@/components/inbox/later'
@@ -128,9 +129,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
   const refresh = () => { void load(); if (!requestId) void ideas.load() }
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
-  const chip = (value: typeof filter, text: string, count: number) => <Button key={value} type="button" size="sm" variant={filter === value ? 'secondary' : 'ghost'} aria-pressed={filter === value} className="rounded-full" onClick={() => setFilter(value)}>
-    {text}<span className="tabular-nums text-muted-foreground">{count}</span>
-  </Button>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   const laterCount = (showDecisions ? laterDecisions.length : 0) + (showIdeas ? laterIdeas.length : 0)
   return <GatewayPageFrame className="h-full">
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5">

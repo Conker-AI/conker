@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { CollectionLoading, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -68,19 +70,19 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel }
   </form>
 }
 
-function LoadingPage() {
-  return <GatewayPageFrame><CollectionLoading label="Loading agents…" /></GatewayPageFrame>
+function LoadingPage({ list }: { list: boolean }) {
+  return <GatewayPageFrame>{list ? <div className="mx-auto w-full max-w-3xl"><ListSkeleton rows={4} label="Loading agents…" /></div> : <CollectionLoading label="Loading agents…" />}</GatewayPageFrame>
 }
 
 export function GatewayAgentsWorkspace({ client, companion = false }: { client: GatewayControlClient; companion?: boolean }) {
   const location = useLocation(), navigate = useNavigate()
   const [agents, setAgents] = useState<AgentProfile[] | null>(null), [query, setQuery] = useState(''), [error, setError] = useState<string | null>(null)
-  const [resetNonce, setResetNonce] = useState(0)
+  const [resetNonce, setResetNonce] = useState(0), [filter, setFilter] = useState<'active' | 'archived'>('active'), [listError, setListError] = useState<unknown>(null)
   const [creating, setCreating] = useState(false), [archive, setArchive] = useState<AgentProfile | null>(null), [archivePending, setArchivePending] = useState(false), [archiveError, setArchiveError] = useState<string | null>(null)
-  const load = useCallback(() => { setError(null); client.agents().then(setAgents).catch(cause => setError(gatewayError(cause).message)) }, [client])
+  const load = useCallback(() => { setError(null); setListError(null); return client.agents().then(setAgents).catch(cause => { setListError(cause); setError(gatewayError(cause).message) }) }, [client])
   useEffect(() => {
     let active = true
-    client.agents().then(rows => { if (active) setAgents(rows) }).catch(cause => { if (active) setError(gatewayError(cause).message) })
+    client.agents().then(rows => { if (active) setAgents(rows) }).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } })
     return () => { active = false }
   }, [client])
   const editMatch = location.pathname.match(/^\/agents\/(agent_[0-9a-f]{32})\/edit$/)
@@ -102,8 +104,8 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
       setAgents(current => current?.map(item => item.id === updated.id ? updated : item) ?? [updated]); setArchive(null)
     } catch (cause) { setArchiveError(changedMessage(cause)) } finally { setArchivePending(false) }
   }
-  if (!agents && !error) return <LoadingPage />
-  if (error) return <div className="space-y-4 p-6" role="alert"><PageHeader title="Agents are unavailable" description={error} density="compact" /><Button variant="outline" onClick={load}>Try again</Button></div>
+  if (!agents && !error) return <LoadingPage list={!companion && !editMatch} />
+  if (error) return <GatewayPageFrame><div className="mx-auto w-full max-w-3xl"><InlineError error={listError} title="Agents didn’t load" onRetry={() => load()} /></div></GatewayPageFrame>
   if (companion) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <PageHeader actionsOnly title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<WorkspaceAction render={<Link to="/companion" />}>Open chat</WorkspaceAction>} />
     {selected ? <AgentEditor key={`${selected.revision}:${resetNonce}`} client={client} profile={selected} companion onSaved={saved} onCancel={() => setResetNonce(value => value + 1)} /> : <div className="p-6 text-sm text-muted-foreground">The canonical Companion profile is missing. Check System before continuing.</div>}
@@ -113,18 +115,21 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
     {selected?.archived_at === null ? <AgentEditor client={client} profile={selected} onSaved={saved} onCancel={() => navigate('/agents')} /> : selected ? <div className="space-y-3 p-6"><p className="text-sm text-muted-foreground">Restore this agent before editing its profile.</p><Button variant="outline" onClick={() => setArchive(selected)}><RotateCcw />Restore agent</Button></div> : <div className="p-6 text-sm text-muted-foreground">This agent does not exist.</div>}
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? 'Its immutable history is kept, but the profile moves out of active use.' : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
   </div>
-  const active = visible.filter(item => item.archived_at === null), archived = visible.filter(item => item.archived_at !== null)
+  const archivedCount = (agents ?? []).filter(item => item.archived_at !== null).length
+  // Archived agents get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const shown = visible.filter(item => (item.archived_at !== null) === (showing === 'archived'))
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   return <GatewayPageFrame>
-    <div className="space-y-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
       <PageHeader actionsOnly title="Agents" description="Create focused roles for recurring work. Profiles choose models, tools and memory; they never grant authority." density="compact" actions={<WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
-      <CollectionPanel query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={visible.length} unit={visible.length === 1 ? 'agent' : 'agents'} emptyTitle={query ? 'No matching agents' : 'No agents yet'} emptyDescription={query ? 'Try a different name or role.' : 'Create an agent for a focused kind of work.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
-        <div className="space-y-5">
-          <CollectionSection title="Active agents">
-            {active.map(item => <CollectionRow key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} title={item.configuration.name} description={<span className="truncate">{item.configuration.role}</span>} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><Bot className="size-4" /></span>} trailing={<><span>Revision {item.revision}</span>{item.kind === 'companion' && <span>Primary</span>}</>} />)}
-          </CollectionSection>
-          {!!archived.length && <CollectionSection title="Archived">{archived.map(item => <CollectionRow key={item.id} to={`/agents/${item.id}/edit`} title={item.configuration.name} description={<span className="truncate">{item.configuration.role}</span>} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><Bot className="size-4" /></span>} trailing={<span>Revision {item.revision}</span>} />)}</CollectionSection>}
-        </div>
-      </CollectionPanel>
+      <ListCard query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={shown.length} unit={shown.length === 1 ? 'agent' : 'agents'}
+        filters={archivedCount ? <>{chip('active', 'Active', (agents?.length ?? 0) - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
+        emptyTitle={query ? 'No matching agents' : showing === 'archived' ? 'No archived agents' : 'No agents yet'} emptyDescription={query ? 'Try a different name or role.' : showing === 'archived' ? 'Archived agents keep their history.' : 'Create an agent for a focused kind of work.'}
+        emptyAction={query || showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
+        {shown.map(item => <ListLine key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={item.archived_at === null ? <Bot /> : <Archive />} title={item.configuration.name} sub={item.configuration.role}
+          meta={item.kind === 'companion' ? 'Primary' : `Revision ${item.revision}`} />)}
+      </ListCard>
     </div>
     <Dialog open={creating} onOpenChange={setCreating}><TaskDialogContent title="New agent" description="Create a durable profile for one focused role." size="wide"><AgentEditor client={client} creating onSaved={saved} onCancel={() => setCreating(false)} /></TaskDialogContent></Dialog>
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? 'Its immutable history is kept, but the profile moves out of active use.' : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
