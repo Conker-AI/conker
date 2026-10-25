@@ -119,6 +119,9 @@ routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
 // Plan usage is percentages per plan window only; dismissing an alert stays host-admin only.
 routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
+// AI jobs: the browser creates AI jobs only (never raw tool jobs), reads their notes and dismisses one.
+routes.GET.unshift(/^\/api\/control\/pi\/jobs\/agent\/notes$/)
+routes.POST.unshift(/^\/api\/control\/pi\/jobs\/agent$/, /^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
 // Character packages may contain bounded embedded media. Only this authenticated owner route gets the larger envelope.
 const characterReadRoute = /^\/api\/control\/pi\/characters\/companion(?:\/(?:history|export))?$/
 const characterResponseRoute = /^\/api\/control\/pi\/characters\/companion(?:\/(?:history|export|save|import|restore))?$/
@@ -143,6 +146,8 @@ routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 conversationWrites.push(draftRoute, draftStartRoute)
+// Dismissing an AI job's note hides one line; it grants and runs nothing.
+conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)

@@ -13,6 +13,8 @@ import { useLater } from '@/components/inbox/later'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { GatewayPageFrame } from './page-frame'
 import { ApprovalCard } from '@/components/inbox/approval-card'
+import { AgentNoteCard } from '@/components/inbox/agent-note-card'
+import { useAgentNotes, type AgentNotesClient } from '@/components/inbox/agent-notes'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { OwnerDecisionError, type GatewayOwnerClient, type OwnerDecision, type OwnerRequest } from '@/lib/gateway/owner'
@@ -20,16 +22,17 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
   const [selected, setSelected] = useState<OwnerRequest | null>(null)
   const [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<unknown>(null)
-  const [filter, setFilter] = useState<'all' | 'decisions' | 'ideas'>('all')
+  const [filter, setFilter] = useState<'all' | 'decisions' | 'ideas' | 'checks'>('all')
   const [undo, setUndo] = useState<{ key: string; title: string } | null>(null)
   const ideas = useProposals(proposals, active && !requestId)
+  const notes = useAgentNotes(checks, active && !requestId)
   const { isLater, later, restore } = useLater()
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
@@ -111,13 +114,14 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
   // Keep uncertain attempts visible until the owner checks their saved outcome.
   const pendingRows = rows.filter(row => !earlier(row) || retained.attempts[row.id])
   const earlierRows = rows.filter(row => earlier(row) && !retained.attempts[row.id])
-  const decisionKey = (id: string) => `decision:${id}`, ideaKey = (id: string) => `idea:${id}`
+  const decisionKey = (id: string) => `decision:${id}`, ideaKey = (id: string) => `idea:${id}`, checkKey = (id: string) => `check:${id}`
   const nowDecisions = pendingRows.filter(row => retained.attempts[row.id] || !isLater(decisionKey(row.id)))
   const laterDecisions = pendingRows.filter(row => !retained.attempts[row.id] && isLater(decisionKey(row.id)))
   const nowIdeas = (ideas.items ?? []).filter(item => !isLater(ideaKey(item.id)))
   const laterIdeas = (ideas.items ?? []).filter(item => isLater(ideaKey(item.id)))
-  const showDecisions = filter !== 'ideas', showIdeas = filter !== 'decisions'
-  const needsCount = nowDecisions.length + nowIdeas.length
+  const nowNotes = notes.items.filter(item => !isLater(checkKey(item.id))), laterNotes = notes.items.filter(item => isLater(checkKey(item.id)))
+  const showDecisions = filter === 'all' || filter === 'decisions', showIdeas = filter === 'all' || filter === 'ideas', showNotes = filter === 'all' || filter === 'checks'
+  const needsCount = nowDecisions.length + nowIdeas.length + nowNotes.length
   const today = new Date(now).toDateString()
   const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
@@ -127,10 +131,10 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
     onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
-  const refresh = () => { void load(); if (!requestId) void ideas.load() }
+  const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load() } }
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
-  const laterCount = (showDecisions ? laterDecisions.length : 0) + (showIdeas ? laterIdeas.length : 0)
+  const laterCount = (showDecisions ? laterDecisions.length : 0) + (showIdeas ? laterIdeas.length : 0) + (showNotes ? laterNotes.length : 0)
   return <GatewayPageFrame className="h-full">
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
@@ -139,7 +143,7 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
           {/* A failed load is never summarized as "All clear". */}
           <p className="text-sm text-muted-foreground">{loadError !== null || ideas.error !== null ? 'Part of your Inbox didn’t load' : needsCount ? `${needsCount} ${needsCount === 1 ? 'needs' : 'need'} you` : 'All clear'}{loadError === null && <> · {decidedToday} decided today</>}</p>
           {loadError === null && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
-            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length)}{chip('ideas', 'Ideas', nowIdeas.length)}
+            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
       </>}
@@ -152,14 +156,15 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
         {loading && !rows.length && <ListSkeleton rows={3} label="Loading your Inbox…" />}
-        {(showDecisions && nowDecisions.length > 0) || (showIdeas && nowIdeas.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
+        {(showDecisions && nowDecisions.length > 0) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
           {showDecisions && nowDecisions.map(row => card(row))}
+          {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}
           {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
             onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
         </section> : !loading && loadError === null && <Empty className="py-10 md:py-14">
           <EmptyHeader>
             <EmptyMedia variant="icon"><CheckCheck className="text-success-foreground" /></EmptyMedia>
-            <EmptyTitle>{filter === 'all' ? 'Nothing needs you' : filter === 'decisions' ? 'No decisions waiting' : 'No new ideas'}</EmptyTitle>
+            <EmptyTitle>{filter === 'all' ? 'Nothing needs you' : filter === 'decisions' ? 'No decisions waiting' : filter === 'checks' ? 'Nothing new from your AI jobs' : 'No new ideas'}</EmptyTitle>
             <EmptyDescription>{filter === 'ideas' ? 'Conker looks once a day, after a model is chosen for Proposals in Settings.' : `You decided ${decidedToday} today. New requests from Conker appear here.`}</EmptyDescription>
           </EmptyHeader>
         </Empty>}
@@ -167,7 +172,8 @@ export function GatewayOwnerWorkspace({ client, proposals, state, active }: { cl
           <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>
           <ul className="flex flex-col divide-y rounded-xl border">
             {[...(showDecisions ? laterDecisions.map(row => ({ key: decisionKey(row.id), title: row.title || 'Review this action', kind: 'Permission' })) : []),
-              ...(showIdeas ? laterIdeas.map(item => ({ key: ideaKey(item.id), title: item.title, kind: 'Idea' })) : [])].map(item => <li key={item.key} className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
+              ...(showIdeas ? laterIdeas.map(item => ({ key: ideaKey(item.id), title: item.title, kind: 'Idea' })) : []),
+              ...(showNotes ? laterNotes.map(item => ({ key: checkKey(item.id), title: item.title, kind: 'AI job' })) : [])].map(item => <li key={item.key} className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
               <span className="min-w-0 flex-1 truncate">{item.title}</span><span className="shrink-0 text-xs text-muted-foreground">{item.kind}</span>
               <Button type="button" size="xs" variant="ghost" onClick={() => restore(item.key)}>Bring back</Button>
             </li>)}

@@ -1,0 +1,65 @@
+import { useState, type FormEvent } from 'react'
+import { Sparkles } from 'lucide-react'
+import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system'
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { GatewayJobMutationError, type GatewayJob, type GatewayJobsClient, type GatewayJobTiming } from '@/lib/gateway/jobs'
+import { gatewayError } from '@/lib/gateway/transport'
+
+type Repeat = 'hours' | 'daily' | 'weekly'
+const repeats: { value: Repeat; label: string }[] = [{ value: 'hours', label: 'Every few hours' }, { value: 'daily', label: 'Every day' }, { value: 'weekly', label: 'Every week' }]
+const intervals = [1, 2, 3, 4, 6, 12]
+const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const blank = { name: '', instructions: '', repeat: 'daily' as Repeat, hours: '2', time: '09:00', day: '0' }
+
+function timing(value: typeof blank): GatewayJobTiming {
+  if (value.repeat === 'hours') return { kind: 'interval', time: '00:00', day: 0, hours: Number(value.hours) }
+  return { kind: value.repeat, time: value.time, day: value.repeat === 'weekly' ? Number(value.day) : 0, hours: 24 }
+}
+
+/** A new AI job: what Conker should do, and when. Tools still ask before changing anything. */
+export function NewAgentJobDialog({ open, onOpenChange, client, onCreated }: {
+  open: boolean; onOpenChange: (open: boolean) => void; client: Pick<GatewayJobsClient, 'createAgentJob'>; onCreated: (job: GatewayJob) => void
+}) {
+  const [value, setValue] = useState(blank), [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null)
+  const close = () => { setValue(blank); setError(null); onOpenChange(false) }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setPending(true); setError(null)
+    try {
+      onCreated(await client.createAgentJob({ name: value.name, instructions: value.instructions, timing: timing(value), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }))
+      setValue(blank)
+    } catch (cause) { setError(cause instanceof GatewayJobMutationError ? cause.message : gatewayError(cause).message) } finally { setPending(false) }
+  }
+  const select = (id: string, current: string, items: { value: string; label: string }[], onChange: (next: string) => void) =>
+    <Select value={current} onValueChange={next => { if (next !== null) onChange(next) }} disabled={pending} items={items}>
+      <SelectTrigger id={id}><SelectValue /></SelectTrigger>
+      <SelectContent>{items.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+    </Select>
+  return <Dialog open={open} onOpenChange={next => !pending && !next && close()} disablePointerDismissal>
+    <TaskDialogContent title="New AI job" description="Tell Conker what to do and when. It works with its tools on that schedule and asks before changing, sending or creating anything." showCloseButton={!pending}>
+      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><OverlayBody>
+        <div className="space-y-2"><Label htmlFor="agent-job-name">Name</Label><Input id="agent-job-name" required maxLength={80} disabled={pending} value={value.name} placeholder="Weekly life review" onChange={event => setValue({ ...value, name: event.target.value })} /></div>
+        <div className="space-y-2"><Label htmlFor="agent-job-instructions">What to do</Label><Textarea id="agent-job-instructions" required maxLength={4000} disabled={pending} value={value.instructions} placeholder="Look at my whole week: chats, calendar and memory. Suggest better ways to organize it, and tell me only if something needs me." onChange={event => setValue({ ...value, instructions: event.target.value })} className="min-h-32 resize-y" />
+          <p className="text-xs leading-5 text-muted-foreground">Add conditions in your own words, like “only if a deadline is within three days”. When there’s nothing for you, it stays quiet.</p></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2"><Label htmlFor="agent-job-repeat">When</Label>{select('agent-job-repeat', value.repeat, repeats, repeat => setValue({ ...value, repeat: repeat as Repeat }))}</div>
+          {value.repeat === 'hours' ? <div className="space-y-2"><Label htmlFor="agent-job-hours">How often</Label>{select('agent-job-hours', value.hours, intervals.map(hours => ({ value: String(hours), label: hours === 1 ? 'Every hour' : `Every ${hours} hours` })), hours => setValue({ ...value, hours }))}</div>
+            : <div className="grid grid-cols-2 gap-2">
+              {value.repeat === 'weekly' && <div className="space-y-2"><Label htmlFor="agent-job-day">Day</Label>{select('agent-job-day', value.day, days.map((day, index) => ({ value: String(index), label: day })), day => setValue({ ...value, day }))}</div>}
+              <div className={value.repeat === 'weekly' ? 'space-y-2' : 'col-span-2 space-y-2'}><Label htmlFor="agent-job-time">Time</Label><Input id="agent-job-time" type="time" required disabled={pending} value={value.time} onChange={event => setValue({ ...value, time: event.target.value })} /></div>
+            </div>}
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">{value.repeat === 'hours' ? 'Repeating jobs skip your quiet hours (set in Settings), so they never run at night.' : 'It runs at the time you set, in this device’s time zone.'}</p>
+        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
+      </OverlayBody>
+      <FormActions inset description="Creating it asks for your password.">
+        <Button type="button" variant="outline" disabled={pending} onClick={close}>Cancel</Button>
+        <Button type="submit" disabled={pending || !value.name.trim() || !value.instructions.trim() || (value.repeat !== 'hours' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))}><Sparkles />{pending ? 'Creating…' : 'Create AI job'}</Button>
+      </FormActions></form>
+    </TaskDialogContent>
+  </Dialog>
+}

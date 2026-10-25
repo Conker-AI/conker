@@ -6,7 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
-import { createFakeProviderCredentials, fakePlanUsage } from './fake-gateway-providers'
+import { createFakeAgentJobs, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -61,7 +61,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const corrections = new Map<string, Json>()
   const correctionTexts = new Map<string, { revision: number; text: string }>()
   if (globalThis.sessionStorage?.getItem('conker-fake-correction') === 'pending') corrections.set('correction_preview_saved', { schemaVersion: 1, requestId: 'correction_preview_saved', memoryId: 'mem_judo', previousRevision: 1, payloadHash: 'a'.repeat(64), status: 'unknown', revision: null, indexing: null, errorCode: null, cachedPackagesCleared: 0, sourceConversationKept: true })
-  const providerCredentials = createFakeProviderCredentials()
+  const providerCredentials = createFakeProviderCredentials(), agentJobs = createFakeAgentJobs(() => jobs), seedAgentJobs = withFakeAgentJobs(agentJobs)
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
   const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
@@ -294,7 +294,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const jobs: Json[] = [{
     schemaVersion: 1, id: jobId, revision: 2, createdAt: now() - 172800, nextAt: now() + 3600,
     definition: {
-      name: 'Morning calendar brief', instructions: 'Summarize today’s calendar into a short planning brief.', agentId: 'companion',
+      name: 'Morning calendar brief', instructionsConfigured: true, agentId: 'companion',
       timing: { kind: 'daily', time: '07:30', day: 0, hours: 24 }, timeZone: 'Asia/Jerusalem', enabled: true, state: 'enabled',
       target: { kind: 'tool', id: 'calendar.read', publishedVersion: 3, digest: '5'.repeat(64), inputsConfigured: true },
       overlap: 'skip', requireBudget: false, budgetAllowanceConfigured: false,
@@ -714,7 +714,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       item.updatedAt = iso(now())
       return item
     }
-    if (path === '/api/control/pi/jobs' && method === 'GET') return { schemaVersion: 1, results: jobs, nextCursor: null }
+    if (path.startsWith('/api/control/pi/jobs/agent')) return agentJobs(path, method, options.body, fail); seedAgentJobs(path); if (path === '/api/control/pi/jobs' && method === 'GET') return { schemaVersion: 1, results: jobs, nextCursor: null }
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})$/)) && method === 'GET') return jobs.find(item => item.id === match![1]) ?? fail(404)
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/runs$/)) && method === 'GET') return { schemaVersion: 1, results: jobRuns.get(match![1]) ?? [], nextCursor: null }
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/state$/)) && method === 'POST') {
