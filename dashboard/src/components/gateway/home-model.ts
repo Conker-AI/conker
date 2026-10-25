@@ -1,6 +1,7 @@
 import type { GatewayActivityRun, GatewayTask } from '@/lib/gateway/activity'
 import type { GatewayJob } from '@/lib/gateway/jobs'
 import type { OwnerRequest } from '@/lib/gateway/owner'
+import type { PlanUsage } from '@/lib/gateway/plans'
 import type { Proposal } from '@/lib/gateway/proposals'
 
 /** Days shown in the work chart. */
@@ -62,4 +63,31 @@ export function buildHome(input: {
       .map(item => ({ id: item.id, title: item.outcome, at: parse(item.updatedAt), today: parse(item.updatedAt) >= today }))
       .sort((a, b) => b.at - a.at).slice(0, 5),
   }
+}
+
+/** At or past this share used, a window is close to its limit (Pi's default alert level). */
+export const PLAN_NEAR_LIMIT = 80
+/** Pi checks plans every 15 minutes; a reading older than an hour may be out of date. */
+export const PLAN_STALE_MS = 60 * 60 * 1000
+const names = { chatgpt: 'ChatGPT', claude: 'Claude' } as const
+
+export type PlanRow = { key: string; name: string; usedPercent: number; resetsAt: number | null; near: boolean }
+export type PlanState =
+  | { status: 'loading' }
+  | { status: 'failed'; error: unknown }
+  /** The server is older than the plan usage route. */
+  | { status: 'unsupported' }
+  | { status: 'ready'; rows: PlanRow[]; checkedAt: number | null; stale: boolean }
+
+/** One row per plan window, Claude first, with the oldest check deciding whether it may be stale. */
+export function summarizePlans(usage: PlanUsage, now = Date.now()): PlanState {
+  const rows = usage.windows.map(item => {
+    const resets = item.resetsAt === null ? Number.NaN : Date.parse(item.resetsAt)
+    return {
+      key: `${item.provider}:${item.window}`, name: `${names[item.provider]} ${item.label}`, usedPercent: item.usedPercent,
+      resetsAt: Number.isFinite(resets) && resets > now ? resets : null, near: item.usedPercent >= PLAN_NEAR_LIMIT,
+    }
+  }).sort((a, b) => Number(b.key.startsWith('claude:')) - Number(a.key.startsWith('claude:')))
+  const checkedAt = usage.windows.length ? Math.min(...usage.windows.map(item => item.checkedAt * 1000)) : null
+  return { status: 'ready', rows, checkedAt, stale: checkedAt !== null && now - checkedAt > PLAN_STALE_MS }
 }

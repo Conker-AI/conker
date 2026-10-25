@@ -6,7 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
-import { createFakeProviderCredentials } from './fake-gateway-providers'
+import { createFakeProviderCredentials, fakePlanUsage } from './fake-gateway-providers'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -959,7 +959,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       if (method !== 'GET') throw new GatewayError('dependency', 503)
       return { available: false, connected: false, connectionId: null, plan: null, loginId: null, loginState: 'idle', problem: 'runtime_unavailable', models: [], catalogueComplete: false, credentialsIncluded: false, deviceCode: null }
     }
-    if (path === '/api/host/providers') return providerCredentials(method, options, fail)
+    if (path === '/api/host/providers' || path === '/api/control/pi/plans/usage') return path === '/api/control/pi/plans/usage' ? fakePlanUsage(method, fail) : providerCredentials(method, options, fail)
     if (path === '/api/pi/models/auto-settings' && method === 'POST') {
       // Deterministic stand-in for the routing model: long or comparative asks are Hard; price-like asks research the web.
       const text = String(options.body?.text ?? ''), hard = text.length > 80 || /compare|best|plan|why/i.test(text), web = /price|latest|best|news|today|buy/i.test(text)

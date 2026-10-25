@@ -17,8 +17,10 @@ to icons with tooltips. Source of truth: `src/components/gateway/navigation.ts`.
 
 Glance and go (prototype v7): a greeting, unfinished setup if any, then an asymmetric bento where
 tile size follows priority. **Needs you** (largest: at most three decisions, then ideas, with the
-true total and a link to Inbox), **Plan allowance** (shows "Not connected yet" until the server
-reports plan usage), **Coming up** (next enabled cron jobs), **Conker’s work** (runs today and a
+true total and a link to Inbox), **Plan allowance** (one meter per Claude and ChatGPT window from
+Pi's `/plans/usage`: "% used" with the reset time, amber from 80% used, Pi's default alert level,
+always next to the number; "Checked 13:05", or "may be out of date" after an hour; "No readings
+yet" when nothing was read; "Not connected yet" on a server older than the route), **Coming up** (next enabled cron jobs), **Conker’s work** (runs today and a
 14-day bar chart; it says when only the latest 100 runs were counted), **Completed**, **Decided by
 you** (today) and **Quick actions**. Six columns on wide screens, two on tablets, one on phones (no
 holes). Every tile has its own loading, failure ("Not loaded" + Try again) and render-error state; a

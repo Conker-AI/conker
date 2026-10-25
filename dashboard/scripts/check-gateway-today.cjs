@@ -9,7 +9,7 @@ const code = ts.transpileModule(fs.readFileSync(path.join(root, 'src/components/
 }).outputText
 const moduleRecord = { exports: {} }
 new Function('require', 'module', 'exports', code)(require, moduleRecord, moduleRecord.exports)
-const { buildHome, HOME_CHART_DAYS } = moduleRecord.exports
+const { buildHome, HOME_CHART_DAYS, summarizePlans, PLAN_NEAR_LIMIT } = moduleRecord.exports
 
 const now = new Date(2026, 9, 24, 15, 0, 0).getTime()
 const at = (daysAgo, hour = 10) => { const date = new Date(now); date.setDate(date.getDate() - daysAgo); date.setHours(hour, 0, 0, 0); return date }
@@ -53,4 +53,15 @@ const bounded = buildHome({ ...input, requests: Array.from({ length: 8 }, (_, in
 assert.equal(bounded.needs.length, 3, 'Home shows at most three items needing him')
 assert.equal(bounded.needsTotal, 9, 'The count still includes everything waiting')
 
-console.log('Gateway Home passed: decisions before ideas, bounded needs with a true total, today-only counts, the run chart window, upcoming jobs and hidden records.')
+const reading = (provider, window, label, usedPercent, resetsAt, checkedAt = now / 1000 - 300) => ({ provider, window, label, usedPercent, resetsAt, checkedAt })
+const plans = summarizePlans({ windows: [reading('chatgpt', 'primary', '5-hour', PLAN_NEAR_LIMIT, new Date(now + 3600_000).toISOString()), reading('claude', 'five_hour', '5-hour', 12, new Date(now - 60_000).toISOString()), reading('claude', 'seven_day', 'weekly', 40, null)] }, now)
+assert.deepEqual(plans.rows.map(row => row.name), ['Claude 5-hour', 'Claude weekly', 'ChatGPT 5-hour'], 'Claude windows come first, each named by plan and window')
+assert.deepEqual(plans.rows.map(row => row.near), [false, false, true], 'A window at the alert level is near its limit')
+assert.deepEqual(plans.rows.map(row => row.resetsAt), [null, null, now + 3600_000], 'Only a reset still ahead is shown')
+assert.equal(plans.stale, false)
+const stale = summarizePlans({ windows: [reading('claude', 'five_hour', '5-hour', 12, null, now / 1000 - 2 * 3600)] }, now)
+assert.equal(stale.stale, true, 'A reading older than an hour says it may be out of date')
+assert.equal(stale.checkedAt, now - 2 * 3600_000, 'Check times are seconds')
+assert.deepEqual(summarizePlans({ windows: [] }, now), { status: 'ready', rows: [], checkedAt: null, stale: false }, 'No readings is its own state')
+
+console.log('Gateway Home passed: decisions before ideas, bounded needs with a true total, today-only counts, the run chart window, upcoming jobs, hidden records and plan allowance.')
