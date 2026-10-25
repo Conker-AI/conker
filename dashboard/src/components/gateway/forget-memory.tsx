@@ -60,7 +60,7 @@ export function ForgetMemory({ client, memoryId, onForgotten, onChanged }: { cli
     <h3 id={`forget-${memoryId}`} className="font-medium">Forget</h3>
     <p className="text-xs leading-5 text-muted-foreground">Remove this memory from Conker: the record, its history, search and recalled context. The chat it came from is kept.</p>
     <Button size="sm" variant="outline" disabled={pending} onClick={() => void review()}><Trash2 />{pending ? 'Checking…' : attempted && intent ? 'Check previous forget…' : 'Forget this memory…'}</Button>
-    {!open && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {!open && error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     <ConfirmationDialog open={open} onOpenChange={setOpen} title={attempted ? 'Check the same forget request?' : 'Forget this memory permanently?'} description={attempted ? 'This checks the deletion you already confirmed and can finish it if needed. The request and memory version stay the same.' : 'Conker will remove the reviewed memory and invalidate recalled copies. This cannot be undone. The original conversation is kept.'} actionLabel={attempted ? 'Check same request' : 'Forget permanently'} pending={pending} error={error} onConfirm={confirm}>
       {preview && <div className="space-y-2"><p className="text-xs text-muted-foreground">Reviewed version {preview.revision}</p><blockquote className="max-h-60 overflow-auto whitespace-pre-wrap break-words border-l-2 pl-3 text-sm">{preview.text}</blockquote></div>}
     </ConfirmationDialog>

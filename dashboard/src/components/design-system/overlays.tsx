@@ -112,7 +112,7 @@ export function ConfirmationDialog({ open, onOpenChange, title, description, chi
   const cancel = useRef<HTMLButtonElement>(null)
   return <Dialog open={open} onOpenChange={next => { if (!pending) onOpenChange(next) }}>
     <TaskDialogContent title={title} description={description} showCloseButton={!pending} initialFocus={cancel} finalFocus={finalFocus}>
-      {(children || error) && <OverlayBody>{children}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>}
+      {(children || error) && <OverlayBody>{children}{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</OverlayBody>}
       <FormActions inset>
         <Button ref={cancel} type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>Cancel</Button>
         <Button type="button" variant={actionVariant} disabled={pending} onClick={() => void onConfirm()}>{pending ? "Working…" : actionLabel}</Button>

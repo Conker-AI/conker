@@ -30,7 +30,7 @@ function GatewaySignIn({ store }: { store: GatewayStore }) {
   return <GatewayFrame title="Sign in to Conker" description="Use the owner password configured on the machine hosting Conker.">
     <form className="space-y-5" onSubmit={async event => { event.preventDefault(); if (!password || pending) return; if (await store.getState().login(password)) setPassword(""); else { passwordInput.current?.focus(); passwordInput.current?.select() } }}>
       <div className="space-y-2"><Label htmlFor="gateway-password">Owner password</Label><Input ref={passwordInput} id="gateway-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="gateway-password-help" aria-invalid={error ? true : undefined} autoFocus /><p id="gateway-password-help" className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is sent only to this gateway.</p></div>
-      {error && <p role="alert" className="text-sm text-destructive">{error.message}</p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error.message}</p>}
       <FormActions><Button type="submit" disabled={pending || !password}>{pending ? "Signing in…" : "Sign in"}</Button></FormActions>
     </form>
     <details className="border-t pt-4"><summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Forgot the password?</summary><p className="mt-3 text-sm leading-6 text-muted-foreground">On the machine hosting Conker, run <code className="font-mono">conker auth reset-password</code>. Recovery requires access to that host and signs out existing browser sessions.</p></details>
@@ -68,18 +68,18 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
   if (state.phase === "authenticated" && gatewaySessionUnlocked(state.session) && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
   if (state.phase === "checking") return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
   if (state.logoutUnconfirmed) return <GatewayFrame title="Sign-out was not confirmed" description="This screen is locked. The server session may still be active until sign-out succeeds or the host revokes it.">
-    {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
+    {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
     <Button onClick={() => void signOut(store, onSignedOut)}><LogOut />Retry sign out</Button>
     <p className="text-sm leading-6 text-muted-foreground">To revoke every browser session from the host, run <code className="font-mono">conker auth revoke-all</code>.</p>
   </GatewayFrame>
   if (state.phase === "setup-required") return <GatewayFrame title="Set up the owner password on the host" description="The owner password has not been configured. Browser visitors cannot set or reset it.">
     <div className="space-y-3 rounded-lg border bg-card p-5 text-card-foreground"><p className="text-sm">Run this command in a terminal on the machine hosting Conker:</p><pre className="overflow-x-auto text-sm"><code>conker auth setup</code></pre><p className="text-sm text-muted-foreground">Choose a password of 15–1,024 characters when prompted. Then check setup again.</p></div>
     <Button onClick={() => void store.getState().revalidate()}><RefreshCw />Check setup again</Button>
-    {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
+    {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
   </GatewayFrame>
   if (state.phase === "anonymous" || state.phase === "authenticated" && !gatewaySessionUnlocked(state.session)) return <GatewaySignIn store={store} />
   return <GatewayFrame title="Could not verify access" description="Check that the gateway is running and that you opened its configured HTTPS address.">
-    {state.error && <p role="alert" className="text-sm text-destructive">{state.error.message}</p>}
+    {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
     <Button onClick={() => void store.getState().revalidate()}><RefreshCw />Retry connection</Button>
     <p className="text-xs leading-5 text-muted-foreground">No workspace data is shown while access is unverified. Retrying checks the session; it does not repeat a previous workspace action.</p>
   </GatewayFrame>
@@ -92,7 +92,7 @@ export function GatewayStatusSurface({ store, onSignedOut }: GatewayProps) {
   return <GatewayFrame authenticated title="Your browser is signed in" description="Authentication is connected to this gateway. The live conversation workspace is not connected to this screen yet.">
     <dl className="space-y-4 rounded-lg border bg-card p-5 text-card-foreground"><div><dt className="text-sm text-muted-foreground">Session status</dt><dd className="mt-1 text-sm font-medium">Authenticated</dd></div><div><dt className="text-sm text-muted-foreground">Absolute session expiry</dt><dd className="mt-1 text-sm"><time dateTime={new Date(session.expiresAt * 1000).toISOString()}>{new Date(session.expiresAt * 1000).toLocaleString()}</time></dd></div></dl>
     <p className="text-sm leading-6 text-muted-foreground">The server also expires idle sessions. Checking access does not connect tools, start work or load fixture records.</p>
-    {error && <p role="alert" className="text-sm text-destructive">{error.message}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error.message}</p>}
     <FormActions><Button variant="outline" disabled={pending} onClick={() => void store.getState().revalidate()}><RefreshCw />Check session</Button><Button disabled={pending} onClick={() => void signOut(store, onSignedOut)}><LogOut />Sign out</Button></FormActions>
   </GatewayFrame>
 }

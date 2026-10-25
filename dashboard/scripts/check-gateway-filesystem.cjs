@@ -56,7 +56,7 @@ async function main() {
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/filesystem-workspace.tsx'), 'utf8')
   assert.match(ui, /Directory listing only/)
   assert.match(ui, /No file contents, editing, uploads, deletes, or shell access/)
-  assert.match(ui, /without dispatching it again/)
+  assert.match(ui, /without sending it again/)
   assert.doesNotMatch(ui, /Edit file|Upload|Delete file|Open terminal|Run command/)
   console.log('Gateway filesystem passed: strict metadata-only DTOs, exact durable routes, bounded navigation, and no content or mutation surface.')
 }

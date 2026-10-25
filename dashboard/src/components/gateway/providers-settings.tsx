@@ -62,7 +62,7 @@ export function GatewayProvidersSettings({ client, authStore }: { client: Gatewa
       {health.phase !== 'current' && health.rows.length > 0 && <p className="text-xs text-muted-foreground">Provider and model names below are from the last successful check.</p>}
       <dl className="divide-y text-sm">{health.rows.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2 py-3"><dt className="min-w-0 break-words">{names[provider.id] ?? provider.id}{provider.model && <span className="text-muted-foreground"> · {health.phase !== 'current' ? 'Last checked model: ' : ''}{provider.model}</span>}</dt><dd className="text-muted-foreground">{health.phase === 'checking' ? 'Checking…' : health.phase !== 'current' ? 'Unavailable' : readiness(provider)}</dd></div>)}</dl>
     </WorkspaceSection>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {value ? <ModelsProviders key={value.revision} serverManaged pending={pending} subscriptionModels={models} configuration={value.configuration ? { ...value.configuration, providers: value.configuration.providers.map(provider => ({ ...provider, endpoint: '', apiKeyDraft: '' })) } : { providers: [], models: [], defaultModelId: null }} onSave={async next => {
       const identity = ownerIdentity(authStore)
       if (!next.roleSettings || saving.current || !identity || !catalogueMounted.current) return false

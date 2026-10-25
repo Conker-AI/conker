@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type { AgentProfile, GatewayControlClient, OwnerSessionSettings } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
+import { composerOutlined } from './composer-select'
+import { cn } from '@/lib/utils'
 
 export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, activeAgentName, disabled, onSaved, compact = false }: { client: GatewayControlClient; sessionId: string; activeAgentId: string; activeAgentName: string; disabled: boolean; onSaved: (agentId: string) => void; compact?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -35,7 +37,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
     finally { setPending(false) }
   }
   return <>
-    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? 'h-8 min-w-0 max-w-40 gap-2 px-2 font-normal text-muted-foreground' : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><span className="truncate">{activeAgentName}</span><ChevronDown className="size-4 shrink-0" /></> : <Bot />}</Button>
+    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? cn('h-8 min-w-0 max-w-40 gap-2 px-2 font-normal text-muted-foreground', composerOutlined) : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><span className="truncate">{activeAgentName}</span><ChevronDown className="size-4 shrink-0" /></> : <Bot />}</Button>
     <Dialog open={open} onOpenChange={value => { if (!pending) setOpen(value) }}><TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
       <OverlayBody><div className="space-y-4">
         <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">
@@ -46,7 +48,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
           </Label>)}
         </RadioGroup>
         {pending && <p role="status" className="text-sm text-muted-foreground">Loading saved agent…</p>}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       </div></OverlayBody>
       <FormActions inset><Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending || disabled || !settings || !profiles.some(agent => agent.id === selected)} onClick={() => void save()}>{selected === settings?.settings.agentId ? <><Check />Done</> : 'Hand off'}</Button></FormActions>
     </TaskDialogContent></Dialog>

@@ -16,6 +16,8 @@ export type GatewayChatState = {
   focusedMessageId?: string | null
   memoryRead?: MemoryDeliveryWatchState | null
   operationPending?: boolean
+  /** Nothing of this chat could be read yet (the observation failed before any history loaded). */
+  historyUnavailable?: boolean
 }
 export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
@@ -102,7 +104,7 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     return { id: turn.id, title: copy.title, description: copy.description, consequence: copy.consequence, recordedAt: turn.endedAt ?? turn.startedAt, controls }
   })
   return {
-    source: 'gateway', sessionId: state.sessionId, messages, outcomes, history: state.detailPending ? 'loading' : state.error ? 'error' : 'ready',
+    source: 'gateway', sessionId: state.sessionId, messages, outcomes, history: state.detailPending ? 'loading' : state.error || state.historyUnavailable ? 'error' : 'ready',
     activeAgentName: state.activeAgentName,
     notice: state.notice, error: state.error, draft: isForgotten(state) || submission.kind === 'sending' ? '' : state.draft, focusedMessageId: state.focusedMessageId,
     setDraft: action(value => !value.sendPending && !isForgotten(value), (handler, text: string) => handler.setDraft(text), 'The composer is unavailable while sending or after forgetting.'),

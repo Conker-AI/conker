@@ -147,7 +147,7 @@
     {
       "id": "agents", "name": "Agent profile management", "authority": "pi", "state": "active", "gatewayRoutes": ["/api/control/pi/agents", "/api/control/pi/agents/{id}", "/api/control/pi/agents/{id}/update", "/api/control/pi/agents/{id}/archive"], "uiRoutes": ["/agents", "/agents/{id}/edit", "/settings/companion"], "cliCommands": ["conker inspect agents", "conker apply agents FILE"],
       "deploymentRequirements": ["PI_OWNER_CONTROL_KEY", "durable Pi store"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "async agents(signal?: AbortSignal)"}, {"path": "dashboard/src/components/gateway/agents-workspace.tsx", "contains": "Profiles choose models, tools and memory; they never grant authority."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Authored agents are owner-controlled records"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "async agents(signal?: AbortSignal)"}, {"path": "dashboard/src/components/gateway/agents-workspace.tsx", "contains": "Each picks its model, tools and memory; your approval rules still apply."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Authored agents are owner-controlled records"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "companion-editing", "name": "Companion character and voice editing", "authority": "pi", "state": "active",
@@ -168,14 +168,14 @@
       "gatewayRoutes": ["/api/control/pi/artifacts", "/api/control/pi/artifacts/from-message", "/api/control/pi/artifacts/{id}", "/api/control/pi/artifacts/{id}/versions", "/api/control/pi/artifacts/{id}/restore", "/api/control/pi/artifacts/{id}/archive", "/api/control/pi/artifacts/{id}/export"],
       "uiRoutes": ["/artifacts", "/artifacts/{id}"], "cliCommands": ["conker inspect artifacts", "conker apply artifacts FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/artifacts.ts", "contains": "execution: z.literal('not-wired')"}, {"path": "dashboard/src/components/gateway/artifacts-workspace.tsx", "contains": "Saved a new immutable version"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "content is bounded to explicit detail and inert export routes"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/artifacts.ts", "contains": "execution: z.literal('not-wired')"}, {"path": "dashboard/src/components/gateway/artifacts-workspace.tsx", "contains": "Saved as a new version."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "content is bounded to explicit detail and inert export routes"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "jobs-schedules", "name": "Job and schedule management", "authority": "pi", "state": "active",
       "gatewayRoutes": ["/api/control/pi/jobs", "/api/control/pi/jobs/{id}", "/api/control/pi/jobs/{id}/runs", "/api/control/pi/jobs/{id}/state", "/api/control/pi/jobs/{id}/run", "/api/control/pi/jobs/runs/{id}/provision-budget", "/api/control/pi/jobs/runs/{id}/cancel", "/api/control/pi/jobs/runs/{id}/resume", "/api/control/pi/jobs/runs/{id}/reconcile"],
       "uiRoutes": ["/jobs", "/jobs/{id}"], "cliCommands": ["conker inspect jobs", "conker apply jobs FILE"],
       "deploymentRequirements": ["PI_SCHEDULER_ENABLED", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "scoped ToolGate execution credential"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "execution: z.literal('not-triggered')"}, {"path": "dashboard/src/components/gateway/jobs-workspace.tsx", "contains": "A successful admission is not a claim that execution completed"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Job views redact target inputs"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "execution: z.literal('not-triggered')"}, {"path": "dashboard/src/components/gateway/jobs-workspace.tsx", "contains": "Queued is not finished: Run history shows the result"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Job views redact target inputs"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",
@@ -216,7 +216,7 @@
       "gatewayRoutes": ["/api/control/pi/system/inventory", "/api/control/pi/system/inventory/{id}", "/api/control/pi/system/inventory/{id}/resume", "/api/control/pi/system/inventory/configured/services", "/api/control/pi/system/inventory/configured/containers"],
       "uiRoutes": ["/system?tab=processes", "/system?tab=ports", "/system?tab=containers"], "cliCommands": ["conker inspect inventory-services", "conker inspect inventory-containers", "conker inspect inventory REQUEST_ID", "conker apply inventory FILE"],
       "deploymentRequirements": ["systemgate", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "fixed system.inventory ToolGate capability"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/host-inventory.ts", "contains": "refreshRequiresNewRequest: z.literal(true)"}, {"path": "dashboard/src/components/gateway/host-inventory-workspace.tsx", "contains": "No host authority"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "fixed read-only ToolGate observation"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/host-inventory.ts", "contains": "refreshRequiresNewRequest: z.literal(true)"}, {"path": "dashboard/src/components/gateway/host-inventory-workspace.tsx", "contains": "Read only. Command lines, users, raw IDs, images, addresses, terminals and files are never shown."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "fixed read-only ToolGate observation"}]
     },
     {
       "id": "provider-secret-management", "name": "Write-only hosted provider credentials and paid-request policy", "authority": "conker-host", "state": "active", "gatewayRoutes": ["/api/host/providers"], "uiRoutes": ["/settings"],

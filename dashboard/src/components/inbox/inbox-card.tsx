@@ -24,9 +24,9 @@ export function InboxCard({ icon, title, summary, meta, primary, onLater, laterL
         aria-expanded={expanded} aria-controls={children ? body : undefined} onClick={() => { if (children && controlled === undefined) setOpen(value => !value) }}>
         <h3 className="break-words font-medium leading-6 [overflow-wrap:anywhere]">{title}</h3>
         {summary && <p className={cn('mt-0.5 text-sm leading-5 text-foreground', !expanded && 'line-clamp-2')}>{summary}</p>}
-        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs leading-5 text-muted-foreground">{meta}
-          {children && controlled === undefined && <span className="inline-flex items-center gap-0.5 group-hover:text-foreground">· {expanded ? 'Less' : 'Details'}<ChevronDown className={cn('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} /></span>}
-        </p>
+        <span className="mt-1 block overflow-hidden"><span className="-ml-3 flex flex-wrap items-center text-xs leading-5 text-muted-foreground [&>*]:before:inline-block [&>*]:before:w-3 [&>*]:before:text-center [&>*]:before:content-['·']">{meta}
+          {children && controlled === undefined && <span className="inline-flex items-center gap-0.5 group-hover:text-foreground">{expanded ? 'Less' : 'Details'}<ChevronDown className={cn('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} /></span>}
+        </span></span>
       </button>
       {(primary || onLater) && <div className="ml-11 flex shrink-0 items-center gap-1 sm:ml-0">
         {primary}

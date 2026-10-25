@@ -176,7 +176,7 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
           </section>
         </div>
         <ModelRolesEditor serverManaged={serverManaged} configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
-        {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm leading-6 text-destructive-foreground">{error}</p>}
         <FormActions description={<span role="status">{saved ? (serverManaged ? "Saved on the server." : "Saved for this preview. Catalogue available to chat; helper roles remain unwired.") : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
           <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => {
             setDraft(structuredClone(configuration))

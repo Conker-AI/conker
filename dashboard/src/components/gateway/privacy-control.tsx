@@ -43,7 +43,7 @@ export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }
       <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Use assistant tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Route models and prepare tool actions.</span></Label><Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} /></div>
       <p className="text-xs text-muted-foreground">Messages still stay in chat history.</p>
       {pending && <p role="status" className="text-xs text-muted-foreground">Checking settings…</p>}
-      {error && <div className="space-y-2"><p role="alert" className="text-xs text-destructive">{error}</p><Button variant="outline" size="sm" disabled={pending} onClick={() => void reload()}>Try again</Button></div>}
+      {error && <div className="space-y-2"><p role="alert" className="text-xs text-destructive-foreground">{error}</p><Button variant="outline" size="sm" disabled={pending} onClick={() => void reload()}>Try again</Button></div>}
       <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Save</Button>
     </PopoverContent>
   </Popover>

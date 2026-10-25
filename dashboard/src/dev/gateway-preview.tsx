@@ -27,7 +27,8 @@ type PreviewFailure = 'network' | 'dependency' | 'partial' | null
 
 /**
  * Failure states for checking the UI: `?preview-failure=network|dependency|partial`, or at runtime
- * `window.conkerPreview.fail('network')` and `fail(null)` to recover.
+ * `window.conkerPreview.fail('network')` and `fail(null)` to recover. `?preview-delay=MS` slows every
+ * answer, to check loading states.
  */
 const failure = (() => {
   const requested = new URLSearchParams(window.location.search).get('preview-failure')
@@ -49,7 +50,9 @@ function services() {
   const setupStep = requestedSetup === 'model' || requestedSetup === 'memory' || requestedSetup === 'capabilities' || requestedSetup === 'protection' || requestedSetup === 'rehearsal' ? requestedSetup : undefined
   const fake = createFakeGateway({ setupStep })
   const verification = createGatewayVerificationStore()
+  const delay = Math.min(Number(new URLSearchParams(window.location.search).get('preview-delay')) || 0, 30_000)
   const auth = { request: async (path, options = {}) => {
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     failIfAsked(path)
     if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path) || fake.correctionVerificationEnabled(path))) {
       await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)

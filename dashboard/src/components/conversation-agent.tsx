@@ -32,7 +32,7 @@ export function ConversationAgent({ session }: { session: Session }) {
         </Label>)}
       </RadioGroup>
       {hasMessages && <p className="text-xs leading-5 text-muted-foreground">The model choice stays separate. Existing execution grants are cleared; no live tools are connected in this preview.</p>}
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       </OverlayBody>
       <FormActions inset><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={busy || !selected || !!data.agents.find(agent => agent.id === selected)?.archivedAt} onClick={async () => {
         const saved = await useConkerStore.getState().mutate(() => conkerClient.handoffConversation(session.id, selected))

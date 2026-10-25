@@ -19,7 +19,7 @@ function jobColumns(controls: JobControls, agentName: (id: string) => string): C
       <p className="text-xs text-muted-foreground">{row.original.status === "Paused" ? "Paused" : row.original.nextRun}</p>
     </div> },
     { accessorKey: "lastRun", header: "Last run", cell: ({ row }) => <div className="min-w-32 max-w-48 space-y-1">
-      {row.original.history[0] && <p className={row.original.history[0].status === "Failed" ? "text-xs text-destructive" : "text-xs"}>{row.original.history[0].source === "preview" ? "Preview complete" : row.original.history[0].status}</p>}
+      {row.original.history[0] && <p className={row.original.history[0].status === "Failed" ? "text-xs text-destructive-foreground" : "text-xs"}>{row.original.history[0].source === "preview" ? "Preview complete" : row.original.history[0].status}</p>}
       <p className="text-xs leading-5 text-muted-foreground">{row.original.lastRun}</p>
     </div> },
     { id: "actions", header: () => <span className="sr-only">Actions</span>, enableHiding: false, cell: ({ row }) => <JobActions job={row.original} controls={controls} /> },
@@ -29,6 +29,6 @@ function jobColumns(controls: JobControls, agentName: (id: string) => string): C
 export function JobsTable({ controls, agentName, data, toolbarAction }: { controls: JobControls; agentName: (id: string) => string; data: Job[]; toolbarAction: ReactNode }) {
   return <DataTable columns={jobColumns(controls, agentName)} data={data} toolbarAction={toolbarAction} itemLabel="jobs" renderItem={job => <RecordItem
     title={job.name} description={job.purpose} onOpen={() => controls.open(job)}
-    meta={<><Badge variant="outline">{job.status}</Badge><span>{agentName(job.agentId)}</span><span>{job.schedule} · {job.timeZone}</span><span className={job.history[0]?.status === "Failed" ? "text-destructive" : undefined}>{job.history[0]?.status === "Failed" ? "Last run failed · " : ""}{job.lastRun}</span></>}
+    meta={<><Badge variant="outline">{job.status}</Badge><span>{agentName(job.agentId)}</span><span>{job.schedule} · {job.timeZone}</span><span className={job.history[0]?.status === "Failed" ? "text-destructive-foreground" : undefined}>{job.history[0]?.status === "Failed" ? "Last run failed · " : ""}{job.lastRun}</span></>}
     actions={<JobActions job={job} controls={controls} />} />} />
 }

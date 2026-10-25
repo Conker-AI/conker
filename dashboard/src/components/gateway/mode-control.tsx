@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import type { AutoSettings, AutoSettingsField, Complexity, Research } from '@/lib/gateway/auto-settings'
 import { gatewayError } from '@/lib/gateway/transport'
 import { complexityHints, composerModes, effectiveMode, modeLabel, modePresets, type ComposerMode, type ModeValues } from './composer-mode'
+import { composerOutlined } from './composer-select'
 
 type Propose = (text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal }) => Promise<AutoSettings>
 type Props = {
@@ -62,7 +63,7 @@ export function ModeControl({ text, think, research, thinkAvailable, harnessDisa
       : current === 'custom' ? 'Custom: your choices are used. Pick a mode to reset them.'
         : mode === 'auto' ? proposal ? `Chosen by Jev (${proposal.modelId}). Change any value to customize.` : 'Jev chooses once you type your message.'
           : 'Change any value to customize.'
-  return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Mode: ${modeLabel(current)}`} />}><Sparkles className="size-4" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}</PopoverTrigger>
+  return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className={composerOutlined} disabled={disabled} aria-label={`Mode: ${modeLabel(current)}`} />}><Sparkles className="size-4" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}</PopoverTrigger>
     <PopoverContent align="start" className="max-h-(--available-height) w-80 space-y-4 overflow-y-auto">
       <RadioGroup value={mode} onValueChange={value => choose(value as ComposerMode)} aria-label="Mode" className="gap-2">
         {composerModes.map(item => <Label key={item.id} className="flex items-start gap-2 font-normal"><RadioGroupItem value={item.id} className="mt-0.5" /><span className="space-y-0.5"><span className="block text-sm font-medium">{item.label}</span><span className="block text-xs text-muted-foreground">{item.description}</span></span></Label>)}

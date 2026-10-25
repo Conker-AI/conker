@@ -47,7 +47,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
     ? <Button type="button" size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={onCheck}>Check</Button>
     : open && eligibility.approve ? <Button type="button" size="sm" className="rounded-full" disabled={busy} onClick={() => onDecide('approved')}>Allow once</Button> : null
   return <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} summary={request.details || undefined}
-    meta={<><span>Permission</span><span>· {request.actor || 'Conker'}</span><span>· {relativeTime(request.createdAt, now)}</span>{state && <span className={attempt ? 'text-warning-foreground' : undefined}>· {state}</span>}</>}
+    meta={<><span>Permission</span><span>{request.actor || 'Conker'}</span><span>{relativeTime(request.createdAt, now)}</span>{state && <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span>}</>}
     primary={primary} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
     footer={processing && <p role="status" className="text-xs text-muted-foreground">Waiting for verification or the recorded decision…</p>}>
     {request.action.args === null ? <p className="text-muted-foreground">Complete arguments are unavailable. Approval is disabled.</p>

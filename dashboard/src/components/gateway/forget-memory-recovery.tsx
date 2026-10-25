@@ -42,7 +42,7 @@ export function ForgetMemoryRecovery({ client, revision, onResolved }: { client:
   if (!saved && !error) return null
   return <section aria-label="Forget recovery" className="space-y-2 border-b px-4 py-3 text-sm">
     {saved && <><h2 className="font-medium">A previous forget request needs confirmation</h2><p className="text-xs text-muted-foreground">Memory recall is paused until this request is resolved. Checking can complete the deletion you previously confirmed. Source conversations are kept.</p></>}
-    {!open && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {!open && error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     <div className="flex flex-wrap gap-2">{saved && <Button variant="outline" size="sm" disabled={pending || reading} onClick={() => { if (!read.current && !action.current) setOpen(true) }}>Check previous forget</Button>}<Button variant="ghost" size="sm" disabled={pending || reading} onClick={() => { if (action.current || read.current) return; setReading(true); setSaved(null); setOpen(false); setRefresh(value => value + 1) }}>{reading ? 'Checking status…' : 'Refresh status'}</Button></div>
     <ConfirmationDialog open={open && saved !== null} onOpenChange={setOpen} title="Check the previous forget request?" description="Conker will check the same saved deletion and can finish it if needed. It will not start a request for a different memory or version." actionLabel="Check previous forget" pending={pending} error={error} onConfirm={recover}>
       {saved && <p className="break-all text-xs text-muted-foreground">Memory {saved.memoryId} · version {saved.revision}</p>}

@@ -51,8 +51,8 @@ async function main() {
   assert.equal(requests, 4)
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/host-inventory-workspace.tsx'), 'utf8')
-  assert.match(ui, /New sample/)
-  assert.match(ui, /No command lines, users, raw IDs, images, addresses, terminal, or files/)
+  assert.match(ui, /Take snapshot/, 'A new host sample is one explicit owner action')
+  assert.match(ui, /Command lines, users, raw IDs, images, addresses, terminals and files are never shown/)
   assert.match(ui, /without dispatching another sample/)
   assert.doesNotMatch(ui, /Start process|Stop process|Restart container|Open terminal/)
   console.log('Gateway host inventory passed: strict redacted DTOs, exact durable routes, explicit sampling, and no host mutation surface.')

@@ -23,7 +23,7 @@ export function JobEditor({ job, agents, pending, onSave, onCancel }: {
     setValue(current => ({ ...current, [key]: next }))
     setErrors(current => ({ ...current, [key]: undefined }))
   }
-  const error = (key: keyof JobInput) => errors[key] && <p id={`${id}-${key}-error`} className="text-xs text-destructive">{errors[key]}</p>
+  const error = (key: keyof JobInput) => errors[key] && <p id={`${id}-${key}-error`} className="text-xs text-destructive-foreground">{errors[key]}</p>
   const describedBy = (key: keyof JobInput) => errors[key] ? `${id}-${key}-error` : undefined
 
   return <form noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={async event => {

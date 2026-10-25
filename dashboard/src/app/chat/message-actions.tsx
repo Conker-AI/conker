@@ -125,7 +125,7 @@ export function MessageActions({ session, message }: { session: Session; message
             if (fork) navigate(`/chat/${fork.id}`)
           }
         }}>
-          <OverlayBody><div className="space-y-2"><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></div>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</OverlayBody>
+          <OverlayBody><div className="space-y-2"><Label htmlFor={`edit-${message.id}`}>Message text</Label><Textarea id={`edit-${message.id}`} value={text} onChange={event => setText(event.target.value)} maxLength={4000} rows={5} /></div>{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</OverlayBody>
           <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy || !text.trim()}>{editNeedsFork ? "Save in new fork" : "Save message"}</Button></FormActions>
         </form>
       </TaskDialogContent>

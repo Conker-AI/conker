@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ReferenceSection } from '@/components/reference-section'
 import { CollectionEmpty, WorkspaceSearch, RecordItem } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
+import { InlineError } from '@/components/resilience/inline-error'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
 
@@ -56,7 +58,8 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? ''), [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [type, setType] = useState<MemoryObjectKind | 'all'>('all')
   const [params, setParams] = useSearchParams()
-  const view = params.get('view') === 'database' ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
+  const isMobile = useIsMobile()
+  const view = params.get('view') === 'database' || !params.get('view') && isMobile ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
   const isGraph = view !== 'database'
   const [expanded, setExpanded] = useState(false)
   const [graphRead, setGraphRead] = useState<{ page: MemoryLibrary; result: MemoryGraphRead } | null>(null)
@@ -174,6 +177,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
     catch (error) { if (epoch === detailEpoch.current && request === contentEpoch.current) setDetailError(error instanceof Error ? error.message : 'Could not load field.') }
     finally { if (epoch === detailEpoch.current && request === contentEpoch.current) setReadingField(null) }
   }
+  const failed = !busy && !!error
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
     <WorkspaceSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" onSubmit={() => { setQuery(search); refresh() }} />
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
@@ -182,18 +186,18 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
       <Button ref={memoryRefresh} size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
     </div>} />
-    <MemoryCorrection control={correction} focusTarget={memoryRefresh} />
+    {!(failed && !page) && <><MemoryCorrection control={correction} focusTarget={memoryRefresh} />
     <ForgetMemoryRecovery client={client} revision={`${revision}:${forgetRevision}`} onResolved={forgetResolved} />
-    {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}</>}
     <div className="memory-workspace-body">
-      {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
+      {!page ? busy || !failed ? <p role="status" className="p-4 text-sm">Loading your memory…</p> : <div className="p-4"><InlineError error={null} title="Memory didn’t load" description={error ?? undefined} onRetry={refresh} /></div> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
         <ul className="divide-y md:hidden">{page.objects.map(item => <li key={key(item)}><RecordItem title={recordTitle(item)} description={`${kindLabel[item.type]} · ${connectionCount(item)} ${connectionCount(item) === 1 ? 'connection' : 'connections'}`} selected={Boolean(selected && key(selected) === key(item))} onOpen={() => selectRecord(item)} /></li>)}</ul>
         <Table render={<div className="hidden h-full overflow-auto md:block" />}><TableHeader className="sticky top-0 bg-background"><TableRow className="hover:bg-transparent"><TableHead className="px-4">Memory</TableHead><TableHead className="px-4">Type</TableHead><TableHead className="px-4 text-right">Connections</TableHead></TableRow></TableHeader><TableBody>{page.objects.map(item => <TableRow key={key(item)} data-state={selected && key(selected) === key(item) ? 'selected' : undefined} className="h-(--collection-row-height)"><TableCell className="px-4 py-2.5 whitespace-normal"><button aria-current={selected && key(selected) === key(item) ? true : undefined} className="w-full min-w-40 break-words rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{recordTitle(item)}</button></TableCell><TableCell className="px-4 text-muted-foreground">{kindLabel[item.type]}</TableCell><TableCell className="px-4 text-right text-muted-foreground tabular-nums">{connectionCount(item)}</TableCell></TableRow>)}</TableBody></Table>
       </div>}
       {selected && <WorkspaceInspector title={selected.title} description={kindLabel[selected.type]} onClose={() => selectRecord(null)}>
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
-          {detailError && <p role="alert" className="text-destructive">{detailError}</p>}
+          {detailError && <p role="alert" className="text-destructive-foreground">{detailError}</p>}
           <ReferenceSection title="Content">
             {selected.available_fields.length ? <Select key={key(selected)} value={readingField ?? content?.field ?? ''} onValueChange={field => { if (field !== null) void expandField(field) }} items={[...selected.available_fields.map((field) => ({ value: field, label: fieldLabel(field) }))]}><SelectTrigger className="w-full" aria-label="Read content field"><SelectValue placeholder="Choose a field to read" /></SelectTrigger><SelectContent>{selected.available_fields.map(field => <SelectItem key={field} value={field}>{fieldLabel(field)}</SelectItem>)}</SelectContent></Select> : <p className="text-muted-foreground">No readable content fields.</p>}
             {readingField && <p role="status" className="text-xs text-muted-foreground">Reading {fieldLabel(readingField).toLocaleLowerCase()}…</p>}

@@ -33,7 +33,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const shown = selected && rows.some(tool => tool.id === selected.id)
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=mcp" />}>MCP servers</WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=drafts" />}>Tool drafts</WorkspaceAction></>} />
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
     {value?.status === 'ok' && <>

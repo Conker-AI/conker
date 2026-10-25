@@ -28,7 +28,7 @@ export function ProjectContext({ client, snapshot, projectId, dirty }: ProjectSc
     {dirty && <p role="status" className="text-xs text-muted-foreground">Preview uses saved instructions. Save your changes to update it.</p>}
     {targetId && !target && <p role="status" className="text-sm">This destination is unavailable. Choose another chat.</p>}
     {target && !current && <p role="status" className="text-sm">Checking source privacy…</p>}
-    {current?.error && <p role="alert" className="text-sm text-destructive">{current.error}</p>}
+    {current?.error && <p role="alert" className="text-sm text-destructive-foreground">{current.error}</p>}
     {current?.plan && <div className="space-y-4">
       <div className="space-y-2"><h3 className="text-sm font-medium">Saved instructions</h3><p className="whitespace-pre-wrap break-words text-sm">{current.plan.instruction?.text || "No active project instructions."}</p><p className="text-xs text-muted-foreground">Project scope, after agent guidance and before session instructions. Separate from history; inheritance is not connected.</p></div>
       <div className="space-y-2"><h3 className="text-sm font-medium">Eligible references ({current.plan.references.length})</h3>{current.plan.references.length ? <ul className="space-y-2 text-sm">{current.plan.references.map(item => <li key={linkKey(item.reference)}><Link className="underline underline-offset-4" to={sourceHref(item.reference)}>{item.label}</Link><span className="ml-2 text-xs text-muted-foreground">{kindLabel(item.reference)}</span></li>)}</ul> : <p className="text-sm text-muted-foreground">No source references are eligible for this destination.</p>}</div>

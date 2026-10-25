@@ -34,12 +34,16 @@
 .workspace-search-dialog { max-width:44rem; }
 @media (max-width:1023px) {
   .workspace-appbar-row { grid-template-columns:minmax(0,1fr) auto auto; gap:0.5rem; }
-  .workspace-search-trigger { width:2rem; padding:0; justify-content:center; border-color:transparent; }
+  .workspace-search-trigger { width:2rem; padding:0; justify-content:center; border-color:transparent; background:transparent; }
+  .workspace-search-trigger::before { display:none; }
+  .workspace-search-trigger:hover { background:var(--accent); }
   .workspace-search-label { display:none; }
 }
 @container workspace-appbar (max-width:900px) {
   .workspace-appbar-row { grid-template-columns:minmax(0,1fr) auto auto; gap:0.5rem; }
-  .workspace-search-trigger { width:2rem; padding:0; justify-content:center; border-color:transparent; }
+  .workspace-search-trigger { width:2rem; padding:0; justify-content:center; border-color:transparent; background:transparent; }
+  .workspace-search-trigger::before { display:none; }
+  .workspace-search-trigger:hover { background:var(--accent); }
   .workspace-search-label { display:none; }
 }
 @media (max-width:767px) {

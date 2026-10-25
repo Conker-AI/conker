@@ -43,7 +43,7 @@ export function ModelRolesEditor({ configuration, pending, onChange, serverManag
         </fieldset>
       </details>
     })}</div>
-    {configuration.roleSettings && errors.length > 0 && <div role="status" className="space-y-1 rounded-md border bg-muted p-3">{errors.map((error, index) => <p key={index} className="text-xs leading-5 text-destructive">{error}</p>)}</div>}
+    {configuration.roleSettings && errors.length > 0 && <div role="status" className="space-y-1 rounded-md border bg-muted p-3">{errors.map((error, index) => <p key={index} className="text-xs leading-5 text-destructive-foreground">{error}</p>)}</div>}
     <p className="text-xs leading-5 text-muted-foreground">No harness disables routing, selection and summarization helpers. No memory separately excludes memory access. {serverManaged ? "The runtime checks provider availability and configured limits before execution." : "Every future adapter must recheck capability, provider privacy and spend limits before sending data."}</p>
   </section>
 }

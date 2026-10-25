@@ -37,6 +37,6 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   if (compact) return <ComposerSelectField error={error ? `Model list unavailable. ${error}` : undefined}>{select}</ComposerSelectField>
   return <div className="space-y-1">
     {select}
-    {error && <p role="alert" className="text-xs text-destructive">Model list unavailable. {error}</p>}
+    {error && <p role="alert" className="text-xs text-destructive-foreground">Model list unavailable. {error}</p>}
   </div>
 }

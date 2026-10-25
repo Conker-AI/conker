@@ -92,7 +92,7 @@ export function MemoryGraph({ graph, hierarchy, selectedId, focusRequest, onSele
     return { ...edge, type: "memoryLink", focusable: false, selectable: false,
       data: { hierarchy: hierarchy && !organization },
       label: edge.id === hoverEdge && !organization ? edge.relationship?.replaceAll('_', ' ') : undefined,
-      labelStyle: { fill: 'var(--foreground)', fontSize: 11 }, labelBgStyle: { fill: 'var(--background)', fillOpacity: .95 },
+      labelStyle: { fill: 'var(--foreground)', fontSize: 12 }, labelBgStyle: { fill: 'var(--background)', fillOpacity: .95 },
       style: { stroke: emphasized ? `var(--memory-category-${color % 5 + 1})` : "var(--muted-foreground)", strokeWidth: emphasized ? 1.5 : .8, strokeOpacity: emphasized ? .85 : (hoverId || activeId) ? .16 : organization ? .35 : .55, strokeDasharray: organization ? "3 6" : undefined } }
   })
   function select(node: Point) {

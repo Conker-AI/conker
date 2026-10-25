@@ -67,7 +67,7 @@ function ProjectEditor({ client, snapshot, project }: ProjectScreenProps & { pro
       <div className="min-w-0 lg:col-span-5"><ProjectContext client={client} snapshot={snapshot} projectId={project.id} dirty={dirty} /></div>
     </div>
     <div className="sticky bottom-0 z-10 space-y-3 bg-background py-3">
-      {error && !linking && !selected && !deleting && <p role="alert" className="text-sm text-destructive">{error}</p>}{feedback && <p role="status" className="text-sm">{feedback}</p>}
+      {error && !linking && !selected && !deleting && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}{feedback && <p role="status" className="text-sm">{feedback}</p>}
       {changed && <p role="status" className="text-sm">The saved project changed. Reset to its current version before making more changes. Your draft is retained.</p>}
       <FormActions description={dirty ? "Unsaved draft kept when navigating away" : "Preview only; changes reset on reload"}><Button variant="outline" disabled={pending || !(dirty || changed)} onClick={() => { reset(project); setFeedback("") }}>Reset changes</Button><Button type="submit" form="project-editor" disabled={frozen || !dirty || changed || !draft.value.name.trim()}>{pending ? "Saving…" : "Save preview"}</Button></FormActions>
     </div>

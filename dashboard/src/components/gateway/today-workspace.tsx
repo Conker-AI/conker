@@ -54,7 +54,7 @@ function Tile({ area, label, icon, count, link, children, className }: {
 }
 
 function TileLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className="inline-flex shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" /></Link>
+  return <Link to={to} className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" /></Link>
 }
 
 function TileLoading({ rows = 2 }: { rows?: number }) {
@@ -139,7 +139,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
   const waiting = (source: Source) => loading && !loaded.has(source)
   const retry = () => { void load(); void reloadPlan() }
   const allFailed = !!failed && failed.sources.size === sources.length && loaded.size === 0
-  const peak = Math.max(1, ...home.runDays.map(item => item.count))
+  const peak = Math.max(0, ...home.runDays.map(item => item.count))
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
 
   return <GatewayPageFrame>
@@ -187,13 +187,13 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
         <Tile area="work" label="Conker’s work" icon={<Sparkles />} link={<TileLink to="/activity?tab=runs">Runs</TileLink>}>
           {waiting('runs') ? <TileLoading rows={3} /> : missing('runs') ? <TileFailed onRetry={retry} /> : <>
             <p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tabular-nums leading-none">{home.runsToday}</span><span className="text-sm text-muted-foreground">{home.runsToday === 1 ? 'run today' : 'runs today'}</span></p>
-            <div className="mt-auto flex h-20 items-end gap-1" aria-hidden="true">
+            {peak === 0 ? <p className="mt-auto text-sm text-muted-foreground">No runs in the last {HOME_CHART_DAYS} days.</p> : <><div className="mt-auto flex h-20 items-end gap-1" aria-hidden="true">
               {home.runDays.map((item, index) => <div key={item.day} title={`${day(item.day)}: ${item.count}`}
                 className={cn('min-h-1 flex-1 rounded-sm', index === home.runDays.length - 1 ? 'bg-foreground' : 'bg-muted-foreground', item.count === 0 && 'opacity-30')}
                 style={{ height: `${Math.max(4, Math.round(item.count / peak * 100))}%` }} />)}
             </div>
             <p className="text-xs text-muted-foreground">Runs per day, last {HOME_CHART_DAYS} days{home.runDaysPartial ? ' (from the latest 100 runs)' : ''}</p>
-            <ul className="sr-only">{home.runDays.map(item => <li key={item.day}>{day(item.day)}: {item.count} runs</li>)}</ul>
+            <ul className="sr-only">{home.runDays.map(item => <li key={item.day}>{day(item.day)}: {item.count} runs</li>)}</ul></>}
           </>}
         </Tile>
 

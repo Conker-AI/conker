@@ -50,7 +50,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   </InlineDetails>
   return <ConnectedShellContext.Provider value={{ view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat, panel }}>
   <LayoutFrame variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}>
-    <div id="conker-workspace-document" className="flex min-h-0 flex-1 flex-col">{children}</div>
+    <div id="conker-workspace-document" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">{children}</div>
   </LayoutFrame>
   </ConnectedShellContext.Provider>
 }

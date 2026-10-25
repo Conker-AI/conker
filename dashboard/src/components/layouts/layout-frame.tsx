@@ -45,14 +45,14 @@ export function LayoutFrame({ children, title, description, actions, status, hea
       {beforeHeader}
       {header}
       {conversation ? <div className="flex min-h-0 flex-1 flex-col">
-        {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive-foreground">{error}</p>}
         {children}
       </div> : <div ref={pageScroll} data-slot="page-scroll" role="region" aria-label={`${title ?? "Page"} content`} tabIndex={0}
         className={cn("flex min-h-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", workspace ? "overflow-hidden" : "overflow-y-auto")}>
         <div className={cn("@container/main flex flex-1 flex-col gap-2", workspace && "min-h-0")}>
           <PageContainer className={cn("flex flex-col gap-(--page-section-gap) py-6 pb-8", collection && "gap-(--collection-section-gap)", workspace && "min-h-0 flex-1")}>
             {title && <PageHeader title={title} description={description} actions={actions} status={status} density={collection ? "compact" : "standard"} />}
-            {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
+            {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive-foreground">{error}</p>}
             {children}
           </PageContainer>
         </div>
@@ -72,6 +72,8 @@ export function LayoutFrame({ children, title, description, actions, status, hea
       }
       className={cn("h-dvh min-h-0 overflow-clip", config.side === "right" && "flex-row-reverse", className)}
     >
+      {/* Keyboard users skip the sidebar's places in one step (WCAG 2.4.1); it shows only when focused. */}
+      <a href="#conker-workspace-document" className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-lg focus-visible:ring-2 focus-visible:ring-ring">Skip to content</a>
       {rail}
       {sidebar}
       {content}

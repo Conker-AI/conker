@@ -67,7 +67,7 @@ async function main() {
   assert.equal(requests, 3)
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/projects-workspace.tsx'), 'utf8')
-  assert.match(ui, /Authority: none\. Content included: no\. Grants inherited: no\./)
+  assert.match(ui, /Linking grants no permissions and copies no content/, 'A project link carries no authority and no content')
   assert.match(ui, /never accepts filesystem paths or uploads/)
   assert.match(ui, /Pi will recheck every source/)
   console.log('Gateway Projects passed: strict DTOs, optimistic writes, exact routes, no destructive browser removal, and honest context boundaries.')

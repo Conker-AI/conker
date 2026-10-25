@@ -38,10 +38,10 @@ export function WorkspaceSection({ title, description, action, children, divided
 }) {
   const id = useId()
   return <section aria-labelledby={id} data-slot="workspace-section" className={cn("min-w-0 space-y-4", divided && "border-b pb-6")}>
-    <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0 flex-1"><h2 id={id} className="text-base leading-6 font-semibold">{title}</h2>
-        {description && <p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}
-      </div>{action}
+    <header className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+      <h2 id={id} className="min-w-0 text-base leading-6 font-semibold">{title}</h2>
+      {action && <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2">{action}</div>}
+      {description && <p className="col-span-2 mt-1 max-w-prose text-sm leading-6 text-muted-foreground">{description}</p>}
     </header>
     {children && <div className="min-w-0 space-y-4">{children}</div>}
   </section>

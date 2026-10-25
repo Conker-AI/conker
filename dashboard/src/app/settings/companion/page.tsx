@@ -89,7 +89,7 @@ export default function CharacterStudioPage() {
       <CharacterPreview profile={profile} />
     </div>
     <div className="sticky bottom-0 z-10 bg-background py-3">
-      {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="mb-3 text-sm text-destructive-foreground">{error}</p>}
       <FormActions description={<span role="status">{uploading ? "Checking media…" : notice || (dirty ? "Unsaved changes" : "Saved in memory · export to keep a copy")}</span>}>
         <Button type="button" variant="outline" disabled={!dirty || pending || uploading} onClick={() => { useCharacterWorkspace.setState({ draft: null }); setError(""); setNotice("Changes discarded.") }}>Discard changes</Button>
         <Button type="submit" form="character-form" disabled={!dirty || !profile.name.trim() || pending || uploading}>{pending ? "Saving…" : "Save character"}</Button>
@@ -100,7 +100,7 @@ export default function CharacterStudioPage() {
         const file = event.target.files?.[0]; event.target.value = ""; if (!file) return
         setIncoming(null); setImportError(""); setReading(true)
         try { if (file.size > 32 * 1024 * 1024) throw new Error("Choose a JSON file under 32 MB."); const next = importCharacter(await file.text(), profile); await validateImportedMedia(next.profile); setIncoming(next) } catch (cause) { setImportError(cause instanceof Error ? cause.message : "Could not read this character package.") } finally { setReading(false) }
-      }} /></div>{reading && <p role="status" className="text-sm text-muted-foreground">Reading character…</p>}{incoming && <div className="space-y-2"><p className="text-sm font-medium">{incoming.profile.name}</p><p className="text-sm leading-6 text-muted-foreground">{incoming.note}</p><p className="text-sm">Import replaces your current draft. Your saved character stays unchanged until you save.</p></div>}{importError && <p role="alert" className="text-sm text-destructive">{importError}</p>}</OverlayBody>
+      }} /></div>{reading && <p role="status" className="text-sm text-muted-foreground">Reading character…</p>}{incoming && <div className="space-y-2"><p className="text-sm font-medium">{incoming.profile.name}</p><p className="text-sm leading-6 text-muted-foreground">{incoming.note}</p><p className="text-sm">Import replaces your current draft. Your saved character stays unchanged until you save.</p></div>}{importError && <p role="alert" className="text-sm text-destructive-foreground">{importError}</p>}</OverlayBody>
       <FormActions inset><Button variant="outline" disabled={reading} onClick={() => setImportOpen(false)}>Cancel</Button><Button disabled={!incoming || reading} onClick={() => { if (incoming) { update(incoming.profile); setNotice(incoming.note); setImportOpen(false) } }}>Import into draft</Button></FormActions>
     </TaskDialogContent></Dialog>
   </BaseLayout>

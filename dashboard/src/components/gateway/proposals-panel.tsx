@@ -15,7 +15,7 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
   item: Proposal; pending: boolean; failure: string | null; onDecide: (decision: ProposalDecision) => void; onLater?: () => void
 }) {
   return <InboxCard icon={<Lightbulb />} title={item.title} summary={item.suggestion}
-    meta={<><span>Idea</span><span>· {age(item.createdAt)}</span></>}
+    meta={<><span>Idea</span><span>{age(item.createdAt)}</span></>}
     primary={<Button type="button" size="sm" className="rounded-full" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>}
     onLater={onLater}
     footer={failure && <p role="alert" className="text-sm text-destructive-foreground">{failure}</p>}>

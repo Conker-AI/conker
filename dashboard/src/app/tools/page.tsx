@@ -113,7 +113,7 @@ export default function ToolsPage() {
           <span
             className={
               r.runs[0]?.status === "failed"
-                ? "text-destructive"
+                ? "text-destructive-foreground"
                 : "text-muted-foreground"
             }
           >
@@ -156,7 +156,7 @@ export default function ToolsPage() {
       }
     >
       {selectedId && !loading && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-foreground">
           This tool is unavailable. Preview creations reset on reload.{" "}
           <Button variant="link" onClick={() => setParams({})}>
             Back to library
@@ -164,7 +164,7 @@ export default function ToolsPage() {
         </p>
       )}
       {error && !creating && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive-foreground">
           {error}
         </p>
       )}
@@ -269,7 +269,7 @@ export default function ToolsPage() {
                 />
               </Field>
               {error && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive-foreground">
                   {error}
                 </p>
               )}
