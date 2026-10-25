@@ -98,6 +98,7 @@ conker apply teams team.json # edit versioned team definitions only
 conker apply jobs job.json # pause/resume or admit one durable manual run
 conker apply memory forget.json # forget one reviewed revision everywhere
 conker apply proposals decision.json # accept, decline, or suppress one proposal
+conker apply requests request.json # approve, decline, or record the saved draft of one of Conker's requests
 conker apply tasks task.json # create, edit, transition, archive, or restore a task
 conker apply artifacts artifact.json # create and version inert owner content
 conker apply sessions session.json # change future-turn harness/privacy settings

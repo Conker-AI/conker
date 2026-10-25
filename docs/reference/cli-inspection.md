@@ -13,6 +13,7 @@ Supported resources are:
 | `approvals` | ToolGate owner | `/v2/owner/requests` |
 | `artifacts` | owner | `/artifacts` |
 | `boundaries` | owner | `/setup/boundaries` |
+| `change-requests` | owner | `/change-requests` |
 | `character` | owner | `/characters/companion` |
 | `character-export` | owner | `/characters/companion/export` |
 | `character-history` | owner | `/characters/companion/history` |

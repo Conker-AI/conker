@@ -229,8 +229,8 @@ cmd_inspect() {
 cmd_apply() {
     local resource=$1 file=$2
     case "$resource" in
-        agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|sessions|tasks|teams|tools|turns) ;;
-        *) printf 'conker apply supports: agents, approvals, artifacts, calls, character, files, inventory, jobs, memory, models, projects, proposals, sessions, tasks, teams, tools, turns.\n' >&2; exit 2 ;;
+        agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|requests|sessions|tasks|teams|tools|turns) ;;
+        *) printf 'conker apply supports: agents, approvals, artifacts, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns.\n' >&2; exit 2 ;;
     esac
     [ -f "$file" ] || {
         printf 'Configuration file not found: %s\n' "$file" >&2
@@ -777,7 +777,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Export one fixed ToolGate editor view
   ${BOLD}inspect${OFF} tool-access DRAFT_ID VERSION DIGEST
               Inspect access for one exact immutable publication
-  ${BOLD}apply${OFF} agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|sessions|tasks|teams|tools|turns FILE
+  ${BOLD}apply${OFF} agents|approvals|artifacts|calls|character|files|inventory|jobs|memory|models|projects|proposals|requests|sessions|tasks|teams|tools|turns FILE
               Apply a typed revision-checked owner-control document
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
   ${BOLD}backup${OFF} [--destination DIR]

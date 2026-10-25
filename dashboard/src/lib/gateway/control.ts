@@ -3,6 +3,7 @@ import { createGatewayEditorDrafts } from './editor-drafts'
 import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
+import { createChangeRequestsClient } from './change-requests'
 import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
@@ -297,6 +298,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),
+    changeRequests: createChangeRequestsClient(auth),
     plans: createGatewayPlansClient(auth),
     characters: createGatewayCharactersClient(auth),
     hostInventory: {
