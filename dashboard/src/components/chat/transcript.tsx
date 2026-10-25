@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { Copy, Link, MoreHorizontal } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { MessageActionButton } from '@/components/message-action-button'
+import { InlineError } from '@/components/resilience/inline-error'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { Action, ChatContract, ChatMessage, MessageAction } from '@/lib/chat/contract'
@@ -72,5 +73,6 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
       <p className="text-xs text-muted-foreground">Saved turn · <time dateTime={outcome.recordedAt}>{new Date(outcome.recordedAt).toLocaleString()}</time></p>
     </section>)}
     {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
+    {chat.history === 'error' && !chat.messages.length && <InlineError error={null} title="Messages didn’t load" description="Your draft is safe. This refreshes by itself when your server answers again." onRetry={chat.checkHistory.availability === 'enabled' ? chat.checkHistory.run : undefined} />}
   </div>
 }

@@ -166,7 +166,7 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
   }
   if (match) {
     if (selected) return <ProjectEditor key={selected.id} project={selected} control={control} runtime={runtime} activity={activity} onChanged={update} />
-    return <div className="space-y-4 p-6">{error ? <><PageHeader title="Project unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/projects')}>Back to projects</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading project…</p>}</div>
+    return <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Project didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft />Projects</Button></> : <ListSkeleton rows={3} label="Loading project…" />}</div>
   }
   const matches = (projects ?? []).filter(item => `${item.name} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length

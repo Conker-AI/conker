@@ -108,7 +108,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="space-y-4 p-6">{error ? <><PageHeader title="Schedule unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/jobs')}>Back to cron jobs</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading schedule…</p>}</div>
+    return <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/jobs')}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.instructions} ${job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length

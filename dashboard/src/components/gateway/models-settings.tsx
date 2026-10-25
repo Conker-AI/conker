@@ -77,7 +77,7 @@ export function GatewayModelsSettings({ client, onSignOut }: { client: GatewayCo
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <OwnerAvatar className="size-16" />
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-          <Button variant="outline" size="sm" render={<label className="cursor-pointer" />}><Upload />Choose photo<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { choosePhoto(event.target.files?.[0]); event.target.value = '' }} /></Button>
+          <Button variant="outline" size="sm" render={<label className="cursor-pointer has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring" />}><Upload />Choose photo<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { choosePhoto(event.target.files?.[0]); event.target.value = '' }} /></Button>
           {profile.avatar && <Button variant="ghost" size="sm" onClick={() => saveOwnerProfile({ ...profile, avatar: '' })}><Trash2 />Remove photo</Button>}
           <p className="w-full text-xs text-muted-foreground">Stored only in this browser · PNG, JPEG, or WebP · 512 KB max</p>
         </div>
