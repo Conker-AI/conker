@@ -95,6 +95,20 @@ async function main() {
   assert.deepEqual(agentCalls.at(-1)[1].body.watch, { toolId: 'mcp.telegram.messages', args: { chat: 'study group' }, everyMinutes: 5 })
   await assert.rejects(agents.createAgentJob({ name: 'x', instructions: 'y', timing: { kind: 'interval', time: '00:00', day: 0, hours: 24 }, timeZone: 'UTC', watch: { toolId: 'mcp.telegram.messages', args: {}, everyMinutes: 1 } }), error => error.kind === 'validation', 'Watches look at most every five minutes')
 
+  // Webhooks: the secret comes back once, in a strict shape; the browser never sends it anywhere.
+  agentReply = { jobId, token: `hook_${'Q'.repeat(43)}`, header: 'X-Conker-Hook-Token', path: `/hooks/${jobId}` }
+  assert.equal((await agents.issueHook(jobId)).header, 'X-Conker-Hook-Token')
+  assert.deepEqual(agentCalls.at(-1)[0], `/api/control/pi/jobs/${jobId}/hook`)
+  agentReply = { jobId, token: 'short', header: 'X-Conker-Hook-Token', path: `/hooks/${jobId}` }
+  await assert.rejects(agents.issueHook(jobId), error => error.kind === 'invalid-response')
+  agentReply = { jobId, revoked: true }
+  assert.equal((await agents.revokeHook(jobId)).revoked, true)
+  agentReply = { ...aiJob, definition: { ...aiJob.definition, target: { kind: 'agent', sessionId: session, webhook: true, clock: false } } }
+  assert.equal((await agents.get(jobId)).definition.target.clock, false, 'A job can start only from its webhook')
+  const hookTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => new Response(JSON.stringify({ jobId, revoked: true }), { headers: { 'content-type': 'application/json' } }) })
+  await hookTransport.request(`/api/control/pi/jobs/${jobId}/hook/revoke`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
+  await assert.rejects(hookTransport.request(`/api/control/pi/jobs/${jobId}/hook/rotate`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation')
+
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')
   assert.match(ui, /Try again resends the same request, so it can’t run twice/, 'An unknown outcome retries with the same request identity')
