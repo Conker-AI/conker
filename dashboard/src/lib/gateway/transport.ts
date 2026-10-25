@@ -117,6 +117,8 @@ routes.POST.unshift(/^\/api\/control\/pi\/artifacts(?:\/from-message)?$/, /^\/ap
 // Job views redact target inputs, allowance identities and receipts; browser writes use exact recovery actions only.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
+// Plan usage is percentages per plan window only; dismissing an alert stays host-admin only.
+routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Character packages may contain bounded embedded media. Only this authenticated owner route gets the larger envelope.
 const characterReadRoute = /^\/api\/control\/pi\/characters\/companion(?:\/(?:history|export))?$/
 const characterResponseRoute = /^\/api\/control\/pi\/characters\/companion(?:\/(?:history|export|save|import|restore))?$/

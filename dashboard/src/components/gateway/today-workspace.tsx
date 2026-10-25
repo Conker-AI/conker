@@ -16,7 +16,8 @@ import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { useOwnerProfile } from '@/lib/owner-profile'
 import { cn } from '@/lib/utils'
-import { buildHome, HOME_CHART_DAYS, type HomeNeed } from './home-model'
+import { buildHome, HOME_CHART_DAYS, type HomeNeed, type PlanRow } from './home-model'
+import { usePlanUsage } from './home-plan'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
@@ -80,6 +81,20 @@ function Need({ item }: { item: HomeNeed }) {
   </Link></li>
 }
 
+/** One plan window: what it is, how much is used, when it resets. Color is always paired with the number. */
+function PlanLine({ row }: { row: PlanRow }) {
+  return <li className="min-w-0">
+    <div className="flex min-w-0 items-baseline justify-between gap-3 text-sm">
+      <span className="min-w-0 truncate">{row.name}</span>
+      <span className={cn('shrink-0 font-medium tabular-nums', row.near && 'text-warning-foreground')}>{row.usedPercent}% used</span>
+    </div>
+    <div role="meter" aria-label={`${row.name} used`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.usedPercent} aria-valuetext={`${row.usedPercent}% used`} className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className={cn('h-full rounded-full', row.near ? 'bg-warning' : 'bg-foreground/70')} style={{ width: `${row.usedPercent}%` }} />
+    </div>
+    {row.resetsAt && <p className="mt-1 text-xs tabular-nums text-muted-foreground">Resets {when(row.resetsAt)}</p>}
+  </li>
+}
+
 export function GatewayTodayWorkspace({ activity, owner, proposals, control }: Props) {
   const [data, setData] = useState<Data>(empty)
   const [loaded, setLoaded] = useState<Set<Source>>(new Set())
@@ -116,12 +131,13 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
   }, [load])
   // Unfinished setup is the first thing to fix; it disappears once verified setup is complete.
   const { status: setupStatus, error: setupError } = useGatewaySetupStatus(control)
+  const [plan, reloadPlan] = usePlanUsage(control.plans)
   const setupSummary = setupStatus && setupStatus.state !== 'complete' ? summarizeSetup(setupStatus) : null
 
   const home = buildHome(data)
   const missing = (source: Source) => !!failed?.sources.has(source) && !loaded.has(source)
   const waiting = (source: Source) => loading && !loaded.has(source)
-  const retry = () => void load()
+  const retry = () => { void load(); void reloadPlan() }
   const allFailed = !!failed && failed.sources.size === sources.length && loaded.size === 0
   const peak = Math.max(1, ...home.runDays.map(item => item.count))
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
@@ -139,7 +155,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
           <span className="block truncate text-muted-foreground">{setupError ? 'Status unavailable' : setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Checking setup…'}</span></span>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>}
-      {allFailed && <InlineError error={failed.error} onRetry={() => load()} />}
+      {allFailed && <InlineError error={failed.error} onRetry={() => Promise.all([load(), reloadPlan()])} />}
 
       <div className="home-bento">
         <Tile area="needs" label="Needs you" icon={<Inbox />} count={missing('requests') ? null : home.needsTotal}
@@ -151,8 +167,13 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
         </Tile>
 
         <Tile area="plan" label="Plan allowance" icon={<Gauge />}>
-          <p className="text-sm font-medium">Not connected yet</p>
-          <p className="text-sm text-muted-foreground">Claude and ChatGPT limits show here once your server reports them.</p>
+          {plan.status === 'loading' ? <TileLoading rows={3} /> : plan.status === 'failed' ? <TileFailed onRetry={() => void reloadPlan()} />
+            : plan.status === 'unsupported' ? <><p className="text-sm font-medium">Not connected yet</p><p className="text-sm text-muted-foreground">Your server doesn’t report plan limits yet. They show here after the next Conker update.</p></>
+              : !plan.rows.length ? <><p className="text-sm font-medium">No readings yet</p><p className="text-sm text-muted-foreground">Limits show here once Conker reads a connected Claude or ChatGPT plan.</p></>
+                : <>
+                  <ul className="flex flex-col gap-3">{plan.rows.map(row => <PlanLine key={row.key} row={row} />)}</ul>
+                  {plan.checkedAt !== null && <p className="mt-auto text-xs text-muted-foreground">{plan.stale ? `Last checked ${when(plan.checkedAt)} · may be out of date` : `Checked ${when(plan.checkedAt)}`}</p>}
+                </>}
         </Tile>
 
         <Tile area="coming" label="Coming up" icon={<CalendarClock />} link={<TileLink to="/jobs">Cron jobs</TileLink>}>
