@@ -9003,8 +9003,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -9035,8 +9035,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 alert_id: string;
