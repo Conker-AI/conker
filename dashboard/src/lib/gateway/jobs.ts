@@ -12,13 +12,24 @@ const timing = z.object({
   day: z.number().int().min(0).max(6),
   hours: z.number().int().min(1).max(168),
 }).strict()
-const target = z.object({
+const sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/)
+const toolTarget = z.object({
   kind: z.enum(['tool', 'automation']), id: z.string().min(1).max(200).regex(/^[A-Za-z0-9_.-]+$/),
   publishedVersion: z.number().int().positive(), digest: z.string().regex(/^[0-9a-f]{64}$/), inputsConfigured: z.boolean(),
 }).strict()
+/** An AI job: its agent carries out the owner's instructions in its own chat; tools ask exactly as they do in chat. */
+const agentTarget = z.object({ kind: z.literal('agent'), sessionId: sessionId.nullable() }).strict()
+const target = z.discriminatedUnion('kind', [toolTarget, agentTarget])
+const toolId = z.string().min(1).max(200).regex(/^[A-Za-z0-9_.:-]+$/)
+/** Starts an AI job when a get tool has something new; Pi keeps only a fingerprint of the answer. */
+const watchSummary = z.object({
+  toolId, everyMinutes: z.number().int().min(5).max(1440), inputsConfigured: z.boolean(),
+  lastCheckedAt: z.number().finite().nonnegative().nullable(), problem: z.enum(['needs_approval', 'no_credential', 'failed']).nullable(),
+}).strict()
+const watchCreate = z.object({ toolId, args: z.record(z.string().max(200), z.string().max(4000)), everyMinutes: z.number().int().min(5).max(1440) }).strict()
 const definition = z.object({
-  name: z.string().min(1).max(80), instructions: z.string().min(1).max(4000), agentId: z.string().min(1).max(200),
-  timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target,
+  name: z.string().min(1).max(80), instructionsConfigured: z.boolean(), agentId: z.string().min(1).max(200),
+  timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target, watch: watchSummary.nullable().optional(),
   overlap: z.literal('skip'), requireBudget: z.boolean(), budgetAllowanceConfigured: z.boolean(),
 }).strict().refine(value => value.enabled === (value.state === 'enabled'), 'Job state is inconsistent.')
 const job = z.object({
@@ -37,7 +48,23 @@ const runCollection = z.object({ schemaVersion: z.literal(1), results: z.array(r
 const runAction = run.extend({ replayed: z.boolean() }).strict()
 const requestId = z.string().min(16).max(128).regex(/^[A-Za-z0-9_.:-]+$/)
 
+const noteId = z.string().regex(/^note_[0-9a-f]{32}$/)
+const agentNote = z.object({
+  id: noteId, jobId, sessionId, messageId: z.string().regex(/^msg_[0-9a-f]{16}$/).nullable(),
+  title: z.string().min(1).max(160), detail: z.string().max(400), createdAt: timestamp,
+}).strict()
+const agentNotes = z.object({ schemaVersion: z.literal(1), results: z.array(agentNote).max(50) }).strict()
+const dismissed = z.object({ id: noteId, dismissed: z.literal(true), changed: z.boolean() }).strict()
+const agentJobCreate = z.object({
+  name: z.string().trim().min(1).max(80), instructions: z.string().trim().min(1).max(4000),
+  timing, timeZone: z.string().min(1).max(100), agentId: z.string().min(1).max(200).optional(), watch: watchCreate.optional(),
+}).strict()
+
 export type GatewayJob = z.infer<typeof job>
+export type GatewayAgentNote = z.infer<typeof agentNote>
+export type GatewayAgentJobCreate = z.infer<typeof agentJobCreate>
+export type GatewayJobTiming = z.infer<typeof timing>
+export const isAiJob = (value: GatewayJob) => value.definition.target.kind === 'agent'
 export type GatewayScheduledRun = z.infer<typeof run>
 export type GatewayScheduledRunStatus = z.infer<typeof runStatus>
 
@@ -99,6 +126,16 @@ export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>
     runNow(id: string, stableRequestId: string) {
       const selected = parse(jobId, id, true)
       return write(runAction, `${jobPath(selected)}/run`, { request_id: parse(requestId, stableRequestId, true) })
+    },
+    /** A new AI job (never a raw tool job); the gateway asks for the password first. */
+    async createAgentJob(body: GatewayAgentJobCreate) {
+      return write(job, '/api/control/pi/jobs/agent', parse(agentJobCreate, body, true))
+    },
+    async agentNotes(signal?: AbortSignal): Promise<GatewayAgentNote[]> {
+      return parse(agentNotes, await auth.request('/api/control/pi/jobs/agent/notes', { signal })).results
+    },
+    async dismissNote(id: string) {
+      return parse(dismissed, await auth.request(`/api/control/pi/jobs/agent/notes/${parse(noteId, id, true)}/dismiss`, { method: 'POST', body: {} }))
     },
     provisionBudget(id: string) { return write(run, `${runPath(id)}/provision-budget`) },
     cancel(id: string) { return write(runAction, `${runPath(id)}/cancel`) },

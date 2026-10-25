@@ -39,3 +39,47 @@ export function fakePlanUsage(method: string, fail: (status: number) => never): 
   const window = (provider: string, id: string, label: string, usedPercent: number, hours: number) => ({ provider, window: id, label, usedPercent, resetsAt: new Date(now + hours * 3600_000).toISOString(), checkedAt })
   return { windows: [window('chatgpt', 'primary', '5-hour', 84, 2), window('chatgpt', 'secondary', 'weekly', 31, 80), window('claude', 'five_hour', '5-hour', 42, 3), window('claude', 'seven_day', 'weekly', 18, 100)], alerts: [] }
 }
+
+/** Preview-only AI jobs: one sample job and one finding; creating and dismissing stay in this tab. */
+export function createFakeAgentJobs(jobs: () => Json[]) {
+  const session = `ses_${'1'.repeat(16)}`, now = () => Date.now() / 1000
+  let seeded = false
+  const notes: Json[] = [{ id: `note_${'7'.repeat(32)}`, jobId: `job_${'8'.repeat(32)}`, sessionId: session, messageId: null, title: 'Physics exam on Thursday', detail: 'Your study chat mentions the worksheet due Friday too. I can make notes and practice questions for both.', createdAt: now() - 1800 }]
+  const job = (id: string, name: string, timing: Json, timeZone: string): Json => ({
+    schemaVersion: 1, id, revision: 1, createdAt: now() - 86400, nextAt: now() + 3600,
+    definition: { name, instructionsConfigured: true, agentId: 'companion', timing, timeZone, enabled: true, state: 'enabled', target: { kind: 'agent', sessionId: session }, overlap: 'skip', requireBudget: false, budgetAllowanceConfigured: false },
+    authority: 'none', contentIncluded: false, execution: 'not-triggered',
+  })
+  const seed = () => {
+    if (seeded) return
+    seeded = true
+    jobs().push(job(`job_${'8'.repeat(32)}`, 'Weekly life review', { kind: 'weekly', time: '21:00', day: 0, hours: 24 }, 'Asia/Jerusalem'))
+    const watched = job(`job_${'9'.repeat(32)}`, 'Study group messages', { kind: 'interval', time: '00:00', day: 0, hours: 24 }, 'Asia/Jerusalem')
+    ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
+    jobs().push(watched)
+  }
+  return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    seed()
+    if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
+    const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
+    if (dismiss && method === 'POST') {
+      const index = notes.findIndex(note => note.id === dismiss[1])
+      if (index < 0) return fail(404)
+      notes.splice(index, 1)
+      return { id: dismiss[1], dismissed: true, changed: true }
+    }
+    if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
+      const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))
+      const watch = body?.watch as Json | undefined
+      if (watch) (created.definition as Json).watch = { toolId: watch.toolId, everyMinutes: watch.everyMinutes, inputsConfigured: Object.keys((watch.args ?? {}) as Json).length > 0, lastCheckedAt: null, problem: null }
+      jobs().push(created)
+      return created
+    }
+    return fail(404)
+  }
+}
+
+/** Seeds the sample AI job before the first job list read. */
+export function withFakeAgentJobs(handle: ReturnType<typeof createFakeAgentJobs>) {
+  return (path: string) => { if (path === '/api/control/pi/jobs') handle('/api/control/pi/jobs/agent/notes', 'GET', undefined, () => { throw new Error('unreachable') }) }
+}

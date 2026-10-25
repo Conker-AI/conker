@@ -172,10 +172,10 @@
     },
     {
       "id": "jobs-schedules", "name": "Job and schedule management", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/control/pi/jobs", "/api/control/pi/jobs/{id}", "/api/control/pi/jobs/{id}/runs", "/api/control/pi/jobs/{id}/state", "/api/control/pi/jobs/{id}/run", "/api/control/pi/jobs/runs/{id}/provision-budget", "/api/control/pi/jobs/runs/{id}/cancel", "/api/control/pi/jobs/runs/{id}/resume", "/api/control/pi/jobs/runs/{id}/reconcile"],
+      "gatewayRoutes": ["/api/control/pi/jobs", "/api/control/pi/jobs/agent", "/api/control/pi/jobs/agent/notes", "/api/control/pi/jobs/agent/notes/{id}/dismiss", "/api/control/pi/jobs/{id}", "/api/control/pi/jobs/{id}/runs", "/api/control/pi/jobs/{id}/state", "/api/control/pi/jobs/{id}/run", "/api/control/pi/jobs/runs/{id}/provision-budget", "/api/control/pi/jobs/runs/{id}/cancel", "/api/control/pi/jobs/runs/{id}/resume", "/api/control/pi/jobs/runs/{id}/reconcile"],
       "uiRoutes": ["/jobs", "/jobs/{id}"], "cliCommands": ["conker inspect jobs", "conker apply jobs FILE"],
       "deploymentRequirements": ["PI_SCHEDULER_ENABLED", "GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "scoped ToolGate execution credential"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "execution: z.literal('not-triggered')"}, {"path": "dashboard/src/components/gateway/jobs-workspace.tsx", "contains": "Queued is not finished: Run history shows the result"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Job views redact target inputs"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "execution: z.literal('not-triggered')"}, {"path": "dashboard/src/lib/gateway/jobs.ts", "contains": "/api/control/pi/jobs/agent"}, {"path": "dashboard/src/components/gateway/new-agent-job-dialog.tsx", "contains": "Creating it asks for your password."}, {"path": "dashboard/src/components/gateway/jobs-workspace.tsx", "contains": "Queued is not finished: Run history shows the result"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Job views redact target inputs"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",
