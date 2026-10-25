@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Pi 0.6.1:** pin it for the drafting model role above, a 10-minute wait for the workflow
+  builder, and the owner's read of plan usage, which fills Home's **Plan allowance** tile
+  (Claude and ChatGPT percent used per window and when each resets). Pi is now licensed
+  AGPL-3.0-only. `conker update` moves a server to it with its staged, health-checked rollback.
 - **A model for drafting:** `conker models --role drafting --model ID` gives the workflow
   builder its own model (Pi's new `drafting` role) while chat keeps its own;
   `--role ROLE --off` switches a role off. The dashboard now keeps model roles it does not
