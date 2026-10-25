@@ -68,9 +68,17 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
       notes.splice(index, 1)
       return { id: dismiss[1], dismissed: true, changed: true }
     }
+    const hook = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/hook(\/revoke)?$/)
+    if (hook && method === 'POST') {
+      const target = jobs().find(item => item.id === hook[1])
+      if (!target) return fail(404)
+      ;((target.definition as Json).target as Json).webhook = !hook[2]
+      return hook[2] ? { jobId: hook[1], revoked: true } : { jobId: hook[1], token: `hook_${'P'.repeat(43)}`, header: 'X-Conker-Hook-Token', path: `/hooks/${hook[1]}` }
+    }
     if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
       const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))
       const watch = body?.watch as Json | undefined
+      if (body?.clock === false) ((created.definition as Json).target as Json).clock = false
       if (watch) (created.definition as Json).watch = { toolId: watch.toolId, everyMinutes: watch.everyMinutes, inputsConfigured: Object.keys((watch.args ?? {}) as Json).length > 0, lastCheckedAt: null, problem: null }
       jobs().push(created)
       return created

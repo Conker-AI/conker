@@ -18,7 +18,8 @@ const toolTarget = z.object({
   publishedVersion: z.number().int().positive(), digest: z.string().regex(/^[0-9a-f]{64}$/), inputsConfigured: z.boolean(),
 }).strict()
 /** An AI job: its agent carries out the owner's instructions in its own chat; tools ask exactly as they do in chat. */
-const agentTarget = z.object({ kind: z.literal('agent'), sessionId: sessionId.nullable() }).strict()
+// webhook and clock arrived with Pi's webhooks; older Pi omits them (no webhook, runs on its timing).
+const agentTarget = z.object({ kind: z.literal('agent'), sessionId: sessionId.nullable(), webhook: z.boolean().optional(), clock: z.boolean().optional() }).strict()
 const target = z.discriminatedUnion('kind', [toolTarget, agentTarget])
 const toolId = z.string().min(1).max(200).regex(/^[A-Za-z0-9_.:-]+$/)
 /** Starts an AI job when a get tool has something new; Pi keeps only a fingerprint of the answer. */
@@ -57,13 +58,18 @@ const agentNotes = z.object({ schemaVersion: z.literal(1), results: z.array(agen
 const dismissed = z.object({ id: noteId, dismissed: z.literal(true), changed: z.boolean() }).strict()
 const agentJobCreate = z.object({
   name: z.string().trim().min(1).max(80), instructions: z.string().trim().min(1).max(4000),
-  timing, timeZone: z.string().min(1).max(100), agentId: z.string().min(1).max(200).optional(), watch: watchCreate.optional(),
+  timing, timeZone: z.string().min(1).max(100), agentId: z.string().min(1).max(200).optional(), watch: watchCreate.optional(), clock: z.boolean().optional(),
 }).strict()
+const hookIssued = z.object({
+  jobId, token: z.string().regex(/^hook_[A-Za-z0-9_-]{43}$/), header: z.literal('X-Conker-Hook-Token'), path: z.string().regex(/^\/hooks\/job_[0-9a-f]{32}$/),
+}).strict()
+const hookRevoked = z.object({ jobId, revoked: z.literal(true) }).strict()
 
 export type GatewayJob = z.infer<typeof job>
 export type GatewayAgentNote = z.infer<typeof agentNote>
 export type GatewayAgentJobCreate = z.infer<typeof agentJobCreate>
 export type GatewayJobTiming = z.infer<typeof timing>
+export type GatewayHookIssued = z.infer<typeof hookIssued>
 export const isAiJob = (value: GatewayJob) => value.definition.target.kind === 'agent'
 export type GatewayScheduledRun = z.infer<typeof run>
 export type GatewayScheduledRunStatus = z.infer<typeof runStatus>
@@ -133,6 +139,13 @@ export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>
     },
     async agentNotes(signal?: AbortSignal): Promise<GatewayAgentNote[]> {
       return parse(agentNotes, await auth.request('/api/control/pi/jobs/agent/notes', { signal })).results
+    },
+    /** A new webhook secret for an AI job, shown once; any earlier one stops working. Asks for the password. */
+    async issueHook(id: string) {
+      return write(hookIssued, `${jobPath(parse(jobId, id, true))}/hook`)
+    },
+    async revokeHook(id: string) {
+      return write(hookRevoked, `${jobPath(parse(jobId, id, true))}/hook/revoke`)
     },
     async dismissNote(id: string) {
       return parse(dismissed, await auth.request(`/api/control/pi/jobs/agent/notes/${parse(noteId, id, true)}/dismiss`, { method: 'POST', body: {} }))
