@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CollectionEmpty, CollectionSearch } from "./primitives"
 
@@ -38,4 +39,11 @@ export function ListLine({ to, icon, title, sub, meta, onClick }: { to: string; 
     </span>
     {meta && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</span>}
   </Link></li>
+}
+
+/** A filter chip with its count: one choice of several, pressed when active. */
+export function FilterChip({ active, count, onClick, children }: { active: boolean; count: number; onClick: () => void; children: ReactNode }) {
+  return <Button type="button" size="sm" variant={active ? "secondary" : "ghost"} aria-pressed={active} className="rounded-full" onClick={onClick}>
+    {children}<span className="tabular-nums text-muted-foreground">{count}</span>
+  </Button>
 }

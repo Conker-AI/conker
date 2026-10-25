@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Archive, ArrowLeft, Download, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArtifactPreview } from '@/components/artifacts/native-preview'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
+import { InlineError } from '@/components/resilience/inline-error'
+import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -116,9 +118,9 @@ function ArtifactEditor({ initial, control, onChanged }: { initial: GatewayArtif
 export function GatewayArtifactsWorkspace({ control, activity }: { control: GatewayControlClient; activity: GatewayActivityClient }) {
   const location = useLocation(), navigate = useNavigate(), match = location.pathname.match(/^\/artifacts\/(artifact_[0-9a-f]{32})$/)
   const [artifacts, setArtifacts] = useState<GatewayArtifactSummary[] | null>(null), [details, setDetails] = useState<Record<string, GatewayArtifact>>({}), [query, setQuery] = useState(''), [filter, setFilter] = useState<'active' | 'archived' | 'all'>('active')
-  const [creating, setCreating] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null)
-  const load = useCallback(async () => { setLoading(true); setError(null); try { setArtifacts((await control.artifacts.list({ limit: 100 })).results) } catch (cause) { setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
-  useEffect(() => { let active = true; control.artifacts.list({ limit: 100 }).then(page => active && setArtifacts(page.results)).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control])
+  const [creating, setCreating] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null), [listError, setListError] = useState<unknown>(null)
+  const load = useCallback(async () => { setLoading(true); setError(null); setListError(null); try { setArtifacts((await control.artifacts.list({ limit: 100 })).results) } catch (cause) { setListError(cause); setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
+  useEffect(() => { let active = true; control.artifacts.list({ limit: 100 }).then(page => active && setArtifacts(page.results)).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } }); return () => { active = false } }, [control])
   const selected = match ? details[match[1]] : undefined
   useEffect(() => {
     if (!match || selected) return; let active = true
@@ -133,16 +135,23 @@ export function GatewayArtifactsWorkspace({ control, activity }: { control: Gate
     if (selected) return <ArtifactEditor key={selected.id} initial={selected} control={control} onChanged={update} />
     return <div className="space-y-4 p-6">{error ? <><PageHeader title="Artifact unavailable" description={error} density="compact" /><Button variant="outline" onClick={() => navigate('/artifacts')}>Back to artifacts</Button></> : <p role="status" className="text-sm text-muted-foreground">Loading artifact…</p>}</div>
   }
-  const visible = (artifacts ?? []).filter(item => (filter === 'all' || (item.archivedAt !== null) === (filter === 'archived')) && item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction><WorkspaceAction onClick={() => setCreating(true)}><Plus />New artifact</WorkspaceAction></>} />
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {!artifacts && !error ? <CollectionLoading label="Loading artifacts…" /> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search artifacts" placeholder="Search artifact titles…" count={visible.length} unit={visible.length === 1 ? 'artifact' : 'artifacts'}
-      filters={<Select value={filter} onValueChange={value => { if (value !== null) setFilter(value as typeof filter) }} items={[{ value: "active", label: "Active artifacts" }, { value: "archived", label: "Archived artifacts" }, { value: "all", label: "All artifacts" }]}><SelectTrigger className="w-44" aria-label="Filter artifacts"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active artifacts</SelectItem><SelectItem value="archived">Archived artifacts</SelectItem><SelectItem value="all">All artifacts</SelectItem></SelectContent></Select>}
-      hint="Library rows contain metadata only. Open an artifact to read its bounded versions."
-      emptyTitle={query ? 'No matching artifacts' : filter === 'archived' ? 'No archived artifacts' : 'Keep an output you can return to'} emptyDescription={query ? 'Try another title. Content is not indexed in this browser list.' : filter === 'archived' ? 'Archived artifacts retain their immutable versions.' : 'Create a document or structured output, then build its version history.'} emptyAction={<Button onClick={() => setCreating(true)}><Plus />Create artifact</Button>} icon={<Files />}>
-      <CollectionSection title={filter === 'archived' ? 'Archived artifacts' : filter === 'all' ? 'All artifacts' : 'Active artifacts'}>{visible.map(item => <CollectionRow key={item.id} to={`/artifacts/${item.id}`} title={item.title} description={<span className="truncate">{availabilityLabels[item.availability]} · {item.origin === 'owner-authored' ? 'Owner authored' : 'Copied response'}{item.privateOrigin ? ' · Private origin' : ''}</span>} leading={<span className="flex size-8 items-center justify-center rounded-lg border bg-background"><FileCode2 className="size-4" /></span>} trailing={<><span>{item.versionCount} {item.versionCount === 1 ? 'version' : 'versions'}</span>{item.archivedAt && <span>Archived</span>}</>} />)}</CollectionSection>
-    </CollectionPanel>}
+  const archivedCount = (artifacts ?? []).filter(item => item.archivedAt !== null).length
+  // Filter chips appear only once something is archived.
+  const showing = archivedCount ? filter : 'active'
+  const visible = (artifacts ?? []).filter(item => (showing === 'all' || (item.archivedAt !== null) === (showing === 'archived')) && item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New artifact</WorkspaceAction></>} />
+    {error && (artifacts ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Artifacts didn’t load" onRetry={() => load()} />)}
+    {!artifacts && !error ? <ListSkeleton rows={4} label="Loading artifacts…" /> : artifacts && <ListCard query={query} onQueryChange={setQuery} label="Search artifacts" placeholder="Search artifact titles…" count={visible.length} unit={visible.length === 1 ? 'artifact' : 'artifacts'}
+      filters={archivedCount ? <>{chip('active', 'Active', artifacts.length - archivedCount)}{chip('archived', 'Archived', archivedCount)}{chip('all', 'All', artifacts.length)}</> : undefined}
+      emptyTitle={query ? 'No matching artifacts' : showing === 'archived' ? 'No archived artifacts' : 'Keep an output you can return to'} emptyDescription={query ? 'Try another title. Content is not indexed in this browser list.' : showing === 'archived' ? 'Archived artifacts retain their immutable versions.' : 'Create a document or structured output, then build its version history.'}
+      emptyAction={query || showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />Create artifact</Button>} icon={<Files />}>
+      {visible.map(item => <ListLine key={item.id} to={`/artifacts/${item.id}`} icon={item.archivedAt ? <Archive /> : <FileCode2 />} title={item.title}
+        sub={`${availabilityLabels[item.availability]} · ${item.origin === 'owner-authored' ? 'Owner authored' : 'Copied response'}${item.privateOrigin ? ' · Private origin' : ''}`}
+        meta={item.archivedAt ? 'Archived' : `${item.versionCount} ${item.versionCount === 1 ? 'version' : 'versions'}`} />)}
+    </ListCard>}
+    <p className="text-xs text-muted-foreground">The list holds titles and details only. Open an artifact to read its versions.</p>
     <CreateArtifactDialog client={control.artifacts} activity={activity} open={creating} onOpenChange={setCreating} onCreated={artifact => { setDetails(current => ({ ...current, [artifact.id]: artifact })); setArtifacts(current => [...(current ?? []), artifactSummary(artifact)]); setCreating(false); navigate(`/artifacts/${artifact.id}`) }} />
   </div></GatewayPageFrame>
 }
