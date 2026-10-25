@@ -2934,6 +2934,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/jobs/agent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Agent Job
+         * @description An AI job: its agent carries out the instructions on schedule; tools ask as in chat.
+         */
+        post: operations["create_agent_job_jobs_agent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/agent/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agent Job Notes
+         * @description What AI jobs found for the owner, newest first, until dismissed.
+         */
+        get: operations["agent_job_notes_jobs_agent_notes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/agent/notes/{identity}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Agent Job Note
+         * @description Hide a note; the job's chat keeps the full reply.
+         */
+        post: operations["dismiss_agent_job_note_jobs_agent_notes__identity__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/jobs/{identity}": {
         parameters: {
             query?: never;
@@ -4413,6 +4473,58 @@ export interface components {
             toolIds: string[];
             memory: components["schemas"]["MemorySelection"];
         };
+        /**
+         * AgentJobCreate
+         * @description What the browser may create: an AI job with any timing, never a raw tool target.
+         */
+        AgentJobCreate: {
+            /** Name */
+            name: string;
+            /** Instructions */
+            instructions: string;
+            /**
+             * Agentid
+             * @default companion
+             */
+            agentId: string;
+            timing: components["schemas"]["Timing"];
+            /** Timezone */
+            timeZone: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            watch?: components["schemas"]["ToolWatch"] | null;
+        };
+        /** AgentJobNote */
+        AgentJobNote: {
+            /** Id */
+            id: string;
+            /** Jobid */
+            jobId: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Messageid */
+            messageId?: string | null;
+            /** Title */
+            title: string;
+            /** Detail */
+            detail: string;
+            /** Createdat */
+            createdAt: number;
+        };
+        /** AgentJobNoteCollection */
+        AgentJobNoteCollection: {
+            /**
+             * Schemaversion
+             * @default 1
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Results */
+            results: components["schemas"]["AgentJobNote"][];
+        };
         /** AgentProfile */
         AgentProfile: {
             /**
@@ -4469,6 +4581,27 @@ export interface components {
             agentId: string;
             /** Revision */
             revision: number;
+        };
+        /**
+         * AgentTarget
+         * @description An AI job: one turn by the job's agent in the job's own chat (see agent_jobs).
+         */
+        AgentTarget: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "agent";
+        };
+        /** AgentTargetSummary */
+        AgentTargetSummary: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "agent";
+            /** Sessionid */
+            sessionId?: string | null;
         };
         /** Append */
         Append: {
@@ -5480,7 +5613,9 @@ export interface components {
             timeZone: string;
             /** Enabled */
             enabled: boolean;
-            target: components["schemas"]["Target"];
+            /** Target */
+            target: components["schemas"]["Target"] | components["schemas"]["AgentTarget"];
+            watch?: components["schemas"]["ToolWatch"] | null;
             /**
              * Overlap
              * @default skip
@@ -5513,7 +5648,9 @@ export interface components {
              * @enum {string}
              */
             state: "enabled" | "paused";
-            target: components["schemas"]["TargetSummary"];
+            /** Target */
+            target: components["schemas"]["TargetSummary"] | components["schemas"]["AgentTargetSummary"];
+            watch?: components["schemas"]["WatchSummary"] | null;
             /**
              * Overlap
              * @constant
@@ -7070,10 +7207,10 @@ export interface components {
         /** Target */
         Target: {
             /**
-             * Kind
+             * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "tool" | "automation";
+            kind: "automation" | "tool";
             /** Id */
             id: string;
             /** Publishedversion */
@@ -7088,10 +7225,10 @@ export interface components {
         /** TargetSummary */
         TargetSummary: {
             /**
-             * Kind
+             * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "tool" | "automation";
+            kind: "automation" | "tool";
             /** Id */
             id: string;
             /** Publishedversion */
@@ -7349,6 +7486,23 @@ export interface components {
             /** Hours */
             hours: number;
         };
+        /**
+         * ToolWatch
+         * @description Start an AI job when a get tool's answer changes; Pi looks every few minutes.
+         */
+        ToolWatch: {
+            /** Toolid */
+            toolId: string;
+            /** Args */
+            args?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Everyminutes
+             * @default 15
+             */
+            everyMinutes: number;
+        };
         /** TransitionTask */
         TransitionTask: {
             /** Expected Revision */
@@ -7481,6 +7635,19 @@ export interface components {
              * @enum {string}
              */
             vote: "up" | "down" | "winner" | "clear";
+        };
+        /** WatchSummary */
+        WatchSummary: {
+            /** Toolid */
+            toolId: string;
+            /** Everyminutes */
+            everyMinutes: number;
+            /** Inputsconfigured */
+            inputsConfigured: boolean;
+            /** Lastcheckedat */
+            lastCheckedAt?: number | null;
+            /** Problem */
+            problem?: ("needs_approval" | "no_credential" | "failed") | null;
         };
         /** State */
         pi__agents__skills__State: {
@@ -14867,6 +15034,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_agent_job_jobs_agent_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentJobCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agent_job_notes_jobs_agent_notes_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentJobNoteCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_agent_job_note_jobs_agent_notes__identity__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
