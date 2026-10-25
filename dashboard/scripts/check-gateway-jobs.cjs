@@ -85,6 +85,16 @@ async function main() {
   await assert.rejects(agentTransport.request('/api/control/pi/jobs', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation', 'The browser never creates raw tool jobs')
   assert.equal(agentRequests, 2)
 
+  // A watched AI job starts when a get tool has something new; the view never carries the inputs.
+  agentReply = { ...aiJob, definition: { ...aiJob.definition, watch: { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: null, problem: 'needs_approval' } } }
+  assert.equal((await agents.get(jobId)).definition.watch.problem, 'needs_approval')
+  agentReply = { ...aiJob, definition: { ...aiJob.definition, watch: { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: null, problem: null, args: { chat: 'x' } } } }
+  await assert.rejects(agents.get(jobId), error => error.kind === 'invalid-response', 'A watch summary never carries its inputs')
+  agentReply = aiJob
+  await agents.createAgentJob({ name: 'Study group', instructions: 'Tell me what the group needs.', timing: { kind: 'interval', time: '00:00', day: 0, hours: 24 }, timeZone: 'UTC', watch: { toolId: 'mcp.telegram.messages', args: { chat: 'study group' }, everyMinutes: 5 } })
+  assert.deepEqual(agentCalls.at(-1)[1].body.watch, { toolId: 'mcp.telegram.messages', args: { chat: 'study group' }, everyMinutes: 5 })
+  await assert.rejects(agents.createAgentJob({ name: 'x', instructions: 'y', timing: { kind: 'interval', time: '00:00', day: 0, hours: 24 }, timeZone: 'UTC', watch: { toolId: 'mcp.telegram.messages', args: {}, everyMinutes: 1 } }), error => error.kind === 'validation', 'Watches look at most every five minutes')
+
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')
   assert.match(ui, /Try again resends the same request, so it can’t run twice/, 'An unknown outcome retries with the same request identity')

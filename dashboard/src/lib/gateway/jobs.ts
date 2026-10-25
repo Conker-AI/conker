@@ -20,9 +20,16 @@ const toolTarget = z.object({
 /** An AI job: its agent carries out the owner's instructions in its own chat; tools ask exactly as they do in chat. */
 const agentTarget = z.object({ kind: z.literal('agent'), sessionId: sessionId.nullable() }).strict()
 const target = z.discriminatedUnion('kind', [toolTarget, agentTarget])
+const toolId = z.string().min(1).max(200).regex(/^[A-Za-z0-9_.:-]+$/)
+/** Starts an AI job when a get tool has something new; Pi keeps only a fingerprint of the answer. */
+const watchSummary = z.object({
+  toolId, everyMinutes: z.number().int().min(5).max(1440), inputsConfigured: z.boolean(),
+  lastCheckedAt: z.number().finite().nonnegative().nullable(), problem: z.enum(['needs_approval', 'no_credential', 'failed']).nullable(),
+}).strict()
+const watchCreate = z.object({ toolId, args: z.record(z.string().max(200), z.string().max(4000)), everyMinutes: z.number().int().min(5).max(1440) }).strict()
 const definition = z.object({
   name: z.string().min(1).max(80), instructionsConfigured: z.boolean(), agentId: z.string().min(1).max(200),
-  timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target,
+  timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target, watch: watchSummary.nullable().optional(),
   overlap: z.literal('skip'), requireBudget: z.boolean(), budgetAllowanceConfigured: z.boolean(),
 }).strict().refine(value => value.enabled === (value.state === 'enabled'), 'Job state is inconsistent.')
 const job = z.object({
@@ -50,7 +57,7 @@ const agentNotes = z.object({ schemaVersion: z.literal(1), results: z.array(agen
 const dismissed = z.object({ id: noteId, dismissed: z.literal(true), changed: z.boolean() }).strict()
 const agentJobCreate = z.object({
   name: z.string().trim().min(1).max(80), instructions: z.string().trim().min(1).max(4000),
-  timing, timeZone: z.string().min(1).max(100), agentId: z.string().min(1).max(200).optional(),
+  timing, timeZone: z.string().min(1).max(100), agentId: z.string().min(1).max(200).optional(), watch: watchCreate.optional(),
 }).strict()
 
 export type GatewayJob = z.infer<typeof job>

@@ -50,7 +50,14 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     definition: { name, instructionsConfigured: true, agentId: 'companion', timing, timeZone, enabled: true, state: 'enabled', target: { kind: 'agent', sessionId: session }, overlap: 'skip', requireBudget: false, budgetAllowanceConfigured: false },
     authority: 'none', contentIncluded: false, execution: 'not-triggered',
   })
-  const seed = () => { if (!seeded) { seeded = true; jobs().push(job(`job_${'8'.repeat(32)}`, 'Weekly life review', { kind: 'weekly', time: '21:00', day: 0, hours: 24 }, 'Asia/Jerusalem')) } }
+  const seed = () => {
+    if (seeded) return
+    seeded = true
+    jobs().push(job(`job_${'8'.repeat(32)}`, 'Weekly life review', { kind: 'weekly', time: '21:00', day: 0, hours: 24 }, 'Asia/Jerusalem'))
+    const watched = job(`job_${'9'.repeat(32)}`, 'Study group messages', { kind: 'interval', time: '00:00', day: 0, hours: 24 }, 'Asia/Jerusalem')
+    ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
+    jobs().push(watched)
+  }
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
@@ -63,6 +70,8 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     }
     if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
       const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))
+      const watch = body?.watch as Json | undefined
+      if (watch) (created.definition as Json).watch = { toolId: watch.toolId, everyMinutes: watch.everyMinutes, inputsConfigured: Object.keys((watch.args ?? {}) as Json).length > 0, lastCheckedAt: null, problem: null }
       jobs().push(created)
       return created
     }
