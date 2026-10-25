@@ -86,7 +86,7 @@ export function GatewayModelsSettings({ client, onSignOut }: { client: GatewayCo
         <div className="min-w-0 flex-1 space-y-2"><Label htmlFor="profile-name">Display name</Label><Input id="profile-name" maxLength={60} value={profileName} onChange={event => setProfileName(event.target.value)} /></div>
         <Button type="submit" variant="outline" disabled={!profileName.trim() || profileName.trim() === profile.name}>Save name</Button>
       </form>
-      {profileError && <p role="alert" className="text-sm text-destructive">{profileError}</p>}
+      {profileError && <p role="alert" className="text-sm text-destructive-foreground">{profileError}</p>}
     </WorkspaceSection>
     <WorkspaceSection title="Appearance" description="Choose a theme for this browser.">
       <div role="radiogroup" aria-label="Color theme" className="grid grid-cols-3 rounded-lg border p-1">
@@ -102,7 +102,7 @@ export function GatewayModelsSettings({ client, onSignOut }: { client: GatewayCo
         </Select>
         {pending && <p role="status" className="text-xs text-muted-foreground">Saving…</p>}
       </div>
-      {error && <p role="alert" className="text-sm text-destructive">{error} Reload the page if settings changed elsewhere.</p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Reload the page if settings changed elsewhere.</p>}
       <p className="text-sm text-muted-foreground"><Link className="underline underline-offset-4" to="/settings?tab=providers">Manage providers and models</Link></p>
     </WorkspaceSection>
     <WorkspaceSection title={<Label htmlFor="ideas-switch" className="text-base font-semibold">Ideas from Conker</Label>} description={<>Once a day Conker reads your recent chats and suggests things it could take off your plate. It only suggests; nothing runs without you. No ideas after a day? <a className="underline underline-offset-4" href={IDEAS_DOCS} target="_blank" rel="noreferrer">Check the server</a></>} action={<Switch id="ideas-switch" checked={ideasOn} disabled={pending || !enabled.length} onCheckedChange={setIdeas} />} />

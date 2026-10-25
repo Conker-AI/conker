@@ -26,6 +26,6 @@ export function PendingSubmissions({ client, sessionId, initial, truncated, disa
   return <section aria-label="Saved message recovery" className="rounded-lg border bg-muted p-3"><p className="text-sm font-medium">A saved message needs your attention ({rows.length}{next ? '+' : ''})</p>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">These requests survived a reload. Inspect their saved state before deciding how to continue.</p>
     <ul className="mt-3 space-y-3">{rows.map(row => <li key={row.requestId} className="flex flex-wrap items-center justify-between gap-2 border-t pt-3"><div className="min-w-0 text-xs"><p className="font-medium">{row.status.replaceAll('_', ' ')}</p><p className="break-all text-muted-foreground">{row.requestId}</p></div><Button size="sm" variant="outline" disabled={disabled || pending} onClick={() => onInspect(row)}>Inspect submission</Button></li>)}</ul>
-    {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}{next && <Button size="sm" variant="outline" className="mt-3" disabled={pending || disabled} onClick={() => void more()}>{pending ? 'Loading…' : 'Load earlier submissions'}</Button>}
+    {error && <p role="alert" className="mt-3 text-xs text-destructive-foreground">{error}</p>}{next && <Button size="sm" variant="outline" className="mt-3" disabled={pending || disabled} onClick={() => void more()}>{pending ? 'Loading…' : 'Load earlier submissions'}</Button>}
   </section>
 }

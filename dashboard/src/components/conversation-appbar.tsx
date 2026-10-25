@@ -88,7 +88,7 @@ export function ConversationAppbar({ session, search }: { session: Session; sear
           <Select value={modelId} onValueChange={value => { if (value !== null) setModelId(value) }} items={[{ value: "default", label: "Use workspace default" }, ...getAvailableModels(data.modelsConfiguration).map((model) => ({ value: model.id, label: <>{model.name} · {data.modelsConfiguration.providers.find(provider => provider.id === model.providerId)?.name}</> }))]}><SelectTrigger id="conversation-route" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Use workspace default</SelectItem>{getAvailableModels(data.modelsConfiguration).map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {data.modelsConfiguration.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>)}</SelectContent></Select>
           </div><Link to="/settings?tab=models" className="text-sm underline underline-offset-4">Manage Models / Providers</Link>
         </OverlayBody><FormActions inset><Button variant="outline" disabled={pending} onClick={() => setDialog(null)}>Cancel</Button><Button disabled={busy} onClick={async () => { if (await update({ modelId: modelId === "default" ? null : modelId })) setDialog(null) }}>Save route</Button></FormActions></>}
-        {error && <p role="alert" className="px-5 pb-4 text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="px-5 pb-4 text-sm text-destructive-foreground">{error}</p>}
       </TaskDialogContent>
     </Dialog>
     <ConfirmationDialog open={dialog === "delete"} onOpenChange={open => { if (!open) setDialog(null) }}

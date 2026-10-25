@@ -57,9 +57,9 @@ async function main() {
   assert.equal(requests, 5)
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
-  assert.match(ui, /A successful admission is not a claim that execution completed/)
-  assert.match(ui, /retrying uses the same durable request identity/)
-  assert.match(ui, /Receipts and inputs stay server-side/)
+  assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')
+  assert.match(ui, /Try again resends the same request, so it can’t run twice/, 'An unknown outcome retries with the same request identity')
+  assert.match(ui, /Inputs and results stay on your server/, 'Receipts and inputs are not shown in the browser')
   console.log('Gateway Jobs passed: redacted DTOs, exact routes, durable manual admission, recovery controls, and no browser authoring of raw targets.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

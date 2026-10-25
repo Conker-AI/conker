@@ -97,7 +97,7 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
               onChange={(e) => { setImportText(e.target.value); setError("") }}
             />
           </div>
-          {error && <p id="theme-import-error" role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p id="theme-import-error" role="alert" className="text-sm text-destructive-foreground">{error}</p>}
         </OverlayBody>
           <FormActions inset>
             <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">

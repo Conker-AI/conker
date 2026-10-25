@@ -72,8 +72,8 @@ async function main() {
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/artifacts-workspace.tsx'), 'utf8')
   const chat = fs.readFileSync(path.join(root, 'src/lib/chat/gateway-adapter.ts'), 'utf8')
-  assert.match(ui, /Saving appends a new immutable version/)
-  assert.match(ui, /Content remains inert/)
+  assert.match(ui, /Saving adds a new version\. Earlier versions never change/, 'Saving appends an immutable version')
+  assert.match(ui, /Nothing in it runs unless you open an HTML preview yourself/, 'Artifact content stays inert')
   assert.match(ui, /History bodies, preview, editing and export are blocked/)
   assert.match(chat, /handler\.saveArtifact/)
   console.log('Gateway Artifacts passed: strict DTOs, immutable revisions, inert export, exact routes, and fail-closed unavailable states.')

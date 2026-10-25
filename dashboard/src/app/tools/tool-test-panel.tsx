@@ -152,7 +152,7 @@ export function ToolTestPanel({
                   </p>
                 )}
                 <pre
-                  className={`tool-json ${run.error ? "text-destructive" : ""}`}
+                  className={`tool-json ${run.error ? "text-destructive-foreground" : ""}`}
                 >
                   {run.error ?? serial(run.output)}
                 </pre>

@@ -46,7 +46,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
           </Label>)}
         </RadioGroup>
         {pending && <p role="status" className="text-sm text-muted-foreground">Loading saved agent…</p>}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       </div></OverlayBody>
       <FormActions inset><Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending || disabled || !settings || !profiles.some(agent => agent.id === selected)} onClick={() => void save()}>{selected === settings?.settings.agentId ? <><Check />Done</> : 'Hand off'}</Button></FormActions>
     </TaskDialogContent></Dialog>

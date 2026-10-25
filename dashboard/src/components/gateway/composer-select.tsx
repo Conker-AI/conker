@@ -9,10 +9,13 @@ export function ComposerSelectField({ children, error }: { children: ReactNode; 
   </div>
 }
 
-export function ComposerSelectTrigger({ className, ...props }: ComponentProps<typeof SelectTrigger>) {
+/** Agent and Mode set everything else, so they alone get the light outline; other composer controls stay plain. */
+export const composerOutlined = 'border border-border'
+
+export function ComposerSelectTrigger({ className, outlined = false, ...props }: ComponentProps<typeof SelectTrigger> & { outlined?: boolean }) {
   return <SelectTrigger
     size="sm"
-    className={cn('min-w-0 border-0 bg-transparent px-2 text-sm text-muted-foreground shadow-none [&_[data-slot=select-value]]:truncate [&_[data-slot=select-value]]:block dark:bg-transparent', className)}
+    className={cn('min-w-0 border-0 bg-transparent px-2 text-sm text-muted-foreground shadow-none before:hidden [&_[data-slot=select-value]]:truncate [&_[data-slot=select-value]]:block dark:bg-transparent', outlined && composerOutlined, className)}
     {...props}
   />
 }

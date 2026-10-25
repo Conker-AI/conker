@@ -502,7 +502,7 @@ export function ToolEditor({
       </div>
       {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>}
       {error && (
-        <div role="alert" className="tools-feedback text-destructive">
+        <div role="alert" className="tools-feedback text-destructive-foreground">
           {error}
           <Button variant="ghost" size="sm" onClick={() => setError("")}>
             Dismiss

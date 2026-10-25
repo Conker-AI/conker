@@ -25,7 +25,7 @@ export function BrowserSessions({ client }: { client: GatewayControlClient }) {
     finally { if (!controller.signal.aborted) setPending(false); request.current = null }
   }
   return <WorkspaceSection title="Browser sessions" description="Only browser access is revoked. Your background jobs keep running." action={<Button size="sm" variant="outline" disabled={pending} onClick={() => setReload(value => value + 1)}><RefreshCw />Refresh</Button>}>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!value && !error && <p role="status" className="text-sm text-muted-foreground">Loading signed-in sessions...</p>}
     {value?.length === 0 && <p className="text-sm text-muted-foreground">No signed-in browser sessions.</p>}
     {value && <div className="divide-y">{value.map((session, index) => <div key={session.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0 space-y-1"><p className="text-sm font-medium">{session.current ? 'This browser' : `Browser session ${index + 1}`}</p><p className="text-xs text-muted-foreground">Signed in {new Date(session.created * 1000).toLocaleString()} · Expires {new Date(session.expires * 1000).toLocaleString()}</p></div><Button size="sm" variant="outline" disabled={pending} onClick={() => void revoke(session.id)}><LogOut />Sign out</Button></div>)}</div>}

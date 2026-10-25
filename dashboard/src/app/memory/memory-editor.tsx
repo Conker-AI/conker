@@ -36,7 +36,7 @@ export function MemoryEditor({ memory, onClose, onSaved }: { memory?: Memory; on
         <div className="space-y-2"><Label htmlFor="memory-text">Memory text</Label><Textarea id="memory-text" value={text} onChange={event => setText(event.target.value)} required maxLength={16000} rows={5} /></div>
         <div className="space-y-2"><Label htmlFor="memory-category">Category</Label><Input id="memory-category" value={category} onChange={event => setCategory(event.target.value)} required maxLength={50} /></div>
         <div className="space-y-2"><Label htmlFor="memory-topics">Topics</Label><Input id="memory-topics" value={tags} onChange={event => setTags(event.target.value)} aria-describedby="memory-topics-help" /><p id="memory-topics-help" className="text-xs text-muted-foreground">Separate up to 8 topics with commas. Shared topics connect records in the graph.</p></div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       </fieldset></OverlayBody>
       <FormActions inset><Button type="button" variant="outline" onClick={onClose} disabled={pending}>Cancel</Button><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save preview"}</Button></FormActions>
     </form>

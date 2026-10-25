@@ -26,7 +26,7 @@ export function VoiceEditor({ value, onChange, onBusy }: { value: CharacterStudi
         setError(""); setLoading(true); onBusy(true)
         try { const src = await readCharacterFile(file, "audio"); onChange(current => ({ ...current, reference: { name: file.name.slice(0, 120), src }, source: "reference" })) } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load this recording.") } finally { setLoading(false); onBusy(false) }
       }} /><p className="text-xs leading-5 text-muted-foreground">WAV, MP3, OGG, WebM or M4A · up to 8 MB. Use a clear recording of a voice you can use.</p></div>
-      {loading && <p role="status" className="text-sm text-muted-foreground">Checking recording…</p>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {loading && <p role="status" className="text-sm text-muted-foreground">Checking recording…</p>}{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       {value.reference && <div className="flex flex-wrap items-center justify-between gap-3"><p className="min-w-0 break-words text-sm">{value.reference.name}</p><Button type="button" size="sm" variant="outline" onClick={() => change({ reference: null, transcript: "" })}>Remove recording</Button></div>}
       <StudioField label="Reference transcript" value={value.transcript} maxLength={3000} onChange={transcript => change({ transcript })} placeholder="The exact words spoken in the recording." />
       <StudioField label="Pronunciation notes" value={value.pronunciation} onChange={pronunciation => change({ pronunciation })} placeholder="Names, abbreviations, or words with a particular pronunciation." />

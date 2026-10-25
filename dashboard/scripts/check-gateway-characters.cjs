@@ -67,7 +67,7 @@ async function main() {
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/character-workspace.tsx'), 'utf8')
   assert.match(ui, /Saved immutable revision/)
   assert.match(ui, /Saving still uses the current revision check/)
-  assert.match(ui, /Every save and restore creates a new immutable revision/)
+  assert.match(ui, /Every save and restore adds a new version; earlier ones never change/, 'Saves and restores append immutable revisions')
   console.log('Gateway Character Studio passed: strict packages, Companion-only routes, large bounded media envelopes, CAS saves, import, export and immutable restore history.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -48,7 +48,7 @@ export function GatewayCapabilityPicker({ client, node, onChange }: { client: Ga
       {page?.items.map(item => <CommandItem key={item.id} value={item.id} onClick={() => choose(item)} className="items-start"><div className="min-w-0"><p className="font-medium">{item.name}{kind === 'workflow' ? ` · v${item.version}` : ''}</p><p className="truncate text-xs text-muted-foreground">{item.id}</p>{item.description && <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>}</div></CommandItem>)}
       {loading && <p role="status" className="p-3 text-xs text-muted-foreground">Loading…</p>}
       {!loading && page?.items.length === 0 && <p className="p-3 text-xs text-muted-foreground">No matching registered capabilities.</p>}
-      {error && <div className="p-3"><p role="alert" className="text-xs text-destructive">{error}</p><Button size="sm" variant="ghost" onClick={() => setRetry(value => value + 1)}>Retry</Button></div>}
+      {error && <div className="p-3"><p role="alert" className="text-xs text-destructive-foreground">{error}</p><Button size="sm" variant="ghost" onClick={() => setRetry(value => value + 1)}>Retry</Button></div>}
       {page?.next_after && <Button variant="ghost" size="sm" disabled={loading} onClick={() => void more()}>Load more</Button>}
     </CommandList>
   </Command></PopoverContent></Popover>

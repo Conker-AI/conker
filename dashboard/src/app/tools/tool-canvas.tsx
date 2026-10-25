@@ -89,7 +89,7 @@ function StepNode({ data }: NodeProps<CanvasNode>) {
       </div>
       {data.status && (
         <span
-          className={`tool-step-status ${data.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}
+          className={`tool-step-status ${data.status === "failed" ? "text-destructive-foreground" : "text-muted-foreground"}`}
         >
           {data.status}
         </span>

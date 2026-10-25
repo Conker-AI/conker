@@ -58,7 +58,7 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
   const pendingInput = chat.submission.kind === 'sending' && !chat.submission.inputSaved && chat.submission.attempt.input.kind === 'text' ? chat.submission.attempt.input.text : null
   return <div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
-    {chat.error && <p role="alert" className="text-sm text-destructive">{chat.error}</p>}
+    {chat.error && <p role="alert" className="text-sm text-destructive-foreground">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
     {chat.messages.map(message => <div id={`record-${message.id}`} key={`${message.id}:${message.content.kind}`} className={cn('min-w-0 scroll-mt-4', chat.focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><ChatMessageRecord message={message} /></div>)}
     {pendingInput !== null && <article aria-label="Submitted message awaiting saved history" className="ml-auto flex min-w-0 max-w-[92%] flex-col items-end sm:max-w-[85%]">

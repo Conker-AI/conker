@@ -88,7 +88,7 @@ function SetupChoiceControl({ client, step, choice, label, onSaved }: { client: 
     } catch (reason) { setError(gatewayError(reason).message) }
     finally { setPending(false) }
   }
-  return <div className="space-y-1"><Button type="button" variant={choice === 'skip' ? 'ghost' : 'outline'} size="sm" disabled={pending} onClick={() => void save()}>{pending ? 'Saving…' : label}</Button>{error && <p role="alert" className="text-xs leading-5 text-destructive">{error}</p>}</div>
+  return <div className="space-y-1"><Button type="button" variant={choice === 'skip' ? 'ghost' : 'outline'} size="sm" disabled={pending} onClick={() => void save()}>{pending ? 'Saving…' : label}</Button>{error && <p role="alert" className="text-xs leading-5 text-destructive-foreground">{error}</p>}</div>
 }
 
 function ModelSetupControl({ client, onSaved }: { client: GatewayControlClient; onSaved: () => void }) {
@@ -140,7 +140,7 @@ function ModelSetupControl({ client, onSaved }: { client: GatewayControlClient; 
       <Button type="button" variant="outline" disabled={pending} onClick={() => void load()}><RefreshCw />Check again</Button>
       <Button type="button" variant="ghost" render={<Link to="/settings" />}>Advanced settings</Button>
     </div>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
   </div>
 }
 
@@ -224,7 +224,7 @@ function ProtectionControl({ client, onSaved }: { client: GatewayControlClient; 
     </div>
     <p role="status" className="min-h-5 text-xs text-muted-foreground">{copied ? 'Command copied.' : 'Return here and refresh after the command finishes.'}</p>
     </>}
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
   </div>
 }
 
@@ -273,7 +273,7 @@ function RehearsalControl({ client, onRecorded }: { client: GatewayControlClient
     catch (reason) { setError(gatewayError(reason).message) }
     finally { setPending('') }
   }
-  if (!rehearsal) return <div className="mt-5 space-y-2 border-t pt-4"><Button variant="outline" onClick={() => void load()} disabled={pending !== ''}><RefreshCw />{pending ? 'Checking…' : 'Check rehearsal'}</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>
+  if (!rehearsal) return <div className="mt-5 space-y-2 border-t pt-4"><Button variant="outline" onClick={() => void load()} disabled={pending !== ''}><RefreshCw />{pending ? 'Checking…' : 'Check rehearsal'}</Button>{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</div>
   const rows = [
     { id: 'conversation', title: 'Have one real conversation', phase: rehearsal.conversation },
     { id: 'memory', title: 'Review memory behavior', phase: rehearsal.memoryReview },
@@ -281,7 +281,7 @@ function RehearsalControl({ client, onRecorded }: { client: GatewayControlClient
   ] as const
   return <div className="mt-5 space-y-4 border-t pt-4">
     <div className="divide-y rounded-md border">{rows.map(item => <div key={item.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 p-3">
-      <span className={cn('mt-0.5 flex size-7 items-center justify-center rounded-full border text-muted-foreground', item.phase.state === 'complete' && 'border-primary bg-primary text-primary-foreground', ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) && 'border-destructive/50 text-destructive')}>{item.phase.state === 'complete' ? <Check className="size-4" /> : item.phase.state === 'awaiting_owner' ? <CircleDashed className="size-4" /> : ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) ? <AlertCircle className="size-4" /> : <Circle className="size-4" />}</span>
+      <span className={cn('mt-0.5 flex size-7 items-center justify-center rounded-full border text-muted-foreground', item.phase.state === 'complete' && 'border-primary bg-primary text-primary-foreground', ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) && 'border-destructive/50 text-destructive-foreground')}>{item.phase.state === 'complete' ? <Check className="size-4" /> : item.phase.state === 'awaiting_owner' ? <CircleDashed className="size-4" /> : ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) ? <AlertCircle className="size-4" /> : <Circle className="size-4" />}</span>
       <div className="min-w-0"><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-medium">{item.title}</p><span className="text-xs text-muted-foreground">{item.phase.state === 'complete' ? 'Verified' : item.phase.state === 'awaiting_owner' ? 'Waiting for you' : item.phase.state === 'missing' ? 'Not yet' : 'Needs attention'}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{item.phase.detail}</p>
         {item.id === 'conversation' && item.phase.state === 'missing' && <Button className="mt-2" variant="outline" size="sm" render={<Link to="/chat" />}><MessageSquare />Open companion</Button>}
         {item.id === 'memory' && item.phase.state === 'missing' && <Button className="mt-2" variant="outline" size="sm" disabled={pending !== ''} onClick={() => void reviewMemory()}>{pending === 'memory' ? 'Recording…' : 'I reviewed memory setup'}</Button>}
@@ -290,7 +290,7 @@ function RehearsalControl({ client, onRecorded }: { client: GatewayControlClient
       </div>
     </div>)}</div>
     <div className="flex flex-wrap items-center gap-2"><Button disabled={!rehearsal.canFinalize || pending !== ''} onClick={() => void finalize()}><Check />{pending === 'finalize' ? 'Verifying…' : 'Finish rehearsal'}</Button><Button variant="ghost" disabled={pending !== ''} onClick={() => void load()}><RefreshCw />Refresh</Button></div>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
   </div>
 }
 
@@ -317,19 +317,19 @@ function BoundaryReview({ client, expectedRevision, onRecorded }: { client: Gate
     } catch (reason) { setError(gatewayError(reason).message) }
     finally { setPending(false) }
   }
-  if (!policy) return <div className="space-y-2"><Button onClick={() => void load()} disabled={pending}><ShieldCheck />{pending ? 'Loading policy…' : 'Review policy'}</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>
+  if (!policy) return <div className="space-y-2"><Button onClick={() => void load()} disabled={pending}><ShieldCheck />{pending ? 'Loading policy…' : 'Review policy'}</Button>{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</div>
   return <div className="w-full space-y-4 border-t pt-4">
     <div className="flex flex-wrap items-center gap-2 text-sm"><Badge variant={policy.lockdown ? 'secondary' : 'outline'}>{policy.lockdown ? 'Lockdown on' : 'Lockdown off'}</Badge><span className="text-muted-foreground">{policy.tools.length} scoped {policy.tools.length === 1 ? 'capability' : 'capabilities'}</span></div>
     <div className="divide-y rounded-md border sm:max-h-72 sm:overflow-y-auto">{policy.tools.map(tool => <div key={tool.id} className="flex flex-wrap items-start justify-between gap-2 p-3 text-sm"><div className="min-w-0"><p className="font-medium">{tool.name}</p><p className="truncate text-xs text-muted-foreground">{tool.id} · {tool.executionType}</p>{policyLimits(tool.usageLimits) && <p className="mt-1 text-xs text-muted-foreground">{policyLimits(tool.usageLimits)}</p>}</div><Badge variant="outline">{tool.authorization === 'owner_confirmation' ? 'Asks first' : 'Automatic'}</Badge></div>)}</div>
     <div className="flex flex-wrap items-center gap-3"><Button onClick={() => void confirm()} disabled={pending}><Check />{pending ? 'Recording…' : 'Confirm reviewed policy'}</Button><Button variant="ghost" onClick={() => setPolicy(null)} disabled={pending}>Cancel</Button></div>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
   </div>
 }
 
 export function GatewaySetupProgress({ client }: { client: GatewayControlClient }) {
   const { status, error, refreshing, refresh } = useGatewaySetupStatus(client, true, true)
   if (!status && !error) return <GatewayPageFrame><p role="status" className="text-sm text-muted-foreground">Checking setup…</p></GatewayPageFrame>
-  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" actionsOnly /><p role="alert" className="text-sm text-destructive">Setup status is unavailable. No progress was changed.</p><Button variant="outline" disabled={refreshing} onClick={refresh}><RefreshCw />{refreshing ? 'Checking…' : 'Try again'}</Button></GatewayPageFrame>
+  if (!status) return <GatewayPageFrame className="space-y-4"><PageHeader title="Setup" actionsOnly /><p role="alert" className="text-sm text-destructive-foreground">Setup status is unavailable. No progress was changed.</p><Button variant="outline" disabled={refreshing} onClick={refresh}><RefreshCw />{refreshing ? 'Checking…' : 'Try again'}</Button></GatewayPageFrame>
 
   const { resolved, remainingRequired, attention, current, operation } = summarizeSetup(status)
   return <GatewayPageFrame>
@@ -342,7 +342,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
           <span className="tabular-nums text-muted-foreground">{resolved} of {status.steps.length} resolved</span>
         </div>
         <Progress value={(resolved / status.steps.length) * 100} aria-label={`${resolved} of ${status.steps.length} setup steps resolved`} />
-        <p className="text-xs leading-5 text-muted-foreground">These checks track setup choices and verification evidence. They do not measure whether a chat can answer now.</p>
+        <p className="text-xs leading-5 text-muted-foreground">These track your setup choices and their checks. They don’t test whether a chat can answer right now.</p>
       </section>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
         <section aria-labelledby="next-step-title" className="elevation-surface min-w-0 rounded-lg border bg-card p-4 text-card-foreground">
@@ -356,7 +356,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
             {current.id === 'boundaries' && <BoundaryReview client={client} expectedRevision={current.evidence[0]?.revision ?? 0} onRecorded={refresh} />}
             {current.id === 'protection' && <ProtectionControl client={client} onSaved={refresh} />}
             {current.id === 'rehearsal' && <RehearsalControl client={client} onRecorded={refresh} />}
-          </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">{error ? 'Setup was complete at the last check' : 'Setup is complete'}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{error ? 'Refresh setup to verify that its evidence is still current.' : 'Required checks have current evidence, and your optional choices are saved.'}</p></div><Button render={<Link to="/chat" />}><MessageSquare />Open companion<ArrowRight /></Button></div>}
+          </> : <div className="flex flex-wrap items-center justify-between gap-4"><div className="max-w-2xl"><h2 id="next-step-title" className="text-base leading-6 font-semibold">{error ? 'Setup was complete at the last check' : 'Setup is complete'}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{error ? 'Refresh setup to check it’s still up to date.' : 'Every required check passed, and your optional choices are saved.'}</p></div><Button render={<Link to="/chat" />}><MessageSquare />Open companion<ArrowRight /></Button></div>}
         </section>
         <aside aria-labelledby="setup-steps-title" className="min-w-0 space-y-5 xl:sticky xl:top-6">
           <div><h2 id="setup-steps-title" className="text-base font-semibold">All setup steps</h2><p className="mt-1 text-sm leading-5 text-muted-foreground">Three phases take Conker from a secured install to a proven daily workspace.</p></div>

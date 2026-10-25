@@ -88,7 +88,7 @@ export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: s
   return <Dialog open={open} onOpenChange={value => { if (!value && !busy) onClose() }}><TaskDialogContent title="Workflow activity" description={name}>
     <OverlayBody className="space-y-4">
       <p className="text-sm text-muted-foreground">Published versions can be tested here. Draft edits do not affect past activity.</p>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       {notice && <p role="status" className="text-sm">{notice}</p>}
       {uncertain && <p className="text-xs text-muted-foreground">A previous result is not confirmed. Refresh history before starting another one.</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">Loading activity…</p>}
@@ -102,7 +102,7 @@ export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: s
         {run.response.message && <p className="text-sm">{run.response.message}</p>}
         {run.response.code === 'CONFIRMATION_REQUIRED' && <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" render={<Link to="/inbox" />}>Review in Inbox</Button><Button size="sm" disabled={busy} onClick={() => void execute(run)}>Continue after approval</Button></div>}
         <details className="text-xs text-muted-foreground"><summary className="cursor-pointer font-medium">Technical details</summary><p className="mt-2 break-all">{run.action_id}</p></details>
-        {run.response.steps?.map(step => <details key={step.nodeId} className="rounded-md bg-muted p-2"><summary className="cursor-pointer text-xs">{step.label} · {plainStatus(step.status)}</summary>{step.error && <p className="mt-2 text-xs text-destructive">{step.error}</p>}{step.output !== undefined && <details className="mt-2"><summary className="cursor-pointer text-xs font-medium">Developer details</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(step.output, null, 2)}</pre></details>}</details>)}
+        {run.response.steps?.map(step => <details key={step.nodeId} className="rounded-md bg-muted p-2"><summary className="cursor-pointer text-xs">{step.label} · {plainStatus(step.status)}</summary>{step.error && <p className="mt-2 text-xs text-destructive-foreground">{step.error}</p>}{step.output !== undefined && <details className="mt-2"><summary className="cursor-pointer text-xs font-medium">Developer details</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(step.output, null, 2)}</pre></details>}</details>)}
         {run.response.result !== undefined && <details><summary className="cursor-pointer text-xs font-medium">Developer details</summary><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(run.response.result, null, 2)}</pre></details>}
       </div></details>)}</section>
     </OverlayBody><FormActions inset><Button variant="outline" disabled={busy} onClick={onClose}>Close</Button><Button variant="outline" disabled={busy || loading} onClick={() => void refresh()}>Refresh history</Button><Button disabled={busy || loading || !selected?.available || !access?.enabled || !!uncertain} onClick={() => void execute()}>{busy ? 'Working…' : 'Start version'}</Button></FormActions>

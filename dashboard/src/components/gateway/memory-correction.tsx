@@ -17,8 +17,8 @@ const notices = {
   read: 'Memory change status could not be read. Nothing was retried.',
   unsupported: 'This record cannot be edited here. Only retained memories in the configured Companion memory are supported.',
   changed: 'Memory access changed. Check for an earlier change before editing again.',
-  'not-started': 'The change was not admitted. Read the latest memory before trying again.',
-  'not-recorded': 'No receipt is available yet. The earlier request may still arrive; check status again. Nothing was repeated.',
+  'not-started': 'The change wasn’t accepted. Load the latest memory before trying again.',
+  'not-recorded': 'Not confirmed yet. The earlier request may still go through; check again. Nothing was sent twice.',
   'work-active': 'A chat or memory operation is active. Wait for it to finish, then read the latest memory before editing.',
   'change-pending': 'Another memory change needs attention. Check for the pending change first.',
   'revision-conflict': 'The memory changed after review. Read its latest version before making another edit.',
@@ -50,7 +50,7 @@ export function MemoryCorrection({ control, focusTarget }: { control: MemoryCorr
             {editor?.snapshot && <>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"><dt className="text-muted-foreground">Revision</dt><dd>{editor.snapshot.revision}</dd><dt className="text-muted-foreground">Source</dt><dd>{editor.snapshot.sourceType || 'Not reported'}</dd><dt className="text-muted-foreground">Confidence</dt><dd>{editor.snapshot.confidence || 'Not reported'}</dd></dl>
               <div className="space-y-2"><Label htmlFor="memory-correction-text">Memory text</Label><Textarea id="memory-correction-text" className="min-h-48" value={editor.text} readOnly={!!busy} aria-disabled={!!busy} onChange={event => controller.edit(event.target.value, editor)} aria-describedby="memory-correction-limit" /><p id="memory-correction-limit" className="text-xs text-muted-foreground">{[...editor.text].length.toLocaleString()} / 16,000 characters. Draft text stays in this open editor.</p></div>
-              {!busy && !correctionTextValid(editor.text) && <p role="alert" className="text-sm text-destructive">Enter nonblank text within the character limit.</p>}
+              {!busy && !correctionTextValid(editor.text) && <p role="alert" className="text-sm text-destructive-foreground">Enter nonblank text within the character limit.</p>}
             </>}
             {pending && <p role="status" className="text-sm text-muted-foreground">{busy === 'verification' ? 'Waiting for owner verification. Cancel the verification dialog to return to your edit.' : 'The approved text has been sent. Waiting for its receipt…'}</p>}
             {notice && <p role="alert" className="text-sm text-muted-foreground">{notices[notice]}</p>}

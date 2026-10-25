@@ -49,7 +49,7 @@ interface DataTableProps<TData, TValue> {
   /** action rendered on the right of the toolbar (e.g. a "New" button) */
   toolbarAction?: React.ReactNode
   toolbarFilters?: React.ReactNode
-  emptyState?: { title: string; description: string; action?: React.ReactNode }
+  emptyState?: { title: string; description: string; action?: React.ReactNode; icon?: React.ReactNode }
   /** onRowClick makes rows behave like links into a detail view */
   onRowClick?: (row: TData) => void
   /** hide the pager when a list is short and always fits */
@@ -98,7 +98,7 @@ export function DataTable<TData, TValue>({
   })
 
   const isFiltered = table.getState().columnFilters.length > 0
-  const empty = <CollectionEmpty title={isFiltered ? 'No results found' : emptyState?.title ?? 'No results found'} description={isFiltered ? 'Try a different search or clear your filters.' : emptyState?.description ?? 'Try a different search or clear your filters.'} action={emptyState?.action} clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
+  const empty = <CollectionEmpty title={isFiltered ? 'No results found' : emptyState?.title ?? 'No results found'} description={isFiltered ? 'Try a different search or clear your filters.' : emptyState?.description ?? 'Try a different search or clear your filters.'} action={emptyState?.action} icon={isFiltered ? undefined : emptyState?.icon} clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
 
   return (
     <div className="min-w-0 space-y-(--collection-section-gap)">

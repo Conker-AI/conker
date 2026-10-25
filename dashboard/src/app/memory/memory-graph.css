@@ -1,6 +1,6 @@
 /* Luminance-bounded chart colors keep graph points legible across imported themes. */
-.memory-workspace { --memory-category-1:oklch(from var(--chart-1) clamp(.3,l,.55) c h); --memory-category-2:oklch(from var(--chart-2) clamp(.3,l,.55) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.3,l,.55) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.3,l,.55) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.3,l,.55) c h); }
-.dark .memory-workspace { --memory-category-1:oklch(from var(--chart-1) clamp(.68,l,.9) c h); --memory-category-2:oklch(from var(--chart-2) clamp(.68,l,.9) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.68,l,.9) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.68,l,.9) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.68,l,.9) c h); }
+.memory-workspace { --memory-category-1:var(--foreground); --memory-category-2:oklch(from var(--chart-2) clamp(.3,l,.5) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.3,l,.5) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.3,l,.5) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.3,l,.5) c h); }
+.dark .memory-workspace { --memory-category-1:var(--foreground); --memory-category-2:oklch(from var(--chart-2) clamp(.68,l,.9) c h); --memory-category-3:oklch(from var(--chart-3) clamp(.68,l,.9) c h); --memory-category-4:oklch(from var(--chart-4) clamp(.68,l,.9) c h); --memory-category-5:oklch(from var(--chart-5) clamp(.68,l,.9) c h); }
 /* Memory is a canvas workspace. Chart colors encode category membership. */
 .memory-workspace { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; background:var(--background); color:var(--foreground); }
 .memory-workspace-expanded { position:fixed; inset:0; z-index:40; }
@@ -20,11 +20,11 @@
 .memory-workspace-body { position:relative; display:flex; flex:1; min-height:0; overflow:hidden; }
 .memory-stage { flex:1; min-width:0; min-height:0; position:relative; }
 .memory-stage-table { overflow:auto; padding:16px; }
-.memory-workspace-status { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; padding:6px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--muted-foreground); }
+.memory-workspace-status { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:32px; padding:6px 16px; border-top:1px solid var(--border); font-size:12px; color:var(--muted-foreground); }
 .memory-folder-browser { display:flex; flex-direction:column; width:216px; min-width:170px; flex-shrink:0; border-right:1px solid var(--border); background:var(--card); }
 .memory-graph-shell { position:relative; display:flex; flex-direction:column; flex:1; min-width:0; height:100%; width:100%; --xy-background-color:var(--background); --xy-attribution-background-color:var(--background); --xy-node-boxshadow-selected-default:none; }
 .memory-graph-shell > .react-flow { flex:1; min-height:0; height:auto; }
-.memory-graph-shell .react-flow__attribution { font-size:9px; color:var(--muted-foreground); }
+.memory-graph-shell .react-flow__attribution { font-size:12px; color:var(--muted-foreground); background:transparent; }
 .memory-graph-shell .react-flow__node:focus-visible { outline:2px solid var(--ring); outline-offset:6px; border-radius:var(--radius); }
 .memory-point { width:180px; height:80px; position:relative; display:flex; flex-direction:column; align-items:center; color:var(--foreground); transition:opacity 180ms ease; }
 .memory-point .react-flow__handle { opacity:0; pointer-events:none; top:20px; bottom:auto; left:90px; right:auto; }
@@ -43,12 +43,12 @@
 .memory-graph-shell .selected .memory-point-symbol { outline:2px solid var(--foreground); outline-offset:5px; }
 .memory-point.is-dimmed { opacity:.24; }
 .memory-canvas-caption { position:relative; order:-1; flex-shrink:0; padding:16px 20px 8px; display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted-foreground); }
-.memory-canvas-legend { display:flex; gap:14px; margin-top:8px; font-size:10px; }
+.memory-canvas-legend { display:flex; gap:14px; margin-top:8px; font-size:12px; }
 .memory-canvas-legend > span { display:flex; align-items:center; gap:6px; }
 .memory-canvas-legend i { width:18px; height:0; border-top:1px solid var(--muted-foreground); }
 .memory-canvas-legend i.is-organization { border-top-style:dashed; }
 .memory-canvas-controls { position:absolute; bottom:26px; left:16px; display:flex; flex-wrap:wrap; gap:8px; }
-.memory-zoom { position:absolute; right:16px; bottom:30px; font-size:11px; color:var(--muted-foreground); }
+.memory-zoom { position:absolute; right:16px; bottom:30px; font-size:12px; color:var(--muted-foreground); }
 @media (max-width:767px) {
  .memory-workspace-toolbar { padding:8px; gap:6px; }
  .memory-toolbar-spacer { display:none; }

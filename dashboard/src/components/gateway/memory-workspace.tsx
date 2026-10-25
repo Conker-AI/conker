@@ -184,7 +184,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
     </div>} />
     <MemoryCorrection control={correction} focusTarget={memoryRefresh} />
     <ForgetMemoryRecovery client={client} revision={`${revision}:${forgetRevision}`} onResolved={forgetResolved} />
-    {error && <p role="alert" className="border-b p-3 text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}
     <div className="memory-workspace-body">
       {!page ? <p role="status" className="p-4 text-sm">{busy ? 'Loading your memory…' : 'Memory could not be loaded.'}</p> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
         <ul className="divide-y md:hidden">{page.objects.map(item => <li key={key(item)}><RecordItem title={recordTitle(item)} description={`${kindLabel[item.type]} · ${connectionCount(item)} ${connectionCount(item) === 1 ? 'connection' : 'connections'}`} selected={Boolean(selected && key(selected) === key(item))} onOpen={() => selectRecord(item)} /></li>)}</ul>
@@ -193,7 +193,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
       {selected && <WorkspaceInspector title={selected.title} description={kindLabel[selected.type]} onClose={() => selectRecord(null)}>
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
           <p className="whitespace-pre-wrap break-words">{selected.preview}{selected.preview_truncated && '…'}</p>
-          {detailError && <p role="alert" className="text-destructive">{detailError}</p>}
+          {detailError && <p role="alert" className="text-destructive-foreground">{detailError}</p>}
           <ReferenceSection title="Content">
             {selected.available_fields.length ? <Select key={key(selected)} value={readingField ?? content?.field ?? ''} onValueChange={field => { if (field !== null) void expandField(field) }} items={[...selected.available_fields.map((field) => ({ value: field, label: fieldLabel(field) }))]}><SelectTrigger className="w-full" aria-label="Read content field"><SelectValue placeholder="Choose a field to read" /></SelectTrigger><SelectContent>{selected.available_fields.map(field => <SelectItem key={field} value={field}>{fieldLabel(field)}</SelectItem>)}</SelectContent></Select> : <p className="text-muted-foreground">No readable content fields.</p>}
             {readingField && <p role="status" className="text-xs text-muted-foreground">Reading {fieldLabel(readingField).toLocaleLowerCase()}…</p>}

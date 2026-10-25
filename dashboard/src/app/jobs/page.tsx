@@ -124,7 +124,7 @@ export default function JobsPage() {
     </DetailPanel>
     <Dialog open={panel?.mode === "create" || panel?.mode === "edit"} onOpenChange={open => { if (!open && !pending) closeForm() }} disablePointerDismissal>
       <TaskDialogContent size="wide" title={panel?.mode === "edit" ? "Edit job" : "New job"} description="Choose the task, agent, and schedule." showCloseButton={!pending} finalFocus={restoreFocus}>
-        {error && <p role="alert" className="px-5 pt-4 text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="px-5 pt-4 text-sm text-destructive-foreground">{error}</p>}
         {(panel?.mode === "create" || panel?.mode === "edit" && selected) && <JobEditor key={`${panel.mode}-${panel.id ?? "new"}`} job={panel.mode === "edit" ? selected : undefined} agents={agents} pending={pending} onSave={save} onCancel={closeForm} />}
       </TaskDialogContent>
     </Dialog>

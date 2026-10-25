@@ -1,3 +1,4 @@
+import { ListChecks } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/data-table'
@@ -19,7 +20,7 @@ export function GatewayTasksTable({ tasks, onOpen, filters, emptyAction }: { tas
     { accessorKey: 'sessionId', header: 'Source', cell: () => <span className="text-xs text-muted-foreground">Conversation</span> },
     { accessorKey: 'updatedAt', header: 'Updated', cell: ({ row }) => date(row.original.updatedAt) },
   ], [onOpen])
-  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded tasks…" itemLabel="tasks" toolbarFilters={filters} emptyState={emptyAction ? { title: 'No recorded tasks', description: 'Create an outcome and completion criteria linked to an open conversation.', action: emptyAction } : undefined} renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>Owner reviewed</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
+  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded tasks…" itemLabel="tasks" toolbarFilters={filters} emptyState={emptyAction ? { title: 'No tasks yet', description: 'Write what you want done and how you’ll know it’s finished. Each task links to a chat.', action: emptyAction, icon: <ListChecks /> } : undefined} renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>You check it off</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
 }
 
 export function GatewayRunsTable({ runs, onOpen }: { runs: GatewayActivityRun[]; onOpen: (run: GatewayActivityRun) => void }) {
