@@ -54,7 +54,7 @@ export function PlanUsageRing({ client, provider }: { client: GatewayControlClie
 
   const getRingColor = (percent: number) => {
     if (percent >= 95) return 'text-destructive'
-    if (percent >= 80) return 'text-amber-500'
+    if (percent >= 80) return 'text-warning'
     return 'text-muted-foreground'
   }
 
@@ -112,7 +112,7 @@ export function PlanUsageRing({ client, provider }: { client: GatewayControlClie
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-muted-foreground/30"
+          className="text-border"
         />
         <circle
           cx="9"
