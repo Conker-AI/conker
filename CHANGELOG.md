@@ -16,6 +16,10 @@ which module versions a release pins.
   ran without asking you and who decided. Memories and cron jobs Conker makes now happen at once.
   Needs the next Pi and ToolGate releases.
 
+- **Plan usage ring:** next to the model in the composer, a small ring shows how much of the
+  selected model's Claude or ChatGPT plan window is used; tap it for every window, its percent
+  and when it resets. Local and API-key models show none.
+
 - **Conker asks, you verify:** in chat (or from an AI job) Conker can ask for a cron job, a
   new tool or a memory. Each request lands in the Inbox showing exactly what would be made;
   **Create job**, **Save as draft** or **Remember** makes it real (asks for your password),
