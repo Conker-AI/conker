@@ -182,6 +182,13 @@ class AcceptanceGate(FirstRunSteps):
                 "CONKER_TERMINAL_WORKSPACE": str(self.terminal_workspace),
                 "CONKER_TERMINAL_WORKSPACE_LABEL": "Release acceptance workspace",
             })
+        if self.plan["capabilities"]["agent-sandbox"]["state"] == "active":
+            workspaces_dir = self.work / "agent-workspaces"
+            workspaces_dir.mkdir(parents=True)
+            self.runner.env.update({
+                "CONKER_WORKSPACES_DIR": str(workspaces_dir),
+                "CONKER_DOCKER_GID": str(os.stat("/var/run/docker.sock").st_gid),
+            })
         self.evidence.artifact("manifest.normalized.json", manifest)
         self.evidence.artifact("image-plan.json", self.plan)
 
@@ -214,6 +221,8 @@ class AcceptanceGate(FirstRunSteps):
         files = ["-f", str(self.root / "docker-compose.yml")]
         if self.plan.get("capabilities", {}).get("owner-terminal", {}).get("state") == "active":
             files.extend(["-f", str(self.root / "docker-compose.terminal.yml")])
+        if self.plan.get("capabilities", {}).get("agent-sandbox", {}).get("state") == "active":
+            files.extend(["-f", str(self.root / "docker-compose.sandbox.yml")])
         return self.runner.run(
             [
                 "docker", "compose", "--env-file", str(self.root / "versions.env"),

@@ -554,3 +554,21 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
         assert result.stdout.strip() == "degraded", (
             f"{script} reported {result.stdout.strip()!r} for a degraded service"
         )
+
+
+def test_installer_selects_sandbox_overlay_only_when_active():
+    """The installer must include docker-compose.sandbox.yml only when
+    AGENT_SANDBOX_STATE=active, matching the owner-terminal precedent."""
+    installer = (ROOT / "install.sh").read_text()
+    launcher = (ROOT / "conker").read_text()
+
+    for source, name in ((installer, "install.sh"), (launcher, "conker")):
+        assert "agent_sandbox_active()" in source, (
+            f"{name} does not define agent_sandbox_active()"
+        )
+        assert "AGENT_SANDBOX_STATE=active" in source, (
+            f"{name} does not check AGENT_SANDBOX_STATE=active"
+        )
+        assert "docker-compose.sandbox.yml" in source, (
+            f"{name} does not include docker-compose.sandbox.yml"
+        )

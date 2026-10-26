@@ -7,8 +7,8 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **43 tracked
-capability families: 42 active and 1 deferred**. Active means at least one real
+Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **44 tracked
+capability families: 42 active and 2 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
@@ -1388,6 +1388,7 @@ Qdrant and Ollama, so a fresh deployment no longer begins from mutable `latest` 
 | Capability | Why it is deferred |
 | --- | --- |
 | Owner terminal | The constrained PTY, UI, dedicated candidate image, health probe, workspace preflight, recovery exclusions and guarded repository/Ubuntu deployment shapes exist. Manifest v2 still records the capability as deferred and requires both a registry digest and hashed target-Linux acceptance to activate it; neither promotion input exists yet. |
+| Agent sandbox | The sandbox runner, package proxy and overlay compose file exist (ADR-0013). Manifest v2 records the capability as deferred and requires a ToolGate release that ships the sandbox runner plus a digest-pinned sandbox image; neither promotion input exists yet. |
 
 This capability exposes no production surface in the capability matrix. Its
 presence in lower-level code is not a release claim.

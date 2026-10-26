@@ -15,6 +15,7 @@ AUTHORITIES = {"gateway", "pi", "toolgate", "memorygate", "systemgate", "conker-
 STATES = {"active", "deferred"}
 REQUIRED_CAPABILITIES = {
     "admin-key-recovery",
+    "agent-sandbox",
     "agents",
     "artifacts",
     "browser-authentication",

@@ -38,6 +38,9 @@ def test_repository_release_manifest_is_complete_and_matches_dashboard():
     assert normalized["capabilities"]["owner-terminal"] == {
         "state": "deferred", "image": None, "acceptance_sha256": None,
     }
+    assert normalized["capabilities"]["agent-sandbox"] == {
+        "state": "deferred", "image": None,
+    }
 
 
 @pytest.mark.parametrize("value", ["postgres:16", "postgres:latest", "postgres@sha256:nope"])

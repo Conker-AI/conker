@@ -142,6 +142,7 @@ REPOSITORY_PROFILE = LayoutProfile(
     writers=(
         "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "searxng", "ollama", "qdrant", "owner-terminal",
+        "sandbox-runner", "package-proxy",
     ),
     excluded_mounts={
         "gateway": frozenset({"/run/conker-terminal", "/run/conker-providers"}),
@@ -155,8 +156,11 @@ REPOSITORY_PROFILE = LayoutProfile(
         }),
         "postgres": frozenset({"/var/lib/postgresql/data"}),
         "systemgate": frozenset({"/host/proc", "/backups"}),
+        "toolgate": frozenset({"/run/conker-sandbox"}),
+        "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
+        "package-proxy": frozenset({"/run/conker-proxy"}),
     },
-    optional_services=frozenset({"owner-terminal"}),
+    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy"}),
 )
 
 
@@ -292,6 +296,12 @@ def compose_command(root: Path, profile: LayoutProfile) -> list[str]:
                 "-f", str(root / "docker-compose.yml"),
             ]
         )
+        versions_env = root / "versions.env"
+        if versions_env.is_file():
+            for line in versions_env.read_text(encoding="utf-8").splitlines():
+                if line.strip() == "AGENT_SANDBOX_STATE=active":
+                    command.extend(["-f", str(root / "docker-compose.sandbox.yml")])
+                    break
     else:
         command.extend(["-f", str(root / "compose.json")])
     return command

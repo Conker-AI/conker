@@ -41,7 +41,10 @@ def manifest() -> dict:
         "capabilities": {
             "owner-terminal": {
                 "state": "deferred", "image": None, "acceptance_sha256": None,
-            }
+            },
+            "agent-sandbox": {
+                "state": "deferred", "image": None,
+            },
         },
     }
 
@@ -180,6 +183,31 @@ def test_deferred_terminal_compose_omits_the_overlay(tmp_path):
     command = runner.commands[-1][0]
     assert command.count("-f") == 1
     assert str(tmp_path / "docker-compose.terminal.yml") not in command
+    assert str(tmp_path / "docker-compose.sandbox.yml") not in command
+
+
+def test_active_sandbox_compose_uses_the_sandbox_overlay(tmp_path):
+    evidence = Evidence(tmp_path / "evidence")
+    runner = CapturingRunner()
+    gate = AcceptanceGate(
+        tmp_path,
+        evidence,
+        require_conversation=True,
+        runner_factory=lambda *_args: runner,
+    )
+    value = manifest()
+    value["capabilities"]["agent-sandbox"] = {
+        "state": "active",
+        "image": "ghcr.io/conker-ai/toolgate-sandbox@sha256:" + "c" * 64,
+    }
+    gate.plan = build_image_plan(value)
+
+    gate.compose("config", "--images", phase="compose-images")
+
+    command = runner.commands[-1][0]
+    assert command.count("-f") == 2
+    assert str(tmp_path / "docker-compose.yml") in command
+    assert str(tmp_path / "docker-compose.sandbox.yml") in command
 
 
 def test_compose_matrix_requires_exact_set_without_substitutes():
