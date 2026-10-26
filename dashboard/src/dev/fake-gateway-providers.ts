@@ -62,6 +62,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
+    if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
     if (dismiss && method === 'POST') {

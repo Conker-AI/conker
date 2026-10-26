@@ -11,7 +11,7 @@ function load(relative) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText
   new Function('require', 'module', 'exports', code)(request => request === 'zod' ? require('zod') :
-    load(`${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`), module, module.exports)
+    load(request.startsWith('@/') ? `src/${request.slice(2)}.ts` : `${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`), module, module.exports)
   return module.exports
 }
 
@@ -59,6 +59,13 @@ async function main() {
   assert.equal(isConversationWrite(`${base}/saved`), true, 'Recording a draft id follows the password-verified save in Tools')
   assert.equal(isConversationWrite('/api/owner/editor-drafts/digest'), false, 'Saving the draft in Tools asks for the password')
 
+  assert.equal(isConversationWrite('/api/control/pi/memory/remember'), false, 'Adding a memory by hand asks for the password too')
+  const { createGatewayControlClient } = load('src/lib/gateway/control.ts')
+  const remembered = []
+  const control = createGatewayControlClient({ request: async (...args) => { remembered.push(args); return { memoryId: 'm1', status: 'remembered' } }, audio: async () => ({}), getSession: () => null }, () => {})
+  assert.equal((await control.rememberMemory('add_' + 'a'.repeat(32), 'My exam is on Thursday.')).status, 'remembered')
+  assert.deepEqual(remembered.at(-1), ['/api/control/pi/memory/remember', { method: 'POST', body: { request_id: 'add_' + 'a'.repeat(32), text: 'My exam is on Thursday.' }, signal: undefined }])
+  await assert.rejects(control.rememberMemory('add_' + 'a'.repeat(32), '   '), error => error.kind === 'validation', 'A blank memory is never sent')
   const hook = fs.readFileSync(path.join(root, 'src/components/inbox/change-requests.ts'), 'utf8')
   assert.ok(hook.indexOf('drafts.save(') < hook.indexOf('client.saved('), 'A tool request is saved in Tools before it is marked approved')
   assert.match(hook, /savedAs\.current\.get\(request\.id\)/, 'Retrying an approval never saves a second draft')

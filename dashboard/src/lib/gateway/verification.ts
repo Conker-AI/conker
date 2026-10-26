@@ -70,6 +70,16 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push(body.operation === 'activate' || body.operation === 'recover' ? 'Restarts the AI runtime. Active requests may be interrupted. Does not grant tool access or authorize paid models.' : body.operation === 'verify' ? 'Sends one credential check to the provider. Does not generate an answer.' : body.operation === 'record-revoked' ? 'Records your confirmation only. Does not revoke the key at its issuer.' : body.operation === 'discard' ? 'Deletes this staged key only. The active provider credential is unchanged.' : 'Stores a write-only key on your Conker host. Does not activate it or authorize paid models.')
     return { title, path, target, details }
   }
+  if (/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/approve$/.test(path)) {
+    return { title: 'Approve Conker’s request', path, target: `Request ${parts[5]}`, details: ['Creates exactly what the Inbox card shows: the cron job or the memory. Nothing else changes.'] }
+  }
+  if (path === '/api/control/pi/memory/remember') {
+    const length = typeof body.text === 'string' ? body.text.length : 0
+    return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }
+  }
+  if (path === '/api/control/pi/jobs/agent') {
+    return { title: 'Create a cron job', path, target: safeName(body.name) ?? 'New cron job', details: ['Each run, Conker carries out your instructions with its tools. Anything that would change or send something still asks you.'] }
+  }
   if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(path)) { title = 'Save tool draft'; target = `Draft ${parts[4]}`; details.push('Saves the editor document only. Does not publish, execute or grant access.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/publish$/.test(path)) { title = 'Publish workflow version'; target = `Draft ${parts[4]}`; details.push('Creates an immutable version with pinned dependencies. Does not run it or grant agent access.'); details.push(body.authorization === 'auto' ? 'Scoped callers may run this version without per-run approval.' : 'Each run requires owner confirmation.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/access$/.test(path)) { title = body.enabled ? 'Allow workflow access' : 'Remove workflow access'; target = `Workflow ${parts[4]}`; details.push(body.enabled ? 'Grants access to this host\'s configured caller. ' + WORKFLOW_ACCESS_SCOPE : 'Removes this workflow’s root grant. Other independently granted workflows keep their access.'); details.push('Workflow grants apply to its published versions; publishing remains owner-controlled.') }

@@ -3,6 +3,7 @@ import { useMemoryCorrection } from './use-memory-correction'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { ForgetMemory } from './forget-memory'
+import { AddMemory } from './add-memory'
 import { ForgetMemoryRecovery } from './forget-memory-recovery'
 import { GatewayHeader } from './header'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -72,7 +73,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   const [readingField, setReadingField] = useState<string | null>(null)
   const [error, setError] = useState(''), [detailError, setDetailError] = useState('')
   const [busy, setBusy] = useState(true), [revision, setRevision] = useState(0)
-  const [forgetRevision, setForgetRevision] = useState(0)
+  const [forgetRevision, setForgetRevision] = useState(0), [added, setAdded] = useState<string | null>(null)
   const workspace = useRef<HTMLDivElement>(null)
   const detailEpoch = useRef(0), libraryEpoch = useRef(0), contentEpoch = useRef(0)
   const routeEpoch = useRef(0), routeRead = useRef<AbortController | null>(null)
@@ -183,12 +184,14 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
       <Select value={view} onValueChange={value => { if (value !== null) setView(value) }} items={[{ value: "network", label: "Map" }, { value: "hierarchy", label: "Tree" }, { value: "database", label: "List" }]}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>
       <Select value={type} onValueChange={value => { if (value === null) return; setType(value as typeof type); refresh() }} items={[{ value: "all", label: "All memories" }, ...kinds.map((kind) => ({ value: kind, label: kindLabels[kind] }))]}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
+      <AddMemory client={client} onAdded={message => { setAdded(message); refresh() }} />
       <Button ref={memoryRefresh} size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
     </div>} />
     {!(failed && !page) && <><MemoryCorrection control={correction} focusTarget={memoryRefresh} />
     <ForgetMemoryRecovery client={client} revision={`${revision}:${forgetRevision}`} onResolved={forgetResolved} />
-    {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}</>}
+    {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}
+    {added && <p role="status" className="border-b p-3 text-sm text-muted-foreground">{added}</p>}</>}
     <div className="memory-workspace-body">
       {!page ? busy || !failed ? <p role="status" className="p-4 text-sm">Loading your memory…</p> : <div className="p-4"><InlineError error={null} title="Memory didn’t load" description={error ?? undefined} onRetry={refresh} /></div> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
         <ul className="divide-y md:hidden">{page.objects.map(item => <li key={key(item)}><RecordItem title={recordTitle(item)} description={`${kindLabel[item.type]} · ${connectionCount(item)} ${connectionCount(item) === 1 ? 'connection' : 'connections'}`} selected={Boolean(selected && key(selected) === key(item))} onOpen={() => selectRecord(item)} /></li>)}</ul>

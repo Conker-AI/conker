@@ -179,10 +179,10 @@
     },
     {
       "id": "change-requests", "name": "Conker asks, the owner verifies: cron jobs, tools and memories", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/control/pi/change-requests", "/api/control/pi/change-requests/{id}", "/api/control/pi/change-requests/{id}/approve", "/api/control/pi/change-requests/{id}/decline", "/api/control/pi/change-requests/{id}/saved"],
-      "uiRoutes": ["/inbox"], "cliCommands": ["conker inspect change-requests", "conker apply requests FILE"],
+      "gatewayRoutes": ["/api/control/pi/change-requests", "/api/control/pi/change-requests/{id}", "/api/control/pi/change-requests/{id}/approve", "/api/control/pi/change-requests/{id}/decline", "/api/control/pi/change-requests/{id}/saved", "/api/control/pi/memory/remember"],
+      "uiRoutes": ["/inbox", "/memory"], "cliCommands": ["conker inspect change-requests", "conker apply requests FILE", "conker apply memory FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "ToolGate owner editor access for tool drafts", "MEMORYGATE_CORRECTION_KEY for memories"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/change-requests.ts", "contains": "What Conker asked to create, exactly as filed"}, {"path": "dashboard/src/components/inbox/change-requests.ts", "contains": "drafts.save("}, {"path": "dashboard/src/components/inbox/change-request-card.tsx", "contains": "Approving makes it real; declining creates nothing."}, {"path": "dashboard/scripts/check-gateway-change-requests.cjs", "contains": "Approving asks for the password"}, {"path": "conker", "contains": "proposals|requests|sessions"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/change-requests.ts", "contains": "What Conker asked to create, exactly as filed"}, {"path": "dashboard/src/components/inbox/change-requests.ts", "contains": "drafts.save("}, {"path": "dashboard/src/components/inbox/change-request-card.tsx", "contains": "Approving makes it real; declining creates nothing."}, {"path": "dashboard/scripts/check-gateway-change-requests.cjs", "contains": "Approving asks for the password"}, {"path": "conker", "contains": "proposals|requests|sessions"}, {"path": "dashboard/src/components/gateway/add-memory.tsx", "contains": "Add one memory by hand, the same way a memory Conker asked for is saved."}]
     },
     {
       "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",

@@ -123,6 +123,8 @@ routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Tools draft a tool request was saved as (the save itself asked for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
+// Adding a memory by hand asks for the password, like approving one Conker asked for.
+routes.POST.unshift(/^\/api\/control\/pi\/memory\/remember$/)
 // AI jobs: the browser creates AI jobs only (never raw tool jobs), reads their notes and dismisses one.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs\/agent\/notes$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/agent$/, /^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
