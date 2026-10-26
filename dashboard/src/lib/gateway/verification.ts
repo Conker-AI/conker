@@ -73,6 +73,12 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   if (/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/approve$/.test(path)) {
     return { title: 'Approve Conker’s request', path, target: `Request ${parts[5]}`, details: ['Creates exactly what the Inbox card shows: the cron job or the memory. Nothing else changes.'] }
   }
+  if (path === '/api/owner/access/delegate') {
+    return { title: body.enabled ? 'Let Conker decide by your settings' : 'Ask me for everything that asks', path, target: 'Conker in ToolGate', details: [body.enabled ? 'Your chat, agent and tool settings decide what runs without asking. Sensitive tools and system controls always ask you.' : 'Every tool goes back to its own setting; nothing Conker decides skips asking you.'] }
+  }
+  if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/sensitive$/.test(path)) {
+    return { title: body.sensitive ? 'Always ask me for this tool' : 'Let settings decide this tool', path, target: `Tool ${parts[4]}`, details: [body.sensitive ? 'No chat switch, agent or AI can run it without you.' : 'Your chat, agent and tool settings decide again.'] }
+  }
   if (path === '/api/control/pi/memory/remember') {
     const length = typeof body.text === 'string' ? body.text.length : 0
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }

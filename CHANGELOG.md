@@ -6,6 +6,20 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Access by your settings:** Conker no longer waits for you on what your own settings already
+  answer. The most specific setting wins: this chat's access switch (the shield in the composer:
+  Agent's settings, Ask me, AI decides, Full access), the agent's setting per tool (agent page,
+  Access per tool), then the tool's own. Tools you mark **Always ask me** (Settings, Access), and
+  system controls, always ask; after a chat reads outside content it is one step stricter. When
+  you typed the request yourself, an action that matches your words goes ahead. Settings, Access
+  has the switch that lets Conker decide by your settings at all. Inbox, **Handled** lists what
+  ran without asking you and who decided. Memories and cron jobs Conker makes now happen at once.
+  Needs the next Pi and ToolGate releases.
+
+- **Plan usage ring:** next to the model in the composer, a small ring shows how much of the
+  selected model's Claude or ChatGPT plan window is used; tap it for every window, its percent
+  and when it resets. Local and API-key models show none.
+
 - **Conker asks, you verify:** in chat (or from an AI job) Conker can ask for a cron job, a
   new tool or a memory. Each request lands in the Inbox showing exactly what would be made;
   **Create job**, **Save as draft** or **Remember** makes it real (asks for your password),

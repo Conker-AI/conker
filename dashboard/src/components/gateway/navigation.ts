@@ -52,7 +52,7 @@ export const gatewaySidebarDestinations = gatewayDestinations.filter(item => ite
 export const gatewayCommandDestinations = gatewayDestinations
 
 const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string])[]>> = {
-  settings: [['general', 'General'], ['providers', 'Providers'], ['search', 'Search']],
+  settings: [['general', 'General'], ['providers', 'Providers'], ['access', 'Access'], ['search', 'Search']],
   activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
   agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills']],
   system: [['overview', 'Overview'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files']],

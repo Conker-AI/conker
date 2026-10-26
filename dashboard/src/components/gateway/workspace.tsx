@@ -14,6 +14,7 @@ import { ConnectionBanner } from '@/components/resilience/connection-banner'
 import { GatewaySidebar } from './gateway-sidebar'
 import { InboxAttentionProvider } from './inbox-attention'
 import { GatewayPrivacyControl } from './privacy-control'
+import { GatewaySessionAccessControl } from './session-access-control'
 import { GatewayHeader } from './header'
 import { WorkspaceChromeProvider } from '@/components/design-system/workspace-chrome'
 import { UniversalSearchProvider } from './universal-search'
@@ -39,6 +40,7 @@ const GatewayMemoryWorkspace = lazy(() => import('./memory-workspace').then(modu
 const GatewayModelsSettings = lazy(() => import('./models-settings').then(module => ({ default: module.GatewayModelsSettings })))
 const GatewayProvidersSettings = lazy(() => import('./providers-settings').then(module => ({ default: module.GatewayProvidersSettings })))
 const GatewaySearchSettings = lazy(() => import('./search-settings').then(module => ({ default: module.GatewaySearchSettings })))
+const GatewayAccessSettings = lazy(() => import('./access-settings').then(module => ({ default: module.GatewayAccessSettings })))
 const GatewaySetupProgress = lazy(() => import('./setup-progress').then(module => ({ default: module.GatewaySetupProgress })))
 const GatewayActivityWorkspace = lazy(() => import('./activity-workspace').then(module => ({ default: module.GatewayActivityWorkspace })))
 const GatewayAgentsWorkspace = lazy(() => import('./agents-workspace').then(module => ({ default: module.GatewayAgentsWorkspace })))
@@ -95,11 +97,11 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
       {setupActive && <GatewaySetupProgress client={control} />}
-      {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} drafts={control.editorDrafts} state={ownerState} active /></div>}
+      {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} drafts={control.editorDrafts} access={control.access} state={ownerState} active /></div>}
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />}
-      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} authStore={authStore} /> : <GatewayModelsSettings client={control} onSignOut={() => void signOut()} />}</div>}
+      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'access' ? <GatewayAccessSettings client={control} /> : params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} authStore={authStore} /> : <GatewayModelsSettings client={control} onSignOut={() => void signOut()} />}</div>}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
@@ -107,7 +109,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {jobsActive && <GatewayJobsWorkspace control={control} />}
     </Suspense></ErrorBoundary>
     {!supported && <div className="space-y-3 p-6"><PageHeader title="This workspace is not connected yet" density="compact" /><p className="text-sm text-muted-foreground">The live gateway currently connects today, conversations, projects, artifacts, jobs, activity, approvals, agents, memory, tools, models and diagnostics.</p><Button variant="outline" render={<Link to="/chat" />}>Open live conversations</Button></div>}
-    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><ErrorBoundary resetKeys={[session]} fallback={workspaceError}><Suspense fallback={chatActive ? <ChatSkeleton /> : null}><GatewayRuntimeWorkspace headerExtra={session ? <GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></ErrorBoundary></div>
+    <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><ErrorBoundary resetKeys={[session]} fallback={workspaceError}><Suspense fallback={chatActive ? <ChatSkeleton /> : null}><GatewayRuntimeWorkspace headerExtra={session ? <><GatewaySessionAccessControl key={`access:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} /><GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /></> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></ErrorBoundary></div>
     {activityActive && <ErrorBoundary resetKeys={[location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
       if (conversationState.getState().operation) return
       activityState.setState({ notice: null })

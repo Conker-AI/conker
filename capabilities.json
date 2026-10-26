@@ -185,6 +185,13 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/change-requests.ts", "contains": "What Conker asked to create, exactly as filed"}, {"path": "dashboard/src/components/inbox/change-requests.ts", "contains": "drafts.save("}, {"path": "dashboard/src/components/inbox/change-request-card.tsx", "contains": "Approving makes it real; declining creates nothing."}, {"path": "dashboard/scripts/check-gateway-change-requests.cjs", "contains": "Approving asks for the password"}, {"path": "conker", "contains": "proposals|requests|sessions"}, {"path": "dashboard/src/components/gateway/add-memory.tsx", "contains": "Add one memory by hand, the same way a memory Conker asked for is saved."}]
     },
     {
+      "id": "access-policy", "name": "Access by the owner's settings: chat, agent and tool layers, the floor, Handled", "authority": "pi", "state": "active",
+      "gatewayRoutes": ["/api/owner/access", "/api/owner/access/delegate", "/api/owner/tools/{id}/sensitive", "/api/control/pi/access/handled"],
+      "uiRoutes": ["/settings?tab=access", "/chat", "/agents/{id}/edit", "/inbox"], "cliCommands": ["conker apply sessions FILE", "conker apply agents FILE"],
+      "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "GATEWAY_TOOLGATE_OWNER_KEY", "scoped ToolGate execution credential"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/access.ts", "contains": "Whether Conker decides by his settings, and the tools that always ask him (the floor)."}, {"path": "dashboard/src/components/gateway/session-access-control.tsx", "contains": "This chat's access switch over the agent's and tools' settings."}, {"path": "dashboard/src/components/gateway/access-settings.tsx", "contains": "Let Conker decide by your settings"}, {"path": "dashboard/src/components/inbox/handled-list.tsx", "contains": "Nothing ran without asking you this week."}, {"path": "dashboard/scripts/check-gateway-access.cjs", "contains": "Letting Conker decide asks for the password"}]
+    },
+    {
       "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",
       "gatewayRoutes": ["/api/control/pi/calls/browser/capabilities", "/api/control/pi/calls/browser/active/{conversation_id}", "/api/control/pi/calls/browser", "/api/control/pi/calls/browser/{id}", "/api/control/pi/calls/browser/{id}/update", "/api/control/pi/calls/browser/{id}/interrupt", "/api/control/pi/calls/browser/{id}/end", "/api/control/pi/calls/browser/{id}/turns"],
       "uiRoutes": ["/chat"], "cliCommands": ["conker inspect call-capabilities", "conker inspect call CALL_ID", "conker inspect active-call CONVERSATION_ID", "conker apply calls FILE"],
