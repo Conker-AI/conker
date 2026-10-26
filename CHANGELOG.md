@@ -6,6 +6,14 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Conker asks, you verify:** in chat (or from an AI job) Conker can ask for a cron job, a
+  new tool or a memory. Each request lands in the Inbox showing exactly what would be made;
+  **Create job**, **Save as draft** or **Remember** makes it real (asks for your password),
+  **Decline** makes nothing. A tool request is saved as a draft in Tools for you to check
+  and publish. Same from the CLI: `conker inspect change-requests`, `conker apply requests`.
+  You can do the same by hand: **Add memory** (the plus on the Memory screen, or
+  `conker apply memory` with `"operation": "remember"`), a new cron job, a tool draft in Tools.
+  Needs the next Pi and MemoryGate releases.
 - **Pi 0.6.1:** pin it for the drafting model role above, a 10-minute wait for the workflow
   builder, and the owner's read of plan usage, which fills Home's **Plan allowance** tile
   (Claude and ChatGPT percent used per window and when each resets). Pi is now licensed

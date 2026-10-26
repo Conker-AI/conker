@@ -58,8 +58,11 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
     jobs().push(watched)
   }
+  const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
+    if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
+    if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
     if (dismiss && method === 'POST') {
@@ -84,6 +87,35 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
       return created
     }
     return fail(404)
+  }
+}
+
+/** Preview-only requests from Conker (a cron job, a tool draft, a memory); deciding them stays in this tab. */
+function createFakeChangeRequests(session: string, now: () => number, createJob: (name: string, timing: Json, timeZone: string) => Json) {
+  const base = (id: string, kind: string, title: string, summary: string, payload: Json, age: number): Json => ({ id: `creq_${id.repeat(32)}`, kind, title, summary, payload, sessionId: session, state: 'open', result: null, createdAt: now() - age, decidedAt: null })
+  const node = (id: string, type: string, label: string, y: number, config: Json) => ({ id, type, label, position: { x: 0, y }, config })
+  const document = {
+    id: 'study-group-digest', name: 'Study group digest', description: 'Reads the last day of the study group chat and lists deadlines and open questions.', kind: 'workflow',
+    nodes: [node('start', 'input', 'Start', 0, {}), node('read', 'tool_call', 'Read the chat', 120, { tool: 'mcp.telegram.messages', args: { chat: '$input.chat', since: '1d' } }), node('done', 'return', 'Done', 240, { value: '$steps.read' })],
+    edges: [{ id: 'e1', source: 'start', target: 'read' }, { id: 'e2', source: 'read', target: 'done' }],
+    inputs: [{ name: 'chat', type: 'string', required: true, description: 'Which chat to read' }], outputs: [], credentialRefs: [], effect: 'read', agentVisible: false, budgets: { maxSteps: 20, maxLoopItems: 10, timeoutMs: 10000 },
+  }
+  const open: Json[] = [
+    base('a', 'ai_job', 'Cron job: Morning study check', 'Every day at 08:00, check the study chats and calendar for deadlines this week and tell me only if something needs me.', { name: 'Morning study check', instructions: 'Check the study group chats and my calendar for deadlines in the next 7 days. If something is new or close, tell me what it is and what I could do about it. If nothing needs me, reply NOTHING.', agentId: 'companion', timing: { kind: 'daily', time: '08:00', day: 0, hours: 24 }, timeZone: 'Asia/Jerusalem', enabled: true }, 600),
+    base('b', 'tool_draft', 'Tool: Study group digest', document.description, { document, issues: [], description: 'A tool that sums up my study group chat' }, 3600),
+    base('c', 'memory', 'Remember: physics exam', 'The physics exam is on Thursday 30 October.', { text: 'The physics exam is on Thursday 30 October, room 204.' }, 7200),
+  ]
+  return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    const saving = path.match(/^\/api\/owner\/editor-drafts\/([a-zA-Z][a-zA-Z0-9_-]{0,63})$/)
+    if (saving && method === 'POST') return { id: saving[1], revision: 1, updated_at: new Date().toISOString(), document: body?.document }
+    if (path === '/api/control/pi/change-requests' && method === 'GET') return { schemaVersion: 1, results: structuredClone(open) }
+    const decide = path.match(/^\/api\/control\/pi\/change-requests\/(creq_[0-9a-f]{32})\/(approve|decline|saved)$/)
+    const index = decide && method === 'POST' ? open.findIndex(item => item.id === decide[1]) : -1
+    if (!decide || index < 0) return fail(decide ? 409 : 404)
+    const [request] = open.splice(index, 1), payload = request.payload as Json
+    const result = decide[2] === 'decline' ? null : decide[2] === 'saved' ? { draftId: body?.draftId }
+      : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id } : { memoryId: 'mem_preview' }
+    return { ...request, state: decide[2] === 'decline' ? 'declined' : 'approved', result, decidedAt: now() }
   }
 }
 

@@ -510,6 +510,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/change-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listing
+         * @description Open requests, newest first.
+         */
+        get: operations["listing_change_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-requests/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get */
+        get: operations["get_change_requests__identity__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-requests/{identity}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve
+         * @description Make a cron job or memory real exactly as filed.
+         */
+        post: operations["approve_change_requests__identity__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-requests/{identity}/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Saved
+         * @description The owner saved this tool request as a draft in Tools; recording it creates nothing.
+         */
+        post: operations["saved_change_requests__identity__saved_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-requests/{identity}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline
+         * @description Nothing is created; Conker is told it was declined if it asks again.
+         */
+        post: operations["decline_change_requests__identity__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow-proposals": {
         parameters: {
             query?: never;
@@ -2916,6 +3013,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive Hook
+         * @description A webhook call: starts its AI job at most once, never while the job is running.
+         */
+        post: operations["receive_hook_hooks__job_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/jobs": {
         parameters: {
             query?: never;
@@ -2988,6 +3105,46 @@ export interface paths {
          * @description Hide a note; the job's chat keeps the full reply.
          */
         post: operations["dismiss_agent_job_note_jobs_agent_notes__identity__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{identity}/hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Hook
+         * @description A new webhook secret for this AI job, shown once; any earlier one stops working.
+         */
+        post: operations["issue_hook_jobs__identity__hook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{identity}/hook/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Hook
+         * @description Stop the webhook; the job keeps its timing or watch.
+         */
+        post: operations["revoke_hook_jobs__identity__hook_revoke_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3763,6 +3920,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/memory/remember": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remember Memory
+         * @description Add one memory in the owner's own words; the same request id never stores it twice.
+         */
+        post: operations["remember_memory_memory_remember_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memory": {
         parameters: {
             query?: never;
@@ -4496,6 +4673,11 @@ export interface components {
              */
             enabled: boolean;
             watch?: components["schemas"]["ToolWatch"] | null;
+            /**
+             * Clock
+             * @default true
+             */
+            clock: boolean;
         };
         /** AgentJobNote */
         AgentJobNote: {
@@ -4592,6 +4774,11 @@ export interface components {
              * @enum {string}
              */
             kind: "agent";
+            /**
+             * Clock
+             * @default true
+             */
+            clock: boolean;
         };
         /** AgentTargetSummary */
         AgentTargetSummary: {
@@ -4602,6 +4789,16 @@ export interface components {
             kind: "agent";
             /** Sessionid */
             sessionId?: string | null;
+            /**
+             * Webhook
+             * @default false
+             */
+            webhook: boolean;
+            /**
+             * Clock
+             * @default true
+             */
+            clock: boolean;
         };
         /** Append */
         Append: {
@@ -5766,6 +5963,14 @@ export interface components {
              */
             execution: "directory-listing-only";
         };
+        /**
+         * DraftSaved
+         * @description The owner's browser saved the requested document in ToolGate's editor.
+         */
+        DraftSaved: {
+            /** Draftid */
+            draftId: string;
+        };
         /** Edge */
         Edge: {
             /** Id */
@@ -5916,6 +6121,29 @@ export interface components {
             payload: "result_only" | "result_and_citations";
             /** Maxtransfers */
             maxTransfers: number;
+        };
+        /** HookIssued */
+        HookIssued: {
+            /** Jobid */
+            jobId: string;
+            /** Token */
+            token: string;
+            /**
+             * Header
+             * @constant
+             */
+            header: "X-Conker-Hook-Token";
+            /** Path */
+            path: string;
+        };
+        /** HookReceived */
+        HookReceived: {
+            /** Started */
+            started: boolean;
+            /** Runid */
+            runId?: string | null;
+            /** Reason */
+            reason?: ("busy" | "paused") | null;
         };
         /** Import */
         Import: {
@@ -6719,6 +6947,13 @@ export interface components {
             name: string;
             /** Valid */
             valid: boolean;
+        };
+        /** Remember */
+        Remember: {
+            /** Request Id */
+            request_id: string;
+            /** Text */
+            text: string;
         };
         /** Rename */
         Rename: {
@@ -9207,6 +9442,178 @@ export interface operations {
             };
             path: {
                 alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_change_requests_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_change_requests__identity__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_change_requests__identity__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    saved_change_requests__identity__saved_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftSaved"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_change_requests__identity__decline_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
             };
             cookie?: never;
         };
@@ -14976,6 +15383,47 @@ export interface operations {
             };
         };
     };
+    receive_hook_hooks__job_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Conker-Hook-Token"?: string | null;
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HookReceived"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listing_jobs_get: {
         parameters: {
             query?: {
@@ -15116,6 +15564,74 @@ export interface operations {
         };
     };
     dismiss_agent_job_note_jobs_agent_notes__identity__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_hook_jobs__identity__hook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HookIssued"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_hook_jobs__identity__hook_revoke_post: {
         parameters: {
             query?: never;
             header?: {
@@ -16719,6 +17235,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Forget"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remember_memory_memory_remember_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Remember"];
             };
         };
         responses: {

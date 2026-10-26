@@ -55,6 +55,7 @@ REQUIRED_CAPABILITIES = {
     "settings-registry",
     "definitions-list",
     "plan-usage",
+    "change-requests",
 }
 FIELDS = {
     "id",

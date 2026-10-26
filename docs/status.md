@@ -7,8 +7,8 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **41 tracked
-capability families: 40 active and 1 deferred**. Active means at least one real
+Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **42 tracked
+capability families: 41 active and 1 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source

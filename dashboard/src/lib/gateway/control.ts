@@ -3,6 +3,7 @@ import { createGatewayEditorDrafts } from './editor-drafts'
 import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
+import { createChangeRequestsClient } from './change-requests'
 import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
@@ -297,6 +298,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),
+    changeRequests: createChangeRequestsClient(auth),
     plans: createGatewayPlansClient(auth),
     characters: createGatewayCharactersClient(auth),
     hostInventory: {
@@ -475,6 +477,11 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     /** Content-free durable recovery; does not retry or contact MemoryGate. */
     async pendingMemoryForget(signal?: AbortSignal): Promise<MemoryForgetRequest | null> {
       return parse(forgetPending, await auth.request('/api/control/pi/memory/forget-pending', { signal })).pending
+    },
+    /** Adds one memory in the owner's words. Retrying with the same request id never stores it twice. */
+    async rememberMemory(requestId: string, text: string, signal?: AbortSignal): Promise<{ memoryId: string; status: 'remembered' | 'already_remembered' }> {
+      const body = { request_id: parse(z.string().regex(/^[A-Za-z0-9_-]{16,128}$/), requestId, true), text: parse(z.string().min(1).max(2000).refine(value => value.trim().length > 0), text, true) }
+      return parse(z.object({ memoryId: z.string().min(1).max(200), status: z.enum(['remembered', 'already_remembered']) }).strict(), await auth.request('/api/control/pi/memory/remember', { method: 'POST', body, signal }))
     },
     /** Repeat only the same reviewed identity after an uncertain result. Owner verification still applies. */
     async forgetMemory(request: MemoryForgetRequest, signal?: AbortSignal): Promise<MemoryForgetReceipt> {

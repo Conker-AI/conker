@@ -119,6 +119,12 @@ routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
 // Plan usage is percentages per plan window only; dismissing an alert stays host-admin only.
 routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
+// Conker's requests: list, approve (asks for the password), decline (creates nothing) and record the
+// Tools draft a tool request was saved as (the save itself asked for the password).
+routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
+routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
+// Adding a memory by hand asks for the password, like approving one Conker asked for.
+routes.POST.unshift(/^\/api\/control\/pi\/memory\/remember$/)
 // AI jobs: the browser creates AI jobs only (never raw tool jobs), reads their notes and dismisses one.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs\/agent\/notes$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/agent$/, /^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
@@ -146,6 +152,7 @@ routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 conversationWrites.push(draftRoute, draftStartRoute)
+conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/)
 // Dismissing an AI job's note hides one line; it grants and runs nothing.
 conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
