@@ -294,8 +294,8 @@ def test_active_sandbox_with_0_6_0_and_correct_digest_passes():
 
 # --- recovery cases ---
 
-from recovery_layout import REPOSITORY_PROFILE  # noqa: E402
-from recovery_snapshot import valid_service_inventory  # noqa: E402
+from recovery_layout import REPOSITORY_PROFILE
+from recovery_snapshot import valid_service_inventory
 
 
 def test_repository_inventory_is_valid_with_and_without_sandbox_services():
