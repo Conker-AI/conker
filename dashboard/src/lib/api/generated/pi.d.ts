@@ -607,6 +607,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/access/handled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Handled
+         * @description The last week of actions that ran without asking him, newest first, with who decided.
+         */
+        get: operations["handled_access_handled_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflow-proposals": {
         parameters: {
             query?: never;
@@ -4648,6 +4668,10 @@ export interface components {
             modelId: string | null;
             /** Toolids */
             toolIds: string[];
+            /** Toolaccess */
+            toolAccess?: {
+                [key: string]: "allow" | "ai" | "ask";
+            };
             memory: components["schemas"]["MemorySelection"];
         };
         /**
@@ -8143,6 +8167,12 @@ export interface components {
             projectSources?: (components["schemas"]["Conversation"] | components["schemas"]["Task"] | components["schemas"]["File"])[];
             /** Presentationmode */
             presentationMode?: ("focus" | "character") | null;
+            /**
+             * Access
+             * @default default
+             * @enum {string}
+             */
+            access: "default" | "ask" | "ai" | "full";
         };
         /** Update */
         pi__conversation__settings__Update: {
@@ -9615,6 +9645,38 @@ export interface operations {
             path: {
                 identity: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handled_access_handled_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
