@@ -22,7 +22,8 @@ GET-only proxy. ToolGate's `sandbox` CI job asserts every setting against the re
 (43 checks, also passing on this Windows workspace with Docker Desktop). Conker's
 `docker-compose.sandbox.yml` overlay, installer, launcher, release and recovery wiring are in
 place but stay off (`AGENT_SANDBOX_STATE=deferred`) until a ToolGate release with the runner and a
-digest-pinned sandbox image is pinned. The Ubuntu source-build layout does not include it yet.
+digest-pinned sandbox image is pinned. The Ubuntu source-build layout (`deploy/ubuntu/prepare.py`)
+generates the same runner and proxy from its ToolGate build under the same switch.
 
 **Hardened now:** ToolGate runs with a read-only root and no capabilities; MemoryGate with a
 read-only root and only DAC_OVERRIDE (its backups go to the owner's host folder). Verified with

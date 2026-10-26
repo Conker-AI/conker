@@ -174,6 +174,7 @@ UBUNTU_PROFILE = LayoutProfile(
     writers=(
         "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "decisions", "ollama", "qdrant", "owner-terminal",
+        "sandbox-runner", "package-proxy",
     ),
     excluded_mounts={
         "gateway": frozenset({"/dashboard", "/run/conker-terminal", "/run/conker-providers"}),
@@ -187,8 +188,11 @@ UBUNTU_PROFILE = LayoutProfile(
         }),
         "postgres": frozenset({"/var/lib/postgresql/data"}),
         "systemgate": frozenset({"/host/proc", "/backups"}),
+        "toolgate": frozenset({"/run/conker-sandbox"}),
+        "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
+        "package-proxy": frozenset({"/run/conker-proxy"}),
     },
-    optional_services=frozenset({"owner-terminal"}),
+    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy"}),
 )
 
 
