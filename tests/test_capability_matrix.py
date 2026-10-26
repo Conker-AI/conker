@@ -22,8 +22,8 @@ def row(data, identity):
 def test_repository_capability_matrix_is_complete_and_evidenced():
     assert load() == {
         "schemaVersion": 1,
-        "capabilities": 41,
-        "active": 40,
+        "capabilities": 42,
+        "active": 41,
         "deferred": 1,
     }
 
