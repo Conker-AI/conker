@@ -294,27 +294,24 @@ def test_active_sandbox_with_0_6_0_and_correct_digest_passes():
 
 # --- recovery cases ---
 
-from recovery_layout import REPOSITORY_PROFILE
+from recovery_layout import REPOSITORY_PROFILE  # noqa: E402
+from recovery_snapshot import valid_service_inventory  # noqa: E402
 
 
-def test_repository_inventory_with_sandbox_services_is_valid():
-    assert "sandbox-runner" in REPOSITORY_PROFILE.optional_services
-    assert "package-proxy" in REPOSITORY_PROFILE.optional_services
+def test_repository_inventory_is_valid_with_and_without_sandbox_services():
+    base = set(REPOSITORY_PROFILE.services)
+    assert valid_service_inventory(base, REPOSITORY_PROFILE)
+    assert valid_service_inventory(base | {"sandbox-runner", "package-proxy"}, REPOSITORY_PROFILE)
+    assert not valid_service_inventory(base | {"sandbox-shell"}, REPOSITORY_PROFILE)
 
 
-def test_repository_inventory_without_sandbox_services_is_valid():
-    # The base services remain valid; sandbox services are optional.
-    assert "sandbox-runner" not in REPOSITORY_PROFILE.services
-    assert "package-proxy" not in REPOSITORY_PROFILE.services
+def test_sandbox_services_are_writers_stopped_for_a_backup():
+    assert {"sandbox-runner", "package-proxy"} <= set(REPOSITORY_PROFILE.writers)
 
 
-def test_sandbox_excluded_mounts_are_as_listed():
-    assert REPOSITORY_PROFILE.excluded_mounts["toolgate"] == frozenset(
-        {"/run/conker-sandbox"}
-    )
+def test_sandbox_mounts_are_never_archived():
+    assert REPOSITORY_PROFILE.excluded_mounts["toolgate"] == frozenset({"/run/conker-sandbox"})
     assert REPOSITORY_PROFILE.excluded_mounts["sandbox-runner"] == frozenset(
         {"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}
     )
-    assert REPOSITORY_PROFILE.excluded_mounts["package-proxy"] == frozenset(
-        {"/run/conker-proxy"}
-    )
+    assert REPOSITORY_PROFILE.excluded_mounts["package-proxy"] == frozenset({"/run/conker-proxy"})

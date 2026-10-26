@@ -26,7 +26,7 @@ Talk to it, choose what it remembers, and review what it does.</p>
 - **Control actions.** Conker tools run through ToolGate's grants and approval policy. Required approvals apply to one exact action.
 - **Run locally.** Host the app and local models yourself, or explicitly connect a hosted provider or subscription runtime.
 
-> **Status:** early. The current source has 42 of 43 tracked capability families active;
+> **Status:** early. The current source has 42 of 44 tracked capability families active;
 > the production owner terminal remains deferred. The current tree still needs
 > assembled Linux release acceptance before rollout. [Full status](docs/status.md)
 

@@ -443,8 +443,9 @@ write_env() {
     MEMORYGATE_INGEST_KEY=$(keep_or_make MEMORYGATE_INGEST_KEY)
 
     mkdir -p "$CONKER_BACKUP_DIR/memorygate"
-    chmod 700 "$CONKER_BACKUP_DIR"
-    chmod 700 "$CONKER_BACKUP_DIR/memorygate"
+    # Memory backups are the owner's alone. A folder an older Docker run created as root cannot
+    # be changed here; say so rather than stop the install.
+    chmod 700 "$CONKER_BACKUP_DIR" "$CONKER_BACKUP_DIR/memorygate" 2>/dev/null         || say "  Could not make $CONKER_BACKUP_DIR private; run: chmod 700 $CONKER_BACKUP_DIR"
 
     local provider_dir="$ROOT/.conker/provider-secrets"
     python3 "$ROOT/scripts/provider_secrets.py" --directory "$provider_dir" initialize >/dev/null
