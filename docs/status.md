@@ -7,11 +7,27 @@ completed [release-acceptance](reference/release-acceptance.md) evidence bundle.
 Those three artifacts answer different questions and must not be substituted for
 one another.
 
-Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **43 tracked
-capability families: 42 active and 1 deferred**. Active means at least one real
+Last source verification: **23 October 2026**, on a Windows workspace (below). The tree has **44 tracked
+capability families: 42 active and 2 deferred**. Active means at least one real
 product surface exists; it does not imply UI/CLI parity or current-server rollout.
 
 ## Current source
+
+### Agent sandbox prepared; ToolGate and MemoryGate containers hardened (26 to 27 October)
+
+**Not active yet.** Agents' Terminal and Install packages tools (ADR-0013) are built in ToolGate
+(Conker-AI/toolgate#19): one fresh locked-down container per command, started by a networkless
+sandbox runner that alone holds the Docker socket; installs reach PyPI and npm only through a
+GET-only proxy. ToolGate's `sandbox` CI job asserts every setting against the real Docker Engine
+(43 checks, also passing on this Windows workspace with Docker Desktop). Conker's
+`docker-compose.sandbox.yml` overlay, installer, launcher, release and recovery wiring are in
+place but stay off (`AGENT_SANDBOX_STATE=deferred`) until a ToolGate release with the runner and a
+digest-pinned sandbox image is pinned. The Ubuntu source-build layout does not include it yet.
+
+**Hardened now:** ToolGate runs with a read-only root and no capabilities; MemoryGate with a
+read-only root and only DAC_OVERRIDE (its backups go to the owner's host folder). Verified with
+the pinned 0.5.1 images: health, a tool invocation, a memory backup. The installer makes the
+backup folder private (mode 700).
 
 ### First-run wizard, weekly security check, workflow offers and a module release (22 to 23 October)
 
@@ -1388,6 +1404,7 @@ Qdrant and Ollama, so a fresh deployment no longer begins from mutable `latest` 
 | Capability | Why it is deferred |
 | --- | --- |
 | Owner terminal | The constrained PTY, UI, dedicated candidate image, health probe, workspace preflight, recovery exclusions and guarded repository/Ubuntu deployment shapes exist. Manifest v2 still records the capability as deferred and requires both a registry digest and hashed target-Linux acceptance to activate it; neither promotion input exists yet. |
+| Agent sandbox | The sandbox runner, package proxy and overlay compose file exist (ADR-0013). Manifest v2 records the capability as deferred and requires a ToolGate release that ships the sandbox runner plus a digest-pinned sandbox image; neither promotion input exists yet. |
 
 This capability exposes no production surface in the capability matrix. Its
 presence in lower-level code is not a release claim.

@@ -116,6 +116,12 @@ services:
     image: ghcr.io/conker-ai/toolgate:${TOOLGATE_VERSION}
     container_name: toolgate-api
     mem_limit: 512m
+    # Its data, vault and keys live only in toolgate_data. A read-only root and no capabilities
+    # leave a compromised process nothing else to change: nothing it runs needs either.
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
     networks:
       conker_net: {}
       owner_control:
@@ -167,6 +173,13 @@ services:
     image: ghcr.io/conker-ai/memorygate:${MEMORYGATE_VERSION}
     container_name: memorygate-api
     mem_limit: 1g
+    # Read-only root, every capability dropped except DAC_OVERRIDE: the backup folder below is the
+    # owner's host directory, and root without it cannot write there.
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
     ports:
       - "127.0.0.1:8020:8020"
     environment:

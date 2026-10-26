@@ -226,6 +226,12 @@
       "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/audits/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}, {"path": "dashboard/src/app/system/terminal.tsx", "contains": "No authenticated terminal session"}]
     },
     {
+      "id": "agent-sandbox", "name": "Agent sandbox", "authority": "toolgate", "state": "deferred", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
+      "deploymentRequirements": ["ToolGate release with sandbox runner", "digest-pinned sandbox image", "Docker Engine 26 or newer"],
+      "gap": "The agent sandbox activates with a ToolGate release that ships the sandbox runner and a digest-pinned sandbox image.",
+      "evidence": [{"path": "versions.env", "contains": "AGENT_SANDBOX_STATE=deferred"}, {"path": "docker-compose.sandbox.yml", "contains": "network_mode: none"}, {"path": "docs/adr/0013-agent-sandbox.md", "contains": "fresh locked-down container"}]
+    },
+    {
       "id": "host-inventory", "name": "Host services, ports and process inventory", "authority": "systemgate", "state": "active",
       "gatewayRoutes": ["/api/control/pi/system/inventory", "/api/control/pi/system/inventory/{id}", "/api/control/pi/system/inventory/{id}/resume", "/api/control/pi/system/inventory/configured/services", "/api/control/pi/system/inventory/configured/containers"],
       "uiRoutes": ["/system?tab=processes", "/system?tab=ports", "/system?tab=containers"], "cliCommands": ["conker inspect inventory-services", "conker inspect inventory-containers", "conker inspect inventory REQUEST_ID", "conker apply inventory FILE"],

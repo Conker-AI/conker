@@ -294,6 +294,16 @@ ask_questions() {
         CONKER_TERMINAL_WORKSPACE_LABEL=${CONKER_TERMINAL_WORKSPACE_LABEL:-$(basename -- "$CONKER_TERMINAL_WORKSPACE")}
         say ""
     fi
+
+    if agent_sandbox_active; then
+        CONKER_WORKSPACES_DIR=$(keep_optional CONKER_WORKSPACES_DIR)
+        if [ -z "$CONKER_WORKSPACES_DIR" ]; then
+            CONKER_WORKSPACES_DIR=$(ask_text "Agent workspaces folder:" "$HOME/conker-workspaces")
+        fi
+        # ~ typed by hand is a literal character, not the shell's expansion.
+        CONKER_WORKSPACES_DIR="${CONKER_WORKSPACES_DIR/#\~/$HOME}"
+        say ""
+    fi
 }
 
 # ============================================================================
@@ -433,6 +443,9 @@ write_env() {
     MEMORYGATE_INGEST_KEY=$(keep_or_make MEMORYGATE_INGEST_KEY)
 
     mkdir -p "$CONKER_BACKUP_DIR/memorygate"
+    # Memory backups are the owner's alone. A folder an older Docker run created as root cannot
+    # be changed here; say so rather than stop the install.
+    chmod 700 "$CONKER_BACKUP_DIR" "$CONKER_BACKUP_DIR/memorygate" 2>/dev/null         || say "  Could not make $CONKER_BACKUP_DIR private; run: chmod 700 $CONKER_BACKUP_DIR"
 
     local provider_dir="$ROOT/.conker/provider-secrets"
     python3 "$ROOT/scripts/provider_secrets.py" --directory "$provider_dir" initialize >/dev/null
@@ -487,6 +500,19 @@ write_env() {
         mv "$terminal_record_tmp" "$terminal_record"
     fi
 
+    if agent_sandbox_active; then
+        CONKER_DOCKER_GID=$(stat -c %g /var/run/docker.sock 2>/dev/null) \
+            || die "Cannot read the Docker socket group. Is Docker installed and running?"
+        mkdir -p "$CONKER_WORKSPACES_DIR"
+        local AGENT_SANDBOX_IMAGE
+        AGENT_SANDBOX_IMAGE=$(sed -n 's/^AGENT_SANDBOX_IMAGE=//p' "$ROOT/versions.env" | head -1)
+        docker run --rm --network none --user 0:0 \
+            --mount "type=bind,src=$CONKER_WORKSPACES_DIR,dst=/w" \
+            "$AGENT_SANDBOX_IMAGE" \
+            sh -c 'chown 65533:'"$(id -g)"' /w && chmod 2770 /w'
+        good "Agent workspaces folder is ready — agents' files appear there, one folder per agent"
+    fi
+
     # Written with a restrictive umask and to a temp file first: a half-written
     # .env that compose reads is worse than no .env at all.
     local tmp="$ENV_FILE.tmp.$$"
@@ -513,6 +539,8 @@ PI_SPEECH_CHARACTER_VOICE=${PI_SPEECH_CHARACTER_VOICE:-unsupported}
 PI_SPEECH_TIMEOUT_S=${PI_SPEECH_TIMEOUT_S:-30}
 CONKER_TERMINAL_WORKSPACE=$CONKER_TERMINAL_WORKSPACE
 CONKER_TERMINAL_WORKSPACE_LABEL=$CONKER_TERMINAL_WORKSPACE_LABEL
+CONKER_WORKSPACES_DIR=${CONKER_WORKSPACES_DIR:-}
+CONKER_DOCKER_GID=${CONKER_DOCKER_GID:-}
 
 # --- embedding model and its width. They must agree; change both or neither. ---
 CONKER_EMBEDDING_MODEL=${CONKER_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
@@ -557,10 +585,17 @@ owner_terminal_active() {
     grep -qx 'OWNER_TERMINAL_STATE=active' "$ROOT/versions.env"
 }
 
+agent_sandbox_active() {
+    grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
+}
+
 compose() {
     local files=(-f "$ROOT/docker-compose.yml")
     if owner_terminal_active; then
         files+=(-f "$ROOT/docker-compose.terminal.yml")
+    fi
+    if agent_sandbox_active; then
+        files+=(-f "$ROOT/docker-compose.sandbox.yml")
     fi
     docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
         "${files[@]}" "$@"

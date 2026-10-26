@@ -104,6 +104,11 @@ explicit operations; neither can undo completed tool effects or erase provider
 usage. Native Codex/Claude CLI sessions and the optional owner terminal run with
 their own host permissions, outside the ordinary Conker tool path.
 
+When the agent sandbox is active, agents' Terminal and Install packages tools run
+in a fresh locked-down container per command through the sandbox runner
+([ADR-0013](adr/0013-agent-sandbox.md)). This is deferred until a ToolGate
+release ships the sandbox runner and a digest-pinned sandbox image.
+
 ## Deployment boundaries
 
 The server deployment uses containers behind a private HTTPS Gateway. The local
