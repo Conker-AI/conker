@@ -112,6 +112,22 @@ def test_authentication_gateway_is_a_coordinated_writer():
     assert "gateway" in recovery_layout.UBUNTU_PROFILE.writers
 
 
+def test_sandbox_runner_and_package_proxy_are_optional_writers():
+    assert "sandbox-runner" in recovery_layout.REPOSITORY_PROFILE.writers
+    assert "package-proxy" in recovery_layout.REPOSITORY_PROFILE.writers
+    assert "sandbox-runner" in recovery_layout.REPOSITORY_PROFILE.optional_services
+    assert "package-proxy" in recovery_layout.REPOSITORY_PROFILE.optional_services
+
+
+def test_sandbox_excluded_mounts_isolate_the_docker_socket_and_workspaces():
+    profile = recovery_layout.REPOSITORY_PROFILE
+    assert "/var/run/docker.sock" in profile.excluded_mounts["sandbox-runner"]
+    assert "/workspaces" in profile.excluded_mounts["sandbox-runner"]
+    assert "/run/conker-sandbox" in profile.excluded_mounts["sandbox-runner"]
+    assert "/run/conker-sandbox" in profile.excluded_mounts["toolgate"]
+    assert "/run/conker-proxy" in profile.excluded_mounts["package-proxy"]
+
+
 def test_model_cache_links_are_flattened_without_archive_links(tmp_path):
     source, restored = tmp_path / "source", tmp_path / "restored"
     source.mkdir()

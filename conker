@@ -78,11 +78,19 @@ owner_terminal_active() {
         && grep -qx 'OWNER_TERMINAL_STATE=active' "$ROOT/versions.env"
 }
 
+agent_sandbox_active() {
+    [ "$LAYOUT" = repository ] \
+        && grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
+}
+
 compose() {
     if [ "$LAYOUT" = repository ]; then
         local files=(-f "$ROOT/docker-compose.yml")
         if owner_terminal_active; then
             files+=(-f "$ROOT/docker-compose.terminal.yml")
+        fi
+        if agent_sandbox_active; then
+            files+=(-f "$ROOT/docker-compose.sandbox.yml")
         fi
         docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
             "${files[@]}" "$@"

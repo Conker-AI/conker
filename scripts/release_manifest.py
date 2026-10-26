@@ -27,6 +27,7 @@ REQUIRED_KEYS = {
     "RELEASE_MANIFEST_VERSION",
     "CONKER_DASHBOARD_REVISION",
     "OWNER_TERMINAL_STATE",
+    "AGENT_SANDBOX_STATE",
     *GATE_VERSION_KEYS.values(),
     *THIRD_PARTY_IMAGE_KEYS.values(),
 }
@@ -37,6 +38,21 @@ DIGEST_IMAGE_RE = re.compile(r"[^\s@:]+(?:/[^\s@:]+)*@sha256:[0-9a-f]{64}\Z")
 
 class ManifestError(ValueError):
     """The release manifest is incomplete, mutable, or inconsistent."""
+
+
+def _version_at_least(version: str, minimum: str) -> bool:
+    """Compare semantic versions (major.minor.patch)."""
+    try:
+        v_parts = [int(part) for part in version.split(".")]
+        min_parts = [int(part) for part in minimum.split(".")]
+        # Pad with zeros for comparison
+        while len(v_parts) < 3:
+            v_parts.append(0)
+        while len(min_parts) < 3:
+            min_parts.append(0)
+        return v_parts >= min_parts
+    except (ValueError, AttributeError):
+        return False
 
 
 def parse_env(path: Path) -> dict[str, str]:
@@ -138,18 +154,51 @@ def validate_manifest(
                 "active owner terminal requires OWNER_TERMINAL_ACCEPTANCE_SHA256"
             )
 
+    # Agent sandbox validation
+    sandbox_state = values["AGENT_SANDBOX_STATE"]
+    if sandbox_state not in {"deferred", "active"}:
+        raise ManifestError("AGENT_SANDBOX_STATE must be deferred or active")
+    sandbox_image = values.get("AGENT_SANDBOX_IMAGE")
+    if sandbox_state == "deferred":
+        if sandbox_image:
+            raise ManifestError("deferred agent sandbox must not name an image")
+    else:
+        if not sandbox_image:
+            raise ManifestError("active agent sandbox requires AGENT_SANDBOX_IMAGE")
+        if not DIGEST_IMAGE_RE.fullmatch(sandbox_image):
+            raise ManifestError(
+                "active agent sandbox requires AGENT_SANDBOX_IMAGE as repository@sha256:<digest>"
+            )
+        # Must match the exact repository
+        if not sandbox_image.startswith("ghcr.io/conker-ai/toolgate-sandbox@sha256:"):
+            raise ManifestError(
+                "active agent sandbox requires AGENT_SANDBOX_IMAGE from ghcr.io/conker-ai/toolgate-sandbox"
+            )
+        # TOOLGATE_VERSION must be at least 0.6.0
+        toolgate_version = values.get("TOOLGATE_VERSION", "")
+        if not _version_at_least(toolgate_version, "0.6.0"):
+            raise ManifestError(
+                "active agent sandbox requires TOOLGATE_VERSION at least 0.6.0"
+            )
+
+    capabilities = {
+        "owner-terminal": {
+            "state": terminal_state,
+            "image": terminal_image,
+            "acceptance_sha256": terminal_acceptance,
+        },
+        "agent-sandbox": {
+            "state": sandbox_state,
+            "image": sandbox_image if sandbox_state == "active" else None,
+        },
+    }
+
     return {
         "manifest_version": int(schema),
         "conker_dashboard_revision": dashboard_revision,
         "gates": gates,
         "third_party_images": third_party,
-        "capabilities": {
-            "owner-terminal": {
-                "state": terminal_state,
-                "image": terminal_image,
-                "acceptance_sha256": terminal_acceptance,
-            }
-        },
+        "capabilities": capabilities,
     }
 
 
