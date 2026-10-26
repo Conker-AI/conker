@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { PlanUsage } from '@/lib/gateway/plans'
 
+/** The selected model's plan window as a small ring; tap for every window and when each resets. */
 export function PlanUsageRing({ client, provider }: { client: GatewayControlClient; provider: 'claude' | 'chatgpt' }) {
   const [usage, setUsage] = useState<PlanUsage | null>(null)
   const [loading, setLoading] = useState(true)
@@ -12,31 +13,21 @@ export function PlanUsageRing({ client, provider }: { client: GatewayControlClie
 
   useEffect(() => {
     const controller = new AbortController()
-    const interval = setInterval(async () => {
+    const load = async () => {
       try {
         const result = await client.plans.usage(controller.signal)
+        if (controller.signal.aborted) return
         setUsage(result)
         setError(null)
       } catch (err) {
+        if (controller.signal.aborted) return
         setError(err instanceof Error ? err.message : 'Failed to load usage')
       } finally {
-        setLoading(false)
-      }
-    }, 5 * 60 * 1000) // 5 minutes
-
-    // Initial load
-    const initialLoad = async () => {
-      try {
-        const result = await client.plans.usage(controller.signal)
-        setUsage(result)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load usage')
-      } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
-    initialLoad()
+    const interval = setInterval(() => void load(), 5 * 60 * 1000)
+    void load()
 
     return () => {
       controller.abort()
@@ -148,7 +139,7 @@ export function PlanUsageRing({ client, provider }: { client: GatewayControlClie
           </div>
           <div className="h-1 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full ${getRingColor(window.usedPercent)} transition-colors`}
+              className={`h-full bg-current ${getRingColor(window.usedPercent)}`}
               style={{ width: `${window.usedPercent}%` }}
             />
           </div>
