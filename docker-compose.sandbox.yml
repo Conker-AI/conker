@@ -1,0 +1,95 @@
+# The agent sandbox (ADR-0013): every Conker agent's Terminal and Install packages tools.
+#
+# Added on top of docker-compose.yml only when versions.env says AGENT_SANDBOX_STATE=active and
+# pins AGENT_SANDBOX_IMAGE by digest; `./conker` and install.sh select it, nothing else does.
+#
+# Three pieces, none of them on conker_net or owner_control:
+# - sandbox-runner: the only holder of the Docker socket for agent commands. Networkless; ToolGate
+#   reaches it through one Unix socket and it admits only ToolGate's UID. It starts one fresh
+#   container per command from the pinned sandbox image, with no network, only that agent's
+#   workspace folder, user 65533, no capabilities, a read-only root and hard limits.
+# - package-proxy: GET-only pull-through to PyPI and npm, on its own egress network. Install
+#   containers reach it through a read-only socket mount, never a network.
+# - agent workspaces: one host folder (CONKER_WORKSPACES_DIR), one subfolder per agent. The owner
+#   and the agent exchange files there. It is not part of Conker's backups.
+services:
+  toolgate:
+    environment:
+      TOOLGATE_SANDBOX_SOCKET: /run/conker-sandbox/runner.sock
+    volumes:
+      - sandbox_control:/run/conker-sandbox
+    depends_on:
+      sandbox-runner:
+        condition: service_healthy
+
+  sandbox-runner:
+    image: ghcr.io/conker-ai/toolgate:${TOOLGATE_VERSION}
+    container_name: toolgate-sandbox-runner
+    restart: unless-stopped
+    command: ["python", "-m", "toolgate.sandbox.runner", "serve"]
+    user: "65533:65533"
+    # Only to open the Docker socket; the host's docker group (install.sh records it).
+    group_add: ["${CONKER_DOCKER_GID:?run ./install.sh}"]
+    network_mode: none
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+    stop_grace_period: 20s
+    environment:
+      SANDBOX_IMAGE: ${AGENT_SANDBOX_IMAGE:?an active release manifest pins the sandbox image}
+      # ToolGate's container runs as UID 0; no other container mounts the control socket.
+      SANDBOX_CLIENT_UIDS: "0"
+      SANDBOX_WORKSPACES_VOLUME: conker_agent_workspaces
+      SANDBOX_PROXY_VOLUME: conker_sandbox_proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - sandbox_control:/run/conker-sandbox
+      - agent_workspaces:/workspaces
+    healthcheck:
+      test: ["CMD", "python", "-m", "toolgate.sandbox.runner", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 120s
+
+  package-proxy:
+    image: ghcr.io/conker-ai/toolgate:${TOOLGATE_VERSION}
+    container_name: toolgate-package-proxy
+    restart: unless-stopped
+    command: ["python", "-m", "toolgate.sandbox.proxy", "serve"]
+    user: "65532:65532"
+    networks: [sandbox_egress]
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    environment:
+      PROXY_CLIENT_UIDS: "65533"
+    volumes:
+      - sandbox_proxy:/run/conker-proxy
+    healthcheck:
+      test: ["CMD", "python", "-m", "toolgate.sandbox.proxy", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  sandbox_control: {}
+  sandbox_proxy:
+    name: conker_sandbox_proxy
+  agent_workspaces:
+    name: conker_agent_workspaces
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONKER_WORKSPACES_DIR:?run ./install.sh}
+
+networks:
+  # The package proxy's way out. No Conker service is on it.
+  sandbox_egress: {}
