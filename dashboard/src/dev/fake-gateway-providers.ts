@@ -58,11 +58,13 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
     jobs().push(watched)
   }
+  const access = createFakeAccess(session, now)
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
+    if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/sensitive$/.test(path) || path === '/api/control/pi/access/handled') return access(path, method, body, fail)
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
     if (dismiss && method === 'POST') {
@@ -116,6 +118,26 @@ function createFakeChangeRequests(session: string, now: () => number, createJob:
     const result = decide[2] === 'decline' ? null : decide[2] === 'saved' ? { draftId: body?.draftId }
       : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id } : { memoryId: 'mem_preview' }
     return { ...request, state: decide[2] === 'decline' ? 'declined' : 'approved', result, decidedAt: now() }
+  }
+}
+
+/** Preview-only access state: Conker's decisions off until switched on, two handled actions. */
+function createFakeAccess(session: string, now: () => number) {
+  const state = { delegate: false, sensitive: ['bank.payments'] as string[], floorExecutions: ['container_control', 'port_control', 'process_control'] }
+  const handled = [
+    { id: `hnd_${'1'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'conker.remember', decidedBy: 'tool_default', reason: 'Allowed by the tool’s own setting.', createdAt: now() - 900 },
+    { id: `hnd_${'2'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'mail.send', decidedBy: 'owner_request', reason: 'You asked to send Dani the notes.', createdAt: now() - 5400 },
+  ]
+  return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    if (path === '/api/owner/access' && method === 'GET') return structuredClone(state)
+    if (path === '/api/owner/access/delegate' && method === 'POST') { state.delegate = body?.enabled === true; return { delegate: state.delegate } }
+    const tool = path.match(/^\/api\/owner\/tools\/([^/]+)\/sensitive$/)
+    if (tool && method === 'POST') {
+      state.sensitive = body?.sensitive === true ? [...new Set([...state.sensitive, tool[1]])] : state.sensitive.filter(id => id !== tool[1])
+      return { id: tool[1], sensitive: body?.sensitive === true }
+    }
+    if (path === '/api/control/pi/access/handled' && method === 'GET') return { schemaVersion: 1, results: structuredClone(handled) }
+    return fail(404)
   }
 }
 

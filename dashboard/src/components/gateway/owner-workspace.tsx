@@ -16,6 +16,8 @@ import { ApprovalCard } from '@/components/inbox/approval-card'
 import { AgentNoteCard } from '@/components/inbox/agent-note-card'
 import { ChangeRequestCard } from '@/components/inbox/change-request-card'
 import { useChangeRequests } from '@/components/inbox/change-requests'
+import { HandledList } from '@/components/inbox/handled-list'
+import type { AccessClient } from '@/lib/gateway/access'
 import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import type { GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import { useAgentNotes, type AgentNotesClient } from '@/components/inbox/agent-notes'
@@ -26,7 +28,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, drafts, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; drafts?: GatewayEditorDrafts; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, drafts, access, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -191,7 +193,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
           </ul>
           <p className="text-xs text-muted-foreground">Later only reorders your Inbox. Nothing is decided, and a permission still expires on its own.</p>
         </section>}
-        <Accordion><AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
+        <Accordion>{access && <AccordionItem value="handled"><AccordionTrigger>Handled</AccordionTrigger><AccordionContent><HandledList client={access} now={now} /></AccordionContent></AccordionItem>}<AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
           {!earlierRows.length && <p className="text-sm text-muted-foreground">No earlier requests.</p>}
           {cursor && <Button variant="outline" disabled={loading || busy} onClick={() => void load(true, cursor)}>Load older requests</Button>}

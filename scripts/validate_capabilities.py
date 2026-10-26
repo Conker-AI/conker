@@ -56,6 +56,7 @@ REQUIRED_CAPABILITIES = {
     "definitions-list",
     "plan-usage",
     "change-requests",
+    "access-policy",
 }
 FIELDS = {
     "id",

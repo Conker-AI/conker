@@ -4,6 +4,7 @@ import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
+import { createAccessClient } from './access'
 import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
@@ -71,6 +72,7 @@ const sessionSettings = z.object({ revision: count, settings: z.object({
   agentId: identity, privacy: z.object({ memoryDisabled: z.boolean(), harnessDisabled: z.boolean() }),
   projectId: identity.nullable().optional(), projectSources: z.array(projectSource).max(20).optional(),
   presentationMode: z.enum(['focus', 'character']).nullable().optional(),
+  access: z.enum(['default', 'ask', 'ai', 'full']).optional(),
 }).strict() })
 export type OwnerSessionSettings = z.infer<typeof sessionSettings>
 const modelSettings = z.object({ revision: count, configuration: configuration.nullable() })
@@ -113,6 +115,7 @@ const toolInventory = z.object({ status: z.enum(['ok', 'unavailable', 'not_confi
     description: z.string().max(8000), inputs: z.array(z.object({ name: z.string().max(200),
       type: z.string().max(100).default('string'), required: z.boolean().optional(),
       description: z.string().max(4000).optional() })).max(100),
+    authorization: z.enum(['auto', 'ai_review', 'owner_confirmation', 'blocked']).optional(), sensitive: z.boolean().optional(),
   })).max(1000),
 })
 export type ToolInventory = z.infer<typeof toolInventory>
@@ -230,6 +233,7 @@ const agentConfiguration = z.object({
   name: z.string().trim().min(1).max(80), role: z.string().trim().min(1).max(160),
   instructions: z.string().trim().min(1).max(8000), modelId: agentReference.nullable(),
   toolIds: z.array(agentReference).max(1000).refine(values => new Set(values).size === values.length),
+  toolAccess: z.record(agentReference, z.enum(['allow', 'ai', 'ask'])).refine(value => Object.keys(value).length <= 1000).optional(),
   memory: z.object({
     scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(agentReference).max(1000),
   }).superRefine((value, context) => {
@@ -299,6 +303,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     artifacts: createGatewayArtifactsClient(auth),
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
+    access: createAccessClient(auth),
     plans: createGatewayPlansClient(auth),
     characters: createGatewayCharactersClient(auth),
     hostInventory: {
