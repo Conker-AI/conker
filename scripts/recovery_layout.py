@@ -142,7 +142,7 @@ REPOSITORY_PROFILE = LayoutProfile(
     writers=(
         "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "searxng", "ollama", "qdrant", "owner-terminal",
-        "sandbox-runner", "package-proxy",
+        "sandbox-runner", "package-proxy", "data-owner",
     ),
     excluded_mounts={
         "gateway": frozenset({"/run/conker-terminal", "/run/conker-providers"}),
@@ -160,7 +160,7 @@ REPOSITORY_PROFILE = LayoutProfile(
         "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
         "package-proxy": frozenset({"/run/conker-proxy"}),
     },
-    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy"}),
+    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy", "data-owner"}),
 )
 
 

@@ -374,10 +374,18 @@ class HostTransport:
             for service, definition in model.get("services", {}).items()
             if definition.get("image")
         }
+        # A one-shot (data-owner) runs to completion before the services that need it; it is
+        # never expected to stay running.
+        one_shot = sorted(
+            service
+            for service, definition in model.get("services", {}).items()
+            if (definition.get("labels") or {}).get("conker.one-shot") == "true"
+        )
         return {
             "revision": candidate_revision,
             "manifest": manifest,
             "service_images": images,
+            "one_shot": one_shot,
         }
 
     def _resolved_digest(self, reference: str) -> str:
@@ -438,6 +446,8 @@ class HostTransport:
         while True:
             try:
                 for service in candidate["service_images"]:
+                    if service in candidate.get("one_shot", ()):
+                        continue
                     container = self._run(
                         self._compose_command(
                             "ps", "-q", "--status", "running", service, override=override
