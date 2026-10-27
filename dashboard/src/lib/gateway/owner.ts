@@ -73,7 +73,7 @@ export function parseOwnerRequest(value: unknown, expectedId?: string): OwnerReq
     if (!statuses.has(String(decision.status)) || decision.status !== result.status) return fail()
     result.decision = { status: decision.status as OwnerRequestStatus, actor: text(decision.actor, 256), note: text(decision.note, 2000), at: date(decision.at) }
   }
-  if (result.reviewable && (result.status !== 'pending' || !result.approval.originValid || result.approval.consumedAt !== null || !result.approval.expiresAt ||
+  if (result.reviewable && (result.status !== 'pending' || !result.approval.originValid || result.approval.consumedAt !== null ||
     result.unavailableReason !== null || !['tool', 'automation'].includes(result.action.subjectType ?? '') || !result.action.subjectId || result.action.args === null || result.action.version === null)) fail()
   return result
 }
