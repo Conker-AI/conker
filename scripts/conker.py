@@ -21,6 +21,7 @@ from conker_inbox import operation as inbox_operation
 from conker_inputs import (
     MCP_ID,
     SKILL_ID,
+    TOOL_ID,
     draft_path,
     draft_payload,
     history_query,
@@ -287,6 +288,12 @@ def main():
                 raise ValueError(
                     "Use --enabled together with --expected-digest to change access."
                 )
+    if args.command == "tool-access":
+        identity(args.id, TOOL_ID, "tool ID")
+        if (args.enabled is None) != (args.expected_digest is None):
+            raise ValueError("Use --enabled together with --expected-digest to change access.")
+        if args.expected_digest is not None:
+            identity(args.expected_digest, r"[a-f0-9]{64}", "exact saved digest")
     memory_edit_request = (
         memory_edit_operation(args) if args.command == "memory-edit" else None
     )
@@ -493,6 +500,13 @@ def main():
                     "expected_digest": args.expected_digest,
                 }
         value = request(config, "toolgate-owner", path, body)
+    elif args.command == "tool-access":
+        body = (
+            {"enabled": args.enabled == "true", "expected_digest": args.expected_digest}
+            if args.enabled is not None
+            else None
+        )
+        value = request(config, "toolgate-owner", f"/v2/owner/tools/{args.id}/access", body)
     elif args.command == "thinking":
         value = (
             request(

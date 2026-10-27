@@ -188,6 +188,12 @@ def build_parser(description):
             "--enabled", choices=["true", "false"], required=operation == "state"
         )
         item.add_argument("--expected-digest", required=operation == "state")
+    tool_access = commands.add_parser(
+        "tool-access", help="Show or switch whether Conker may use one ToolGate tool"
+    )
+    tool_access.add_argument("id")
+    tool_access.add_argument("--enabled", choices=["true", "false"])
+    tool_access.add_argument("--expected-digest")
     show = commands.add_parser("show")
     show.add_argument("session")
     think = commands.add_parser("thinking")

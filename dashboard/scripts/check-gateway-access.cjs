@@ -34,6 +34,18 @@ async function main() {
   assert.equal(await client.setSensitive('mail.send', true), true)
   assert.deepEqual(calls.at(-1), ['/api/owner/tools/mail.send/sensitive', { method: 'POST', body: { sensitive: true } }])
   await assert.rejects(client.setSensitive('../mail', true), error => error.kind === 'validation')
+  const grant = { schemaVersion: 1, toolId: 'sandbox.run', actorId: 'k1', actorName: 'Pi', enabled: false, requiredScope: 'tool:sandbox.run', digest: 'd'.repeat(64) }
+  reply = grant
+  assert.equal((await client.toolAccess('sandbox.run')).enabled, false)
+  assert.deepEqual(calls.at(-1)[0], '/api/owner/tools/sandbox.run/access')
+  reply = { ...grant, toolId: 'other.tool' }
+  await assert.rejects(client.toolAccess('sandbox.run'), error => error.kind === 'invalid-response', 'The answer is about the tool asked for')
+  reply = { ...grant, enabled: true }
+  assert.equal((await client.setToolAccess('sandbox.run', true, 'd'.repeat(64))).enabled, true)
+  assert.deepEqual(calls.at(-1), ['/api/owner/tools/sandbox.run/access', { method: 'POST', body: { enabled: true, expected_digest: 'd'.repeat(64) } }])
+  reply = grant
+  await assert.rejects(client.setToolAccess('sandbox.run', true, 'd'.repeat(64)), error => error.kind === 'invalid-response', 'A grant that did not change is not reported as changed')
+  await assert.rejects(client.setToolAccess('sandbox.run', true, 'stale'), error => error.kind === 'validation', 'Only an exact digest is sent')
   reply = { schemaVersion: 1, results: [{ id: `hnd_${'a'.repeat(32)}`, sessionId: null, turnId: null, toolId: 'mail.send', decidedBy: 'owner_request', reason: 'He asked.', createdAt: 1 }] }
   assert.equal((await client.handled())[0].decidedBy, 'owner_request')
   reply = { schemaVersion: 1, results: [{ id: `hnd_${'a'.repeat(32)}`, sessionId: null, turnId: null, toolId: 'mail.send', decidedBy: 'model', reason: '', createdAt: 1 }] }
@@ -47,12 +59,15 @@ async function main() {
   assert.equal(requests, 2)
   assert.equal(isConversationWrite('/api/owner/access/delegate'), false, 'Letting Conker decide asks for the password')
   assert.equal(isConversationWrite('/api/owner/tools/mail.send/sensitive'), false, 'Changing the floor asks for the password')
+  assert.equal(isConversationWrite('/api/owner/tools/sandbox.run/access'), false, 'Letting Conker use a tool asks for the password')
+  await transport.request('/api/owner/tools/sandbox.run/access')
+  assert.equal(requests, 3)
 
   const control = fs.readFileSync(path.join(root, 'src/lib/gateway/control.ts'), 'utf8')
   assert.match(control, /access: z\.enum\(\['default', 'ask', 'ai', 'full'\]\)\.optional\(\)/, 'Chat settings carry the access switch')
   assert.match(control, /toolAccess: z\.record\(agentReference, z\.enum\(\['allow', 'ai', 'ask'\]\)\)/, 'Agents carry per-tool access')
   const chat = fs.readFileSync(path.join(root, 'src/components/gateway/session-access-control.tsx'), 'utf8')
   assert.match(chat, /Sensitive tools always ask you/, 'The chat switch states the floor')
-  console.log('Gateway access passed: exact views, password-bound switches, five deciders, chat and agent layers.')
+  console.log('Gateway access passed: exact views, password-bound switches, tool grants, five deciders, chat and agent layers.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

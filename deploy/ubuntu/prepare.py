@@ -13,6 +13,11 @@ from urllib.parse import urlsplit
 
 os.umask(0o077)
 root = Path.cwd()
+# A new ToolGate key starts with Conker's built-in tools, as in the repository layout.
+BUILT_IN_TOOLS = (
+    "tool:research.search,tool:research.fetch,tool:research.fetch-batch,"
+    "tool:sandbox.run,tool:sandbox.install"
+)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
 from scripts.provider_secrets import ProviderSecretError, SecretStore
@@ -147,7 +152,7 @@ env = {
     "toolgate": {"TOOLGATE_DATA_DIR": "/data", "TOOLGATE_ADMIN_KEY": keys["toolgate"],
         "TOOLGATE_OWNER_KEY_SHA256": digest("owner"), "TOOLGATE_VAULT_KEY_FILE": "/data/vault.key",
         "TOOLGATE_VAULT_SALT": keys["salt"], "TOOLGATE_CALLBACK_SECRET": keys["callback"],
-        "TOOLGATE_BOOTSTRAP_EXECUTION_KEY": keys["execution"], "TOOLGATE_BOOTSTRAP_SCOPES": "",
+        "TOOLGATE_BOOTSTRAP_EXECUTION_KEY": keys["execution"], "TOOLGATE_BOOTSTRAP_SCOPES": BUILT_IN_TOOLS,
         "MEMORYGATE_URL": "http://memorygate:8020", "MEMORYGATE_READ_KEY": keys["read"]},
     "memorygate": {"DATABASE_URL": "postgresql+psycopg://conker:" + keys["postgres"] + "@postgres:5432/conker",
         "MEMORYGATE_ADMIN_KEY": keys["memory"], "MEMORYGATE_BOOTSTRAP_READ_KEY": keys["read"],

@@ -150,7 +150,10 @@ services:
       # scope the owner narrowed, or a key they revoked, survives a restart.
       # It used to grant tool:*,automation:* on every boot, which quietly undid
       # exactly the decisions the owner had most deliberately made.
-      TOOLGATE_BOOTSTRAP_SCOPES: ${PI_TOOLGATE_SCOPES:-}
+      # A new key starts with Conker's built-in tools only: web search and reading,
+      # its Terminal and package installs, by exact id so Settings, Access can
+      # switch each off. The access layers still decide what runs without asking.
+      TOOLGATE_BOOTSTRAP_SCOPES: ${PI_TOOLGATE_SCOPES:-tool:research.search,tool:research.fetch,tool:research.fetch-batch,tool:sandbox.run,tool:sandbox.install}
     volumes:
       # The control plane, the vault and its key. The key sharing this volume
       # is deliberate and narrow: the volume never leaves the machine, whereas
