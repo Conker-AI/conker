@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+
+from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_DOC = ROOT / "docs" / "reference" / "owner-terminal-sidecar.md"
@@ -32,23 +31,7 @@ def load_contract() -> dict:
 
 
 def ubuntu_manifest(tmp_path: Path) -> tuple[dict, dict[str, str]]:
-    dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
-    dashboard.mkdir(parents=True)
-    (dashboard / "index.html").write_text("<!doctype html>", encoding="utf-8")
-    (tmp_path / "sources" / "companion" / "versions.env").write_text(
-        (ROOT / "versions.env").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "deploy" / "ubuntu" / "prepare.py"),
-            "https://conker.test:8443",
-        ],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    prepare(tmp_path)
     manifest = json.loads((tmp_path / "compose.json").read_text(encoding="utf-8"))
     gateway_env = dict(
         line.split("=", 1)
@@ -198,28 +181,11 @@ def active_terminal_versions() -> str:
 
 
 def prepare_active_terminal(tmp_path: Path, workspace: Path | None):
-    dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
-    dashboard.mkdir(parents=True)
-    (dashboard / "index.html").write_text("<!doctype html>", encoding="utf-8")
-    (tmp_path / "sources" / "companion" / "versions.env").write_text(
-        active_terminal_versions(), encoding="utf-8"
-    )
-    environment = os.environ.copy()
+    environment = {}
     if workspace is not None:
         environment["CONKER_TERMINAL_WORKSPACE"] = str(workspace)
         environment["CONKER_TERMINAL_WORKSPACE_LABEL"] = "Owner project"
-    return subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "deploy" / "ubuntu" / "prepare.py"),
-            "https://conker.test:8443",
-        ],
-        cwd=tmp_path,
-        check=False,
-        capture_output=True,
-        text=True,
-        env=environment,
-    )
+    return prepare(tmp_path, active_terminal_versions(), environment=environment, check=False)
 
 
 def test_ubuntu_generator_requires_preflighted_workspace_for_active_terminal(tmp_path):

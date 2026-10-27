@@ -13,22 +13,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import recovery_layout
 from release_manifest import parse_env
 
+from tests.ubuntu_generator import prepare
+
 
 def ubuntu_deployment(tmp_path: Path) -> tuple[dict, dict[str, dict[str, str]]]:
-    dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
-    dashboard.mkdir(parents=True)
-    (dashboard / "index.html").write_text("<!doctype html>")
-    (tmp_path / "sources" / "companion" / "versions.env").write_text(
-        (ROOT / "versions.env").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    subprocess.run(
-        [sys.executable, str(ROOT / "deploy" / "ubuntu" / "prepare.py"),
-         "https://conker.test:8443"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    prepare(tmp_path)
     manifest = json.loads((tmp_path / "compose.json").read_text())
     environments = {}
     for path in (tmp_path / "state").glob("*.env"):
@@ -109,7 +98,8 @@ def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
     manifest, environment = ubuntu_deployment(tmp_path)
     services = manifest["services"]
 
-    assert set(services) == recovery_layout.UBUNTU_SERVICES
+    # The repository pins the agent sandbox active; its two services are optional in the profile.
+    assert set(services) == recovery_layout.UBUNTU_SERVICES | {"sandbox-runner", "package-proxy"}
     for service, destination in recovery_layout.UBUNTU_STORES.items():
         declared = {
             volume.split(":", 2)[1]

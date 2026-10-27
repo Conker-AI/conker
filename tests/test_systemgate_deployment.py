@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 from pathlib import Path
+
+from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = ("/var/run/docker.sock", "/host/root", "source: /")
@@ -28,20 +29,7 @@ def test_root_compose_grants_only_narrow_read_only_telemetry_mounts():
 
 
 def test_ubuntu_generator_grants_the_same_narrow_capabilities(tmp_path):
-    script = ROOT / "deploy" / "ubuntu" / "prepare.py"
-    dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
-    dashboard.mkdir(parents=True)
-    (dashboard / "index.html").write_text("<!doctype html>")
-    (tmp_path / "sources" / "companion" / "versions.env").write_text(
-        (ROOT / "versions.env").read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    subprocess.run(
-        [sys.executable, str(script), "https://conker.test:8443"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    prepare(tmp_path)
     manifest = json.loads((tmp_path / "compose.json").read_text())
     systemgate = manifest["services"]["systemgate"]
     environment = dict(
