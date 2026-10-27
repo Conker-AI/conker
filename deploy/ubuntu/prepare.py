@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 os.umask(0o077)
 root = Path.cwd()
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
 from scripts.provider_secrets import ProviderSecretError, SecretStore
 from scripts.release_manifest import ManifestError, load_release_manifest
 from scripts.terminal_workspace import TerminalWorkspaceError, validate_workspace
@@ -68,6 +69,30 @@ if terminal["state"] == "active":
         )
     except TerminalWorkspaceError as exc:
         raise SystemExit(f"Terminal workspace rejected: {exc}") from exc
+sandbox = release["capabilities"]["agent-sandbox"]
+sandbox_workspaces = None
+docker_gid = None
+if sandbox["state"] == "active":
+    selected = os.environ.get("CONKER_WORKSPACES_DIR", "")
+    if not selected:
+        raise SystemExit("Active agent sandbox requires CONKER_WORKSPACES_DIR")
+    try:
+        # The owner's group (this deployment's UID/GID 1000) reaches every agent's files.
+        sandbox_workspaces = validate_workspaces(
+            Path(selected), installation=root, home=Path.home(), owner_gid=1000
+        )
+    except AgentWorkspacesError as exc:
+        raise SystemExit(f"Agent workspaces folder rejected: {exc}") from exc
+    docker_gid = os.environ.get("CONKER_DOCKER_GID", "")
+    if not docker_gid:
+        try:
+            docker_gid = str(os.stat("/var/run/docker.sock").st_gid)
+        except OSError as exc:
+            raise SystemExit(
+                "Active agent sandbox needs the Docker socket's group; is Docker running?"
+            ) from exc
+    if not (docker_gid.isascii() and docker_gid.isdigit()):
+        raise SystemExit("CONKER_DOCKER_GID must be a numeric group ID")
 keyfile = state / "credentials.json"
 if keyfile.exists():
     keys = json.loads(keyfile.read_text())
@@ -145,6 +170,8 @@ if terminal_workspace is not None:
         "GATEWAY_TERMINAL_SOCKET": "/run/conker-terminal/control.sock",
         "GATEWAY_TERMINAL_WORKSPACE_LABEL": terminal_workspace_label,
     })
+if sandbox_workspaces is not None:
+    env["toolgate"]["TOOLGATE_SANDBOX_SOCKET"] = "/run/conker-sandbox/runner.sock"
 provider_store = SecretStore(state / "provider-secrets")
 provider_store.initialize()
 for provider, name in (
@@ -289,9 +316,87 @@ services["decisions"] = {"build": {"context": "./sources/companion/services/deci
     "security_opt": ["no-new-privileges:true"], "env_file": ["./state/decisions.env"],
     "user": "1000:1000", "network_mode": "service:pi", "depends_on": ["pi"], "volumes": ["./state/decisions:/models"],
     "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
-manifest = {"name": "conker", "services": services, "networks": {
-    "runtime": {}, "owner": {"internal": True}, "index": {"internal": True}, "inference": {}}}
-if terminal_workspace is not None:
-    manifest["volumes"] = {"terminal_control": {}}
+volumes = {"terminal_control": {}} if terminal_workspace is not None else {}
+networks = {"runtime": {}, "owner": {"internal": True}, "index": {"internal": True}, "inference": {}}
+if sandbox_workspaces is not None:
+    # ADR-0013 with the settings of docker-compose.sandbox.yml. The runner is the only holder of
+    # the Docker socket and has no network; the package proxy is the only service on
+    # sandbox_egress. Both run this deployment's ToolGate build.
+    services["toolgate"]["volumes"].append("sandbox_control:/run/conker-sandbox")
+    services["toolgate"]["depends_on"] = {"sandbox-runner": {"condition": "service_healthy"}}
+    services["sandbox-runner"] = {
+        "build": dict(services["toolgate"]["build"]),
+        "restart": "unless-stopped",
+        "command": ["python", "-m", "toolgate.sandbox.runner", "serve"],
+        "user": "65533:65533",
+        # Only to open the Docker socket.
+        "group_add": [docker_gid],
+        "network_mode": "none",
+        "read_only": True,
+        "init": True,
+        "cap_drop": ["ALL"],
+        "security_opt": ["no-new-privileges:true"],
+        "pids_limit": 64,
+        "mem_limit": "128m",
+        "stop_grace_period": "20s",
+        "environment": {
+            "SANDBOX_IMAGE": sandbox["image"],
+            # The source-built ToolGate runs as UID 1000; no other container mounts the socket.
+            "SANDBOX_CLIENT_UIDS": "1000",
+            "SANDBOX_WORKSPACES_VOLUME": "conker_agent_workspaces",
+            "SANDBOX_PROXY_VOLUME": "conker_sandbox_proxy",
+        },
+        "volumes": [
+            "/var/run/docker.sock:/var/run/docker.sock",
+            "sandbox_control:/run/conker-sandbox",
+            # nocopy: on first start Docker would give the empty folder the image's group, and the
+            # owner would lose access to agents' files.
+            "agent_workspaces:/workspaces:nocopy",
+        ],
+        "healthcheck": {
+            "test": ["CMD", "python", "-m", "toolgate.sandbox.runner", "health"],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 6,
+            "start_period": "120s",
+        },
+        "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}},
+    }
+    services["package-proxy"] = {
+        "build": dict(services["toolgate"]["build"]),
+        "restart": "unless-stopped",
+        "command": ["python", "-m", "toolgate.sandbox.proxy", "serve"],
+        "user": "65532:65532",
+        "networks": ["sandbox_egress"],
+        "read_only": True,
+        "init": True,
+        "cap_drop": ["ALL"],
+        "security_opt": ["no-new-privileges:true"],
+        "pids_limit": 64,
+        "mem_limit": "256m",
+        "environment": {"PROXY_CLIENT_UIDS": "65533"},
+        "volumes": ["sandbox_proxy:/run/conker-proxy"],
+        "healthcheck": {
+            "test": ["CMD", "python", "-m", "toolgate.sandbox.proxy", "health"],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 6,
+        },
+        "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}},
+    }
+    volumes.update({
+        "sandbox_control": {},
+        "sandbox_proxy": {"name": "conker_sandbox_proxy"},
+        "agent_workspaces": {
+            "name": "conker_agent_workspaces",
+            "driver": "local",
+            "driver_opts": {"type": "none", "o": "bind", "device": str(sandbox_workspaces)},
+        },
+    })
+    # The package proxy's way out. No Conker service is on it.
+    networks["sandbox_egress"] = {}
+manifest = {"name": "conker", "services": services, "networks": networks}
+if volumes:
+    manifest["volumes"] = volumes
 (root / "compose.json").write_text(json.dumps(manifest, indent=2))
 print("Prepared isolated deployment; no credentials printed. Only 127.0.0.1:18050 is published.")

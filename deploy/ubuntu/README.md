@@ -45,6 +45,28 @@ read, write and traverse access. Preparation records its canonical path, device 
 inode in private `state/terminal-workspace.json`, emits the networkless hardened
 sidecar, and gives Gateway only the ephemeral control volume and control GID.
 
+### Agent sandbox activation gate
+
+The agent sandbox (ADR-0013) follows the release manifest too: while
+`AGENT_SANDBOX_STATE=deferred`, preparation generates no sandbox service, volume, network
+or ToolGate setting. An active manifest pins `AGENT_SANDBOX_IMAGE` by digest and requires
+`CONKER_WORKSPACES_DIR`: an existing folder outside the deployment directory (and not
+your home directory or one of its parents) that holds one subfolder per agent. Prepare
+it once; the setgid bit gives every agent's files your group:
+
+```sh
+mkdir -p ~/conker-workspaces
+sudo chown 65533:1000 ~/conker-workspaces && sudo chmod 2770 ~/conker-workspaces
+CONKER_WORKSPACES_DIR=~/conker-workspaces python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443
+```
+
+Preparation then emits the settings of `docker-compose.sandbox.yml`, built from this
+deployment's ToolGate source: `sandbox-runner` (UID 65533, no network, read-only, the
+Docker socket's group, admits only ToolGate's UID 1000) and `package-proxy` (UID 65532,
+only on its own `sandbox_egress` network). The Docker socket's group is read from
+`/var/run/docker.sock`; `CONKER_DOCKER_GID` overrides it. The workspaces folder is not
+part of backups.
+
 ## Updating an existing deployment
 
 1. Run `conker backup --destination PRIVATE_DIRECTORY`, then
@@ -84,7 +106,8 @@ Only the HTTPS gateway publishes a host port: `127.0.0.1:18050`. Databases,
 Ollama, vector indexing and service APIs have no host-published ports. Laya shares
 Pi's network namespace and listens on loopback. Application containers run as
 UID 1000 with capabilities dropped; databases retain their image startup defaults.
-No container receives the Docker socket or the host root filesystem. SystemGate receives only
+No container receives the host root filesystem, and only an active agent sandbox's
+`sandbox-runner` receives the Docker socket (ADR-0013). SystemGate receives only
 the host's `/proc` tree and the deployment recovery directory as read-only telemetry mounts.
 
 Tailscale Serve may expose the gateway on a separate tailnet-only HTTPS port,
