@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- Pins ToolGate 0.8.1: the Terminal tells models never to wrap a whole command in quotes.
+
 - **Requests wait until you see them.** An Inbox request no longer runs out after minutes: it
   shows "Waiting for you" with its age and stays until you answer. Once you allow it, the exact
   action has 15 minutes to run. Pins ToolGate 0.8.0.
