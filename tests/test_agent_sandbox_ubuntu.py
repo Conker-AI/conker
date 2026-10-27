@@ -219,7 +219,10 @@ def test_ubuntu_sandbox_services_keep_the_repository_overlay_settings(tmp_path):
         ):
             assert ubuntu.get(key) == repository.get(key), (name, key)
         assert ubuntu["environment"].keys() == repository["environment"].keys()
-        assert [mount.removesuffix(":nocopy") for mount in ubuntu["volumes"]] == repository["volumes"]
+        # nocopy is pinned by each layout's own exact test.
+        assert [mount.removesuffix(":nocopy") for mount in ubuntu["volumes"]] == [
+            mount.removesuffix(":nocopy") for mount in repository["volumes"]
+        ]
     # Only the image and ToolGate's UID differ: 1000 here, 0 in the repository layout.
     differing = {
         key for key, value in services["sandbox-runner"]["environment"].items()
