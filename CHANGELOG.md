@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- The source-built Ubuntu layout now runs SearXNG (the pinned image, as `toolgate-searxng`), so
+  web search works there too; before, ToolGate reported it missing and general search had no
+  local engine.
+
 - **Tools Conker can use:** Settings, Access lists every tool with a switch; off means Conker
   cannot see or call it at all (asks for your password). Same from the CLI:
   `python scripts/conker.py tool-access ID`. A new install starts with Conker's built-in tools
