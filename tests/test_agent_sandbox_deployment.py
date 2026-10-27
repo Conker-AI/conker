@@ -41,7 +41,7 @@ def test_sandbox_runner_volumes_are_exactly_docker_socket_control_and_workspaces
     assert sr["volumes"] == [
         "/var/run/docker.sock:/var/run/docker.sock",
         "sandbox_control:/run/conker-sandbox",
-        "agent_workspaces:/workspaces",
+        "agent_workspaces:/workspaces:nocopy",
     ]
 
 

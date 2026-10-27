@@ -47,7 +47,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - sandbox_control:/run/conker-sandbox
-      - agent_workspaces:/workspaces
+      # nocopy: Docker's copy-up would give the empty host folder the image's group on first start.
+      - agent_workspaces:/workspaces:nocopy
     healthcheck:
       test: ["CMD", "python", "-m", "toolgate.sandbox.runner", "health"]
       interval: 10s
