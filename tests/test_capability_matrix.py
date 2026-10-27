@@ -23,8 +23,8 @@ def test_repository_capability_matrix_is_complete_and_evidenced():
     assert load() == {
         "schemaVersion": 1,
         "capabilities": 44,
-        "active": 42,
-        "deferred": 2,
+        "active": 43,
+        "deferred": 1,
     }
 
 

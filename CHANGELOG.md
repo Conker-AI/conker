@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Agents have a terminal:** the Terminal and Install packages tools are on. Each command runs
+  in a fresh locked-down container that sees only that agent's own workspace folder and has no
+  network; installs come from PyPI and npm through a download-only proxy. Default access: AI
+  decides. Pins Pi 0.7.0, ToolGate 0.6.0 (with its `toolgate-sandbox` image by digest) and
+  MemoryGate 0.6.0, which also carry the access and change-request entries below.
+
 - **Access by your settings:** Conker no longer waits for you on what your own settings already
   answer. The most specific setting wins: this chat's access switch (the shield in the composer:
   Agent's settings, Ask me, AI decides, Full access), the agent's setting per tool (agent page,
@@ -14,7 +20,6 @@ which module versions a release pins.
   you typed the request yourself, an action that matches your words goes ahead. Settings, Access
   has the switch that lets Conker decide by your settings at all. Inbox, **Handled** lists what
   ran without asking you and who decided. Memories and cron jobs Conker makes now happen at once.
-  Needs the next Pi and ToolGate releases.
 
 - **Plan usage ring:** next to the model in the composer, a small ring shows how much of the
   selected model's Claude or ChatGPT plan window is used; tap it for every window, its percent
@@ -27,7 +32,6 @@ which module versions a release pins.
   and publish. Same from the CLI: `conker inspect change-requests`, `conker apply requests`.
   You can do the same by hand: **Add memory** (the plus on the Memory screen, or
   `conker apply memory` with `"operation": "remember"`), a new cron job, a tool draft in Tools.
-  Needs the next Pi and MemoryGate releases.
 - **Pi 0.6.1:** pin it for the drafting model role above, a 10-minute wait for the workflow
   builder, and the owner's read of plan usage, which fills Home's **Plan allowance** tile
   (Claude and ChatGPT percent used per window and when each resets). Pi is now licensed

@@ -39,7 +39,7 @@ def test_repository_release_manifest_is_complete_and_matches_dashboard():
         "state": "deferred", "image": None, "acceptance_sha256": None,
     }
     assert normalized["capabilities"]["agent-sandbox"] == {
-        "state": "deferred", "image": None,
+        "state": "active", "image": parse_env(MANIFEST)["AGENT_SANDBOX_IMAGE"],
     }
 
 

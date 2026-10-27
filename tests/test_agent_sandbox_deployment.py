@@ -235,6 +235,7 @@ MANIFEST = ROOT / "versions.env"
 
 def test_deferred_sandbox_with_an_image_fails():
     values = parse_env(MANIFEST)
+    values["AGENT_SANDBOX_STATE"] = "deferred"
     values["AGENT_SANDBOX_IMAGE"] = "ghcr.io/conker-ai/toolgate-sandbox@sha256:" + "a" * 64
 
     with pytest.raises(ManifestError, match="deferred agent sandbox"):
@@ -244,6 +245,7 @@ def test_deferred_sandbox_with_an_image_fails():
 def test_active_sandbox_without_image_fails():
     values = parse_env(MANIFEST)
     values["AGENT_SANDBOX_STATE"] = "active"
+    values.pop("AGENT_SANDBOX_IMAGE", None)
 
     with pytest.raises(ManifestError, match="active agent sandbox requires AGENT_SANDBOX_IMAGE"):
         validate_manifest(values)

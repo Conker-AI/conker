@@ -17,34 +17,26 @@ PREPARE = ROOT / "deploy" / "ubuntu" / "prepare.py"
 SANDBOX_IMAGE = "ghcr.io/conker-ai/toolgate-sandbox@sha256:" + "a" * 64
 TOOLGATE_BUILD = {"context": "./sources/toolgate", "dockerfile": "toolgate/Dockerfile"}
 LOGGING = {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}
-# A host test cannot create a folder owned by UID 65533; the validator has its own tests below.
-ACCEPT_FOLDER = """
-import runpy, sys
-sys.path.insert(0, sys.argv[1])
-import scripts.agent_workspaces as workspaces
-workspaces.validate_workspaces = lambda folder, **_: folder.resolve()
-sys.argv = sys.argv[2:]
-runpy.run_path(sys.argv[0], run_name="__main__")
-"""
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from agent_workspaces import AgentWorkspacesError, validate_workspaces
 from recovery_layout import UBUNTU_PROFILE
 from recovery_snapshot import valid_service_inventory
 
+from tests.ubuntu_generator import ACCEPT_FOLDER
+
 
 def versions(active: bool) -> str:
-    text = (ROOT / "versions.env").read_text(encoding="utf-8")
+    lines = [
+        line
+        for line in (ROOT / "versions.env").read_text(encoding="utf-8").splitlines()
+        if not line.startswith(("AGENT_SANDBOX_STATE=", "AGENT_SANDBOX_IMAGE="))
+    ]
     if active:
-        text = text.replace(
-            "AGENT_SANDBOX_STATE=deferred",
-            f"AGENT_SANDBOX_STATE=active\nAGENT_SANDBOX_IMAGE={SANDBOX_IMAGE}",
-        )
-        text = "\n".join(
-            "TOOLGATE_VERSION=0.6.0" if line.startswith("TOOLGATE_VERSION=") else line
-            for line in text.splitlines()
-        ) + "\n"
-    return text
+        lines += ["AGENT_SANDBOX_STATE=active", f"AGENT_SANDBOX_IMAGE={SANDBOX_IMAGE}"]
+    else:
+        lines.append("AGENT_SANDBOX_STATE=deferred")
+    return "\n".join(lines) + "\n"
 
 
 def prepare(tmp_path: Path, *, active: bool, workspaces: Path | None = None,

@@ -226,10 +226,9 @@
       "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/audits/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}, {"path": "dashboard/src/app/system/terminal.tsx", "contains": "No authenticated terminal session"}]
     },
     {
-      "id": "agent-sandbox", "name": "Agent sandbox", "authority": "toolgate", "state": "deferred", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
-      "deploymentRequirements": ["ToolGate release with sandbox runner", "digest-pinned sandbox image", "Docker Engine 26 or newer"],
-      "gap": "The agent sandbox activates with a ToolGate release that ships the sandbox runner and a digest-pinned sandbox image.",
-      "evidence": [{"path": "versions.env", "contains": "AGENT_SANDBOX_STATE=deferred"}, {"path": "docker-compose.sandbox.yml", "contains": "network_mode: none"}, {"path": "docs/adr/0013-agent-sandbox.md", "contains": "fresh locked-down container"}]
+      "id": "agent-sandbox", "name": "Agent sandbox", "authority": "toolgate", "state": "active", "gatewayRoutes": ["/api/pi/tools"], "uiRoutes": ["/tools"], "cliCommands": ["conker inspect tools"],
+      "deploymentRequirements": ["ToolGate 0.6.0 or newer", "digest-pinned sandbox image", "Docker Engine 26 or newer"],
+      "evidence": [{"path": "versions.env", "contains": "AGENT_SANDBOX_STATE=active"}, {"path": "versions.env", "contains": "AGENT_SANDBOX_IMAGE=ghcr.io/conker-ai/toolgate-sandbox@sha256:"}, {"path": "docker-compose.sandbox.yml", "contains": "network_mode: none"}, {"path": "docs/adr/0013-agent-sandbox.md", "contains": "fresh locked-down container"}]
     },
     {
       "id": "host-inventory", "name": "Host services, ports and process inventory", "authority": "systemgate", "state": "active",
