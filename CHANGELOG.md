@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- The source-built Ubuntu layout now runs SearXNG (the pinned image, as `toolgate-searxng`), so
+  web search works there too; before, ToolGate reported it missing and general search had no
+  local engine.
+
 - **Agents have a terminal:** the Terminal and Install packages tools are on. Each command runs
   in a fresh locked-down container that sees only that agent's own workspace folder and has no
   network; installs come from PyPI and npm through a download-only proxy. Default access: AI

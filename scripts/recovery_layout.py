@@ -66,6 +66,7 @@ UBUNTU_SERVICES = {
     "qdrant",
     "ollama",
     "decisions",
+    "searxng",
 }
 
 

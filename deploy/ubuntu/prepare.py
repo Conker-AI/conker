@@ -223,6 +223,11 @@ service("ollama", "5g", ["inference"], image=images["ollama"], volumes=["./state
 services["qdrant"] = {"image": images["qdrant"], "restart": "unless-stopped", "mem_limit": "512m",
     "networks": ["index"], "volumes": ["./state/qdrant:/qdrant/storage"], "security_opt": ["no-new-privileges:true"],
     "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
+# ToolGate's web search goes through SearXNG under this name, as in the repository layout.
+services["searxng"] = {"image": images["searxng"], "restart": "unless-stopped", "mem_limit": "512m",
+    "pids_limit": 256, "networks": {"runtime": {"aliases": ["toolgate-searxng"]}},
+    "security_opt": ["no-new-privileges:true"],
+    "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
 for name, memory, networks, context, dockerfile in [
     ("pi", "768m", ["runtime", "inference"], "pi", "Dockerfile"),
     ("gateway", "512m", ["runtime", "owner"], "pi", "Dockerfile"),
