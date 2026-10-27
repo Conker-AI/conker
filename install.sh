@@ -323,13 +323,16 @@ random_hex() {
     fi
 }
 
+# Always 32 characters: the gateway refuses shorter keys. Base64 of 48 random
+# bytes is 64 characters, so dropping '+', '/' and '=' still leaves well over
+# 32. Base64 of 24 bytes is exactly 32, and every dropped character made the
+# key shorter than the gateway accepts.
 random_secret() {
-    local bytes="${1:-24}"
     if command -v openssl >/dev/null 2>&1; then
-        openssl rand -base64 "$bytes" | tr -d '\n=+/' | cut -c1-32
+        openssl rand -base64 48 | tr -d '\n=+/' | cut -c1-32
     else
         # No openssl is normal on a slim image. urandom is the same entropy.
-        head -c "$((bytes * 2))" /dev/urandom | base64 | tr -d '\n=+/' | cut -c1-32
+        head -c 48 /dev/urandom | base64 | tr -d '\n=+/' | cut -c1-32
     fi
 }
 
@@ -354,6 +357,20 @@ keep_or_make() {
     fi
 }
 
+# A key two services share only to talk to each other, which the gateway
+# demands be at least 32 characters. Older installers could write a shorter one;
+# keeping it would leave the gateway refusing to start. It protects no stored
+# data, so a short one is simply replaced (its SHA256 is derived again below).
+keep_or_make_long() {
+    local value
+    value=$(keep_or_make "$1")
+    if [ "${#value}" -ge 32 ]; then
+        printf '%s' "$value"
+    else
+        printf '%s' "$(random_secret)"
+    fi
+}
+
 keep_optional() {
     local name="$1" value=""
     value="${!name:-}"
@@ -371,7 +388,7 @@ shaped() {
     value=$(keep_or_make "$name")
     case "$value" in
         "$prefix"*) printf '%s' "$value" ;;
-        *) printf '%s%s' "$prefix" "$(random_secret 32)" ;;
+        *) printf '%s%s' "$prefix" "$(random_secret)" ;;
     esac
 }
 
@@ -382,9 +399,9 @@ write_env() {
     [ -f "$ENV_FILE" ] && existing_env=1
 
     CONKER_ADMIN_KEY=$(keep_or_make CONKER_ADMIN_KEY)
-    PI_GATEWAY_KEY=$(keep_or_make PI_GATEWAY_KEY)
+    PI_GATEWAY_KEY=$(keep_or_make_long PI_GATEWAY_KEY)
     PI_GATEWAY_KEY_SHA256=$(sha256_secret "$PI_GATEWAY_KEY")
-    GATEWAY_PI_OWNER_KEY=$(keep_or_make GATEWAY_PI_OWNER_KEY)
+    GATEWAY_PI_OWNER_KEY=$(keep_or_make_long GATEWAY_PI_OWNER_KEY)
     PI_OWNER_KEY_SHA256=$(sha256_secret "$GATEWAY_PI_OWNER_KEY")
     GATEWAY_TOOLGATE_OWNER_KEY=$(keep_or_make GATEWAY_TOOLGATE_OWNER_KEY)
     TOOLGATE_OWNER_KEY_SHA256=$(sha256_secret "$GATEWAY_TOOLGATE_OWNER_KEY")
@@ -541,6 +558,9 @@ CONKER_TERMINAL_WORKSPACE=$CONKER_TERMINAL_WORKSPACE
 CONKER_TERMINAL_WORKSPACE_LABEL=$CONKER_TERMINAL_WORKSPACE_LABEL
 CONKER_WORKSPACES_DIR=${CONKER_WORKSPACES_DIR:-}
 CONKER_DOCKER_GID=${CONKER_DOCKER_GID:-}
+# Pi and the gateway run as you, so they can read your private provider files.
+CONKER_UID=$(id -u)
+CONKER_GID=$(id -g)
 
 # --- embedding model and its width. They must agree; change both or neither. ---
 CONKER_EMBEDDING_MODEL=${CONKER_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
