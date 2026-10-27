@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 import conker_models
+import conker_toolgate
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
 from conker_context import operation as context_operation
@@ -19,18 +20,14 @@ from conker_context import pi_call
 from conker_files import operation as files_operation
 from conker_inbox import operation as inbox_operation
 from conker_inputs import (
-    MCP_ID,
     SKILL_ID,
     draft_path,
     draft_payload,
     history_query,
     identity,
-    imported_mcp,
-    mcp_endpoint,
     memory_edit_operation,
     read_json,
     read_text,
-    secret_reference,
 )
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
@@ -279,14 +276,7 @@ def main():
             )
         if args.operation == "import" and args.expected_id:
             identity(args.expected_id, SKILL_ID, "skill ID", 64)
-    if args.command == "mcp" and args.operation in {"state", "access"}:
-        identity(args.id, MCP_ID, "MCP capability ID")
-        if args.expected_digest is not None:
-            identity(args.expected_digest, r"[a-f0-9]{64}", "exact saved digest")
-            if args.enabled is None:
-                raise ValueError(
-                    "Use --enabled together with --expected-digest to change access."
-                )
+    conker_toolgate.check(args)
     memory_edit_request = (
         memory_edit_operation(args) if args.command == "memory-edit" else None
     )
@@ -470,29 +460,8 @@ def main():
                 "expected_revision": args.expected_revision,
             }
         value = request(config, "pi-owner", path, body)
-    elif args.command == "mcp":
-        path, body = "/v2/owner/mcp/tools", None
-        if args.operation == "discover":
-            path = "/v2/owner/mcp/discover"
-            body = {
-                "url": mcp_endpoint(args.url),
-                "secret_ref": secret_reference(args.secret_ref),
-            }
-        elif args.operation == "import":
-            path = "/v2/owner/mcp/import"
-            body = imported_mcp(args)
-        elif args.operation in {"state", "access"}:
-            path += "/" + args.id + "/" + args.operation
-            if args.enabled is not None:
-                if not args.expected_digest:
-                    raise ValueError(
-                        "Supply --expected-digest from the inspected tool before changing access."
-                    )
-                body = {
-                    "enabled": args.enabled == "true",
-                    "expected_digest": args.expected_digest,
-                }
-        value = request(config, "toolgate-owner", path, body)
+    elif args.command in conker_toolgate.COMMANDS:
+        value = conker_toolgate.operation(args, config, request)
     elif args.command == "thinking":
         value = (
             request(

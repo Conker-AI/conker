@@ -16,7 +16,14 @@ const handled = z.object({
   }).strict()).max(200),
 }).strict()
 
+/** Whether Conker may use one tool at all: the chat's own key in ToolGate, checked by the tool's digest. */
+const toolAccess = z.object({
+  schemaVersion: z.literal(1), toolId, actorId: z.string().max(100), actorName: z.string().max(160),
+  enabled: z.boolean(), requiredScope: z.string().max(140), digest: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict()
+
 export type AccessState = z.infer<typeof state>
+export type ToolAccessState = z.infer<typeof toolAccess>
 export type HandledAction = z.infer<typeof handled>['results'][number]
 export type ChatAccess = 'default' | 'ask' | 'ai' | 'full'
 export type ToolAccessLevel = 'allow' | 'ai' | 'ask'
@@ -43,6 +50,19 @@ export function createAccessClient(auth: Pick<GatewayAuthClient, 'request'>) {
       const result = parse(z.object({ id: toolId, sensitive: z.boolean() }).strict(), await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/sensitive`, { method: 'POST', body: { sensitive } }))
       if (result.id !== id || result.sensitive !== sensitive) throw new GatewayError('invalid-response')
       return result.sensitive
+    },
+    /** Whether Conker may use this tool at all. */
+    async toolAccess(id: string, signal?: AbortSignal): Promise<ToolAccessState> {
+      const result = parse(toolAccess, await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/access`, { signal }))
+      if (result.toolId !== id) throw new GatewayError('invalid-response')
+      return result
+    },
+    /** Asks for the password: lets Conker use this tool, or takes it away. A stale digest is refused. */
+    async setToolAccess(id: string, enabled: boolean, digest: string): Promise<ToolAccessState> {
+      const body = { enabled, expected_digest: parse(z.string().regex(/^[a-f0-9]{64}$/), digest, true) }
+      const result = parse(toolAccess, await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/access`, { method: 'POST', body }))
+      if (result.toolId !== id || result.enabled !== enabled) throw new GatewayError('invalid-response')
+      return result
     },
     /** What ran in the last week without asking him, with who decided. */
     async handled(signal?: AbortSignal): Promise<HandledAction[]> {

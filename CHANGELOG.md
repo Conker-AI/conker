@@ -10,6 +10,12 @@ which module versions a release pins.
   web search works there too; before, ToolGate reported it missing and general search had no
   local engine.
 
+- **Tools Conker can use:** Settings, Access lists every tool with a switch; off means Conker
+  cannot see or call it at all (asks for your password). Same from the CLI:
+  `python scripts/conker.py tool-access ID`. A new install starts with Conker's built-in tools
+  on (web search and reading, Terminal, Install packages); before this, a fresh install's Conker
+  could use no tool and nothing in Conker could change that. Needs the next ToolGate and Pi.
+
 - **Agents have a terminal:** the Terminal and Install packages tools are on. Each command runs
   in a fresh locked-down container that sees only that agent's own workspace folder and has no
   network; installs come from PyPI and npm through a download-only proxy. Default access: AI

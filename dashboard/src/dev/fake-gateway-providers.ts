@@ -64,7 +64,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
-    if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/sensitive$/.test(path) || path === '/api/control/pi/access/handled') return access(path, method, body, fail)
+    if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
     if (dismiss && method === 'POST') {
@@ -128,7 +128,19 @@ function createFakeAccess(session: string, now: () => number) {
     { id: `hnd_${'1'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'conker.remember', decidedBy: 'tool_default', reason: 'Allowed by the tool’s own setting.', createdAt: now() - 900 },
     { id: `hnd_${'2'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'mail.send', decidedBy: 'owner_request', reason: 'You asked to send Dani the notes.', createdAt: now() - 5400 },
   ]
+  const digest = 'f'.repeat(64), version = 1
+  const catalogue = [['research.search', 'Web search', 'Searches the public web.'], ['research.fetch', 'Read a web page', 'Fetches one public page as text.'],
+    ['sandbox.run', 'Terminal', 'Runs a command in the agent’s locked-down workspace.'], ['sandbox.install', 'Install packages', 'Installs PyPI or npm packages into the workspace.'],
+    ['mail.send', 'Send email', 'Sends an email from your account.'], ['bank.payments', 'Bank payments', 'Pays from your bank account.']]
+  const usable = new Set(['research.search', 'research.fetch', 'sandbox.run', 'sandbox.install'])
+  const access = (id: string) => ({ schemaVersion: 1, toolId: id, actorId: 'preview-key', actorName: 'Conker', enabled: usable.has(id), requiredScope: `tool:${id}`, digest })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    if (path === '/api/owner/editor-capabilities' && method === 'GET') return { items: catalogue.map(([id, name, description]) => ({ id, name, description, version, authorization: 'ai_review', inputs: [] })), next_after: null }
+    const grant = path.match(/^\/api\/owner\/tools\/([^/]+)\/access$/)
+    if (grant && catalogue.some(([id]) => id === grant[1])) {
+      if (method === 'POST') { if (body?.expected_digest !== digest) return fail(409); if (body?.enabled === true) usable.add(grant[1]); else usable.delete(grant[1]) }
+      return access(grant[1])
+    }
     if (path === '/api/owner/access' && method === 'GET') return structuredClone(state)
     if (path === '/api/owner/access/delegate' && method === 'POST') { state.delegate = body?.enabled === true; return { delegate: state.delegate } }
     const tool = path.match(/^\/api\/owner\/tools\/([^/]+)\/sensitive$/)

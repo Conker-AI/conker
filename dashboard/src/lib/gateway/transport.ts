@@ -85,8 +85,8 @@ routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0
 routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
 routes.GET.unshift(/^\/api\/host\/providers$/)
 // Access: whether Conker decides by his settings, the tools that always ask him, and what ran without asking.
-routes.GET.unshift(/^\/api\/owner\/access$/, /^\/api\/control\/pi\/access\/handled$/)
-routes.POST.unshift(/^\/api\/owner\/access\/delegate$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/sensitive$/)
+routes.GET.unshift(/^\/api\/owner\/access$/, /^\/api\/control\/pi\/access\/handled$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/)
+routes.POST.unshift(/^\/api\/owner\/access\/delegate$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/(?:sensitive|access)$/)
 routes.GET.unshift(new RegExp(`^/api/pi/sessions/${ids}/thinking$`))
 const turnUsageRoute = /^\/api\/pi\/turns\/[A-Za-z0-9_-]{1,128}\/usage$/
 routes.GET.unshift(turnUsageRoute)
