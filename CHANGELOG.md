@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Pins Pi 0.8.0 and ToolGate 0.7.0:** the owner tool switch end to end, owner confirmations
+  that wait 15 minutes, the Terminal accepting `/workspace` and telling the model how to quote,
+  and a sandbox runner that reports out-of-memory kills reliably.
+
+- **A fresh `./install.sh` now starts on Linux.** Found by installing the release for real: keys
+  were sometimes shorter than the gateway accepts (now always 32 characters, and a short one
+  from an older install is replaced); Pi could not read your provider key files (Pi and the
+  gateway now run as your user, like the source-built layout, and a one-time step hands their
+  data over); and the local model never loaded (Ollama now uses an 8192-token context,
+  `CONKER_MODEL_CONTEXT` to raise it).
+
 - The source-built Ubuntu layout now runs SearXNG (the pinned image, as `toolgate-searxng`), so
   web search works there too; before, ToolGate reported it missing and general search had no
   local engine.
@@ -14,7 +25,7 @@ which module versions a release pins.
   cannot see or call it at all (asks for your password). Same from the CLI:
   `python scripts/conker.py tool-access ID`. A new install starts with Conker's built-in tools
   on (web search and reading, Terminal, Install packages); before this, a fresh install's Conker
-  could use no tool and nothing in Conker could change that. Needs the next ToolGate and Pi.
+  could use no tool and nothing in Conker could change that.
 
 - **Agents have a terminal:** the Terminal and Install packages tools are on. Each command runs
   in a fresh locked-down container that sees only that agent's own workspace folder and has no

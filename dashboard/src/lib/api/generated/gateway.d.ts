@@ -541,6 +541,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/tools/{identity}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Access Control
+         * @description Whether Conker decides by his access settings, the tools that always ask him, and
+         *     which tools Conker may use at all.
+         */
+        get: operations["access_control_api_owner_tools__identity__access_get"];
+        put?: never;
+        /**
+         * Access Control
+         * @description Whether Conker decides by his access settings, the tools that always ask him, and
+         *     which tools Conker may use at all.
+         */
+        post: operations["access_control_api_owner_tools__identity__access_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/owner/tools/{identity}/sensitive": {
         parameters: {
             query?: never;
@@ -552,7 +578,8 @@ export interface paths {
         put?: never;
         /**
          * Access Control
-         * @description Whether Conker decides by his access settings, and the tools that always ask him.
+         * @description Whether Conker decides by his access settings, the tools that always ask him, and
+         *     which tools Conker may use at all.
          */
         post: operations["access_control_api_owner_tools__identity__sensitive_post"];
         delete?: never;
@@ -572,7 +599,8 @@ export interface paths {
         put?: never;
         /**
          * Access Control
-         * @description Whether Conker decides by his access settings, and the tools that always ask him.
+         * @description Whether Conker decides by his access settings, the tools that always ask him, and
+         *     which tools Conker may use at all.
          */
         post: operations["access_control_api_owner_access_delegate_post"];
         delete?: never;
@@ -590,7 +618,8 @@ export interface paths {
         };
         /**
          * Access Control
-         * @description Whether Conker decides by his access settings, and the tools that always ask him.
+         * @description Whether Conker decides by his access settings, the tools that always ask him, and
+         *     which tools Conker may use at all.
          */
         get: operations["access_control_api_owner_access_get"];
         put?: never;
@@ -1769,6 +1798,68 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_control_api_owner_tools__identity__access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_control_api_owner_tools__identity__access_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string | null;
+            };
             cookie?: never;
         };
         requestBody?: never;
