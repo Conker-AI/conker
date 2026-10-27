@@ -186,8 +186,8 @@
     },
     {
       "id": "access-policy", "name": "Access by the owner's settings: chat, agent and tool layers, the floor, Handled", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/owner/access", "/api/owner/access/delegate", "/api/owner/tools/{id}/sensitive", "/api/control/pi/access/handled"],
-      "uiRoutes": ["/settings?tab=access", "/chat", "/agents/{id}/edit", "/inbox"], "cliCommands": ["conker apply sessions FILE", "conker apply agents FILE"],
+      "gatewayRoutes": ["/api/owner/access", "/api/owner/access/delegate", "/api/owner/tools/{id}/sensitive", "/api/owner/tools/{id}/access", "/api/control/pi/access/handled"],
+      "uiRoutes": ["/settings?tab=access", "/chat", "/agents/{id}/edit", "/inbox"], "cliCommands": ["conker apply sessions FILE", "conker apply agents FILE", "python scripts/conker.py tool-access ID"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "GATEWAY_TOOLGATE_OWNER_KEY", "scoped ToolGate execution credential"],
       "evidence": [{"path": "dashboard/src/lib/gateway/access.ts", "contains": "Whether Conker decides by his settings, and the tools that always ask him (the floor)."}, {"path": "dashboard/src/components/gateway/session-access-control.tsx", "contains": "This chat's access switch over the agent's and tools' settings."}, {"path": "dashboard/src/components/gateway/access-settings.tsx", "contains": "Let Conker decide by your settings"}, {"path": "dashboard/src/components/inbox/handled-list.tsx", "contains": "Nothing ran without asking you this week."}, {"path": "dashboard/scripts/check-gateway-access.cjs", "contains": "Letting Conker decide asks for the password"}]
     },

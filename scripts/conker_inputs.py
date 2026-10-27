@@ -9,6 +9,7 @@ SKILL_ID = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 
 
 MCP_ID = r"mcp\.[a-z0-9][a-z0-9.-]{1,74}"
+TOOL_ID = r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"
 
 
 def identity(value, pattern, label, maximum=128):

@@ -79,6 +79,9 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/sensitive$/.test(path)) {
     return { title: body.sensitive ? 'Always ask me for this tool' : 'Let settings decide this tool', path, target: `Tool ${parts[4]}`, details: [body.sensitive ? 'No chat switch, agent or AI can run it without you.' : 'Your chat, agent and tool settings decide again.'] }
   }
+  if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/.test(path)) {
+    return { title: body.enabled ? 'Let Conker use this tool' : 'Stop Conker using this tool', path, target: `Tool ${parts[4]}`, details: [body.enabled ? 'Conker can see and call it from now on. Your access settings still decide whether it asks you first.' : 'Conker can no longer see or call it. Nothing that already ran is undone.'] }
+  }
   if (path === '/api/control/pi/memory/remember') {
     const length = typeof body.text === 'string' ? body.text.length : 0
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }
