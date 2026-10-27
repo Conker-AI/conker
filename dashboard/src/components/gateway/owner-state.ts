@@ -12,7 +12,8 @@ export function createGatewayOwnerState() {
 }
 export type GatewayOwnerState = ReturnType<typeof createGatewayOwnerState>
 export function ownerDecisionEligibility(request: OwnerRequest, now: number) {
-  const expired = !request.approval.expiresAt || Date.parse(request.approval.expiresAt) <= now
+  // No expiry: the request waits for him. Only a time-limited request runs out.
+  const expired = request.approval.expiresAt !== null && Date.parse(request.approval.expiresAt) <= now
   const reviewableContent = request.status === 'pending' && request.approval.originValid && request.action.args !== null &&
     !request.approval.consumedAt && [null, 'expired', 'unsupported_subject'].includes(request.unavailableReason)
   return { approve: reviewableContent && request.reviewable && !expired, reject: reviewableContent, expired }

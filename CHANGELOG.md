@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Requests wait until you see them.** An Inbox request no longer runs out after minutes: it
+  shows "Waiting for you" with its age and stays until you answer. Once you allow it, the exact
+  action has 15 minutes to run. Needs the next ToolGate.
+
 - **Pins Pi 0.8.0 and ToolGate 0.7.0:** the owner tool switch end to end, owner confirmations
   that wait 15 minutes, the Terminal accepting `/workspace` and telling the model how to quote,
   and a sandbox runner that reports out-of-memory kills reliably.

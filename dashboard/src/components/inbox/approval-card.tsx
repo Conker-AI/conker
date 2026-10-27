@@ -42,7 +42,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
   const title = request.title || 'Review this action'
   const open = request.status === 'pending' && !expired
   const minutesLeft = request.approval.expiresAt ? Math.max(1, Math.ceil((Date.parse(request.approval.expiresAt) - now) / 60000)) : null
-  const state = attempt ? 'Outcome not confirmed' : expired ? 'Expired, nothing was done' : request.status !== 'pending' ? humanize(request.status) : minutesLeft !== null ? `Expires in ${minutesLeft} min` : null
+  const state = attempt ? 'Outcome not confirmed' : expired ? 'Expired, nothing was done' : request.status !== 'pending' ? humanize(request.status) : minutesLeft !== null ? `Expires in ${minutesLeft} min` : 'Waiting for you'
   const primary = attempt
     ? <Button type="button" size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={onCheck}>Check</Button>
     : open && eligibility.approve ? <Button type="button" size="sm" className="rounded-full" disabled={busy} onClick={() => onDecide('approved')}>Allow once</Button> : null
