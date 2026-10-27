@@ -26,12 +26,36 @@ x-service: &service
 
 services:
 
+  # Pi and the gateway run as the owner's own user, as in the source-built layout,
+  # because they read the owner's private files: provider keys, the ChatGPT and
+  # provider-control sockets. Those are 0600 and 0700 to the owner, and root with
+  # every capability dropped cannot open them. Volumes from older installs were
+  # written as root; this one-shot hands both to the owner before either starts.
+  data-owner:
+    image: ghcr.io/conker-ai/pi:${PI_VERSION}
+    container_name: conker-data-owner
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    entrypoint: ["chown", "-R", "${CONKER_UID:-1000}:${CONKER_GID:-1000}", "/owned/pi", "/owned/gateway"]
+    volumes:
+      - pi_data:/owned/pi
+      - gateway_data:/owned/gateway
+    # CHOWN to change ownership; DAC_READ_SEARCH to walk folders the owner
+    # already holds on a re-run. Nothing else.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH]
+    security_opt: [no-new-privileges:true]
+    labels:
+      conker.one-shot: "true"
+
   # Browser authority lives in a separate process and volume from the worker.
   # Release prerequisite: PI_VERSION must contain the gateway package (see docs/reference/browser-auth.md).
   gateway:
     <<: *service
     image: ghcr.io/conker-ai/pi:${PI_VERSION}
     container_name: conker-gateway
+    user: "${CONKER_UID:-1000}:${CONKER_GID:-1000}"
     mem_limit: 512m
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -54,7 +78,11 @@ services:
       - gateway_data:/auth
       - ./dashboard/dist:/dashboard:ro
       - ./.conker/provider-control:/run/conker-providers:ro
-    depends_on: [pi]
+    depends_on:
+      data-owner:
+        condition: service_completed_successfully
+      pi:
+        condition: service_started
 
   # --- the runtime ----------------------------------------------------------
   # No published port or owner credentials. Only the gateway serves browsers.
@@ -62,6 +90,7 @@ services:
     <<: *service
     image: ghcr.io/conker-ai/pi:${PI_VERSION}
     container_name: conker-pi
+    user: "${CONKER_UID:-1000}:${CONKER_GID:-1000}"
     mem_limit: 768m
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -108,7 +137,15 @@ services:
       - ./.conker/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro
       - ./.conker/chatgpt-inference:/run/conker-chatgpt:ro
       - ./.conker/speech/speech.key:/run/secrets/speech:ro
-    depends_on: [ollama, memorygate, toolgate]
+    depends_on:
+      data-owner:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_started
+      memorygate:
+        condition: service_started
+      toolgate:
+        condition: service_started
 
   # --- the action boundary --------------------------------------------------
   toolgate:
@@ -278,8 +315,15 @@ services:
           # gate ran its own Ollama. One server answering to both names is
           # cheaper than a settings migration, and costs nothing.
           - memorygate-ollama
+    # The same settings as the source-built layout. A 65536-token context needs
+    # about 9 GB for its cache alone with the default 4B model, more than this
+    # container's 8 GB, so the model never loaded. Raise CONKER_MODEL_CONTEXT in
+    # .env on a machine with room to spare.
     environment:
-      OLLAMA_CONTEXT_LENGTH: "65536"
+      OLLAMA_CONTEXT_LENGTH: ${CONKER_MODEL_CONTEXT:-8192}
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_KEEP_ALIVE: 5m
     volumes:
       - ollama_data:/root/.ollama
 
