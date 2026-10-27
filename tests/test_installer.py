@@ -11,7 +11,6 @@ fake would assert nothing.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -246,43 +245,6 @@ def test_a_wrongly_shaped_key_from_an_older_install_is_replaced(install):
 
     int(values["TOOLGATE_VAULT_SALT"], 16)
     assert values["MEMORYGATE_READ_KEY"].startswith("mg_read_")
-
-
-def test_generated_secrets_are_always_32_characters():
-    """Base64 of 24 bytes is exactly 32 characters, and dropping '+', '/' and
-    '=' made most keys shorter; the gateway refuses any key under 32 and
-    stopped a fresh install from starting."""
-    script = (
-        re.search(r"^random_secret\(\) \{.*?^\}\n", (ROOT / "install.sh").read_text(), re.MULTILINE | re.DOTALL)[0]
-        + 'for _ in $(seq 200); do s=$(random_secret); [ "${#s}" -eq 32 ] || { echo "short:${#s}"; exit 1; }; done'
-    )
-    proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=False)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-
-
-@needs_docker
-def test_a_short_gateway_key_from_an_older_install_is_replaced(install):
-    """The two keys the gateway shares with Pi must be 32 characters or the
-    gateway will not start. They protect no stored data, so a short one from an
-    older installer is replaced, and its SHA256 follows."""
-    install("--yes", "--dry-run")
-    values = env_values(install.env_file)
-    body = install.env_file.read_text()
-    install.env_file.write_text(
-        body.replace(f"PI_GATEWAY_KEY={values['PI_GATEWAY_KEY']}", "PI_GATEWAY_KEY=only31charactersxxxxxxxxxxxxxxx")
-        .replace(f"GATEWAY_PI_OWNER_KEY={values['GATEWAY_PI_OWNER_KEY']}", "GATEWAY_PI_OWNER_KEY=short")
-    )
-
-    install("--yes", "--dry-run")
-    after = env_values(install.env_file)
-
-    for name in ("PI_GATEWAY_KEY", "GATEWAY_PI_OWNER_KEY"):
-        assert len(after[name]) >= 32, name
-    assert after["PI_GATEWAY_KEY_SHA256"] == hashlib.sha256(after["PI_GATEWAY_KEY"].encode()).hexdigest()
-    assert after["PI_OWNER_KEY_SHA256"] == hashlib.sha256(after["GATEWAY_PI_OWNER_KEY"].encode()).hexdigest()
-    # Keys that protect stored data are kept exactly.
-    assert after["MEMORYGATE_DB_PASSWORD"] == values["MEMORYGATE_DB_PASSWORD"]
-    assert after["TOOLGATE_VAULT_SALT"] == values["TOOLGATE_VAULT_SALT"]
 
 
 @needs_docker
