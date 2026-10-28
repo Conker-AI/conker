@@ -22,6 +22,8 @@ async function main() {
   const parsed = parseOwnerRequest(fixture())
   assert.ok(!JSON.stringify(parsed).includes('DO NOT COPY'))
   assert.deepEqual(parsed.action.args, { value: 'Test only' })
+  assert.equal(parsed.card, 'do', 'An older ToolGate sends no buttons: Do it')
+  for (const [sent, shown] of [['send', 'send'], ['delete', 'delete'], ['Cancel', 'do'], [7, 'do']]) assert.equal(parseOwnerRequest({ ...fixture(), card: sent }).card, shown, 'Only the fixed button templates are shown')
   const workflow = fixture(); workflow.action.subject_type = 'automation'
   assert.equal(parseOwnerRequest(workflow).action.subjectType, 'automation')
   assert.deepEqual(ownerDecisionEligibility(parsed, Date.parse('2026-09-20T12:01:00Z')), { approve: true, reject: true, expired: false })

@@ -86,7 +86,7 @@ routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi
 routes.GET.unshift(/^\/api\/host\/providers$/)
 // Access: whether Conker decides by his settings, the tools that always ask him, and what ran without asking.
 routes.GET.unshift(/^\/api\/owner\/access$/, /^\/api\/control\/pi\/access\/handled$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/)
-routes.POST.unshift(/^\/api\/owner\/access\/delegate$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/(?:sensitive|access)$/)
+routes.POST.unshift(/^\/api\/owner\/access\/delegate$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/(?:sensitive|card|access)$/)
 routes.GET.unshift(new RegExp(`^/api/pi/sessions/${ids}/thinking$`))
 const turnUsageRoute = /^\/api\/pi\/turns\/[A-Za-z0-9_-]{1,128}\/usage$/
 routes.GET.unshift(turnUsageRoute)
@@ -126,6 +126,9 @@ routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Tools draft a tool request was saved as (the save itself asked for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
+// Conker's questions: list, answer (his next message in that chat) and dismiss (sends nothing).
+routes.GET.unshift(/^\/api\/control\/pi\/asks(?:\/ask_[0-9a-f]{32})?$/)
+routes.POST.unshift(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
 // Adding a memory by hand asks for the password, like approving one Conker asked for.
 routes.POST.unshift(/^\/api\/control\/pi\/memory\/remember$/)
 // AI jobs: the browser creates AI jobs only (never raw tool jobs), reads their notes and dismisses one.
@@ -156,6 +159,8 @@ const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessio
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 conversationWrites.push(draftRoute, draftStartRoute)
 conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/)
+// Answering Conker's question is like typing in that chat; dismissing sends nothing.
+conversationWrites.push(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
 // Dismissing an AI job's note hides one line; it grants and runs nothing.
 conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))

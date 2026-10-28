@@ -46,8 +46,11 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     async saved(id: string, savedDraftId: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/saved`, { method: 'POST', body: { draftId: parse(draftId, savedDraftId, true) } }))
     },
-    async decline(id: string): Promise<ChangeRequest> {
-      return parse(request, await auth.request(`${path(id)}/decline`, { method: 'POST', body: {} }))
+    /** Creates nothing. Words he writes (Change) go to that chat as his next message. */
+    async decline(id: string, reply = ''): Promise<ChangeRequest> {
+      const words = reply.trim()
+      if ([...words].length > 4000) throw new GatewayError('validation')
+      return parse(request, await auth.request(`${path(id)}/decline`, { method: 'POST', body: words ? { reply: words } : {} }))
     },
   }
 }

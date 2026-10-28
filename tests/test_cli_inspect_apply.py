@@ -127,7 +127,7 @@ def test_apply_rejects_unknown_resource_or_missing_file_before_compose(ubuntu_cl
     unknown = ubuntu_cli("apply", "payments", str(tmp_path / "missing.json"))
     missing = ubuntu_cli("apply", "models", str(tmp_path / "missing.json"))
 
-    assert unknown.returncode == 2 and "supports: agents, approvals, artifacts, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns" in unknown.stderr
+    assert unknown.returncode == 2 and "supports: agents, approvals, artifacts, asks, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns" in unknown.stderr
     assert missing.returncode == 2 and "file not found" in missing.stderr.lower()
     assert not ubuntu_cli.docker_log.exists()
 

@@ -398,7 +398,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     try {
       const status = await request(signal => client.resumeTurn(turnId, { signal }))
       // The reply appears on its own; only say something when the turn is still waiting on the owner.
-      if (workspace.getState().epoch === epoch && status === 'awaiting_approval') setNotice('Still waiting for your OK. Approve it in the Inbox, then continue.')
+      if (workspace.getState().epoch === epoch && status === 'awaiting_approval') setNotice('Still waiting for you in the Inbox. Your answer there continues this chat.')
     } catch (error) {
       failure = error instanceof Error ? error.message : 'Resume could not be confirmed. Check history before trying again.'
     } finally {

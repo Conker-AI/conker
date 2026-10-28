@@ -58,13 +58,14 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
     jobs().push(watched)
   }
-  const access = createFakeAccess(session, now)
+  const access = createFakeAccess(session, now), asks = createFakeAsks(session, now)
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
-    if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
+    if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
+    if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
     if (dismiss && method === 'POST') {
@@ -121,9 +122,22 @@ function createFakeChangeRequests(session: string, now: () => number, createJob:
   }
 }
 
+/** Preview-only questions from Conker; an answer stays in this tab. */
+function createFakeAsks(session: string, now: () => number) {
+  const open: Json[] = [{ id: `ask_${'5'.repeat(32)}`, sessionId: session, chatTitle: 'Plan my week', question: 'Your server app’s login page bothers you. Fix it today?', options: ['Yes, fix it', 'This weekend', 'Not now'], state: 'open', answer: null, chosen: null, createdAt: now() - 2400, answeredAt: null }]
+  return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    if (path === '/api/control/pi/asks' && method === 'GET') return { schemaVersion: 1, results: structuredClone(open) }
+    const act = path.match(/^\/api\/control\/pi\/asks\/(ask_[0-9a-f]{32})\/(answer|dismiss)$/)
+    const index = act && method === 'POST' ? open.findIndex(item => item.id === act[1]) : -1
+    if (!act || index < 0) return fail(act ? 409 : 404)
+    const [ask] = open.splice(index, 1)
+    return act[2] === 'dismiss' ? { ...ask, state: 'dismissed', answeredAt: now() } : { ...ask, state: 'answered', answer: String(body?.text), chosen: body?.chosen === true, answeredAt: now() }
+  }
+}
+
 /** Preview-only access state: Conker's decisions off until switched on, two handled actions. */
 function createFakeAccess(session: string, now: () => number) {
-  const state = { delegate: false, sensitive: ['bank.payments'] as string[], floorExecutions: ['container_control', 'port_control', 'process_control'] }
+  const state = { delegate: false, sensitive: ['bank.payments'] as string[], floorExecutions: ['container_control', 'port_control', 'process_control'], cards: { 'sandbox.run': 'run', 'mail.send': 'send' } as Record<string, string> }
   const handled = [
     { id: `hnd_${'1'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'conker.remember', decidedBy: 'tool_default', reason: 'Allowed by the tool’s own setting.', createdAt: now() - 900 },
     { id: `hnd_${'2'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'mail.send', decidedBy: 'owner_request', reason: 'You asked to send Dani the notes.', createdAt: now() - 5400 },
@@ -143,6 +157,13 @@ function createFakeAccess(session: string, now: () => number) {
     }
     if (path === '/api/owner/access' && method === 'GET') return structuredClone(state)
     if (path === '/api/owner/access/delegate' && method === 'POST') { state.delegate = body?.enabled === true; return { delegate: state.delegate } }
+    const card = path.match(/^\/api\/owner\/tools\/([^/]+)\/card$/)
+    if (card && method === 'POST') {
+      const template = String(body?.template)
+      if (template === 'do') delete state.cards[card[1]]
+      else state.cards[card[1]] = template
+      return { id: card[1], template }
+    }
     const tool = path.match(/^\/api\/owner\/tools\/([^/]+)\/sensitive$/)
     if (tool && method === 'POST') {
       state.sensitive = body?.sensitive === true ? [...new Set([...state.sensitive, tool[1]])] : state.sensitive.filter(id => id !== tool[1])
@@ -151,6 +172,20 @@ function createFakeAccess(session: string, now: () => number) {
     if (path === '/api/control/pi/access/handled' && method === 'GET') return { schemaVersion: 1, results: structuredClone(handled) }
     return fail(404)
   }
+}
+
+type FakeSession = { id: string; messages: Json[]; turns: Json[] }
+
+/** As Pi does after his Inbox decision: Do it runs and replies; a no closes; Change sends his words. */
+export function continueAfterDecision(sessions: FakeSession[], requestId: string, status: string, note: string, messageId: () => string, now: () => number) {
+  const owner = sessions.find(row => row.turns.some(turn => turn.approval_request_id === requestId && turn.status === 'awaiting_approval'))
+  const turn = owner?.turns.find(row => row.approval_request_id === requestId)
+  if (!owner || !turn) return
+  const words = note.trim()
+  const say = (role: 'user' | 'assistant', content: string) => owner.messages.push({ id: messageId(), session_id: owner.id, seq: owner.messages.length + 1, role, content, created_at: now() })
+  if (status === 'approved') { say('assistant', 'Done. I sent the email to coach and will tell you when they reply.'); Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() }); return }
+  Object.assign(turn, { status: 'cancelled', ended_at: now(), detail: words ? 'You said what to do instead in the Inbox. This action was not done.' : 'You said no in the Inbox. Nothing was done.' })
+  if (words) { say('user', words); say('assistant', 'Got it, I changed it the way you said.') }
 }
 
 /** Seeds the sample AI job before the first job list read. */

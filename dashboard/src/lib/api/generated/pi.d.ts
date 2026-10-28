@@ -598,7 +598,8 @@ export interface paths {
         put?: never;
         /**
          * Decline
-         * @description Nothing is created; Conker is told it was declined if it asks again.
+         * @description Nothing is created; Conker is told it was declined if it asks again. Words he wrote
+         *     with it (Change) go to that chat as his next message.
          */
         post: operations["decline_change_requests__identity__decline_post"];
         delete?: never;
@@ -3341,6 +3342,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/{request_id}/decided": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decided
+         * @description Continue what waits on this request: run it, or close it and pass on his words.
+         */
+        post: operations["decided_approvals__request_id__decided_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/asks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listing
+         * @description Conker's questions waiting for him, oldest first.
+         */
+        get: operations["listing_asks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/asks/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get */
+        get: operations["get_asks__identity__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/asks/{identity}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer
+         * @description Record his answer; it goes to that chat as his next message.
+         */
+        post: operations["answer_asks__identity__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/asks/{identity}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description No answer: nothing goes back to the chat.
+         */
+        post: operations["dismiss_asks__identity__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/owner/preferences": {
         parameters: {
             query?: never;
@@ -4824,6 +4922,16 @@ export interface components {
              */
             clock: boolean;
         };
+        /** Answer */
+        Answer: {
+            /** Text */
+            text: string;
+            /**
+             * Chosen
+             * @default false
+             */
+            chosen: boolean;
+        };
         /** Append */
         Append: {
             /** Expected Revision */
@@ -5820,6 +5928,27 @@ export interface components {
             researchMinutes: number;
             /** Costcents */
             costCents: number;
+        };
+        /** Decided */
+        Decided: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected" | "dismissed";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** Decline */
+        Decline: {
+            /**
+             * Reply
+             * @default
+             */
+            reply: string;
         };
         /** Definition */
         Definition: {
@@ -9647,7 +9776,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Decline"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -16073,6 +16206,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decided_approvals__request_id__decided_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Decided"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_asks_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_asks__identity__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_asks__identity__answer_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Answer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_asks__identity__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

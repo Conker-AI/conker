@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { cardLabels } from '@/lib/inbox-buttons'
 import type { OwnerDecision, OwnerRequest } from '@/lib/gateway/owner'
 import { canReleaseExpiredOwnerDecision, ownerDecisionEligibility, ownerUnavailableText, type RetainedOwnerDecision } from '@/components/gateway/owner-state'
 import { InboxCard } from './inbox-card'
+import { ReplyBox } from './reply-box'
 
 const humanize = (value: string) => {
   const words = value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
@@ -27,28 +29,38 @@ function friendlyValue(value: unknown): string {
 function ArgumentValue({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false)
   const text = friendlyValue(value)
-  return <><span className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{expanded || text.length <= 180 ? text : `${text.slice(0, 180)}…`}</span>{text.length > 180 && <Button size="sm" variant="ghost" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? 'Show less' : 'Show more'}</Button>}</>
+  return <><span className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{expanded || text.length <= 180 ? text : `${text.slice(0, 180)}…`}</span>{text.length > 180 && <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? 'Show less' : 'Show more'}</Button>}</>
 }
 
-/** A permission request as one Inbox card: Allow once on top, everything else one tap away. */
+/**
+ * A permission request as one Inbox card: the tool's own yes and no (its button template) and
+ * Change, all one tap away. Yes runs this exact action once, now; Change sends his words to Conker
+ * instead and runs nothing here.
+ */
 export function ApprovalCard({ request, now, detail, note, attempt, busy, processing, onNote, onDecide, onCheck, onRelease, onLater }: {
   request: OwnerRequest; now: number; detail: boolean; note: string; attempt?: RetainedOwnerDecision; busy: boolean; processing: boolean
-  onNote: (note: string) => void; onDecide: (status: OwnerDecision, retry?: boolean) => void; onCheck: () => void; onRelease: () => void
+  onNote: (note: string) => void; onDecide: (status: OwnerDecision, retry?: boolean, note?: string) => void; onCheck: () => void; onRelease: () => void
   onLater?: () => void
 }) {
-  const [noteOpen, setNoteOpen] = useState(false)
+  const [changing, setChanging] = useState(false)
   const eligibility = ownerDecisionEligibility(request, now)
   const expired = request.status === 'pending' && (eligibility.expired || request.unavailableReason === 'expired')
   const title = request.title || 'Review this action'
   const open = request.status === 'pending' && !expired
+  const labels = cardLabels[request.card]
   const minutesLeft = request.approval.expiresAt ? Math.max(1, Math.ceil((Date.parse(request.approval.expiresAt) - now) / 60000)) : null
   const state = attempt ? 'Outcome not confirmed' : expired ? 'Expired, nothing was done' : request.status !== 'pending' ? humanize(request.status) : minutesLeft !== null ? `Expires in ${minutesLeft} min` : 'Waiting for you'
-  const primary = attempt
-    ? <Button type="button" size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={onCheck}>Check</Button>
-    : open && eligibility.approve ? <Button type="button" size="sm" className="rounded-full" disabled={busy} onClick={() => onDecide('approved')}>Allow once</Button> : null
+  const answers = attempt ? <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCheck}>Check</Button></div>
+    : open && changing ? <ReplyBox label="What should Conker do instead?" placeholder="Your words go to Conker in that chat. Nothing here runs." value={note} busy={busy}
+      onChange={onNote} onSend={() => onDecide('rejected', false, note.trim())} onCancel={() => setChanging(false)} />
+    : open ? <div className="flex flex-wrap gap-2">
+      {eligibility.approve && <Button type="button" size="sm" variant={request.card === 'delete' || request.card === 'pay' ? 'destructive' : 'default'} disabled={busy} onClick={() => onDecide('approved', false, '')}>{labels.yes}</Button>}
+      <Button type="button" size="sm" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected', false, '')}>{labels.no}</Button>
+      <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} onClick={() => setChanging(true)}>Change</Button>
+    </div> : null
   return <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} summary={request.details || undefined}
     meta={<><span>Permission</span><span>{request.actor || 'Conker'}</span><span>{relativeTime(request.createdAt, now)}</span>{state && <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span>}</>}
-    primary={primary} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
+    actions={answers} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
     footer={processing && <p role="status" className="text-xs text-muted-foreground">Waiting for verification or the recorded decision…</p>}>
     {request.action.args === null ? <p className="text-muted-foreground">Complete arguments are unavailable. Approval is disabled.</p>
       : <dl className="flex flex-col gap-3">{Object.entries(request.action.args).map(([key, value]) => <div key={key} className="grid min-w-0 gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"><dt className="break-words text-muted-foreground">{humanize(key)}</dt><dd className="min-w-0"><ArgumentValue value={value} /></dd></div>)}</dl>}
@@ -62,14 +74,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
         {canReleaseExpiredOwnerDecision(request, attempt) ? <Button type="button" variant="outline" disabled={busy} onClick={onRelease}>Review expired request</Button>
           : attempt.checked && request.status === 'pending' && <Button type="button" disabled={busy} onClick={() => onDecide(attempt.status, true)}>Retry identical decision</Button>}
       </div>
-    </div> : open && <>
-      {noteOpen || note ? <div className="flex flex-col gap-2"><Label htmlFor={`note-${request.id}`}>Note (optional)</Label><Textarea id={`note-${request.id}`} value={note} maxLength={2000} disabled={busy} onChange={event => onNote(event.target.value)} placeholder="Add context for your decision…" /></div>
-        : <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => setNoteOpen(true)}>Add a note</Button>}
-      <p className="text-muted-foreground">Permission only: allow this exact action once before expiry. Nothing runs automatically. Confirm with your owner password, then return to the chat to continue.</p>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected')}>Don&apos;t allow</Button>
-      </div>
-    </>}
+    </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went. {labels.no} and Change run nothing. Your password confirms the decision.</p>}
     <Accordion><AccordionItem value="technical"><AccordionTrigger>Technical details</AccordionTrigger><AccordionContent><div className="flex flex-col gap-3 text-sm">
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 break-words"><dt>Request ID</dt><dd className="break-all">{request.id}</dd><dt>Type</dt><dd>{request.action.subjectType ?? 'Unavailable'}</dd><dt>Subject ID</dt><dd className="break-all">{request.action.subjectId ?? 'Unavailable'}</dd><dt>Version</dt><dd>{request.action.version ?? 'Unavailable'}</dd><dt>Origin verified</dt><dd>{request.approval.originValid ? 'Yes' : 'No'}</dd><dt>Status</dt><dd>{humanize(request.status)}</dd></dl>
       <p>Created {timestamp(request.createdAt)} · Updated {timestamp(request.updatedAt)}</p>

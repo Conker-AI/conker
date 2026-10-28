@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookmarkPlus, CalendarClock, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChangeRequest } from '@/lib/gateway/change-requests'
 import { InboxCard } from './inbox-card'
+import { ReplyBox } from './reply-box'
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const effects = { read: 'Only reads', prepare: 'Prepares things, sends nothing', write: 'Changes or sends things' } as const
@@ -43,21 +45,31 @@ function Details({ request }: { request: ChangeRequest }) {
   </dl>
 }
 
-/** One thing Conker asked to create. Approving makes it real; declining creates nothing. */
+/**
+ * One thing Conker asked to create. Approving makes it real; Don't creates nothing; Change creates
+ * nothing and sends his words to that chat.
+ */
 export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecline, onLater }: {
   request: ChangeRequest; now: number; busy: boolean; error: string | null
-  onApprove: () => void; onDecline: () => void; onLater?: () => void
+  onApprove: () => void; onDecline: (reply?: string) => void; onLater?: () => void
 }) {
+  const [changing, setChanging] = useState(false), [words, setWords] = useState('')
   const icon = request.kind === 'ai_job' ? <CalendarClock /> : request.kind === 'tool_draft' ? <Wrench /> : <BookmarkPlus />
   const action = request.kind === 'ai_job' ? 'Create job' : request.kind === 'tool_draft' ? 'Save as draft' : 'Remember'
+  const answers = changing && request.sessionId
+    ? <ReplyBox label="What should Conker do instead?" placeholder="Your words go to Conker in that chat. Nothing is created." value={words} busy={busy}
+      onChange={setWords} onSend={() => onDecline(words.trim())} onCancel={() => setChanging(false)} />
+    : <div className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" disabled={busy} onClick={onApprove}>{busy ? 'Working…' : action}</Button>
+      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
+      {request.sessionId && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setChanging(true)}>Change</Button>}
+    </div>
   return <InboxCard icon={icon} title={request.title} summary={request.kind === 'memory' ? request.payload.text : request.summary || undefined}
     meta={<><span>Conker’s request</span><span>{age(request.createdAt, now)}</span></>}
-    primary={<Button type="button" size="sm" className="rounded-full" disabled={busy} onClick={onApprove}>{busy ? 'Working…' : action}</Button>}
-    onLater={onLater} footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined}>
+    actions={answers} onLater={onLater} footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined}>
     <Details request={request} />
-    <div className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDecline}>Decline</Button>
-      {request.sessionId && <Button type="button" size="sm" variant="ghost" render={<Link to={`/chat?session=${encodeURIComponent(request.sessionId)}`} />}>Open the chat</Button>}
-    </div>
+    {request.sessionId && <div className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" variant="ghost" render={<Link to={`/chat?session=${encodeURIComponent(request.sessionId)}`} />}>Open the chat</Button>
+    </div>}
   </InboxCard>
 }

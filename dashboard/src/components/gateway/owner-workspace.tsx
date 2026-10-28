@@ -17,6 +17,9 @@ import { AgentNoteCard } from '@/components/inbox/agent-note-card'
 import { ChangeRequestCard } from '@/components/inbox/change-request-card'
 import { useChangeRequests } from '@/components/inbox/change-requests'
 import { HandledList } from '@/components/inbox/handled-list'
+import { AskCard } from '@/components/inbox/ask-card'
+import { useAsks } from '@/components/inbox/asks'
+import type { AsksClient } from '@/lib/gateway/asks'
 import type { AccessClient } from '@/lib/gateway/access'
 import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import type { GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
@@ -28,7 +31,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, drafts, access, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, drafts, access, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -40,6 +43,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
   const ideas = useProposals(proposals, active && !requestId)
   const notes = useAgentNotes(checks, active && !requestId)
   const requests = useChangeRequests(changes, drafts, active && !requestId)
+  const questions = useAsks(asks, active && !requestId)
   const { isLater, later, restore } = useLater()
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
@@ -97,12 +101,13 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [retained.notes, retained.attempts, retained.pendingId])
-  async function decide(current: OwnerRequest, status: OwnerDecision, retry = false) {
+  async function decide(current: OwnerRequest, status: OwnerDecision, retry = false, note?: string) {
     if (!current || state.getState().pendingId || loading) return
     const id = current.id, epoch = state.getState().epoch, previous = state.getState().attempts[id]
     const eligibility = ownerDecisionEligibility(current, Date.now())
     if (retry ? !previous?.checked || previous.status !== status : Boolean(previous) || !(status === 'approved' ? eligibility.approve : eligibility.reject)) return
-    const submittedNote = retry ? previous!.note : state.getState().notes[id] ?? ''
+    // Do it and Don't send no words; Change sends his (they go to Conker as his next message).
+    const submittedNote = retry ? previous!.note : note ?? state.getState().notes[id] ?? ''
     state.setState({ pendingId: id }); setError(null); setNotice(null)
     try {
       const updated = await request(signal => client.decide(id, status, submittedNote, { signal }))
@@ -110,7 +115,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
       if (selectedId.current === id) { generation.current++; setLoading(false); setSelected(updated) }
       setRows(values => values.map(row => row.id === id ? updated : row))
       state.setState(value => { const attempts = { ...value.attempts }; delete attempts[id]; const notes = { ...value.notes }; if (notes[id] === submittedNote) delete notes[id]; return { attempts, notes } })
-      if (!selectedId.current || selectedId.current === id) setNotice(`Decision recorded: ${label(updated.status)}. This does not start or resume the action.`)
+      if (!selectedId.current || selectedId.current === id) setNotice(updated.status === 'approved' ? 'Done. Conker is doing it now; the chat shows how it went.' : submittedNote.trim() ? 'Nothing was done. Your words went to Conker in that chat.' : 'Nothing was done.')
     } catch (failure) {
       if (!mounted.current || state.getState().epoch !== epoch) return
       if (!selectedId.current || selectedId.current === id) { generation.current++; setLoading(false); setError(failure instanceof OwnerDecisionError ? failure.message : gatewayError(failure).message) }
@@ -121,7 +126,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
   // Keep uncertain attempts visible until the owner checks their saved outcome.
   const pendingRows = rows.filter(row => !earlier(row) || retained.attempts[row.id])
   const earlierRows = rows.filter(row => earlier(row) && !retained.attempts[row.id])
-  const decisionKey = (id: string) => `decision:${id}`, ideaKey = (id: string) => `idea:${id}`, checkKey = (id: string) => `check:${id}`, changeKey = (id: string) => `change:${id}`
+  const decisionKey = (id: string) => `decision:${id}`, ideaKey = (id: string) => `idea:${id}`, checkKey = (id: string) => `check:${id}`, changeKey = (id: string) => `change:${id}`, askKey = (id: string) => `ask:${id}`
   const nowDecisions = pendingRows.filter(row => retained.attempts[row.id] || !isLater(decisionKey(row.id)))
   const laterDecisions = pendingRows.filter(row => !retained.attempts[row.id] && isLater(decisionKey(row.id)))
   const nowIdeas = (ideas.items ?? []).filter(item => !isLater(ideaKey(item.id)))
@@ -129,20 +134,21 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
   const nowNotes = notes.items.filter(item => !isLater(checkKey(item.id))), laterNotes = notes.items.filter(item => isLater(checkKey(item.id)))
   const showDecisions = filter === 'all' || filter === 'decisions', showIdeas = filter === 'all' || filter === 'ideas', showNotes = filter === 'all' || filter === 'checks'
   const nowChanges = requests.items.filter(item => !isLater(changeKey(item.id))), laterChanges = requests.items.filter(item => isLater(changeKey(item.id)))
-  const needsCount = nowDecisions.length + nowChanges.length + nowIdeas.length + nowNotes.length
+  const nowAsks = questions.items.filter(item => !isLater(askKey(item.id))), laterAsks = questions.items.filter(item => isLater(askKey(item.id)))
+  const needsCount = nowDecisions.length + nowChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length
   const today = new Date(now).toDateString()
   const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
   const card = (row: OwnerRequest, detail = false) => <ApprovalCard key={row.id} request={row} now={now} detail={detail}
     note={retained.notes[row.id] ?? ''} attempt={retained.attempts[row.id]} busy={busy || loading} processing={retained.pendingId === row.id}
     onNote={note => state.setState(value => ({ notes: { ...value.notes, [row.id]: note } }))}
-    onDecide={(status, retry) => void decide(row, status, retry)} onCheck={() => void load(false, undefined, row.id)}
+    onDecide={(status, retry, note) => void decide(row, status, retry, note)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
-  const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load(); void requests.load() } }
+  const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load(); void requests.load(); void questions.load() } }
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
-  const laterCount = (showDecisions ? laterDecisions.length + laterChanges.length : 0) + (showIdeas ? laterIdeas.length : 0) + (showNotes ? laterNotes.length : 0)
+  const laterCount = (showDecisions ? laterDecisions.length + laterChanges.length + laterAsks.length : 0) + (showIdeas ? laterIdeas.length : 0) + (showNotes ? laterNotes.length : 0)
   return <GatewayPageFrame className="h-full">
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
@@ -151,12 +157,13 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
           {/* A failed load is never summarized as "All clear". */}
           <p className="text-sm text-muted-foreground">{loadError !== null || ideas.error !== null ? 'Part of your Inbox didn’t load' : needsCount ? `${needsCount} ${needsCount === 1 ? 'needs' : 'need'} you` : 'All clear'}{loadError === null && <> · {decidedToday} decided today</>}</p>
           {loadError === null && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
-            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + nowChanges.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
+            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + nowChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
       </>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
       {ideas.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{ideas.notice}</p>}
+      {questions.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{questions.notice.text}{questions.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={questions.notice.link.to}>{questions.notice.link.label}</Link></>}</p>}
       {requests.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{requests.notice.text}{requests.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={requests.notice.link.to}>{requests.notice.link.label}</Link></>}</p>}
       {undo && !requestId && <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Moved “{undo.title}” to Later.
         <Button type="button" size="xs" variant="outline" onClick={() => { restore(undo.key); setUndo(null) }}>Undo</Button></p>}
@@ -166,10 +173,13 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
         {loading && !rows.length && <ListSkeleton rows={3} label="Loading your Inbox…" />}
         {showDecisions && requests.error !== null && <InlineError error={requests.error} title="Conker’s requests didn’t load" onRetry={() => requests.load()} />}
-        {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
+        {showDecisions && questions.error !== null && <InlineError error={questions.error} title="Conker’s questions didn’t load" onRetry={() => questions.load()} />}
+        {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
           {showDecisions && nowDecisions.map(row => card(row))}
           {showDecisions && nowChanges.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
-            onApprove={() => void requests.approve(request)} onDecline={() => void requests.decline(request)} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
+            onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
+          {showDecisions && nowAsks.map(ask => <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
+            onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />)}
           {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}
           {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
             onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
@@ -185,20 +195,21 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, draf
           <ul className="flex flex-col divide-y rounded-xl border">
             {[...(showDecisions ? laterDecisions.map(row => ({ key: decisionKey(row.id), title: row.title || 'Review this action', kind: 'Permission' })) : []),
               ...(showDecisions ? laterChanges.map(item => ({ key: changeKey(item.id), title: item.title, kind: 'Conker’s request' })) : []),
+              ...(showDecisions ? laterAsks.map(item => ({ key: askKey(item.id), title: item.question, kind: 'Conker asks' })) : []),
               ...(showIdeas ? laterIdeas.map(item => ({ key: ideaKey(item.id), title: item.title, kind: 'Idea' })) : []),
               ...(showNotes ? laterNotes.map(item => ({ key: checkKey(item.id), title: item.title, kind: 'AI job' })) : [])].map(item => <li key={item.key} className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
               <span className="min-w-0 flex-1 truncate">{item.title}</span><span className="shrink-0 text-xs text-muted-foreground">{item.kind}</span>
               <Button type="button" size="xs" variant="ghost" onClick={() => restore(item.key)}>Bring back</Button>
             </li>)}
           </ul>
-          <p className="text-xs text-muted-foreground">Later only reorders your Inbox. Nothing is decided, and a permission still expires on its own.</p>
+          <p className="text-xs text-muted-foreground">Later only reorders your Inbox. Nothing is decided, and Conker keeps waiting.</p>
         </section>}
         <Accordion>{access && <AccordionItem value="handled"><AccordionTrigger>Handled</AccordionTrigger><AccordionContent><HandledList client={access} now={now} /></AccordionContent></AccordionItem>}<AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
           {!earlierRows.length && <p className="text-sm text-muted-foreground">No earlier requests.</p>}
           {cursor && <Button variant="outline" disabled={loading || busy} onClick={() => void load(true, cursor)}>Load older requests</Button>}
         </AccordionContent></AccordionItem></Accordion>
-        <p className="text-xs text-muted-foreground">Decisions do not automatically continue a paused run.</p>
+        <p className="text-xs text-muted-foreground">Your answer here continues the chat it came from; you don’t need to open it.</p>
       </>}
     </div>
   </GatewayPageFrame>
