@@ -14,7 +14,7 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.11.0 | Conversations, model roles, access, Inbox, owner settings |
+| Pi and the Gateway | 0.11.1 | Conversations, model roles, access, Inbox, owner settings |
 | ToolGate | 0.9.1 | Tools, approvals, spending, the agent sandbox |
 | MemoryGate | 0.6.0 | Memory with sources |
 | SystemGate | 0.4.0 | Read-only view of the machine |
