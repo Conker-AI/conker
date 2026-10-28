@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- Pins Pi 0.11.1: two more small-model mistakes get one retry (request JSON that does not
+  parse, and a tool's arguments without the tool request), so scheduling and tool drafts from chat
+  work more often on a local model and raw JSON no longer reaches you as an answer.
+  Settings and plan usage are listed with their screens in `capabilities.json`.
+
 - Pins ToolGate 0.9.1: the Terminal takes a working folder of `/` as the workspace and a null time
   limit as the default, the arguments small local models send.
 
