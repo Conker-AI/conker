@@ -15,7 +15,7 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 | Service | Version | |
 |---|---|---|
 | Pi and the Gateway | 0.11.0 | Conversations, model roles, access, Inbox, owner settings |
-| ToolGate | 0.9.0 | Tools, approvals, spending, the agent sandbox |
+| ToolGate | 0.9.1 | Tools, approvals, spending, the agent sandbox |
 | MemoryGate | 0.6.0 | Memory with sources |
 | SystemGate | 0.4.0 | Read-only view of the machine |
 | Embeddings | 0.1.4 | Text to vectors |
@@ -51,9 +51,9 @@ tests, but not yet exercised end to end on an installed stack.
 
 ## Known gaps
 
-- **Small CPU models are the weak spot.** A 3B model sometimes breaks the tool-call format or sends
-  arguments the Terminal refuses (a working folder of `/`, an empty timeout), a 4B reviewer on a
-  4-core CPU can take minutes and time out, and workflow drafts need a larger or hosted model.
+- **Small CPU models are the weak spot.** A 3B model sometimes breaks the tool-call format, a 4B
+  reviewer on a 4-core CPU can take minutes and time out, and workflow drafts need a larger or
+  hosted model.
 - **An answer can be lost** if Pi restarts while delivering it.
 - **The profile photo is kept per browser** for now.
 - **Some settings say "Not used yet":** they are saved, and the feature that reads them comes later.
