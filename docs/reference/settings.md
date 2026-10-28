@@ -338,8 +338,8 @@ How new chats start and how chats look and behave.
 | **Answer language** (per chat)<br>`chat.output.language` | The language of answers in this chat; auto follows your message. (applies from the next message) | `auto` | pi `/sessions/{chat}/output` `language` |
 | **Instructions** (per chat)<br>`chat.context.instructions` | Instructions for this chat only. (applies from the next message) | empty | pi `/context/{chat}` `sessionInstructions` |
 | **Context window** (per chat)<br>`chat.context.window_tokens` | The most tokens this chat sends to a model. 2 to 10000000 tokens. (applies from the next message) | none | pi `/context/{chat}` `budget.contextWindowTokens` |
-| **Answer reserve** (per chat)<br>`chat.context.output_reserve_tokens` | Tokens kept free for the answer. 1 to 10000000 tokens. (applies from the next message) | none | pi `/context/{chat}` `budget.outputReserveTokens` |
-| **Other input** (per chat)<br>`chat.context.other_input_tokens` | Tokens set aside for instructions, memory and tools. 0 to 10000000 tokens. (applies from the next message) | none | pi `/context/{chat}` `budget.otherInputTokens` |
+| **Answer reserve** (per chat)<br>`chat.context.output_reserve_tokens` | Tokens kept free for the answer. (applies from the next message) | none | pi `/context/{chat}` `budget.outputReserveTokens` |
+| **Other input** (per chat)<br>`chat.context.other_input_tokens` | Tokens set aside for instructions, memory and tools. (applies from the next message) | none | pi `/context/{chat}` `budget.otherInputTokens` |
 
 ## Prompts and templates
 
