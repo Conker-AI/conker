@@ -23,6 +23,17 @@ async function main() {
   let reply = { delegate: false, sensitive: ['bank.pay'], floorExecutions: ['port_control'] }
   const client = createAccessClient({ request: async (...args) => { calls.push(args); return structuredClone(reply) } })
   assert.equal((await client.state()).delegate, false)
+  assert.deepEqual((await client.state()).cards, {}, 'An older ToolGate sends no Inbox buttons')
+  reply = { delegate: false, sensitive: [], floorExecutions: [], cards: { 'mail.send': 'send' } }
+  assert.deepEqual((await client.state()).cards, { 'mail.send': 'send' })
+  reply = { delegate: false, sensitive: [], floorExecutions: [], cards: { 'mail.send': 'Cancel' } }
+  await assert.rejects(client.state(), error => error.kind === 'invalid-response', 'Only the fixed button templates exist')
+  reply = { id: 'mail.send', template: 'send' }
+  assert.equal(await client.setCard('mail.send', 'send'), 'send')
+  assert.deepEqual(calls.at(-1), ['/api/owner/tools/mail.send/card', { method: 'POST', body: { template: 'send' } }])
+  await assert.rejects(client.setCard('mail.send', 'Cancel'), error => error.kind === 'validation')
+  assert.equal(isConversationWrite('/api/owner/tools/mail.send/card'), false, 'Picking a tool’s buttons asks for the password')
+  reply = { delegate: false, sensitive: ['bank.pay'], floorExecutions: ['port_control'] }
   reply = { delegate: false, sensitive: [], floorExecutions: [], key: 'x' }
   await assert.rejects(client.state(), error => error.kind === 'invalid-response', 'The access view is exact')
   reply = { delegate: true }

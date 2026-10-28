@@ -1,11 +1,14 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
+import { cardTemplates, type CardTemplate } from '../inbox-buttons'
 
 const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/)
 /** Whether Conker decides by his settings, and the tools that always ask him (the floor). */
 const state = z.object({
   delegate: z.boolean(), sensitive: z.array(toolId).max(1000), floorExecutions: z.array(z.string().max(80)).max(20),
+  // Inbox buttons that differ from Do it, by tool; an older ToolGate sends none.
+  cards: z.record(toolId, z.enum(cardTemplates)).default({}),
 }).strict()
 const deciders = ['tool_default', 'agent', 'chat', 'ai_reviewer', 'owner_request'] as const
 const handled = z.object({
@@ -50,6 +53,12 @@ export function createAccessClient(auth: Pick<GatewayAuthClient, 'request'>) {
       const result = parse(z.object({ id: toolId, sensitive: z.boolean() }).strict(), await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/sensitive`, { method: 'POST', body: { sensitive } }))
       if (result.id !== id || result.sensitive !== sensitive) throw new GatewayError('invalid-response')
       return result.sensitive
+    },
+    /** Asks for the password: the buttons his Inbox shows when this tool asks him. */
+    async setCard(id: string, template: CardTemplate): Promise<CardTemplate> {
+      const result = parse(z.object({ id: toolId, template: z.enum(cardTemplates) }).strict(), await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/card`, { method: 'POST', body: { template: parse(z.enum(cardTemplates), template, true) } }))
+      if (result.id !== id || result.template !== template) throw new GatewayError('invalid-response')
+      return result.template
     },
     /** Whether Conker may use this tool at all. */
     async toolAccess(id: string, signal?: AbortSignal): Promise<ToolAccessState> {

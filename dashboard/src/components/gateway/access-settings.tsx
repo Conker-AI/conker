@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cardLabels, cardTemplates, type CardTemplate } from '@/lib/inbox-buttons'
 import { PageHeader, WorkspaceSection } from '@/components/design-system/primitives'
 import type { AccessState, ToolAccessState } from '@/lib/gateway/access'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
@@ -66,6 +68,21 @@ export function GatewayAccessSettings({ client }: { client: GatewayControlClient
     } catch (cause) { setError(gatewayError(cause).message) }
     finally { setPending(null) }
   }
+  async function card(id: string, template: CardTemplate) {
+    setPending(`card:${id}`); setError('')
+    try {
+      const saved = await client.access.setCard(id, template)
+      setState(current => {
+        if (!current) return current
+        const cards = { ...current.cards }
+        if (saved === 'do') delete cards[id]
+        else cards[id] = saved
+        return { ...current, cards }
+      })
+    } catch (cause) { setError(gatewayError(cause).message) }
+    finally { setPending(null) }
+  }
+  const buttons = (template: CardTemplate) => `${cardLabels[template].yes} / ${cardLabels[template].no}`
   if (!state) return <GatewayPageFrame>{error ? <div className="space-y-2"><p role="alert">{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)}>Try again</Button></div> : <p role="status">Loading access settings…</p>}</GatewayPageFrame>
   return <GatewayPageFrame><div className="max-w-3xl space-y-6">
     <PageHeader title="Access" description="What Conker may do without asking you. Your settings decide; the AI never changes them." />
@@ -99,7 +116,7 @@ export function GatewayAccessSettings({ client }: { client: GatewayControlClient
           <Switch id={`use-${tool.id}`} aria-label={`Let Conker use ${tool.name}`} checked={tool.access?.enabled ?? false} disabled={pending !== null || tool.access === null} onCheckedChange={value => void use(tool, value)} />
         </li>)}</ul>}
     </WorkspaceSection>
-    <WorkspaceSection title="Always ask me" description="Turn this on for anything that spends money, deletes for good, or signs in to accounts." divided={false}>
+    <WorkspaceSection title="Always ask me" description="Turn this on for anything that spends money, deletes for good, or signs in to accounts.">
       {tools.length === 0 ? <p className="text-sm text-muted-foreground">No tools are connected yet. <Link className="underline underline-offset-4" to="/tools">Tools</Link></p>
         : <ul className="divide-y rounded-lg border">{tools.map(tool => {
           const marked = state.sensitive.includes(tool.id)
@@ -109,6 +126,20 @@ export function GatewayAccessSettings({ client }: { client: GatewayControlClient
               <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{marked ? 'Always asks you' : `Its own setting: ${DEFAULT_ACCESS[tool.authorization ?? 'owner_confirmation']}`}</span>
             </Label>
             <Switch id={`sensitive-${tool.id}`} aria-label={`Always ask me before ${tool.name || tool.id}`} checked={marked} disabled={pending !== null} onCheckedChange={value => void sensitive(tool.id, value)} />
+          </li>
+        })}</ul>}
+    </WorkspaceSection>
+    <WorkspaceSection title="Inbox buttons" description="The buttons a tool’s card shows when it asks you. Change is always there. The yes button still runs only the exact action shown." divided={false}>
+      {tools.length === 0 ? <p className="text-sm text-muted-foreground">No tools are connected yet.</p>
+        : <ul className="divide-y rounded-lg border">{tools.map(tool => {
+          const current = state.cards[tool.id] ?? 'do'
+          return <li key={tool.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3">
+            <span className="min-w-0 truncate text-sm">{tool.name || tool.id}</span>
+            <Select value={current} disabled={pending !== null} onValueChange={value => { if (value && value !== current) void card(tool.id, value as CardTemplate) }}
+              items={cardTemplates.map(template => ({ value: template, label: buttons(template) }))}>
+              <SelectTrigger aria-label={`Inbox buttons for ${tool.name || tool.id}`} className="w-48"><SelectValue>{buttons(current)}</SelectValue></SelectTrigger>
+              <SelectContent>{cardTemplates.map(template => <SelectItem key={template} value={template}>{buttons(template)}</SelectItem>)}</SelectContent>
+            </Select>
           </li>
         })}</ul>}
     </WorkspaceSection>

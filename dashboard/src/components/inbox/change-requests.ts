@@ -58,10 +58,13 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
     } catch (cause) { setFailure({ id: request.id, message: cause instanceof Error && !(cause as { kind?: string }).kind ? cause.message : gatewayError(cause).message }) }
     finally { setPending(null) }
   }, [client, drafts])
-  const decline = useCallback(async (request: ChangeRequest) => {
+  const decline = useCallback(async (request: ChangeRequest, reply = '') => {
     if (!client) return
     setPending(request.id); setFailure(null); setNotice(null)
-    try { settle(await client.decline(request.id)); setNotice({ text: 'Declined. Nothing was created.' }) }
+    try {
+      settle(await client.decline(request.id, reply))
+      setNotice(reply && request.sessionId ? { text: 'Nothing was created. Your words went to the chat.', link: { to: `/chat?session=${encodeURIComponent(request.sessionId)}`, label: 'Open the chat' } } : { text: 'Declined. Nothing was created.' })
+    }
     catch (cause) { setFailure({ id: request.id, message: gatewayError(cause).message }) }
     finally { setPending(null) }
   }, [client])

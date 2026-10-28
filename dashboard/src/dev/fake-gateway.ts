@@ -107,7 +107,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     id: 'req_email_coach', kind: 'verification', title: 'Send an email to coach', details: 'Conker drafted this email and needs your OK before sending it.',
     actor: 'Conker', severity: 'normal', status: 'pending', created_at: iso(now() - 120), updated_at: iso(now() - 120), decision: null,
     action: { subject_type: 'tool', subject_id: 'email.send', version: 3, args: { to: 'coach@judo-club.example', subject: 'Friday open mat', body: 'Hi coach, is the open mat on Friday still happening? Thanks, Alexey' } },
-    approval: { expires_at: iso(now() + 600), consumed_at: null, origin_valid: true }, reviewable: true, unavailable_reason: null,
+    approval: { expires_at: null, consumed_at: null, origin_valid: true }, reviewable: true, unavailable_reason: null, card: 'send',
   }]
   const proposals: Json[] = [
     { id: 'prp_homework', title: 'Homework reminders', noticed: 'You asked what homework is due on Friday three times this week.', suggestion: 'Remind you every Thursday evening of what is due Friday.', ifApproved: 'A short reminder appears in your chat each Thursday at 19:00. Nothing else changes.', state: 'open', createdAt: now() - 3600, decidedAt: null, grantsExecutionAuthority: false,
@@ -607,6 +607,15 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const item = approvals.find(row => row.id === match![1]) ?? fail(404)
       const status = String(options.body?.status)
       Object.assign(item, { status, updated_at: iso(now()), reviewable: false, unavailable_reason: 'already_decided', decision: { status, actor: 'owner', note: String(options.body?.note ?? ''), at: iso(now()) } })
+      // As Pi does after his decision: Do it runs and replies; a no closes; Change sends his words.
+      const owner = sessions.find(row => row.turns.some(turn => turn.approval_request_id === item.id && turn.status === 'awaiting_approval'))
+      const turn = owner?.turns.find(row => row.approval_request_id === item.id)
+      if (owner && turn) {
+        const words = String(options.body?.note ?? '').trim()
+        const say = (role: 'user' | 'assistant', content: string) => owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role, content, created_at: now() })
+        if (status === 'approved') { say('assistant', 'Done. I sent the email to coach and will tell you when they reply.'); Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() }) }
+        else { Object.assign(turn, { status: 'cancelled', ended_at: now(), detail: words ? 'You said what to do instead in the Inbox. This action was not done.' : 'You said no in the Inbox. Nothing was done.' }); if (words) { say('user', words); say('assistant', 'Got it, I changed it the way you said.') } }
+      }
       return item
     }
     if (path === '/api/pi/proposals') return { proposals: proposals.filter(item => item.state === 'open') }
@@ -714,7 +723,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       item.updatedAt = iso(now())
       return item
     }
-    if (path.startsWith('/api/control/pi/jobs/agent') || path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/') || path === '/api/control/pi/memory/remember' || path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities' || /^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/hook(\/revoke)?$/.test(path)) return agentJobs(path, method, options.body, fail); seedAgentJobs(path); if (path === '/api/control/pi/jobs' && method === 'GET') return { schemaVersion: 1, results: jobs, nextCursor: null }
+    if (path.startsWith('/api/control/pi/jobs/agent') || path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/') || path === '/api/control/pi/memory/remember' || path.startsWith('/api/control/pi/asks') || path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities' || /^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/hook(\/revoke)?$/.test(path)) return agentJobs(path, method, options.body, fail); seedAgentJobs(path); if (path === '/api/control/pi/jobs' && method === 'GET') return { schemaVersion: 1, results: jobs, nextCursor: null }
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})$/)) && method === 'GET') return jobs.find(item => item.id === match![1]) ?? fail(404)
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/runs$/)) && method === 'GET') return { schemaVersion: 1, results: jobRuns.get(match![1]) ?? [], nextCursor: null }
     if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/state$/)) && method === 'POST') {

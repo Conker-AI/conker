@@ -194,6 +194,16 @@ def build_parser(description):
     tool_access.add_argument("id")
     tool_access.add_argument("--enabled", choices=["true", "false"])
     tool_access.add_argument("--expected-digest")
+    tool_card = commands.add_parser(
+        "tool-card",
+        help="Show or pick the buttons your Inbox shows when one tool asks you",
+    )
+    tool_card.add_argument("id")
+    tool_card.add_argument(
+        "--template",
+        choices=["do", "send", "publish", "ship", "run", "delete", "pay", "save"],
+        help="do: Do it / Don't, send: Send it / Don't send, publish: Publish / Not yet, ...",
+    )
     show = commands.add_parser("show")
     show.add_argument("session")
     think = commands.add_parser("thinking")
@@ -205,9 +215,13 @@ def build_parser(description):
         type=Path,
         help="JSON update containing expected_revision and configuration",
     )
-    models.add_argument("--role", help="Point one model role at one model, e.g. drafting")
+    models.add_argument(
+        "--role", help="Point one model role at one model, e.g. drafting"
+    )
     choice = models.add_mutually_exclusive_group()
-    choice.add_argument("--model", help="The model ID for --role, as conker models lists it")
+    choice.add_argument(
+        "--model", help="The model ID for --role, as conker models lists it"
+    )
     choice.add_argument("--off", action="store_true", help="Switch --role off")
     commands.add_parser(
         "profiles", help="Read-only model profiles from recorded outcomes"

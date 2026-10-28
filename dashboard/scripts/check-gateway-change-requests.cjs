@@ -45,7 +45,29 @@ async function main() {
   await assert.rejects(client.approve('creq_bad'), error => error.kind === 'validation')
   reply = { ...job, state: 'declined', decidedAt: 2 }
   await client.decline(id)
-  assert.equal(calls.at(-1)[0], `${base}/decline`)
+  assert.deepEqual(calls.at(-1), [`${base}/decline`, { method: 'POST', body: {} }])
+  await client.decline(id, '  Make it weekly instead ')
+  assert.deepEqual(calls.at(-1), [`${base}/decline`, { method: 'POST', body: { reply: 'Make it weekly instead' } }], 'Change sends his words with the decline')
+  await client.decline(id, '   ')
+  assert.deepEqual(calls.at(-1)[1].body, {}, 'Blank words are no Change')
+
+  const { createAsksClient } = load('src/lib/gateway/asks.ts')
+  const askId = `ask_${'d'.repeat(32)}`, askBase = `/api/control/pi/asks/${askId}`
+  const question = { id: askId, sessionId: `ses_${'b'.repeat(16)}`, chatTitle: 'Plan my week', question: 'Fix the login today?', options: ['Yes, fix it', 'Not now'], state: 'open', answer: null, chosen: null, createdAt: 1, answeredAt: null }
+  const asked = []
+  let answer = { schemaVersion: 1, results: [question] }
+  const asks = createAsksClient({ request: async (...args) => { asked.push(args); return structuredClone(answer) } })
+  assert.equal((await asks.list())[0].question, 'Fix the login today?')
+  answer = { schemaVersion: 1, results: [{ ...question, options: ['Only one'] }] }
+  await assert.rejects(asks.list(), error => error.kind === 'invalid-response', 'A question has 2 to 4 options')
+  answer = { ...question, state: 'answered', answer: 'Yes, fix it', chosen: true, answeredAt: 2 }
+  await asks.answer(askId, 'Yes, fix it', true)
+  assert.deepEqual(asked.at(-1), [`${askBase}/answer`, { method: 'POST', body: { text: 'Yes, fix it', chosen: true } }])
+  await assert.rejects(asks.answer(askId, '  ', false), error => error.kind === 'validation', 'A blank answer is never sent')
+  answer = { ...question, state: 'dismissed', answeredAt: 2 }
+  await asks.dismiss(askId)
+  assert.deepEqual(asked.at(-1), [`${askBase}/dismiss`, { method: 'POST', body: {} }])
+  await assert.rejects(asks.dismiss('ask_bad'), error => error.kind === 'validation')
 
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => { requests++; return new Response(JSON.stringify(job), { headers: { 'content-type': 'application/json' } }) } })
@@ -58,6 +80,8 @@ async function main() {
   assert.equal(isConversationWrite(`${base}/decline`), true, 'Declining creates nothing')
   assert.equal(isConversationWrite(`${base}/saved`), true, 'Recording a draft id follows the password-verified save in Tools')
   assert.equal(isConversationWrite('/api/owner/editor-drafts/digest'), false, 'Saving the draft in Tools asks for the password')
+  assert.equal(isConversationWrite(`/api/control/pi/asks/ask_${'d'.repeat(32)}/answer`), true, 'Answering Conker is like typing in that chat')
+  assert.equal(isConversationWrite(`/api/control/pi/asks/ask_${'d'.repeat(32)}/dismiss`), true, 'Dismissing a question sends nothing')
 
   assert.equal(isConversationWrite('/api/control/pi/memory/remember'), false, 'Adding a memory by hand asks for the password too')
   const { createGatewayControlClient } = load('src/lib/gateway/control.ts')
@@ -71,6 +95,10 @@ async function main() {
   assert.match(hook, /savedAs\.current\.get\(request\.id\)/, 'Retrying an approval never saves a second draft')
   const card = fs.readFileSync(path.join(root, 'src/components/inbox/change-request-card.tsx'), 'utf8')
   for (const label of ['What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word']) assert.ok(card.includes(label), `The card shows: ${label}`)
+  for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx']) {
+    const source = fs.readFileSync(path.join(root, file), 'utf8')
+    assert.ok(!/<Button(?![^>]*type="button")[^>]*onClick/.test(source), `${file}: every clickable button is type="button" (a card can sit inside a form)`)
+  }
   console.log('Gateway change requests passed: three kinds only, exact payloads, verified approval, save-then-record tool drafts, and no browser edits.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -5,15 +5,16 @@ import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import type { AgentNotesClient } from '@/components/inbox/agent-notes'
 import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
+import type { AsksClient } from '@/lib/gateway/asks'
 import { InboxAttentionContext } from '@/lib/workspace-chrome'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 
 /**
- * One read of the Inbox count for the whole shell: decisions waiting for the owner, open ideas and
- * what AI jobs found. Refreshed on navigation and after chat work.
+ * One read of the Inbox count for the whole shell: decisions waiting for the owner, Conker's
+ * questions, open ideas and what AI jobs found. Refreshed on navigation and after chat work.
  */
-export function InboxAttentionProvider({ owner, proposals, checks, changes, conversationState, children }: {
-  owner: GatewayOwnerClient; proposals: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; conversationState: GatewayRuntimeWorkspaceState; children: ReactNode
+export function InboxAttentionProvider({ owner, proposals, checks, changes, asks, conversationState, children }: {
+  owner: GatewayOwnerClient; proposals: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; conversationState: GatewayRuntimeWorkspaceState; children: ReactNode
 }) {
   const location = useLocation()
   const selected = useStore(conversationState, value => value.selected)
@@ -24,15 +25,16 @@ export function InboxAttentionProvider({ owner, proposals, checks, changes, conv
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    void Promise.allSettled([owner.listRequests({ limit: 50 }), proposals.list({ signal: controller.signal }), checks ? checks.agentNotes(controller.signal) : Promise.resolve([]), changes ? changes.list(controller.signal) : Promise.resolve([])]).then(([decisions, ideas, notes, requests]) => {
+    void Promise.allSettled([owner.listRequests({ limit: 50 }), proposals.list({ signal: controller.signal }), checks ? checks.agentNotes(controller.signal) : Promise.resolve([]), changes ? changes.list(controller.signal) : Promise.resolve([]), asks ? asks.list(controller.signal) : Promise.resolve([])]).then(([decisions, ideas, notes, requests, questions]) => {
       if (controller.signal.aborted) return
       if (decisions.status === 'rejected' && ideas.status === 'rejected') { setCount(null); return }
       setCount((decisions.status === 'fulfilled' ? decisions.value.results.filter(row => row.status === 'pending' && row.reviewable).length : 0)
         + (ideas.status === 'fulfilled' ? ideas.value.filter(item => item.state === 'open').length : 0)
         + (notes.status === 'fulfilled' ? notes.value.length : 0)
-        + (requests.status === 'fulfilled' ? requests.value.length : 0))
+        + (requests.status === 'fulfilled' ? requests.value.length : 0)
+        + (questions.status === 'fulfilled' ? questions.value.length : 0))
     })
-  }, [owner, proposals, checks, changes])
+  }, [owner, proposals, checks, changes, asks])
   useEffect(() => {
     let cancelled = false
     if (!operation) queueMicrotask(() => { if (!cancelled) refresh() })

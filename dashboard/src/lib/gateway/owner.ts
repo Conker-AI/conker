@@ -1,4 +1,5 @@
 import type { GatewayAuthClient } from './auth'
+import { isCardTemplate, type CardTemplate } from '../inbox-buttons'
 import { GatewayError, gatewayError } from './transport'
 
 export type OwnerDecision = 'approved' | 'rejected' | 'dismissed'
@@ -11,6 +12,8 @@ export type OwnerRequest = {
   action: { subjectType: string | null; subjectId: string | null; version: number | null; args: Record<string, unknown> | null }
   approval: { expiresAt: string | null; consumedAt: string | null; originValid: boolean }
   reviewable: boolean; unavailableReason: OwnerUnavailableReason | null
+  /** The buttons the tool had when it asked; labels only. An older ToolGate sends none: Do it. */
+  card: CardTemplate
 }
 export type OwnerRequestPage = { results: OwnerRequest[]; nextCursor: string | null }
 const statuses = new Set(['pending', 'approved', 'rejected', 'dismissed', 'cancelled'])
@@ -67,6 +70,7 @@ export function parseOwnerRequest(value: unknown, expectedId?: string): OwnerReq
     action: { subjectType: action.subject_type === null ? null : text(action.subject_type, 64), subjectId: action.subject_id === null ? null : text(action.subject_id, 256), version, args: jsonArgs(action.args) },
     approval: { expiresAt: optionalDate(approval.expires_at), consumedAt: optionalDate(approval.consumed_at), originValid: approval.origin_valid },
     reviewable: row.reviewable, unavailableReason: row.unavailable_reason as OwnerUnavailableReason | null,
+    card: isCardTemplate(row.card) ? row.card : 'do',
   }
   if (row.decision !== null) {
     const decision = record(row.decision)
