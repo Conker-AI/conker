@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- Pins ToolGate 0.9.1: the Terminal takes a working folder of `/` as the workspace and a null time
+  limit as the default, the arguments small local models send.
+
 - **`conker config` on an installed server.** `./conker config list|get|set|reset` now works on a
   Docker install (repository and Ubuntu layouts), not only in development: the same registry and
   checks, and every read or write reaches Pi inside its own container, so no key leaves it.
