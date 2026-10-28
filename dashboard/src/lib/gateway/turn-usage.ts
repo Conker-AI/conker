@@ -13,7 +13,7 @@ const unknown = z.object({ input_tokens: count, output_tokens: count, cached_tok
 const lane = z.object({ attempt_count: count, pending_count: count, reported_count: count, failed_count: count, totals, known_subtotal: totals, complete: completeness, unknown_counts: unknown })
 const label = (max: number) => z.string().min(1).max(max * 2).refine(value => [...value].length <= max)
 const attempt = z.object({
-  id, lane: z.enum(['foreground', 'thinking']), role: z.enum(['answer', 'thinking', 'routing', 'context-selection', 'summarization', 'memory-ranking', 'search-ranking', 'proposals']),
+  id, lane: z.enum(['foreground', 'thinking']), role: z.enum(['answer', 'thinking', 'routing', 'context-selection', 'summarization', 'memory-ranking', 'search-ranking', 'proposals', 'drafting', 'reviewer']),
   provider_id: label(100).nullable(), model_id: label(200).nullable(), provider: label(100), model: label(300), actual_provider: label(100).nullable(), actual_model: label(300).nullable(),
   status: z.enum(['pending', 'reported', 'failed']), failure_kind: z.enum(['provider_error', 'cancelled', 'timeout', 'preempted', 'interrupted']).nullable(),
   started_at: amount, ended_at: amount.nullable(), elapsed_ms: count.nullable(),

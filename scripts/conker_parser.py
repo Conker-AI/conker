@@ -216,7 +216,7 @@ def build_parser(description):
         help="JSON update containing expected_revision and configuration",
     )
     models.add_argument(
-        "--role", help="Point one model role at one model, e.g. drafting"
+        "--role", help="Point one model role at one model, e.g. drafting or reviewer"
     )
     choice = models.add_mutually_exclusive_group()
     choice.add_argument(
