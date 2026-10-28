@@ -1,5 +1,6 @@
 """Shared test fixtures. ubuntu_cli: the installed Ubuntu launcher against a fake deployment and a
-recording Docker, used by the CLI contract tests."""
+recording Docker, used by the CLI contract tests. The Docker hands conker config's Pi relay to the
+script named by FAKE_PI."""
 
 from __future__ import annotations
 
@@ -57,6 +58,10 @@ def ubuntu_cli(tmp_path: Path):
         shutil.copy2(ROOT / "scripts" / name, companion / "scripts" / name)
     shutil.copy2(ROOT / "scripts/speech_config.py", companion / "scripts/speech_config.py")
     shutil.copy2(ROOT / "scripts/setup_wizard.py", companion / "scripts/setup_wizard.py")
+    for name in ("conker_config.py", "config_cli.py"):
+        shutil.copy2(ROOT / "scripts" / name, companion / "scripts" / name)
+    registry = "dashboard/src/settings/registry"
+    shutil.copytree(ROOT / registry, companion / registry)
     cli.chmod(cli.stat().st_mode | stat.S_IXUSR)
     launcher = ROOT / "deploy/ubuntu/conker"
 
@@ -106,6 +111,7 @@ def ubuntu_cli(tmp_path: Path):
         '  *gateway*python*-m*gateway*setup-rehearsal*resume-approval:*) printf \'%s\\n\' \'{"schemaVersion":1,"state":"ready","approval":{"state":"complete"},"approvalRequestId":"setup-approval-test","canFinalize":true}\' ;;\n'
         '  *gateway*python*-m*gateway*setup-rehearsal*finalize*) printf \'%s\\n\' \'{"step":"rehearsal","revision":1,"receiptId":"setup-rehearsal-test","source":"conker.first-run-rehearsal","subject":"owner.daily-workflow","evidenceDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","completedAt":"2026-09-27T00:00:00Z","expiresAt":"2026-10-27T00:00:00Z","recordedAt":"2026-09-27T00:00:01Z","state":"valid"}\' ;;\n'
         '  *gateway*python*-m*gateway*record-setup-receipt*) cat >/dev/null; printf \'%s\\n\' \'{"step":"rehearsal","revision":1,"receiptId":"setup-rehearsal-test","source":"conker.release-acceptance","subject":"release","evidenceDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","completedAt":"2026-09-27T00:00:00Z","expiresAt":"2026-10-27T00:00:00Z","recordedAt":"2026-09-27T00:00:01Z","state":"valid"}\' ;;\n'
+        '  *X-Pi-Key*) exec python3 "$FAKE_PI" "$@" ;;\n'
         '  *setup/status*) printf \'%s\\n\' \'{"schemaVersion":1,"workflow":"first-run","state":"blocked","currentStep":"model","recommendedNextOperation":"configure_model","generatedAt":"2026-09-26T12:00:00Z","steps":[]}\' ;;\n'
         '  *setup/receipts*) body=$(cat); receipt=$(printf \'%s\' "$body" | sed -n \'s/.*"receiptId":"\\([^"]*\\)".*/\\1/p\'); digest=$(printf \'%s\' "$body" | sed -n \'s/.*"evidenceDigest":"\\([^"]*\\)".*/\\1/p\'); printf \'{"step":"rehearsal","revision":1,"receiptId":"%s","evidenceDigest":"%s"}\\n\' "$receipt" "$digest" ;;\n'
         '  *provider_credentials*) printf \'%s\\n\' configured ;;\n'

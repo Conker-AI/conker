@@ -101,8 +101,9 @@ the pinned sources, local model qwen2.5:3b in Ollama, 21 and 22 October):
 - Plan usage alerts: Pi reads each subscription runtime's usage every 15 minutes and puts a
   "limit N% used" item in the Inbox at the owner's level (`plans.alert_percent`, default 80), and a
   line when the window resets. Readings are percentages; no model call.
-- [Settings](reference/settings.md): `conker config list|get|set|reset` over one registry of 26
-  settings, each checked against Pi's own models.
+- [Settings](reference/settings.md): `conker config list|get|set|reset` over one registry of 401
+  settings, each checked against the registry before Pi sees it. It works on an installed server
+  (`./conker config`, both layouts), reaching Pi inside its own container.
 - `conker definitions`: agents, teams, templates, skills, jobs and projects in one list.
 
 **Hardening:** ToolGate refuses to replace a tool or workflow through `POST` without the version it
