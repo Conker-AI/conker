@@ -31,15 +31,15 @@ tests, but not yet exercised end to end on an installed stack.
 
 | Area | What you can do | Proven |
 |---|---|---|
-| **Install and run** | `./install.sh`, the guided `./conker setup`, `status`, `update` with rollback, `backup`, held `restore` | Fresh install of main on Linux (WSL2), 27 October: every service healthy, Conker's built-in tools usable with no admin step |
+| **Install and run** | `./install.sh`, the guided `./conker setup`, `status`, `update` with rollback, `backup`, held `restore` | Fresh install of main on Linux (WSL2), 27 October: every service healthy, Conker's built-in tools usable with no admin step. Owner's server (source-built layout), 28 October: updated to this release after a verified backup; "Everything is working" |
 | **Chat** | Chats and drafts, stop, steer and queue, regenerate and branch, search, Think in the background, recovery after a lost connection | Installed stack, 27 to 28 October |
 | **Models** | Local models through Ollama; OpenRouter, OpenAI and Anthropic keys; ChatGPT and Claude plan sign-in; a model per role (answer, thinking, reviewer, helpers); Auto; plan usage alerts | Installed stack with local models, 28 October. Hosted providers: built |
 | **Access** | Per chat, agent and tool: run, let the AI reviewer decide, or ask. A floor of actions always asks. The owner's switch for each tool Conker may use | Installed stack, 28 October: reviewer 5 of 5 (a harmless command ran, a deletion asked, a "no" closed it) |
 | **Inbox** | One card per approval, request and idea; Do it, Don't, Change; Conker's own questions; requests wait until answered, then run once within 15 minutes | Installed stack, 28 October: 13 of 13 decision paths, and a request still approvable after 21 minutes |
-| **Agent sandbox** | Terminal and Install packages in a fresh locked-down container per command, no network, packages through a read-only proxy | Owner's server and installed stack, 27 October: a command ran, a package installed through the proxy, network lookups failed as they should |
+| **Agent sandbox** | Terminal and Install packages in a fresh locked-down container per command, no network, packages through a read-only proxy | Owner's server and installed stack, 27 October: a command ran, a package installed through the proxy, network lookups failed as they should. Owner's server on this release, 28 October: a command ran from chat |
 | **Memory** | Memories with their sources, the memory map, correct and forget from the screen and the CLI, delivery receipts | Built; source checks on Windows, 10 October |
 | **Cron jobs** | The owner's instructions run by the AI with tools, on a schedule, an event or a webhook; workflows drafted from words | Local stack, 23 October: offers appear in the Inbox. Drafting needs a larger model than a 3B CPU model |
-| **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks; screens checked at phone and desktop, light and dark |
+| **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
 | **Projects, agents, teams** | Projects with sources, agent profiles with their own toolkits, teams | Built |
 | **Calls and voice** | Voice turns in a call | Built; needs a configured speech service |
 
@@ -51,11 +51,9 @@ tests, but not yet exercised end to end on an installed stack.
 
 ## Known gaps
 
-- **The owner's server runs an earlier build** (ToolGate 0.8.0). It is offline and gets the current
-  release when it is back.
-- **Small CPU models are the weak spot.** A 3B model sometimes breaks the tool-call format, a 4B
-  reviewer on a 4-core CPU can take minutes and time out, and workflow drafts need a larger or
-  hosted model.
+- **Small CPU models are the weak spot.** A 3B model sometimes breaks the tool-call format or sends
+  arguments the Terminal refuses (a working folder of `/`, an empty timeout), a 4B reviewer on a
+  4-core CPU can take minutes and time out, and workflow drafts need a larger or hosted model.
 - **An answer can be lost** if Pi restarts while delivering it.
 - **The profile photo is kept per browser** for now.
 - **Some settings say "Not used yet":** they are saved, and the feature that reads them comes later.
