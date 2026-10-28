@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A separate, stronger reviewer.** The check before Conker acts without asking you has its own
+  model in Settings, Models (Checking actions), so it can be stronger than the model that answers,
+  for example Jev; `conker models --role reviewer --model ID` does the same. When the AI decides,
+  anything that reaches a real person or can't be undone now always asks you. Every Inbox item
+  also uses the same answer row (ideas: Accept / Not now; AI-job notes: Open chat / Got it).
+  Pins Pi 0.10.0.
+
 - **One Inbox card, and your answer continues the work.** Every decision shows its answers in one
   row: the tool's own yes and no (Send it / Don't send, Publish / Not yet, ...) and Change, which
   sends your words to Conker instead. Do it runs the exact action at once; you no longer open the
