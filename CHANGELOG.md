@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **`conker config` on an installed server.** `./conker config list|get|set|reset` now works on a
+  Docker install (repository and Ubuntu layouts), not only in development: the same registry and
+  checks, and every read or write reaches Pi inside its own container, so no key leaves it.
+  Settings kept in each browser (theme, text size, motion) say so instead of changing.
+
 - **Settings, rebuilt around topics.** Every setting (401, in 31 topics such as Appearance, Inbox,
   Models, Memory, Access and Server) now comes from one registry, one file per topic in
   `dashboard/src/settings/registry/`, and every one uses the same row: title, one sentence, its

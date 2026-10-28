@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ COMMANDS = {
     "doctor",
     "inspect",
     "apply",
+    "config",
     "tailscale",
     "backup",
     "verify-backup",
@@ -367,4 +369,62 @@ def test_ubuntu_recovery_hold_blocks_writer_commands_before_compose(ubuntu_cli):
 
     assert result.returncode == 1
     assert "Recovery is held" in result.stderr
+    assert not ubuntu_cli.docker_log.exists()
+
+
+# Pi's owner settings document for conker config, as the pi container's relay sees it.
+FAKE_PI = """
+import json, os, sys
+from pathlib import Path
+state = Path(os.environ["FAKE_PI_STATE"])
+saved = json.loads(state.read_text()) if state.exists() else {"revision": 0, "values": {}}
+method, path = sys.argv[-2:]
+if path != "/owner/settings":
+    sys.stdout.write('404\\n{"detail": "Not Found"}')
+    raise SystemExit
+if method == "POST":
+    body = json.load(sys.stdin)
+    assert body["expected_revision"] == saved["revision"]
+    saved = {"revision": saved["revision"] + 1, "values": body["values"]}
+    state.write_text(json.dumps(saved))
+sys.stdout.write("200\\n" + json.dumps({"schemaVersion": 1, **saved}))
+"""
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Python starts the recording Docker, a POSIX script"
+)
+def test_config_changes_settings_through_pi_inside_its_container(ubuntu_cli, tmp_path):
+    fake, state = tmp_path / "fake_pi.py", tmp_path / "pi-settings.json"
+    fake.write_text(FAKE_PI, encoding="utf-8")
+    ubuntu_cli.environment.update(FAKE_PI=str(fake), FAKE_PI_STATE=str(state))
+
+    saved = ubuntu_cli("config", "set", "appearance.accent", "purple")
+    assert saved.returncode == 0, saved.stderr
+    assert json.loads(saved.stdout)["value"] == "purple"
+    got = json.loads(ubuntu_cli("config", "get", "appearance.accent").stdout)
+    assert got["value"] == "purple" and got["modified"] is True
+    listed = ubuntu_cli("config", "list", "--group", "appearance")
+    rows = {row["id"]: row for row in json.loads(listed.stdout)["settings"]}
+    assert rows["appearance.accent"]["value"] == "purple"
+    assert "appearance.theme" not in rows  # kept in each browser
+    reset = ubuntu_cli("config", "reset", "appearance.accent")
+    assert json.loads(reset.stdout)["value"] == "neutral"
+    assert json.loads(state.read_text(encoding="utf-8"))["values"] == {}
+    log = ubuntu_cli.docker_log.read_text(encoding="utf-8")
+    calls = [line for line in log.splitlines() if line.startswith("compose ")]
+    assert len(calls) == 6  # set and reset read, then write; get and list read once
+    assert all(
+        "compose --project-directory" in call and "exec -T pi python -c" in call
+        for call in calls
+    )
+    assert log.count("\n GET /owner/settings\n") == 4
+    assert log.count("\n POST /owner/settings\n") == 2
+
+    ubuntu_cli.docker_log.unlink()
+    bad = ubuntu_cli("config", "set", "appearance.accent", "green")
+    assert bad.returncode == 2 and "Use one of: neutral, blue" in bad.stderr
+    browser = ubuntu_cli("config", "set", "appearance.theme", "light")
+    assert browser.returncode == 2 and "kept in each browser" in browser.stderr
+    assert ubuntu_cli("config").returncode == 2
     assert not ubuntu_cli.docker_log.exists()

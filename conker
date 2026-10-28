@@ -247,6 +247,14 @@ cmd_apply() {
     compose exec -T gateway python -m gateway apply "$resource" < "$file"
 }
 
+cmd_config() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for conker config. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    python3 "$SOURCE_ROOT/scripts/config_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
+}
+
 cmd_key() {
     [ "$LAYOUT" = repository ] || unavailable key \
         'This layout has separate scoped credentials; there is no single admin key to reveal.'
@@ -787,6 +795,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Inspect access for one exact immutable publication
   ${BOLD}apply${OFF} agents|approvals|artifacts|asks|calls|character|files|inventory|jobs|memory|models|projects|proposals|requests|sessions|tasks|teams|tools|turns FILE
               Apply a typed revision-checked owner-control document
+  ${BOLD}config${OFF} list [--group TOPIC] [--search TEXT] [--modified] | get|set|reset ID
+              Read and change the settings of the Settings screen (--chat CHAT_ID for one chat)
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
   ${BOLD}backup${OFF} [--destination DIR]
               Create a verified snapshot (stops writers during capture)
@@ -868,6 +878,7 @@ case "$command" in
     doctor)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_doctor ;;
     inspect)   [ "$#" -ge 2 ] && [ "$#" -le 5 ] || { usage >&2; exit 2; }; shift; cmd_inspect "$@" ;;
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
+    config)    shift; cmd_config "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
     logs)      [ "$#" -le 3 ] || { usage >&2; exit 2; }; shift; cmd_logs "$@" ;;
     model)     [ "$#" -eq 2 ] || { usage >&2; exit 2; }; shift; cmd_model "$@" ;;
