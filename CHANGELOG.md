@@ -6,6 +6,14 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One Inbox card, and your answer continues the work.** Every decision shows its answers in one
+  row: the tool's own yes and no (Send it / Don't send, Publish / Not yet, ...) and Change, which
+  sends your words to Conker instead. Do it runs the exact action at once; you no longer open the
+  chat to continue it, and a no frees that chat. Conker can ask you questions (`conker.ask`) with
+  options it writes; your answer goes to that chat as your next message. Pick each tool's buttons
+  in Settings, Access or with `conker tool-card`; answer from the CLI with `conker apply asks`.
+  Pins Pi 0.9.0 and ToolGate 0.9.0.
+
 - Pins ToolGate 0.8.1: the Terminal tells models never to wrap a whole command in quotes.
 
 - **Requests wait until you see them.** An Inbox request no longer runs out after minutes: it
