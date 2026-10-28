@@ -6,7 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
-import { createFakeAgentJobs, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
+import { continueAfterDecision, createFakeAgentJobs, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -606,16 +606,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if ((match = path.match(/^\/api\/owner\/requests\/([^/]+)\/decision$/))) {
       const item = approvals.find(row => row.id === match![1]) ?? fail(404)
       const status = String(options.body?.status)
-      Object.assign(item, { status, updated_at: iso(now()), reviewable: false, unavailable_reason: 'already_decided', decision: { status, actor: 'owner', note: String(options.body?.note ?? ''), at: iso(now()) } })
-      // As Pi does after his decision: Do it runs and replies; a no closes; Change sends his words.
-      const owner = sessions.find(row => row.turns.some(turn => turn.approval_request_id === item.id && turn.status === 'awaiting_approval'))
-      const turn = owner?.turns.find(row => row.approval_request_id === item.id)
-      if (owner && turn) {
-        const words = String(options.body?.note ?? '').trim()
-        const say = (role: 'user' | 'assistant', content: string) => owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role, content, created_at: now() })
-        if (status === 'approved') { say('assistant', 'Done. I sent the email to coach and will tell you when they reply.'); Object.assign(turn, { status: 'complete', acted: 1, ended_at: now() }) }
-        else { Object.assign(turn, { status: 'cancelled', ended_at: now(), detail: words ? 'You said what to do instead in the Inbox. This action was not done.' : 'You said no in the Inbox. Nothing was done.' }); if (words) { say('user', words); say('assistant', 'Got it, I changed it the way you said.') } }
-      }
+      Object.assign(item, { status, updated_at: iso(now()), reviewable: false, unavailable_reason: 'already_decided', decision: { status, actor: 'owner', note: String(options.body?.note ?? ''), at: iso(now()) } }); continueAfterDecision(sessions, item.id as string, status, String(options.body?.note ?? ''), () => nextId('msg'), now)
       return item
     }
     if (path === '/api/pi/proposals') return { proposals: proposals.filter(item => item.state === 'open') }
