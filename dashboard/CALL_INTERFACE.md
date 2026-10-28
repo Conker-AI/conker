@@ -45,13 +45,13 @@ The user's CC control opts into real browser recognition through `ConkerClient.v
 - Verified actual word events in connected Chrome, the current word holding during pause and advancing after resume, completed text, stopped waveform, held generation, draft preservation, mini/expand, separate settings and keyboard-accessible text. Reviewed desktop dark/light and 375/320px layouts; no horizontal page overflow or console warnings/errors observed. Input recognition was confirmed on hardware in the previous refinement; this pass did not capture a new spoken input sample.
 - Build/design guard (166 sources), affected-file ESLint, call checks and all 14 voice checks pass. Tests cover pause during generation, blocked paused sends, chunk offsets, late boundaries, pause/resume and local voice preference. The layout detector returned no findings. This is frontend call QA, not a full application audit.
 
-Current screenshots: [timed desktop](.impeccable/review/timed-speech-desktop.png), [timed mobile](.impeccable/review/timed-speech-mobile.png), [light paused speech](.impeccable/review/timed-speech-light.png). These use fixture content with camera/microphone off. The owner's waveform reference informed code-drawn bars; the referenced image is not shipped. No new raster asset was added.
+The owner's waveform reference informed code-drawn bars; the referenced image is not shipped. No new raster asset was added.
 
 ### Previous balanced-layout validation
 
 Independent review of the refinement returned **SHIP** at the source-review boundary; final small-viewport validation is complete. The existing lifecycle fixes remain part of the contract: starting from the appbar cancels hidden dictation without losing words or stealing focus, mini respects appearance, and summary dismissal restores useful shell focus. This is call-focused QA, not a final dashboard audit.
 
-Current visual evidence: [balanced desktop light](.impeccable/review/balanced-desktop-light.png), [balanced desktop dark](.impeccable/review/balanced-desktop-dark.png), and [balanced mobile](.impeccable/review/balanced-mobile.png). Earlier `desktop`, `desktop-light`, `mobile`, `mobile-transcript`, `mini`, `mini-avatar-hidden` and `ended` captures in `.impeccable/review/` document the earlier call layout, not the balanced refinement. All are browser screenshots; no generated artwork was added. Final captures use sample messages with devices off; private camera footage and speech were not retained in these artifacts.
+Review screenshots of the call screen were local captures, never part of the repository; retake them with fixture content and camera and microphone off.
 
 The updated `check:calls` defaults/lifecycle checks and all 12 `check:voice` checks pass, including borrowed-stream ownership and the silence error code. The final production build passed the design guard over 165 sources, TypeScript and Vite, and affected-file lint passed after the subtitle adjustment. Broader conversation/character/navigation checks have not been rerun for this refinement.
 

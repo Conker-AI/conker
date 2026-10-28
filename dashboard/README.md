@@ -35,23 +35,31 @@ It is a separate development build, not a switch exposed in the product UI.
 
 ## Screen map
 
+The sidebar follows the owner-approved structure: **Overview** (Home, Inbox, Chats),
+**Workspace** (Projects, Memory, Agents, Tools, Cron jobs) and **System** (Server, Settings).
+[`src/components/gateway/navigation.ts`](src/components/gateway/navigation.ts) is its one
+source of truth; every other place is one search away (Ctrl/Cmd+K).
+
 | Route | Screen |
 | --- | --- |
-| `/`, `/chat`, `/chats`, `/companion` | Connected conversations and task handoff. |
-| `/setup` | Verified first-run progress and the next available operation. |
-| `/inbox` | Owner approvals and proposals. |
-| `/activity` | Durable task and run activity. |
-| `/tools` | Available capabilities and owner tool drafts. |
-| `/memory` | Connected memory evidence, search and forgetting. |
-| `/system` | Connected service and model health. |
-| `/settings` | Connected answer-model routing. |
+| `/`, `/overview` | Home: what needs you, plan allowance, what is coming up. |
+| `/inbox` | One card per approval, request, idea and AI-job note. |
+| `/chats`, `/chat` | The chat list and one conversation. |
+| `/projects` | Projects and their sources. |
+| `/memory` | Memories, the memory map, sources, corrections and forgetting. |
+| `/agents` | Agents, teams and skills. |
+| `/tools` | Tools, workflow drafts, MCP servers and which tools Conker may use. |
+| `/jobs` | Cron jobs and their runs. |
+| `/system` | Server: health, processes, ports, containers, terminal, native sessions, files. |
+| `/settings` | Every setting by topic (`?group=TOPIC`). |
 | `/settings/companion` | Character Studio: identity, style, appearance, voice and modes. |
-| `/login`, `/setup` | Frontend authentication/setup previews. |
+| `/activity` | Tasks, runs and the activity log. |
+| `/artifacts` | Saved content and its versions. |
+| `/setup` | Verified first-run progress and the next step. |
 
-The appbar carries page navigation and conversation-wide actions. The composer
-owns next-turn controls, message toolbars own message actions, and the right rail
-holds requested reference/detail views. The Companion brand opens `/companion`;
-Home is an entry screen, not the parent of every sidebar route.
+The appbar carries page navigation and conversation-wide actions. The composer owns next-turn
+controls, message toolbars own message actions, and the right rail holds requested reference and
+detail views.
 
 ## Preview boundaries
 

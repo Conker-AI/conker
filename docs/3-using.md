@@ -9,11 +9,12 @@ records tested scope and remaining release work.
 
 Open your Conker address and enter the owner password. The local workspace uses
 `https://localhost:18550`; its initial password location and recovery commands are
-in [Connected workspace](connected-workspace.md). Chat messages use your signed-in
+in [Connected workspace](reference/connected-workspace.md). Chat messages use your signed-in
 session. Protected changes ask for owner verification for the exact operation.
 
-Conker opens at **New chat**. Choose an agent and model if needed, type a message
-and send it. **Chats** lists existing conversations; **Load older** reads another
+Conker opens at **Home**: what needs you, what is coming up, and how much of each
+plan is left. **Ask Conker** at the top of the sidebar starts a new chat. Choose an
+agent and model if needed, type a message and send it. **Chats** lists existing conversations; **Load older** reads another
 page. Its search matches saved titles and summaries. Global search with
 **Ctrl/Cmd+K** also offers page navigation and source-specific search results,
 including coverage notices when a source is incomplete or unavailable.
@@ -23,9 +24,48 @@ on its next visible refresh. An open chat also checks for saved changes from
 other clients; delayed updates offer a read-only check. Refreshing does not resume
 or resend work.
 
+## Find your way around
+
+The sidebar has three groups. Everything else is one search away (**Ctrl/Cmd+K**).
+
+| Group | Screens |
+|---|---|
+| **Overview** | **Home** (what needs you today), **Inbox** (every decision waiting for you), **Chats** |
+| **Workspace** | **Projects**, **Memory**, **Agents** (with teams and skills), **Tools**, **Cron jobs** |
+| **System** | **Server** (health, processes, ports, containers, files), **Settings** |
+
+## Decide in the Inbox
+
+Everything that waits for you is one card in the **Inbox**: a tool that needs your OK,
+something Conker asks to create (a cron job, a tool, a memory), an idea, or a note from
+an AI job. Each card says what it is, who asked and how long it has waited, and offers
+the buttons that fit it, such as **Do it**, **Don't** and **Change**. **Change** sends
+your words back to the chat as your next message.
+
+A request waits as long as it takes. Once you approve, that exact action may run once
+within 15 minutes; a changed argument needs a new approval. Answering a card continues
+the work in its chat by itself. Which actions ask you at all depends on the chat, the
+agent and the tool; the defaults are in **Settings > Access and safety**.
+
+## Change a setting
+
+**Settings** lists every topic on the left (on a phone, tap a topic to open it). Each
+setting is one row: its name, one line on what it does, the control, and **Reset**
+once it differs from the default. **Search settings** finds any of them; **Changed
+only** shows what you changed; **Show advanced** reveals the rest. A row marked
+**Not used yet** is saved now and read by a feature that comes later.
+
+The same settings work from the terminal:
+
+```sh
+conker config list --group appearance
+conker config set appearance.accent blue
+conker config reset appearance.accent
+```
+
 ## Keep talking while Conker thinks
 
-In **Settings > General**, choose a **Talking model** and, optionally, a separate
+In **Settings > Models**, choose a **Talking model** and, optionally, a separate
 **Thinking model**. In a Companion chat, enable **Think** for the next message to
 request background analysis. Ordinary messages do not start it automatically.
 
@@ -43,9 +83,8 @@ successful response.
 
 ## Connect providers and assign roles
 
-**Settings > Providers** contains provider connections, the model catalogue and
-advanced role assignments. General keeps the common talking/thinking choices
-close at hand. Context selection, summarization, ranking and proposals can use
+**Settings > Models** holds the talking and thinking choices, and under **Providers**
+the provider connections, the model catalogue and the role assignments. Context selection, summarization, ranking and proposals can use
 their own configured roles.
 
 For the enhanced local profile, choose **Sign in with ChatGPT** or **Sign in with
@@ -88,7 +127,7 @@ one alert until its window resets. Turn the alerts off with
 
 Model-role calls through a subscription runtime remain distinct from a full
 native-agent session. For host CLI commands and installation requirements, see
-[Harnesses and model roles](harnesses-and-models-2026-10-09.md).
+[Harnesses and model roles](reference/harnesses-and-models.md).
 
 ## Inspect native sessions
 
@@ -195,18 +234,17 @@ Start a new independent chat when you need a conversation without that context.
 
 ## Where other work lives
 
-| Destination | Use it for |
+| Screen | Use it for |
 |---|---|
-| **Work / Overview** | Attention, active work and recent activity. |
-| **Inbox** | Tool approvals and proposals with evidence. Accepting a proposal records your choice; it does not execute it automatically. |
-| **Activity** | Tasks, runs and recorded events. |
-| **Library / Projects** | Project metadata and selected source links. |
+| **Projects** | Project metadata and selected source links. |
+| **Memory** | What Conker remembers, the map of how it connects, and the chat each memory came from. Correct or forget any memory here. |
+| **Agents** | Profiles with their own model, toolkit and memory; teams and reusable skills. Instructions do not grant execution rights. |
+| **Tools** | Registered tools, workflow drafts, publication and runs, and which tools Conker may use. |
+| **Cron jobs** | Your instructions run by the AI with tools, on a schedule, an event or a webhook, and their recorded runs. |
+| **Server** | Diagnostics and host observations. The production owner terminal remains deferred. |
+| **Tasks, runs and the activity log** | Recorded work and events, from search or the pages that link to them. |
 | **Artifacts** | Saved owner content and its versions. |
-| **Agents / Teams** | Durable profiles, model choices and granted capabilities; team definitions and runs. |
-| **Skills / Tools** | Reusable instructions, registered tools, workflow drafts, publication and runs. Instructions do not grant execution rights. |
-| **Schedules** | Configured jobs and recorded runs; execution needs the host scheduler. |
-| **System** | Diagnostics and configured host observations. The enhanced Windows owner terminal is a separate host-access surface; the production container terminal remains deferred. |
-| **Settings / Companion** | Character, speaking style and configured voice choices. Full 3D appearance and voice cloning are not connected. |
+| **Settings > Companion** | Character, speaking style and voice. Full 3D appearance and voice cloning are not connected. |
 
 Calls support durable typed turns and bounded English voice turns when a compatible
 speech service is configured. Microphone capture begins only after your click;

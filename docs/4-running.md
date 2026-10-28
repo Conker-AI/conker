@@ -5,8 +5,8 @@ Pick one of three ways.
 | Way | For | Needs |
 |---|---|---|
 | [A · Preview](#a--preview-the-interface) | Looking around, UI work | Node.js 22.12+ |
-| [B · Server](#b--server-ubuntu) | Container deployment; current release acceptance remains pending | Ubuntu, Docker, about 16 GB RAM |
-| [C · Local Windows stack](#c--local-windows-stack) | Connected local app and development | Docker Desktop, Python 3.12, Node.js 22.12+, Ollama |
+| [B · Server](#b--server) | Using Conker every day | Linux (or WSL2) with Docker; about 16 GB of RAM for local models |
+| [C · Local Windows stack](#c--local-windows-stack) | Developing the connected app | Docker Desktop, Python 3.12, Node.js 22.12+, Ollama |
 
 ## A · Preview the interface
 
@@ -18,13 +18,12 @@ npm ci
 npm run dev -- --host localhost --port 5173 --strictPort
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173. A preview is not a connected installation: it cannot prove memory,
+tools or scheduled work.
 
-## B · Server (Ubuntu)
+## B · Server
 
-For a fresh repository installation, use the canonical repository and its
-installer. It builds the connected dashboard with the pinned Node image and
-pulls the application versions declared in `versions.env`:
+### Install
 
 ```sh
 git clone https://github.com/Conker-AI/conker.git
@@ -32,44 +31,33 @@ cd conker
 ./install.sh
 ```
 
-Review the installer prompts and private-network configuration. At the end the
-installer offers `./conker setup`, a guided first run that asks one plain question at
-a time: your browser password, the companion, the answer model, memory, tools and their
-limits, backups, and a short test run. Stop it with Ctrl+C and run it again to continue
-where you left off. Keep the owner password private. A browser preview is not a connected installation and cannot
-prove memory, tools or scheduled work. The source-built layout below is an
-alternative; do not mix the two layouts over the same stores.
+The installer checks the machine, generates every secret, pulls the images pinned in
+`versions.env`, starts them, waits for real health and prints one address. Run it again at any
+time: it repairs rather than duplicates, and it keeps existing secrets. `./install.sh --check` only
+checks the machine; `--yes` accepts every default.
 
-This runs ten containers: gateway, Pi, ToolGate, MemoryGate, PostgreSQL, Qdrant, embeddings,
-SystemGate, Ollama and Laya decisions. Only the gateway gets a port, on `127.0.0.1`. Share it on
-your private network with Tailscale Serve.
+At the end it offers `./conker setup`, a guided first run that asks one plain question at a time:
+your browser password, the companion, the answer model, memory, tools and their limits, backups,
+and a short test run. Stop it with Ctrl+C and run it again to continue where you left off.
 
-1. Export the six repositories into `~/conker-deploy/sources/` and build the dashboard.
-2. Generate configuration and credentials (safe to re-run, keeps existing data):
-   ```sh
-   python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443
-   ```
-3. Start everything:
-   ```sh
-   docker compose -f compose.json up -d
-   ```
-4. Download the configured local models, then run `conker setup` for the guided first
-   run, or choose and test the answer model in the Setup screen. For a scripted install:
-   ```sh
-   conker setup models
-   conker setup run model local-answer
-   ```
-5. Expose the gateway on the tailnet only. Do not use Funnel.
-6. Check it works:
-   ```sh
-   acceptance.py --origin https://HOST:8443 --password-file FILE
-   ```
-
-Full guide: [deploy/ubuntu/README.md](../deploy/ubuntu/README.md).
-The shared runtime contract and the one explicit decision-sidecar packaging difference
-are recorded in [minimum deployment parity](reference/deployment-parity.md).
+Only the gateway gets a port, on `127.0.0.1`. To reach Conker from your phone or laptop,
+`./conker tailscale` walks you through a private path over Tailscale. Do not expose it to the
+internet.
 
 ### Day to day
+
+```sh
+conker status        # is everything working, and what isn't
+conker doctor        # the same findings as the System screen, with recovery actions
+conker update        # a pinned release, staged and health-checked, with rollback
+conker config list   # every setting from the Settings screen
+conker backup        # a verified snapshot
+conker logs pi       # recent logs of one service
+conker stop / start / restart
+```
+
+<details>
+<summary>Every command, with an example</summary>
 
 ```sh
 conker status                 # service health, not just container state
@@ -134,6 +122,34 @@ conker stop
 conker start
 conker update                 # staged, health-checked, rollback-capable
 ```
+
+</details>
+
+### Source-built Ubuntu layout
+
+An alternative to the installer that builds each service from source on the server. It runs the
+same services; do not mix the two layouts over the same stores.
+
+1. Export the six repositories into `~/conker-deploy/sources/` and build the dashboard.
+2. Generate configuration and credentials (safe to re-run, keeps existing data):
+   ```sh
+   python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443
+   ```
+3. Start everything:
+   ```sh
+   docker compose -f compose.json up -d
+   ```
+4. Download the configured local models, then run `conker setup`.
+5. Expose the gateway on the tailnet only. Do not use Funnel.
+6. Check it works:
+   ```sh
+   acceptance.py --origin https://HOST:8443 --password-file FILE
+   ```
+
+Full guide: [deploy/ubuntu/README.md](../deploy/ubuntu/README.md). The shared runtime contract
+and the one packaging difference are recorded in [deployment parity](reference/deployment-parity.md).
+
+### Commands in detail
 
 `conker help` is the authoritative command list in both installation layouts.
 
@@ -356,9 +372,14 @@ This asks for the new password privately and signs out every browser.
 
 ### Backups
 
-Stop the stack, archive `state/` and `compose.json`, check the archive's hash, then start the stack
-again. Keep a copy on another machine. A restore starts in a held state and does not go straight
-back into service. See [recovery](reference/recovery.md).
+```sh
+conker backup --destination DIR     # stops writers briefly, captures, verifies
+conker verify-backup SNAPSHOT       # checks every file and hash
+conker restore SNAPSHOT --into DIR  # restores into fresh, isolated volumes, held
+```
+
+A restore starts held and does not go straight back into service. Keep a copy on another
+machine. See [recovery](reference/recovery.md).
 
 ## C · Local Windows stack
 
@@ -378,7 +399,7 @@ start it again. The launcher checks ownership and preserves the prior served bui
 if publication fails.
 
 Full instructions and optional-service limits:
-[Connected workspace](connected-workspace.md). The older multi-repository backend
+[Connected workspace](reference/connected-workspace.md). The older multi-repository backend
 harness is documented separately in [Local Windows reference](reference/local-windows.md);
 its ports and lifecycle commands are not interchangeable with this workspace.
 
@@ -391,7 +412,7 @@ its ports and lifecycle commands are not interchangeable with this workspace.
   include `conker providers set`, `verify` and `activate`.
 - **Subscription runtimes:** the enhanced local profile connects native ChatGPT
   and Claude Code sign-in separately from API keys. Connecting does not select or
-  verify a model. See [Harnesses and model roles](harnesses-and-models-2026-10-09.md).
+  verify a model. See [Harnesses and model roles](reference/harnesses-and-models.md).
 - **Auto and thinking:** optional Laya chooses among eligible answer models using
   model descriptions and bounded conversation context. This is not a guarantee of
   best-model selection or fixed latency. A separately assigned thinking model runs
