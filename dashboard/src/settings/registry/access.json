@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 2,
+  "id": "access",
+  "title": "Access and safety",
+  "description": "What Conker may do without asking you, and what always asks.",
+  "icon": "shield",
+  "category": "safety",
+  "order": 410,
+  "sections": [
+    {
+      "id": "deciding",
+      "title": "Who decides",
+      "settings": [
+        {
+          "id": "access.delegate",
+          "title": "Let Conker decide by your settings",
+          "description": "Your chat switch, each agent's settings and each tool's own setting decide what runs without asking.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "access-delegate"
+        },
+        {
+          "id": "access.default",
+          "title": "Default for every chat",
+          "description": "What a chat may do without asking until you change it there.",
+          "type": "select",
+          "default": "ai",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask me"
+            },
+            {
+              "value": "ai",
+              "label": "AI decides"
+            },
+            {
+              "value": "full",
+              "label": "Full access"
+            }
+          ]
+        },
+        {
+          "id": "access.your_words",
+          "title": "Your words count as approval",
+          "description": "When your own message asks for exactly this action, it goes ahead without a card.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ],
+      "description": "The most specific setting wins: this chat's switch, then the agent's setting for the tool, then the tool's own."
+    },
+    {
+      "id": "tools",
+      "title": "Tools",
+      "settings": [
+        {
+          "id": "access.tools",
+          "title": "Tools Conker can use",
+          "description": "Off: Conker cannot see or call the tool at all.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "tools-usable"
+        },
+        {
+          "id": "access.always_ask",
+          "title": "Always ask me",
+          "description": "These tools ask you every time, whatever else says.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "always-ask"
+        }
+      ]
+    },
+    {
+      "id": "reviewer",
+      "title": "Reviewer",
+      "settings": [
+        {
+          "id": "access.reviewer_model",
+          "title": "Reviewer model",
+          "description": "The model that checks an action before it runs without you.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "reviewer-model"
+        },
+        {
+          "id": "access.reviewer.strictness",
+          "title": "Strictness",
+          "description": "How readily the reviewer lets an action go ahead.",
+          "type": "select",
+          "default": "balanced",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "strict",
+              "label": "Strict"
+            },
+            {
+              "value": "balanced",
+              "label": "Balanced"
+            },
+            {
+              "value": "relaxed",
+              "label": "Relaxed"
+            }
+          ]
+        },
+        {
+          "id": "access.escalate",
+          "title": "People and lasting changes ask you",
+          "description": "When an action that reaches a person or can't be undone asks you.",
+          "type": "select",
+          "default": "ai",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ai",
+              "label": "When the AI decides"
+            },
+            {
+              "value": "ai_full",
+              "label": "Also with Full access"
+            }
+          ]
+        },
+        {
+          "id": "access.real_person",
+          "title": "A real person means",
+          "description": "Who counts as a person for that rule.",
+          "type": "select",
+          "default": "anyone",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "anyone",
+              "label": "Anyone"
+            },
+            {
+              "value": "untrusted",
+              "label": "Anyone not on your trusted list"
+            }
+          ]
+        },
+        {
+          "id": "access.trusted_people",
+          "title": "Trusted people",
+          "description": "People Conker may message without the extra ask; it still shows in Handled.",
+          "type": "tags",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "access.show_reason",
+          "title": "Show the reviewer's reason",
+          "description": "Shows on each card why the reviewer asked you.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "guards",
+      "title": "Guards",
+      "settings": [
+        {
+          "id": "access.always_ask_kinds",
+          "title": "Always ask about",
+          "description": "Kinds of actions that ask you every time.",
+          "type": "tags",
+          "default": [
+            "Banking",
+            "Passwords",
+            "Government",
+            "Health"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "access.pause",
+          "title": "Pause everything",
+          "description": "Stops every cron job and anything that would run without you.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "access.lockdown",
+          "title": "Lockdown",
+          "description": "Lets Conker only read until you turn it off.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "access.reverify",
+          "title": "Ask for your password",
+          "description": "How often changes ask for your password again.",
+          "type": "select",
+          "default": "every",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "every",
+              "label": "Every time"
+            },
+            {
+              "value": "ten",
+              "label": "Once every 10 minutes"
+            },
+            {
+              "value": "session",
+              "label": "Once per sign-in"
+            }
+          ]
+        },
+        {
+          "id": "access.outside",
+          "title": "After outside content",
+          "description": "How long a chat stays stricter after it read someone else's text.",
+          "type": "select",
+          "default": "chat",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "chat",
+              "label": "For the whole chat"
+            },
+            {
+              "value": "cleared",
+              "label": "Until you clear it"
+            }
+          ]
+        },
+        {
+          "id": "access.weekly_review",
+          "title": "Weekly review",
+          "description": "A weekly card listing everything that ran without you.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

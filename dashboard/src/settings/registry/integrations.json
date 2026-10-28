@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 2,
+  "id": "integrations",
+  "title": "Integrations",
+  "description": "How Conker may use the connectors you build.",
+  "icon": "plug",
+  "category": "system",
+  "order": 510,
+  "sections": [
+    {
+      "id": "calendar",
+      "title": "Calendar",
+      "settings": [
+        {
+          "id": "integrations.calendar",
+          "title": "Calendar use",
+          "description": "What Conker may do with your calendars.",
+          "type": "list",
+          "default": [
+            "read"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "read",
+              "label": "Read events"
+            },
+            {
+              "value": "add",
+              "label": "Add events"
+            }
+          ]
+        },
+        {
+          "id": "integrations.calendar_reminders",
+          "title": "Event reminders",
+          "description": "When Conker reminds you of an event.",
+          "type": "select",
+          "default": "30",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "Never"
+            },
+            {
+              "value": "10",
+              "label": "10 minutes before"
+            },
+            {
+              "value": "30",
+              "label": "30 minutes before"
+            },
+            {
+              "value": "60",
+              "label": "1 hour before"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mail",
+      "title": "Email",
+      "settings": [
+        {
+          "id": "integrations.email",
+          "title": "Email use",
+          "description": "What Conker may do with your email; sending always asks.",
+          "type": "select",
+          "default": "off",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Nothing"
+            },
+            {
+              "value": "read",
+              "label": "Read"
+            },
+            {
+              "value": "draft",
+              "label": "Read and draft"
+            }
+          ]
+        },
+        {
+          "id": "integrations.signature",
+          "title": "Signature",
+          "description": "The signature on emails Conker drafts.",
+          "type": "textarea",
+          "default": "",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 500
+        }
+      ]
+    },
+    {
+      "id": "messages",
+      "title": "Messengers",
+      "settings": [
+        {
+          "id": "integrations.messengers",
+          "title": "Messengers",
+          "description": "Which messengers Conker may use once you connect them.",
+          "type": "list",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "telegram",
+              "label": "Telegram"
+            },
+            {
+              "value": "whatsapp",
+              "label": "WhatsApp"
+            },
+            {
+              "value": "discord",
+              "label": "Discord"
+            }
+          ]
+        },
+        {
+          "id": "integrations.listen",
+          "title": "Listen for messages",
+          "description": "Which new messages start a cron job.",
+          "type": "select",
+          "default": "off",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "None"
+            },
+            {
+              "value": "mentions",
+              "label": "Messages to you"
+            },
+            {
+              "value": "all",
+              "label": "All messages"
+            }
+          ]
+        },
+        {
+          "id": "integrations.draft_replies",
+          "title": "Draft replies",
+          "description": "Conker drafts replies; sending always asks you.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "title": "Files, notes and code",
+      "settings": [
+        {
+          "id": "integrations.storage",
+          "title": "File storage",
+          "description": "Which file services Conker may read.",
+          "type": "list",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "drive",
+              "label": "Google Drive"
+            },
+            {
+              "value": "onedrive",
+              "label": "OneDrive"
+            },
+            {
+              "value": "dropbox",
+              "label": "Dropbox"
+            }
+          ]
+        },
+        {
+          "id": "integrations.notes",
+          "title": "Notes",
+          "description": "Which note apps Conker may read.",
+          "type": "list",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "notion",
+              "label": "Notion"
+            },
+            {
+              "value": "obsidian",
+              "label": "Obsidian"
+            }
+          ]
+        },
+        {
+          "id": "integrations.github",
+          "title": "GitHub",
+          "description": "Lets Conker read your GitHub repositories.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "id": "memory",
+  "title": "Memory",
+  "description": "What Conker remembers about you and for how long.",
+  "icon": "book-marked",
+  "category": "brain",
+  "order": 330,
+  "sections": [
+    {
+      "id": "memory",
+      "title": "Remembering",
+      "settings": [
+        {
+          "id": "memory.mode",
+          "title": "Memory",
+          "description": "Whether Conker reads and adds memories.",
+          "type": "select",
+          "default": "on",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "read",
+              "label": "Read only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "memory.auto",
+          "title": "Remember on its own",
+          "description": "Whether Conker saves memories without asking.",
+          "type": "select",
+          "default": "allowed",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "allowed",
+              "label": "Yes, listed in Handled"
+            },
+            {
+              "value": "ask",
+              "label": "Ask me first"
+            },
+            {
+              "value": "off",
+              "label": "Never"
+            }
+          ]
+        },
+        {
+          "id": "memory.kinds",
+          "title": "What to remember",
+          "description": "Kinds of things Conker may remember.",
+          "type": "list",
+          "default": [
+            "facts",
+            "preferences",
+            "people",
+            "places",
+            "events",
+            "decisions",
+            "tasks",
+            "howtos"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "facts",
+              "label": "Facts"
+            },
+            {
+              "value": "preferences",
+              "label": "Preferences"
+            },
+            {
+              "value": "people",
+              "label": "People"
+            },
+            {
+              "value": "places",
+              "label": "Places"
+            },
+            {
+              "value": "events",
+              "label": "Events"
+            },
+            {
+              "value": "decisions",
+              "label": "Decisions"
+            },
+            {
+              "value": "tasks",
+              "label": "Tasks"
+            },
+            {
+              "value": "howtos",
+              "label": "How-tos"
+            }
+          ]
+        },
+        {
+          "id": "memory.never",
+          "title": "Never remember",
+          "description": "Topics Conker never saves to memory.",
+          "type": "tags",
+          "default": [
+            "Health",
+            "Money",
+            "Passwords",
+            "Other people's secrets"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "memory.agents",
+          "title": "Memory between agents",
+          "description": "Whether agents share one memory.",
+          "type": "select",
+          "default": "shared",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "shared",
+              "label": "Shared"
+            },
+            {
+              "value": "separate",
+              "label": "Separate for each agent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recall",
+      "title": "Recall",
+      "settings": [
+        {
+          "id": "memory.recall",
+          "title": "Recall in new chats",
+          "description": "Whether memories are used in new chats.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "memory.per_answer",
+          "title": "Memories per answer",
+          "description": "The most memories one answer uses.",
+          "type": "number",
+          "default": 8,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 50,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "upkeep",
+      "title": "Upkeep",
+      "settings": [
+        {
+          "id": "memory.review",
+          "title": "Review new memories",
+          "description": "How you check what Conker remembered.",
+          "type": "select",
+          "default": "never",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "never",
+              "label": "Never"
+            },
+            {
+              "value": "each",
+              "label": "One by one"
+            },
+            {
+              "value": "weekly",
+              "label": "Weekly digest"
+            }
+          ]
+        },
+        {
+          "id": "memory.event_days",
+          "title": "Forget events after",
+          "description": "Forgets past events after this long; 0 keeps them.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 3650,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "memory.conflicts",
+          "title": "When memories disagree",
+          "description": "What happens when a new memory contradicts an old one.",
+          "type": "select",
+          "default": "ask",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask you"
+            },
+            {
+              "value": "newer",
+              "label": "Keep the newer"
+            },
+            {
+              "value": "both",
+              "label": "Keep both"
+            }
+          ]
+        },
+        {
+          "id": "memory.map",
+          "title": "Memory map",
+          "description": "Shows memories as a map of connected things.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

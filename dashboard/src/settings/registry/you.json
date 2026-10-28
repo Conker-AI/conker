@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 2,
+  "id": "you",
+  "title": "You",
+  "description": "Who you are, where you are and how your days run.",
+  "icon": "user",
+  "category": "you",
+  "order": 10,
+  "sections": [
+    {
+      "id": "identity",
+      "title": "Identity",
+      "settings": [
+        {
+          "id": "you.profile",
+          "title": "Name and photo",
+          "description": "Your name and photo in Conker and in calls.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "profile"
+        },
+        {
+          "id": "you.call_me",
+          "title": "What Conker calls you",
+          "description": "The name Conker uses when it talks to you; empty uses your name.",
+          "type": "text",
+          "default": "",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 60
+        },
+        {
+          "id": "you.pronouns",
+          "title": "Pronouns",
+          "description": "How Conker refers to you when it writes about you.",
+          "type": "select",
+          "default": "unset",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "unset",
+              "label": "Not set"
+            },
+            {
+              "value": "he",
+              "label": "He"
+            },
+            {
+              "value": "she",
+              "label": "She"
+            },
+            {
+              "value": "they",
+              "label": "They"
+            }
+          ]
+        },
+        {
+          "id": "you.about",
+          "title": "About you",
+          "description": "A short text Conker always knows: school, work, what matters to you.",
+          "type": "textarea",
+          "default": "",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 2000
+        },
+        {
+          "id": "you.goals",
+          "title": "Your goals",
+          "description": "Goals Conker keeps in mind when it plans, suggests and reminds.",
+          "type": "tags",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "you.people",
+          "title": "Important people",
+          "description": "Who is who in your life: name, relation and how to reach them, one per line.",
+          "type": "textarea",
+          "default": "",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 4000
+        }
+      ]
+    },
+    {
+      "id": "place",
+      "title": "Place and language",
+      "settings": [
+        {
+          "id": "you.time_zone",
+          "title": "Time zone",
+          "description": "Your time zone for schedules, reminders and the daily ritual.",
+          "type": "timezone",
+          "default": "Asia/Jerusalem",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "you.time_zone_auto",
+          "title": "Follow this device's time zone",
+          "description": "Updates your time zone when you travel.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "you.app_language",
+          "title": "App language",
+          "description": "The language of Conker's screens.",
+          "type": "select",
+          "default": "en",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "en",
+              "label": "English"
+            },
+            {
+              "value": "he",
+              "label": "Hebrew"
+            },
+            {
+              "value": "ru",
+              "label": "Russian"
+            }
+          ]
+        },
+        {
+          "id": "you.answer_language",
+          "title": "Answer language",
+          "description": "The language Conker answers in.",
+          "type": "select",
+          "default": "same",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "same",
+              "label": "Same as your message"
+            },
+            {
+              "value": "en",
+              "label": "English"
+            },
+            {
+              "value": "he",
+              "label": "Hebrew"
+            },
+            {
+              "value": "ru",
+              "label": "Russian"
+            }
+          ]
+        },
+        {
+          "id": "you.time_format",
+          "title": "Time format",
+          "description": "How times are written.",
+          "type": "select",
+          "default": "24h",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "24h",
+              "label": "24-hour"
+            },
+            {
+              "value": "12h",
+              "label": "12-hour"
+            }
+          ]
+        },
+        {
+          "id": "you.date_format",
+          "title": "Date format",
+          "description": "How dates are written.",
+          "type": "select",
+          "default": "dmy",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "dmy",
+              "label": "28 Oct 2026"
+            },
+            {
+              "value": "mdy",
+              "label": "Oct 28, 2026"
+            },
+            {
+              "value": "ymd",
+              "label": "2026-10-28"
+            }
+          ]
+        },
+        {
+          "id": "you.week_start",
+          "title": "First day of the week",
+          "description": "Where weeks start in calendars and weekly plans.",
+          "type": "select",
+          "default": "sunday",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "sunday",
+              "label": "Sunday"
+            },
+            {
+              "value": "monday",
+              "label": "Monday"
+            }
+          ]
+        },
+        {
+          "id": "you.units",
+          "title": "Units",
+          "description": "Units for distance, weight and temperature.",
+          "type": "select",
+          "default": "metric",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "metric",
+              "label": "Metric"
+            },
+            {
+              "value": "imperial",
+              "label": "Imperial"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rhythm",
+      "title": "Your rhythm",
+      "settings": [
+        {
+          "id": "you.wake",
+          "title": "Wake time",
+          "description": "When your day usually starts.",
+          "type": "time",
+          "default": "07:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "you.sleep",
+          "title": "Sleep time",
+          "description": "When your day usually ends.",
+          "type": "time",
+          "default": "23:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "you.week",
+          "title": "Your week",
+          "description": "Fixed parts of your week, like school, work or training, in your own words.",
+          "type": "textarea",
+          "default": "",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 2000
+        },
+        {
+          "id": "you.focus",
+          "title": "Best focus time",
+          "description": "When Conker should plan your hardest work.",
+          "type": "select",
+          "default": "varies",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "morning",
+              "label": "Morning"
+            },
+            {
+              "value": "afternoon",
+              "label": "Afternoon"
+            },
+            {
+              "value": "evening",
+              "label": "Evening"
+            },
+            {
+              "value": "night",
+              "label": "Night"
+            },
+            {
+              "value": "varies",
+              "label": "It varies"
+            }
+          ]
+        },
+        {
+          "id": "you.away",
+          "title": "Away mode",
+          "description": "While on, Conker sends nothing first and the Inbox waits for you.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "you.away_until",
+          "title": "Away until",
+          "description": "The day away mode turns off by itself.",
+          "type": "date",
+          "default": null,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

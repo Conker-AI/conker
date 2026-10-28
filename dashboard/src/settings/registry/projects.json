@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "id": "projects",
+  "title": "Tasks and projects",
+  "description": "How tasks and projects are tracked.",
+  "icon": "folder-kanban",
+  "category": "system",
+  "order": 520,
+  "sections": [
+    {
+      "id": "tasks",
+      "title": "Tasks",
+      "settings": [
+        {
+          "id": "projects.tasks_home",
+          "title": "Tasks on Home",
+          "description": "Shows open tasks on Home.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "projects.task_reminders",
+          "title": "Task reminders",
+          "description": "When Conker reminds you of a task's due date.",
+          "type": "select",
+          "default": "morning",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "Never"
+            },
+            {
+              "value": "morning",
+              "label": "On the morning it is due"
+            },
+            {
+              "value": "day_before",
+              "label": "The day before"
+            }
+          ]
+        },
+        {
+          "id": "projects.tasks_from_chats",
+          "title": "Tasks from chats",
+          "description": "Whether Conker turns things you say into tasks.",
+          "type": "select",
+          "default": "ask",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask you"
+            },
+            {
+              "value": "off",
+              "label": "Never"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "title": "Projects",
+      "settings": [
+        {
+          "id": "projects.archive_after",
+          "title": "Archive finished projects after",
+          "description": "Archives a finished project after this long; 0 keeps it.",
+          "type": "number",
+          "default": 0,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 365,
+          "step": 1,
+          "unit": "days"
+        }
+      ]
+    }
+  ]
+}

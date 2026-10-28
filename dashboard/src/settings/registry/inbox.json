@@ -1,0 +1,434 @@
+{
+  "schemaVersion": 2,
+  "id": "inbox",
+  "title": "Inbox",
+  "description": "How requests, questions and the daily ritual work.",
+  "icon": "inbox",
+  "category": "inbox",
+  "order": 110,
+  "sections": [
+    {
+      "id": "waiting",
+      "title": "Waiting and running",
+      "settings": [
+        {
+          "id": "inbox.wait",
+          "title": "Requests wait",
+          "description": "How long a request waits for your answer.",
+          "type": "select",
+          "default": "forever",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "forever",
+              "label": "Until you answer"
+            },
+            {
+              "value": "hour",
+              "label": "One hour"
+            },
+            {
+              "value": "day",
+              "label": "One day"
+            },
+            {
+              "value": "week",
+              "label": "One week"
+            }
+          ]
+        },
+        {
+          "id": "inbox.run_window",
+          "title": "Time to run after you approve",
+          "description": "How long an approved action has to start.",
+          "type": "number",
+          "default": 15,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 60,
+          "step": 5,
+          "unit": "minutes"
+        },
+        {
+          "id": "inbox.duplicates",
+          "title": "Same request twice",
+          "description": "What happens when Conker asks for the same action again.",
+          "type": "select",
+          "default": "merge",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "merge",
+              "label": "One card"
+            },
+            {
+              "value": "separate",
+              "label": "Separate cards"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ritual",
+      "title": "Daily ritual",
+      "settings": [
+        {
+          "id": "inbox.ritual",
+          "title": "Daily ritual",
+          "description": "At set times Conker sums up what it did and lists what needs you.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "inbox.ritual_morning",
+          "title": "Morning ritual",
+          "description": "When the morning summary arrives.",
+          "type": "time",
+          "default": "08:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "inbox.ritual_evening",
+          "title": "Evening ritual",
+          "description": "When the evening summary arrives.",
+          "type": "time",
+          "default": "20:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "inbox.ritual_weekends",
+          "title": "Ritual on weekends",
+          "description": "Keeps the ritual on Friday and Saturday too.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "inbox.ritual_order",
+          "title": "What comes first",
+          "description": "The order of the ritual.",
+          "type": "select",
+          "default": "summary",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "summary",
+              "label": "What I did, then questions"
+            },
+            {
+              "value": "questions",
+              "label": "Questions, then what I did"
+            }
+          ]
+        },
+        {
+          "id": "inbox.ritual_length",
+          "title": "Summary length",
+          "description": "How long the \"What I did\" summary is.",
+          "type": "select",
+          "default": "short",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "line",
+              "label": "One line each"
+            },
+            {
+              "value": "short",
+              "label": "Short"
+            },
+            {
+              "value": "full",
+              "label": "Full"
+            }
+          ]
+        },
+        {
+          "id": "inbox.ritual_covers",
+          "title": "Summary covers",
+          "description": "What the summary tells you about.",
+          "type": "list",
+          "default": [
+            "chats",
+            "jobs",
+            "memories",
+            "money",
+            "tools",
+            "failures"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "chats",
+              "label": "Chats"
+            },
+            {
+              "value": "jobs",
+              "label": "Cron jobs"
+            },
+            {
+              "value": "memories",
+              "label": "Memories"
+            },
+            {
+              "value": "money",
+              "label": "Money spent"
+            },
+            {
+              "value": "tools",
+              "label": "Tools run"
+            },
+            {
+              "value": "failures",
+              "label": "What failed"
+            }
+          ]
+        },
+        {
+          "id": "inbox.ritual_delivery",
+          "title": "How the ritual reaches you",
+          "description": "Where the ritual shows up.",
+          "type": "list",
+          "default": [
+            "card",
+            "notification"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "card",
+              "label": "Inbox card"
+            },
+            {
+              "value": "notification",
+              "label": "Notification"
+            },
+            {
+              "value": "chat",
+              "label": "Chat message"
+            },
+            {
+              "value": "voice",
+              "label": "Read aloud"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cards",
+      "title": "Cards",
+      "settings": [
+        {
+          "id": "inbox.tool_buttons",
+          "title": "Buttons per tool",
+          "description": "The buttons a tool's card shows when it asks you.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "inbox-buttons"
+        },
+        {
+          "id": "inbox.details_open",
+          "title": "Exact details open",
+          "description": "Shows a request's exact details without tapping Details.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "inbox.asks_per_chat",
+          "title": "Questions per chat",
+          "description": "How many of Conker's questions can wait from one chat.",
+          "type": "number",
+          "default": 3,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 10,
+          "step": 1
+        },
+        {
+          "id": "inbox.asks_total",
+          "title": "Questions in all",
+          "description": "How many of Conker's questions can wait at once.",
+          "type": "number",
+          "default": 20,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 100,
+          "step": 5
+        },
+        {
+          "id": "inbox.group_by",
+          "title": "Group cards by",
+          "description": "How the Inbox groups what waits for you.",
+          "type": "select",
+          "default": "kind",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "kind",
+              "label": "Kind"
+            },
+            {
+              "value": "chat",
+              "label": "Chat"
+            },
+            {
+              "value": "agent",
+              "label": "Agent"
+            },
+            {
+              "value": "urgency",
+              "label": "Urgency"
+            }
+          ]
+        },
+        {
+          "id": "inbox.sort",
+          "title": "Order",
+          "description": "Which cards come first.",
+          "type": "select",
+          "default": "urgent",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "urgent",
+              "label": "Urgent first"
+            },
+            {
+              "value": "oldest",
+              "label": "Oldest first"
+            },
+            {
+              "value": "newest",
+              "label": "Newest first"
+            }
+          ]
+        },
+        {
+          "id": "inbox.later",
+          "title": "Later means",
+          "description": "When a card you moved to Later comes back.",
+          "type": "select",
+          "default": "ritual",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ritual",
+              "label": "Next ritual"
+            },
+            {
+              "value": "tonight",
+              "label": "Tonight"
+            },
+            {
+              "value": "tomorrow",
+              "label": "Tomorrow morning"
+            }
+          ]
+        },
+        {
+          "id": "inbox.badge",
+          "title": "Badge count",
+          "description": "What the Inbox count includes.",
+          "type": "select",
+          "default": "all",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "all",
+              "label": "Everything"
+            },
+            {
+              "value": "urgent",
+              "label": "Urgent only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "inbox.handled_days",
+          "title": "Keep Handled",
+          "description": "How long the list of what Conker did stays.",
+          "type": "number",
+          "default": 7,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 90,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "inbox.notes_days",
+          "title": "Keep AI-job notes",
+          "description": "How long findings from cron jobs stay in the Inbox.",
+          "type": "number",
+          "default": 14,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 90,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "inbox.batch",
+          "title": "Approve similar together",
+          "description": "Lets you approve many of one kind at once; never for messages, money or deleting.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

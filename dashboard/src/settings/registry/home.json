@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 2,
+  "id": "home",
+  "title": "Home",
+  "description": "What your first screen shows.",
+  "icon": "house",
+  "category": "you",
+  "order": 30,
+  "sections": [
+    {
+      "id": "tiles",
+      "title": "Tiles",
+      "settings": [
+        {
+          "id": "home.tiles",
+          "title": "Tiles on Home",
+          "description": "Which tiles Home shows.",
+          "type": "list",
+          "default": [
+            "needs_you",
+            "plan",
+            "upcoming",
+            "handled"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "needs_you",
+              "label": "Needs you"
+            },
+            {
+              "value": "today",
+              "label": "Today"
+            },
+            {
+              "value": "plan",
+              "label": "Plan allowance"
+            },
+            {
+              "value": "running",
+              "label": "Running now"
+            },
+            {
+              "value": "upcoming",
+              "label": "Coming up"
+            },
+            {
+              "value": "recent",
+              "label": "Recent chats"
+            },
+            {
+              "value": "ideas",
+              "label": "Ideas"
+            },
+            {
+              "value": "handled",
+              "label": "Done today"
+            },
+            {
+              "value": "goals",
+              "label": "Your goals"
+            },
+            {
+              "value": "server",
+              "label": "Server health"
+            },
+            {
+              "value": "spend",
+              "label": "Spending"
+            }
+          ]
+        },
+        {
+          "id": "home.needs_count",
+          "title": "Waiting items on Home",
+          "description": "How many waiting items Home shows before the rest stay in the Inbox.",
+          "type": "number",
+          "default": 3,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        },
+        {
+          "id": "home.greeting",
+          "title": "Greeting",
+          "description": "The line at the top of Home.",
+          "type": "select",
+          "default": "short",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "short",
+              "label": "Short"
+            },
+            {
+              "value": "encouraging",
+              "label": "Encouraging, when earned"
+            }
+          ]
+        },
+        {
+          "id": "home.start_card",
+          "title": "Start of day card",
+          "description": "Shows what is due today and what Conker did overnight.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "home.quick_actions",
+          "title": "Quick actions",
+          "description": "Buttons on Home for things you do often.",
+          "type": "list",
+          "default": [
+            "new_chat",
+            "add_memory"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "new_chat",
+              "label": "New chat"
+            },
+            {
+              "value": "voice_note",
+              "label": "Voice note"
+            },
+            {
+              "value": "add_memory",
+              "label": "Add a memory"
+            },
+            {
+              "value": "run_tool",
+              "label": "Run a tool"
+            },
+            {
+              "value": "new_job",
+              "label": "New cron job"
+            }
+          ]
+        },
+        {
+          "id": "home.plan_ring",
+          "title": "Plan usage ring",
+          "description": "Where your plan allowance ring shows.",
+          "type": "select",
+          "default": "both",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "home",
+              "label": "On Home"
+            },
+            {
+              "value": "composer",
+              "label": "In the message box"
+            },
+            {
+              "value": "both",
+              "label": "Both"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

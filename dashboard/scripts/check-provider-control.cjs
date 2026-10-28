@@ -102,14 +102,18 @@ async function main() {
     nativeResponse = malformed
     await assert.rejects(native.status(), error => error.kind === 'invalid-response')
   }
-  const general = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/models-settings.tsx'), 'utf8')
-  assert.ok(!general.includes('<ProviderCredentials') && !general.includes('<ModelsProviders'), 'provider management is not General')
+  // Settings is one screen of topics; providers are one row of the Models topic, and old links still land there.
+  const screen = fs.readFileSync(path.resolve(__dirname, '../src/settings/settings-screen.tsx'), 'utf8')
+  assert.ok(screen.includes("providers: { group: 'models', focus: 'models.providers' }"), 'old Providers links open the Models topic at Providers')
+  const models = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../src/settings/registry/models.json'), 'utf8'))
+  const providers = models.sections.flatMap(section => section.settings).find(setting => setting.id === 'models.providers')
+  assert.equal(providers.component, 'providers', 'provider management is the Providers row of Models')
+  const blocks = fs.readFileSync(path.resolve(__dirname, '../src/settings/blocks.tsx'), 'utf8')
+  assert.ok(blocks.includes('<GatewayProvidersSettings client={client} authStore={authStore} embedded />'))
   const header = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/header.tsx'), 'utf8')
   assert.ok(header.includes('gatewayPageNavigation'))
   const { gatewayPageNavigation } = load(path.resolve(__dirname, '../src/components/gateway/navigation.ts'))
-  const providerNavigation = gatewayPageNavigation('/settings', '?tab=providers')
-  assert.equal(providerNavigation.activeSection, 'providers')
-  assert.deepEqual(providerNavigation.sections.find(section => section.value === 'providers'), { value: 'providers', label: 'Providers', to: '/settings?tab=providers', badge: undefined })
+  assert.deepEqual(gatewayPageNavigation('/settings', '?tab=providers').sections, [], 'Settings has no header tabs; its topics are in the screen')
   console.log('Provider control passed: separate subscription and API-key flows, exact verification, strict secret-free projections, dedicated Providers settings and late-read recovery.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "id": "keyboard",
+  "title": "Keyboard",
+  "description": "Shortcuts for working fast.",
+  "icon": "keyboard",
+  "category": "you",
+  "order": 60,
+  "sections": [
+    {
+      "id": "shortcuts",
+      "title": "Shortcuts",
+      "settings": [
+        {
+          "id": "keyboard.shortcuts",
+          "title": "Keyboard shortcuts",
+          "description": "Turns Conker's keyboard shortcuts on or off.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "keyboard.palette",
+          "title": "Search everything",
+          "description": "The keys that open search for places, chats and actions.",
+          "type": "select",
+          "default": "ctrl_k",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ctrl_k",
+              "label": "Ctrl+K"
+            },
+            {
+              "value": "ctrl_p",
+              "label": "Ctrl+P"
+            }
+          ]
+        },
+        {
+          "id": "keyboard.cheat_sheet",
+          "title": "Shortcut list on ?",
+          "description": "Pressing ? shows every shortcut.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "keyboard.approve_enter",
+          "title": "Approve with Enter",
+          "description": "Lets you approve the open Inbox card with Enter; never for messages, money or deleting.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

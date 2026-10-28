@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 2,
+  "id": "context",
+  "title": "Context",
+  "description": "What the AI sees when it answers.",
+  "icon": "layers",
+  "category": "talk",
+  "order": 230,
+  "sections": [
+    {
+      "id": "instructions",
+      "title": "Instructions",
+      "settings": [
+        {
+          "id": "context.instructions",
+          "title": "Instructions for every chat",
+          "description": "Text added to every chat after the agent's own instructions.",
+          "type": "textarea",
+          "default": "",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 4000
+        },
+        {
+          "id": "context.placement",
+          "title": "Where instructions go",
+          "description": "Whether instructions come first or right before your latest message.",
+          "type": "select",
+          "default": "start",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "start",
+              "label": "At the start"
+            },
+            {
+              "value": "reminder",
+              "label": "Before your latest message"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "title": "History and memory",
+      "settings": [
+        {
+          "id": "context.history",
+          "title": "Chat history",
+          "description": "How much of the chat the model sees.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "recent",
+              "label": "Recent messages"
+            },
+            {
+              "value": "full",
+              "label": "Everything"
+            },
+            {
+              "value": "summary",
+              "label": "Summary only"
+            }
+          ]
+        },
+        {
+          "id": "context.recent_messages",
+          "title": "Recent messages",
+          "description": "How many recent messages count as recent.",
+          "type": "number",
+          "default": 30,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 200,
+          "step": 1
+        },
+        {
+          "id": "context.memory_recall",
+          "title": "Memory recall",
+          "description": "Whether memories are added to each answer's context.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "context.memories_per_answer",
+          "title": "Memories per answer",
+          "description": "The most memories added to one answer.",
+          "type": "number",
+          "default": 8,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 50,
+          "step": 1
+        },
+        {
+          "id": "context.project_sources",
+          "title": "Project sources",
+          "description": "Whether a chat's project files are offered to the model.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "none",
+              "label": "None"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "title": "Budget",
+      "settings": [
+        {
+          "id": "context.meter",
+          "title": "Context meter",
+          "description": "Shows how full the context is in the message box.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "context.web_page_limit",
+          "title": "Web page size",
+          "description": "The most text taken from one web page.",
+          "type": "number",
+          "default": 20000,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1000,
+          "max": 100000,
+          "step": 1000,
+          "unit": "characters"
+        },
+        {
+          "id": "context.web_keep",
+          "title": "Keep web pages",
+          "description": "How long a fetched page stays in context.",
+          "type": "select",
+          "default": "answer",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "answer",
+              "label": "For one answer"
+            },
+            {
+              "value": "chat",
+              "label": "For the whole chat"
+            }
+          ]
+        },
+        {
+          "id": "context.decisions",
+          "title": "Decisions list",
+          "description": "Who can add to a chat's list of decisions.",
+          "type": "select",
+          "default": "both",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "owner",
+              "label": "Only you"
+            },
+            {
+              "value": "both",
+              "label": "You and Conker, marked"
+            }
+          ]
+        },
+        {
+          "id": "context.threads",
+          "title": "Open threads",
+          "description": "Tracks questions that are still open in a chat.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

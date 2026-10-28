@@ -20,7 +20,7 @@ const ownerIdentity = (authStore: GatewayAuthStore) => {
   return auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed ? auth.session.sessionId : null
 }
 
-export function GatewayProvidersSettings({ client, authStore }: { client: GatewayControlClient; authStore: GatewayAuthStore }) {
+export function GatewayProvidersSettings({ client, authStore, embedded = false }: { client: GatewayControlClient; authStore: GatewayAuthStore; embedded?: boolean }) {
   const source = useMemo(() => ({ client, authStore }), [client, authStore])
   const [catalogue, setCatalogue] = useState<{ source: typeof source; value: OwnerModelSettings } | null>(null)
   const value = catalogue?.source === source ? catalogue.value : null
@@ -52,7 +52,9 @@ export function GatewayProvidersSettings({ client, authStore }: { client: Gatewa
     readRuntimeWithDeadline(signal => client.models(signal), controller).then(result => { if (current() && !controller.signal.aborted) { setCatalogue({ source, value: result }); setError('') } }).catch(() => { if (current()) setError('Model settings could not be read. Try again.') })
     return () => controller.abort()
   }, [client, authStore, source, reload])
-  return <GatewayPageFrame><div className="w-full max-w-3xl space-y-7">
+  // Embedded: one row on the Settings screen, without its own page frame.
+  const Frame = embedded ? 'div' : GatewayPageFrame
+  return <Frame><div className="w-full max-w-3xl space-y-7">
     <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />
     <NativeClaudeConnection client={client} authStore={authStore} />
     <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></details>
@@ -79,5 +81,5 @@ export function GatewayProvidersSettings({ client, authStore }: { client: Gatewa
       } catch (error) { if (current()) setError(error instanceof Error ? error.message : 'Could not save model settings.'); return false }
       finally { if (catalogueWrite.current === controller) { catalogueWrite.current = null; saving.current = false; if (catalogueMounted.current) setSaveSource(null) } }
     }} /> : error ? <Button variant="outline" onClick={() => setReload(number => number + 1)}>Retry model settings</Button> : <p role="status" className="text-sm text-muted-foreground">Loading model settings...</p>}
-  </div></GatewayPageFrame>
+  </div></Frame>
 }

@@ -1,75 +1,104 @@
-"""Write docs/reference/settings.md from settings-registry.json, or check that it still matches.
+"""Write docs/reference/settings.md from the settings registry, or check that it still matches.
 
-Run from the repository root: python scripts/settings_docs.py [--check]
+The registry is one JSON file per topic in dashboard/src/settings/registry/. Run from the
+repository root: python scripts/settings_docs.py [--check]
 """
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REGISTRY = ROOT / "settings-registry.json"
+sys.path.insert(0, str(ROOT / "scripts"))
+import conker_config
+
 OUTPUT = ROOT / "docs" / "reference" / "settings.md"
-SCOPES = {"global": "Everywhere", "agent": "Per agent", "chat": "Per chat"}
+SCOPES = {
+    "global": "",
+    "device": " (this device)",
+    "agent": " (per agent)",
+    "chat": " (per chat)",
+}
 EFFECTS = {
     "live": "applies right away",
     "next-turn": "applies from the next message",
     "restart": "applies after a restart",
-    "stored": "saved, not enforced yet",
+    "stored": "saved, not used yet",
 }
 
 
-def shown(value) -> str:
+def shown(setting) -> str:
+    value = setting["default"]
+    labels = {option["value"]: option["label"] for option in setting.get("options", [])}
+    if setting["type"] == "custom":
+        return "its own screen"
     if value is None:
         return "none"
     if isinstance(value, bool):
         return "on" if value else "off"
     if isinstance(value, list):
-        return ", ".join(map(str, value)) or "none"
-    return f"`{value}`" if value != "" else "empty"
+        return ", ".join(str(labels.get(item, item)) for item in value) or "none"
+    if value in labels:
+        return labels[value]
+    unit = f" {setting['unit']}" if setting.get("unit") else ""
+    return f"`{value}`{unit}" if value != "" else "empty"
+
+
+def where(setting) -> str:
+    if setting["type"] == "custom":
+        return "Settings screen"
+    home = setting["home"]
+    if home["service"] == "browser":
+        return "this browser"
+    if home.get("flat"):
+        return "owner settings"
+    return f"{home['service']} `{home['path']}` `{home['field']}`"
 
 
 def render() -> str:
-    settings = json.loads(REGISTRY.read_text(encoding="utf-8"))["settings"]
     lines = [
         "# Settings",
         "",
-        "Generated from `settings-registry.json` by `scripts/settings_docs.py`; do not edit by hand.",
-        "Read and change any of them with `conker config get|set|reset ID` (add `--chat CHAT_ID` for",
-        "chat settings); `conker config list --search TEXT` finds them. Each setting lives in one",
-        "service document, shown as its home.",
+        "Generated from `dashboard/src/settings/registry/` by `scripts/settings_docs.py`; do not edit",
+        "by hand. Read and change server settings with `conker config get|set|reset ID` (add",
+        "`--chat CHAT_ID` for chat settings); `conker config list --search TEXT` finds them. Each",
+        "setting lives in one home: its own service document, the owner settings document, or this",
+        'browser. "Saved, not used yet" settings keep your choice until the feature that reads them',
+        "is built.",
     ]
-    for scope, heading in SCOPES.items():
-        rows = [setting for setting in settings if setting["scope"] == scope]
-        if not rows:
-            continue
-        lines += [
-            "",
-            f"## {heading}",
-            "",
-            "| Setting | What it does | Default | Home |",
-            "|---|---|---|---|",
-        ]
-        for setting in rows:
-            values = setting.get("options")
-            choice = (
-                f" Values: {', '.join(map(str, values))}."
-                if values and setting["type"] == "select"
-                else ""
-            )
-            bounds = (
-                f" {setting['min']} to {setting['max']}."
-                if "min" in setting and "max" in setting
-                else ""
-            )
-            home = setting["home"]
-            lines.append(
-                f"| **{setting['title']}**<br>`{setting['id']}` | {setting['description']}{choice}{bounds} "
-                f"({EFFECTS[setting['effect']]}) | {shown(setting['default'])} "
-                f"| {home['service']} `{home['path']}` `{home['field']}` |"
-            )
+    settings = conker_config.load_registry()
+    for group in conker_config.load_groups():
+        lines += ["", f"## {group['title']}", "", group["description"]]
+        for section in group["sections"]:
+            lines += [
+                "",
+                f"### {section['title']}",
+                "",
+                "| Setting | What it does | Default | Home |",
+                "|---|---|---|---|",
+            ]
+            for entry in section["settings"]:
+                setting = next(item for item in settings if item["id"] == entry["id"])
+                choices = (
+                    " Choices: "
+                    + ", ".join(option["label"] for option in setting["options"])
+                    + "."
+                    if setting.get("options")
+                    else ""
+                )
+                bounds = (
+                    f" {setting['min']} to {setting['max']}{' ' + setting['unit'] if setting.get('unit') else ''}."
+                    if "min" in setting
+                    and "max" in setting
+                    and setting["type"] == "number"
+                    else ""
+                )
+                lines.append(
+                    f"| **{setting['title']}**{SCOPES[setting['scope']]}<br>`{setting['id']}` "
+                    f"| {setting['description']}{choices}{bounds} ({EFFECTS[setting['effect']]}) "
+                    f"| {shown(setting)} | {where(setting)} |"
+                )
     return "\n".join(lines) + "\n"
 
 

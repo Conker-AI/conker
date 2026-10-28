@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "id": "prompts",
+  "title": "Prompts and templates",
+  "description": "Templates, commands and snippets for writing requests.",
+  "icon": "file-text",
+  "category": "talk",
+  "order": 220,
+  "sections": [
+    {
+      "id": "templates",
+      "title": "Templates",
+      "settings": [
+        {
+          "id": "prompts.builtin",
+          "title": "Built-in templates",
+          "description": "Which ready-made templates are offered.",
+          "type": "list",
+          "default": [
+            "research",
+            "writing",
+            "code",
+            "analysis",
+            "summary"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "research",
+              "label": "Research"
+            },
+            {
+              "value": "writing",
+              "label": "Writing"
+            },
+            {
+              "value": "code",
+              "label": "Code"
+            },
+            {
+              "value": "analysis",
+              "label": "Analysis"
+            },
+            {
+              "value": "summary",
+              "label": "Summary"
+            }
+          ]
+        },
+        {
+          "id": "prompts.default_template",
+          "title": "Default template",
+          "description": "The template a new message starts with.",
+          "type": "select",
+          "default": "none",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "research",
+              "label": "Research"
+            },
+            {
+              "value": "writing",
+              "label": "Writing"
+            },
+            {
+              "value": "code",
+              "label": "Code"
+            },
+            {
+              "value": "analysis",
+              "label": "Analysis"
+            },
+            {
+              "value": "summary",
+              "label": "Summary"
+            }
+          ]
+        },
+        {
+          "id": "prompts.required_fields",
+          "title": "Required fields must be filled",
+          "description": "Blocks sending until a template's required fields are filled.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "shortcuts",
+      "title": "Commands and mentions",
+      "settings": [
+        {
+          "id": "prompts.slash",
+          "title": "Slash commands",
+          "description": "Typing / opens a list of commands.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "prompts.mentions",
+          "title": "What @ can mention",
+          "description": "What you can point to with @ in a message.",
+          "type": "list",
+          "default": [
+            "chats",
+            "files",
+            "memories",
+            "projects",
+            "web"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "chats",
+              "label": "Chats"
+            },
+            {
+              "value": "files",
+              "label": "Files"
+            },
+            {
+              "value": "memories",
+              "label": "Memories"
+            },
+            {
+              "value": "projects",
+              "label": "Projects"
+            },
+            {
+              "value": "web",
+              "label": "Web pages"
+            }
+          ]
+        },
+        {
+          "id": "prompts.snippets",
+          "title": "Snippets",
+          "description": "Saved text you insert by name, one per line as name: text.",
+          "type": "textarea",
+          "default": "",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 8000
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "id": "account",
+  "title": "Account and security",
+  "description": "Your sign-in, devices and how Conker protects them.",
+  "icon": "user-lock",
+  "category": "safety",
+  "order": 430,
+  "sections": [
+    {
+      "id": "devices",
+      "title": "Devices",
+      "settings": [
+        {
+          "id": "account.devices",
+          "title": "Signed-in browsers",
+          "description": "Every browser signed in to Conker; sign one out.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "browser-sessions"
+        },
+        {
+          "id": "account.sign_out",
+          "title": "Sign out",
+          "description": "Ends this browser's session; your chats and settings stay on your server.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "sign-out"
+        },
+        {
+          "id": "session.idle_timeout_minutes",
+          "title": "Sign out when idle",
+          "description": "Signs this browser out after this long without use.",
+          "type": "select",
+          "default": 15,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": 0,
+              "label": "Never"
+            },
+            {
+              "value": 5,
+              "label": "5 minutes"
+            },
+            {
+              "value": 15,
+              "label": "15 minutes"
+            },
+            {
+              "value": 30,
+              "label": "30 minutes"
+            },
+            {
+              "value": 60,
+              "label": "1 hour"
+            }
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "idleTimeoutMinutes"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "settings": [
+        {
+          "id": "account.security_log",
+          "title": "Security log",
+          "description": "Keeps a list of sign-ins and changes to access.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "account.rotation",
+          "title": "Renew access codes",
+          "description": "How often the codes the CLI and agents use are replaced.",
+          "type": "select",
+          "default": "never",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "never",
+              "label": "Never"
+            },
+            {
+              "value": "90",
+              "label": "Every 90 days"
+            },
+            {
+              "value": "365",
+              "label": "Every year"
+            }
+          ]
+        },
+        {
+          "id": "account.two_step",
+          "title": "Two-step sign-in",
+          "description": "Asks for a code from your phone when you sign in.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

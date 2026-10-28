@@ -58,13 +58,14 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
     jobs().push(watched)
   }
-  const access = createFakeAccess(session, now), asks = createFakeAsks(session, now)
+  const access = createFakeAccess(session, now), asks = createFakeAsks(session, now), ownerSettings = createFakeOwnerSettings()
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path.startsWith('/api/owner/editor-drafts/')) return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
+    if (path.startsWith('/api/control/pi/owner/')) return ownerSettings(path, method, body, fail)
     if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
@@ -119,6 +120,23 @@ function createFakeChangeRequests(session: string, now: () => number, createJob:
     const result = decide[2] === 'decline' ? null : decide[2] === 'saved' ? { draftId: body?.draftId }
       : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id } : { memoryId: 'mem_preview' }
     return { ...request, state: decide[2] === 'decline' ? 'declined' : 'approved', result, decidedAt: now() }
+  }
+}
+
+/** Preview-only settings document and preferences, revision-checked like Pi's; changes stay in this tab. */
+function createFakeOwnerSettings() {
+  const settings = { schemaVersion: 1, revision: 1, values: { 'appearance.accent': 'neutral', 'chats.names.auto': true } as Json }
+  const preferences = { revision: 1, preferences: { quietHours: { enabled: true, start: '22:00', end: '07:00', timeZone: 'Asia/Jerusalem', urgentExceptions: false }, urgency: 'meaningful',
+    dailyBudget: { suggestions: 4, researchMinutes: 30, costCents: 0 }, idleTimeoutMinutes: 15, planAlerts: { enabled: true, percent: 80 } } as Json }
+  return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    const document = path === '/api/control/pi/owner/settings' ? settings : path === '/api/control/pi/owner/preferences' ? preferences : null
+    if (!document) return fail(404)
+    if (method === 'GET') return structuredClone(document)
+    if (body?.expected_revision !== document.revision) return fail(409)
+    document.revision += 1
+    if (document === settings) settings.values = structuredClone(body?.values as Json)
+    else preferences.preferences = structuredClone(body?.preferences as Json)
+    return structuredClone(document)
   }
 }
 

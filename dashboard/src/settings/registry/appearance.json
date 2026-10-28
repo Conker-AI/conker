@@ -1,0 +1,719 @@
+{
+  "schemaVersion": 2,
+  "id": "appearance",
+  "title": "Appearance",
+  "description": "How Conker looks on your screens.",
+  "icon": "palette",
+  "category": "you",
+  "order": 20,
+  "sections": [
+    {
+      "id": "theme",
+      "title": "Theme",
+      "settings": [
+        {
+          "id": "appearance.theme",
+          "title": "Theme",
+          "description": "Light or dark, or follow this device.",
+          "type": "select",
+          "default": "dark",
+          "tier": "basic",
+          "scope": "device",
+          "effect": "live",
+          "options": [
+            {
+              "value": "system",
+              "label": "Follow this device"
+            },
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ],
+          "home": {
+            "service": "browser"
+          }
+        },
+        {
+          "id": "appearance.accent",
+          "title": "Accent color",
+          "description": "The color of main buttons and of things that need you.",
+          "type": "select",
+          "default": "neutral",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "options": [
+            {
+              "value": "neutral",
+              "label": "Neutral"
+            },
+            {
+              "value": "blue",
+              "label": "Blue"
+            },
+            {
+              "value": "indigo",
+              "label": "Indigo"
+            },
+            {
+              "value": "purple",
+              "label": "Purple"
+            },
+            {
+              "value": "magenta",
+              "label": "Magenta"
+            }
+          ]
+        },
+        {
+          "id": "appearance.theme_switch",
+          "title": "Switch theme automatically",
+          "description": "Changes between light and dark during the day.",
+          "type": "select",
+          "default": "off",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "sun",
+              "label": "At sunrise and sunset"
+            },
+            {
+              "value": "times",
+              "label": "At set times"
+            }
+          ]
+        },
+        {
+          "id": "appearance.tint",
+          "title": "Background tint",
+          "description": "A light tint behind the content.",
+          "type": "select",
+          "default": "none",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "warm",
+              "label": "Warm"
+            },
+            {
+              "value": "cool",
+              "label": "Cool"
+            }
+          ]
+        },
+        {
+          "id": "appearance.contrast",
+          "title": "High contrast",
+          "description": "Darker text and stronger lines everywhere.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "appearance.color_vision",
+          "title": "Color-blind friendly colors",
+          "description": "Status colors that stay apart for your kind of color vision.",
+          "type": "select",
+          "default": "off",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "red_green",
+              "label": "Red and green"
+            },
+            {
+              "value": "blue_yellow",
+              "label": "Blue and yellow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "text",
+      "title": "Text",
+      "settings": [
+        {
+          "id": "appearance.text_size",
+          "title": "Text size",
+          "description": "The size of all text on this device.",
+          "type": "select",
+          "default": "100",
+          "tier": "basic",
+          "scope": "device",
+          "effect": "live",
+          "options": [
+            {
+              "value": "90",
+              "label": "Small"
+            },
+            {
+              "value": "100",
+              "label": "Default"
+            },
+            {
+              "value": "110",
+              "label": "Large"
+            },
+            {
+              "value": "125",
+              "label": "Larger"
+            }
+          ],
+          "home": {
+            "service": "browser"
+          }
+        },
+        {
+          "id": "appearance.chat_text_size",
+          "title": "Chat text size",
+          "description": "The size of messages, apart from the rest of the screen.",
+          "type": "select",
+          "default": "100",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "90",
+              "label": "Small"
+            },
+            {
+              "value": "100",
+              "label": "Default"
+            },
+            {
+              "value": "110",
+              "label": "Large"
+            },
+            {
+              "value": "125",
+              "label": "Larger"
+            }
+          ]
+        },
+        {
+          "id": "appearance.font",
+          "title": "Font",
+          "description": "The font for screens and messages.",
+          "type": "select",
+          "default": "system",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "system",
+              "label": "System"
+            },
+            {
+              "value": "inter",
+              "label": "Inter"
+            },
+            {
+              "value": "atkinson",
+              "label": "Atkinson Hyperlegible"
+            },
+            {
+              "value": "dyslexic",
+              "label": "OpenDyslexic"
+            }
+          ]
+        },
+        {
+          "id": "appearance.code_font",
+          "title": "Code font",
+          "description": "The font for code and commands.",
+          "type": "select",
+          "default": "system",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "system",
+              "label": "System monospace"
+            },
+            {
+              "value": "jetbrains",
+              "label": "JetBrains Mono"
+            },
+            {
+              "value": "fira",
+              "label": "Fira Code"
+            }
+          ]
+        },
+        {
+          "id": "appearance.ligatures",
+          "title": "Code ligatures",
+          "description": "Joins symbol pairs like => into one sign in code.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "appearance.line_spacing",
+          "title": "Line spacing",
+          "description": "Space between lines of text.",
+          "type": "select",
+          "default": "normal",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "compact",
+              "label": "Compact"
+            },
+            {
+              "value": "normal",
+              "label": "Normal"
+            },
+            {
+              "value": "relaxed",
+              "label": "Relaxed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layout",
+      "title": "Layout",
+      "settings": [
+        {
+          "id": "appearance.density",
+          "title": "Density",
+          "description": "How much fits on the screen.",
+          "type": "select",
+          "default": "comfortable",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "comfortable",
+              "label": "Comfortable"
+            },
+            {
+              "value": "compact",
+              "label": "Compact"
+            },
+            {
+              "value": "spacious",
+              "label": "Spacious"
+            }
+          ]
+        },
+        {
+          "id": "appearance.corners",
+          "title": "Corners",
+          "description": "How round cards and buttons are.",
+          "type": "select",
+          "default": "soft",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "sharp",
+              "label": "Sharp"
+            },
+            {
+              "value": "soft",
+              "label": "Soft"
+            },
+            {
+              "value": "round",
+              "label": "Round"
+            }
+          ]
+        },
+        {
+          "id": "appearance.chat_width",
+          "title": "Chat width",
+          "description": "How wide messages can grow on large screens.",
+          "type": "select",
+          "default": "medium",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "narrow",
+              "label": "Narrow"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "wide",
+              "label": "Wide"
+            },
+            {
+              "value": "full",
+              "label": "Full width"
+            }
+          ]
+        },
+        {
+          "id": "appearance.message_style",
+          "title": "Message style",
+          "description": "How messages are drawn in chats.",
+          "type": "select",
+          "default": "flat",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "flat",
+              "label": "Flat"
+            },
+            {
+              "value": "bubbles",
+              "label": "Bubbles"
+            },
+            {
+              "value": "cards",
+              "label": "Cards"
+            }
+          ]
+        },
+        {
+          "id": "appearance.portraits",
+          "title": "Portraits in chat",
+          "description": "Shows the agent's portrait next to its messages.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "appearance.sidebar",
+          "title": "Sidebar",
+          "description": "How the sidebar starts on large screens.",
+          "type": "select",
+          "default": "open",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "open",
+              "label": "Open"
+            },
+            {
+              "value": "collapsed",
+              "label": "Collapsed"
+            },
+            {
+              "value": "auto",
+              "label": "Hide on small screens"
+            }
+          ]
+        },
+        {
+          "id": "appearance.sidebar_places",
+          "title": "Sidebar places",
+          "description": "Which places show in the sidebar.",
+          "type": "list",
+          "default": [
+            "projects",
+            "memory",
+            "agents",
+            "tools",
+            "jobs",
+            "server"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "projects",
+              "label": "Projects"
+            },
+            {
+              "value": "memory",
+              "label": "Memory"
+            },
+            {
+              "value": "agents",
+              "label": "Agents"
+            },
+            {
+              "value": "tools",
+              "label": "Tools"
+            },
+            {
+              "value": "jobs",
+              "label": "Cron jobs"
+            },
+            {
+              "value": "server",
+              "label": "Server"
+            }
+          ]
+        },
+        {
+          "id": "appearance.chat_views",
+          "title": "Chat views",
+          "description": "Which views a chat's title bar offers.",
+          "type": "list",
+          "default": [
+            "context",
+            "thinking",
+            "files",
+            "browser",
+            "terminal",
+            "logs"
+          ],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "context",
+              "label": "Context"
+            },
+            {
+              "value": "thinking",
+              "label": "Thinking"
+            },
+            {
+              "value": "files",
+              "label": "Files"
+            },
+            {
+              "value": "browser",
+              "label": "Browser"
+            },
+            {
+              "value": "terminal",
+              "label": "Terminal"
+            },
+            {
+              "value": "logs",
+              "label": "Logs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "title": "Motion and sound",
+      "settings": [
+        {
+          "id": "appearance.motion",
+          "title": "Animations",
+          "description": "How much moves on screen.",
+          "type": "select",
+          "default": "device",
+          "tier": "basic",
+          "scope": "device",
+          "effect": "live",
+          "options": [
+            {
+              "value": "device",
+              "label": "Follow this device"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "reduced",
+              "label": "Reduced"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ],
+          "home": {
+            "service": "browser"
+          }
+        },
+        {
+          "id": "appearance.streaming",
+          "title": "How answers appear",
+          "description": "Whether answers show as they are written or all at once.",
+          "type": "select",
+          "default": "words",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "words",
+              "label": "Word by word"
+            },
+            {
+              "value": "chunks",
+              "label": "In chunks"
+            },
+            {
+              "value": "whole",
+              "label": "All at once"
+            }
+          ]
+        },
+        {
+          "id": "appearance.sounds",
+          "title": "Sounds",
+          "description": "Plays a short sound when an answer is done or something needs you.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "appearance.volume",
+          "title": "Sound volume",
+          "description": "How loud Conker's sounds are.",
+          "type": "number",
+          "default": 60,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 100,
+          "step": 10,
+          "unit": "%"
+        },
+        {
+          "id": "appearance.haptics",
+          "title": "Vibration",
+          "description": "Short vibrations on your phone for taps and arrivals.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "details",
+      "title": "Details on screen",
+      "settings": [
+        {
+          "id": "appearance.answer_details",
+          "title": "Under each answer",
+          "description": "What shows under Conker's answers.",
+          "type": "list",
+          "default": [
+            "model",
+            "time"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "model",
+              "label": "Model"
+            },
+            {
+              "value": "time",
+              "label": "Time"
+            },
+            {
+              "value": "cost",
+              "label": "Cost"
+            },
+            {
+              "value": "tokens",
+              "label": "Tokens"
+            },
+            {
+              "value": "route",
+              "label": "Why this model"
+            },
+            {
+              "value": "tools",
+              "label": "Tools used"
+            }
+          ]
+        },
+        {
+          "id": "appearance.timestamps",
+          "title": "Times",
+          "description": "How times are shown in lists and chats.",
+          "type": "select",
+          "default": "relative",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "relative",
+              "label": "5 min ago"
+            },
+            {
+              "value": "exact",
+              "label": "Exact time"
+            },
+            {
+              "value": "hidden",
+              "label": "Hidden"
+            }
+          ]
+        },
+        {
+          "id": "appearance.rich_text",
+          "title": "Rich text in answers",
+          "description": "Shows headings, lists and tables instead of plain text.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "appearance.technical_ids",
+          "title": "Technical IDs",
+          "description": "Shows ids and revisions next to things, for fixing problems.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

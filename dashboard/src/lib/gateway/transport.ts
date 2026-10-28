@@ -126,6 +126,10 @@ routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Tools draft a tool request was saved as (the save itself asked for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
+// Settings: the owner's settings document (preferences only, no password) and his preferences
+// (quiet hours, proactivity, budgets: saving asks for the password).
+routes.GET.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
+routes.POST.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
 // Conker's questions: list, answer (his next message in that chat) and dismiss (sends nothing).
 routes.GET.unshift(/^\/api\/control\/pi\/asks(?:\/ask_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
@@ -159,6 +163,8 @@ const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessio
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 conversationWrites.push(draftRoute, draftStartRoute)
 conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/)
+// The settings document holds look and defaults, never authority.
+conversationWrites.push(/^\/api\/control\/pi\/owner\/settings$/)
 // Answering Conker's question is like typing in that chat; dismissing sends nothing.
 conversationWrites.push(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
 // Dismissing an AI job's note hides one line; it grants and runs nothing.
