@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "id": "files",
+  "title": "Files and answers",
+  "description": "Uploads, answer shape and exports.",
+  "icon": "folder",
+  "category": "talk",
+  "order": 270,
+  "sections": [
+    {
+      "id": "files",
+      "title": "Files",
+      "settings": [
+        {
+          "id": "files.upload_limit",
+          "title": "Largest upload",
+          "description": "The largest file you can attach.",
+          "type": "number",
+          "default": 25,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 500,
+          "step": 1,
+          "unit": "MB"
+        },
+        {
+          "id": "files.types",
+          "title": "Allowed files",
+          "description": "Which kinds of files you can attach.",
+          "type": "list",
+          "default": [
+            "images",
+            "documents",
+            "code",
+            "audio"
+          ],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "images",
+              "label": "Images"
+            },
+            {
+              "value": "documents",
+              "label": "Documents"
+            },
+            {
+              "value": "code",
+              "label": "Code"
+            },
+            {
+              "value": "audio",
+              "label": "Audio"
+            },
+            {
+              "value": "video",
+              "label": "Video"
+            },
+            {
+              "value": "archives",
+              "label": "Archives"
+            }
+          ]
+        },
+        {
+          "id": "files.keep_days",
+          "title": "Keep uploads",
+          "description": "Deletes uploads after this long; 0 keeps them.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 3650,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "files.to_project",
+          "title": "Add uploads to the project",
+          "description": "Files attached in a project chat join the project.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "answers",
+      "title": "Answers",
+      "settings": [
+        {
+          "id": "files.answer_format",
+          "title": "Answer format",
+          "description": "The shape of answers in new chats.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "text",
+              "label": "Text"
+            },
+            {
+              "value": "list",
+              "label": "List"
+            },
+            {
+              "value": "table",
+              "label": "Table"
+            },
+            {
+              "value": "document",
+              "label": "Document"
+            },
+            {
+              "value": "code",
+              "label": "Code"
+            }
+          ]
+        },
+        {
+          "id": "files.answer_length",
+          "title": "Answer length",
+          "description": "How long answers are in new chats.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "short",
+              "label": "Short"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "long",
+              "label": "Long"
+            }
+          ]
+        },
+        {
+          "id": "files.destination",
+          "title": "Where answers go",
+          "description": "Whether long answers stay in the chat or become a file.",
+          "type": "select",
+          "default": "chat",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "chat",
+              "label": "In the chat"
+            },
+            {
+              "value": "file",
+              "label": "A file"
+            },
+            {
+              "value": "artifact",
+              "label": "An artifact"
+            }
+          ]
+        },
+        {
+          "id": "files.export",
+          "title": "Export as",
+          "description": "The file type for exported answers.",
+          "type": "select",
+          "default": "markdown",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "markdown",
+              "label": "Markdown"
+            },
+            {
+              "value": "pdf",
+              "label": "PDF"
+            },
+            {
+              "value": "word",
+              "label": "Word"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

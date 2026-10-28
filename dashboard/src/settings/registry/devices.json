@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "id": "devices",
+  "title": "Phone and devices",
+  "description": "How Conker works on your phone and other devices.",
+  "icon": "smartphone",
+  "category": "you",
+  "order": 70,
+  "sections": [
+    {
+      "id": "phone",
+      "title": "Phone",
+      "settings": [
+        {
+          "id": "devices.install",
+          "title": "Offer to install as an app",
+          "description": "Offers to put Conker on your home screen like an app.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "devices.navigation",
+          "title": "Phone navigation",
+          "description": "How you move between places on a phone.",
+          "type": "select",
+          "default": "menu",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "menu",
+              "label": "Menu button"
+            },
+            {
+              "value": "bottom",
+              "label": "Bottom bar"
+            }
+          ]
+        },
+        {
+          "id": "devices.swipe",
+          "title": "Swipe Inbox cards",
+          "description": "Swipe a card to move it to Later.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "devices.offline",
+          "title": "Offline reading",
+          "description": "Keeps your recent chats readable without a connection.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "devices.data_saver",
+          "title": "Data saver",
+          "description": "Loads no images or previews until you tap them.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

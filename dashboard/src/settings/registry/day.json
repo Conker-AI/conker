@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 2,
+  "id": "day",
+  "title": "Your day",
+  "description": "Calmer screens for tired days and focused ones.",
+  "icon": "sun",
+  "category": "you",
+  "order": 40,
+  "sections": [
+    {
+      "id": "modes",
+      "title": "Modes",
+      "settings": [
+        {
+          "id": "day.easy_mode",
+          "title": "Easy mode",
+          "description": "Bigger buttons, fewer cards and one thing at a time.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "day.focus_mode",
+          "title": "Focus mode",
+          "description": "Hides everything that is not urgent until you turn it off.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "day.max_cards",
+          "title": "Cards at once",
+          "description": "The most Inbox cards shown together.",
+          "type": "number",
+          "default": 5,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 20,
+          "step": 1
+        },
+        {
+          "id": "day.late_night",
+          "title": "Late-night mode",
+          "description": "Calmer colors and shorter answers in the evening.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "day.late_night_from",
+          "title": "Late-night mode from",
+          "description": "When late-night mode starts.",
+          "type": "time",
+          "default": "22:00",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "day.break_after",
+          "title": "Break reminder",
+          "description": "Reminds you to rest after this long without a pause; 0 turns it off.",
+          "type": "number",
+          "default": 0,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 240,
+          "step": 15,
+          "unit": "minutes"
+        },
+        {
+          "id": "day.tired_button",
+          "title": "I'm tired button",
+          "description": "A button that hands your plan for the rest of the day to Conker.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Settings profiles",
+      "settings": [
+        {
+          "id": "day.profile",
+          "title": "Profile",
+          "description": "A set of settings for one kind of day.",
+          "type": "select",
+          "default": "none",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "school",
+              "label": "School day"
+            },
+            {
+              "value": "weekend",
+              "label": "Weekend"
+            },
+            {
+              "value": "exams",
+              "label": "Exams"
+            },
+            {
+              "value": "vacation",
+              "label": "Vacation"
+            }
+          ]
+        },
+        {
+          "id": "day.profile_schedule",
+          "title": "Switch profiles by schedule",
+          "description": "Changes the profile by day and time on its own.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

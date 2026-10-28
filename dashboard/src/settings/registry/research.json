@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 2,
+  "id": "research",
+  "title": "Research and review",
+  "description": "How Conker searches the web and checks its answers.",
+  "icon": "telescope",
+  "category": "talk",
+  "order": 240,
+  "sections": [
+    {
+      "id": "research",
+      "title": "Research",
+      "settings": [
+        {
+          "id": "research.default",
+          "title": "Research by default",
+          "description": "Whether new chats search the web.",
+          "type": "select",
+          "default": "off",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "web",
+              "label": "Web"
+            },
+            {
+              "value": "deep",
+              "label": "Deep"
+            }
+          ]
+        },
+        {
+          "id": "research.deep_searches",
+          "title": "Searches in deep research",
+          "description": "The most searches one deep research makes.",
+          "type": "number",
+          "default": 10,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 50,
+          "step": 1
+        },
+        {
+          "id": "research.sources",
+          "title": "Sources per answer",
+          "description": "The most sources one answer cites.",
+          "type": "number",
+          "default": 5,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 20,
+          "step": 1
+        },
+        {
+          "id": "research.recent",
+          "title": "Prefer recent",
+          "description": "How new sources should be.",
+          "type": "select",
+          "default": "any",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "any",
+              "label": "Any age"
+            },
+            {
+              "value": "year",
+              "label": "Last year"
+            },
+            {
+              "value": "month",
+              "label": "Last month"
+            }
+          ]
+        },
+        {
+          "id": "research.trusted_sites",
+          "title": "Trusted sites",
+          "description": "Sites Conker prefers when it searches.",
+          "type": "tags",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "research.skip_sites",
+          "title": "Sites to skip",
+          "description": "Sites Conker never uses as sources.",
+          "type": "tags",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Review",
+      "settings": [
+        {
+          "id": "research.fact_check",
+          "title": "Fact check",
+          "description": "Checks claims in answers against sources.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "research.judge",
+          "title": "Judge",
+          "description": "A second model scores answers when several models compete.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "research.citations",
+          "title": "Citation style",
+          "description": "How sources are cited.",
+          "type": "select",
+          "default": "numbers",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "numbers",
+              "label": "Numbers"
+            },
+            {
+              "value": "links",
+              "label": "Links"
+            },
+            {
+              "value": "footnotes",
+              "label": "Footnotes"
+            }
+          ]
+        },
+        {
+          "id": "research.votes",
+          "title": "Your votes teach model profiles",
+          "description": "Your thumbs up and down shape which models Conker picks.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 2,
+  "id": "proactivity",
+  "title": "Proactivity and cron jobs",
+  "description": "What Conker does on its own and on a schedule.",
+  "icon": "zap",
+  "category": "brain",
+  "order": 340,
+  "sections": [
+    {
+      "id": "first",
+      "title": "Messaging first",
+      "settings": [
+        {
+          "id": "companion.proactivity",
+          "title": "Proactivity",
+          "description": "When Conker may start suggestions or research of its own.",
+          "type": "select",
+          "default": "meaningful",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "options": [
+            {
+              "value": "meaningful",
+              "label": "When it matters"
+            },
+            {
+              "value": "urgent_only",
+              "label": "Only when urgent"
+            },
+            {
+              "value": "off",
+              "label": "Never"
+            }
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "urgency"
+          }
+        },
+        {
+          "id": "proactivity.ideas",
+          "title": "Ideas from Conker",
+          "description": "Once a day Conker reads your recent chats and suggests what it could take off your plate.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "ideas"
+        },
+        {
+          "id": "proactivity.ideas_time",
+          "title": "Ideas time",
+          "description": "When the daily ideas pass runs.",
+          "type": "time",
+          "default": "09:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "proactivity.ideas_per_day",
+          "title": "Ideas a day",
+          "description": "The most new ideas in one day.",
+          "type": "number",
+          "default": 3,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 10,
+          "step": 1
+        },
+        {
+          "id": "proactivity.skip_topics",
+          "title": "Topics to skip",
+          "description": "Topics Conker never suggests ideas about.",
+          "type": "tags",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "proactivity.nudges",
+          "title": "Nudges",
+          "description": "Reminders Conker may send on its own.",
+          "type": "list",
+          "default": [
+            "deadlines"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "deadlines",
+              "label": "Deadlines"
+            },
+            {
+              "value": "unfinished",
+              "label": "Unfinished tasks"
+            },
+            {
+              "value": "follow_ups",
+              "label": "Follow-ups"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Daily limits",
+      "settings": [
+        {
+          "id": "companion.daily_budget.suggestions",
+          "title": "Suggestions a day",
+          "description": "The most suggestions Conker makes on its own in one day.",
+          "type": "number",
+          "default": 4,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "dailyBudget.suggestions"
+          }
+        },
+        {
+          "id": "companion.daily_budget.research_minutes",
+          "title": "Research time a day",
+          "description": "The most minutes of research Conker does on its own in one day.",
+          "type": "number",
+          "default": 30,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "min": 0,
+          "max": 1440,
+          "step": 1,
+          "unit": "minutes",
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "dailyBudget.researchMinutes"
+          }
+        },
+        {
+          "id": "companion.daily_budget.cost_cents",
+          "title": "Spending a day",
+          "description": "The most Conker spends on its own in one day.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "min": 0,
+          "max": 100000,
+          "step": 10,
+          "unit": "cents",
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "dailyBudget.costCents"
+          }
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "title": "Cron jobs",
+      "settings": [
+        {
+          "id": "proactivity.jobs.access",
+          "title": "Access for new cron jobs",
+          "description": "Whether a new cron job uses its agent's access or a stricter one.",
+          "type": "select",
+          "default": "agent",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "agent",
+              "label": "Agent's access"
+            },
+            {
+              "value": "stricter",
+              "label": "One step stricter"
+            }
+          ]
+        },
+        {
+          "id": "proactivity.jobs.overlap",
+          "title": "When a run is still going",
+          "description": "What happens when a cron job is due while its last run still works.",
+          "type": "select",
+          "default": "skip",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "skip",
+              "label": "Skip the new run"
+            },
+            {
+              "value": "queue",
+              "label": "Run it after"
+            }
+          ]
+        },
+        {
+          "id": "proactivity.jobs.triggers",
+          "title": "Allowed triggers",
+          "description": "What may start a cron job.",
+          "type": "list",
+          "default": [
+            "time",
+            "watch",
+            "webhook",
+            "events"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "time",
+              "label": "A time"
+            },
+            {
+              "value": "watch",
+              "label": "A tool's answer changing"
+            },
+            {
+              "value": "webhook",
+              "label": "A webhook"
+            },
+            {
+              "value": "events",
+              "label": "Something in Conker"
+            }
+          ]
+        },
+        {
+          "id": "proactivity.jobs.min_interval",
+          "title": "Shortest interval",
+          "description": "How often a cron job may run at most.",
+          "type": "number",
+          "default": 5,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 1440,
+          "step": 1,
+          "unit": "minutes"
+        },
+        {
+          "id": "proactivity.jobs.max_runs",
+          "title": "Runs a day",
+          "description": "The most runs one cron job makes in a day.",
+          "type": "number",
+          "default": 100,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 1000,
+          "step": 1
+        },
+        {
+          "id": "proactivity.jobs.results",
+          "title": "Results in the Inbox",
+          "description": "When a cron job's result shows in the Inbox.",
+          "type": "select",
+          "default": "needs_you",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "needs_you",
+              "label": "Only when something needs you"
+            },
+            {
+              "value": "always",
+              "label": "Always"
+            },
+            {
+              "value": "never",
+              "label": "Never"
+            }
+          ]
+        },
+        {
+          "id": "proactivity.jobs.on_failure",
+          "title": "When a cron job fails",
+          "description": "What happens after a failed run.",
+          "type": "select",
+          "default": "tell",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "tell",
+              "label": "Tell me"
+            },
+            {
+              "value": "retry",
+              "label": "Try again"
+            },
+            {
+              "value": "pause",
+              "label": "Pause the job"
+            }
+          ]
+        },
+        {
+          "id": "proactivity.jobs.retries",
+          "title": "Tries after a failure",
+          "description": "How many times a failed run is tried again.",
+          "type": "number",
+          "default": 1,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "hooks",
+      "title": "Webhooks",
+      "settings": [
+        {
+          "id": "proactivity.hooks.rate",
+          "title": "Webhook calls an hour",
+          "description": "The most webhook calls one cron job accepts in an hour.",
+          "type": "number",
+          "default": 60,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 600,
+          "step": 1
+        },
+        {
+          "id": "proactivity.hooks.size",
+          "title": "Largest webhook payload",
+          "description": "The largest payload a webhook accepts.",
+          "type": "number",
+          "default": 64,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 1024,
+          "step": 1,
+          "unit": "KB"
+        },
+        {
+          "id": "proactivity.hooks.keep_days",
+          "title": "Keep webhook payloads",
+          "description": "How long webhook payloads are kept.",
+          "type": "number",
+          "default": 7,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 90,
+          "step": 1,
+          "unit": "days"
+        }
+      ]
+    }
+  ]
+}

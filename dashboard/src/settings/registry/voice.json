@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 2,
+  "id": "voice",
+  "title": "Voice and calls",
+  "description": "Talking to Conker and hearing it.",
+  "icon": "mic",
+  "category": "talk",
+  "order": 260,
+  "sections": [
+    {
+      "id": "listening",
+      "title": "Listening",
+      "settings": [
+        {
+          "id": "voice.input_language",
+          "title": "Speech language",
+          "description": "The language Conker listens for.",
+          "type": "select",
+          "default": "same",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "same",
+              "label": "Same as the app"
+            },
+            {
+              "value": "en",
+              "label": "English"
+            },
+            {
+              "value": "he",
+              "label": "Hebrew"
+            },
+            {
+              "value": "ru",
+              "label": "Russian"
+            }
+          ]
+        },
+        {
+          "id": "voice.input_mode",
+          "title": "How you talk",
+          "description": "Hold to talk, or let Conker hear when you start and stop.",
+          "type": "select",
+          "default": "hold",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "hold",
+              "label": "Hold to talk"
+            },
+            {
+              "value": "auto",
+              "label": "Automatic"
+            }
+          ]
+        },
+        {
+          "id": "voice.punctuation",
+          "title": "Punctuation",
+          "description": "Adds commas and periods to what you say.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "voice.listen_models",
+          "title": "Listening models",
+          "description": "Which models turn speech into text, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        }
+      ]
+    },
+    {
+      "id": "speaking",
+      "title": "Speaking",
+      "settings": [
+        {
+          "id": "voice.character",
+          "title": "Conker's voice",
+          "description": "The voice and look live in the companion's character.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "character-link"
+        },
+        {
+          "id": "voice.speed",
+          "title": "Speaking speed",
+          "description": "How fast Conker speaks.",
+          "type": "number",
+          "default": 100,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 50,
+          "max": 200,
+          "step": 10,
+          "unit": "%"
+        },
+        {
+          "id": "voice.pitch",
+          "title": "Pitch",
+          "description": "How high or low Conker's voice is.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": -50,
+          "max": 50,
+          "step": 5
+        },
+        {
+          "id": "voice.read_aloud",
+          "title": "Read answers aloud",
+          "description": "Reads every answer aloud as it arrives.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "calls",
+      "title": "Calls",
+      "settings": [
+        {
+          "id": "voice.interrupt",
+          "title": "Interrupt Conker",
+          "description": "Speaking while Conker talks stops it and lets you go on.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "voice.silence_end",
+          "title": "End after silence",
+          "description": "Ends a call after this much silence.",
+          "type": "number",
+          "default": 5,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 60,
+          "step": 1,
+          "unit": "minutes"
+        },
+        {
+          "id": "voice.max_length",
+          "title": "Longest call",
+          "description": "Ends a call after this long.",
+          "type": "number",
+          "default": 60,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 240,
+          "step": 5,
+          "unit": "minutes"
+        },
+        {
+          "id": "voice.keep_transcript",
+          "title": "Keep call transcripts",
+          "description": "Saves what was said as a chat.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "voice.keep_audio",
+          "title": "Keep call audio",
+          "description": "Saves the recording of each call.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "notes",
+      "title": "Voice notes",
+      "settings": [
+        {
+          "id": "voice.notes_transcribe",
+          "title": "Transcribe voice notes",
+          "description": "Turns voice notes into text right away.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "voice.notes_remember",
+          "title": "Remember from voice notes",
+          "description": "Saves key facts from voice notes to memory.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

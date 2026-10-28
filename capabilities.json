@@ -189,7 +189,7 @@
       "gatewayRoutes": ["/api/owner/access", "/api/owner/access/delegate", "/api/owner/tools/{id}/sensitive", "/api/owner/tools/{id}/access", "/api/control/pi/access/handled"],
       "uiRoutes": ["/settings?tab=access", "/chat", "/agents/{id}/edit", "/inbox"], "cliCommands": ["conker apply sessions FILE", "conker apply agents FILE", "python scripts/conker.py tool-access ID"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "GATEWAY_TOOLGATE_OWNER_KEY", "scoped ToolGate execution credential"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/access.ts", "contains": "Whether Conker decides by his settings, and the tools that always ask him (the floor)."}, {"path": "dashboard/src/components/gateway/session-access-control.tsx", "contains": "This chat's access switch over the agent's and tools' settings."}, {"path": "dashboard/src/components/gateway/access-settings.tsx", "contains": "Let Conker decide by your settings"}, {"path": "dashboard/src/components/inbox/handled-list.tsx", "contains": "Nothing ran without asking you this week."}, {"path": "dashboard/scripts/check-gateway-access.cjs", "contains": "Letting Conker decide asks for the password"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/access.ts", "contains": "Whether Conker decides by his settings, and the tools that always ask him (the floor)."}, {"path": "dashboard/src/components/gateway/session-access-control.tsx", "contains": "This chat's access switch over the agent's and tools' settings."}, {"path": "dashboard/src/settings/access-blocks.tsx", "contains": "Off: every tool follows only its own setting."}, {"path": "dashboard/src/components/inbox/handled-list.tsx", "contains": "Nothing ran without asking you this week."}, {"path": "dashboard/scripts/check-gateway-access.cjs", "contains": "Letting Conker decide asks for the password"}]
     },
     {
       "id": "typed-calls", "name": "Durable typed call mode", "authority": "pi", "state": "active",
@@ -246,7 +246,7 @@
     {
       "id": "settings-registry", "name": "Every setting from one registry, read and changed in its own home", "authority": "pi", "state": "active",
       "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["python scripts/conker.py config list", "python scripts/conker.py config get ID", "python scripts/conker.py config set ID VALUE", "python scripts/conker.py config reset ID"],
-      "deploymentRequirements": ["settings-registry.json", "Pi admin key"],
+      "deploymentRequirements": ["dashboard/src/settings/registry", "Pi admin key"],
       "evidence": [{"path": "scripts/conker_config.py", "contains": "def config_operation"}, {"path": "docs/reference/settings.md", "contains": "plans.alert_percent"}]
     },
     {

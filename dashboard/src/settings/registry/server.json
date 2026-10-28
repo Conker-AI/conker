@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 2,
+  "id": "server",
+  "title": "Server",
+  "description": "Updates, backups, remote access and resources.",
+  "icon": "server",
+  "category": "system",
+  "order": 530,
+  "sections": [
+    {
+      "id": "updates",
+      "title": "Updates",
+      "settings": [
+        {
+          "id": "server.updates.channel",
+          "title": "Update channel",
+          "description": "Which releases your server gets.",
+          "type": "select",
+          "default": "stable",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "stable",
+              "label": "Stable"
+            },
+            {
+              "value": "beta",
+              "label": "Beta"
+            }
+          ]
+        },
+        {
+          "id": "server.updates.mode",
+          "title": "Updating",
+          "description": "Whether updates install on their own.",
+          "type": "select",
+          "default": "notify",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Never"
+            },
+            {
+              "value": "notify",
+              "label": "Tell me"
+            },
+            {
+              "value": "night",
+              "label": "Install at night"
+            }
+          ]
+        },
+        {
+          "id": "server.updates.time",
+          "title": "Update time",
+          "description": "When night updates install.",
+          "type": "time",
+          "default": "03:00",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "backups",
+      "title": "Backups",
+      "settings": [
+        {
+          "id": "server.backups.schedule",
+          "title": "Backups",
+          "description": "How often your server is backed up.",
+          "type": "select",
+          "default": "weekly",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "daily",
+              "label": "Daily"
+            },
+            {
+              "value": "weekly",
+              "label": "Weekly"
+            }
+          ]
+        },
+        {
+          "id": "server.backups.folder",
+          "title": "Backup folder",
+          "description": "Where backups are saved on the server.",
+          "type": "text",
+          "default": "~/conker-snapshots",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 300
+        },
+        {
+          "id": "server.backups.keep",
+          "title": "Backups kept",
+          "description": "How many backups are kept before the oldest goes.",
+          "type": "number",
+          "default": 4,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 60,
+          "step": 1
+        },
+        {
+          "id": "server.backups.models",
+          "title": "Include local models",
+          "description": "Adds local models to backups; they are large.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "server.backups.test",
+          "title": "Test restores",
+          "description": "Checks once a month that a backup restores.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "reach",
+      "title": "Remote access",
+      "settings": [
+        {
+          "id": "server.remote",
+          "title": "Remote access",
+          "description": "Lets your devices reach Conker away from home through Tailscale.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "server.domain",
+          "title": "Domain",
+          "description": "A web address for your server, if you have one.",
+          "type": "text",
+          "default": "",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 200
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "settings": [
+        {
+          "id": "server.disk_warning",
+          "title": "Disk warning",
+          "description": "Warns you when the disk is this full.",
+          "type": "number",
+          "default": 85,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 50,
+          "max": 99,
+          "step": 1,
+          "unit": "%"
+        },
+        {
+          "id": "server.auto_clean",
+          "title": "Clean up by itself",
+          "description": "Removes old images and caches when space runs low.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "server.actions",
+          "title": "What Conker may do on the server",
+          "description": "Whether Conker may change services or only look.",
+          "type": "select",
+          "default": "actions",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "read",
+              "label": "Only look"
+            },
+            {
+              "value": "actions",
+              "label": "Allowed actions"
+            }
+          ]
+        },
+        {
+          "id": "server.log_level",
+          "title": "Log detail",
+          "description": "How much the services write to their logs.",
+          "type": "select",
+          "default": "info",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "error",
+              "label": "Errors"
+            },
+            {
+              "value": "warning",
+              "label": "Warnings"
+            },
+            {
+              "value": "info",
+              "label": "Normal"
+            },
+            {
+              "value": "debug",
+              "label": "Everything"
+            }
+          ]
+        },
+        {
+          "id": "server.health_interval",
+          "title": "Health checks",
+          "description": "How often the services are checked.",
+          "type": "number",
+          "default": 5,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 60,
+          "step": 1,
+          "unit": "minutes"
+        }
+      ]
+    }
+  ]
+}

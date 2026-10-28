@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Settings, rebuilt around topics.** Every setting (401, in 31 topics such as Appearance, Inbox,
+  Models, Memory, Access and Server) now comes from one registry, one file per topic in
+  `dashboard/src/settings/registry/`, and every one uses the same row: title, one sentence, its
+  control, Reset when changed, and Saving / Saved. Search, "Show advanced" and "Changed only" work
+  across all topics; on a phone the topic list comes first. Rows for features still being built say
+  "Not used yet": your choice is saved for them. New: accent color (Neutral, Blue, Indigo, Purple,
+  Magenta), text size and animations. `conker config` and `docs/reference/settings.md` read the
+  same registry, which replaces `settings-registry.json`. Settings with no other home live in Pi's
+  new owner settings document; quiet hours, proactivity and budgets now show in Settings and ask
+  for your password when saved. Pins Pi 0.11.0.
+
 - **A separate, stronger reviewer.** The check before Conker acts without asking you has its own
   model in Settings, Models (Checking actions), so it can be stronger than the model that answers,
   for example Jev; `conker models --role reviewer --model ID` does the same. When the AI decides,

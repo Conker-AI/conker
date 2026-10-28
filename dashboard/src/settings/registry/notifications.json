@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 2,
+  "id": "notifications",
+  "title": "Notifications",
+  "description": "When and how Conker gets your attention.",
+  "icon": "bell",
+  "category": "inbox",
+  "order": 120,
+  "sections": [
+    {
+      "id": "channels",
+      "title": "Channels",
+      "settings": [
+        {
+          "id": "notifications.channels",
+          "title": "Where notifications go",
+          "description": "The places Conker can reach you.",
+          "type": "list",
+          "default": [
+            "browser"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "browser",
+              "label": "Browser"
+            },
+            {
+              "value": "phone",
+              "label": "Phone"
+            },
+            {
+              "value": "email",
+              "label": "Email"
+            },
+            {
+              "value": "telegram",
+              "label": "Telegram"
+            },
+            {
+              "value": "desktop",
+              "label": "Desktop"
+            }
+          ]
+        },
+        {
+          "id": "notifications.delivery",
+          "title": "Delivery",
+          "description": "Whether notifications arrive at once or together.",
+          "type": "select",
+          "default": "instant",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "instant",
+              "label": "Right away"
+            },
+            {
+              "value": "hourly",
+              "label": "Once an hour"
+            },
+            {
+              "value": "ritual",
+              "label": "Only at ritual times"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "events",
+      "title": "What notifies you",
+      "settings": [
+        {
+          "id": "notifications.events",
+          "title": "Notify me about",
+          "description": "Which events send a notification.",
+          "type": "list",
+          "default": [
+            "approvals",
+            "questions",
+            "failures",
+            "budget",
+            "plan"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "approvals",
+              "label": "Requests"
+            },
+            {
+              "value": "questions",
+              "label": "Conker's questions"
+            },
+            {
+              "value": "findings",
+              "label": "Cron job findings"
+            },
+            {
+              "value": "failures",
+              "label": "Failures"
+            },
+            {
+              "value": "budget",
+              "label": "Budget limits"
+            },
+            {
+              "value": "plan",
+              "label": "Plan usage"
+            },
+            {
+              "value": "server",
+              "label": "Server problems"
+            },
+            {
+              "value": "updates",
+              "label": "Updates"
+            },
+            {
+              "value": "backups",
+              "label": "Backups"
+            }
+          ]
+        },
+        {
+          "id": "notifications.urgent",
+          "title": "Urgent means",
+          "description": "What may reach you during quiet hours.",
+          "type": "list",
+          "default": [
+            "failures",
+            "money",
+            "security"
+          ],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "failures",
+              "label": "Failures"
+            },
+            {
+              "value": "money",
+              "label": "Money"
+            },
+            {
+              "value": "security",
+              "label": "Security"
+            },
+            {
+              "value": "person",
+              "label": "A person waiting"
+            }
+          ]
+        },
+        {
+          "id": "notifications.repeat",
+          "title": "Remind again",
+          "description": "Whether an unopened notification comes back.",
+          "type": "select",
+          "default": "never",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "never",
+              "label": "Never"
+            },
+            {
+              "value": "hour",
+              "label": "After an hour"
+            },
+            {
+              "value": "day",
+              "label": "After a day"
+            }
+          ]
+        },
+        {
+          "id": "notifications.preview",
+          "title": "Show text in notifications",
+          "description": "Shows what a notification is about; off shows only that something needs you.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "notifications.sound",
+          "title": "Notification sound",
+          "description": "Plays a sound with each notification.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "quiet",
+      "title": "Quiet hours",
+      "settings": [
+        {
+          "id": "notifications.quiet_hours.enabled",
+          "title": "Quiet hours",
+          "description": "During these hours Conker starts no suggestions or research of its own.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.enabled"
+          },
+          "keywords": [
+            "night",
+            "sleep",
+            "do not disturb"
+          ],
+          "related": [
+            "notifications.quiet_hours.start",
+            "notifications.quiet_hours.end",
+            "notifications.quiet_hours.time_zone"
+          ]
+        },
+        {
+          "id": "notifications.quiet_hours.start",
+          "title": "Quiet hours start",
+          "description": "When quiet hours begin each day.",
+          "type": "time",
+          "default": "22:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "dependsOn": {
+            "id": "notifications.quiet_hours.enabled",
+            "value": true
+          },
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.start"
+          }
+        },
+        {
+          "id": "notifications.quiet_hours.end",
+          "title": "Quiet hours end",
+          "description": "When quiet hours end each day.",
+          "type": "time",
+          "default": "07:00",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "dependsOn": {
+            "id": "notifications.quiet_hours.enabled",
+            "value": true
+          },
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.end"
+          }
+        },
+        {
+          "id": "notifications.quiet_hours.time_zone",
+          "title": "Quiet hours time zone",
+          "description": "The time zone quiet hours follow.",
+          "type": "timezone",
+          "default": "Asia/Jerusalem",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.timeZone"
+          }
+        },
+        {
+          "id": "notifications.quiet_hours.urgent_exceptions",
+          "title": "Urgent exceptions",
+          "description": "Lets something urgent through during quiet hours.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "dependsOn": {
+            "id": "notifications.quiet_hours.enabled",
+            "value": true
+          },
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.urgentExceptions"
+          }
+        },
+        {
+          "id": "notifications.quiet_days",
+          "title": "Quiet all day on",
+          "description": "Days with no notifications at all.",
+          "type": "list",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "sunday",
+              "label": "Sunday"
+            },
+            {
+              "value": "monday",
+              "label": "Monday"
+            },
+            {
+              "value": "tuesday",
+              "label": "Tuesday"
+            },
+            {
+              "value": "wednesday",
+              "label": "Wednesday"
+            },
+            {
+              "value": "thursday",
+              "label": "Thursday"
+            },
+            {
+              "value": "friday",
+              "label": "Friday"
+            },
+            {
+              "value": "saturday",
+              "label": "Saturday"
+            }
+          ]
+        },
+        {
+          "id": "notifications.quiet_in_calls",
+          "title": "Quiet during calls",
+          "description": "Holds notifications while you are in a call.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

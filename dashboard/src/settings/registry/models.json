@@ -1,0 +1,524 @@
+{
+  "schemaVersion": 2,
+  "id": "models",
+  "title": "Models",
+  "description": "Which AI answers, thinks and helps, and how.",
+  "icon": "cpu",
+  "category": "brain",
+  "order": 310,
+  "sections": [
+    {
+      "id": "talking",
+      "title": "Talking",
+      "settings": [
+        {
+          "id": "models.talking",
+          "title": "Talking model",
+          "description": "The model that answers you; Auto lets your router choose for each request.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "talking-model"
+        },
+        {
+          "id": "models.thinking",
+          "title": "Thinking model",
+          "description": "Analyzes the conversation in the background while you keep talking.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "thinking-model"
+        },
+        {
+          "id": "models.locality",
+          "title": "Where models run",
+          "description": "Whether Conker may use online models or only ones on your server.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "local",
+              "label": "Only on my server"
+            },
+            {
+              "value": "hosted",
+              "label": "Online allowed"
+            }
+          ]
+        },
+        {
+          "id": "models.think",
+          "title": "Think",
+          "description": "Whether Conker thinks before answering.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "models.think_budget",
+          "title": "Thinking budget",
+          "description": "How long Conker may think before answering.",
+          "type": "number",
+          "default": 4000,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 32000,
+          "step": 1000,
+          "unit": "tokens"
+        },
+        {
+          "id": "models.creativity",
+          "title": "Creativity",
+          "description": "How varied answers are; low is steady, high is inventive.",
+          "type": "slider",
+          "default": 50,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 100,
+          "step": 10,
+          "ends": [
+            "Steady",
+            "Inventive"
+          ]
+        },
+        {
+          "id": "models.max_answer",
+          "title": "Longest answer",
+          "description": "The most an answer may use.",
+          "type": "number",
+          "default": 4000,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 256,
+          "max": 32000,
+          "step": 256,
+          "unit": "tokens"
+        },
+        {
+          "id": "models.complexity",
+          "title": "Complexity hint",
+          "description": "Tells the router how hard requests usually are.",
+          "type": "select",
+          "default": "auto",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "low",
+              "label": "Low"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "high",
+              "label": "High"
+            }
+          ]
+        },
+        {
+          "id": "models.compare",
+          "title": "Compare models",
+          "description": "Sends each request to several models side by side.",
+          "type": "select",
+          "default": "off",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "2",
+              "label": "2 models"
+            },
+            {
+              "value": "3",
+              "label": "3 models"
+            },
+            {
+              "value": "4",
+              "label": "4 models"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "title": "Providers",
+      "settings": [
+        {
+          "id": "models.providers",
+          "title": "Providers and models",
+          "description": "Your subscriptions, API keys and local models, and which models Conker may use.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "providers"
+        }
+      ]
+    },
+    {
+      "id": "modes",
+      "title": "Modes",
+      "settings": [
+        {
+          "id": "models.auto_mode",
+          "title": "Auto mode",
+          "description": "Jev reads your message and proposes model, Think, research and length, with reasons.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "models.auto_reasons",
+          "title": "Show Auto's reasons",
+          "description": "Shows why Auto chose each setting before you send.",
+          "type": "toggle",
+          "default": true,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "models.mode_fast",
+          "title": "Fast mode models",
+          "description": "Models Fast mode uses, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.mode_balanced",
+          "title": "Balanced mode models",
+          "description": "Models Balanced mode uses, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.mode_deep",
+          "title": "Deep mode models",
+          "description": "Models Deep mode uses, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "title": "AI jobs",
+      "settings": [
+        {
+          "id": "models.roles",
+          "title": "Model roles",
+          "description": "Every role's model, backup, time limit and what happens on failure.",
+          "type": "custom",
+          "default": null,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "component": "model-roles"
+        },
+        {
+          "id": "models.jobs.judge",
+          "title": "Judge models",
+          "description": "Which models judge answers, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.fact_check",
+          "title": "Fact-check models",
+          "description": "Which models check facts, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.prompt_check",
+          "title": "Prompt-check models",
+          "description": "Which models advise on your requests, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.auto_settings",
+          "title": "Auto mode models",
+          "description": "Which models propose settings in Auto mode, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.voice",
+          "title": "Voice models",
+          "description": "Which models speak Conker's answers, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.embeddings",
+          "title": "Embedding models",
+          "description": "Which models turn text into searchable meaning, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.images_in",
+          "title": "Image reading models",
+          "description": "Which models look at pictures you send, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.images_out",
+          "title": "Image making models",
+          "description": "Which models make pictures, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.translation",
+          "title": "Translation models",
+          "description": "Which models translate, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.scanning",
+          "title": "Document scanning models",
+          "description": "Which models read scanned documents, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.ritual",
+          "title": "Ritual summary models",
+          "description": "Which models write the daily ritual, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "models.jobs.time_limit",
+          "title": "Time limit per AI job",
+          "description": "How long one AI job may take before its backup is tried.",
+          "type": "number",
+          "default": 120,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 300,
+          "step": 5,
+          "unit": "seconds"
+        },
+        {
+          "id": "models.jobs.on_failure",
+          "title": "When an AI job fails",
+          "description": "What happens when every model in a job's list fails.",
+          "type": "select",
+          "default": "talking",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "talking",
+              "label": "Use the talking model"
+            },
+            {
+              "value": "ask",
+              "label": "Ask you"
+            },
+            {
+              "value": "stop",
+              "label": "Stop"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "local",
+      "title": "Local models",
+      "settings": [
+        {
+          "id": "models.local.keep_loaded",
+          "title": "Keep loaded",
+          "description": "How long a local model stays in memory after use.",
+          "type": "number",
+          "default": 5,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 1440,
+          "step": 1,
+          "unit": "minutes"
+        },
+        {
+          "id": "models.local.context",
+          "title": "Local context size",
+          "description": "How much text a local model reads at once.",
+          "type": "select",
+          "default": "8192",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "4096",
+              "label": "4,096"
+            },
+            {
+              "value": "8192",
+              "label": "8,192"
+            },
+            {
+              "value": "16384",
+              "label": "16,384"
+            },
+            {
+              "value": "32768",
+              "label": "32,768"
+            }
+          ]
+        },
+        {
+          "id": "models.local.threads",
+          "title": "CPU threads",
+          "description": "How many processor threads local models use; 0 picks automatically.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 64,
+          "step": 1
+        },
+        {
+          "id": "models.local.parallel",
+          "title": "Requests at once",
+          "description": "How many requests a local model handles together.",
+          "type": "number",
+          "default": 1,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 8,
+          "step": 1
+        },
+        {
+          "id": "models.local.warm_up",
+          "title": "Warm up at start",
+          "description": "Loads the talking model when the server starts.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

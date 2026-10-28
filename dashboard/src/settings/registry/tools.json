@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 2,
+  "id": "tools",
+  "title": "Tools",
+  "description": "How Conker's tools, Terminal, browser and web search behave.",
+  "icon": "wrench",
+  "category": "brain",
+  "order": 350,
+  "sections": [
+    {
+      "id": "tools",
+      "title": "Tools",
+      "settings": [
+        {
+          "id": "tools.defaults.change",
+          "title": "Tools that change your things",
+          "description": "What new tools that change your things start with.",
+          "type": "select",
+          "default": "ai",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask me"
+            },
+            {
+              "value": "ai",
+              "label": "AI decides"
+            },
+            {
+              "value": "full",
+              "label": "Full access"
+            }
+          ]
+        },
+        {
+          "id": "tools.defaults.outward",
+          "title": "Tools that send or post",
+          "description": "What new tools that reach other people start with.",
+          "type": "select",
+          "default": "ask",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask me"
+            },
+            {
+              "value": "ai",
+              "label": "AI decides"
+            }
+          ]
+        },
+        {
+          "id": "tools.timeout",
+          "title": "Tool time limit",
+          "description": "How long one tool call may run.",
+          "type": "number",
+          "default": 60,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 600,
+          "step": 5,
+          "unit": "seconds"
+        },
+        {
+          "id": "tools.result_limit",
+          "title": "Largest tool result",
+          "description": "The most a tool result may hold.",
+          "type": "number",
+          "default": 64,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 1024,
+          "step": 1,
+          "unit": "KB"
+        },
+        {
+          "id": "tools.apps",
+          "title": "Tool screens",
+          "description": "Whether tools may show their own small screens in a chat.",
+          "type": "select",
+          "default": "auto",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "tools.drafts",
+          "title": "Tools Conker drafts",
+          "description": "What happens to a tool Conker drafts for you.",
+          "type": "select",
+          "default": "ask",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "ask",
+              "label": "Ask you"
+            },
+            {
+              "value": "draft",
+              "label": "Save as a draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "settings": [
+        {
+          "id": "tools.terminal.time",
+          "title": "Command time limit",
+          "description": "How long one Terminal command may run.",
+          "type": "number",
+          "default": 60,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 5,
+          "max": 600,
+          "step": 5,
+          "unit": "seconds"
+        },
+        {
+          "id": "tools.terminal.memory",
+          "title": "Command memory",
+          "description": "How much memory one Terminal command may use.",
+          "type": "number",
+          "default": 512,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 128,
+          "max": 8192,
+          "step": 128,
+          "unit": "MB"
+        },
+        {
+          "id": "tools.terminal.cpu",
+          "title": "Command CPUs",
+          "description": "How many processors one Terminal command may use.",
+          "type": "number",
+          "default": 1,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 8,
+          "step": 1
+        },
+        {
+          "id": "tools.terminal.workspace",
+          "title": "Workspace size",
+          "description": "How much the agent's workspace may hold.",
+          "type": "number",
+          "default": 2000,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 100,
+          "max": 20000,
+          "step": 100,
+          "unit": "MB"
+        },
+        {
+          "id": "tools.terminal.installs",
+          "title": "Package installs",
+          "description": "Lets agents install Python and npm packages into their workspace.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "tools.terminal.keep",
+          "title": "Keep the workspace",
+          "description": "When the agent's workspace is cleared.",
+          "type": "select",
+          "default": "always",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "always",
+              "label": "Keep it"
+            },
+            {
+              "value": "daily",
+              "label": "Clear daily"
+            },
+            {
+              "value": "chat",
+              "label": "Clear after each chat"
+            }
+          ]
+        },
+        {
+          "id": "tools.terminal.owner",
+          "title": "Your own terminal",
+          "description": "A terminal for you on the server, apart from the agents' Terminal.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "browser",
+      "title": "Browser",
+      "settings": [
+        {
+          "id": "tools.browser.allowed",
+          "title": "Allowed sites",
+          "description": "Sites the browser tool may open; empty allows all but blocked ones.",
+          "type": "tags",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "tools.browser.blocked",
+          "title": "Blocked sites",
+          "description": "Sites the browser tool never opens.",
+          "type": "tags",
+          "default": [],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "tools.browser.sensitive",
+          "title": "Sites that always ask",
+          "description": "Sites where every action asks you first.",
+          "type": "tags",
+          "default": [
+            "bank",
+            "gov",
+            "health"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "tools.browser.sign_in",
+          "title": "Signing in",
+          "description": "Whether the browser tool may sign in to sites.",
+          "type": "select",
+          "default": "never",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "never",
+              "label": "Never"
+            },
+            {
+              "value": "ask",
+              "label": "Ask you"
+            },
+            {
+              "value": "allowed",
+              "label": "On allowed sites"
+            }
+          ]
+        },
+        {
+          "id": "tools.browser.watch",
+          "title": "Watch it work",
+          "description": "Shows the browser live while an agent uses it.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "tools.browser.screenshots",
+          "title": "Keep screenshots",
+          "description": "How long browser screenshots are kept.",
+          "type": "number",
+          "default": 7,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 90,
+          "step": 1,
+          "unit": "days"
+        }
+      ],
+      "description": "The browser tool comes later; these are ready for it."
+    },
+    {
+      "id": "web",
+      "title": "Web search",
+      "settings": [
+        {
+          "id": "tools.web.safe_search",
+          "title": "Safe search",
+          "description": "Filters adult results from web searches.",
+          "type": "select",
+          "default": "moderate",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "off",
+              "label": "Off"
+            },
+            {
+              "value": "moderate",
+              "label": "Moderate"
+            },
+            {
+              "value": "strict",
+              "label": "Strict"
+            }
+          ]
+        },
+        {
+          "id": "tools.web.results",
+          "title": "Results per search",
+          "description": "How many results one web search returns.",
+          "type": "number",
+          "default": 10,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 3,
+          "max": 50,
+          "step": 1
+        },
+        {
+          "id": "tools.web.region",
+          "title": "Search region",
+          "description": "A region code for local results, such as il or us; empty searches everywhere.",
+          "type": "text",
+          "default": "",
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_length": 10
+        },
+        {
+          "id": "tools.web.engines",
+          "title": "Search engines",
+          "description": "Which engines web search asks; empty uses the defaults.",
+          "type": "tags",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 50
+        },
+        {
+          "id": "tools.web.page_limit",
+          "title": "Largest page fetched",
+          "description": "The most text one page fetch returns.",
+          "type": "number",
+          "default": 200,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 10,
+          "max": 2000,
+          "step": 10,
+          "unit": "KB"
+        }
+      ]
+    }
+  ]
+}

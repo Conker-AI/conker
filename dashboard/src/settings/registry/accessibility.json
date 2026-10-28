@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "id": "accessibility",
+  "title": "Accessibility",
+  "description": "Ways to make Conker easier to see, hear and use.",
+  "icon": "accessibility",
+  "category": "you",
+  "order": 50,
+  "sections": [
+    {
+      "id": "access",
+      "title": "Seeing and using",
+      "settings": [
+        {
+          "id": "accessibility.screen_reader",
+          "title": "Extra screen reader hints",
+          "description": "Adds descriptions for screen readers to icons and charts.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "accessibility.focus",
+          "title": "Bigger focus outlines",
+          "description": "Makes the keyboard focus easier to see.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "accessibility.large_targets",
+          "title": "Larger buttons",
+          "description": "Makes every button and link easier to tap.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "accessibility.captions",
+          "title": "Captions for voice",
+          "description": "Shows the words while Conker speaks.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "accessibility.simple_words",
+          "title": "Simpler wording",
+          "description": "Asks Conker to answer in short sentences and plain words.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

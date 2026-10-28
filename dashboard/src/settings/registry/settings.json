@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "id": "settings",
+  "title": "Settings",
+  "description": "How this screen works.",
+  "icon": "sliders-horizontal",
+  "category": "system",
+  "order": 560,
+  "sections": [
+    {
+      "id": "screen",
+      "title": "This screen",
+      "settings": [
+        {
+          "id": "settings.advanced",
+          "title": "Show advanced settings",
+          "description": "Shows every setting, not only the common ones.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "device",
+          "effect": "live",
+          "home": {
+            "service": "browser"
+          }
+        },
+        {
+          "id": "settings.history",
+          "title": "Keep a history of changes",
+          "description": "Records each change so you can see and undo it.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "settings.conker_suggests",
+          "title": "Conker suggests settings",
+          "description": "Conker may suggest a setting change; it never changes one on its own.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

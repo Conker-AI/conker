@@ -1,7 +1,8 @@
 """The settings registry agrees with Pi's own document models (cross-gate: needs Pi on the path).
 
-For every setting: the field exists in its home document, the registry default and every option
-pass Pi's validation, and the registry's bounds are Pi's bounds (one step outside is refused).
+For every setting Pi keeps: the field exists in its home document, the registry default and every
+option pass Pi's validation, and the registry's bounds are Pi's bounds (one step outside is refused).
+Settings in the owner settings document only need an id and values Pi's shape check accepts.
 """
 
 import copy
@@ -15,6 +16,7 @@ from pi.context import controls, universal_search
 from pi.conversation import output_settings
 from pi.conversation import settings as chat_settings
 from pi.owner import preferences
+from pi.owner import settings as owner_settings
 from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -47,6 +49,12 @@ HOMES = {
 
 
 def accepts(setting, value):
+    if setting["home"].get("flat"):
+        try:
+            owner_settings.check({setting["id"]: value})
+        except ValueError:
+            return False
+        return True
     model, document = HOMES[setting["home"]["path"]]
     changed = config.with_value(
         copy.deepcopy(document), setting["home"]["field"], value
@@ -64,22 +72,33 @@ def accepts(setting, value):
 
 
 @pytest.mark.parametrize(
-    "setting", config.load_registry(), ids=lambda setting: setting["id"]
+    "setting",
+    [item for item in config.load_registry() if item.get("home", {}).get("service") == "pi"],
+    ids=lambda setting: setting["id"],
 )
 def test_registry_matches_pi(setting):
-    assert setting["home"]["path"] in HOMES, "Add the home's Pi model to this test."
-    _, document = HOMES[setting["home"]["path"]]
-    assert config.value_at(document, setting["home"]["field"]) is not None or setting[
-        "default"
-    ] in (None, ""), "field missing from the home document"
+    if setting["home"].get("flat"):
+        assert setting["home"]["path"] == "/owner/settings"
+        assert owner_settings.SETTING_ID.fullmatch(setting["id"]), "Pi refuses this id"
+    else:
+        assert setting["home"]["path"] in HOMES, "Add the home's Pi model to this test."
+        _, document = HOMES[setting["home"]["path"]]
+        assert config.value_at(document, setting["home"]["field"]) is not None or setting[
+            "default"
+        ] in (None, ""), "field missing from the home document"
     if setting["default"] is not None:
         assert accepts(setting, setting["default"])
-    for option in setting.get("options", []) if setting["type"] == "select" else []:
-        assert accepts(setting, option), option
+    if setting["type"] == "select":
+        for option in config.values_of(setting):
+            assert accepts(setting, option), option
+    if setting["type"] == "list":
+        assert accepts(setting, config.values_of(setting))
     if setting["type"] == "number":
         for bound, outside in (("min", -1), ("max", 1)):
             if bound in setting:
                 assert accepts(setting, setting[bound])
-                assert not accepts(setting, setting[bound] + outside), (
-                    f"Pi allows beyond {bound}"
-                )
+                # The owner settings document checks shape only; the screen and the CLI keep
+                # the bounds, and the feature that reads the value clamps it.
+                assert setting["home"].get("flat") or not accepts(
+                    setting, setting[bound] + outside
+                ), f"Pi allows beyond {bound}"

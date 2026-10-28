@@ -1,0 +1,849 @@
+{
+  "schemaVersion": 2,
+  "id": "chats",
+  "title": "Chats",
+  "description": "How new chats start and how chats look and behave.",
+  "icon": "messages-square",
+  "category": "talk",
+  "order": 210,
+  "sections": [
+    {
+      "id": "new",
+      "title": "New chats",
+      "settings": [
+        {
+          "id": "chats.default_mode",
+          "title": "Mode",
+          "description": "How hard Conker works in a new chat.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "fast",
+              "label": "Fast"
+            },
+            {
+              "value": "balanced",
+              "label": "Balanced"
+            },
+            {
+              "value": "deep",
+              "label": "Deep"
+            }
+          ]
+        },
+        {
+          "id": "chats.default_access",
+          "title": "Access",
+          "description": "What Conker may do without asking in a new chat.",
+          "type": "select",
+          "default": "agent",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "agent",
+              "label": "Agent's setting"
+            },
+            {
+              "value": "ask",
+              "label": "Ask me"
+            },
+            {
+              "value": "ai",
+              "label": "AI decides"
+            },
+            {
+              "value": "full",
+              "label": "Full access"
+            }
+          ]
+        },
+        {
+          "id": "chats.default_incognito",
+          "title": "Private by default",
+          "description": "New chats remember nothing and stay out of search.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.default_think",
+          "title": "Think by default",
+          "description": "New chats think before answering.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.start",
+          "title": "A new chat starts with",
+          "description": "What you see in an empty chat.",
+          "type": "select",
+          "default": "empty",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "empty",
+              "label": "Nothing"
+            },
+            {
+              "value": "greeting",
+              "label": "A greeting"
+            },
+            {
+              "value": "summary",
+              "label": "Today's summary"
+            },
+            {
+              "value": "suggestion",
+              "label": "A suggested request"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "names",
+      "title": "Chat names",
+      "settings": [
+        {
+          "id": "chats.names.auto",
+          "title": "Name chats automatically",
+          "description": "Gives each chat a short name and keeps it current; your own name stops it.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.names.when",
+          "title": "Rename when",
+          "description": "When an automatic name changes.",
+          "type": "select",
+          "default": "topic",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "first",
+              "label": "After the first answer"
+            },
+            {
+              "value": "topic",
+              "label": "When the topic changes"
+            }
+          ]
+        },
+        {
+          "id": "chats.names.style",
+          "title": "Name style",
+          "description": "How automatic names look.",
+          "type": "select",
+          "default": "short",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "short",
+              "label": "Short"
+            },
+            {
+              "value": "descriptive",
+              "label": "Descriptive"
+            },
+            {
+              "value": "emoji",
+              "label": "With an emoji"
+            }
+          ]
+        },
+        {
+          "id": "chats.names.models",
+          "title": "Naming models",
+          "description": "Which models name chats, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        }
+      ]
+    },
+    {
+      "id": "suggestions",
+      "title": "Suggestions",
+      "settings": [
+        {
+          "id": "chats.suggestions",
+          "title": "Suggest your next message",
+          "description": "Shows what you might ask next under Conker's answer.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.suggestions_count",
+          "title": "Suggestions shown",
+          "description": "How many next-message suggestions appear.",
+          "type": "number",
+          "default": 2,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 3,
+          "step": 1
+        },
+        {
+          "id": "chats.suggestions_style",
+          "title": "Suggestion style",
+          "description": "How suggestions appear.",
+          "type": "select",
+          "default": "chips",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "chips",
+              "label": "Buttons"
+            },
+            {
+              "value": "ghost",
+              "label": "Gray text in the box"
+            }
+          ]
+        },
+        {
+          "id": "chats.suggestions_models",
+          "title": "Suggestion models",
+          "description": "Which models suggest your next message, first choice first.",
+          "type": "models",
+          "default": [],
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "max_items": 5
+        },
+        {
+          "id": "chats.prompt_check",
+          "title": "Prompt check",
+          "description": "Advises how to make a request clearer before you send it.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "id": "chats.template_suggest",
+          "title": "Template suggestions",
+          "description": "Offers a template when your message looks like one.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "writing",
+      "title": "Writing",
+      "settings": [
+        {
+          "id": "chats.send_with",
+          "title": "Send with",
+          "description": "The key that sends a message.",
+          "type": "select",
+          "default": "enter",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "enter",
+              "label": "Enter"
+            },
+            {
+              "value": "ctrl_enter",
+              "label": "Ctrl+Enter"
+            }
+          ]
+        },
+        {
+          "id": "chats.spellcheck",
+          "title": "Spell check",
+          "description": "Marks spelling mistakes while you type.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.paste_images",
+          "title": "Paste images as attachments",
+          "description": "Turns a pasted picture into an attachment.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.queue",
+          "title": "Queue messages",
+          "description": "Lets you send more messages while Conker is still working.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.queue_max",
+          "title": "Queued messages",
+          "description": "How many messages can wait in one chat.",
+          "type": "number",
+          "default": 5,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "reading",
+      "title": "Reading",
+      "settings": [
+        {
+          "id": "chats.tool_calls",
+          "title": "Tool calls",
+          "description": "How tool calls show in a chat.",
+          "type": "select",
+          "default": "collapsed",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "collapsed",
+              "label": "Folded"
+            },
+            {
+              "value": "expanded",
+              "label": "Open"
+            },
+            {
+              "value": "hidden",
+              "label": "Hidden"
+            }
+          ]
+        },
+        {
+          "id": "chats.thinking",
+          "title": "Thinking",
+          "description": "How Conker's thinking shows in a chat.",
+          "type": "select",
+          "default": "collapsed",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "collapsed",
+              "label": "Folded"
+            },
+            {
+              "value": "expanded",
+              "label": "Open"
+            },
+            {
+              "value": "hidden",
+              "label": "Hidden"
+            }
+          ]
+        },
+        {
+          "id": "chats.citations",
+          "title": "Sources",
+          "description": "How sources show in answers.",
+          "type": "select",
+          "default": "inline",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "inline",
+              "label": "Numbers in the text"
+            },
+            {
+              "value": "footnotes",
+              "label": "At the end"
+            },
+            {
+              "value": "hidden",
+              "label": "Hidden"
+            }
+          ]
+        },
+        {
+          "id": "chats.autoscroll",
+          "title": "Follow new text",
+          "description": "Scrolls down as an answer is written.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.code_wrap",
+          "title": "Wrap long code lines",
+          "description": "Breaks long code lines instead of scrolling sideways.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.code_numbers",
+          "title": "Line numbers in code",
+          "description": "Numbers the lines of code blocks.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.fold_after",
+          "title": "Fold long answers after",
+          "description": "Folds answers longer than this; 0 never folds.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 500,
+          "step": 10,
+          "unit": "lines"
+        },
+        {
+          "id": "chats.read_aloud",
+          "title": "Read aloud",
+          "description": "Whether answers are read aloud.",
+          "type": "select",
+          "default": "on_demand",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "on_demand",
+              "label": "When you ask"
+            },
+            {
+              "value": "auto",
+              "label": "Always"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keeping",
+      "title": "Keeping chats",
+      "settings": [
+        {
+          "id": "chats.archive_after",
+          "title": "Archive after",
+          "description": "Archives chats with no messages for this long; 0 never archives.",
+          "type": "number",
+          "default": 0,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 365,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "chats.forget_after",
+          "title": "Forget after",
+          "description": "Forgets chats with no messages for this long; 0 keeps them.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 3650,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "chats.pinned_top",
+          "title": "Pinned chats on top",
+          "description": "Keeps pinned chats at the top of the list.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "chats.compaction",
+          "title": "Fold old messages",
+          "description": "Whether long chats fold their oldest messages into a summary.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "manual",
+              "label": "Only when you ask"
+            }
+          ]
+        },
+        {
+          "id": "chats.context_warning",
+          "title": "Warn when context is",
+          "description": "Warns when a chat's context is this full.",
+          "type": "number",
+          "default": 80,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 50,
+          "max": 95,
+          "step": 5,
+          "unit": "%"
+        },
+        {
+          "id": "chats.export_format",
+          "title": "Export as",
+          "description": "The file type for exported chats.",
+          "type": "select",
+          "default": "markdown",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "options": [
+            {
+              "value": "markdown",
+              "label": "Markdown"
+            },
+            {
+              "value": "pdf",
+              "label": "PDF"
+            },
+            {
+              "value": "json",
+              "label": "JSON"
+            }
+          ]
+        },
+        {
+          "id": "chats.export_tools",
+          "title": "Include tool results in exports",
+          "description": "Adds tool calls and their results to exported chats.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "each_chat",
+      "title": "In each chat",
+      "settings": [
+        {
+          "id": "chat.agent",
+          "title": "Agent",
+          "description": "Which agent answers in this chat (companion or an agent id).",
+          "type": "text",
+          "default": "companion",
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "max_length": 200,
+          "pattern": "^(companion|agent_[0-9a-f]{32})$",
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/settings",
+            "key": "settings",
+            "field": "agentId"
+          }
+        },
+        {
+          "id": "chat.privacy.memory_off",
+          "title": "Memory off",
+          "description": "This chat neither reads nor adds memories.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/settings",
+            "key": "settings",
+            "field": "privacy.memoryDisabled"
+          }
+        },
+        {
+          "id": "chat.privacy.tools_off",
+          "title": "Helpers off",
+          "description": "No helper models or tools see this chat.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/settings",
+            "key": "settings",
+            "field": "privacy.harnessDisabled"
+          }
+        },
+        {
+          "id": "chat.output.format",
+          "title": "Answer format",
+          "description": "The shape of answers in this chat.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "text",
+              "label": "Text"
+            },
+            {
+              "value": "list",
+              "label": "List"
+            },
+            {
+              "value": "table",
+              "label": "Table"
+            },
+            {
+              "value": "document",
+              "label": "Document"
+            },
+            {
+              "value": "code",
+              "label": "Code"
+            },
+            {
+              "value": "json",
+              "label": "JSON"
+            }
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/output",
+            "key": "output",
+            "field": "format"
+          }
+        },
+        {
+          "id": "chat.output.length",
+          "title": "Answer length",
+          "description": "How long answers are in this chat.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "short",
+              "label": "Short"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "long",
+              "label": "Long"
+            }
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/output",
+            "key": "output",
+            "field": "length"
+          }
+        },
+        {
+          "id": "chat.output.language",
+          "title": "Answer language",
+          "description": "The language of answers in this chat; auto follows your message.",
+          "type": "text",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "max_length": 200,
+          "pattern": "^(auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3})$",
+          "home": {
+            "service": "pi",
+            "path": "/sessions/{chat}/output",
+            "key": "output",
+            "field": "language"
+          }
+        },
+        {
+          "id": "chat.context.instructions",
+          "title": "Instructions",
+          "description": "Instructions for this chat only.",
+          "type": "text",
+          "default": "",
+          "tier": "basic",
+          "scope": "chat",
+          "effect": "next-turn",
+          "max_length": 16000,
+          "home": {
+            "service": "pi",
+            "path": "/context/{chat}",
+            "key": "policy",
+            "field": "sessionInstructions"
+          }
+        },
+        {
+          "id": "chat.context.window_tokens",
+          "title": "Context window",
+          "description": "The most tokens this chat sends to a model.",
+          "type": "number",
+          "default": null,
+          "tier": "advanced",
+          "scope": "chat",
+          "effect": "next-turn",
+          "min": 2,
+          "max": 10000000,
+          "step": 1,
+          "unit": "tokens",
+          "home": {
+            "service": "pi",
+            "path": "/context/{chat}",
+            "key": "policy",
+            "field": "budget.contextWindowTokens"
+          }
+        },
+        {
+          "id": "chat.context.output_reserve_tokens",
+          "title": "Answer reserve",
+          "description": "Tokens kept free for the answer.",
+          "type": "number",
+          "default": null,
+          "tier": "advanced",
+          "scope": "chat",
+          "effect": "next-turn",
+          "min": 1,
+          "step": 1,
+          "unit": "tokens",
+          "home": {
+            "service": "pi",
+            "path": "/context/{chat}",
+            "key": "policy",
+            "field": "budget.outputReserveTokens"
+          }
+        },
+        {
+          "id": "chat.context.other_input_tokens",
+          "title": "Other input",
+          "description": "Tokens set aside for instructions, memory and tools.",
+          "type": "number",
+          "default": null,
+          "tier": "advanced",
+          "scope": "chat",
+          "effect": "next-turn",
+          "min": 0,
+          "step": 1,
+          "unit": "tokens",
+          "home": {
+            "service": "pi",
+            "path": "/context/{chat}",
+            "key": "policy",
+            "field": "budget.otherInputTokens"
+          }
+        }
+      ],
+      "description": "Each chat sets these in its own settings; here they are listed so search finds them."
+    }
+  ]
+}

@@ -35,7 +35,7 @@ for (const item of gatewayDestinations) {
 }
 assert.equal(gatewayPageNavigation('/activity', '?tab=unknown').destination.id, 'tasks')
 assert.equal(gatewayPageNavigation('/agents', '?tab=teams').destination.id, 'agents')
-assert.equal(gatewayPageNavigation('/settings', '?tab=providers').activeSection, 'providers')
+assert.deepEqual(gatewayPageNavigation('/settings', '?tab=providers').sections, [], 'Settings keeps its topics in the screen, not in header tabs')
 assert.equal(gatewayPageNavigation('/agents/agent_0123456789abcdef0123456789abcdef/edit', '').title, 'Edit agent')
 assert.equal(gatewayViewTitle('/agents', '?tab=skills'), 'Skills')
 assert.equal(gatewayViewTitle('/settings', '?tab=unknown'), 'Settings')

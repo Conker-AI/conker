@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 2,
+  "id": "search",
+  "title": "Search",
+  "description": "What Conker's search looks through.",
+  "icon": "search",
+  "category": "talk",
+  "order": 250,
+  "sections": [
+    {
+      "id": "sources",
+      "title": "Sources",
+      "settings": [
+        {
+          "id": "search.sources",
+          "title": "Included sources",
+          "description": "Which kinds of records search looks through.",
+          "type": "list",
+          "default": [
+            "conversations",
+            "memory",
+            "projects",
+            "artifacts",
+            "tasks",
+            "jobs",
+            "agents",
+            "tools",
+            "activity"
+          ],
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "options": [
+            {
+              "value": "conversations",
+              "label": "Chats"
+            },
+            {
+              "value": "memory",
+              "label": "Memory"
+            },
+            {
+              "value": "projects",
+              "label": "Projects"
+            },
+            {
+              "value": "artifacts",
+              "label": "Artifacts"
+            },
+            {
+              "value": "tasks",
+              "label": "Tasks"
+            },
+            {
+              "value": "jobs",
+              "label": "Cron jobs"
+            },
+            {
+              "value": "agents",
+              "label": "Agents"
+            },
+            {
+              "value": "tools",
+              "label": "Tools"
+            },
+            {
+              "value": "activity",
+              "label": "Activity"
+            }
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/search/settings",
+            "key": "configuration",
+            "verify": true,
+            "field": "sources"
+          }
+        },
+        {
+          "id": "search.archived",
+          "title": "Archived chats",
+          "description": "Includes archived chats in search results.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "levels",
+      "title": "Search levels",
+      "settings": [
+        {
+          "id": "search.exact_text",
+          "title": "Exact text",
+          "description": "Finds the exact words you type in messages and records.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/search/settings",
+            "key": "configuration",
+            "verify": true,
+            "field": "exactText"
+          }
+        },
+        {
+          "id": "search.semantic",
+          "title": "Meaning search",
+          "description": "Finds records by meaning, not only exact words.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/search/settings",
+            "key": "configuration",
+            "verify": true,
+            "field": "semantic"
+          }
+        },
+        {
+          "id": "search.reranking",
+          "title": "AI ranking",
+          "description": "Lets a model order results by how well they fit.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/search/settings",
+            "key": "configuration",
+            "verify": true,
+            "field": "reranking"
+          }
+        },
+        {
+          "id": "search.history",
+          "title": "Recent searches",
+          "description": "Remembers your last searches on this device.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "device",
+          "effect": "stored",
+          "home": {
+            "service": "browser"
+          }
+        }
+      ]
+    }
+  ]
+}

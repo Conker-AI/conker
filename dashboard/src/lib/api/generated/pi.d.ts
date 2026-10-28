@@ -3439,6 +3439,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/owner/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Owner Settings */
+        get: operations["get_owner_settings_owner_settings_get"];
+        put?: never;
+        /** Save Owner Settings */
+        post: operations["save_owner_settings_owner_settings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/owner/preferences": {
         parameters: {
             query?: never;
@@ -8430,6 +8448,15 @@ export interface components {
             /** Expected Revision */
             expected_revision: number;
             configuration: components["schemas"]["Configuration"];
+        };
+        /** Update */
+        pi__owner__settings__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
         };
         /** Update */
         pi__schedule__job_models__Update: {
@@ -16395,12 +16422,80 @@ export interface operations {
             };
         };
     };
+    get_owner_settings_owner_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_owner_settings_owner_settings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["pi__owner__settings__Update"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_owner_preferences_owner_preferences_get: {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -16431,8 +16526,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
             cookie?: never;

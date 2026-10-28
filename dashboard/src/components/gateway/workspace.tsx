@@ -30,6 +30,7 @@ import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayAgentSection, gatewaySystemSection, resolveGatewayRoute } from './navigation'
 import { ConnectedWorkspaceShell } from './workspace-shell'
 import { SessionDiscoveryProvider } from './session-discovery-provider'
+import { useAppearanceSync } from '@/settings/appearance'
 
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
@@ -37,10 +38,7 @@ const GatewayMcpWorkspace = lazy(() => import('./mcp-workspace').then(module => 
 const GatewaySystemStatus = lazy(() => import('./system-status').then(module => ({ default: module.GatewaySystemStatus })))
 const GatewayOwnerWorkspace = lazy(() => import('./owner-workspace').then(module => ({ default: module.GatewayOwnerWorkspace })))
 const GatewayMemoryWorkspace = lazy(() => import('./memory-workspace').then(module => ({ default: module.GatewayMemoryWorkspace })))
-const GatewayModelsSettings = lazy(() => import('./models-settings').then(module => ({ default: module.GatewayModelsSettings })))
-const GatewayProvidersSettings = lazy(() => import('./providers-settings').then(module => ({ default: module.GatewayProvidersSettings })))
-const GatewaySearchSettings = lazy(() => import('./search-settings').then(module => ({ default: module.GatewaySearchSettings })))
-const GatewayAccessSettings = lazy(() => import('./access-settings').then(module => ({ default: module.GatewayAccessSettings })))
+const SettingsScreen = lazy(() => import('@/settings/settings-screen').then(module => ({ default: module.SettingsScreen })))
 const GatewaySetupProgress = lazy(() => import('./setup-progress').then(module => ({ default: module.GatewaySetupProgress })))
 const GatewayActivityWorkspace = lazy(() => import('./activity-workspace').then(module => ({ default: module.GatewayActivityWorkspace })))
 const GatewayAgentsWorkspace = lazy(() => import('./agents-workspace').then(module => ({ default: module.GatewayAgentsWorkspace })))
@@ -70,6 +68,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   sourcePrivacy: GatewaySourcePrivacyState
 }) {
   const location = useLocation(), navigate = useNavigate(), [params] = useSearchParams()
+  useAppearanceSync(control)
   const [harnessBySession, setHarnessBySession] = useState<Record<string, boolean>>({})
   const savedPrivacy = useCallback((id: string, disabled: boolean) => setHarnessBySession(current => ({ ...current, [id]: disabled })), [])
   const route = resolveGatewayRoute(location.pathname)
@@ -101,7 +100,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />}
-      {modelsActive && <div className="min-h-0 flex-1 overflow-y-auto">{params.get('tab') === 'access' ? <GatewayAccessSettings client={control} /> : params.get('tab') === 'search' ? <GatewaySearchSettings client={control.search} /> : params.get('tab') === 'providers' ? <GatewayProvidersSettings client={control} authStore={authStore} /> : <GatewayModelsSettings client={control} onSignOut={() => void signOut()} />}</div>}
+      {modelsActive && <SettingsScreen client={control} authStore={authStore} onSignOut={() => void signOut()} />}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 2,
+  "id": "privacy",
+  "title": "Privacy and data",
+  "description": "What is kept, for how long, and what leaves your server.",
+  "icon": "lock",
+  "category": "safety",
+  "order": 420,
+  "sections": [
+    {
+      "id": "defaults",
+      "title": "Defaults",
+      "settings": [
+        {
+          "id": "privacy.incognito",
+          "title": "Private chats by default",
+          "description": "New chats remember nothing and stay out of search.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "privacy.helpers",
+          "title": "Helper models in new chats",
+          "description": "Lets helper models (naming, summaries) see new chats.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "privacy.redact",
+          "title": "Hide secrets from online models",
+          "description": "Removes passwords, keys and card numbers before anything goes to an online model.",
+          "type": "toggle",
+          "default": true,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    },
+    {
+      "id": "keeping",
+      "title": "How long things are kept",
+      "settings": [
+        {
+          "id": "privacy.keep.logs",
+          "title": "Logs",
+          "description": "How long service logs are kept.",
+          "type": "number",
+          "default": 30,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored",
+          "min": 1,
+          "max": 365,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "privacy.keep.receipts",
+          "title": "Action receipts",
+          "description": "How long records of tool actions are kept; 0 keeps them.",
+          "type": "number",
+          "default": 0,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 3650,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "privacy.keep.call_audio",
+          "title": "Call audio",
+          "description": "How long call recordings are kept.",
+          "type": "number",
+          "default": 7,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 365,
+          "step": 1,
+          "unit": "days"
+        },
+        {
+          "id": "privacy.keep.searches",
+          "title": "Search history",
+          "description": "How long your searches are remembered.",
+          "type": "number",
+          "default": 30,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored",
+          "min": 0,
+          "max": 365,
+          "step": 1,
+          "unit": "days"
+        }
+      ]
+    }
+  ]
+}

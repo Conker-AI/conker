@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "id": "labs",
+  "title": "Labs",
+  "description": "Experimental features and tools for fixing problems.",
+  "icon": "flask-conical",
+  "category": "system",
+  "order": 550,
+  "sections": [
+    {
+      "id": "labs",
+      "title": "Labs",
+      "settings": [
+        {
+          "id": "labs.experiments",
+          "title": "Experimental features",
+          "description": "Turns on features that are still being built.",
+          "type": "toggle",
+          "default": false,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "labs.api_explorer",
+          "title": "API explorer",
+          "description": "A screen for trying Conker's API.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        },
+        {
+          "id": "labs.debug",
+          "title": "Debug logging",
+          "description": "Writes much more detail to the logs.",
+          "type": "toggle",
+          "default": false,
+          "tier": "advanced",
+          "scope": "global",
+          "effect": "stored"
+        }
+      ]
+    }
+  ]
+}

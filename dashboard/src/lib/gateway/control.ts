@@ -5,6 +5,7 @@ import { createGatewayArtifactsClient } from './artifacts'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
+import { createOwnerSettingsClient } from './owner-settings'
 import { createAccessClient } from './access'
 import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
@@ -305,6 +306,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
     asks: createAsksClient(auth),
+    settings: createOwnerSettingsClient(auth),
     access: createAccessClient(auth),
     plans: createGatewayPlansClient(auth),
     characters: createGatewayCharactersClient(auth),
