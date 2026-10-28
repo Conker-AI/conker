@@ -223,7 +223,7 @@
       "id": "owner-terminal", "name": "Owner terminal", "authority": "gateway", "state": "deferred", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
       "deploymentRequirements": ["operator-selected validated workspace", "digest-pinned owner-terminal registry image", "hashed target-Linux acceptance bundle", "explicit owner terminal transport", "production UI"],
       "gap": "The constrained gateway PTY is not configured or mounted by the release deployment, and its fixture screen is not a connected product route.",
-      "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/audits/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}, {"path": "dashboard/src/app/system/terminal.tsx", "contains": "No authenticated terminal session"}]
+      "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/reference/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}, {"path": "dashboard/src/app/system/terminal.tsx", "contains": "No authenticated terminal session"}]
     },
     {
       "id": "agent-sandbox", "name": "Agent sandbox", "authority": "toolgate", "state": "active", "gatewayRoutes": ["/api/pi/tools"], "uiRoutes": ["/tools"], "cliCommands": ["conker inspect tools"],

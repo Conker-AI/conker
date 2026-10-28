@@ -68,7 +68,7 @@ guarantee that Auto always chooses the best model.
 
 Enabling a role does not install its model or verify provider access. Provider
 sign-in, model availability, role selection and successful inference are separate
-steps. See [model roles and native runtimes](harnesses-and-models-2026-10-09.md).
+steps. See [model roles and native runtimes](reference/harnesses-and-models.md).
 
 ## Privacy and memory
 

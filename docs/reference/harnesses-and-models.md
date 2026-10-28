@@ -2,7 +2,7 @@
 
 The current local build adds subscription sign-in, learned model selection and an
 independent background analyst to the connected workspace. This continues the
-[chat and GitHub source review](conker-research-2026-10-09.md), using the existing
+[chat and GitHub source review](https://github.com/Conker-AI/conker/blob/af68cfb78ce738ba75ba779c4da371219583762e/docs/conker-research-2026-10-09.md), using the existing
 Pi, Gateway, ToolGate and MemoryGate services rather than replacing their state.
 
 ## What was learned from the other harnesses
@@ -215,7 +215,7 @@ privacy applies even if the current chat settings have changed. A successful
 acknowledgement records a past save; later forgetting updates its displayed state.
 `memory-forget-pending` reads only the saved request identity and revision. After
 an uncertain deletion, use Memory's recovery notice or resend the exact original
-owner request described in [CLI inspection](reference/cli-inspection.md); do not
+owner request described in [CLI inspection](cli-inspection.md); do not
 create a new request ID. Source conversations are kept.
 
 ## Capability coverage and remaining work
@@ -227,7 +227,7 @@ create a new request ID. Source conversations are kept.
 | Role-specific models, Auto, separate talking/thinking | Implemented; local inference and real Laya selection exercised |
 | Subscription sign-in | Both native runtimes detected; real Codex device flow and Claude authorization-link start/cancel exercised; final user authorization and hosted inference pending |
 | Full Codex / Claude native CLI commands | Native command passthrough and Windows browser terminal; native permissions retained |
-| Claude background-session discovery, status, output and Stop | Isolated native profile, CLI and owner UI; exact identity verification and explicit recovery; [scope and commands](reference/native-sessions.md) |
+| Claude background-session discovery, status, output and Stop | Isolated native profile, CLI and owner UI; exact identity verification and explicit recovery; [scope and commands](native-sessions.md) |
 | Codex saved-thread discovery and metadata | Isolated native profile, paginated unarchived/archived CLI and owner UI; manual exact resume command; activity in other native processes is not visible |
 | Native agent events in Conker's structured Activity and approval views | Remaining integration; terminal output is not a structured Conker run |
 | Hermes/Pi/OpenCode plugin and skill package interoperability | Research complete for architecture; no universal importer or compatibility claim |
@@ -245,7 +245,7 @@ The initial profile below was validated on this Windows host against the dashboa
 `142b67e` and `4a69639`, based on Pi
 `865b74b86db808a50ad487231009a21a301b3a96`. Its application was checked against
 the unchanged pinned source checkout. Later changes, current checks and remaining
-issues are recorded in [Status](status.md).
+issues are recorded in [Status](../status.md).
 
 - The production build, TypeScript, design guard and lint passed. The final
   Gateway entry is 691,007 bytes; no fixture chunk is included. Existing Vite

@@ -98,7 +98,7 @@ broad relevance accuracy or test real MemoryGate retrieval ranking.
 
 ## Running the local workspace
 
-Use `scripts/workspace.py` and the [connected workspace guide](../../docs/connected-workspace.md)
+Use `scripts/workspace.py` and the [connected workspace guide](../../docs/reference/connected-workspace.md)
 for installation, service ownership, status and recovery. Ignored `.local-run`
 configuration owns the selected ports and distinct credentials. Do not copy a
 historical benchmark's ports or keys into an existing workspace. The current

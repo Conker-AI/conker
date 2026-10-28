@@ -5,8 +5,8 @@ client. Conversations, memory, workflows, approvals, projects, agents,
 teams, schedules, artifacts and settings retain their existing service contracts.
 The independent `astra-cleanroom/conker-ui` design prototype is preserved.
 
-See the [source review](conker-research-2026-10-09.md) and
-[validation record](connected-workspace-validation.md) for evidence and tested scope.
+See the [source review](https://github.com/Conker-AI/conker/blob/af68cfb78ce738ba75ba779c4da371219583762e/docs/conker-research-2026-10-09.md) and
+[validation record](https://github.com/Conker-AI/conker/blob/af68cfb78ce738ba75ba779c4da371219583762e/docs/connected-workspace-validation.md) for evidence and tested scope.
 
 ## Run on this computer
 
@@ -212,11 +212,11 @@ deployment is not inherited here.
 
 The optional `enhance` profile now installs Laya, native subscription sign-in,
 independent background thinking, and a Windows owner terminal. The provider
-bridge also exposes [native sessions](reference/native-sessions.md) through CLI
+bridge also exposes [native sessions](native-sessions.md) through CLI
 and owner UI: Codex saved-thread metadata and Claude background-session
 inspection and exact-session Stop. Codex saved history does not establish live
 activity in other native processes. See
-[harnesses and model roles](harnesses-and-models-2026-10-09.md) for setup, CLI
+[harnesses and model roles](harnesses-and-models.md) for setup, CLI
 commands, current validation and remaining parity work.
 
 ChatGPT subscription connection still needs the official provider runtime and

@@ -19,10 +19,12 @@ both sides are tested together.
 ```text
 dashboard/          React + Vite + TypeScript + shadcn frontend (the product UI)
 services/decisions/ Optional Laya decision service (routing, memory ranking)
-deploy/ubuntu/      Server deployment scripts and acceptance checks
-scripts/            Local Windows stack, recovery, verification scripts
-tests/              Installer and deployment tests
-docs/               These docs; reference/ for deep dives; archive/ for history
+install.sh, conker  The one-command installer and the installed launcher
+deploy/ubuntu/      The source-built server layout and its acceptance checks
+scripts/            CLI, local stack, update, recovery and verification scripts
+tests/              Installer, deployment and cross-repository contract tests
+docs/               These docs; reference/ for deep dives; adr/ for decisions
+capabilities.json   The capability matrix: every feature's UI, CLI and gateway surface
 versions.env        Authoritative release compatibility manifest and image pins
 ```
 

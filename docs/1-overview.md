@@ -63,6 +63,6 @@ Every other word, in plain language: [Glossary](reference/glossary.md).
 
 - [2 · How it works](2-how-it-works.md): the services and boundaries.
 - [3 · Using Conker](3-using.md): conversations, models, memory and recovery.
-- [Connected workspace](connected-workspace.md): run this local build.
+- [Connected workspace](reference/connected-workspace.md): run this local build.
 - [4 · Running Conker](4-running.md): deployment and host operations.
 - [Status](status.md): verified source behavior and release limitations.
