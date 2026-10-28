@@ -95,7 +95,7 @@ async function main() {
   assert.match(hook, /savedAs\.current\.get\(request\.id\)/, 'Retrying an approval never saves a second draft')
   const card = fs.readFileSync(path.join(root, 'src/components/inbox/change-request-card.tsx'), 'utf8')
   for (const label of ['What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word']) assert.ok(card.includes(label), `The card shows: ${label}`)
-  for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx']) {
+  for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx', 'src/components/inbox/agent-note-card.tsx', 'src/components/gateway/proposals-panel.tsx', 'src/components/inbox/inbox-card.tsx']) {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     assert.ok(!/<Button(?![^>]*type="button")[^>]*onClick/.test(source), `${file}: every clickable button is type="button" (a card can sit inside a form)`)
   }

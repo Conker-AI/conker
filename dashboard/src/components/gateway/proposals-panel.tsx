@@ -16,7 +16,10 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
 }) {
   return <InboxCard icon={<Lightbulb />} title={item.title} summary={item.suggestion}
     meta={<><span>Idea</span><span>{age(item.createdAt)}</span></>}
-    primary={<Button type="button" size="sm" className="rounded-full" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>}
+    actions={<div className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>
+      <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => onDecide('decline')}>Not now</Button>
+    </div>}
     onLater={onLater}
     footer={failure && <p role="alert" className="text-sm text-destructive-foreground">{failure}</p>}>
     <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
@@ -28,8 +31,8 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
         : <span>This message was forgotten.</span>}</li>)}</ul>
         : <p className="text-muted-foreground">No cited messages are available.</p>}
     </div>
+    <p className="text-muted-foreground">Not now hides this idea for 30 days.</p>
     <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="outline" disabled={pending} onClick={() => onDecide('decline')}>Not now (30 days)</Button>
       <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onDecide('never')}>Never suggest this</Button>
     </div>
   </InboxCard>

@@ -9,11 +9,17 @@ function age(seconds: number, now: number) {
   return minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
 }
 
-/** One finding from an AI job: what needs the owner, in one line, and a way into its chat. */
+/**
+ * One finding from an AI job: what needs the owner, in one line. Open chat goes to the full reply;
+ * Got it clears the line (the chat keeps the reply either way).
+ */
 export function AgentNoteCard({ note, now, onOpen, onLater }: { note: GatewayAgentNote; now: number; onOpen: () => void; onLater?: () => void }) {
   const navigate = useNavigate()
   return <InboxCard icon={<Sparkles />} title={note.title} summary={note.detail || undefined}
     meta={<><span>AI job</span><span>{age(note.createdAt, now)}</span></>}
-    primary={<Button type="button" size="sm" className="rounded-full" onClick={() => { onOpen(); navigate(`/chat?session=${encodeURIComponent(note.sessionId)}`) }}>Open chat</Button>}
+    actions={<div className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" onClick={() => { onOpen(); navigate(`/chat?session=${encodeURIComponent(note.sessionId)}`) }}>Open chat</Button>
+      <Button type="button" size="sm" variant="outline" onClick={onOpen}>Got it</Button>
+    </div>}
     onLater={onLater} />
 }
