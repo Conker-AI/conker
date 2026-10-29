@@ -19,7 +19,7 @@
           "default": "",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_length": 4000
         },
         {
@@ -97,7 +97,7 @@
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",
@@ -133,9 +133,9 @@
           "default": 12000,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "min": 1000,
-          "max": 20000,
+          "max": 12000,
           "step": 1000,
           "unit": "characters"
         },

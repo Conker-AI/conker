@@ -95,7 +95,7 @@
           "default": 100,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "min": 50,
           "max": 200,
           "step": 10,
