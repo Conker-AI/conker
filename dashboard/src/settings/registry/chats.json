@@ -366,6 +366,31 @@
       "title": "Reading",
       "settings": [
         {
+          "id": "chats.interactive_answers",
+          "title": "Interactive answers",
+          "description": "Answers can hold tables, charts, choices to tap and short forms; Auto uses them only with hosted models.",
+          "type": "select",
+          "default": "auto",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "next-turn",
+          "options": [
+            {
+              "value": "auto",
+              "label": "Auto"
+            },
+            {
+              "value": "on",
+              "label": "On"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ],
+          "keywords": ["openui", "buttons", "charts", "forms", "generative ui"]
+        },
+        {
           "id": "chats.tool_calls",
           "title": "Tool calls",
           "description": "How tool calls show in a chat.",

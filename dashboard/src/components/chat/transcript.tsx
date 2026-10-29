@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { Copy, Link, MoreHorizontal } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { MessageActionButton } from '@/components/message-action-button'
+import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -11,8 +12,8 @@ import { cn } from '@/lib/utils'
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
 
-function Answer({ text }: { text: string }) {
-  return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} /></Suspense>
+function Answer({ text, streaming }: { text: string; streaming?: boolean }) {
+  return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} streaming={streaming} /></Suspense>
 }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
@@ -57,7 +58,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
   const pendingInput = chat.submission.kind === 'sending' && !chat.submission.inputSaved && chat.submission.attempt.input.kind === 'text' ? chat.submission.attempt.input.text : null
-  return <div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
+  return <ChatAnswerReplies chat={chat}><div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive-foreground">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
@@ -66,7 +67,7 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
       <p dir="auto" className="min-w-0 max-w-full whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-base leading-7 [overflow-wrap:anywhere]">{pendingInput}</p>
       <p role="status" className="mt-1.5 text-xs text-muted-foreground">Waiting for saved history</p>
     </article>}
-    {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} />}</article>}
+    {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Preview ended. Waiting for saved history…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} streaming />}</article>}
     {chat.outcomes?.map(outcome => <section key={outcome.id} aria-label={outcome.title} className="space-y-3 rounded-lg border bg-muted p-4">
       <div className="space-y-1"><h3 className="text-sm font-medium">{outcome.title}</h3><p className="text-sm leading-6 text-muted-foreground">{outcome.description}</p><p className="text-xs leading-5 text-muted-foreground">{outcome.consequence}</p></div>
       <div className="flex flex-wrap gap-2">{outcome.controls.map(control => <Button key={control.label} type="button" size="sm" variant={control.primary ? 'default' : 'outline'} className="h-auto min-h-(--control-height-sm) whitespace-normal" disabled={control.action.availability !== 'enabled'} onClick={() => { if (control.action.availability === 'enabled') void control.action.run() }}>{control.label}</Button>)}</div>
@@ -74,5 +75,5 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
     </section>)}
     {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
     {chat.history === 'error' && !chat.messages.length && <InlineError error={null} title="Messages didn’t load" description="Your draft is safe. This refreshes by itself when your server answers again." onRetry={chat.checkHistory.availability === 'enabled' ? chat.checkHistory.run : undefined} />}
-  </div>
+  </div></ChatAnswerReplies>
 }

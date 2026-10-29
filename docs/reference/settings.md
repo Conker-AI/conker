@@ -305,6 +305,7 @@ How new chats start and how chats look and behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
+| **Interactive answers**<br>`chats.interactive_answers` | Answers can hold tables, charts, choices to tap and short forms; Auto uses them only with hosted models. Choices: Auto, On, Off. (applies from the next message) | Auto | owner settings |
 | **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
 | **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
 | **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (saved, not used yet) | Numbers in the text | owner settings |
