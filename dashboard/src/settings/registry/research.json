@@ -43,7 +43,7 @@
           "default": 4,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "min": 1,
           "max": 4,
           "step": 1
@@ -69,7 +69,7 @@
           "default": "any",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "any",
