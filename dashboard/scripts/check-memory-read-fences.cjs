@@ -59,7 +59,11 @@ async function checkPreviewRecovery() {
     if (name === '@/lib/gateway/transport') return transport
     if (name === '@/lib/api/character-defaults') return { createCharacterStudio: () => ({}) }
     if (name === '@/lib/gateway/search') return { searchSources: [] }
-    if (name === './fake-gateway-providers') return load('src/dev/fake-gateway-providers.ts', inner => { if (inner === '@/lib/gateway/transport') return transport; throw Error(`Unexpected preview import: ${inner}`) })
+    if (name === './fake-gateway-providers') return load('src/dev/fake-gateway-providers.ts', inner => {
+      if (inner === '@/lib/gateway/transport') return transport
+      if (inner === './fake-gateway-drafting') return load('src/dev/fake-gateway-drafting.ts', drafting => { if (drafting === '@/lib/tool-workspace') return load('src/lib/tool-workspace.ts', () => require('zod')); throw Error(`Unexpected preview import: ${drafting}`) })
+      throw Error(`Unexpected preview import: ${inner}`)
+    })
     throw Error(`Unexpected preview import: ${name}`)
   })
   const pendingPath = '/api/control/pi/memory/forget-pending', forgetPath = '/api/control/pi/memory/forget'

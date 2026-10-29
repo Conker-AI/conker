@@ -4,14 +4,15 @@ import { useStore } from 'zustand'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import type { AgentNotesClient } from '@/components/inbox/agent-notes'
-import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
+import { isDrafting, type ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import type { AsksClient } from '@/lib/gateway/asks'
 import { InboxAttentionContext } from '@/lib/workspace-chrome'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 
 /**
  * One read of the Inbox count for the whole shell: decisions waiting for the owner, Conker's
- * questions, open ideas and what AI jobs found. Refreshed on navigation and after chat work.
+ * questions, open ideas and what AI jobs found (a tool still being drafted does not count yet).
+ * Refreshed on navigation and after chat work.
  */
 export function InboxAttentionProvider({ owner, proposals, checks, changes, asks, conversationState, children }: {
   owner: GatewayOwnerClient; proposals: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; conversationState: GatewayRuntimeWorkspaceState; children: ReactNode
@@ -31,7 +32,7 @@ export function InboxAttentionProvider({ owner, proposals, checks, changes, asks
       setCount((decisions.status === 'fulfilled' ? decisions.value.results.filter(row => row.status === 'pending' && row.reviewable).length : 0)
         + (ideas.status === 'fulfilled' ? ideas.value.filter(item => item.state === 'open').length : 0)
         + (notes.status === 'fulfilled' ? notes.value.length : 0)
-        + (requests.status === 'fulfilled' ? requests.value.length : 0)
+        + (requests.status === 'fulfilled' ? requests.value.filter(item => !isDrafting(item)).length : 0)
         + (questions.status === 'fulfilled' ? questions.value.length : 0))
     })
   }, [owner, proposals, checks, changes, asks])

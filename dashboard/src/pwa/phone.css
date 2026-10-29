@@ -1,0 +1,30 @@
+/* Phone shell: screen safe areas and the on-screen keyboard (keyboard.ts sets the data and variables). */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The height the app may use: the screen, or the part the keyboard leaves visible. */
+  --app-height: calc(100dvh - var(--safe-top));
+}
+
+:root[data-keyboard="open"] {
+  --app-height: calc(var(--visual-height) - var(--safe-top));
+  /* The keyboard covers the home indicator, so its inset would only add a gap above the keyboard. */
+  --safe-bottom: 0px;
+}
+
+/* Clear of the status bar, and of the notch in landscape. Zero on desktops. */
+body {
+  padding: var(--safe-top) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+}
+
+[data-slot="sidebar-wrapper"] {
+  height: var(--app-height);
+}
+
+/* iOS can pan the page while the keyboard is open; the app follows the visible area instead. */
+:root[data-keyboard="open"] [data-slot="sidebar-wrapper"] {
+  position: fixed;
+  top: calc(var(--safe-top) + var(--visual-top, 0px));
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
+}

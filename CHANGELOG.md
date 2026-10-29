@@ -13,6 +13,12 @@ which module versions a release pins.
   memory map. Screens read them through one `useServerSetting` hook that checks each saved value
   against the settings registry and falls back to its default.
 
+- **19 more settings work now.** About you (what Conker calls you, pronouns, about you, people,
+  goals, units, wake, sleep, your week, focus), instructions for every chat, simpler wording,
+  project sources, research depth and recency, results per search, web page size, which plan
+  windows alert you, and voice speed. They apply from the next answer. Results per search go up to
+  8 and a web page to 12,000 characters, the most Pi uses.
+
 - **The Claude plan on the server.** The source-built Ubuntu layout now runs a Claude plan
   runtime, the `subscriptions` service: the official Claude Code CLI (2.1.310, checked by SHA-512)
   behind the private bridge, sharing Pi's network namespace, with the sign-in in its own folder
@@ -35,6 +41,13 @@ which module versions a release pins.
 - **Local models stay loaded for a day** after their last use instead of five minutes
   (`OLLAMA_KEEP_ALIVE=24h`), so the first answer after a pause does not wait for a reload. Change
   it with `CONKER_OLLAMA_KEEP_ALIVE` (in `.env`, or when running `prepare.py`).
+
+- **Conker on the phone.** It can be added to the home screen as an app (manifest, icons, and a
+  service worker that starts it from the build files and shows a plain "You're offline" page; it
+  never stores API, sign-in or chat data). In a chat on a phone the composer stays above the
+  on-screen keyboard (Android and iOS) with the latest message in view, and a back arrow or a
+  swipe right returns to Chats. On a phone, Enter adds a new line and the Send button sends.
+  Installing needs Pi's gateway to allow the manifest (`manifest-src 'self'`).
 
 - **Conker remembers across chats.** What it learned in one chat can come up in any other, the
   same in every chat. Turn it off in Settings, Memory, Remember across chats (`memory.across_chats`),

@@ -53,7 +53,7 @@ const connections = detail.extend({ links: z.array(link).max(50), nodes: z.array
 const content = detail.extend({ field: z.string().max(60), content: z.string().max(16000), total_characters: count, next_offset: count.nullable() })
 const assignment = z.object({
   enabled: z.boolean(), eligibleModelIds: z.array(z.string().max(200)).max(200), modelId: z.string().max(200).nullable(),
-  timeoutMs: z.number().int().min(100).max(120000), failure: z.enum(['stop', 'fallback']), fallbackModelId: z.string().max(200).nullable(),
+  timeoutMs: z.number().int().min(100).max(600000), failure: z.enum(['stop', 'fallback']), fallbackModelId: z.string().max(200).nullable(),
 })
 // Endpoint URLs and credentials deliberately do not belong to browser model configuration.
 // Roles this page does not list (such as drafting) pass through untouched, so saving here never
@@ -63,7 +63,7 @@ const configuration = z.object({
   models: z.array(z.object({ id: z.string().min(1).max(200), providerId: z.string().min(1).max(100), name: z.string().min(1).max(160),
     route: z.string().min(1).max(300), enabled: z.boolean(), routingDescription: short.default('') })).max(1000),
   defaultModelId: z.string().max(200).nullable(),
-  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ reviewer: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), thinking: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }) }).loose() }),
+  roleSettings: z.object({ answerMode: z.enum(['manual', 'router']), roles: z.object({ reviewer: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), thinking: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), answer: assignment, routing: assignment, 'context-selection': assignment, summarization: assignment, "memory-ranking": assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: "stop", fallbackModelId: null }), proposals: assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: "stop", fallbackModelId: null }), 'search-ranking': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 2000, failure: 'stop', fallbackModelId: null }), 'memory-sorting': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop', fallbackModelId: null }), 'tool-text': assignment.default({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop', fallbackModelId: null }) }).loose() }),
 })
 const projectSource = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('conversation'), sessionId: identity }),

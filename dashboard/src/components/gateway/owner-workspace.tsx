@@ -21,7 +21,7 @@ import { AskCard } from '@/components/inbox/ask-card'
 import { useAsks } from '@/components/inbox/asks'
 import type { AsksClient } from '@/lib/gateway/asks'
 import type { AccessClient } from '@/lib/gateway/access'
-import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
+import { isDrafting, type ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import type { GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import { useAgentNotes, type AgentNotesClient } from '@/components/inbox/agent-notes'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -134,8 +134,10 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const nowNotes = notes.items.filter(item => !isLater(checkKey(item.id))), laterNotes = notes.items.filter(item => isLater(checkKey(item.id)))
   const showDecisions = filter === 'all' || filter === 'decisions', showIdeas = filter === 'all' || filter === 'ideas', showNotes = filter === 'all' || filter === 'checks'
   const nowChanges = requests.items.filter(item => !isLater(changeKey(item.id))), laterChanges = requests.items.filter(item => isLater(changeKey(item.id)))
+  // A tool Conker is still drafting is shown, but it does not need him yet.
+  const waitingChanges = nowChanges.filter(item => !isDrafting(item))
   const nowAsks = questions.items.filter(item => !isLater(askKey(item.id))), laterAsks = questions.items.filter(item => isLater(askKey(item.id)))
-  const needsCount = nowDecisions.length + nowChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length
+  const needsCount = nowDecisions.length + waitingChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length
   const today = new Date(now).toDateString()
   const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
@@ -157,7 +159,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
           {/* A failed load is never summarized as "All clear". */}
           <p className="text-sm text-muted-foreground">{loadError !== null || ideas.error !== null ? 'Part of your Inbox didn’t load' : needsCount ? `${needsCount} ${needsCount === 1 ? 'needs' : 'need'} you` : 'All clear'}{loadError === null && <> · {decidedToday} decided today</>}</p>
           {loadError === null && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
-            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + nowChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
+            {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + waitingChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
       </>}
@@ -177,7 +179,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
           {showDecisions && nowDecisions.map(row => card(row))}
           {showDecisions && nowChanges.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
-            onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
+            onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
           {showDecisions && nowAsks.map(ask => <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
             onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />)}
           {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}

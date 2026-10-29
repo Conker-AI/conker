@@ -53,6 +53,7 @@
     "check:theme": "node scripts/check-theme.cjs",
     "check:settings": "node scripts/check-settings.cjs && node scripts/check-server-setting.cjs",
     "check:calls": "node scripts/check-calls.cjs",
+    "check:pwa": "node scripts/check-pwa.cjs",
     "check:reachability": "node scripts/check-source-reachability.cjs",
     "check": "npm run check:reachability && node scripts/run-checks.mjs",
     "check:memory-delivery": "node scripts/check-memory-delivery.cjs",

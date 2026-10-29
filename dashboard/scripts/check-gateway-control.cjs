@@ -145,6 +145,24 @@ async function main() {
   await transport.request('/api/owner/editor-drafts')
   await transport.request('/api/owner/editor-drafts/draft-one', { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 0, document: definition } })
   await assert.rejects(transport.request('/api/owner/editor-drafts/draft-one/publish', { method: 'POST', body: {} }), error => error.kind === 'validation')
+  // The editor shows ToolGate's own check of the saved draft.
+  result = { id: 'draft-one', revision: 3, graph_valid: false, execution_ready: false, issues: [{ message: 'Node is disconnected from Input.', node_id: 'orphan' }, { code: 'graph', message: 'Use exactly one Input node.', nodeId: null }] }
+  assert.deepEqual(await client.editorDrafts.validation('draft-one'), { revision: 3, issues: [{ path: 'toolgate', message: 'Node is disconnected from Input.', nodeId: 'orphan' }, { path: 'toolgate', message: 'Use exactly one Input node.' }] })
+  assert.equal(calls.pop()[0], '/api/owner/editor-drafts/draft-one/validation')
+  result.id = 'other'
+  await assert.rejects(client.editorDrafts.validation('draft-one'), error => error.kind === 'invalid-response', 'A check of another draft is never shown')
+  // Publishing sends "Let Conker use this tool" and reads back what ToolGate did.
+  const toolId = `workflow:editor-${'a'.repeat(32)}:2:${'b'.repeat(64)}`
+  result = { draft_id: 'draft-one', revision: 3, automation_id: `editor-${'a'.repeat(32)}`, version: 2, digest: 'b'.repeat(64), published_at: '2026-10-29T10:00:00Z', toolId, conkerMayUse: true }
+  const publication = await client.editorDrafts.publish('draft-one', 3, 1, 'owner_confirmation', true)
+  assert.deepEqual(calls.at(-1)[1].body, { expected_revision: 3, expected_publication_version: 1, authorization: 'owner_confirmation', conkerMayUse: true })
+  assert.equal(publication.toolId, toolId)
+  assert.equal(publication.conkerMayUse, true)
+  await client.editorDrafts.publish('draft-one', 3, 1, 'owner_confirmation', false)
+  assert.equal(calls.at(-1)[1].body.conkerMayUse, false, 'Switched off, Conker gets nothing')
+  delete result.toolId; delete result.conkerMayUse
+  assert.equal((await client.editorDrafts.publish('draft-one', 3, 1, 'auto', true)).conkerMayUse, undefined, 'An older answer confirms nothing about Conker')
+  await transport.request('/api/owner/editor-drafts/draft-one/validation')
   console.log('Gateway owner control: bounded memory reads, identity/scope checks, catalogue credential exclusion and route isolation passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })
