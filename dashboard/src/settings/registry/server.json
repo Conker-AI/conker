@@ -12,26 +12,6 @@
       "title": "Updates",
       "settings": [
         {
-          "id": "server.updates.channel",
-          "title": "Update channel",
-          "description": "Which releases your server gets.",
-          "type": "select",
-          "default": "stable",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "stable",
-              "label": "Stable"
-            },
-            {
-              "value": "beta",
-              "label": "Beta"
-            }
-          ]
-        },
-        {
           "id": "server.updates.mode",
           "title": "Updating",
           "description": "Whether updates install on their own.",
@@ -94,30 +74,6 @@
               "label": "Weekly"
             }
           ]
-        },
-        {
-          "id": "server.backups.folder",
-          "title": "Backup folder",
-          "description": "Where backups are saved on the server.",
-          "type": "text",
-          "default": "~/conker-snapshots",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "max_length": 300
-        },
-        {
-          "id": "server.backups.keep",
-          "title": "Backups kept",
-          "description": "How many backups are kept before the oldest goes.",
-          "type": "number",
-          "default": 4,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "min": 1,
-          "max": 60,
-          "step": 1
         },
         {
           "id": "server.backups.models",
@@ -195,26 +151,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "server.actions",
-          "title": "What Conker may do on the server",
-          "description": "Whether Conker may change services or only look.",
-          "type": "select",
-          "default": "actions",
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "read",
-              "label": "Only look"
-            },
-            {
-              "value": "actions",
-              "label": "Allowed actions"
-            }
-          ]
         },
         {
           "id": "server.log_level",
