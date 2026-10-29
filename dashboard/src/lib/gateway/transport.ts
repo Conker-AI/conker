@@ -126,6 +126,10 @@ routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Tools draft a tool request was saved as (the save itself asked for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
+// Tool requests: draft one from his words, draft a failed one again, record that one was published.
+// None of them creates anything real, so the signed-in session is enough.
+const toolRequestRoutes = [/^\/api\/control\/pi\/tool-drafts$/, /^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:retry|published)$/]
+routes.POST.unshift(...toolRequestRoutes)
 // Settings: the owner's settings document (preferences only, no password) and his preferences
 // (quiet hours, proactivity, budgets: saving asks for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
@@ -162,7 +166,7 @@ routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
 conversationWrites.push(draftRoute, draftStartRoute)
-conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/)
+conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/, ...toolRequestRoutes)
 // The settings document holds look and defaults, never authority.
 conversationWrites.push(/^\/api\/control\/pi\/owner\/settings$/)
 // Answering Conker's question is like typing in that chat; dismissing sends nothing.

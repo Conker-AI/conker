@@ -6,6 +6,8 @@ import { PageHeader, WorkspaceAction, CollectionLoading, CollectionPanel, Collec
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
+import { DescribeTool } from './describe-tool'
+import { useChangeRequests } from '@/components/inbox/change-requests'
 
 export function GatewayToolsInventory({ client }: { client: GatewayControlClient }) {
   const [value, setValue] = useState<ToolInventory | null>(null)
@@ -13,6 +15,8 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const [query, setQuery] = useState('')
   const [revision, setRevision] = useState(0)
   const [params, setParams] = useSearchParams()
+  // Tool requests (his own and Conker's) show here as in the Inbox, with the same card.
+  const requests = useChangeRequests(client.changeRequests, client.editorDrafts, true)
   useEffect(() => {
     const controller = new AbortController()
     client.tools(controller.signal).then(value => { if (!controller.signal.aborted) setValue(value) })
@@ -33,6 +37,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
   const shown = selected && rows.some(tool => tool.id === selected.id)
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=mcp" />}>MCP servers</WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=drafts" />}>Tool drafts</WorkspaceAction></>} />
+    <DescribeTool requests={requests} />
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}

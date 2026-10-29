@@ -35,6 +35,22 @@ async function main() {
   reply = { schemaVersion: 1, results: [{ ...memory, payload: { text: 'x', memoryId: 'm1' } }] }
   await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'A memory request is exactly its text')
 
+  // A tool request fills in while Conker drafts it; requests filed before that have no status and are ready.
+  const { toolDraftStatus, isDrafting } = load('src/lib/gateway/change-requests.ts')
+  const drafting = { ...draft, payload: { description: 'A digest', status: 'drafting' } }
+  const ready = { ...draft, payload: { description: 'A digest', status: 'ready', document: { id: 'digest', nodes: [] }, issues: [{ code: 'missing_tool', message: 'Step read uses a tool you do not have.', nodeId: 'read' }, 'A plain note'], steps: ['Read the chat.', 'List the deadlines.'] } }
+  const failed = { ...draft, payload: { description: 'A digest', status: 'failed', error: 'Pi restarted while drafting. Try again.' } }
+  reply = { schemaVersion: 1, results: [drafting, ready, failed, draft] }
+  const listed = await client.list()
+  assert.deepEqual(listed.map(toolDraftStatus), ['drafting', 'ready', 'failed', 'ready'], 'An older request without a status is ready')
+  assert.deepEqual(listed.map(isDrafting), [true, false, false, false], 'Only drafting is not yet a decision')
+  assert.deepEqual(listed[1].payload.issues, ['Step read uses a tool you do not have.', 'A plain note'], 'Check notes read as plain words, whatever their shape')
+  assert.deepEqual(listed[1].payload.steps, ['Read the chat.', 'List the deadlines.'])
+  assert.deepEqual(listed[3].payload.steps, [], 'No steps is an empty list, not an error')
+  assert.equal(listed[2].payload.error, 'Pi restarted while drafting. Try again.')
+  reply = { schemaVersion: 1, results: [{ ...draft, payload: { description: 'A digest', status: 'thinking' } }] }
+  await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'An unknown drafting state is not guessed')
+
   reply = { ...job, state: 'approved', result: { jobId: `job_${'c'.repeat(32)}` }, decidedAt: 2 }
   await client.approve(id)
   assert.deepEqual(calls.at(-1), [`${base}/approve`, { method: 'POST', body: {} }], 'Approving sends nothing but the decision')
@@ -50,6 +66,42 @@ async function main() {
   assert.deepEqual(calls.at(-1), [`${base}/decline`, { method: 'POST', body: { reply: 'Make it weekly instead' } }], 'Change sends his words with the decline')
   await client.decline(id, '   ')
   assert.deepEqual(calls.at(-1)[1].body, {}, 'Blank words are no Change')
+
+  // Try again, Change (new words), a new tool from his own words, and "it is live".
+  reply = drafting
+  await client.retry(id)
+  assert.deepEqual(calls.at(-1), [`${base}/retry`, { method: 'POST', body: {} }], 'Try again sends no words')
+  await client.retry(id, '  A digest of the whole week ')
+  assert.deepEqual(calls.at(-1), [`${base}/retry`, { method: 'POST', body: { description: 'A digest of the whole week' } }], 'Change sends his new words')
+  await assert.rejects(client.retry(id, '  '), error => error.kind === 'validation', 'Blank words are never sent')
+  await client.draft(' Sum up my study chat ', 'tooldraft_' + 'e'.repeat(32))
+  assert.deepEqual(calls.at(-1), ['/api/control/pi/tool-drafts', { method: 'POST', body: { description: 'Sum up my study chat', request_id: 'tooldraft_' + 'e'.repeat(32) } }])
+  await assert.rejects(client.draft('x'.repeat(4001), 'tooldraft_' + 'e'.repeat(32)), error => error.kind === 'validation', 'At most 4000 characters')
+  await assert.rejects(client.draft('Sum up', 'short'), error => error.kind === 'validation', 'A submission id Pi can make idempotent')
+  reply = { ...job, state: 'approved' }
+  await assert.rejects(client.draft('Sum up my study chat', 'tooldraft_' + 'e'.repeat(32)), error => error.kind === 'invalid-response', 'A new tool request answers with a tool request')
+  reply = { ...ready, state: 'approved', result: { draftId: 'digest' } }
+  assert.equal((await client.published(id, 'editor-' + 'f'.repeat(32), 'Digest')).id, id)
+  assert.deepEqual(calls.at(-1), [`${base}/published`, { method: 'POST', body: { toolId: 'editor-' + 'f'.repeat(32), name: 'Digest' } }])
+  reply = { recorded: true }
+  assert.equal(await client.published(id, 'editor-' + 'f'.repeat(32), 'Digest'), null, 'Any answer records it; only a request answer is read')
+  await assert.rejects(client.published(id, '', 'Digest'), error => error.kind === 'validation')
+
+  // Which request a draft came from survives leaving the editor, in this browser only.
+  const store = new Map()
+  globalThis.localStorage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) }
+  const { rememberDraftOrigin, draftOrigin, forgetDraftOrigin } = load('src/lib/tool-draft-origin.ts')
+  rememberDraftOrigin('digest', id)
+  assert.equal(draftOrigin('digest'), id)
+  assert.equal(draftOrigin('digest', `creq_${'9'.repeat(32)}`), `creq_${'9'.repeat(32)}`, 'The address wins')
+  assert.equal(draftOrigin('digest', '../x'), id, 'A malformed address is ignored')
+  forgetDraftOrigin('digest')
+  assert.equal(draftOrigin('digest'), null)
+  store.set('conker.tool-draft-origins', '{broken')
+  assert.equal(draftOrigin('digest'), null, 'Broken storage reads as nothing')
+  globalThis.localStorage = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } }
+  assert.doesNotThrow(() => rememberDraftOrigin('digest', id), 'Blocked storage never breaks Review')
+  delete globalThis.localStorage
 
   const { createAsksClient } = load('src/lib/gateway/asks.ts')
   const askId = `ask_${'d'.repeat(32)}`, askBase = `/api/control/pi/asks/${askId}`
@@ -73,9 +125,11 @@ async function main() {
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => { requests++; return new Response(JSON.stringify(job), { headers: { 'content-type': 'application/json' } }) } })
   await transport.request('/api/control/pi/change-requests')
   await transport.request(base)
-  for (const action of ['decline', 'saved']) await transport.request(`${base}/${action}`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
+  for (const action of ['decline', 'saved', 'retry', 'published']) await transport.request(`${base}/${action}`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
+  await transport.request('/api/control/pi/tool-drafts', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
   await assert.rejects(transport.request(`${base}/edit`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation', 'A request is never edited from the browser')
-  assert.equal(requests, 4)
+  assert.equal(requests, 7)
+  for (const route of [`${base}/retry`, `${base}/published`, '/api/control/pi/tool-drafts']) assert.equal(isConversationWrite(route), true, `${route} creates nothing real: no password`)
   assert.equal(isConversationWrite(`${base}/approve`), false, 'Approving asks for the password')
   assert.equal(isConversationWrite(`${base}/decline`), true, 'Declining creates nothing')
   assert.equal(isConversationWrite(`${base}/saved`), true, 'Recording a draft id follows the password-verified save in Tools')
@@ -93,12 +147,16 @@ async function main() {
   const hook = fs.readFileSync(path.join(root, 'src/components/inbox/change-requests.ts'), 'utf8')
   assert.ok(hook.indexOf('drafts.save(') < hook.indexOf('client.saved('), 'A tool request is saved in Tools before it is marked approved')
   assert.match(hook, /savedAs\.current\.get\(request\.id\)/, 'Retrying an approval never saves a second draft')
+  assert.match(hook, /DRAFTING_POLL_MS = \d+/, 'A drafting card fills in by itself')
+  assert.match(hook, /setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) void load\(\) \}, DRAFTING_POLL_MS\)/, 'It reads again only while the page is in view')
+  assert.ok(hook.indexOf('navigate(`/tools?draft=') > hook.indexOf('client.saved('), 'Review opens the saved draft in Tools')
   const card = fs.readFileSync(path.join(root, 'src/components/inbox/change-request-card.tsx'), 'utf8')
-  for (const label of ['What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word']) assert.ok(card.includes(label), `The card shows: ${label}`)
-  for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx', 'src/components/inbox/agent-note-card.tsx', 'src/components/gateway/proposals-panel.tsx', 'src/components/inbox/inbox-card.tsx']) {
+  for (const label of ['What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word', 'Conker is drafting this tool…', 'Couldn’t draft it:', 'Try again', 'Draft again', "'Review'", 'What it does, step by step']) assert.ok(card.includes(label), `The card shows: ${label}`)
+  for (const file of ['src/components/gateway/owner-workspace.tsx', 'src/components/gateway/inbox-attention.tsx']) assert.match(fs.readFileSync(path.join(root, file), 'utf8'), /isDrafting\(item\)/, `${file}: a tool still being drafted does not count as needing him`)
+  for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx', 'src/components/inbox/agent-note-card.tsx', 'src/components/gateway/proposals-panel.tsx', 'src/components/inbox/inbox-card.tsx', 'src/components/gateway/describe-tool.tsx']) {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     assert.ok(!/<Button(?![^>]*type="button")[^>]*onClick/.test(source), `${file}: every clickable button is type="button" (a card can sit inside a form)`)
   }
-  console.log('Gateway change requests passed: three kinds only, exact payloads, verified approval, save-then-record tool drafts, and no browser edits.')
+  console.log('Gateway change requests passed: three kinds only, exact payloads, verified approval, save-then-record tool drafts, background drafting states, retry and publish records, and no browser edits.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

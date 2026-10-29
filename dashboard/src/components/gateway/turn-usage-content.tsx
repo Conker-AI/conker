@@ -5,7 +5,7 @@ import type { TurnUsageProps } from './turn-usage-disclosure'
 import { startTurnUsageRead, type UsageRead } from './turn-usage-read'
 
 const labels: Record<UsageField, string> = { input_tokens: 'Input tokens', output_tokens: 'Output tokens', cached_tokens: 'Cached tokens', cost_usd: 'Reported cost', summed_call_ms: 'Summed call time' }
-const roles: Record<UsageAttempt['role'], string> = { answer: 'Answer', thinking: 'Thinking', routing: 'Model selection', 'context-selection': 'Context selection', summarization: 'Summarization', 'memory-ranking': 'Memory ranking', 'search-ranking': 'Search ranking', proposals: 'Proposals', drafting: 'Drafting', reviewer: 'Reviewer' }
+const roles: Record<UsageAttempt['role'], string> = { answer: 'Answer', thinking: 'Thinking', routing: 'Model selection', 'context-selection': 'Context selection', summarization: 'Summarization', 'memory-ranking': 'Memory ranking', 'search-ranking': 'Search ranking', proposals: 'Proposals', drafting: 'Drafting', reviewer: 'Reviewer', 'memory-sorting': 'Memory sorting', 'tool-text': 'Tool text' }
 const failures: Record<NonNullable<UsageAttempt['failure_kind']>, string> = { provider_error: 'Provider error', cancelled: 'Canceled', timeout: 'Timed out', preempted: 'Yielded capacity', interrupted: 'Interrupted' }
 function duration(value: number) { return value < 1000 ? `${value.toLocaleString()} ms` : `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} s` }
 function amount(field: UsageField, value: number | null) {

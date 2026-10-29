@@ -90,19 +90,6 @@
           "step": 1
         },
         {
-          "id": "context.memories_per_answer",
-          "title": "Memories per answer",
-          "description": "The most memories added to one answer.",
-          "type": "number",
-          "default": 8,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 1,
-          "max": 50,
-          "step": 1
-        },
-        {
           "id": "context.project_sources",
           "title": "Project sources",
           "description": "Whether a chat's project files are offered to the model.",

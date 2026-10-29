@@ -1,8 +1,10 @@
 import type { CatalogueModel, ModelsConfiguration } from "./model-catalogue"
 
-export const MODEL_ROLES = ["answer", "reviewer", "thinking", "routing", "context-selection", "summarization", "memory-ranking", "proposals", "search-ranking"] as const
+export const MODEL_ROLES = ["answer", "reviewer", "thinking", "routing", "context-selection", "summarization", "memory-ranking", "proposals", "search-ranking", "memory-sorting", "tool-text"] as const
 export type ModelRole = typeof MODEL_ROLES[number]
-export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Talking / answers", reviewer: "Checking actions (reviewer)", thinking: "Background thinking", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking", proposals: "Proposals (daily pass)", "search-ranking": "Search ranking" }
+export const MODEL_ROLE_LABELS: Record<ModelRole, string> = { answer: "Talking / answers", reviewer: "Checking actions (reviewer)", thinking: "Background thinking", routing: "Routing decision", "context-selection": "Context selection", summarization: "Summarization", "memory-ranking": "Memory ranking", proposals: "Proposals (daily pass)", "search-ranking": "Search ranking", "memory-sorting": "Memory sorting", "tool-text": "Tool text" }
+/** What a role does, where its name alone does not say it. MemoryGate and ToolGate ask Pi for these two. */
+export const MODEL_ROLE_DESCRIPTIONS: Partial<Record<ModelRole, string>> = { "memory-sorting": "how new memories are sorted", "tool-text": "AI steps inside your tools" }
 export type ModelRoleAssignment = {
   enabled: boolean
   /** Owner-assigned eligibility, not a verified capability claim. */
@@ -24,7 +26,7 @@ function enabledModels(configuration: ModelsConfiguration): CatalogueModel[] {
 export function createModelRoles(configuration: ModelsConfiguration): ModelRolesConfiguration {
   const defaultId = enabledModels(configuration).find(model => model.id === configuration.defaultModelId)?.id || null
   const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelId: null })
-  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, reviewer: empty(), thinking: empty(), routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty() } }
+  return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, reviewer: empty(), thinking: empty(), routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty(), "memory-sorting": empty(), "tool-text": empty() } }
 }
 
 /** Checks known IDs, owner eligibility and enabled routes; capabilities remain unverified. */
@@ -39,7 +41,7 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
     if (!assignment || typeof assignment.enabled !== "boolean" || !Array.isArray(assignment.eligibleModelIds) || assignment.eligibleModelIds.length > 200 || assignment.eligibleModelIds.some(id => typeof id !== "string" || !known.has(id)) || new Set(assignment.eligibleModelIds).size !== assignment.eligibleModelIds.length) { errors.push(`${label}: choose unique catalogue models for the eligible list.`); continue }
     const decisionRoute = role === 'routing' ? 'model-routing' : role === 'memory-ranking' || role === 'search-ranking' ? role : null
     if (configuration.models.some(model => assignment.eligibleModelIds.includes(model.id) && model.providerId === 'decisions' && model.route !== decisionRoute)) errors.push(`${label}: this decision classifier cannot perform this role.`)
-    if (!Number.isSafeInteger(assignment.timeoutMs) || assignment.timeoutMs < 100 || assignment.timeoutMs > 120000) errors.push(`${label}: timeout must be 100–120,000 milliseconds.`)
+    if (!Number.isSafeInteger(assignment.timeoutMs) || assignment.timeoutMs < 100 || assignment.timeoutMs > 600000) errors.push(`${label}: timeout must be 100–600,000 milliseconds.`)
     if (!["stop", "fallback"].includes(assignment.failure)) errors.push(`${label}: choose stop or explicit fallback on failure.`)
     for (const id of [assignment.modelId, assignment.fallbackModelId]) if (id !== null && (typeof id !== "string" || !known.has(id) || !assignment.eligibleModelIds.includes(id))) errors.push(`${label}: selected and fallback models must belong to its eligible list.`)
     if (assignment.modelId && assignment.fallbackModelId === assignment.modelId) errors.push(`${label}: fallback must differ from the primary model.`)
