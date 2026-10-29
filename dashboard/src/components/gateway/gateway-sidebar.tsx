@@ -9,13 +9,18 @@ import {
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
 import { UniversalSearchContext, useInboxAttention } from '@/lib/workspace-chrome'
+import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { gatewayPageNavigation, gatewaySidebarDestinations, gatewaySidebarGroups, type GatewayDestination } from './navigation'
+import { useSearchShortcut } from './search-shortcut'
 
 const icons: Partial<Record<GatewayDestination['id'], LucideIcon>> = {
   today: House, inbox: Inbox, chats: MessagesSquare, projects: Folder, memory: BookOpen, agents: Bot, tools: Wrench,
   jobs: Clock3, system: Server, settings: Settings2,
 }
+/** Places the owner can hide (Settings, Appearance, Sidebar places); Home, Inbox, Chats and Settings always show. */
+const optional: Partial<Record<GatewayDestination['id'], string>> = { projects: 'projects', memory: 'memory', agents: 'agents', tools: 'tools', jobs: 'jobs', system: 'server' }
+const ALL_PLACES = ['projects', 'memory', 'agents', 'tools', 'jobs', 'server']
 
 /**
  * Places, never actions (the owner's rule): Ask Conker and Search sit above them. No profile,
@@ -26,17 +31,21 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
   const page = gatewayPageNavigation(location.pathname, location.search)
   const openSearch = useContext(UniversalSearchContext)
   const attention = useInboxAttention()
+  const places = useServerSetting('appearance.sidebar_places', ALL_PLACES), shortcuts = useServerSetting('keyboard.shortcuts', true)
+  const searchKey = useSearchShortcut(), searchLabel = searchKey ? `Search · Ctrl ${searchKey.toUpperCase()}` : 'Search'
+  const shown = (item: GatewayDestination) => !optional[item.id] || places.includes(optional[item.id]!)
   const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false, 'content') }, [isMobile, setOpenMobile])
   const newChat = useCallback(() => {
     conversationState.setState({ selected: null }); navigate('/chat'); afterNavigate()
   }, [conversationState, navigate, afterNavigate])
   useEffect(() => {
+    if (!shortcuts) return
     const key = (event: KeyboardEvent) => {
       if (!event.isComposing && (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'o') { event.preventDefault(); newChat() }
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [newChat])
+  }, [newChat, shortcuts])
   const onServer = page.route === 'system'
   const [serverOpen, setServerOpen] = useState(onServer)
   const serverSections = gatewayPageNavigation('/system', '').sections
@@ -67,14 +76,14 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
       <div className="flex gap-2 group-data-[collapsible=icon]:flex-col">
         <Button className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden" onClick={newChat}><Plus />Ask Conker</Button>
         <Tooltip><TooltipTrigger render={<Button size="icon" className="hidden group-data-[collapsible=icon]:inline-flex" aria-label="Ask Conker" onClick={newChat} />}><Plus /></TooltipTrigger><TooltipPopup side="right">Ask Conker</TooltipPopup></Tooltip>
-        <Tooltip><TooltipTrigger render={<Button size="icon" variant="outline" aria-label="Search (Ctrl K)" disabled={!openSearch} onClick={event => openSearch?.('', event.currentTarget)} />}><Search /></TooltipTrigger><TooltipPopup side="right">Search · Ctrl K</TooltipPopup></Tooltip>
+        <Tooltip><TooltipTrigger render={<Button size="icon" variant="outline" aria-label={searchKey ? `Search (Ctrl ${searchKey.toUpperCase()})` : 'Search'} disabled={!openSearch} onClick={event => openSearch?.('', event.currentTarget)} />}><Search /></TooltipTrigger><TooltipPopup side="right">{searchLabel}</TooltipPopup></Tooltip>
       </div>
     </SidebarHeader>
     <SidebarContent role="navigation" aria-label="Conker">
-      {gatewaySidebarGroups.map(group => <SidebarGroup key={group.id}>
+      {gatewaySidebarGroups.filter(group => gatewaySidebarDestinations.some(item => item.group === group.id && shown(item))).map(group => <SidebarGroup key={group.id}>
         <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
         <SidebarMenu>
-          {gatewaySidebarDestinations.filter(item => item.group === group.id).map(item => item.id !== 'system' ? place(item)
+          {gatewaySidebarDestinations.filter(item => item.group === group.id && shown(item)).map(item => item.id !== 'system' ? place(item)
             : <Collapsible key={item.id} open={serverOpen || onServer} onOpenChange={setServerOpen} render={<SidebarMenuItem />}>
               <CollapsibleTrigger render={<SidebarMenuButton className="group/server" isActive={onServer} tooltip={item.title} />}>
                 <Server aria-hidden="true" /><span>{item.title}</span>

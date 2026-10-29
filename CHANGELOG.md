@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Eleven shell settings now change the screen they name, at once.** Corners, how the sidebar
+  starts, which places it shows, bigger focus outlines, keyboard shortcuts and the search keys,
+  how many waiting items Home shows, the Home greeting (with an "encouraging" line only when you
+  decided something today), the plan allowance tile and ring, the completed tasks on Home, and the
+  memory map. Screens read them through one `useServerSetting` hook that checks each saved value
+  against the settings registry and falls back to its default.
+
 - **The Claude plan on the server.** The source-built Ubuntu layout now runs a Claude plan
   runtime, the `subscriptions` service: the official Claude Code CLI (2.1.310, checked by SHA-512)
   behind the private bridge, sharing Pi's network namespace, with the sign-in in its own folder

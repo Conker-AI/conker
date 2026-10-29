@@ -25,6 +25,7 @@ function harness() {
   new Function('require', 'module', 'exports', code)(name => {
     if (name === './use-memory-correction') return { useMemoryCorrection: () => correction }
     if (name === '@/hooks/use-mobile') return { useIsMobile: () => false }
+    if (name === '@/settings/server-setting') return { useServerSetting: (_, fallback) => fallback }
     if (name === 'react') return react
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
     if (name === 'react-router-dom') return { useSearchParams: () => [params, (value, options) => { params = value; writes.push([params.toString(), options]) }] }

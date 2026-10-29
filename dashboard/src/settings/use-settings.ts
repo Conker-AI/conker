@@ -3,6 +3,7 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import { GatewayError, gatewayError } from '@/lib/gateway/transport'
 import { useTheme } from '@/hooks/use-theme'
 import { readDeviceSetting, writeDeviceSetting } from './device'
+import { publishServerSettings } from './server-setting'
 import { sameValue, type Setting, type SettingValue } from './registry'
 
 export type RowStatus = { state: 'saving' | 'saved' | 'failed'; message?: string }
@@ -57,6 +58,7 @@ export function useSettings(client: GatewayControlClient) {
     const message = (result: PromiseSettledResult<unknown>) => result.status === 'rejected' ? gatewayError(result.reason).message : undefined
     setLoadErrors({ settings: message(settings), preferences: message(preferences), search: message(search) })
     setDocuments(next); latest.current = next; setLoading(false)
+    if (next.settings) publishServerSettings(next.settings)
   }, [client])
   useEffect(() => {
     const controller = new AbortController()
@@ -110,6 +112,8 @@ export function useSettings(client: GatewayControlClient) {
           if (sameValue(next, setting.default)) delete values[setting.id]; else values[setting.id] = next
           const saved = await client.settings.save(values, current.settings.revision)
           setDocuments(documents => ({ ...documents, settings: saved })); latest.current = { ...latest.current, settings: saved }
+          // Every other screen follows at once (the sidebar, Home, Memory...).
+          publishServerSettings(saved)
         } else if (home === 'preferences' && current.preferences && setting.home?.service === 'pi') {
           const saved = await client.settings.savePreferences(withField(current.preferences.preferences, setting.home.field, next), current.preferences.revision)
           setDocuments(documents => ({ ...documents, preferences: saved })); latest.current = { ...latest.current, preferences: saved }

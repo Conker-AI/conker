@@ -18,6 +18,7 @@ import { CollectionEmpty, WorkspaceSearch, RecordItem } from '@/components/desig
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import { InlineError } from '@/components/resilience/inline-error'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayControlClient, MemoryConnections, MemoryContent, MemoryLibrary, MemoryObjectCard, MemoryObjectKind } from '@/lib/gateway/control'
 import { layoutMemoryAtlas, memoryGraphNodeLimit, projectMemoryGraph, readMemoryGraph, type MemoryGraphRead } from '@/lib/gateway/memory-graph'
 
@@ -60,7 +61,9 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   const [type, setType] = useState<MemoryObjectKind | 'all'>('all')
   const [params, setParams] = useSearchParams()
   const isMobile = useIsMobile()
-  const view = params.get('view') === 'database' || !params.get('view') && isMobile ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
+  // Settings > Memory > Memory map: off keeps Memory to the list (the map and tree are both drawings of connections).
+  const mapOn = useServerSetting('memory.map', true)
+  const view = !mapOn || params.get('view') === 'database' || !params.get('view') && isMobile ? 'database' : ['hierarchy', 'tree'].includes(params.get('view') ?? '') ? 'hierarchy' : 'network'
   const isGraph = view !== 'database'
   const [expanded, setExpanded] = useState(false)
   const [graphRead, setGraphRead] = useState<{ page: MemoryLibrary; result: MemoryGraphRead } | null>(null)
@@ -182,7 +185,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
     <WorkspaceSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" onSubmit={() => { setQuery(search); refresh() }} />
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
-      <Select value={view} onValueChange={value => { if (value !== null) setView(value) }} items={[{ value: "network", label: "Map" }, { value: "hierarchy", label: "Tree" }, { value: "database", label: "List" }]}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>
+      {mapOn && <Select value={view} onValueChange={value => { if (value !== null) setView(value) }} items={[{ value: "network", label: "Map" }, { value: "hierarchy", label: "Tree" }, { value: "database", label: "List" }]}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>}
       <Select value={type} onValueChange={value => { if (value === null) return; setType(value as typeof type); refresh() }} items={[{ value: "all", label: "All memories" }, ...kinds.map((kind) => ({ value: kind, label: kindLabels[kind] }))]}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
       <AddMemory client={client} onAdded={message => { setAdded(message); refresh() }} />
       <Button ref={memoryRefresh} size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
