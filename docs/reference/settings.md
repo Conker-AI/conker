@@ -379,7 +379,6 @@ What the AI sees when it answers.
 | **Chat history**<br>`context.history` | How much of the chat the model sees. Choices: Auto, Recent messages, Everything, Summary only. (saved, not used yet) | Auto | owner settings |
 | **Recent messages**<br>`context.recent_messages` | How many recent messages count as recent. 5 to 200. (saved, not used yet) | `30` | owner settings |
 | **Memory recall**<br>`context.memory_recall` | Whether memories are added to each answer's context. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
-| **Memories per answer**<br>`context.memories_per_answer` | The most memories added to one answer. 1 to 50. (saved, not used yet) | `8` | owner settings |
 | **Project sources**<br>`context.project_sources` | Whether a chat's project files are offered to the model. Choices: Auto, None. (saved, not used yet) | Auto | owner settings |
 
 ### Budget
@@ -608,7 +607,7 @@ What Conker remembers about you and for how long.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Remember across chats**<br>`memory.across_chats` | Conker uses what it learned in your other chats; off keeps each chat to itself. (applies from the next message) | on | owner settings |
-| **Memories per answer**<br>`memory.per_answer` | The most memories one answer uses. 1 to 50. (saved, not used yet) | `8` | owner settings |
+| **Memories per answer**<br>`memory.per_answer` | The most memories one answer uses. 1 to 30. (applies from the next message) | `8` | owner settings |
 
 ### Upkeep
 

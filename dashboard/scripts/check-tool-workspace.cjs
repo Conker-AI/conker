@@ -17,7 +17,26 @@ function load(relative) {
 }
 async function main() {
   const { createToolWorkspacePreview, executeToolPreview, createToolWorkspaceFixtures } = load('src/lib/api/tool-workspace-preview.ts')
-  const { validateToolDefinition, parseToolDraft, parseToolDefinition, createToolNode, createToolDefinition } = load('src/lib/tool-workspace.ts')
+  const { validateToolDefinition, parseToolDraft, parseToolDefinition, createToolNode, createToolDefinition, editorValidation } = load('src/lib/tool-workspace.ts')
+  // ToolGate's check of the saved draft wins; the quick local check covers only unsaved edits.
+  const saved = createToolDefinition('saved-live', 'Saved live')
+  const toolgate = [{ path: 'toolgate', message: 'Referenced step must run on every path to this node.', nodeId: 'result' }]
+  assert.deepEqual(editorValidation(saved, true, false, toolgate), { issues: toolgate, label: 'ToolGate: needs attention' }, 'ToolGate finds what the quick check misses')
+  const unlinked = structuredClone(saved); unlinked.edges = []
+  assert.deepEqual(editorValidation(unlinked, true, false, []).issues, [], 'ToolGate saying valid wins over the quick check')
+  assert.ok(editorValidation(unlinked, true, true, []).issues.length, 'Unsaved edits get instant feedback from the quick check')
+  assert.match(editorValidation(unlinked, true, true, []).label, /save to check with ToolGate/)
+  assert.equal(editorValidation(saved, true, false, 'checking').label, 'Checking with ToolGate\u2026')
+  assert.match(editorValidation(saved, true, false, 'failed').label, /ToolGate didn\u2019t answer/, 'No answer is said, not hidden')
+  assert.equal(editorValidation(saved, false, false).label, 'Definition valid', 'The local preview has only the local check')
+  // Rules ToolGate does not have are gone from live drafts.
+  const typed = structuredClone(saved)
+  typed.inputs = [{ name: 'count', type: 'number', required: false, default: 'three' }]
+  assert.deepEqual(validateToolDefinition(typed, true), [], 'ToolGate does not check defaults, so live drafts are not refused for them')
+  assert.ok(validateToolDefinition(typed).length, 'The local preview, which runs defaults itself, still checks them')
+  const long = structuredClone(saved)
+  long.nodes.find(n => n.type === 'return').config.value = 'x'.repeat(20000)
+  assert.doesNotThrow(() => parseToolDraft(JSON.stringify(long)), 'ToolGate bounds the document, not each value')
   for (const record of createToolWorkspaceFixtures()) assert.deepEqual(validateToolDefinition(record.draft), [], record.id)
   const nestedLive = createToolDefinition('nested-live', 'Nested live')
   const nestedNode = createToolNode('workflow_call')

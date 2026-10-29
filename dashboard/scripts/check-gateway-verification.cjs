@@ -47,6 +47,9 @@ async function prompt(f, body = { text: 'Private draft never shown in the verifi
 }
 async function main() {
   const grantReview = describeGatewayOperation({ method: 'POST', path: '/api/owner/editor-drafts/qa_workflow/access', body: { enabled: true } })
+  const publishFor = conkerMayUse => describeGatewayOperation({ method: 'POST', path: '/api/owner/editor-drafts/qa_workflow/publish', body: { expected_revision: 2, expected_publication_version: 0, authorization: 'owner_confirmation', conkerMayUse } }).details.join(' ')
+  assert.match(publishFor(true), /lets Conker use it/, 'The password prompt says Conker gets access')
+  assert.match(publishFor(false), /Does not run it or grant agent access/)
   assert.match(grantReview.details.join(' '), /pinned nested workflows/)
   assert.ok(grantReview.details.some(detail => detail.includes(WORKFLOW_ACCESS_SCOPE)))
   const workflowScreen = fs.readFileSync(path.resolve(__dirname, '../src/components/gateway/workflow-runs.tsx'), 'utf8')

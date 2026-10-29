@@ -30,7 +30,8 @@ export interface ToolWorkspaceClient {
 export const MOCK_CONNECTORS = ["calendar.read", "email.read", "email.draft", "email.send", "files.read", "files.delete", "reminder.create", "system.status"] as const
 export const NODE_LABELS: Record<NodeKind, string> = { input: "Input", tool_call: "Call connector", workflow_call: "Call published tool", set: "Set value", calculation: "Calculate", condition: "Condition", loop: "Bounded loop", return: "Return" }
 
-const json: z.ZodType<JsonValue> = z.lazy(() => z.union([z.null(), z.boolean(), z.number().finite(), z.string().max(16000), z.array(json).max(200), z.record(z.string(), json)]))
+// ToolGate bounds a document as a whole (150000 bytes), not each value; so does the editor.
+const json: z.ZodType<JsonValue> = z.lazy(() => z.union([z.null(), z.boolean(), z.number().finite(), z.string(), z.array(json), z.record(z.string(), json)]))
 const identifier = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/, "Use a letter followed by letters, digits, underscores or hyphens.")
 const field = z.object({ name: identifier, type: z.enum(["string", "number", "boolean", "array", "object"]), required: z.boolean(), description: z.string().max(500).optional(), default: json.optional() }).strict()
 const definitionSchema = z.object({
@@ -66,7 +67,8 @@ export function validateToolDefinition(value: unknown, live = false): Validation
   if (new Set(d.edges.map(e => e.id)).size !== d.edges.length) add("edges", "Edge IDs must be unique.")
   for (const key of ["inputs", "outputs"] as const) {
     if (new Set(d[key].map(f => f.name)).size !== d[key].length) add(key, "Field names must be unique.")
-    d[key].forEach(f => { if (f.default !== undefined && !valueMatchesType(f.default, f.type)) add(key, `Default for ${f.name} must be ${f.type}.`) })
+    // The local preview runs defaults itself; ToolGate does not check them, so live drafts don't either.
+    if (!live) d[key].forEach(f => { if (f.default !== undefined && !valueMatchesType(f.default, f.type)) add(key, `Default for ${f.name} must be ${f.type}.`) })
   }
   for (const edge of d.edges) if (!ids.has(edge.source) || !ids.has(edge.target)) add("edges", `Connection ${edge.id} has a missing endpoint.`)
   const roots = d.nodes.filter(n => n.type === "input")
@@ -112,6 +114,19 @@ export function validateToolDefinition(value: unknown, live = false): Validation
   if (roots[0]) visit(roots[0].id)
   d.nodes.filter(n => !visited.has(n.id)).forEach(n => add("nodes", "Node is disconnected from Input.", n.id))
   return issues
+}
+/** ToolGate's answer for the saved draft: still checking, its issues, or no answer. */
+export type SavedCheck = "checking" | "failed" | ValidationIssue[]
+/**
+ * What the editor shows. For a saved live draft ToolGate's check wins; the quick local check only
+ * gives instant feedback on unsaved edits, or stands in (and says so) until ToolGate answers.
+ */
+export function editorValidation(definition: ToolDefinition, live: boolean, dirty: boolean, saved?: SavedCheck): { issues: ValidationIssue[]; label: string } {
+  if (live && saved !== undefined && !dirty && Array.isArray(saved)) return { issues: saved, label: saved.length ? "ToolGate: needs attention" : "ToolGate: valid" }
+  const issues = validateToolDefinition(definition, live)
+  const quick = issues.length ? "Needs attention" : "Definition valid"
+  if (!live || saved === undefined) return { issues, label: quick }
+  return { issues, label: dirty ? `${quick} · save to check with ToolGate` : saved === "checking" ? "Checking with ToolGate…" : `${quick} · ToolGate didn’t answer` }
 }
 export function parseToolDefinition(source: string): ToolDefinition {
   if (source.length > 150000) throw new Error("Definition exceeds the preview size limit.")
