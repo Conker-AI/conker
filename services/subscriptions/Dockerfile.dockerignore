@@ -1,0 +1,13 @@
+# The image is built from the whole Conker source; it needs only these files.
+*
+!services/subscriptions/requirements.txt
+!services/subscriptions/fetch_claude.py
+!scripts/subscription_runtime.py
+!scripts/workspace_providers.py
+!scripts/chatgpt_relay.py
+!scripts/chatgpt_provider.py
+!scripts/inference_requests.py
+!scripts/native_claude.py
+!scripts/native_claude_sessions.py
+!scripts/native_codex_sessions.py
+!scripts/plan_limits.py

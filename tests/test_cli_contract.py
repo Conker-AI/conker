@@ -15,6 +15,7 @@ COMMANDS = {
     "inspect",
     "apply",
     "config",
+    "tool",
     "tailscale",
     "backup",
     "verify-backup",

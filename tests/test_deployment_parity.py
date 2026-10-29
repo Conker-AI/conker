@@ -98,8 +98,17 @@ def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
     manifest, environment = ubuntu_deployment(tmp_path)
     services = manifest["services"]
 
-    # The repository pins the agent sandbox active; its two services are optional in the profile.
-    assert set(services) == recovery_layout.UBUNTU_SERVICES | {"sandbox-runner", "package-proxy"}
+    # The repository pins the agent sandbox active; its two services are optional in the profile,
+    # as is the Claude plan runtime, which older deployments lack.
+    assert set(services) == recovery_layout.UBUNTU_SERVICES | {
+        "sandbox-runner", "package-proxy", "subscriptions"
+    }
+    assert set(services) - recovery_layout.UBUNTU_SERVICES <= (
+        recovery_layout.UBUNTU_PROFILE.optional_services
+    )
+    assert {path.name for path in (tmp_path / "state").glob("*.env")} == (
+        recovery_layout.UBUNTU_ENV_FILES | recovery_layout.UBUNTU_OPTIONAL_ENV_FILES
+    )
     for service, destination in recovery_layout.UBUNTU_STORES.items():
         declared = {
             volume.split(":", 2)[1]

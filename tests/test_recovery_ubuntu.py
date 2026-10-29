@@ -171,3 +171,42 @@ def test_ubuntu_manifest_store_destination_cannot_drift(ubuntu_installed, tmp_pa
 
     with pytest.raises(recovery.RecoveryError, match="Storage service or destination"):
         recovery_snapshot.verify_snapshot(snapshot)
+
+
+def test_claude_plan_runtime_is_captured_without_its_sign_in(ubuntu_installed, tmp_path):
+    root, engine = ubuntu_installed
+    sign_in, sockets = tmp_path / "subscriptions", tmp_path / "chatgpt-inference"
+    sign_in.mkdir()
+    sockets.mkdir()
+    (sign_in / "claude-auth").mkdir()
+    (sign_in / "claude-auth/.credentials.json").write_text("synthetic-sign-in")
+    (root / "state/subscriptions.env").write_text("SUBSCRIPTIONS_CONTROL_KEY=fixture\n")
+    engine.services.add("subscriptions")
+    engine.containers["source-subscriptions"] = {
+        "Id": "source-subscriptions",
+        "Image": engine.image,
+        "State": {"Running": True, "ExitCode": 0},
+        "Mounts": [
+            {"Type": "bind", "Source": str(sign_in), "Destination": "/state"},
+            {"Type": "bind", "Source": str(sockets), "Destination": "/run/conker-chatgpt"},
+        ],
+        "Config": {"Image": "conker-subscriptions", "Env": []},
+    }
+
+    snapshot = recovery.backup(root, tmp_path / "off-machine", engine)
+    manifest = recovery_snapshot.verify_snapshot(snapshot)
+
+    assert "subscriptions" in manifest["images"]
+    assert "subscriptions" not in manifest["stores"]
+    assert (snapshot / "config/env/subscriptions.env").is_file()
+    archived = b"".join(path.read_bytes() for path in snapshot.rglob("*") if path.is_file())
+    assert b"synthetic-sign-in" not in archived
+    assert any(call[0] == "stop" and "source-subscriptions" in call for call in engine.calls)
+
+
+def test_an_unknown_environment_file_still_stops_a_backup(ubuntu_installed, tmp_path):
+    root, engine = ubuntu_installed
+    (root / "state/unexpected.env").write_text("X=1\n")
+
+    with pytest.raises(recovery.RecoveryError, match="environment inventory"):
+        recovery.backup(root, tmp_path / "off-machine", engine)

@@ -6,6 +6,7 @@ Secrets are generated once, owner-readable only, and never printed.
 import hashlib
 import json
 import os
+import re
 import secrets
 import sys
 from pathlib import Path
@@ -22,6 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
 from scripts.provider_secrets import ProviderSecretError, SecretStore
 from scripts.release_manifest import ManifestError, load_release_manifest
+from scripts.service_keys import environments as service_environments
+from scripts.service_keys import new_key, usable
 from scripts.terminal_workspace import TerminalWorkspaceError, validate_workspace
 
 origin = sys.argv[1]
@@ -99,17 +102,27 @@ if sandbox["state"] == "active":
     if not (docker_gid.isascii() and docker_gid.isdigit()):
         raise SystemExit("CONKER_DOCKER_GID must be a numeric group ID")
 keyfile = state / "credentials.json"
-if keyfile.exists():
-    keys = json.loads(keyfile.read_text())
-else:
+fresh = not keyfile.exists()
+if fresh:
     keys = {name: secrets.token_urlsafe(36) for name in (
         "pi", "gateway", "pi_owner", "toolgate", "owner", "execution", "memory",
         "read", "ingest", "decisions", "salt", "callback", "postgres", "embeddings", "system")}
     keys["execution"] = "tgx_" + keys["execution"]
     keys["read"] = "mg_read_" + keys["read"]
     keys["salt"] = secrets.token_hex(16)
-    keyfile.write_text(json.dumps(keys))
-    keyfile.chmod(0o600)
+else:
+    keys = json.loads(keyfile.read_text())
+# Keys added after a deployment's first prepare: MemoryGate's and ToolGate's for asking Pi for
+# model text, and the Claude plan runtime's two. None protects stored data, so an older deployment
+# gets them here and every other key stays exactly as it is.
+added = [name for name in ("memorygate_pi", "toolgate_pi", "subscriptions_control",
+    "subscriptions_inference") if not usable(keys.get(name))]
+keys.update({name: new_key() for name in added})
+if fresh or added:
+    written = keyfile.with_name(keyfile.name + ".writing")
+    written.write_text(json.dumps(keys))
+    written.chmod(0o600)
+    written.replace(keyfile)
 digest = lambda name: hashlib.sha256(keys[name].encode()).hexdigest()
 
 def preserved_pi_setting(name):
@@ -126,6 +139,11 @@ def preserved_pi_setting(name):
         raise SystemExit(f"{name} must be one line")
     return value
 
+# A loaded local model stays in memory this long after its last use (Ollama's own default is 5m,
+# which made the first answer after a pause wait for the model to load again).
+keep_alive = os.environ.get("CONKER_OLLAMA_KEEP_ALIVE") or "24h"
+if not re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?(?:ms|s|m|h)?", keep_alive):
+    raise SystemExit("CONKER_OLLAMA_KEEP_ALIVE must be a duration such as 24h, 30m or -1")
 env = {
     "postgres": {"POSTGRES_USER": "conker", "POSTGRES_DB": "conker", "POSTGRES_PASSWORD": keys["postgres"]},
     "gateway": {"GATEWAY_ORIGIN": origin, "GATEWAY_DB_PATH": "/auth/auth.db",
@@ -140,7 +158,9 @@ env = {
         "PI_OPENROUTER_KEY_FILE": "/run/secrets/provider-openrouter",
         "PI_OPENAI_KEY_FILE": "/run/secrets/provider-openai",
         "PI_ANTHROPIC_KEY_FILE": "/run/secrets/provider-anthropic",
-        "PI_CHATGPT_SOCKET": "/run/conker-chatgpt/inference.sock",
+        # Claude plan answers, and ChatGPT ones passed on to the host worker's socket, come from
+        # the subscription runtime at Pi's own address (the subscriptions service below).
+        "PI_SUBSCRIPTION_URL": "http://127.0.0.1:8070", "PI_SUBSCRIPTION_KEY": keys["subscriptions_inference"],
         "PI_SPEECH_KEY_FILE": "/run/secrets/speech",
         "PI_TOOLGATE_URL": "http://toolgate:8010", "PI_TOOLGATE_KEY": keys["execution"],
         "PI_MEMORYGATE_URL": "http://memorygate:8020", "PI_MEMORYGATE_INGEST_KEY": keys["ingest"],
@@ -168,8 +188,15 @@ env = {
     "decisions": {"DECISION_API_KEY": keys["decisions"], "DECISION_CPU_THREADS": "4",
         "DECISION_MODEL_PATH": "/models/hub/models--convaiinnovations--laya/snapshots/1c5edc17a7acd8701df6fc341c0d179f1c62c982",
         "DECISION_MODEL_ID": "laya-english@1c5edc17", "HF_HOME": "/models"},
-    "ollama": {"OLLAMA_CONTEXT_LENGTH": "8192", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "2", "OLLAMA_KEEP_ALIVE": "5m"},
+    "ollama": {"OLLAMA_CONTEXT_LENGTH": "8192", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "2", "OLLAMA_KEEP_ALIVE": keep_alive},
+    "subscriptions": {"SUBSCRIPTIONS_CONTROL_KEY": keys["subscriptions_control"],
+        "SUBSCRIPTIONS_INFERENCE_KEY": keys["subscriptions_inference"],
+        "SUBSCRIPTIONS_CHATGPT_SOCKET": "/run/conker-chatgpt/inference.sock"},
 }
+for name, values in service_environments(
+    "http://pi:8050", {"memorygate": keys["memorygate_pi"], "toolgate": keys["toolgate_pi"]}
+).items():
+    env[name].update(values)
 if terminal_workspace is not None:
     env["gateway"].update({
         "GATEWAY_TERMINAL_SOCKET": "/run/conker-terminal/control.sock",
@@ -247,7 +274,6 @@ services["pi"]["volumes"] = [
     "./state/provider-secrets/openrouter.key:/run/secrets/provider-openrouter:ro",
     "./state/provider-secrets/openai.key:/run/secrets/provider-openai:ro",
     "./state/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro",
-    "./state/chatgpt-inference:/run/conker-chatgpt:ro",
     "./state/speech/speech.key:/run/secrets/speech:ro",
 ]
 services["pi"]["depends_on"] = ["memorygate", "toolgate", "ollama"]
@@ -325,6 +351,18 @@ services["decisions"] = {"build": {"context": "./sources/companion/services/deci
     "restart": "unless-stopped", "mem_limit": "3g", "pids_limit": 256, "cap_drop": ["ALL"],
     "security_opt": ["no-new-privileges:true"], "env_file": ["./state/decisions.env"],
     "user": "1000:1000", "network_mode": "service:pi", "depends_on": ["pi"], "volumes": ["./state/decisions:/models"],
+    "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
+# The Claude plan runtime (scripts/subscription_runtime.py): the official Claude Code CLI, holding
+# the owner's sign-in in state/subscriptions alone. It joins Pi's network namespace because Pi
+# reaches a subscription runtime only at 127.0.0.1, and listens only there. ChatGPT answers go on
+# to the host's private ChatGPT worker through its socket, as Pi's went before.
+services["subscriptions"] = {
+    "build": {"context": "./sources/companion", "dockerfile": "services/subscriptions/Dockerfile"},
+    "restart": "unless-stopped", "mem_limit": "1g", "pids_limit": 128, "cap_drop": ["ALL"],
+    "security_opt": ["no-new-privileges:true"], "env_file": ["./state/subscriptions.env"],
+    "user": "1000:1000", "network_mode": "service:pi", "depends_on": ["pi"], "read_only": True,
+    "tmpfs": ["/tmp:rw,nosuid,nodev,size=64m"],
+    "volumes": ["./state/subscriptions:/state", "./state/chatgpt-inference:/run/conker-chatgpt:ro"],
     "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
 volumes = {"terminal_control": {}} if terminal_workspace is not None else {}
 networks = {"runtime": {}, "owner": {"internal": True}, "index": {"internal": True}, "inference": {}}

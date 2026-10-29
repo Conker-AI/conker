@@ -350,6 +350,11 @@ def main():
     elif args.command == "up":
         if not (ROOT / "dashboard/dist/index.html").is_file():
             raise SystemExit("Build the dashboard first: python scripts/workspace.py build")
+        from service_keys import ensure
+        # A workspace made before MemoryGate and ToolGate asked Pi for model text gets their keys
+        # here; a service already running picks its key up when it next starts.
+        if ensure(config, f"http://127.0.0.1:{PORTS['pi']}"):
+            CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
         for service in order:
             if not owned_process(config, service):
                 launch(config, "start", service)
