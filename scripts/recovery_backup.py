@@ -21,6 +21,7 @@ from recovery_layout import (
     PROVIDER_IDS,
     PROVIDER_STATE_FIELDS,
     UBUNTU_ENV_FILES,
+    UBUNTU_OPTIONAL_ENV_FILES,
     LayoutProfile,
     compose_command,
     copy_bounded_regular,
@@ -116,14 +117,16 @@ def capture_configuration(
         for path in (root / "state").glob("*.env")
         if path.is_file() or path.is_symlink()
     }
-    if environment_files != UBUNTU_ENV_FILES:
+    if not UBUNTU_ENV_FILES <= environment_files <= (
+        UBUNTU_ENV_FILES | UBUNTU_OPTIONAL_ENV_FILES
+    ):
         raise RecoveryError(
             "Ubuntu environment inventory differs from the release contract; "
             "review it before backup."
         )
     environment_target = target / "env"
     environment_target.mkdir(mode=0o700)
-    for name in sorted(UBUNTU_ENV_FILES):
+    for name in sorted(environment_files):
         copy_bounded_regular(root / "state" / name, environment_target / name)
 
 

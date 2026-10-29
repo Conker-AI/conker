@@ -100,6 +100,56 @@ jobs:
           CONKER_RECOVERY_DOCKER: "1"
         run: python -m pytest tests/test_recovery_docker.py -q
 
+  subscription-runtime:
+    # The Claude plan runtime the source-built server layout builds (services/subscriptions): the
+    # image builds, the pinned Claude Code binary passes its checksum and runs read-only, signed
+    # out, and the bridge answers only with its keys. Nothing signs in.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the image
+        run: docker build -f services/subscriptions/Dockerfile -t conker-subscriptions:ci .
+
+      - name: Claude Code runs without a network
+        run: |
+          docker run --rm --network none --read-only conker-subscriptions:ci \
+            /opt/claude/bin/claude --version
+
+      - name: The bridge starts, signed out, and keeps its keys apart
+        run: |
+          control=ci-control-key-ci-control-key-ci-control
+          inference=ci-inference-key-ci-inference-key-ci-inf
+          docker run -d --name subscriptions --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m --tmpfs /state:rw,uid=1000,gid=1000 \
+            -e SUBSCRIPTIONS_CONTROL_KEY="$control" -e SUBSCRIPTIONS_INFERENCE_KEY="$inference" \
+            conker-subscriptions:ci
+          probe='import sys, urllib.request as u
+          request = u.Request("http://127.0.0.1:8070" + sys.argv[1], headers={"Authorization": "Bearer " + sys.argv[2]})
+          try:
+              print(u.urlopen(request, timeout=20).read().decode())
+          except u.HTTPError as error:
+              print(error.code)'
+          for _ in $(seq 30); do
+            docker exec subscriptions python -c "$probe" /health x && break
+            sleep 1
+          done
+          status=$(docker exec subscriptions python /app/subscription_runtime.py status)
+          echo "$status"
+          echo "$status" | python3 -c 'import json, sys; value = json.load(sys.stdin); assert value["available"] is True and value["connected"] is False, value'
+          test "$(docker exec subscriptions python -c "$probe" /inference/claude/status "$control")" = 401
+          docker exec subscriptions python -c "$probe" /inference/claude/status "$inference" \
+            | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"available": True, "connected": False}'
+          # No host ChatGPT worker here, so ChatGPT is honestly unavailable.
+          docker exec subscriptions python -c "$probe" /inference/status "$inference" \
+            | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"available": False, "connected": False}'
+
+      - name: Runtime logs
+        if: always()
+        run: docker logs subscriptions || true
+
   cross-gate:
     # The tests that import Pi, ToolGate and MemoryGate together, run against the gate commits
     # Conker pins (scripts/workspace-sources.json). Run only by hand, they once rotted for weeks

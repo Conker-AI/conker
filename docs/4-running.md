@@ -117,6 +117,8 @@ conker setup run rehearsal --start-approval
 conker setup run rehearsal --finish-approval REQUEST_ID
 conker setup run rehearsal --finalize
 conker providers status       # secret-free hosted-provider revisions and state
+conker providers claude login # Ubuntu layout: sign in to the Claude plan once, in this terminal
+conker tool draft "Show free disk space" # Pi drafts a tool; the draft waits in the Inbox
 conker logs pi
 conker stop
 conker start
@@ -166,7 +168,8 @@ and revision-bound targets as the UI, not a second credential store.
 OAuth credentials in `state/chatgpt-auth` (Ubuntu) or `.conker/chatgpt-auth`
 (repository layout) are private and not mounted into Pi/Gateway or included in
 normal Conker snapshots. Reconnect after restoring onto another host; never copy
-desktop credentials into this store. Only Pi mounts `chatgpt-inference`; only
+desktop credentials into this store. Only Pi mounts `chatgpt-inference` (in the Ubuntu
+layout, only the Claude plan runtime, which passes Pi's ChatGPT answers on); only
 Gateway mounts `provider-control`. The main shell and tool permissions are unchanged.
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
@@ -410,8 +413,9 @@ its ports and lifecycle commands are not interchangeable with this workspace.
 - **Hosted:** configure a provider, check availability and select its model. The
   connected turn records which provider answered. Host API-key lifecycle commands
   include `conker providers set`, `verify` and `activate`.
-- **Subscription runtimes:** the enhanced local profile connects native ChatGPT
-  and Claude Code sign-in separately from API keys. Connecting does not select or
+- **Subscription runtimes:** the enhanced local profile, and the Claude plan runtime of
+  the Ubuntu layout (below), connect native ChatGPT and Claude Code sign-in separately from
+  API keys. Connecting does not select or
   verify a model. See [Harnesses and model roles](reference/harnesses-and-models.md).
 - **Auto and thinking:** optional Laya chooses among eligible answer models using
   model descriptions and bounded conversation context. This is not a guarantee of
@@ -421,6 +425,62 @@ its ports and lifecycle commands are not interchangeable with this workspace.
 Provider keys are host-only files, never browser settings or `.env` values. See
 [hosted provider credentials](reference/provider-credentials.md) for rotation,
 interruption recovery, issuer revocation and backup behavior.
+
+### Connect Claude
+
+The server keeps the tools, folders, commands and internet; the thinking can run on Claude.
+There are two ways to connect it, and they differ by layout:
+
+| Layout | Claude plan (subscription) | Anthropic API key (billed per request) |
+|---|---|---|
+| Source-built Ubuntu (`deploy/ubuntu`) | `conker providers claude login`, once | `conker providers set anthropic` |
+| Repository install (`./install.sh`) | Not yet (see below) | `conker providers set anthropic` |
+| Windows workspace (C) | Settings > Providers, or `python scripts/conker.py auth claude login`, after `workspace.py enhance` | Not wired |
+
+**Claude plan on the Ubuntu layout.** The Claude plan runtime is its own service,
+`subscriptions`: the official Claude Code CLI (pinned, checked by SHA-512) behind a private
+bridge, built from the source export. It shares Pi's network namespace and listens only on
+`127.0.0.1:8070` inside it; Pi has only its inference key, and the sign-in stays in
+`state/subscriptions`, which snapshots leave out (sign in again after a restore elsewhere).
+ChatGPT answers go through it to the host ChatGPT worker, unchanged. Once, after updating the
+source export:
+
+```sh
+python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443   # adds the service and keys
+docker compose -f compose.json up -d --build
+conker providers claude login    # open the link it prints in any browser, sign in to
+                                 # your Claude account, paste the code it shows back here
+conker providers claude status   # "connected": true
+```
+
+Then choose a Claude model (`sonnet`, `opus` or `haiku` under Claude Code) for each role in
+Settings > Models > Model roles. `conker providers claude logout` signs out. Signing in happens
+only in the terminal: the server cannot receive the browser's sign-in callback, and the
+Settings sign-in button stays unavailable on the server until the Gateway can reach this
+runtime. No token is copied in or out.
+
+**API key, both server layouts.** `conker providers set anthropic` (hidden prompt), then
+`conker providers verify anthropic` and `conker providers activate anthropic REVISION` (the
+revision from `conker providers status`). Pi then reads the key from its read-only file. Pi
+answers with a key only after `conker providers spending on`: until then the provider shows
+"paid models are disabled", which is why a server with a key can still say not configured.
+Settings > Providers does the same after `conker providers install-ui-control`.
+
+**Repository install, plan sign-in.** Not packaged yet: this layout runs only published,
+digest-pinned images, and `conker update` resolves each to a registry digest and rolls back with
+`--no-build`, so a locally built runtime would break that guarantee. The plan: publish `services/subscriptions` as a release image,
+pin it in `versions.env`, add it in an overlay selected by a capability state (as the agent
+sandbox is), and wire `PI_SUBSCRIPTION_URL`/`KEY` and its two keys in `install.sh`.
+
+### Which command makes a tool
+
+`conker tool draft "what it should do"` files a tool request in Pi at once; Pi drafts it in the
+background with the drafting model, checks it with ToolGate and repairs it, and the command
+waits and prints its steps and issues, or why it failed (`--no-wait` returns at once). The draft
+waits in the Inbox, the same card a chat request makes. Use it from both installed layouts and
+`python scripts/conker.py tool draft` in the workspace. `python scripts/conker.py workflow draft`
+is the older interactive builder of the development CLI (it asks questions in the terminal and
+saves straight into Tools); keep it for that.
 
 ## Security in one paragraph
 
