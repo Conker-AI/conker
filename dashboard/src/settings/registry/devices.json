@@ -60,16 +60,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "devices.data_saver",
-          "title": "Data saver",
-          "description": "Loads no images or previews until you tap them.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     }

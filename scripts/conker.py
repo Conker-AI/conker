@@ -13,6 +13,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 import conker_models
 import conker_toolgate
+import tool_drafts
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
 from conker_context import operation as context_operation
@@ -497,6 +498,14 @@ def main():
         value = limits_operation(args, config, request, pi_call)
     elif args.command == "workflow":
         value = workflow_operation(args, config, request)
+    elif args.command == "tool":
+        return tool_drafts.run(
+            lambda method, path, body: pi_call(
+                request, config, path, body, method=method
+            ),
+            args,
+            emit=tool_drafts.emit,
+        )
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
     elif args.command == "config":

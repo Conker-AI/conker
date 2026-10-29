@@ -103,13 +103,15 @@ class PaidPolicy:
         services = self._compose("config", "--services")
         if services.returncode:
             raise ProviderSecretError("Dependent service inventory was not confirmed.")
-        if (
-            b"decisions" in services.stdout.splitlines()
-            and self._compose(
-                "up", "-d", "--no-deps", "--force-recreate", "decisions"
-            ).returncode
-        ):
-            raise ProviderSecretError("Decision-service restart was not confirmed.")
+        # Both share Pi's network namespace, so they are recreated with it.
+        for name in ("decisions", "subscriptions"):
+            if (
+                name.encode() in services.stdout.splitlines()
+                and self._compose(
+                    "up", "-d", "--no-deps", "--force-recreate", name
+                ).returncode
+            ):
+                raise ProviderSecretError(f"The {name} service restart was not confirmed.")
         check = self._compose(
             "exec",
             "-T",

@@ -53,40 +53,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "day.late_night_from",
-          "title": "Late-night mode from",
-          "description": "When late-night mode starts.",
-          "type": "time",
-          "default": "22:00",
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "day.break_after",
-          "title": "Break reminder",
-          "description": "Reminds you to rest after this long without a pause; 0 turns it off.",
-          "type": "number",
-          "default": 0,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 240,
-          "step": 15,
-          "unit": "minutes"
-        },
-        {
-          "id": "day.tired_button",
-          "title": "I'm tired button",
-          "description": "A button that hands your plan for the rest of the day to Conker.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     },

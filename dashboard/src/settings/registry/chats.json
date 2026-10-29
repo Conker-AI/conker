@@ -78,16 +78,6 @@
           "effect": "stored"
         },
         {
-          "id": "chats.default_think",
-          "title": "Think by default",
-          "description": "New chats think before answering.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "chats.start",
           "title": "A new chat starts with",
           "description": "What you see in an empty chat.",
@@ -174,17 +164,6 @@
               "label": "With an emoji"
             }
           ]
-        },
-        {
-          "id": "chats.names.models",
-          "title": "Naming models",
-          "description": "Which models name chats, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
         }
       ]
     },
@@ -234,17 +213,6 @@
               "label": "Gray text in the box"
             }
           ]
-        },
-        {
-          "id": "chats.suggestions_models",
-          "title": "Suggestion models",
-          "description": "Which models suggest your next message, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
         },
         {
           "id": "chats.prompt_check",

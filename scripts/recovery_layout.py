@@ -112,6 +112,10 @@ UBUNTU_ENV_FILES = {
 }
 
 
+# Written only by deployments prepared since the Claude plan runtime arrived; older snapshots lack it.
+UBUNTU_OPTIONAL_ENV_FILES = {"subscriptions.env"}
+
+
 UBUNTU_CONFIG_REQUIRED = {
     "config/source-compose.json",
     "config/versions.env",
@@ -174,11 +178,14 @@ UBUNTU_PROFILE = LayoutProfile(
     memory_key_name="runtime.key",
     writers=(
         "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
-        "decisions", "ollama", "qdrant", "owner-terminal",
+        "decisions", "subscriptions", "ollama", "qdrant", "owner-terminal",
         "sandbox-runner", "package-proxy",
     ),
     excluded_mounts={
         "gateway": frozenset({"/dashboard", "/run/conker-terminal", "/run/conker-providers"}),
+        # The Claude plan sign-in, like ChatGPT's, is not in snapshots: sign in again after a
+        # restore onto another host.
+        "subscriptions": frozenset({"/state", "/run/conker-chatgpt"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
         "pi": frozenset({
             "/run/secrets/provider-openrouter",
@@ -193,7 +200,9 @@ UBUNTU_PROFILE = LayoutProfile(
         "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
         "package-proxy": frozenset({"/run/conker-proxy"}),
     },
-    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy"}),
+    optional_services=frozenset(
+        {"owner-terminal", "sandbox-runner", "package-proxy", "subscriptions"}
+    ),
 )
 
 

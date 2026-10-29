@@ -24,6 +24,9 @@ def environment(home):
         "APPDATA",
         "PATH",
         "HOME",
+        # Set by the server's Claude plan runtime: no self-update, telemetry or error reports.
+        "DISABLE_AUTOUPDATER",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
     )
     env = {key: os.environ[key] for key in keep if key in os.environ}
     env.update(CLAUDE_CONFIG_DIR=str(home), NO_COLOR="1")

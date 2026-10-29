@@ -23,6 +23,14 @@ release runner select the repository overlay from manifest state. These implemen
 shapes are not activation evidence; the current manifest remains deferred until
 publication and target-Linux acceptance are complete.
 
+Like Laya (next paragraph), the Claude plan runtime is a packaging difference. Ubuntu builds
+`services/subscriptions` from the reviewed source as the `subscriptions` service, sharing Pi's
+network namespace, with its sign-in in `state/subscriptions` (an optional service and env file in
+the recovery profile, its mounts excluded from snapshots). The repository installer has no
+published image for it yet, so there the Claude plan is unavailable and an Anthropic API key is
+the way to connect Claude. Both layouts give MemoryGate and ToolGate their own keys for Pi's
+`/inference` at `http://pi:8050`, with Pi holding only `PI_SERVICE_KEYS_SHA256`.
+
 Laya remains one explicit packaging difference. Ubuntu is a source-build deployment
 and builds its decision sidecar from the reviewed Companion source. The repository
 installer has no published decision-service image to pin, so `PI_DECISION_URL` and

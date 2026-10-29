@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverPopup, PopoverTrigger } from '@/components/ui/popover'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useEnterSends } from '@/pwa/enter-key'
 import { Textarea } from '@/components/ui/textarea'
 import type { ChatContract } from '@/lib/chat/contract'
 
@@ -29,22 +30,26 @@ function ComposerSettings({ children }: { children: ReactNode }) {
 export function ChatComposerFrame({ id, label, placeholder, value, onChange, onSend, disabled, inputRef, controls, settings, actions, feedback, input }: ComposerFrameProps) {
   const localInput = useRef<HTMLTextAreaElement>(null)
   const isMobile = useIsMobile()
+  const enterSends = useEnterSends()
   const inputEl = inputRef ?? localInput
   useLayoutEffect(() => {
     const resize = () => {
       const field = inputEl.current
       if (!field) return
+      // At most 30% of what is visible, so the on-screen keyboard always leaves room for the chat.
+      const limit = Math.min(240, Math.max(64, Math.floor((window.visualViewport?.height ?? window.innerHeight) * 0.3)))
       field.style.height = '0px'
-      field.style.height = `${Math.min(240, Math.max(64, field.scrollHeight))}px`
+      field.style.height = `${Math.min(limit, Math.max(64, field.scrollHeight))}px`
     }
     resize()
     window.addEventListener('resize', resize)
-    return () => window.removeEventListener('resize', resize)
+    window.visualViewport?.addEventListener('resize', resize)
+    return () => { window.removeEventListener('resize', resize); window.visualViewport?.removeEventListener('resize', resize) }
   }, [inputEl, value])
   return <form aria-label="Message composer" className="relative min-w-0 rounded-3xl border bg-card text-card-foreground shadow-composer transition-colors focus-within:border-ring" onSubmit={event => { event.preventDefault(); onSend() }}>
     {input ?? <><Label htmlFor={id} className="sr-only">{label}</Label>
-    <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} className="max-h-60 min-h-16 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-4 pb-2 pt-4 text-base shadow-none focus-visible:ring-0 md:text-base dark:bg-transparent" />
-    <p id={`${id}-help`} className="sr-only">Enter to send. Shift+Enter for a new line.</p></>}
+    <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} enterKeyHint={enterSends ? 'send' : 'enter'} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (enterSends && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} className="max-h-[min(16.5rem,calc(var(--app-height)*0.3+1.5rem))] min-h-16 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-4 pb-2 pt-4 text-base shadow-none focus-visible:ring-0 has-focus-visible:ring-0 md:text-base dark:bg-transparent" />
+    <p id={`${id}-help`} className="sr-only">{enterSends ? 'Enter to send. Shift+Enter for a new line.' : 'Enter for a new line. Use the Send button to send.'}</p></>}
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 pb-3">
       <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">{controls}{settings && (isMobile ? <ComposerSettings>{settings}</ComposerSettings> : settings)}</div>
       <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>

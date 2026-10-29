@@ -82,20 +82,6 @@
           ]
         },
         {
-          "id": "models.think_budget",
-          "title": "Thinking budget",
-          "description": "How long Conker may think before answering.",
-          "type": "number",
-          "default": 4000,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 32000,
-          "step": 1000,
-          "unit": "tokens"
-        },
-        {
           "id": "models.creativity",
           "title": "Creativity",
           "description": "How varied answers are; low is steady, high is inventive.",
@@ -206,16 +192,6 @@
       "title": "Modes",
       "settings": [
         {
-          "id": "models.auto_mode",
-          "title": "Auto mode",
-          "description": "Jev reads your message and proposes model, Think, research and length, with reasons.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "models.auto_reasons",
           "title": "Show Auto's reasons",
           "description": "Shows why Auto chose each setting before you send.",
@@ -309,42 +285,9 @@
           "max_items": 5
         },
         {
-          "id": "models.jobs.auto_settings",
-          "title": "Auto mode models",
-          "description": "Which models propose settings in Auto mode, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
-        },
-        {
           "id": "models.jobs.voice",
           "title": "Voice models",
           "description": "Which models speak Conker's answers, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
-        },
-        {
-          "id": "models.jobs.embeddings",
-          "title": "Embedding models",
-          "description": "Which models turn text into searchable meaning, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
-        },
-        {
-          "id": "models.jobs.images_in",
-          "title": "Image reading models",
-          "description": "Which models look at pictures you send, first choice first.",
           "type": "models",
           "default": [],
           "tier": "advanced",
@@ -364,17 +307,6 @@
           "max_items": 5
         },
         {
-          "id": "models.jobs.translation",
-          "title": "Translation models",
-          "description": "Which models translate, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
-        },
-        {
           "id": "models.jobs.scanning",
           "title": "Document scanning models",
           "description": "Which models read scanned documents, first choice first.",
@@ -384,55 +316,6 @@
           "scope": "global",
           "effect": "stored",
           "max_items": 5
-        },
-        {
-          "id": "models.jobs.ritual",
-          "title": "Ritual summary models",
-          "description": "Which models write the daily ritual, first choice first.",
-          "type": "models",
-          "default": [],
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "max_items": 5
-        },
-        {
-          "id": "models.jobs.time_limit",
-          "title": "Time limit per AI job",
-          "description": "How long one AI job may take before its backup is tried.",
-          "type": "number",
-          "default": 120,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 5,
-          "max": 300,
-          "step": 5,
-          "unit": "seconds"
-        },
-        {
-          "id": "models.jobs.on_failure",
-          "title": "When an AI job fails",
-          "description": "What happens when every model in a job's list fails.",
-          "type": "select",
-          "default": "talking",
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "talking",
-              "label": "Use the talking model"
-            },
-            {
-              "value": "ask",
-              "label": "Ask you"
-            },
-            {
-              "value": "stop",
-              "label": "Stop"
-            }
-          ]
         }
       ]
     },

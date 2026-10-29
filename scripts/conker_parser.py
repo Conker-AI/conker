@@ -10,6 +10,7 @@ from conker_files import register as register_files
 from conker_inbox import register as register_inbox
 from conker_messages import register as register_message
 from conker_workflows import register as register_workflows
+from tool_drafts import register as register_tool
 
 
 def build_parser(description):
@@ -94,6 +95,7 @@ def build_parser(description):
     register_inbox(commands)
     register_config(commands)
     register_workflows(commands)
+    register_tool(commands)
     stop = commands.add_parser(
         "stop", help="Stop the saved submission by its request ID"
     )

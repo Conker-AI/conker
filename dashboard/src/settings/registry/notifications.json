@@ -194,16 +194,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "notifications.sound",
-          "title": "Notification sound",
-          "description": "Plays a sound with each notification.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     },

@@ -324,26 +324,6 @@
               "label": "It varies"
             }
           ]
-        },
-        {
-          "id": "you.away",
-          "title": "Away mode",
-          "description": "While on, Conker sends nothing first and the Inbox waits for you.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "you.away_until",
-          "title": "Away until",
-          "description": "The day away mode turns off by itself.",
-          "type": "date",
-          "default": null,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     }
