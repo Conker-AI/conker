@@ -182,7 +182,15 @@ function serviceWorker({ shell = [], online = true, stored = {} } = {}) {
   assert.deepEqual(Object.keys(viewport.listeners), [])
   const css = read('src/pwa/phone.css')
   assert.match(css, /\[data-slot="sidebar-wrapper"\] \{\s*height: var\(--app-height\);/, 'The app frame uses the visible height')
-  assert.match(read('src/components/chat/composer.tsx'), /enterKeyHint="send"/, 'The phone keyboard labels Enter with what it does')
+  // Enter: a new line on phones (Send button sends), send elsewhere; the keyboard's key says which.
+  const enterKey = load('src/pwa/enter-key.ts', { react: {}, '@/hooks/use-mobile': {} })
+  assert.equal(enterKey.enterSends(true, true), false, 'On a phone Enter adds a new line')
+  assert.equal(enterKey.enterSends(true, false), true, 'A narrow desktop window keeps Enter to send')
+  assert.equal(enterKey.enterSends(false, true), true, 'A tablet keeps Enter to send')
+  assert.equal(enterKey.enterSends(false, false), true, 'Desktop keeps Enter to send')
+  const composer = read('src/components/chat/composer.tsx')
+  assert.match(composer, /enterKeyHint=\{enterSends \? 'send' : 'enter'\}/, 'The keyboard key is labelled Send only where Enter sends')
+  assert.match(composer, /if \(enterSends && event\.key === 'Enter' && !event\.shiftKey/, 'Enter sends only where it should')
 
   // Back to the chat list: the swipe and the history-aware return.
   const navigation = load('src/pwa/chat-navigation.ts', { react: {}, 'react-router-dom': {}, '@/hooks/use-mobile': {} })
@@ -209,5 +217,5 @@ function serviceWorker({ shell = [], online = true, stored = {} } = {}) {
     assert.ok(shell.every(file => !file.endsWith('.html') && !file.startsWith('api/')), 'No page or API answer is precached')
   } else console.log('dist/ not built: skipped the built shell check (CI builds first).')
 
-  console.log('PWA: manifest, icons, service worker rules, registration, keyboard and back navigation passed.')
+  console.log('PWA: manifest, icons, service worker rules, registration, keyboard, Enter key and back navigation passed.')
 })().catch(error => { console.error(error); process.exit(1) })
