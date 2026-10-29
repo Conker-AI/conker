@@ -607,7 +607,7 @@ What Conker remembers about you and for how long.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Recall in new chats**<br>`memory.recall` | Whether memories are used in new chats. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
+| **Remember across chats**<br>`memory.across_chats` | Conker uses what it learned in your other chats; off keeps each chat to itself. (applies from the next message) | on | owner settings |
 | **Memories per answer**<br>`memory.per_answer` | The most memories one answer uses. 1 to 50. (saved, not used yet) | `8` | owner settings |
 
 ### Upkeep

@@ -155,28 +155,15 @@
       "title": "Recall",
       "settings": [
         {
-          "id": "memory.recall",
-          "title": "Recall in new chats",
-          "description": "Whether memories are used in new chats.",
-          "type": "select",
-          "default": "auto",
+          "id": "memory.across_chats",
+          "title": "Remember across chats",
+          "description": "Conker uses what it learned in your other chats; off keeps each chat to itself.",
+          "type": "toggle",
+          "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "auto",
-              "label": "Auto"
-            },
-            {
-              "value": "on",
-              "label": "On"
-            },
-            {
-              "value": "off",
-              "label": "Off"
-            }
-          ]
+          "effect": "next-turn",
+          "keywords": ["recall", "cross-chat", "other chats", "privacy"]
         },
         {
           "id": "memory.per_answer",

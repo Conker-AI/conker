@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Conker remembers across chats.** What it learned in one chat can come up in any other, the
+  same in every chat. Turn it off in Settings, Memory, Remember across chats (`memory.across_chats`),
+  which replaces the unused "Recall in new chats". Before, a chat stopped recalling other chats once
+  any of its settings was saved. Pins Pi 0.12.0.
+
 - Pins Pi 0.11.1: two more small-model mistakes get one retry (request JSON that does not
   parse, and a tool's arguments without the tool request), so scheduling and tool drafts from chat
   work more often on a local model and raw JSON no longer reaches you as an answer.

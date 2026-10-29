@@ -212,10 +212,11 @@ an unavailable read never proves that the previous edit failed. Closing the
 editor discards unsent text. Text being saved and search indexing being ready are
 separate results.
 
-For automatic recall across chats, open **Agents > Companion > Harness** and
-choose **Memory access > Across my chats**. Saving requires owner verification
-and applies to future turns. The default is **Current conversation**. This choice
-does not grant tools or enable memory for other agents.
+Conker remembers across chats: what it learned in one chat can come up in any other.
+To keep every chat to itself, turn off **Settings > Memory > Remember across chats**
+(or `./conker config set memory.across_chats off`); it applies from the next answer.
+The Companion's own **Memory access** in **Agents** can narrow it further. Neither choice
+grants tools or enables memory for other agents.
 
 The chat's **Incognito** control opens two independent future-message choices:
 
