@@ -43,8 +43,6 @@ Who you are, where you are and how your days run.
 | **Sleep time**<br>`you.sleep` | When your day usually ends. (saved, not used yet) | `23:00` | owner settings |
 | **Your week**<br>`you.week` | Fixed parts of your week, like school, work or training, in your own words. (saved, not used yet) | empty | owner settings |
 | **Best focus time**<br>`you.focus` | When Conker should plan your hardest work. Choices: Morning, Afternoon, Evening, Night, It varies. (saved, not used yet) | It varies | owner settings |
-| **Away mode**<br>`you.away` | While on, Conker sends nothing first and the Inbox waits for you. (saved, not used yet) | off | owner settings |
-| **Away until**<br>`you.away_until` | The day away mode turns off by itself. (saved, not used yet) | none | owner settings |
 
 ## Appearance
 
@@ -93,7 +91,6 @@ How Conker looks on your screens.
 | **How answers appear**<br>`appearance.streaming` | Whether answers show as they are written or all at once. Choices: Word by word, In chunks, All at once. (saved, not used yet) | Word by word | owner settings |
 | **Sounds**<br>`appearance.sounds` | Plays a short sound when an answer is done or something needs you. (saved, not used yet) | off | owner settings |
 | **Sound volume**<br>`appearance.volume` | How loud Conker's sounds are. 0 to 100 %. (saved, not used yet) | `60` % | owner settings |
-| **Vibration**<br>`appearance.haptics` | Short vibrations on your phone for taps and arrivals. (saved, not used yet) | on | owner settings |
 
 ### Details on screen
 
@@ -115,7 +112,6 @@ What your first screen shows.
 | **Tiles on Home**<br>`home.tiles` | Which tiles Home shows. Choices: Needs you, Today, Plan allowance, Running now, Coming up, Recent chats, Ideas, Done today, Your goals, Server health, Spending. (saved, not used yet) | Needs you, Plan allowance, Coming up, Done today | owner settings |
 | **Waiting items on Home**<br>`home.needs_count` | How many waiting items Home shows before the rest stay in the Inbox. 1 to 5. (saved, not used yet) | `3` | owner settings |
 | **Greeting**<br>`home.greeting` | The line at the top of Home. Choices: None, Short, Encouraging, when earned. (saved, not used yet) | Short | owner settings |
-| **Start of day card**<br>`home.start_card` | Shows what is due today and what Conker did overnight. (saved, not used yet) | on | owner settings |
 | **Quick actions**<br>`home.quick_actions` | Buttons on Home for things you do often. Choices: New chat, Voice note, Add a memory, Run a tool, New cron job. (saved, not used yet) | New chat, Add a memory | owner settings |
 | **Plan usage ring**<br>`home.plan_ring` | Where your plan allowance ring shows. Choices: On Home, In the message box, Both, Off. (saved, not used yet) | Both | owner settings |
 
@@ -131,9 +127,6 @@ Calmer screens for tired days and focused ones.
 | **Focus mode**<br>`day.focus_mode` | Hides everything that is not urgent until you turn it off. (saved, not used yet) | off | owner settings |
 | **Cards at once**<br>`day.max_cards` | The most Inbox cards shown together. 1 to 20. (saved, not used yet) | `5` | owner settings |
 | **Late-night mode**<br>`day.late_night` | Calmer colors and shorter answers in the evening. (saved, not used yet) | off | owner settings |
-| **Late-night mode from**<br>`day.late_night_from` | When late-night mode starts. (saved, not used yet) | `22:00` | owner settings |
-| **Break reminder**<br>`day.break_after` | Reminds you to rest after this long without a pause; 0 turns it off. 0 to 240 minutes. (saved, not used yet) | `0` minutes | owner settings |
-| **I'm tired button**<br>`day.tired_button` | A button that hands your plan for the rest of the day to Conker. (saved, not used yet) | on | owner settings |
 
 ### Settings profiles
 
@@ -150,7 +143,6 @@ Ways to make Conker easier to see, hear and use.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Extra screen reader hints**<br>`accessibility.screen_reader` | Adds descriptions for screen readers to icons and charts. (saved, not used yet) | off | owner settings |
 | **Bigger focus outlines**<br>`accessibility.focus` | Makes the keyboard focus easier to see. (saved, not used yet) | off | owner settings |
 | **Larger buttons**<br>`accessibility.large_targets` | Makes every button and link easier to tap. (saved, not used yet) | off | owner settings |
 | **Captions for voice**<br>`accessibility.captions` | Shows the words while Conker speaks. (saved, not used yet) | off | owner settings |
@@ -181,7 +173,6 @@ How Conker works on your phone and other devices.
 | **Phone navigation**<br>`devices.navigation` | How you move between places on a phone. Choices: Menu button, Bottom bar. (saved, not used yet) | Menu button | owner settings |
 | **Swipe Inbox cards**<br>`devices.swipe` | Swipe a card to move it to Later. (saved, not used yet) | on | owner settings |
 | **Offline reading**<br>`devices.offline` | Keeps your recent chats readable without a connection. (saved, not used yet) | off | owner settings |
-| **Data saver**<br>`devices.data_saver` | Loads no images or previews until you tap them. (saved, not used yet) | off | owner settings |
 
 ## Inbox
 
@@ -194,19 +185,6 @@ How requests, questions and the daily ritual work.
 | **Requests wait**<br>`inbox.wait` | How long a request waits for your answer. Choices: Until you answer, One hour, One day, One week. (saved, not used yet) | Until you answer | owner settings |
 | **Time to run after you approve**<br>`inbox.run_window` | How long an approved action has to start. 5 to 60 minutes. (saved, not used yet) | `15` minutes | owner settings |
 | **Same request twice**<br>`inbox.duplicates` | What happens when Conker asks for the same action again. Choices: One card, Separate cards. (saved, not used yet) | One card | owner settings |
-
-### Daily ritual
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Daily ritual**<br>`inbox.ritual` | At set times Conker sums up what it did and lists what needs you. (saved, not used yet) | on | owner settings |
-| **Morning ritual**<br>`inbox.ritual_morning` | When the morning summary arrives. (saved, not used yet) | `08:00` | owner settings |
-| **Evening ritual**<br>`inbox.ritual_evening` | When the evening summary arrives. (saved, not used yet) | `20:00` | owner settings |
-| **Ritual on weekends**<br>`inbox.ritual_weekends` | Keeps the ritual on Friday and Saturday too. (saved, not used yet) | on | owner settings |
-| **What comes first**<br>`inbox.ritual_order` | The order of the ritual. Choices: What I did, then questions, Questions, then what I did. (saved, not used yet) | What I did, then questions | owner settings |
-| **Summary length**<br>`inbox.ritual_length` | How long the "What I did" summary is. Choices: One line each, Short, Full. (saved, not used yet) | Short | owner settings |
-| **Summary covers**<br>`inbox.ritual_covers` | What the summary tells you about. Choices: Chats, Cron jobs, Memories, Money spent, Tools run, What failed. (saved, not used yet) | Chats, Cron jobs, Memories, Money spent, Tools run, What failed | owner settings |
-| **How the ritual reaches you**<br>`inbox.ritual_delivery` | Where the ritual shows up. Choices: Inbox card, Notification, Chat message, Read aloud. (saved, not used yet) | Inbox card, Notification | owner settings |
 
 ### Cards
 
@@ -243,7 +221,6 @@ When and how Conker gets your attention.
 | **Urgent means**<br>`notifications.urgent` | What may reach you during quiet hours. Choices: Failures, Money, Security, A person waiting. (saved, not used yet) | Failures, Money, Security | owner settings |
 | **Remind again**<br>`notifications.repeat` | Whether an unopened notification comes back. Choices: Never, After an hour, After a day. (saved, not used yet) | Never | owner settings |
 | **Show text in notifications**<br>`notifications.preview` | Shows what a notification is about; off shows only that something needs you. (saved, not used yet) | on | owner settings |
-| **Notification sound**<br>`notifications.sound` | Plays a sound with each notification. (saved, not used yet) | on | owner settings |
 
 ### Quiet hours
 
@@ -268,7 +245,6 @@ How new chats start and how chats look and behave.
 | **Mode**<br>`chats.default_mode` | How hard Conker works in a new chat. Choices: Auto, Fast, Balanced, Deep. (saved, not used yet) | Auto | owner settings |
 | **Access**<br>`chats.default_access` | What Conker may do without asking in a new chat. Choices: Agent's setting, Ask me, AI decides, Full access. (saved, not used yet) | Agent's setting | owner settings |
 | **Private by default**<br>`chats.default_incognito` | New chats remember nothing and stay out of search. (saved, not used yet) | off | owner settings |
-| **Think by default**<br>`chats.default_think` | New chats think before answering. (saved, not used yet) | off | owner settings |
 | **A new chat starts with**<br>`chats.start` | What you see in an empty chat. Choices: Nothing, A greeting, Today's summary, A suggested request. (saved, not used yet) | Nothing | owner settings |
 
 ### Chat names
@@ -278,7 +254,6 @@ How new chats start and how chats look and behave.
 | **Name chats automatically**<br>`chats.names.auto` | Gives each chat a short name and keeps it current; your own name stops it. (saved, not used yet) | on | owner settings |
 | **Rename when**<br>`chats.names.when` | When an automatic name changes. Choices: After the first answer, When the topic changes. (saved, not used yet) | When the topic changes | owner settings |
 | **Name style**<br>`chats.names.style` | How automatic names look. Choices: Short, Descriptive, With an emoji. (saved, not used yet) | Short | owner settings |
-| **Naming models**<br>`chats.names.models` | Which models name chats, first choice first. (saved, not used yet) | none | owner settings |
 
 ### Suggestions
 
@@ -287,7 +262,6 @@ How new chats start and how chats look and behave.
 | **Suggest your next message**<br>`chats.suggestions` | Shows what you might ask next under Conker's answer. (saved, not used yet) | on | owner settings |
 | **Suggestions shown**<br>`chats.suggestions_count` | How many next-message suggestions appear. 1 to 3. (saved, not used yet) | `2` | owner settings |
 | **Suggestion style**<br>`chats.suggestions_style` | How suggestions appear. Choices: Buttons, Gray text in the box. (saved, not used yet) | Buttons | owner settings |
-| **Suggestion models**<br>`chats.suggestions_models` | Which models suggest your next message, first choice first. (saved, not used yet) | none | owner settings |
 | **Prompt check**<br>`chats.prompt_check` | Advises how to make a request clearer before you send it. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
 | **Template suggestions**<br>`chats.template_suggest` | Offers a template when your message looks like one. Choices: Auto, Off. (saved, not used yet) | Auto | owner settings |
 
@@ -378,7 +352,6 @@ What the AI sees when it answers.
 |---|---|---|---|
 | **Chat history**<br>`context.history` | How much of the chat the model sees. Choices: Auto, Recent messages, Everything, Summary only. (saved, not used yet) | Auto | owner settings |
 | **Recent messages**<br>`context.recent_messages` | How many recent messages count as recent. 5 to 200. (saved, not used yet) | `30` | owner settings |
-| **Memory recall**<br>`context.memory_recall` | Whether memories are added to each answer's context. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
 | **Memories per answer**<br>`context.memories_per_answer` | The most memories added to one answer. 1 to 50. (saved, not used yet) | `8` | owner settings |
 | **Project sources**<br>`context.project_sources` | Whether a chat's project files are offered to the model. Choices: Auto, None. (saved, not used yet) | Auto | owner settings |
 
@@ -387,7 +360,7 @@ What the AI sees when it answers.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Context meter**<br>`context.meter` | Shows how full the context is in the message box. (saved, not used yet) | on | owner settings |
-| **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 100000 characters. (saved, not used yet) | `20000` characters | owner settings |
+| **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 20000 characters. (saved, not used yet) | `12000` characters | owner settings |
 | **Keep web pages**<br>`context.web_keep` | How long a fetched page stays in context. Choices: For one answer, For the whole chat. (saved, not used yet) | For one answer | owner settings |
 | **Decisions list**<br>`context.decisions` | Who can add to a chat's list of decisions. Choices: Only you, You and Conker, marked. (saved, not used yet) | You and Conker, marked | owner settings |
 | **Open threads**<br>`context.threads` | Tracks questions that are still open in a chat. (saved, not used yet) | off | owner settings |
@@ -401,7 +374,7 @@ How Conker searches the web and checks its answers.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Research by default**<br>`research.default` | Whether new chats search the web. Choices: Off, Web, Deep. (saved, not used yet) | Off | owner settings |
-| **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 50. (saved, not used yet) | `10` | owner settings |
+| **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (saved, not used yet) | `4` | owner settings |
 | **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (saved, not used yet) | `5` | owner settings |
 | **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (saved, not used yet) | Any age | owner settings |
 | **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (saved, not used yet) | none | owner settings |
@@ -413,7 +386,6 @@ How Conker searches the web and checks its answers.
 |---|---|---|---|
 | **Fact check**<br>`research.fact_check` | Checks claims in answers against sources. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
 | **Judge**<br>`research.judge` | A second model scores answers when several models compete. (saved, not used yet) | off | owner settings |
-| **Citation style**<br>`research.citations` | How sources are cited. Choices: Numbers, Links, Footnotes. (saved, not used yet) | Numbers | owner settings |
 | **Your votes teach model profiles**<br>`research.votes` | Your thumbs up and down shape which models Conker picks. (saved, not used yet) | on | owner settings |
 
 ## Search
@@ -446,7 +418,6 @@ Talking to Conker and hearing it.
 |---|---|---|---|
 | **Speech language**<br>`voice.input_language` | The language Conker listens for. Choices: Same as the app, English, Hebrew, Russian. (saved, not used yet) | Same as the app | owner settings |
 | **How you talk**<br>`voice.input_mode` | Hold to talk, or let Conker hear when you start and stop. Choices: Hold to talk, Automatic. (saved, not used yet) | Hold to talk | owner settings |
-| **Punctuation**<br>`voice.punctuation` | Adds commas and periods to what you say. (saved, not used yet) | on | owner settings |
 | **Listening models**<br>`voice.listen_models` | Which models turn speech into text, first choice first. (saved, not used yet) | none | owner settings |
 
 ### Speaking
@@ -456,7 +427,6 @@ Talking to Conker and hearing it.
 | **Conker's voice**<br>`voice.character` | The voice and look live in the companion's character. (applies right away) | its own screen | Settings screen |
 | **Speaking speed**<br>`voice.speed` | How fast Conker speaks. 50 to 200 %. (saved, not used yet) | `100` % | owner settings |
 | **Pitch**<br>`voice.pitch` | How high or low Conker's voice is. -50 to 50. (saved, not used yet) | `0` | owner settings |
-| **Read answers aloud**<br>`voice.read_aloud` | Reads every answer aloud as it arrives. (saved, not used yet) | off | owner settings |
 
 ### Calls
 
@@ -465,8 +435,6 @@ Talking to Conker and hearing it.
 | **Interrupt Conker**<br>`voice.interrupt` | Speaking while Conker talks stops it and lets you go on. (saved, not used yet) | on | owner settings |
 | **End after silence**<br>`voice.silence_end` | Ends a call after this much silence. 1 to 60 minutes. (saved, not used yet) | `5` minutes | owner settings |
 | **Longest call**<br>`voice.max_length` | Ends a call after this long. 5 to 240 minutes. (saved, not used yet) | `60` minutes | owner settings |
-| **Keep call transcripts**<br>`voice.keep_transcript` | Saves what was said as a chat. (saved, not used yet) | on | owner settings |
-| **Keep call audio**<br>`voice.keep_audio` | Saves the recording of each call. (saved, not used yet) | off | owner settings |
 
 ### Voice notes
 
@@ -509,7 +477,6 @@ Which AI answers, thinks and helps, and how.
 | **Thinking model**<br>`models.thinking` | Analyzes the conversation in the background while you keep talking. (applies right away) | its own screen | Settings screen |
 | **Where models run**<br>`models.locality` | Whether Conker may use online models or only ones on your server. Choices: Auto, Only on my server, Online allowed. (saved, not used yet) | Auto | owner settings |
 | **Think**<br>`models.think` | Whether Conker thinks before answering. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
-| **Thinking budget**<br>`models.think_budget` | How long Conker may think before answering. 0 to 32000 tokens. (saved, not used yet) | `4000` tokens | owner settings |
 | **Creativity**<br>`models.creativity` | How varied answers are; low is steady, high is inventive. (saved, not used yet) | `50` | owner settings |
 | **Longest answer**<br>`models.max_answer` | The most an answer may use. 256 to 32000 tokens. (saved, not used yet) | `4000` tokens | owner settings |
 | **Complexity hint**<br>`models.complexity` | Tells the router how hard requests usually are. Choices: Auto, Low, Medium, High. (saved, not used yet) | Auto | owner settings |
@@ -525,7 +492,6 @@ Which AI answers, thinks and helps, and how.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Auto mode**<br>`models.auto_mode` | Jev reads your message and proposes model, Think, research and length, with reasons. (saved, not used yet) | on | owner settings |
 | **Show Auto's reasons**<br>`models.auto_reasons` | Shows why Auto chose each setting before you send. (saved, not used yet) | on | owner settings |
 | **Fast mode models**<br>`models.mode_fast` | Models Fast mode uses, first choice first. (saved, not used yet) | none | owner settings |
 | **Balanced mode models**<br>`models.mode_balanced` | Models Balanced mode uses, first choice first. (saved, not used yet) | none | owner settings |
@@ -539,16 +505,9 @@ Which AI answers, thinks and helps, and how.
 | **Judge models**<br>`models.jobs.judge` | Which models judge answers, first choice first. (saved, not used yet) | none | owner settings |
 | **Fact-check models**<br>`models.jobs.fact_check` | Which models check facts, first choice first. (saved, not used yet) | none | owner settings |
 | **Prompt-check models**<br>`models.jobs.prompt_check` | Which models advise on your requests, first choice first. (saved, not used yet) | none | owner settings |
-| **Auto mode models**<br>`models.jobs.auto_settings` | Which models propose settings in Auto mode, first choice first. (saved, not used yet) | none | owner settings |
 | **Voice models**<br>`models.jobs.voice` | Which models speak Conker's answers, first choice first. (saved, not used yet) | none | owner settings |
-| **Embedding models**<br>`models.jobs.embeddings` | Which models turn text into searchable meaning, first choice first. (saved, not used yet) | none | owner settings |
-| **Image reading models**<br>`models.jobs.images_in` | Which models look at pictures you send, first choice first. (saved, not used yet) | none | owner settings |
 | **Image making models**<br>`models.jobs.images_out` | Which models make pictures, first choice first. (saved, not used yet) | none | owner settings |
-| **Translation models**<br>`models.jobs.translation` | Which models translate, first choice first. (saved, not used yet) | none | owner settings |
 | **Document scanning models**<br>`models.jobs.scanning` | Which models read scanned documents, first choice first. (saved, not used yet) | none | owner settings |
-| **Ritual summary models**<br>`models.jobs.ritual` | Which models write the daily ritual, first choice first. (saved, not used yet) | none | owner settings |
-| **Time limit per AI job**<br>`models.jobs.time_limit` | How long one AI job may take before its backup is tried. 5 to 300 seconds. (saved, not used yet) | `120` seconds | owner settings |
-| **When an AI job fails**<br>`models.jobs.on_failure` | What happens when every model in a job's list fails. Choices: Use the talking model, Ask you, Stop. (saved, not used yet) | Use the talking model | owner settings |
 
 ### Local models
 
@@ -576,18 +535,6 @@ Who works for you and how your companion behaves.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Character**<br>`agents.character` | Your companion's name, look, voice, speaking style and backstory. (applies right away) | its own screen | Settings screen |
-| **Formal or casual**<br>`agents.companion.formality` | How formally your companion talks. (saved, not used yet) | `70` | owner settings |
-| **Serious or playful**<br>`agents.companion.playfulness` | How playful your companion is. (saved, not used yet) | `40` | owner settings |
-| **Brief or detailed**<br>`agents.companion.detail` | How much your companion says by default. (saved, not used yet) | `40` | owner settings |
-| **Gentle or direct**<br>`agents.companion.directness` | How bluntly your companion says hard things. (saved, not used yet) | `70` | owner settings |
-| **Calm or energetic**<br>`agents.companion.energy` | How lively your companion sounds. (saved, not used yet) | `40` | owner settings |
-| **Emoji**<br>`agents.companion.emoji` | How many emoji your companion uses. (saved, not used yet) | `10` | owner settings |
-| **Emotions**<br>`agents.companion.emotions` | How much your companion shows feelings. Choices: Off, Subtle, Expressive. (saved, not used yet) | Subtle | owner settings |
-| **Encouragement**<br>`agents.companion.motivation` | How your companion encourages you. Choices: Like a good teacher, Only facts. (saved, not used yet) | Like a good teacher | owner settings |
-| **Disagreeing**<br>`agents.companion.pushback` | What your companion does when it thinks you are wrong. Choices: Goes along, Tells you, Argues its case. (saved, not used yet) | Tells you | owner settings |
-| **Humor**<br>`agents.companion.humor` | What kind of humor your companion uses. Choices: None, Dry, Playful. (saved, not used yet) | Dry | owner settings |
-| **Check-ins**<br>`agents.companion.check_ins` | When your companion asks how you are doing. Choices: Never, When you seem stuck, Once a day. (saved, not used yet) | When you seem stuck | owner settings |
-| **Character versions kept**<br>`agents.versions` | How many earlier versions of a character are kept. 1 to 100. (saved, not used yet) | `20` | owner settings |
 
 ## Memory
 
@@ -598,10 +545,8 @@ What Conker remembers about you and for how long.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Memory**<br>`memory.mode` | Whether Conker reads and adds memories. Choices: On, Read only, Off. (saved, not used yet) | On | owner settings |
-| **Remember on its own**<br>`memory.auto` | Whether Conker saves memories without asking. Choices: Yes, listed in Handled, Ask me first, Never. (saved, not used yet) | Yes, listed in Handled | owner settings |
 | **What to remember**<br>`memory.kinds` | Kinds of things Conker may remember. Choices: Facts, Preferences, People, Places, Events, Decisions, Tasks, How-tos. (saved, not used yet) | Facts, Preferences, People, Places, Events, Decisions, Tasks, How-tos | owner settings |
 | **Never remember**<br>`memory.never` | Topics Conker never saves to memory. (saved, not used yet) | Health, Money, Passwords, Other people's secrets | owner settings |
-| **Memory between agents**<br>`memory.agents` | Whether agents share one memory. Choices: Shared, Separate for each agent. (saved, not used yet) | Shared | owner settings |
 
 ### Recall
 
@@ -630,9 +575,7 @@ What Conker does on its own and on a schedule.
 | **Proactivity**<br>`companion.proactivity` | When Conker may start suggestions or research of its own. Choices: When it matters, Only when urgent, Never. (applies right away) | When it matters | pi `/owner/preferences` `urgency` |
 | **Ideas from Conker**<br>`proactivity.ideas` | Once a day Conker reads your recent chats and suggests what it could take off your plate. (applies right away) | its own screen | Settings screen |
 | **Ideas time**<br>`proactivity.ideas_time` | When the daily ideas pass runs. (saved, not used yet) | `09:00` | owner settings |
-| **Ideas a day**<br>`proactivity.ideas_per_day` | The most new ideas in one day. 1 to 10. (saved, not used yet) | `3` | owner settings |
 | **Topics to skip**<br>`proactivity.skip_topics` | Topics Conker never suggests ideas about. (saved, not used yet) | none | owner settings |
-| **Nudges**<br>`proactivity.nudges` | Reminders Conker may send on its own. Choices: Deadlines, Unfinished tasks, Follow-ups. (saved, not used yet) | Deadlines | owner settings |
 
 ### Daily limits
 
@@ -660,7 +603,7 @@ What Conker does on its own and on a schedule.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Webhook calls an hour**<br>`proactivity.hooks.rate` | The most webhook calls one cron job accepts in an hour. 1 to 600. (saved, not used yet) | `60` | owner settings |
-| **Largest webhook payload**<br>`proactivity.hooks.size` | The largest payload a webhook accepts. 1 to 1024 KB. (saved, not used yet) | `64` KB | owner settings |
+| **Largest webhook payload**<br>`proactivity.hooks.size` | The largest payload a webhook accepts. 1 to 16 KB. (saved, not used yet) | `16` KB | owner settings |
 | **Keep webhook payloads**<br>`proactivity.hooks.keep_days` | How long webhook payloads are kept. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
 
 ## Tools
@@ -682,11 +625,10 @@ How Conker's tools, Terminal, browser and web search behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Command time limit**<br>`tools.terminal.time` | How long one Terminal command may run. 5 to 600 seconds. (saved, not used yet) | `60` seconds | owner settings |
+| **Command time limit**<br>`tools.terminal.time` | How long one Terminal command may run. 5 to 100 seconds. (saved, not used yet) | `30` seconds | owner settings |
 | **Command memory**<br>`tools.terminal.memory` | How much memory one Terminal command may use. 128 to 8192 MB. (saved, not used yet) | `512` MB | owner settings |
 | **Command CPUs**<br>`tools.terminal.cpu` | How many processors one Terminal command may use. 1 to 8. (saved, not used yet) | `1` | owner settings |
 | **Workspace size**<br>`tools.terminal.workspace` | How much the agent's workspace may hold. 100 to 20000 MB. (saved, not used yet) | `2000` MB | owner settings |
-| **Package installs**<br>`tools.terminal.installs` | Lets agents install Python and npm packages into their workspace. (saved, not used yet) | on | owner settings |
 | **Keep the workspace**<br>`tools.terminal.keep` | When the agent's workspace is cleared. Choices: Keep it, Clear daily, Clear after each chat. (saved, not used yet) | Keep it | owner settings |
 | **Your own terminal**<br>`tools.terminal.owner` | A terminal for you on the server, apart from the agents' Terminal. (saved, not used yet) | off | owner settings |
 
@@ -698,7 +640,6 @@ How Conker's tools, Terminal, browser and web search behave.
 | **Blocked sites**<br>`tools.browser.blocked` | Sites the browser tool never opens. (saved, not used yet) | none | owner settings |
 | **Sites that always ask**<br>`tools.browser.sensitive` | Sites where every action asks you first. (saved, not used yet) | bank, gov, health | owner settings |
 | **Signing in**<br>`tools.browser.sign_in` | Whether the browser tool may sign in to sites. Choices: Never, Ask you, On allowed sites. (saved, not used yet) | Never | owner settings |
-| **Watch it work**<br>`tools.browser.watch` | Shows the browser live while an agent uses it. (saved, not used yet) | on | owner settings |
 | **Keep screenshots**<br>`tools.browser.screenshots` | How long browser screenshots are kept. 0 to 90 days. (saved, not used yet) | `7` days | owner settings |
 
 ### Web search
@@ -709,7 +650,6 @@ How Conker's tools, Terminal, browser and web search behave.
 | **Results per search**<br>`tools.web.results` | How many results one web search returns. 3 to 50. (saved, not used yet) | `10` | owner settings |
 | **Search region**<br>`tools.web.region` | A region code for local results, such as il or us; empty searches everywhere. (saved, not used yet) | empty | owner settings |
 | **Search engines**<br>`tools.web.engines` | Which engines web search asks; empty uses the defaults. (saved, not used yet) | none | owner settings |
-| **Largest page fetched**<br>`tools.web.page_limit` | The most text one page fetch returns. 10 to 2000 KB. (saved, not used yet) | `200` KB | owner settings |
 
 ## Money and limits
 
@@ -719,15 +659,11 @@ What Conker may spend and how close you are to plan limits.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Paid models**<br>`money.paid` | Lets Conker use models that cost money per use. (saved, not used yet) | off | owner settings |
-| **Currency**<br>`money.currency` | The currency for budgets and reports. Choices: US dollar, Euro, Israeli shekel. (saved, not used yet) | US dollar | owner settings |
 | **Monthly budget**<br>`money.monthly` | The most Conker spends in a month; 0 means nothing paid. 0 to 10000 $. (saved, not used yet) | `0` $ | owner settings |
 | **Ask before spending more than**<br>`money.confirm_above` | Any single request above this asks you first. 0 to 1000 $. (saved, not used yet) | `1` $ | owner settings |
 | **Budget per chat**<br>`money.per_chat` | The most one chat may spend; 0 means no separate limit. 0 to 1000 $. (saved, not used yet) | `0` $ | owner settings |
-| **Budget per cron job**<br>`money.per_job` | The most one cron job may spend in a month; 0 means no separate limit. 0 to 1000 $. (saved, not used yet) | `0` $ | owner settings |
 | **Near a limit**<br>`money.near_limit` | What happens when a budget is almost used up. Choices: Ask you, Switch to local models, Switch to cheaper backups, Stop. (saved, not used yet) | Ask you | owner settings |
 | **Show the cost before sending**<br>`money.show_cost` | Shows what a request will likely cost before it is sent. (saved, not used yet) | on | owner settings |
-| **Monthly report**<br>`money.report` | A summary of what Conker spent, in the Inbox each month. (saved, not used yet) | on | owner settings |
 
 ### Plan usage
 
@@ -746,7 +682,6 @@ What Conker may do without asking you, and what always asks.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Let Conker decide by your settings**<br>`access.delegate` | Your chat switch, each agent's settings and each tool's own setting decide what runs without asking. (applies right away) | its own screen | Settings screen |
-| **Default for every chat**<br>`access.default` | What a chat may do without asking until you change it there. Choices: Ask me, AI decides, Full access. (saved, not used yet) | AI decides | owner settings |
 | **Your words count as approval**<br>`access.your_words` | When your own message asks for exactly this action, it goes ahead without a card. (saved, not used yet) | on | owner settings |
 
 ### Tools
@@ -776,7 +711,6 @@ What Conker may do without asking you, and what always asks.
 | **Lockdown**<br>`access.lockdown` | Lets Conker only read until you turn it off. (saved, not used yet) | off | owner settings |
 | **Ask for your password**<br>`access.reverify` | How often changes ask for your password again. Choices: Every time, Once every 10 minutes, Once per sign-in. (saved, not used yet) | Every time | owner settings |
 | **After outside content**<br>`access.outside` | How long a chat stays stricter after it read someone else's text. Choices: For the whole chat, Until you clear it. (saved, not used yet) | For the whole chat | owner settings |
-| **Weekly review**<br>`access.weekly_review` | A weekly card listing everything that ran without you. (saved, not used yet) | off | owner settings |
 
 ## Privacy and data
 
@@ -786,18 +720,14 @@ What is kept, for how long, and what leaves your server.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Private chats by default**<br>`privacy.incognito` | New chats remember nothing and stay out of search. (saved, not used yet) | off | owner settings |
 | **Helper models in new chats**<br>`privacy.helpers` | Lets helper models (naming, summaries) see new chats. (saved, not used yet) | on | owner settings |
-| **Hide secrets from online models**<br>`privacy.redact` | Removes passwords, keys and card numbers before anything goes to an online model. (saved, not used yet) | on | owner settings |
+| **Hide secrets from online models**<br>`privacy.redact` | Removes passwords, keys and card numbers before anything goes to an online model. (saved, not used yet) | off | owner settings |
 
 ### How long things are kept
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Logs**<br>`privacy.keep.logs` | How long service logs are kept. 1 to 365 days. (saved, not used yet) | `30` days | owner settings |
-| **Action receipts**<br>`privacy.keep.receipts` | How long records of tool actions are kept; 0 keeps them. 0 to 3650 days. (saved, not used yet) | `0` days | owner settings |
-| **Call audio**<br>`privacy.keep.call_audio` | How long call recordings are kept. 0 to 365 days. (saved, not used yet) | `7` days | owner settings |
-| **Search history**<br>`privacy.keep.searches` | How long your searches are remembered. 0 to 365 days. (saved, not used yet) | `30` days | owner settings |
 
 ## Account and security
 
@@ -809,13 +739,12 @@ Your sign-in, devices and how Conker protects them.
 |---|---|---|---|
 | **Signed-in browsers**<br>`account.devices` | Every browser signed in to Conker; sign one out. (applies right away) | its own screen | Settings screen |
 | **Sign out**<br>`account.sign_out` | Ends this browser's session; your chats and settings stay on your server. (applies right away) | its own screen | Settings screen |
-| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out after this long without use. Choices: Never, 5 minutes, 15 minutes, 30 minutes, 1 hour. (saved, not used yet) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
+| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out after this long without use. Choices: 5 minutes, 15 minutes, 30 minutes, 1 hour. (saved, not used yet) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
 
 ### Security
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Security log**<br>`account.security_log` | Keeps a list of sign-ins and changes to access. (saved, not used yet) | on | owner settings |
 | **Renew access codes**<br>`account.rotation` | How often the codes the CLI and agents use are replaced. Choices: Never, Every 90 days, Every year. (saved, not used yet) | Never | owner settings |
 | **Two-step sign-in**<br>`account.two_step` | Asks for a code from your phone when you sign in. (saved, not used yet) | off | owner settings |
 
@@ -828,7 +757,6 @@ How Conker may use the connectors you build.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Calendar use**<br>`integrations.calendar` | What Conker may do with your calendars. Choices: Read events, Add events. (saved, not used yet) | Read events | owner settings |
-| **Event reminders**<br>`integrations.calendar_reminders` | When Conker reminds you of an event. Choices: Never, 10 minutes before, 30 minutes before, 1 hour before. (saved, not used yet) | 30 minutes before | owner settings |
 
 ### Email
 
@@ -842,7 +770,6 @@ How Conker may use the connectors you build.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Messengers**<br>`integrations.messengers` | Which messengers Conker may use once you connect them. Choices: Telegram, WhatsApp, Discord. (saved, not used yet) | none | owner settings |
-| **Listen for messages**<br>`integrations.listen` | Which new messages start a cron job. Choices: None, Messages to you, All messages. (saved, not used yet) | None | owner settings |
 | **Draft replies**<br>`integrations.draft_replies` | Conker drafts replies; sending always asks you. (saved, not used yet) | on | owner settings |
 
 ### Files, notes and code
@@ -862,7 +789,6 @@ How tasks and projects are tracked.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Tasks on Home**<br>`projects.tasks_home` | Shows open tasks on Home. (saved, not used yet) | on | owner settings |
-| **Task reminders**<br>`projects.task_reminders` | When Conker reminds you of a task's due date. Choices: Never, On the morning it is due, The day before. (saved, not used yet) | On the morning it is due | owner settings |
 | **Tasks from chats**<br>`projects.tasks_from_chats` | Whether Conker turns things you say into tasks. Choices: Ask you, Never. (saved, not used yet) | Ask you | owner settings |
 
 ### Projects
@@ -879,7 +805,6 @@ Updates, backups, remote access and resources.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Update channel**<br>`server.updates.channel` | Which releases your server gets. Choices: Stable, Beta. (saved, not used yet) | Stable | owner settings |
 | **Updating**<br>`server.updates.mode` | Whether updates install on their own. Choices: Never, Tell me, Install at night. (saved, not used yet) | Tell me | owner settings |
 | **Update time**<br>`server.updates.time` | When night updates install. (saved, not used yet) | `03:00` | owner settings |
 
@@ -888,8 +813,6 @@ Updates, backups, remote access and resources.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Backups**<br>`server.backups.schedule` | How often your server is backed up. Choices: Off, Daily, Weekly. (saved, not used yet) | Weekly | owner settings |
-| **Backup folder**<br>`server.backups.folder` | Where backups are saved on the server. (saved, not used yet) | `~/conker-snapshots` | owner settings |
-| **Backups kept**<br>`server.backups.keep` | How many backups are kept before the oldest goes. 1 to 60. (saved, not used yet) | `4` | owner settings |
 | **Include local models**<br>`server.backups.models` | Adds local models to backups; they are large. (saved, not used yet) | off | owner settings |
 | **Test restores**<br>`server.backups.test` | Checks once a month that a backup restores. (saved, not used yet) | off | owner settings |
 
@@ -906,7 +829,6 @@ Updates, backups, remote access and resources.
 |---|---|---|---|
 | **Disk warning**<br>`server.disk_warning` | Warns you when the disk is this full. 50 to 99 %. (saved, not used yet) | `85` % | owner settings |
 | **Clean up by itself**<br>`server.auto_clean` | Removes old images and caches when space runs low. (saved, not used yet) | on | owner settings |
-| **What Conker may do on the server**<br>`server.actions` | Whether Conker may change services or only look. Choices: Only look, Allowed actions. (saved, not used yet) | Allowed actions | owner settings |
 | **Log detail**<br>`server.log_level` | How much the services write to their logs. Choices: Errors, Warnings, Normal, Everything. (saved, not used yet) | Normal | owner settings |
 | **Health checks**<br>`server.health_interval` | How often the services are checked. 1 to 60 minutes. (saved, not used yet) | `5` minutes | owner settings |
 
@@ -919,9 +841,6 @@ Seeing what Conker did and why.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Watch Conker work**<br>`logs.watch` | A pane that shows searches, pages, commands and the browser live. (saved, not used yet) | off | owner settings |
-| **Decision log**<br>`logs.decisions` | Keeps every access decision with who decided and why. (saved, not used yet) | on | owner settings |
-| **Monthly report**<br>`logs.monthly` | A monthly summary of what Conker did for you. (saved, not used yet) | on | owner settings |
-| **Raw data views**<br>`logs.raw` | Shows the raw data behind cards and answers. (saved, not used yet) | off | owner settings |
 
 ## Labs
 
@@ -931,9 +850,7 @@ Experimental features and tools for fixing problems.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Experimental features**<br>`labs.experiments` | Turns on features that are still being built. (saved, not used yet) | off | owner settings |
 | **API explorer**<br>`labs.api_explorer` | A screen for trying Conker's API. (saved, not used yet) | off | owner settings |
-| **Debug logging**<br>`labs.debug` | Writes much more detail to the logs. (saved, not used yet) | off | owner settings |
 
 ## Settings
 

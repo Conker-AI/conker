@@ -44,10 +44,6 @@
           "effect": "stored",
           "options": [
             {
-              "value": 0,
-              "label": "Never"
-            },
-            {
               "value": 5,
               "label": "5 minutes"
             },
@@ -78,16 +74,6 @@
       "id": "security",
       "title": "Security",
       "settings": [
-        {
-          "id": "account.security_log",
-          "title": "Security log",
-          "description": "Keeps a list of sign-ins and changes to access.",
-          "type": "toggle",
-          "default": true,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
-        },
         {
           "id": "account.rotation",
           "title": "Renew access codes",

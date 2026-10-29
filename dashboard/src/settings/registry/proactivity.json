@@ -64,19 +64,6 @@
           "effect": "stored"
         },
         {
-          "id": "proactivity.ideas_per_day",
-          "title": "Ideas a day",
-          "description": "The most new ideas in one day.",
-          "type": "number",
-          "default": 3,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "min": 1,
-          "max": 10,
-          "step": 1
-        },
-        {
           "id": "proactivity.skip_topics",
           "title": "Topics to skip",
           "description": "Topics Conker never suggests ideas about.",
@@ -86,32 +73,6 @@
           "scope": "global",
           "effect": "stored",
           "max_items": 50
-        },
-        {
-          "id": "proactivity.nudges",
-          "title": "Nudges",
-          "description": "Reminders Conker may send on its own.",
-          "type": "list",
-          "default": [
-            "deadlines"
-          ],
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "deadlines",
-              "label": "Deadlines"
-            },
-            {
-              "value": "unfinished",
-              "label": "Unfinished tasks"
-            },
-            {
-              "value": "follow_ups",
-              "label": "Follow-ups"
-            }
-          ]
         }
       ]
     },
@@ -372,12 +333,12 @@
           "title": "Largest webhook payload",
           "description": "The largest payload a webhook accepts.",
           "type": "number",
-          "default": 64,
+          "default": 16,
           "tier": "advanced",
           "scope": "global",
           "effect": "stored",
           "min": 1,
-          "max": 1024,
+          "max": 16,
           "step": 1,
           "unit": "KB"
         },

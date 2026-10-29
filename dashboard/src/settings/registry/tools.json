@@ -134,12 +134,12 @@
           "title": "Command time limit",
           "description": "How long one Terminal command may run.",
           "type": "number",
-          "default": 60,
+          "default": 30,
           "tier": "basic",
           "scope": "global",
           "effect": "stored",
           "min": 5,
-          "max": 600,
+          "max": 100,
           "step": 5,
           "unit": "seconds"
         },
@@ -183,16 +183,6 @@
           "max": 20000,
           "step": 100,
           "unit": "MB"
-        },
-        {
-          "id": "tools.terminal.installs",
-          "title": "Package installs",
-          "description": "Lets agents install Python and npm packages into their workspace.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         },
         {
           "id": "tools.terminal.keep",
@@ -296,16 +286,6 @@
           ]
         },
         {
-          "id": "tools.browser.watch",
-          "title": "Watch it work",
-          "description": "Shows the browser live while an agent uses it.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "tools.browser.screenshots",
           "title": "Keep screenshots",
           "description": "How long browser screenshots are kept.",
@@ -384,20 +364,6 @@
           "scope": "global",
           "effect": "stored",
           "max_items": 50
-        },
-        {
-          "id": "tools.web.page_limit",
-          "title": "Largest page fetched",
-          "description": "The most text one page fetch returns.",
-          "type": "number",
-          "default": 200,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 10,
-          "max": 2000,
-          "step": 10,
-          "unit": "KB"
         }
       ]
     }

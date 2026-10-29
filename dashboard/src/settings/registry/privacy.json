@@ -12,16 +12,6 @@
       "title": "Defaults",
       "settings": [
         {
-          "id": "privacy.incognito",
-          "title": "Private chats by default",
-          "description": "New chats remember nothing and stay out of search.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "privacy.helpers",
           "title": "Helper models in new chats",
           "description": "Lets helper models (naming, summaries) see new chats.",
@@ -36,7 +26,7 @@
           "title": "Hide secrets from online models",
           "description": "Removes passwords, keys and card numbers before anything goes to an online model.",
           "type": "toggle",
-          "default": true,
+          "default": false,
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
@@ -57,48 +47,6 @@
           "scope": "global",
           "effect": "stored",
           "min": 1,
-          "max": 365,
-          "step": 1,
-          "unit": "days"
-        },
-        {
-          "id": "privacy.keep.receipts",
-          "title": "Action receipts",
-          "description": "How long records of tool actions are kept; 0 keeps them.",
-          "type": "number",
-          "default": 0,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 3650,
-          "step": 1,
-          "unit": "days"
-        },
-        {
-          "id": "privacy.keep.call_audio",
-          "title": "Call audio",
-          "description": "How long call recordings are kept.",
-          "type": "number",
-          "default": 7,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 365,
-          "step": 1,
-          "unit": "days"
-        },
-        {
-          "id": "privacy.keep.searches",
-          "title": "Search history",
-          "description": "How long your searches are remembered.",
-          "type": "number",
-          "default": 30,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
           "max": 365,
           "step": 1,
           "unit": "days"

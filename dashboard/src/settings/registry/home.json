@@ -110,16 +110,6 @@
           ]
         },
         {
-          "id": "home.start_card",
-          "title": "Start of day card",
-          "description": "Shows what is due today and what Conker did overnight.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "home.quick_actions",
           "title": "Quick actions",
           "description": "Buttons on Home for things you do often.",
