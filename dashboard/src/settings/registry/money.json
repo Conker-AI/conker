@@ -12,40 +12,6 @@
       "title": "Spending",
       "settings": [
         {
-          "id": "money.paid",
-          "title": "Paid models",
-          "description": "Lets Conker use models that cost money per use.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "money.currency",
-          "title": "Currency",
-          "description": "The currency for budgets and reports.",
-          "type": "select",
-          "default": "usd",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "usd",
-              "label": "US dollar"
-            },
-            {
-              "value": "eur",
-              "label": "Euro"
-            },
-            {
-              "value": "ils",
-              "label": "Israeli shekel"
-            }
-          ]
-        },
-        {
           "id": "money.monthly",
           "title": "Monthly budget",
           "description": "The most Conker spends in a month; 0 means nothing paid.",
@@ -88,20 +54,6 @@
           "unit": "$"
         },
         {
-          "id": "money.per_job",
-          "title": "Budget per cron job",
-          "description": "The most one cron job may spend in a month; 0 means no separate limit.",
-          "type": "number",
-          "default": 0,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 1000,
-          "step": 1,
-          "unit": "$"
-        },
-        {
           "id": "money.near_limit",
           "title": "Near a limit",
           "description": "What happens when a budget is almost used up.",
@@ -133,16 +85,6 @@
           "id": "money.show_cost",
           "title": "Show the cost before sending",
           "description": "Shows what a request will likely cost before it is sent.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "money.report",
-          "title": "Monthly report",
-          "description": "A summary of what Conker spent, in the Inbox each month.",
           "type": "toggle",
           "default": true,
           "tier": "basic",
