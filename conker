@@ -255,6 +255,15 @@ cmd_config() {
     python3 "$SOURCE_ROOT/scripts/config_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
 }
 
+# conker tool draft: Pi drafts the described tool in the background; the draft waits in the Inbox.
+cmd_tool() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for conker tool. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    python3 "$SOURCE_ROOT/scripts/tool_draft_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
+}
+
 cmd_key() {
     [ "$LAYOUT" = repository ] || unavailable key \
         'This layout has separate scoped credentials; there is no single admin key to reveal.'
@@ -483,13 +492,21 @@ except Exception:
     return 1
 }
 
-provider_restart_runtime() {
+# Pi and the services that share its network namespace (the source-built layout's Laya and Claude
+# plan sidecars): recreating Pi alone would leave them without a network.
+recreate_pi() {
     compose up -d --no-deps --force-recreate pi || return 1
-    local services
+    local services service
     services=$(compose config --services) || return 1
-    if printf '%s\n' "$services" | grep -qx decisions; then
-        compose up -d --no-deps --force-recreate decisions || return 1
-    fi
+    for service in decisions subscriptions; do
+        if printf '%s\n' "$services" | grep -qx "$service"; then
+            compose up -d --no-deps --force-recreate "$service" || return 1
+        fi
+    done
+}
+
+provider_restart_runtime() {
+    recreate_pi
 }
 
 provider_restore_runtime() {
@@ -518,6 +535,33 @@ print("\n  Secret values are not included.\n")
 '
 }
 
+# The Claude plan sign-in, held by the source-built layout's subscription runtime. The official
+# Claude Code CLI signs in here, in this terminal: it prints a link to open anywhere, and the code
+# that page shows is pasted back. No token is copied, and Pi never holds the sign-in.
+provider_claude() {
+    local action=${1:-status} services
+    case "$#:$action" in
+        0:status|1:status|1:login|1:logout) ;;
+        *) printf 'Use conker providers claude status|login|logout.\n' >&2; exit 2 ;;
+    esac
+    [ "$LAYOUT" = ubuntu ] || unavailable 'providers claude' \
+        'It has no Claude plan runtime yet. Connect Claude with an Anthropic API key: conker providers set anthropic.'
+    services=$(compose config --services 2>/dev/null) || services=''
+    printf '%s\n' "$services" | grep -qx subscriptions || {
+        printf 'This deployment has no Claude plan runtime yet. Run deploy/ubuntu/prepare.py from the current source, then docker compose up -d.\n' >&2
+        exit 1
+    }
+    if [ "$action" = login ]; then
+        [ -t 0 ] && [ -t 1 ] || {
+            printf 'Run conker providers claude login in a terminal: you paste the sign-in code there.\n' >&2
+            exit 2
+        }
+        compose exec subscriptions python /app/subscription_runtime.py login
+    else
+        compose exec -T subscriptions python /app/subscription_runtime.py "$action"
+    fi
+}
+
 cmd_providers() {
     command -v python3 >/dev/null 2>&1 || {
         printf 'Python 3.11+ is required for provider credential management.\n' >&2
@@ -529,6 +573,9 @@ cmd_providers() {
     case "$action" in
         chatgpt)
             PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m scripts.chatgpt_cli --root "$ROOT" --layout "$LAYOUT" "$@"
+            ;;
+        claude)
+            provider_claude "$@"
             ;;
         install-ui-control)
             [ "$#" -eq 0 ] || { printf 'Use conker providers install-ui-control.\n' >&2; exit 2; }
@@ -611,7 +658,7 @@ cmd_providers() {
             provider_call record-revoked "$1" "$2"
             ;;
         *)
-            printf 'Use conker providers status, set, verify, discard, activate, recover, record-revoked, spending, or install-ui-control.\n' >&2
+            printf 'Use conker providers status, set, verify, discard, activate, recover, record-revoked, spending, chatgpt, claude, or install-ui-control.\n' >&2
             exit 2
             ;;
     esac
@@ -687,8 +734,7 @@ speech_apply() {
         rm -rf "$backup"
         return 1
     fi
-    if compose up -d --no-deps --force-recreate pi \
-            && speech_runtime_state "$expected"; then
+    if recreate_pi && speech_runtime_state "$expected"; then
         rm -rf "$backup"
         printf '%s\n' "$result"
         good "Speech configuration is active"
@@ -699,7 +745,7 @@ speech_apply() {
     mkdir -p "$(dirname "$(speech_key_file)")"
     cp -p "$backup/key" "$(speech_key_file)"
     rm -rf "$backup"
-    compose up -d --no-deps --force-recreate pi >/dev/null 2>&1 || true
+    recreate_pi >/dev/null 2>&1 || true
     printf 'Speech activation failed and the previous host configuration was restored.\n' >&2
     return 1
 }
@@ -767,9 +813,10 @@ cmd_speech() {
 }
 
 usage() {
-    local limited=''
+    local limited='' claude_limited=' [unavailable in this layout]'
     if [ "$LAYOUT" = ubuntu ]; then
         limited=' [unavailable in this layout]'
+        claude_limited=''
     fi
     cat <<USAGE
 
@@ -797,6 +844,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Apply a typed revision-checked owner-control document
   ${BOLD}config${OFF} list [--group TOPIC] [--search TEXT] [--modified] | get|set|reset ID
               Read and change the settings of the Settings screen (--chat CHAT_ID for one chat)
+  ${BOLD}tool${OFF} draft "DESCRIPTION" [--no-wait]
+              Have Conker make a tool; the draft waits in the Inbox for review
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
   ${BOLD}backup${OFF} [--destination DIR]
               Create a verified snapshot (stops writers during capture)
@@ -811,6 +860,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
   ${BOLD}model${OFF} NAME  Fetch another local model
   ${BOLD}providers${OFF} status|set|verify|discard|activate|recover|record-revoked|spending|install-ui-control
   ${BOLD}providers chatgpt${OFF} status|login|models|cancel ID|logout ID
+  ${BOLD}providers claude${OFF} status|login|logout${claude_limited}
+              Sign in to the Claude plan once, in this terminal
   ${BOLD}speech${OFF}    status|configure|disable
               Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}
@@ -879,6 +930,7 @@ case "$command" in
     inspect)   [ "$#" -ge 2 ] && [ "$#" -le 5 ] || { usage >&2; exit 2; }; shift; cmd_inspect "$@" ;;
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
     config)    shift; cmd_config "$@" ;;
+    tool)      shift; cmd_tool "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
     logs)      [ "$#" -le 3 ] || { usage >&2; exit 2; }; shift; cmd_logs "$@" ;;
     model)     [ "$#" -eq 2 ] || { usage >&2; exit 2; }; shift; cmd_model "$@" ;;

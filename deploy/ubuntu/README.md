@@ -132,7 +132,17 @@ install -m 755 ~/conker-deploy/sources/companion/deploy/ubuntu/conker ~/.local/b
 conker status
 conker providers install-ui-control
 conker auth reset-password
+conker providers claude login   # once: the Claude plan, signed in by the official CLI
 ```
+
+The `subscriptions` service is the Claude plan runtime: Claude Code at a pinned, checksummed
+version in a read-only container that shares Pi's network namespace and keeps the sign-in in
+`state/subscriptions` (left out of snapshots). Pi reaches it at `127.0.0.1:8070` with its
+inference key; ChatGPT answers pass through it to the host ChatGPT worker. Run `prepare.py`
+again after a source update: it adds keys a newer release needs (the Claude plan runtime's and
+MemoryGate's and ToolGate's keys for Pi's `/inference`) and changes no other key. Ollama keeps a
+model loaded for `24h` after its last use; set `CONKER_OLLAMA_KEEP_ALIVE` when running
+`prepare.py` to change that.
 
 The launcher targets `~/conker-deploy` (override with `CONKER_DEPLOY_DIR`) and
 delegates to the authoritative CLI in `sources/companion/conker`. `conker help`

@@ -1,4 +1,9 @@
-"""Private loopback bridge: separate owner-auth and model-inference credentials."""
+"""Private loopback bridge: separate owner-auth and model-inference credentials.
+
+The Windows workspace runs it with both native runtimes. The server layouts run it as the Claude
+plan runtime (scripts/subscription_runtime.py) with `chatgpt_relay`: ChatGPT answers then go to the
+host's ChatGPT worker, which keeps that sign-in, and the ChatGPT and Codex control routes are absent.
+"""
 
 import hmac
 import json
@@ -24,20 +29,27 @@ from plan_limits import read_chatgpt, read_claude
 from starlette.concurrency import run_in_threadpool
 
 
-def create_app(config):
+def create_app(config, *, chatgpt_relay=None):
     settings = config["native_providers"]
     control_key, inference_key = settings["control_key"], settings["inference_key"]
     if min(len(control_key), len(inference_key)) < 32 or control_key == inference_key:
         raise ValueError(
             "Provision separate private credentials for provider control and inference."
         )
-    chatgpt = ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
+    relay = chatgpt_relay
+    chatgpt = (
+        None
+        if relay
+        else ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
+    )
     claude = Claude(settings["claude"], Path(settings["state"]) / "claude-auth")
     native_sessions = Sessions(
         settings["claude"], Path(settings["state"]) / "claude-auth"
     )
-    codex_sessions = CodexSessions(
-        settings["codex"], Path(settings["state"]) / "chatgpt-auth"
+    codex_sessions = (
+        None
+        if relay
+        else CodexSessions(settings["codex"], Path(settings["state"]) / "chatgpt-auth")
     )
     requests = Requests()
 
@@ -45,9 +57,10 @@ def create_app(config):
     async def lifespan(app):
         yield
         native_sessions.close()
-        codex_sessions.close()
+        if codex_sessions:
+            codex_sessions.close()
         requests.close()
-        if chatgpt.rpc:
+        if chatgpt and chatgpt.rpc:
             chatgpt.rpc.close()
         claude.close()
 
@@ -106,10 +119,6 @@ def create_app(config):
                 return JSONResponse({"error": "invalid_request"}, status_code=422)
         return await call_next(request)
 
-    @app.get("/chatgpt")
-    def chatgpt_status():
-        return chatgpt.status()
-
     @app.post("/lifecycle/stop")
     async def lifecycle_stop(request: Request):
         # Host launcher only: no Gateway/browser route, no inference authority.
@@ -125,16 +134,24 @@ def create_app(config):
         callback()
         return {"status": "stopping"}
 
-    @app.post("/chatgpt")
-    async def chatgpt_operation(request: Request):
-        try:
-            return await run_in_threadpool(chatgpt.apply, await request.json())
-        except (ValueError, OSError):
-            return JSONResponse({"error": "provider_operation_failed"}, status_code=503)
+    if chatgpt:
 
-    @app.get("/chatgpt/limits")
-    def chatgpt_limits():
-        return read_chatgpt(chatgpt)
+        @app.get("/chatgpt")
+        def chatgpt_status():
+            return chatgpt.status()
+
+        @app.post("/chatgpt")
+        async def chatgpt_operation(request: Request):
+            try:
+                return await run_in_threadpool(chatgpt.apply, await request.json())
+            except (ValueError, OSError):
+                return JSONResponse(
+                    {"error": "provider_operation_failed"}, status_code=503
+                )
+
+        @app.get("/chatgpt/limits")
+        def chatgpt_limits():
+            return read_chatgpt(chatgpt)
 
     @app.get("/claude")
     def claude_status():
@@ -155,13 +172,15 @@ def create_app(config):
     def claude_sessions():
         return native_sessions.list()
 
-    @app.get("/codex/sessions")
-    def codex_saved_sessions(request: Request):
-        return codex_sessions.list(raw_list_query(request.scope["query_string"]))
+    if codex_sessions:
 
-    @app.get("/codex/sessions/{identity}")
-    def codex_saved_session(identity: str):
-        return codex_sessions.status(identity)
+        @app.get("/codex/sessions")
+        def codex_saved_sessions(request: Request):
+            return codex_sessions.list(raw_list_query(request.scope["query_string"]))
+
+        @app.get("/codex/sessions/{identity}")
+        def codex_saved_session(identity: str):
+            return codex_sessions.status(identity)
 
     @app.get("/claude/sessions/{identity}")
     def claude_session(identity: str):
@@ -178,7 +197,7 @@ def create_app(config):
 
     @app.get("/inference/status")
     def inference_status():
-        status = chatgpt.status()
+        status = relay.status() if relay else chatgpt.status()
         return {key: status[key] for key in ("available", "connected")}
 
     @app.get("/inference/claude/status")
@@ -189,7 +208,7 @@ def create_app(config):
     # Plan usage in percent, for Pi's alerts; the same readings as the owner's limits routes.
     @app.get("/inference/limits")
     def inference_limits():
-        return read_chatgpt(chatgpt)
+        return relay.limits() if relay else read_chatgpt(chatgpt)
 
     @app.get("/inference/claude/limits")
     def claude_inference_limits():
@@ -220,7 +239,9 @@ def create_app(config):
         def work():
             try:
                 with closing(
-                    inference_events(chatgpt, value, cancellation=control)
+                    relay.events(value, cancellation=control)
+                    if relay
+                    else inference_events(chatgpt, value, cancellation=control)
                 ) as events:
                     for item in events:
                         put(item)

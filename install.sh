@@ -459,6 +459,15 @@ write_env() {
     MEMORYGATE_READ_KEY=$(shaped MEMORYGATE_READ_KEY "mg_read_")
     MEMORYGATE_INGEST_KEY=$(keep_or_make MEMORYGATE_INGEST_KEY)
 
+    # MemoryGate's and ToolGate's own keys for asking Pi for model text. Pi holds only their
+    # hashes, as one JSON object. They protect no stored data, so a short one is made again.
+    MEMORYGATE_PI_SERVICE_KEY=$(keep_or_make_long MEMORYGATE_PI_SERVICE_KEY)
+    TOOLGATE_PI_SERVICE_KEY=$(keep_or_make_long TOOLGATE_PI_SERVICE_KEY)
+    PI_SERVICE_KEYS_SHA256=$(printf '{"memorygate":"%s","toolgate":"%s"}' \
+        "$(sha256_secret "$MEMORYGATE_PI_SERVICE_KEY")" "$(sha256_secret "$TOOLGATE_PI_SERVICE_KEY")")
+    # Empty means the default in docker-compose.yml (24h).
+    CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)
+
     mkdir -p "$CONKER_BACKUP_DIR/memorygate"
     # Memory backups are the owner's alone. A folder an older Docker run created as root cannot
     # be changed here; say so rather than stop the install.
@@ -558,6 +567,8 @@ CONKER_TERMINAL_WORKSPACE=$CONKER_TERMINAL_WORKSPACE
 CONKER_TERMINAL_WORKSPACE_LABEL=$CONKER_TERMINAL_WORKSPACE_LABEL
 CONKER_WORKSPACES_DIR=${CONKER_WORKSPACES_DIR:-}
 CONKER_DOCKER_GID=${CONKER_DOCKER_GID:-}
+# How long a local model stays loaded after its last use; empty is 24h.
+CONKER_OLLAMA_KEEP_ALIVE=$CONKER_OLLAMA_KEEP_ALIVE
 # Pi and the gateway run as you, so they can read your private provider files.
 CONKER_UID=$(id -u)
 CONKER_GID=$(id -g)
@@ -585,6 +596,9 @@ MEMORYGATE_DB_PASSWORD=$MEMORYGATE_DB_PASSWORD
 SYSTEMGATE_ADMIN_KEY=$SYSTEMGATE_ADMIN_KEY
 EMBEDDINGS_KEY=$EMBEDDINGS_KEY
 PI_TOOLGATE_KEY=$PI_TOOLGATE_KEY
+MEMORYGATE_PI_SERVICE_KEY=$MEMORYGATE_PI_SERVICE_KEY
+TOOLGATE_PI_SERVICE_KEY=$TOOLGATE_PI_SERVICE_KEY
+PI_SERVICE_KEYS_SHA256=$PI_SERVICE_KEYS_SHA256
 ENV
     chmod 600 "$tmp"
     mv "$tmp" "$ENV_FILE"
