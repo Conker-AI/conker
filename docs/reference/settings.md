@@ -16,11 +16,11 @@ Who you are, where you are and how your days run.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Name and photo**<br>`you.profile` | Your name and photo in Conker and in calls. (applies right away) | its own screen | Settings screen |
-| **What Conker calls you**<br>`you.call_me` | The name Conker uses when it talks to you; empty uses your name. (saved, not used yet) | empty | owner settings |
-| **Pronouns**<br>`you.pronouns` | How Conker refers to you when it writes about you. Choices: Not set, He, She, They. (saved, not used yet) | Not set | owner settings |
-| **About you**<br>`you.about` | A short text Conker always knows: school, work, what matters to you. (saved, not used yet) | empty | owner settings |
-| **Your goals**<br>`you.goals` | Goals Conker keeps in mind when it plans, suggests and reminds. (saved, not used yet) | none | owner settings |
-| **Important people**<br>`you.people` | Who is who in your life: name, relation and how to reach them, one per line. (saved, not used yet) | empty | owner settings |
+| **What Conker calls you**<br>`you.call_me` | The name Conker uses when it talks to you; empty uses your name. (applies from the next message) | empty | owner settings |
+| **Pronouns**<br>`you.pronouns` | How Conker refers to you when it writes about you. Choices: Not set, He, She, They. (applies from the next message) | Not set | owner settings |
+| **About you**<br>`you.about` | A short text Conker always knows: school, work, what matters to you. (applies from the next message) | empty | owner settings |
+| **Your goals**<br>`you.goals` | Goals Conker keeps in mind when it plans, suggests and reminds. (applies from the next message) | none | owner settings |
+| **Important people**<br>`you.people` | Who is who in your life: name, relation and how to reach them, one per line. (applies from the next message) | empty | owner settings |
 
 ### Place and language
 
@@ -33,16 +33,16 @@ Who you are, where you are and how your days run.
 | **Time format**<br>`you.time_format` | How times are written. Choices: 24-hour, 12-hour. (saved, not used yet) | 24-hour | owner settings |
 | **Date format**<br>`you.date_format` | How dates are written. Choices: 28 Oct 2026, Oct 28, 2026, 2026-10-28. (saved, not used yet) | 28 Oct 2026 | owner settings |
 | **First day of the week**<br>`you.week_start` | Where weeks start in calendars and weekly plans. Choices: Sunday, Monday. (saved, not used yet) | Sunday | owner settings |
-| **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Metric, Imperial. (saved, not used yet) | Metric | owner settings |
+| **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Metric, Imperial. (applies from the next message) | Metric | owner settings |
 
 ### Your rhythm
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Wake time**<br>`you.wake` | When your day usually starts. (saved, not used yet) | `07:00` | owner settings |
-| **Sleep time**<br>`you.sleep` | When your day usually ends. (saved, not used yet) | `23:00` | owner settings |
-| **Your week**<br>`you.week` | Fixed parts of your week, like school, work or training, in your own words. (saved, not used yet) | empty | owner settings |
-| **Best focus time**<br>`you.focus` | When Conker should plan your hardest work. Choices: Morning, Afternoon, Evening, Night, It varies. (saved, not used yet) | It varies | owner settings |
+| **Wake time**<br>`you.wake` | When your day usually starts. (applies from the next message) | `07:00` | owner settings |
+| **Sleep time**<br>`you.sleep` | When your day usually ends. (applies from the next message) | `23:00` | owner settings |
+| **Your week**<br>`you.week` | Fixed parts of your week, like school, work or training, in your own words. (applies from the next message) | empty | owner settings |
+| **Best focus time**<br>`you.focus` | When Conker should plan your hardest work. Choices: Morning, Afternoon, Evening, Night, It varies. (applies from the next message) | It varies | owner settings |
 
 ## Appearance
 
@@ -146,7 +146,7 @@ Ways to make Conker easier to see, hear and use.
 | **Bigger focus outlines**<br>`accessibility.focus` | Makes the keyboard focus easier to see. (saved, not used yet) | off | owner settings |
 | **Larger buttons**<br>`accessibility.large_targets` | Makes every button and link easier to tap. (saved, not used yet) | off | owner settings |
 | **Captions for voice**<br>`accessibility.captions` | Shows the words while Conker speaks. (saved, not used yet) | off | owner settings |
-| **Simpler wording**<br>`accessibility.simple_words` | Asks Conker to answer in short sentences and plain words. (saved, not used yet) | off | owner settings |
+| **Simpler wording**<br>`accessibility.simple_words` | Asks Conker to answer in short sentences and plain words. (applies from the next message) | off | owner settings |
 
 ## Keyboard
 
@@ -343,7 +343,7 @@ What the AI sees when it answers.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Instructions for every chat**<br>`context.instructions` | Text added to every chat after the agent's own instructions. (saved, not used yet) | empty | owner settings |
+| **Instructions for every chat**<br>`context.instructions` | Text added to every chat after the agent's own instructions. (applies from the next message) | empty | owner settings |
 | **Where instructions go**<br>`context.placement` | Whether instructions come first or right before your latest message. Choices: At the start, Before your latest message. (saved, not used yet) | At the start | owner settings |
 
 ### History and memory
@@ -353,14 +353,14 @@ What the AI sees when it answers.
 | **Chat history**<br>`context.history` | How much of the chat the model sees. Choices: Auto, Recent messages, Everything, Summary only. (saved, not used yet) | Auto | owner settings |
 | **Recent messages**<br>`context.recent_messages` | How many recent messages count as recent. 5 to 200. (saved, not used yet) | `30` | owner settings |
 | **Memories per answer**<br>`context.memories_per_answer` | The most memories added to one answer. 1 to 50. (saved, not used yet) | `8` | owner settings |
-| **Project sources**<br>`context.project_sources` | Whether a chat's project files are offered to the model. Choices: Auto, None. (saved, not used yet) | Auto | owner settings |
+| **Project sources**<br>`context.project_sources` | Whether a chat's project files are offered to the model. Choices: Auto, None. (applies from the next message) | Auto | owner settings |
 
 ### Budget
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Context meter**<br>`context.meter` | Shows how full the context is in the message box. (saved, not used yet) | on | owner settings |
-| **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 20000 characters. (saved, not used yet) | `12000` characters | owner settings |
+| **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 12000 characters. (applies from the next message) | `12000` characters | owner settings |
 | **Keep web pages**<br>`context.web_keep` | How long a fetched page stays in context. Choices: For one answer, For the whole chat. (saved, not used yet) | For one answer | owner settings |
 | **Decisions list**<br>`context.decisions` | Who can add to a chat's list of decisions. Choices: Only you, You and Conker, marked. (saved, not used yet) | You and Conker, marked | owner settings |
 | **Open threads**<br>`context.threads` | Tracks questions that are still open in a chat. (saved, not used yet) | off | owner settings |
@@ -374,9 +374,9 @@ How Conker searches the web and checks its answers.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Research by default**<br>`research.default` | Whether new chats search the web. Choices: Off, Web, Deep. (saved, not used yet) | Off | owner settings |
-| **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (saved, not used yet) | `4` | owner settings |
+| **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (applies from the next message) | `4` | owner settings |
 | **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (saved, not used yet) | `5` | owner settings |
-| **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (saved, not used yet) | Any age | owner settings |
+| **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (applies from the next message) | Any age | owner settings |
 | **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (saved, not used yet) | none | owner settings |
 | **Sites to skip**<br>`research.skip_sites` | Sites Conker never uses as sources. (saved, not used yet) | none | owner settings |
 
@@ -425,7 +425,7 @@ Talking to Conker and hearing it.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Conker's voice**<br>`voice.character` | The voice and look live in the companion's character. (applies right away) | its own screen | Settings screen |
-| **Speaking speed**<br>`voice.speed` | How fast Conker speaks. 50 to 200 %. (saved, not used yet) | `100` % | owner settings |
+| **Speaking speed**<br>`voice.speed` | How fast Conker speaks. 50 to 200 %. (applies from the next message) | `100` % | owner settings |
 | **Pitch**<br>`voice.pitch` | How high or low Conker's voice is. -50 to 50. (saved, not used yet) | `0` | owner settings |
 
 ### Calls
@@ -647,7 +647,7 @@ How Conker's tools, Terminal, browser and web search behave.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Safe search**<br>`tools.web.safe_search` | Filters adult results from web searches. Choices: Off, Moderate, Strict. (saved, not used yet) | Moderate | owner settings |
-| **Results per search**<br>`tools.web.results` | How many results one web search returns. 3 to 50. (saved, not used yet) | `10` | owner settings |
+| **Results per search**<br>`tools.web.results` | How many results one web search returns. 3 to 8. (applies from the next message) | `8` | owner settings |
 | **Search region**<br>`tools.web.region` | A region code for local results, such as il or us; empty searches everywhere. (saved, not used yet) | empty | owner settings |
 | **Search engines**<br>`tools.web.engines` | Which engines web search asks; empty uses the defaults. (saved, not used yet) | none | owner settings |
 
@@ -671,7 +671,7 @@ What Conker may spend and how close you are to plan limits.
 |---|---|---|---|
 | **Plan usage alerts**<br>`plans.alerts` | Tells you when a Claude or ChatGPT plan window is nearly used up. (applies right away) | on | pi `/owner/preferences` `planAlerts.enabled` |
 | **Alert at**<br>`plans.alert_percent` | How full a plan window is before you are told. 50 to 100 %. (applies right away) | `80` % | pi `/owner/preferences` `planAlerts.percent` |
-| **Windows to watch**<br>`money.plan_windows` | Which plan windows count for alerts. Choices: 5-hour, Weekly. (saved, not used yet) | 5-hour, Weekly | owner settings |
+| **Windows to watch**<br>`money.plan_windows` | Which plan windows count for alerts. Choices: 5-hour, Weekly. (applies from the next message) | 5-hour, Weekly | owner settings |
 
 ## Access and safety
 

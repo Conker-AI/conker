@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **19 more settings work now.** About you (what Conker calls you, pronouns, about you, people,
+  goals, units, wake, sleep, your week, focus), instructions for every chat, simpler wording,
+  project sources, research depth and recency, results per search, web page size, which plan
+  windows alert you, and voice speed. They apply from the next answer. Results per search go up to
+  8 and a web page to 12,000 characters, the most Pi uses.
+
 - **The Claude plan on the server.** The source-built Ubuntu layout now runs a Claude plan
   runtime, the `subscriptions` service: the official Claude Code CLI (2.1.310, checked by SHA-512)
   behind the private bridge, sharing Pi's network namespace, with the sign-in in its own folder
