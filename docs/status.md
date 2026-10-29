@@ -42,6 +42,7 @@ tests, but not yet exercised end to end on an installed stack.
 | **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
 | **Projects, agents, teams** | Projects with sources, agent profiles with their own toolkits, teams | Built |
 | **Calls and voice** | Voice turns in a call | Built; needs a configured speech service |
+| **Phone app** | Add Conker to the home screen (its icon, a fast start, a plain offline page); on a phone a chat fills the screen, the composer stays above the keyboard, and the back arrow or a swipe right returns to Chats | Built; checked in a phone-sized browser with the keyboard simulated. Installing needs Pi's gateway to allow the web manifest (`manifest-src 'self'`); not yet tried on a real phone |
 
 ## Deferred
 
