@@ -30,7 +30,7 @@
           "default": "",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_length": 60
         },
         {
@@ -41,7 +41,7 @@
           "default": "unset",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "unset",
@@ -69,7 +69,7 @@
           "default": "",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_length": 2000
         },
         {
@@ -80,7 +80,7 @@
           "default": [],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_items": 50
         },
         {
@@ -91,7 +91,7 @@
           "default": "",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_length": 4000
         }
       ]
@@ -244,7 +244,7 @@
           "default": "metric",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "metric",
@@ -270,7 +270,7 @@
           "default": "07:00",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "next-turn"
         },
         {
           "id": "you.sleep",
@@ -280,7 +280,7 @@
           "default": "23:00",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "next-turn"
         },
         {
           "id": "you.week",
@@ -290,7 +290,7 @@
           "default": "",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_length": 2000
         },
         {
@@ -301,7 +301,7 @@
           "default": "varies",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "morning",
