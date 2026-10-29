@@ -1,5 +1,7 @@
 /* Home bento (prototype v7, owner-approved): tile size follows priority. "Needs you" is largest,
-   the work chart and completed list are wide, figures are small; spans are uneven and leave no holes. */
+   the work chart and completed list are wide, figures are small; spans are uneven and leave no holes.
+   Settings can hide the plan tile (Plan usage ring) and the completed list (Tasks on Home); each
+   data-layout closes the gap at every width. */
 .home-overview { container-type: inline-size; }
 
 .home-bento {
@@ -13,11 +15,36 @@
     "decided quick quick done done done";
 }
 
+.home-bento[data-layout="no-plan"] {
+  grid-template-areas:
+    "needs needs needs needs coming coming"
+    "needs needs needs needs coming coming"
+    "work work work done done done"
+    "decided quick quick done done done";
+}
+.home-bento[data-layout="no-done"] {
+  grid-template-areas:
+    "needs needs needs needs plan plan"
+    "needs needs needs needs coming coming"
+    "work work work work decided decided"
+    "work work work work quick quick";
+}
+.home-bento[data-layout="no-plan-done"] {
+  grid-template-areas:
+    "needs needs needs needs coming coming"
+    "needs needs needs needs coming coming"
+    "work work work work decided decided"
+    "work work work work quick quick";
+}
+
 @container (max-width: 1000px) {
   .home-bento {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas: "needs needs" "plan coming" "work work" "done done" "decided quick";
   }
+  .home-bento[data-layout="no-plan"] { grid-template-areas: "needs needs" "coming coming" "work work" "done done" "decided quick"; }
+  .home-bento[data-layout="no-done"] { grid-template-areas: "needs needs" "plan coming" "work work" "decided quick"; }
+  .home-bento[data-layout="no-plan-done"] { grid-template-areas: "needs needs" "coming coming" "work work" "decided quick"; }
 }
 
 @container (max-width: 560px) {
@@ -26,4 +53,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "needs" "coming" "work" "done" "decided" "quick" "plan";
   }
+  .home-bento[data-layout="no-plan"] { grid-template-areas: "needs" "coming" "work" "done" "decided" "quick"; }
+  .home-bento[data-layout="no-done"] { grid-template-areas: "needs" "coming" "work" "decided" "quick" "plan"; }
+  .home-bento[data-layout="no-plan-done"] { grid-template-areas: "needs" "coming" "work" "decided" "quick"; }
 }

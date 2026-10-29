@@ -127,6 +127,7 @@ async function componentCases() {
     if (name === 'react') return { useRef: () => ({ current: null }), useEffect: () => {}, useState: initial => [initial, () => {}], lazy: () => LazyDialog, Suspense: 'Suspense' }
     if (name === 'react-router-dom') return { useNavigate: () => href => navigations.push(href) }
     if (name === './use-universal-search') return { useUniversalSearch: () => ({ ...h.store.getState(), search: h }) }
+    if (name === './search-shortcut') return { useSearchShortcut: () => 'k' }
     if (name === './universal-search-state') return { searchStages: ['metadata', 'text', 'semantic'] }
     if (name === './navigation') return { gatewayCommandDestinations: [{ title: 'Needle page', path: '/settings' }] }
     if (name === '@/lib/workspace-chrome') return { UniversalSearchContext: { Provider: 'Provider' } }
