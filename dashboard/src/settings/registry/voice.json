@@ -60,16 +60,6 @@
           ]
         },
         {
-          "id": "voice.punctuation",
-          "title": "Punctuation",
-          "description": "Adds commas and periods to what you say.",
-          "type": "toggle",
-          "default": true,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "voice.listen_models",
           "title": "Listening models",
           "description": "Which models turn speech into text, first choice first.",
@@ -123,16 +113,6 @@
           "min": -50,
           "max": 50,
           "step": 5
-        },
-        {
-          "id": "voice.read_aloud",
-          "title": "Read answers aloud",
-          "description": "Reads every answer aloud as it arrives.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     },
@@ -177,26 +157,6 @@
           "max": 240,
           "step": 5,
           "unit": "minutes"
-        },
-        {
-          "id": "voice.keep_transcript",
-          "title": "Keep call transcripts",
-          "description": "Saves what was said as a chat.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "voice.keep_audio",
-          "title": "Keep call audio",
-          "description": "Saves the recording of each call.",
-          "type": "toggle",
-          "default": false,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     },

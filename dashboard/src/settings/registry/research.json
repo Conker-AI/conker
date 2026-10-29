@@ -40,12 +40,12 @@
           "title": "Searches in deep research",
           "description": "The most searches one deep research makes.",
           "type": "number",
-          "default": 10,
+          "default": 4,
           "tier": "basic",
           "scope": "global",
           "effect": "stored",
           "min": 1,
-          "max": 50,
+          "max": 4,
           "step": 1
         },
         {
@@ -146,30 +146,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "research.citations",
-          "title": "Citation style",
-          "description": "How sources are cited.",
-          "type": "select",
-          "default": "numbers",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "numbers",
-              "label": "Numbers"
-            },
-            {
-              "value": "links",
-              "label": "Links"
-            },
-            {
-              "value": "footnotes",
-              "label": "Footnotes"
-            }
-          ]
         },
         {
           "id": "research.votes",

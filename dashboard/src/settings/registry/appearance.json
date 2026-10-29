@@ -613,16 +613,6 @@
           "max": 100,
           "step": 10,
           "unit": "%"
-        },
-        {
-          "id": "appearance.haptics",
-          "title": "Vibration",
-          "description": "Short vibrations on your phone for taps and arrivals.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     },

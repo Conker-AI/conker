@@ -12,16 +12,6 @@
       "title": "Seeing and using",
       "settings": [
         {
-          "id": "accessibility.screen_reader",
-          "title": "Extra screen reader hints",
-          "description": "Adds descriptions for screen readers to icons and charts.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
           "id": "accessibility.focus",
           "title": "Bigger focus outlines",
           "description": "Makes the keyboard focus easier to see.",

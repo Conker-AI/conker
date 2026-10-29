@@ -4,6 +4,7 @@ is replaced. Split from test_installer.py, whose fixtures these use."""
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import subprocess
 
@@ -51,3 +52,37 @@ def test_a_short_gateway_key_from_an_older_install_is_replaced(install):  # noqa
     # Keys that protect stored data are kept exactly.
     assert after["MEMORYGATE_DB_PASSWORD"] == values["MEMORYGATE_DB_PASSWORD"]
     assert after["TOOLGATE_VAULT_SALT"] == values["TOOLGATE_VAULT_SALT"]
+
+
+@needs_docker
+def test_memorygate_and_toolgate_get_their_own_pi_keys_and_pi_the_hashes(install):  # noqa: F811
+    """Contract C1: each service asks Pi for model text with its own key; Pi holds only the
+    hashes. A key from an older install is kept, a short one made again, and an install from
+    before them gets them on the next run without any other key changing."""
+    install("--yes", "--dry-run")
+    values = env_values(install.env_file)
+    memorygate, toolgate = values["MEMORYGATE_PI_SERVICE_KEY"], values["TOOLGATE_PI_SERVICE_KEY"]
+    assert min(len(memorygate), len(toolgate)) >= 32 and memorygate != toolgate
+    assert json.loads(values["PI_SERVICE_KEYS_SHA256"]) == {
+        "memorygate": hashlib.sha256(memorygate.encode()).hexdigest(),
+        "toolgate": hashlib.sha256(toolgate.encode()).hexdigest(),
+    }
+
+    older = "".join(
+        line + "\n"
+        for line in install.env_file.read_text().splitlines()
+        if not line.startswith(("MEMORYGATE_PI_SERVICE_KEY=", "PI_SERVICE_KEYS_SHA256="))
+    ).replace(f"TOOLGATE_PI_SERVICE_KEY={toolgate}", "TOOLGATE_PI_SERVICE_KEY=short")
+    install.env_file.write_text(older)
+    install("--yes", "--dry-run")
+    after = env_values(install.env_file)
+
+    assert len(after["MEMORYGATE_PI_SERVICE_KEY"]) >= 32
+    assert len(after["TOOLGATE_PI_SERVICE_KEY"]) >= 32
+    assert json.loads(after["PI_SERVICE_KEYS_SHA256"])["toolgate"] == hashlib.sha256(
+        after["TOOLGATE_PI_SERVICE_KEY"].encode()
+    ).hexdigest()
+    for name in ("MEMORYGATE_DB_PASSWORD", "TOOLGATE_VAULT_SALT", "CONKER_ADMIN_KEY", "PI_TOOLGATE_KEY"):
+        assert after[name] == values[name]
+    install("--yes", "--dry-run")
+    assert env_values(install.env_file)["TOOLGATE_PI_SERVICE_KEY"] == after["TOOLGATE_PI_SERVICE_KEY"]

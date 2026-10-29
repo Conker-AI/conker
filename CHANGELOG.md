@@ -6,6 +6,36 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The Claude plan on the server.** The source-built Ubuntu layout now runs a Claude plan
+  runtime, the `subscriptions` service: the official Claude Code CLI (2.1.310, checked by SHA-512)
+  behind the private bridge, sharing Pi's network namespace, with the sign-in in its own folder
+  that snapshots leave out. Sign in once with `conker providers claude login` in the server's
+  terminal, then pick Claude models in Settings > Models. ChatGPT answers pass through it to the
+  host ChatGPT worker as before. The repository install has no such runtime yet (it runs only
+  published images); connect Claude there with an Anthropic API key, which answers only after
+  `conker providers spending on`. How each layout connects Claude is in docs/4-running.md.
+
+- **MemoryGate and ToolGate ask Pi for model text with their own keys.** `install.sh`,
+  `deploy/ubuntu/prepare.py` and the Windows workspace generate `MEMORYGATE_PI_SERVICE_KEY` and
+  `TOOLGATE_PI_SERVICE_KEY` (with `MEMORYGATE_PI_URL` / `TOOLGATE_PI_URL`, Pi at `http://pi:8050`)
+  and give Pi only their hashes, `PI_SERVICE_KEYS_SHA256`. Existing installs get them the next
+  time `./install.sh` or `prepare.py` runs (the workspace on its next `up`); no other key changes.
+
+- **`conker tool draft "..."`** files a tool request in Pi, waits while Pi drafts it in the
+  background and prints its steps and issues, or why it failed (`--no-wait` to return at once).
+  The draft waits in the Inbox. Works in both installed layouts and the development CLI.
+
+- **Local models stay loaded for a day** after their last use instead of five minutes
+  (`OLLAMA_KEEP_ALIVE=24h`), so the first answer after a pause does not wait for a reload. Change
+  it with `CONKER_OLLAMA_KEEP_ALIVE` (in `.env`, or when running `prepare.py`).
+
+- **Conker on the phone.** It can be added to the home screen as an app (manifest, icons, and a
+  service worker that starts it from the build files and shows a plain "You're offline" page; it
+  never stores API, sign-in or chat data). In a chat on a phone the composer stays above the
+  on-screen keyboard (Android and iOS) with the latest message in view, and a back arrow or a
+  swipe right returns to Chats. On a phone, Enter adds a new line and the Send button sends.
+  Installing needs Pi's gateway to allow the manifest (`manifest-src 'self'`).
+
 - **Conker remembers across chats.** What it learned in one chat can come up in any other, the
   same in every chat. Turn it off in Settings, Memory, Remember across chats (`memory.across_chats`),
   which replaces the unused "Recall in new chats". Before, a chat stopped recalling other chats once

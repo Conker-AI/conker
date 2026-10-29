@@ -20,36 +20,6 @@
           "tier": "basic",
           "scope": "global",
           "effect": "stored"
-        },
-        {
-          "id": "logs.decisions",
-          "title": "Decision log",
-          "description": "Keeps every access decision with who decided and why.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "logs.monthly",
-          "title": "Monthly report",
-          "description": "A monthly summary of what Conker did for you.",
-          "type": "toggle",
-          "default": true,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
-        },
-        {
-          "id": "logs.raw",
-          "title": "Raw data views",
-          "description": "Shows the raw data behind cards and answers.",
-          "type": "toggle",
-          "default": false,
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     }

@@ -90,30 +90,6 @@
           "step": 1
         },
         {
-          "id": "context.memory_recall",
-          "title": "Memory recall",
-          "description": "Whether memories are added to each answer's context.",
-          "type": "select",
-          "default": "auto",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "auto",
-              "label": "Auto"
-            },
-            {
-              "value": "on",
-              "label": "On"
-            },
-            {
-              "value": "off",
-              "label": "Off"
-            }
-          ]
-        },
-        {
           "id": "context.project_sources",
           "title": "Project sources",
           "description": "Whether a chat's project files are offered to the model.",
@@ -154,12 +130,12 @@
           "title": "Web page size",
           "description": "The most text taken from one web page.",
           "type": "number",
-          "default": 20000,
+          "default": 12000,
           "tier": "advanced",
           "scope": "global",
           "effect": "stored",
           "min": 1000,
-          "max": 100000,
+          "max": 20000,
           "step": 1000,
           "unit": "characters"
         },

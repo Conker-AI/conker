@@ -23,30 +23,6 @@
           "component": "access-delegate"
         },
         {
-          "id": "access.default",
-          "title": "Default for every chat",
-          "description": "What a chat may do without asking until you change it there.",
-          "type": "select",
-          "default": "ai",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "ask",
-              "label": "Ask me"
-            },
-            {
-              "value": "ai",
-              "label": "AI decides"
-            },
-            {
-              "value": "full",
-              "label": "Full access"
-            }
-          ]
-        },
-        {
           "id": "access.your_words",
           "title": "Your words count as approval",
           "description": "When your own message asks for exactly this action, it goes ahead without a card.",
@@ -272,16 +248,6 @@
               "label": "Until you clear it"
             }
           ]
-        },
-        {
-          "id": "access.weekly_review",
-          "title": "Weekly review",
-          "description": "A weekly card listing everything that ran without you.",
-          "type": "toggle",
-          "default": false,
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored"
         }
       ]
     }

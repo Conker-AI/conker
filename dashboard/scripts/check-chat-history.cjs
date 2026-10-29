@@ -40,6 +40,7 @@ function historyHarness() {
     if (name === 'react') return react
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
     if (name === './composer') return { conversationColumn: 'conversation-column' }
+    if (name === '@/pwa/chat-navigation') return { useSwipeBack: () => {}, useBackToChats: () => () => {} }
     return new Proxy({}, { get: (_, property) => property })
   }, module, module.exports)
   const targets = new Map()
@@ -151,6 +152,30 @@ test.scroller.scrollHeight = 2500
 test.resize()
 assert.equal(test.scroller.scrollTop, 2500, 'Latest explicitly restores normal stream following after inspection')
 
+// The on-screen keyboard shrinks the history; the lines being read at its bottom stay in view.
+test = historyHarness()
+test.render({ sessionId: 'keyboard', children: null })
+test.scroll(1000)
+test.scroller.clientHeight = 250
+test.resize()
+assert.equal(test.scroller.scrollTop, 1150, 'Opening the keyboard keeps the bottom of the reading position in view')
+test.scroller.clientHeight = 400
+test.resize()
+assert.equal(test.scroller.scrollTop, 1000, 'Closing the keyboard returns to the same reading position')
+test = historyHarness()
+test.render({ sessionId: 'keyboard-latest', children: null })
+test.scroller.clientHeight = 250
+test.resize()
+assert.equal(test.scroller.scrollTop, 1600, 'At the latest message, opening the keyboard keeps the latest message visible')
+test = historyHarness()
+test.render({ sessionId: 'keyboard-hidden', children: null })
+test.scroll(500)
+test.scroller.clientHeight = 0
+test.resize()
+test.scroller.clientHeight = 400
+test.resize()
+assert.equal(test.scroller.scrollTop, 500, 'Hiding and showing the chat workspace does not move the reading position')
+
 delete global.ResizeObserver
 delete global.Element
-console.log('Chat history: linked-message focus, delayed loading, hidden workspace, streaming and manual scroll passed.')
+console.log('Chat history: linked-message focus, delayed loading, hidden workspace, streaming, manual scroll and keyboard passed.')

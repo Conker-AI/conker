@@ -36,30 +36,6 @@
           ]
         },
         {
-          "id": "memory.auto",
-          "title": "Remember on its own",
-          "description": "Whether Conker saves memories without asking.",
-          "type": "select",
-          "default": "allowed",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "allowed",
-              "label": "Yes, listed in Handled"
-            },
-            {
-              "value": "ask",
-              "label": "Ask me first"
-            },
-            {
-              "value": "off",
-              "label": "Never"
-            }
-          ]
-        },
-        {
           "id": "memory.kinds",
           "title": "What to remember",
           "description": "Kinds of things Conker may remember.",
@@ -127,26 +103,6 @@
           "scope": "global",
           "effect": "stored",
           "max_items": 50
-        },
-        {
-          "id": "memory.agents",
-          "title": "Memory between agents",
-          "description": "Whether agents share one memory.",
-          "type": "select",
-          "default": "shared",
-          "tier": "advanced",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "shared",
-              "label": "Shared"
-            },
-            {
-              "value": "separate",
-              "label": "Separate for each agent"
-            }
-          ]
         }
       ]
     },

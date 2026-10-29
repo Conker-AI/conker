@@ -22,30 +22,6 @@
           "effect": "stored"
         },
         {
-          "id": "projects.task_reminders",
-          "title": "Task reminders",
-          "description": "When Conker reminds you of a task's due date.",
-          "type": "select",
-          "default": "morning",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "stored",
-          "options": [
-            {
-              "value": "none",
-              "label": "Never"
-            },
-            {
-              "value": "morning",
-              "label": "On the morning it is due"
-            },
-            {
-              "value": "day_before",
-              "label": "The day before"
-            }
-          ]
-        },
-        {
           "id": "projects.tasks_from_chats",
           "title": "Tasks from chats",
           "description": "Whether Conker turns things you say into tasks.",
