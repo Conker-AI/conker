@@ -7,6 +7,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { useUniversalSearch } from './use-universal-search'
+import { useSearchShortcut } from './search-shortcut'
 import { UniversalSearchContext, useWorkspaceChrome } from '@/lib/workspace-chrome'
 
 const UniversalSearchDialog = lazy(() => import('./universal-search-dialog'))
@@ -35,20 +36,22 @@ export function UniversalSearchProvider({ children, client, authStore, workspace
   const [mounted, setMounted] = useState(open)
   if (open && !mounted) setMounted(true)
   useEffect(() => {
-    // Warm the palette module after start-up so the first Ctrl+K opens without a wait.
+    // Warm the palette module after start-up so the first search opens without a wait.
     const timer = setTimeout(() => { void import('./universal-search-dialog') }, 2000)
     return () => clearTimeout(timer)
   }, [])
+  const shortcut = useSearchShortcut()
   useEffect(() => {
+    if (!shortcut) return
     const key = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !event.isComposing) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === shortcut && !event.isComposing) {
         if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('[data-slot="command-dialog-popup"]')) opener.current = document.activeElement
         event.preventDefault(); search.setOpen(!search.store.getState().open)
       }
     }
     document.addEventListener('keydown', key)
     return () => document.removeEventListener('keydown', key)
-  }, [search])
+  }, [search, shortcut])
   function select(href: string) { search.setOpen(false); navigate(href) }
   function selectRecord(id: string) { const href = search.resultHref(id); if (href) select(href) }
   return <UniversalSearchContext.Provider value={(value, returnTo) => { opener.current = returnTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null); search.query(value ?? ''); search.setOpen(true) }}>{children}

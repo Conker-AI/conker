@@ -6,7 +6,7 @@ import type { Proposal } from '@/lib/gateway/proposals'
 
 /** Days shown in the work chart. */
 export const HOME_CHART_DAYS = 14
-/** At most this many items needing him (rationale ledger: Items per glance). */
+/** At most this many items needing him (rationale ledger: Items per glance); Settings > Home can set 1 to 5. */
 export const HOME_NEEDS_LIMIT = 3
 
 export type HomeNeed =
@@ -32,7 +32,7 @@ const parse = (value: string | null) => value ? Date.parse(value) : Number.NaN
 /** What Home shows, computed only from records the server returned; nothing is estimated. */
 export function buildHome(input: {
   requests: OwnerRequest[]; proposals: Proposal[]; tasks: GatewayTask[]; runs: GatewayActivityRun[]; jobs: GatewayJob[]; runsComplete: boolean
-}, now = Date.now()): HomeSnapshot {
+}, now = Date.now(), needsLimit = HOME_NEEDS_LIMIT): HomeSnapshot {
   const today = startOfDay(now)
   const decisions: HomeNeed[] = input.requests.filter(item => item.status === 'pending' && item.reviewable)
     .map(item => ({ kind: 'decision' as const, id: item.id, title: item.title || 'Review this action', detail: item.details || `${item.actor} is waiting for your decision.`,
@@ -51,7 +51,7 @@ export function buildHome(input: {
   })
   const oldest = input.runs.reduce((min, run) => Math.min(min, parse(run.startedAt)), Number.POSITIVE_INFINITY)
   return {
-    needs: needs.slice(0, HOME_NEEDS_LIMIT),
+    needs: needs.slice(0, needsLimit),
     needsTotal: needs.length,
     decidedToday,
     runsToday: runDays.at(-1)?.count ?? 0,
@@ -63,6 +63,17 @@ export function buildHome(input: {
       .map(item => ({ id: item.id, title: item.outcome, at: parse(item.updatedAt), today: parse(item.updatedAt) >= today }))
       .sort((a, b) => b.at - a.at).slice(0, 5),
   }
+}
+
+/**
+ * The encouraging greeting line (Settings > Home > Greeting), only when it is earned: he decided
+ * something today. It names his part first, then Conker's, with the real counts (motivation.md,
+ * leverage made visible); "ran" claims no success, because ended runs include failed ones.
+ */
+export function earnedLine(decidedToday: number, runsToday: number): string | null {
+  if (decidedToday < 1) return null
+  const decided = `You decided ${decidedToday} ${decidedToday === 1 ? 'thing' : 'things'} today`
+  return runsToday > 0 ? `${decided}, and Conker ran ${runsToday} ${runsToday === 1 ? 'time' : 'times'}.` : `${decided}.`
 }
 
 /** At or past this share used, a window is close to its limit (Pi's default alert level). */

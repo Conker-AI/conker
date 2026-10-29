@@ -5,12 +5,15 @@ import { AnimatedIconGlyph } from '@/components/icons/animated/animated-icon'
 import { useAnimatedIconController } from '@/components/icons/animated/use-animated-icon-controller'
 import { BrainIcon } from '@/components/icons/animated/icons'
 import { ComposerSelectField, ComposerSelectTrigger } from './composer-select'
+import { useServerSetting } from '@/settings/server-setting'
 import { PlanUsageRing } from './plan-usage-ring'
 
 export function GatewayModelPicker({ client, value, onChange, disabled, manualRequired, compact = false, iconOnlyOnMobile = false }: { client: GatewayControlClient; value: string; onChange: (value: string) => void; disabled: boolean; manualRequired: boolean; compact?: boolean; iconOnlyOnMobile?: boolean }) {
   const [catalogue, setCatalogue] = useState<OwnerModelsConfiguration | null>(null)
   const [error, setError] = useState('')
   const { iconRef, animationProps } = useAnimatedIconController()
+  // Settings > Home > Plan usage ring: in the message box, on Home, both or off.
+  const ring = useServerSetting<'home' | 'composer' | 'both' | 'off'>('home.plan_ring', 'both')
   useEffect(() => {
     let controller: AbortController
     const load = () => {
@@ -46,7 +49,7 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   if (compact) return <ComposerSelectField error={error ? `Model list unavailable. ${error}` : undefined}>
     <div className="flex items-center gap-1">
       {select}
-      {planProvider && <PlanUsageRing client={client} provider={planProvider} />}
+      {planProvider && (ring === 'composer' || ring === 'both') && <PlanUsageRing client={client} provider={planProvider} />}
     </div>
   </ComposerSelectField>
   return <div className="space-y-1">
