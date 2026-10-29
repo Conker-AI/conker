@@ -29,6 +29,13 @@ which module versions a release pins.
   (`OLLAMA_KEEP_ALIVE=24h`), so the first answer after a pause does not wait for a reload. Change
   it with `CONKER_OLLAMA_KEEP_ALIVE` (in `.env`, or when running `prepare.py`).
 
+- **Conker on the phone.** It can be added to the home screen as an app (manifest, icons, and a
+  service worker that starts it from the build files and shows a plain "You're offline" page; it
+  never stores API, sign-in or chat data). In a chat on a phone the composer stays above the
+  on-screen keyboard (Android and iOS) with the latest message in view, and a back arrow or a
+  swipe right returns to Chats. On a phone, Enter adds a new line and the Send button sends.
+  Installing needs Pi's gateway to allow the manifest (`manifest-src 'self'`).
+
 - **Conker remembers across chats.** What it learned in one chat can come up in any other, the
   same in every chat. Turn it off in Settings, Memory, Remember across chats (`memory.across_chats`),
   which replaces the unused "Recall in new chats". Before, a chat stopped recalling other chats once
