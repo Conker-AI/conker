@@ -21,13 +21,23 @@ function load(relative) {
 }
 async function main() {
   const { createModelsConfiguration, validateModelsConfiguration } = load('src/lib/api/model-catalogue.ts')
-  const { createModelRoles, modelRolesErrors, planModelRole, withAnswerModel, withIdeas } = load('src/lib/api/model-roles.ts')
+  const { createModelRoles, modelRolesErrors, planModelRole, withAnswerModel, withIdeas, MODEL_ROLES, MODEL_ROLE_LABELS, MODEL_ROLE_DESCRIPTIONS } = load('src/lib/api/model-roles.ts')
+  // The services' own AI goes through Pi: MemoryGate sorts memories, ToolGate writes a tool's AI steps.
+  for (const [role, label, description] of [['memory-sorting', 'Memory sorting', 'how new memories are sorted'], ['tool-text', 'Tool text', 'AI steps inside your tools']]) {
+    assert.ok(MODEL_ROLES.includes(role), `${role} is listed`)
+    assert.equal(MODEL_ROLE_LABELS[role], label)
+    assert.equal(MODEL_ROLE_DESCRIPTIONS[role], description)
+  }
   const config = createModelsConfiguration()
   const settings = createModelRoles(config)
   const primary = config.defaultModelId
   const secondary = config.models.find(model => model.id !== primary).id
   const crossProvider = config.models.find(model => model.providerId !== config.models.find(item => item.id === primary).providerId).id
   assert.deepEqual(modelRolesErrors(settings, config), [])
+  for (const role of ['memory-sorting', 'tool-text']) assert.equal(settings.roles[role].enabled, false, `${role}: off until he picks a model; the local model keeps doing it`)
+  const slow = structuredClone(settings)
+  slow.roles.reviewer.timeoutMs = 600000
+  assert.deepEqual(modelRolesErrors(slow, config), [], 'A role may wait up to ten minutes, as Pi allows')
   // Choosing the answer model moves the Answer role (what Pi uses) and the default together.
   const routed = { ...config, roleSettings: { ...settings, answerMode: 'router', roles: { ...settings.roles, answer: { ...settings.roles.answer, failure: 'fallback', fallbackModelId: primary, eligibleModelIds: [primary] } } } }
   const chosen = withAnswerModel(routed, secondary)
@@ -70,7 +80,7 @@ async function main() {
   plan = planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', allowedProviderIds: [providerId] })
   assert.equal(plan.selectedModelId, crossProvider, 'Runtime privacy/provider filters never widen the owner allowlist')
   assert.equal(planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', allowedModelIds: [] }).status, 'blocked')
-  for (const invalid of [{ fallbackModelId: primary }, { fallbackModelId: 'unknown' }, { eligibleModelIds: [primary] }, { timeoutMs: 0 }, { timeoutMs: 120001 }, { timeoutMs: NaN }, { failure: 'retry-forever' }, { failure: 'stop' }, { eligibleModelIds: [primary, primary, crossProvider] }]) {
+  for (const invalid of [{ fallbackModelId: primary }, { fallbackModelId: 'unknown' }, { eligibleModelIds: [primary] }, { timeoutMs: 0 }, { timeoutMs: 600001 }, { timeoutMs: NaN }, { failure: 'retry-forever' }, { failure: 'stop' }, { eligibleModelIds: [primary, primary, crossProvider] }]) {
     const broken = structuredClone(helperSettings)
     Object.assign(broken.roles.summarization, invalid)
     assert.ok(modelRolesErrors(broken, config).length, JSON.stringify(invalid))

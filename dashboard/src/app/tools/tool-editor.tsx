@@ -29,11 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   CollectionSearch,
   WorkspaceInspector,
@@ -46,9 +42,10 @@ import {
   createToolNode,
   NODE_LABELS,
   parseToolDraft,
-  validateToolDefinition,
+  editorValidation,
   type JsonValue,
   type NodeKind,
+  type SavedCheck,
   type ToolDefinition,
   type ToolRun,
   type WorkspaceRecord,
@@ -85,6 +82,7 @@ export function ToolEditor({
   liveHistory,
   liveRun,
   capabilityPicker,
+  savedCheck,
 }: {
   record: WorkspaceRecord;
   records: WorkspaceRecord[];
@@ -94,6 +92,8 @@ export function ToolEditor({
   liveHistory?: () => void;
   liveRun?: () => void;
   capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
+  /** ToolGate's check of the saved draft (live only); it wins over the quick local check. */
+  savedCheck?: SavedCheck;
 }) {
   const [definition, setDefinition] = useState(
     () => (liveSave ? undefined : drafts.get(record.id)?.definition) ?? record.draft,
@@ -138,7 +138,7 @@ export function ToolEditor({
     sourceDirty = source !== null && source !== serial(definition);
   const hasUnappliedFields = Object.keys(argumentSources).length > 0;
   const pendingEdits = sourceDirty || hasUnappliedFields;
-  const issues = validateToolDefinition(definition, !!liveSave),
+  const { issues, label: checkLabel } = editorValidation(definition, !!liveSave, dirty, savedCheck),
     node = definition.nodes.find((n) => n.id === selected);
   const canvasRun =
     !pendingEdits && testedDefinition === serial(definition) ? run : undefined;
@@ -932,7 +932,7 @@ export function ToolEditor({
             `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : liveSave ? "Save to preserve changes" : "Changes reset on reload"}`}
         </span>
         <span className="hidden sm:inline">
-          {issues.length ? "Needs attention" : "Definition valid"} · {liveRun ? 'Published runs via ToolGate' : 'No live execution'}
+          {checkLabel} · {liveRun ? 'Published runs via ToolGate' : 'No live execution'}
         </span>
       </footer>
       <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved ToolGate draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />

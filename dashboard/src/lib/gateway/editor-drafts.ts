@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { parseToolDraft, type ToolDefinition } from '../tool-workspace'
+import { parseToolDraft, type ToolDefinition, type ValidationIssue } from '../tool-workspace'
 import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
@@ -10,6 +10,10 @@ const page = z.object({ items: z.array(summary).max(100), next_after: identity.n
 const saved = z.object({ id: identity, revision, updated_at: z.string().datetime({ offset: true }), document: z.unknown() })
 const publication = z.object({ draft_id: identity, revision, automation_id: z.string().regex(/^editor-[a-f0-9]{32}$/), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), published_at: z.string().datetime({ offset: true }) })
 const publicationHistory = z.object({ items: z.array(publication.extend({ authorization: z.enum(['auto', 'owner_confirmation']), available: z.boolean() })).max(100) })
+// The publish answer: `toolId` is the id Conker sees in its tool list, `conkerMayUse` whether it may use it.
+const published = publication.extend({ toolId: z.string().min(1).max(200).optional(), conkerMayUse: z.boolean().optional() })
+const checkIssue = z.object({ message: z.string().min(1).max(2000), node_id: z.string().max(64).nullable().optional(), nodeId: z.string().max(64).nullable().optional() })
+const validation = z.object({ id: identity, revision, issues: z.array(checkIssue).max(200) })
 const capability = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), name: z.string().max(160), description: z.string().max(800), version: revision, authorization: z.string().max(40), inputs: z.array(z.object({ name: z.string().max(200), type: z.string().max(40), required: z.boolean(), description: z.string().max(500) })).max(100) })
 const catalogue = z.object({ items: z.array(capability).max(100), next_after: z.string().max(80).nullable() })
 const access = z.object({ actor_id: z.string().max(100), actor_name: z.string().max(160), automation_id: z.string().max(80), enabled: z.boolean(), required_scopes: z.array(z.string().max(100)).max(500) })
@@ -18,6 +22,8 @@ const runHistory = z.object({ items: z.array(z.object({ action_id: z.string().ma
 export type EditorRun = z.infer<typeof runHistory>['items'][number]
 export type EditorCapability = z.infer<typeof capability>
 export type EditorDraft = { id: string; revision: number; updated_at: string; document: ToolDefinition }
+/** ToolGate's answer for one saved revision: the editor shows these, not its own guess. */
+export type EditorValidation = { revision: number; issues: ValidationIssue[] }
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value)
   if (!result.success) throw new GatewayError('invalid-response')
@@ -66,9 +72,16 @@ export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request
       if (result.items.some(item => item.draft_id !== id)) throw new GatewayError('invalid-response')
       return result.items
     },
-    async publish(id: string, expectedRevision: number, previousVersion: number, authorization: 'auto' | 'owner_confirmation', signal?: AbortSignal) {
+    /** ToolGate's check of the saved draft (graph rules); it saves, grants and runs nothing. */
+    async validation(id: string, signal?: AbortSignal): Promise<EditorValidation> {
+      const result = parse(validation, await auth.request(`${path(id)}/validation`, { signal }))
+      if (result.id !== id) throw new GatewayError('invalid-response')
+      return { revision: result.revision, issues: result.issues.map(({ message, nodeId = null, node_id = null }) => ({ path: 'toolgate', message, ...(nodeId ?? node_id ? { nodeId: (nodeId ?? node_id) as string } : {}) })) }
+    },
+    /** `conkerMayUse` also shows the published tool to Conker and gives its key access, in the same step. */
+    async publish(id: string, expectedRevision: number, previousVersion: number, authorization: 'auto' | 'owner_confirmation', conkerMayUse: boolean, signal?: AbortSignal) {
       if (!revision.safeParse(expectedRevision).success || !Number.isSafeInteger(previousVersion) || previousVersion < 0) throw new GatewayError('validation')
-      const result = parse(publication, await auth.request(`${path(id)}/publish`, { method: 'POST', body: { expected_revision: expectedRevision, expected_publication_version: previousVersion, authorization }, signal }))
+      const result = parse(published, await auth.request(`${path(id)}/publish`, { method: 'POST', body: { expected_revision: expectedRevision, expected_publication_version: previousVersion, authorization, conkerMayUse }, signal }))
       if (result.draft_id !== id || result.revision !== expectedRevision) throw new GatewayError('invalid-response')
       return result
     },
