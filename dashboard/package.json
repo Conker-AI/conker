@@ -10,6 +10,7 @@
     "build": "npm run design:check && tsc -b && vite build --configLoader runner && node scripts/check-production-bundle.cjs",
     "lint": "npm run design:check && eslint .",
     "preview": "vite preview",
+    "shots": "node scripts/shots.cjs",
     "design:check": "node scripts/check-design-system.mjs",
     "design:check:test": "node scripts/check-design-system.mjs --self-test",
     "check:prompt-templates": "node scripts/check-prompt-templates.cjs",
