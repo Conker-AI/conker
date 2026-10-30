@@ -1,64 +1,26 @@
 """conker workflow: describe a workflow in words, review the draft, then publish it.
 
-Pi's talking model drafts (POST /workflow-drafts/draft). ToolGate stores the draft in its editor
-and validates it. Nothing is published or run until the owner runs `conker workflow publish`.
+Drafting is a tool request in Pi (POST /tool-drafts, scripts/tool_drafts.py): `draft` is
+`conker tool draft`, and `from-chat` files one from your own message in a chat. Pi drafts it in
+the background and the draft waits in the Inbox; `dismiss` declines such a request. ToolGate
+stores drafts in its editor and validates them: `list`, `show` and `publish` work on those.
+Nothing is published or run until the owner runs `conker workflow publish`.
 """
 
 from __future__ import annotations
 
 import json
 import re
-import sys
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
+import tool_drafts
+
 DRAFT_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
-PROPOSAL_ID = re.compile(r"wfp_[0-9a-f]{32}")
-OFFER_ID = re.compile(r"wfo_[0-9a-f]{32}")
 EDITOR = "/v2/owner/editor-drafts/"
-QUESTIONS = 4  # rounds of builder questions before asking for a fuller description
-REPAIRS = 2  # rounds of fixing what Pi or ToolGate found wrong
 CAPABILITIES = 200
-TOOLS = 8  # matching tools sent to the model; a small local model reads about 20 tokens a second
-STOP = {
-    "the",
-    "and",
-    "for",
-    "with",
-    "from",
-    "that",
-    "this",
-    "then",
-    "into",
-    "when",
-    "what",
-    "your",
-    "you",
-    "are",
-    "was",
-    "its",
-    "all",
-    "any",
-    "get",
-    "give",
-    "gives",
-    "return",
-    "returns",
-    "find",
-    "found",
-    "list",
-    "show",
-    "tell",
-    "make",
-    "use",
-    "using",
-    "each",
-    "every",
-    "about",
-}
-# Terminal control characters (C0 except tab and newline, DEL, C1) in text from a model.
-CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+TOOL_REQUESTS = {"draft", "from-chat"}
 
 
 def register(commands):
@@ -67,42 +29,22 @@ def register(commands):
     )
     operations = workflow.add_subparsers(dest="operation", required=True)
     draft = operations.add_parser(
-        "draft", help="Describe a workflow; the talking model drafts it for review"
+        "draft",
+        help="Describe a workflow; Pi drafts it in the background (as conker tool draft)",
     )
     draft.add_argument("description", help="What the workflow should do, in your words")
-    draft.add_argument(
-        "--all-tools",
-        action="store_true",
-        help="Offer every tool to the model, not only the ones matching the description",
-    )
-    draft.add_argument(
-        "--id",
-        help="Draft id (letters, digits, - and _); made from its name if omitted",
-    )
+    tool_drafts.waiting_arguments(draft)
     chat = operations.add_parser(
         "from-chat",
-        help="Turn one of your chat messages into a workflow draft; it waits in the Inbox",
+        help="Draft a workflow from one of your chat messages; it waits in the Inbox",
     )
     chat.add_argument("session", help="The chat")
     chat.add_argument("message", help="Your message in it, as show lists it")
-    chat.add_argument("--id", help="Draft id; made from its name if omitted")
-    chat.add_argument(
-        "--all-tools", action="store_true", help="Offer every tool to the model"
-    )
-    accept = operations.add_parser(
-        "accept",
-        help="Accept Pi's offer to draft a workflow from your chat message",
-    )
-    accept.add_argument("offer", help="The Inbox item's id (wfo_...)")
-    accept.add_argument("--id", help="Draft id; made from its name if omitted")
-    accept.add_argument(
-        "--all-tools", action="store_true", help="Offer every tool to the model"
-    )
+    tool_drafts.waiting_arguments(chat)
     dismiss = operations.add_parser(
-        "dismiss",
-        help="Take a draft made from chat, or an offer, out of the Inbox",
+        "dismiss", help="Decline a tool request waiting in the Inbox; nothing is made"
     )
-    dismiss.add_argument("proposal", help="The Inbox item's id (wfp_... or wfo_...)")
+    dismiss.add_argument("request", help="The request's id (creq_...)")
     operations.add_parser("list", help="Saved workflow drafts")
     show = operations.add_parser(
         "show", help="One draft: its steps and whether it is valid"
@@ -114,13 +56,17 @@ def register(commands):
         "--expected-revision",
         type=int,
         required=True,
-        help="The revision you reviewed, from show or draft",
+        help="The revision you reviewed, from show",
     )
     publish.add_argument(
         "--authorization",
         choices=["owner_confirmation", "auto"],
         default="owner_confirmation",
         help="owner_confirmation (default) asks you before each run; auto runs without asking",
+    )
+    publish.add_argument(
+        "--request",
+        help="The tool request it was drafted for (creq_...): Conker tells that chat it is live",
     )
 
 
@@ -163,28 +109,6 @@ def call(request, config, service, path, body=None, *, changes=False, **options)
         raise refusal(exc, "Pi" if service.startswith("pi") else "ToolGate") from None
 
 
-def builder(request, config, body: dict) -> dict:
-    """One draft from Pi. Output the model mangled is retried once, telling it what was wrong."""
-    try:
-        return call(request, config, "pi", "/workflow-drafts/draft", body)
-    except Refused as exc:
-        if exc.code != "unusable":
-            raise
-        retry = {**body, "issues": [*body.get("issues", []), str(exc)][-20:]}
-        return call(request, config, "pi", "/workflow-drafts/draft", retry)
-
-
-def ask(question: str) -> str:
-    if not sys.stdin.isatty():
-        return ""
-    # Model text: show control characters as escapes rather than let them drive the terminal.
-    print(CONTROL.sub(lambda m: f"\\x{ord(m.group()):02x}", question), file=sys.stderr)
-    try:
-        return input("> ").strip()
-    except EOFError:
-        return ""
-
-
 def capabilities(request, config) -> list[dict]:
     """Active tools and published workflows, as ToolGate's editor lists them."""
     found = []
@@ -203,15 +127,6 @@ def capabilities(request, config) -> list[dict]:
                 found.append(
                     {
                         "id": item["id"],
-                        "kind": kind,
-                        "name": item["name"],
-                        "description": item.get("description", ""),
-                        "inputs": [
-                            field
-                            for field in item.get("inputs", [])
-                            if field.get("name")
-                        ],
-                        "version": max(1, int(item.get("version") or 1)),
                         "authorization": str(item.get("authorization") or "auto"),
                     }
                 )
@@ -219,59 +134,6 @@ def capabilities(request, config) -> list[dict]:
             if not after:
                 break
     return found[:CAPABILITIES]
-
-
-def words(text: str) -> set[str]:
-    """Lowercase word stems: `disks` and `disk` match, short and common words do not count."""
-    found = set()
-    for word in re.findall(r"[a-z0-9]+", text.lower()):
-        word = word[:-1] if len(word) > 4 and word.endswith("s") else word
-        if len(word) >= 3 and word not in STOP:
-            found.add(word)
-    return found
-
-
-def relevant(available: list[dict], text: str, limit: int = TOOLS) -> list[dict]:
-    """The capabilities whose id, name, description or inputs share words with the request.
-
-    The model reads every capability it is offered; a slow local model cannot read all of them
-    within Pi's time limit. When nothing matches, every capability is offered.
-    """
-    wanted = words(text)
-    vocabulary = [
-        words(" ".join([item["id"], item["name"], item["description"]]))
-        | words(" ".join(field["name"] for field in item["inputs"]))
-        for item in available
-    ]
-    # A word most tools share ("search") says less than one only a few have ("web").
-    spread = {word: sum(word in own for own in vocabulary) for word in wanted}
-    scored = []
-    for index, (item, own) in enumerate(zip(available, vocabulary, strict=True)):
-        if shared := wanted & own:
-            scored.append((-sum(1 / spread[word] for word in shared), index, item))
-    return [item for *_, item in sorted(scored)[:limit]] or available
-
-
-def compact(item: dict) -> dict:
-    """What the model needs from a capability, in fewer words; never its authorization."""
-    return {
-        "id": item["id"],
-        "kind": item["kind"],
-        "name": item["name"],
-        "description": item["description"][:240],
-        "inputs": [
-            {
-                **{
-                    key: field[key]
-                    for key in ("name", "type", "required")
-                    if key in field
-                },
-                "description": str(field.get("description", ""))[:100],
-            }
-            for field in item["inputs"]
-        ],
-        "version": item["version"],
-    }
 
 
 def steps(document: dict, asks: set[str] = frozenset()) -> list[str]:
@@ -289,120 +151,13 @@ def steps(document: dict, asks: set[str] = frozenset()) -> list[str]:
 
 
 def problem(issue: dict) -> str:
-    """A validation issue, naming its step so the builder knows where to look."""
+    """A validation issue, naming its step."""
     step = issue.get("node_id")
     return f"Step {step}: {issue['message']}" if step else issue["message"]
 
 
-def exists(request, config, identity: str) -> bool:
-    try:
-        request(config, "toolgate-owner", EDITOR + identity)
-    except HTTPError as exc:
-        if exc.code == 404:
-            exc.close()
-            return False
-        raise refusal(exc, "ToolGate") from None
-    return True
-
-
-def draft(args, config, request, answer=ask) -> dict:
-    if args.id is not None and not DRAFT_ID.fullmatch(args.id):
-        raise ValueError(
-            "A draft id starts with a letter and uses letters, digits, - and _."
-        )
-    available = capabilities(request, config)
-    if not available:
-        raise ValueError(
-            "ToolGate lists no active tools or published workflows to build from."
-        )
-    offered = available if args.all_tools else relevant(available, args.description)
-    asks = {item["id"] for item in available if item["authorization"] != "auto"}
-    body = {
-        "description": args.description,
-        "capabilities": [compact(item) for item in offered],
-    }
-    if args.id:
-        body["draftId"] = args.id
-    conversation = []
-    for _ in range(QUESTIONS + 1):
-        result = builder(request, config, {**body, "conversation": conversation})
-        if result["ready"]:
-            break
-        reply = answer(result["reply"])
-        if not reply:
-            raise ValueError(
-                f"The builder asks: {result['reply']} Add the answer to your description and run it again."
-            )
-        conversation += [
-            {"role": "builder", "content": result["reply"][:4000]},
-            {"role": "owner", "content": reply[:4000]},
-        ]
-    else:
-        raise ValueError(
-            "The builder still has questions. Describe the workflow in more detail."
-        )
-    document, issues = result["document"], result["issues"]
-    identity = document["id"]
-    if exists(request, config, identity):
-        raise ValueError(
-            f"A draft named {identity} already exists. Choose another with --id."
-        )
-    revision = 0
-    for attempt in range(REPAIRS + 1):
-        if not issues:
-            saved = call(
-                request,
-                config,
-                "toolgate-owner",
-                EDITOR + identity,
-                {"expected_revision": revision, "document": document},
-                changes=True,
-            )
-            revision = saved["revision"]
-            check = call(
-                request, config, "toolgate-owner", EDITOR + identity + "/validation"
-            )
-            issues = [problem(item) for item in check["issues"]]
-        if not issues or attempt == REPAIRS:
-            break
-        repair = builder(
-            request,
-            config,
-            {
-                **body,
-                "draftId": identity,
-                "conversation": conversation,
-                "previous": document,
-                "issues": issues[:20],
-            },
-        )
-        if not repair["ready"]:
-            break
-        result, document, issues = repair, repair["document"], repair["issues"]
-    valid = revision > 0 and not issues
-    return {
-        "draft": identity,
-        "saved": revision > 0,
-        "revision": revision,
-        "valid": valid,
-        "summary": result["reply"],
-        "name": document["name"],
-        "effect": document["effect"],
-        "inputs": [field["name"] for field in document["inputs"]],
-        "steps": steps(document, asks),
-        "toolsOffered": len(offered),
-        "issues": issues,
-        "modelId": result["modelId"],
-        "next": (
-            f"Review it, then: conker workflow publish {identity} --expected-revision {revision}"
-            if valid
-            else "Fix it in the workflow editor, or describe it again with more detail."
-        ),
-    }
-
-
-def from_chat(args, config, request, answer=ask) -> dict:
-    """Draft from one of the owner's own messages, then record it for the Inbox."""
+def message_text(args, config, request) -> str:
+    """The owner's own message in a chat, the description of a workflow drafted from it."""
     if not CHAT_ID.fullmatch(args.session) or not CHAT_ID.fullmatch(args.message):
         raise ValueError("Use the chat and message ids that show prints.")
     chat = call(request, config, "pi", f"/sessions/{args.session}")
@@ -421,54 +176,34 @@ def from_chat(args, config, request, answer=ask) -> dict:
         raise ValueError("Make workflows only from your own messages.")
     if not 1 <= len(text.strip()) <= 4000:
         raise ValueError("Use a message of 1 to 4,000 characters.")
-    request_args = SimpleNamespace(
-        description=text.strip(), id=args.id, all_tools=args.all_tools
+    return text.strip()
+
+
+def tool_request(args, config, request, pi, *, emit=print) -> int:
+    """`draft` and `from-chat`: a tool request in Pi, waited for as `conker tool draft` does."""
+    description = (
+        message_text(args, config, request)
+        if args.operation == "from-chat"
+        else args.description
     )
-    result = draft(request_args, config, request, answer)
-    if result["saved"]:
-        result["inbox"] = call(
-            request,
-            config,
-            "pi",
-            "/workflow-proposals",
-            {
-                "sessionId": args.session,
-                "messageId": args.message,
-                "draftId": result["draft"],
-                "name": result["name"][:100],
-                "valid": result["valid"],
-            },
-            changes=True,
-        )
-    return result
+    drafting = SimpleNamespace(
+        **{**vars(args), "operation": "draft", "description": description}
+    )
+    return tool_drafts.run(pi, drafting, emit=emit)
 
 
 def workflow_operation(args, config, request) -> dict:
-    if args.operation == "draft":
-        return draft(args, config, request)
-    if args.operation == "from-chat":
-        return from_chat(args, config, request)
-    if args.operation == "accept":
-        if not OFFER_ID.fullmatch(args.offer):
-            raise ValueError("Use an Inbox item id that starts with wfo_.")
-        offer = call(request, config, "pi", f"/workflow-proposals/offers/{args.offer}")
-        if offer.get("state") != "open":
-            raise ValueError("That offer was already accepted or dismissed.")
-        chat = SimpleNamespace(
-            session=offer["sessionId"],
-            message=offer["messageId"],
-            id=args.id,
-            all_tools=args.all_tools,
-        )
-        return from_chat(chat, config, request)
     if args.operation == "dismiss":
-        if OFFER_ID.fullmatch(args.proposal):
-            path = f"/workflow-proposals/offers/{args.proposal}/dismiss"
-        elif PROPOSAL_ID.fullmatch(args.proposal):
-            path = f"/workflow-proposals/{args.proposal}/dismiss"
-        else:
-            raise ValueError("Use an Inbox item id that starts with wfp_ or wfo_.")
-        return call(request, config, "pi", path, {}, changes=True)
+        if not tool_drafts.CHANGE_REQUEST.fullmatch(args.request):
+            raise ValueError("Use the tool request's id, which starts with creq_.")
+        return call(
+            request,
+            config,
+            "pi",
+            f"/change-requests/{args.request}/decline",
+            {},
+            changes=True,
+        )
     if args.operation == "list":
         return call(request, config, "toolgate-owner", EDITOR.rstrip("/"))
     if not DRAFT_ID.fullmatch(args.id):
@@ -503,6 +238,10 @@ def workflow_operation(args, config, request) -> dict:
             "issues": [problem(item) for item in check["issues"]],
             "publications": published,
         }
+    if args.request is not None and not tool_drafts.CHANGE_REQUEST.fullmatch(
+        args.request
+    ):
+        raise ValueError("Use the tool request's id, which starts with creq_.")
     published = call(request, config, "toolgate-owner", path + "/publications")["items"]
     result = call(
         request,
@@ -518,19 +257,27 @@ def workflow_operation(args, config, request) -> dict:
         },
         changes=True,
     )
+    if args.request is not None:
+        result["toolRequest"] = told(request, config, args, result)
+    return result
+
+
+def told(request, config, args, result) -> dict:
+    """Tell Pi the requested tool is live, so Conker says so in the chat that asked."""
+    if not isinstance(result.get("toolId"), str):
+        return {"note": "ToolGate did not say the tool's id, so Pi was not told."}
     try:
-        result["inbox"] = call(
+        name = call(request, config, "toolgate-owner", EDITOR + args.id)["document"][
+            "name"
+        ]
+        return call(
             request,
             config,
             "pi",
-            "/workflow-proposals/published",
-            {"draftId": args.id},
+            f"/change-requests/{args.request}/published",
+            {"toolId": result["toolId"], "name": name},
             changes=True,
         )
     except (ValueError, OSError):
-        # Published either way; only the Inbox item may stay until it is dismissed by hand.
-        result["inbox"] = {
-            "closed": None,
-            "note": "Pi did not confirm the Inbox update.",
-        }
-    return result
+        # Published either way; only Conker's note in the chat is missing.
+        return {"note": "Pi did not confirm the tool request. The tool is published."}

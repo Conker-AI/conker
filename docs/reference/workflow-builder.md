@@ -1,71 +1,78 @@
 # Workflow builder
 
-Describe a workflow in your own words. The talking model drafts it from the tools and published
-workflows you already have, and you review the draft before anything runs.
+Describe a workflow in your own words. Pi's drafting model drafts it from the tools and published
+workflows Conker can use, and you review the draft before anything runs. It is the same drafter
+the chat ("make me a tool that ...") and the Tools screen ("Describe a new tool") use.
 
 ```bash
-python scripts/conker.py workflow draft "Every morning, get the weather for Tel Aviv and tell me if I need an umbrella"
+conker tool draft "Every morning, get the weather for Tel Aviv and tell me if I need an umbrella"
+python scripts/conker.py tool draft "..."      # the same, in the workspace
+python scripts/conker.py workflow draft "..."  # the same again, under its older name
 ```
 
-1. Conker lists your active tools and published workflows from ToolGate and sends Pi the ones
-   that share words with your description, at most 8, shortened. Words few tools share count
-   more than words most of them share. `--all-tools` sends all of them, which a slow local model
-   may not read within Pi's time limit.
-2. If a detail is missing, the builder asks one question. Answer it in the terminal. In a script
-   with no terminal, the command stops and prints the question; add the answer to the
-   description and run it again.
-3. The draft is saved in ToolGate's workflow editor and validated. If Pi or ToolGate finds a
-   problem, such as a step using a tool you do not have or a step left unconnected, the builder
-   fixes it, up to two times. Each problem names its step. Output the model garbled is retried
-   once.
-4. The command prints the steps, the inputs, what the workflow does (`read`, `prepare` or
-   `write`) and whether it is valid. Steps whose tool asks you before it runs say so; that comes
-   from ToolGate, not from the model. Nothing is published.
+1. The command files a tool request in Pi and returns its id (`creq_...`). Pi drafts in the
+   background: it offers the model only the tools that share words with your description (at
+   most 8, published workflows included), checks the draft with ToolGate and has the model
+   repair it up to two times.
+2. The command waits and prints the steps in plain words and any issues, or why drafting failed.
+   `--no-wait` returns at once; `--timeout SECONDS` waits longer or shorter (30 minutes by
+   default). Exit codes: 0 ready (or filed, with `--no-wait`), 1 failed, 3 still drafting when
+   the time ran out, 4 the drafter asks a question.
+3. The draft waits in the Inbox, the same card a chat request makes. Review it there, then save
+   and publish it in Tools. Nothing is saved, published or run from the command line.
 
-Then review and publish:
+If the command's answer is lost, run it again with `--request-id` and the id it printed: the
+same id files nothing twice.
+
+## When the drafter asks a question
+
+A request made in a chat can need a detail ("Which city?"). Conker asks it in that chat and the
+card says what it asks; your next message in that chat is the answer, or answer it in the Inbox,
+or from the terminal:
 
 ```bash
-python scripts/conker.py workflow show morning-weather
-python scripts/conker.py workflow publish morning-weather --expected-revision 1
+conker tool answer creq_... "Tel Aviv"
 ```
 
-`publish` asks you before each run by default (`owner_confirmation`). `--authorization auto`
-lets it run without asking. Every tool it calls still keeps its own grants and approvals.
-`workflow list` shows all saved drafts.
+Drafting goes on with the same draft: the drafter sees your description and every question and
+answer so far, and asks at most four times. A request made from the terminal or the Tools screen
+has no chat, so a question fails it with the question's words: describe it again with that
+detail.
 
 ## From a chat message
-
-Write what you want in a chat, then turn that message into a workflow:
 
 ```bash
 python scripts/conker.py show SESSION
 python scripts/conker.py workflow from-chat SESSION MESSAGE_ID
 ```
 
-It drafts from your message exactly as `draft` does, saves the draft for review, and puts
-"Workflow draft ready: <name>" in your Inbox ("to fix" when ToolGate found problems). Publishing
-it clears the Inbox item; `workflow dismiss ID` clears it without publishing. Only your own
-messages work. The companion never makes a workflow on its own, so text pasted into a chat cannot
-start one. Forgetting the chat removes the Inbox item; the draft stays, as your own work.
+Files a tool request from one of your own messages, exactly as `tool draft` does with that text,
+and waits for it. Only your own messages work, never Conker's or a forgotten one. In a chat you
+can simply ask Conker for the tool instead.
 
-## When you ask in chat
+`python scripts/conker.py workflow dismiss creq_...` declines a tool request: its card leaves the
+Inbox and nothing is made.
 
-Ask the companion for something recurring ("every morning tell me the weather in Tel Aviv",
-"remind me every Monday ...", "make me a workflow that ..."; English or Russian) and it says it
-put an offer in your Inbox: "Draft a workflow from your message? ...". To accept:
+## Review and publish a saved draft
+
+Once a draft is saved in Tools:
 
 ```bash
-python scripts/conker.py workflow accept wfo_...
+python scripts/conker.py workflow list
+python scripts/conker.py workflow show morning-weather
+python scripts/conker.py workflow publish morning-weather --expected-revision 1 --request creq_...
 ```
 
-That drafts from your message exactly as `from-chat` does, and the draft takes the offer's
-place in the Inbox. `workflow dismiss wfo_...` declines it. Pi makes the offer from your own
-message only, before the model answers; nothing the model writes, and no web page or tool
-result, can make one. Nothing is drafted until you accept, and nothing runs until you publish.
+`show` prints the steps, which steps ask you before they run (that comes from ToolGate, not from
+the model), and whether the draft is valid. `publish` asks you before each run by default
+(`owner_confirmation`); `--authorization auto` lets it run without asking. Every tool it calls
+still keeps its own grants and approvals. `--request` names the tool request it was drafted for,
+so Conker tells the chat that asked that the tool is live; the tool is published even if Pi does
+not confirm that.
 
 ## A model for drafting
 
-The builder uses your talking model unless you give it one of its own. A small local model can
+The drafter uses your talking model unless you give it one of its own. A small local model can
 chat well and still draft badly; give drafting a stronger one while chat stays local:
 
 ```bash
@@ -73,15 +80,22 @@ python scripts/conker.py models --role drafting --model MODEL_ID
 python scripts/conker.py models --role drafting --off
 ```
 
-It is used only when you ask for a draft, sees only your request and the capability list, and
-waits up to 10 minutes. A hosted model costs what that provider charges per draft.
+It sees only your description, its questions and your answers, and the list of capabilities. Each
+model call gets the drafting role's own time limit. A hosted model costs what that provider
+charges per draft.
 
-## What the builder cannot do
+## What the drafter cannot do
 
-- Use a tool or workflow you do not have. It says so instead.
-- See your memories, chats or keys. It sees only your description and the list of capabilities.
-- Bind credentials, show the workflow to agents, publish it or run it. Agent visibility is off
-  until you turn it on in the editor.
-- Overwrite a draft. If one with that name exists, choose another with `--id`.
+- Use a tool or workflow Conker cannot use. It says so instead.
+- See your memories, chats or keys.
+- Bind credentials, publish or run anything. Agents see the tool only once you publish it with
+  "Let Conker use this tool".
 
-Pi's side is documented in Pi's `docs/workflow-drafts.md`.
+## Retired (2026-10-30)
+
+`workflow draft` no longer asks questions in the terminal or saves straight into Tools, and its
+`--all-tools` and `--id` options are gone: Pi chooses the tools and the draft's id comes from its
+name when you save it. `workflow accept` (Pi's offers) is gone, and `workflow dismiss` takes a
+tool request's id instead of a `wfp_` or `wfo_` Inbox item.
+
+Pi's side is documented in Pi's `docs/workflow-drafts.md` and `docs/change-requests.md`.
