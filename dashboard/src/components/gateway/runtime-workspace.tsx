@@ -40,7 +40,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
 import { followLivePreview } from '@/lib/gateway/live-preview'
 import { GatewayError, gatewayError } from '@/lib/gateway/transport'
-import { canReleaseTaskConflict, canSubmitRuntime, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
+import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 import { GatewayCallLauncher } from './call-workspace'
 import { GatewaySessionAgentControl } from './session-agent-control'
@@ -72,7 +72,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [localPrivacy] = useState(createGatewaySourcePrivacyState)
   const privacy = sourcePrivacy ?? localPrivacy
   const forgottenIds = useStore(privacy, value => value.sessionIds)
-  const { selected, uncertain, createUnknown, operation, taskIntent, epoch: workspaceEpoch } = useStore(workspace)
+  const { selected, uncertain, createUnknown, operation, taskIntent, epoch: workspaceEpoch, turnCheck } = useStore(workspace)
   const draftEpoch = useRef(workspaceEpoch)
   const [draftController] = useState(() => createDraftController(client.drafts, () => {
     const value = authStore.getState()
@@ -96,7 +96,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [pendingStart, setPendingStart] = useState<PendingDraftStart | null>(null)
   const [startMissing, setStartMissing] = useState(false)
   const safeTaskIntent = visibleTaskDispatchIntent(taskIntent, forgottenIds)
-  const setSelected = (value: string | null) => workspace.setState({ selected: value })
+  const setSelected = (value: string | null) => workspace.setState({ selected: value, turnCheck: null })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
   const { rows: sessions, refresh: refreshList } = useSessionDiscovery()
   const [agentNames, setAgentNames] = useState<Record<string, string>>({ companion: 'Conker' })
@@ -391,20 +391,20 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   async function resumeTurn(turnId: string) {
     const latest = chatLatest.current?.snapshot.current
     const turn = latest?.turns.find(turn => turn.id === turnId)
-    if (!selected || workspace.getState().selected !== selected || latest?.id !== selected || latest.status !== 'open' || privacy.getState().sessionIds.includes(selected) || workspace.getState().uncertain[selected] || !turn || !(turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted) || workspace.getState().operation || !activeRef.current) return
-    const id = selected, epoch = workspace.getState().epoch
+    if (!selected || workspace.getState().selected !== selected || latest?.id !== selected || latest.status !== 'open' || privacy.getState().sessionIds.includes(selected) || workspace.getState().uncertain[selected] || !turn || !(turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted || checkableTurn(turn.status)) || workspace.getState().operation || !activeRef.current) return
+    const id = selected, epoch = workspace.getState().epoch, checking = checkableTurn(turn.status)
     let failure: string | null = null
-    workspace.setState({ operation: 'resume' }); setNotice(null); setDetailError(null)
+    workspace.setState({ operation: 'resume', turnCheck: checking ? { turnId, phase: 'checking' } : null }); setNotice(null); setDetailError(null)
     try {
       const status = await request(signal => client.resumeTurn(turnId, { signal }))
-      // The reply appears on its own; only say something when the turn is still waiting on the owner.
-      if (workspace.getState().epoch === epoch && status === 'awaiting_approval') setNotice('Still waiting for you in the Inbox. Your answer there continues this chat.')
+      // A check always reports what it found; otherwise the reply appears on its own, and only a turn still waiting on the owner needs a line.
+      if (workspace.getState().epoch === epoch) { if (checking) workspace.setState({ turnCheck: { turnId, phase: 'checked', status } }); else if (status === 'awaiting_approval') setNotice('Still waiting for you in the Inbox. Your answer there continues this chat.') }
     } catch (error) {
       failure = error instanceof Error ? error.message : 'Resume could not be confirmed. Check history before trying again.'
     } finally {
       if (workspace.getState().epoch === epoch) {
         await refreshDetail(id)
-        if (workspace.getState().epoch === epoch && selectedRef.current === id && failure) setDetailError(failure)
+        if (workspace.getState().epoch === epoch && selectedRef.current === id && failure) { if (checking) workspace.setState({ turnCheck: { turnId, phase: 'failed', reason: failure } }); else setDetailError(failure) }
         if (workspace.getState().epoch === epoch) workspace.setState({ operation: null })
       }
     }
@@ -417,7 +417,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     const { modelId } = requestOptions
     if (harnessBySession?.[id] && !modelId) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
     const epoch = workspace.getState().epoch
-    workspace.setState({ operation: 'send' }); setDetailError(null); setNotice(null); setTaskError(null)
+    workspace.setState({ operation: 'send', turnCheck: null }); setDetailError(null); setNotice(null); setTaskError(null)
     let dispatched = false
     const previewStop = new AbortController()
     try {
@@ -539,7 +539,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending: detailPending || historyLoading,
     activeAgentName, agentNames,
     forgotten: !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten' || !!attempt?.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)),
-    attempt, reviewed, notice, error: detailError, historyUnavailable: !!observation.error && !current, rejected, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
+    attempt, reviewed, notice, error: detailError, historyUnavailable: !!observation.error && !current, rejected, turnCheck, inFlight: inFlight?.epoch === workspace.getState().epoch ? inFlight : null, preview, focusedMessageId,
   }
   const chatHandlers: GatewayChatHandlers = {
     resumeTurn,

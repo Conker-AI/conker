@@ -10,7 +10,7 @@ Every chat feature the dashboard offers has a command here; this page grows with
 
 `context instructions SESSION FILE` - Set session instructions from a file; use --clear to remove them.
 
-`context budget SESSION --window N --reserve N [--other N]` - Set token budget limits; start with this command for new chats.
+`context budget SESSION --window N --reserve N [--other N]` - Set token budget limits; start with this command for new chats. An installed stack runs it as `./conker context budget`.
 
 `context summary-edit SESSION FILE` - Edit the chat summary.
 
@@ -24,7 +24,7 @@ Every chat feature the dashboard offers has a command here; this page grows with
 
 `context compaction SESSION` - Show current compaction status and covered messages.
 
-Writes check the revision and never retry automatically. Use context budget first when a chat has no settings. The usual flow: context summary-draft to propose, save the summary, then context compact to fold messages.
+Writes check the revision and never retry automatically. Run `conker context budget` first when a chat has no context settings; then `conker config` can change the rest. The usual flow: context summary-draft to propose, save the summary, then context compact to fold messages.
 
 ## Output
 

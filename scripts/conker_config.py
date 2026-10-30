@@ -308,9 +308,10 @@ def config_operation(args, config, request) -> int:
             new = parse(setting, args.value)
         revision, document = read(request, config, setting, chat)
         if document is None:
+            # Only budget can start them: a window and reserve have no default to guess.
             raise ValueError(
                 "This chat has no context settings yet. Start them with: "
-                "conker context budget SESSION --window N --reserve N"
+                f"conker context budget {chat} --window TOKENS --reserve TOKENS"
             )
         saved = request(
             config,

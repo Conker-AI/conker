@@ -126,8 +126,36 @@ async function main() {
     for (const status of ['outcome_unknown', 'action_in_progress', 'awaiting_budget']) {
       state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, status, action: { id: 'action_a', state: 'outcome_unknown', jobId: null } }, later] } }
       const outcome = project().outcomes[0]; assert.ok(outcome); assert.match(outcome.consequence, /not confirmed/)
-      assert.deepEqual(outcome.controls.map(control => control.label), ['Check saved history', 'Review saved action'], 'Uncertain action never receives generic Retry or reply-only recovery')
+      assert.deepEqual(outcome.controls.map(control => control.label), ['Check saved history', 'Review saved action', ...(status === 'awaiting_budget' ? [] : ['Check what happened'])], 'Uncertain action never receives generic Retry or reply-only recovery')
     }
+    const unknown = { ...failedTurn, status: 'outcome_unknown', action: { id: 'action_a', state: 'outcome_unknown', jobId: null } }
+    const unknownState = { ...failedState, current: { ...failedState.current, turns: [unknown] } }
+    state = unknownState; calls = []; chat = project()
+    const checkControl = chat.outcomes[0].controls.at(-1)
+    assert.equal(checkControl.label, 'Check what happened'); assert.equal(checkControl.primary, true); assert.match(chat.outcomes[0].description, /without sending it again/)
+    await run(checkControl.action); assert.deepEqual(calls, [['resumeTurn', unknown.id]], 'Checking asks Pi about the same saved turn, never send')
+    for (const patch of [{ operationPending: true }, { attempt }, { forgotten: true }, { current: { ...unknownState.current, status: 'closed' } }]) {
+      calls = []; state = { ...unknownState, ...patch }; await checkControl.action.run(); assert.equal(calls.length, 0)
+    }
+    state = { ...unknownState, operationPending: true, turnCheck: { turnId: unknown.id, phase: 'checking' } }; chat = project()
+    assert.equal(chat.outcomes[0].controls.at(-1).label, 'Checking…'); assert.equal(chat.outcomes[0].controls.at(-1).action.availability, 'disabled')
+    assert.match(chat.outcomes[0].status, /^Checking with your tools… The action is not sent again\.$/)
+    state = { ...state, current: { ...unknownState.current, turns: [{ ...unknown, status: 'running', endedAt: null }] } }; chat = project()
+    assert.equal(chat.outcomes.length, 1, 'While Pi checks, its own card stands in for the claimed turn'); assert.equal(chat.outcomes[0].title, 'Checking what happened'); assert.deepEqual(chat.outcomes[0].controls, [])
+    state = { ...unknownState, turnCheck: { turnId: unknown.id, phase: 'checked', status: 'outcome_unknown' } }; chat = project()
+    assert.match(chat.outcomes[0].status, /^Still unknown\./); assert.equal(chat.outcomes[0].controls.at(-1).label, 'Check again')
+    state = { ...unknownState, turnCheck: { turnId: unknown.id, phase: 'checked', status: 'action_in_progress' }, current: { ...unknownState.current, turns: [{ ...unknown, status: 'action_in_progress' }] } }
+    assert.match(project().outcomes[0].status, /^Still running\./); assert.equal(project().outcomes[0].controls.at(-1).label, 'Check again')
+    state = { ...unknownState, turnCheck: { turnId: unknown.id, phase: 'checked', status: 'complete' }, current: { ...unknownState.current, turns: [{ ...unknown, status: 'complete', action: { ...unknown.action, state: 'completed' } }] } }; chat = project()
+    assert.equal(chat.outcomes.length, 1); assert.equal(chat.outcomes[0].title, 'Checked what happened'); assert.match(chat.outcomes[0].status, /^Done\. /); assert.deepEqual(chat.outcomes[0].controls, [])
+    state = { ...unknownState, turnCheck: { turnId: unknown.id, phase: 'checked', status: 'acted_no_reply' }, current: { ...unknownState.current, turns: [{ ...unknown, status: 'acted_no_reply', acted: true, action: { ...unknown.action, state: 'completed' } }] } }; chat = project()
+    assert.match(chat.outcomes[0].status, /reply is missing/); assert.equal(chat.outcomes[0].controls.at(-1).label, 'Ask only for the reply')
+    state = { ...unknownState, turnCheck: { turnId: unknown.id, phase: 'failed', reason: 'Password verification was cancelled before the operation was sent.' } }; chat = project()
+    assert.equal(chat.outcomes[0].status, 'Password verification was cancelled before the operation was sent. The action was not sent again.')
+    assert.match(renderToStaticMarkup(createElement(ChatTranscript, { chat })), /<p role="status"[^>]*>Password verification was cancelled/)
+    state = { ...unknownState, turnCheck: { turnId: 'turn_elsewhere', phase: 'checked', status: 'complete' } }; chat = project()
+    assert.equal(chat.outcomes.length, 1); assert.equal(chat.outcomes[0].status, undefined, 'A check of a turn outside this chat shows nothing here')
+    state = { ...unknownState, forgotten: true, turnCheck: { turnId: unknown.id, phase: 'checking' } }; assert.deepEqual(project().outcomes, [])
     for (const acted of [false, true]) {
       state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, status: 'interrupted', acted }] } }
       assert.equal(project().outcomes[0].title, 'This turn was interrupted'); assert.ok(!project().outcomes[0].controls.some(control => control.label === 'Ask only for the reply'))

@@ -3,6 +3,9 @@ import type { TaskDispatchIntent, TaskSubmissionBinding } from './task-dispatch-
 import { createStore } from 'zustand/vanilla'
 
 export type RequestModelOptions = { modelId?: string; skillIds?: string[]; think?: boolean; draftRevision?: number; researchMode?: 'off' | 'web' | 'deep'; isAnalysis?: boolean }
+/** Asking ToolGate what became of an action whose result was never confirmed. Pi checks the same action id and never sends it again. */
+export type TurnCheck = { turnId: string } & ({ phase: 'checking' } | { phase: 'checked'; status: string | null } | { phase: 'failed'; reason: string })
+export const checkableTurn = (status: string) => status === 'outcome_unknown' || status === 'action_in_progress'
 export type UncertainTurn = { requestOptions?: RequestModelOptions; taskBinding?: TaskSubmissionBinding; rejectionStatus?: 409; text: string; turnId?: string; checked: boolean; accepted?: boolean; requestId?: string; requestedSessionId?: string; submission?: RuntimeSubmission; notFound?: boolean }
 
 /** The composer's empty selection means Automatic, so no model override is sent. */
@@ -19,10 +22,10 @@ export function retainedRequestOptions(attempt: UncertainTurn): RequestModelOpti
 export function createGatewayRuntimeWorkspaceState() {
   return createStore<{
     epoch: number; selected: string | null; drafts: Record<string, string>; skillChoices: Record<string, string[]>; thinkChoices: Record<string, boolean>; uncertain: Record<string, UncertainTurn>
-    taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | 'resume' | null
+    taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | 'resume' | null; turnCheck: TurnCheck | null
     reset: () => void
-  }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null,
-    reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null }),
+  }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null, turnCheck: null,
+    reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null, turnCheck: null }),
   }))
 }
 export type GatewayRuntimeWorkspaceState = ReturnType<typeof createGatewayRuntimeWorkspaceState>

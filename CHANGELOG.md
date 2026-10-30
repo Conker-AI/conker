@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **"Check what happened" for an action whose result was never confirmed.** When something stopped
+  while an action was running, the chat card now has a Check what happened button: Pi asks your
+  tools about the same action and never sends it again. The card says what it found in plain
+  words: checking, done (the reply appears), still unknown or still running (check again later),
+  or why it could not check.
+
+- **`conker context budget` works on an installed stack.** A chat starts with no context settings,
+  and the error said to run a command only the development CLI had. Now `./conker context budget
+  CHAT_ID --window TOKENS --reserve TOKENS` starts them through the pi container, like `conker
+  config`, and the error names the chat.
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or
