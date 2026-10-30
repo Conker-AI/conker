@@ -387,6 +387,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, 120))
+    // A tool run by hand takes a moment, so Tools shows it running.
+    if (method === 'POST' && /^\/api\/owner\/editor-drafts\/[^/]+\/runs$/.test(path)) await new Promise(resolve => setTimeout(resolve, 2500))
     let match: RegExpMatchArray | null
     if ((match = path.match(/^\/api\/control\/pi\/drafts\/new\/start\/([A-Za-z0-9_-]+)$/)) && method === 'GET') return structuredClone(draftStarts.get(match[1]) ?? fail(404))
     if (path === '/api/control/pi/drafts/new/start' && method === 'POST') {
@@ -988,7 +990,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     }
     if (path === '/api/pi/health') return { service: 'pi', version: '0.4.0', status: 'ok', checked_at: iso(now()), age_seconds: 1,
       checks: { store: { status: 'ok' }, memory: { status: 'ok' }, local_provider: { status: 'ok' }, hosted_provider: { status: 'not_configured' }, action_boundary: { status: 'ok' } } }
-    if (path === '/api/pi/tools') return { status: 'ok', results: tools }
+    if (path === '/api/pi/tools') return { status: 'ok', results: [...tools, ...agentJobs(path, method, undefined, fail).results as Json[]] }
     if (path === '/api/control/pi/setup/boundaries') return boundaryPolicy
     if (path === '/api/control/pi/setup/protection') {
       if (method === 'GET') return protectionPolicy
