@@ -28,6 +28,7 @@ Five guides, read in order, about 20 minutes in all.
 - [Local Windows](reference/local-windows.md) · [Recovery](reference/recovery.md) · [Diagnostics](reference/diagnostics.md)
 - [Hosted provider credentials](reference/provider-credentials.md): stage, verify, activate and rotate keys
 - [Harnesses and model roles](reference/harnesses-and-models.md): subscription sign-in and background thinking
+- [Claude plan runtime](reference/claude-plan-runtime.md): sign in to a Claude plan on a server; releasing its image
 - [Release manifest](reference/release-manifest.md) · [Release acceptance](reference/release-acceptance.md) · [Deployment parity](reference/deployment-parity.md)
 
 **How it is built**
