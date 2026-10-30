@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The Inbox and Server tell the truth.** The Inbox shows "Loading your Inbox…" and a placeholder
+  until every source has answered, and a source that failed says it didn't load; it never says
+  "All clear" before that. After Send it (or Do it), the line says "Approved. Sending now…" and
+  follows the saved request until ToolGate has run it ("ran at 14:02; the chat shows how it
+  went"), shows when it can no longer run, and after a minute without word says it isn't
+  confirmed yet, with Check again. A fresh device follows its own light or dark setting. Healthy
+  Server checks say OK, and messages point to Server, not System.
 - **"Check what happened" for an action whose result was never confirmed.** When something stopped
   while an action was running, the chat card now has a Check what happened button: Pi asks your
   tools about the same action and never sends it again. The card says what it found in plain

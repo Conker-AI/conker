@@ -114,7 +114,8 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
     catch (cause) { setFailure({ id: 'new', message: gatewayError(cause).message }); return false }
     finally { setPending(null) }
   }, [client])
-  return { items: client ? items ?? [] : [], error, pending, failure, notice, load, approve, decline, retry, draft }
+  // Answered once the first read came back (or failed); no client means nothing to wait for.
+  return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, pending, failure, notice, load, approve, decline, retry, draft }
 }
 
 export type ChangeRequestsState = ReturnType<typeof useChangeRequests>

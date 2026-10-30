@@ -10,7 +10,8 @@ import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/con
 const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
   access: 'Owner access', services: 'Services', models: 'Answer models',
 }
-const statusLabels = { ok: 'Working', attention: 'Needs attention', optional: 'Optional' } as const
+// "Working" means "Conker is doing it now" everywhere else, so a healthy check says OK.
+const statusLabels = { ok: 'OK', attention: 'Needs attention', optional: 'Optional' } as const
 
 function StatusIcon({ status }: { status: GatewayDiagnostics['findings'][number]['status'] }) {
   if (status === 'ok') return <Check aria-hidden="true" />
@@ -35,7 +36,7 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
   const refresh = () => { setPending(true); setFailed(false); setRevision(value => value + 1) }
   return <GatewayPageFrame>
     <div className="max-w-4xl space-y-6">
-      <PageHeader title="System status" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh system status" title="Refresh system status" disabled={pending} onClick={refresh}><RefreshCw /></WorkspaceAction>} />
+      <PageHeader title="Server" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh Server" title="Refresh Server" disabled={pending} onClick={refresh}><RefreshCw /></WorkspaceAction>} />
       {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
       {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive-foreground">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
       {report && <>
