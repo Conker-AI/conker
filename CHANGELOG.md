@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Server actions in the app.** Server > Services lists every service with its state, health,
+  start time and automatic restarts; a service's details have Restart, which asks for the password
+  in a sheet that says what it pauses ("Conker can't recall or save memories until it is back").
+  Server > Backups says where the backups are and what that place does not protect against ("Same
+  computer: lost if this PC dies"), the free space and the backups in the folder, with Back up now
+  (Conker pauses for a few minutes) and Check this backup. Each action shows the host helper's
+  receipt: working, done, failed with its reason, or can't tell with a Check that only reads. One
+  runs at a time and nothing is retried by itself. Overview lists recent server actions, also the
+  ones run with `conker ops run`. When the helper isn't running, the pages say so and give the
+  commands that still work on the server.
+
 - **Release pins:** Pi 0.13.0, ToolGate 0.10.0 (with its sandbox image), MemoryGate 0.7.0. The
   dashboard reads the new job fields (who made a job, whether forgetting a chat turned it off, the
   agent's name) and shows the agent's name on the job page.

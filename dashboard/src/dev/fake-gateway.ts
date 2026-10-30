@@ -6,7 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
-import { continueAfterDecision, createFakeAgentJobs, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
+import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -61,7 +61,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const corrections = new Map<string, Json>()
   const correctionTexts = new Map<string, { revision: number; text: string }>()
   if (globalThis.sessionStorage?.getItem('conker-fake-correction') === 'pending') corrections.set('correction_preview_saved', { schemaVersion: 1, requestId: 'correction_preview_saved', memoryId: 'mem_judo', previousRevision: 1, payloadHash: 'a'.repeat(64), status: 'unknown', revision: null, indexing: null, errorCode: null, cachedPackagesCleared: 0, sourceConversationKept: true })
-  const providerCredentials = createFakeProviderCredentials(), agentJobs = createFakeAgentJobs(() => jobs), seedAgentJobs = withFakeAgentJobs(agentJobs)
+  const hostOps = createFakeHostOps(new URLSearchParams(globalThis.location?.search).get('preview-host')), providerCredentials = createFakeProviderCredentials(), agentJobs = createFakeAgentJobs(() => jobs), seedAgentJobs = withFakeAgentJobs(agentJobs)
   const subscriptionStates = new Map<string, 'idle' | 'pending' | 'connected'>()
   const sessions = seed()
   const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
@@ -387,7 +387,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, method === 'POST' && /^\/api\/owner\/editor-drafts\/[^/]+\/runs$/.test(path) ? 2500 : 120)) // A tool run by hand takes a moment.
-    let match: RegExpMatchArray | null
+    let match: RegExpMatchArray | null; if (path === '/api/host/read' || path.startsWith('/api/host/ops')) return hostOps(path, options)
     if ((match = path.match(/^\/api\/control\/pi\/drafts\/new\/start\/([A-Za-z0-9_-]+)$/)) && method === 'GET') return structuredClone(draftStarts.get(match[1]) ?? fail(404))
     if (path === '/api/control/pi/drafts/new/start' && method === 'POST') {
       const body = options.body ?? {}, requestId = String(body.request_id)
@@ -1179,5 +1179,5 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const credentialVerificationEnabled = (path: string) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
   const nativeSessionVerificationEnabled = (path: string) => /^\/api\/host\/claude\/sessions\/[^/]+\/stop$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
   const correctionVerificationEnabled = (path: string) => /^\/api\/control\/pi\/memory\/corrections(?:\/[A-Za-z0-9_-]+\/retry)?$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-correction')
-  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled, correctionVerificationEnabled }
+  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled, correctionVerificationEnabled, hostVerificationEnabled: (path: string) => path === '/api/host/ops' }
 }

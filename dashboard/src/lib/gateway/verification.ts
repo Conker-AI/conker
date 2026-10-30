@@ -1,8 +1,11 @@
 import { createStore } from 'zustand/vanilla'
 import { GatewayError, gatewayError, type GatewayVerifiedOperation } from './transport'
 import { WORKFLOW_ACCESS_SCOPE } from './workflow-access'
+import { describeHostAction } from '../server-actions'
 
-export type GatewayOperationReview = { title: string; path: string; target: string; details: string[] }
+export type GatewayOperationReview = { title: string; path: string; target: string; details: string[]
+  /** The submit button's words, named after the action ("Restart Memory"); default "Verify and submit". */
+  action?: string }
 /** Display only allowlisted operation metadata, never an arbitrary body, password or token. */
 export function describeGatewayOperation(operation: GatewayVerifiedOperation): GatewayOperationReview {
   const { path, body } = operation
@@ -16,6 +19,10 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     target = path === '/auth/revoke-all' ? 'Every signed-in browser, including this one' : `Browser session ${parts[3]}`
     details.push('Revokes browser access only. Models, jobs and services keep running. Revoking this browser signs you out.')
     return { title, path, target, details }
+  }
+  if (path === '/api/host/ops') {
+    const host = describeHostAction(body)
+    return host ? { ...host, path } : { title: 'Run a server action', path, target: 'Your server', details: ['Runs one allowlisted server action.'] }
   }
   if (path === '/api/control/pi/memory/corrections' || /^\/api\/control\/pi\/memory\/corrections\/[A-Za-z0-9_-]{16,128}\/retry$/.test(path)) {
     const retry = path.endsWith('/retry')

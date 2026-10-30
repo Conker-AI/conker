@@ -39,6 +39,8 @@ export const gatewayDestinations = [
   { id: 'artifacts', route: 'artifacts', title: 'Artifacts', path: '/artifacts', group: 'more' },
   { id: 'skills', route: 'agents', title: 'Skills', path: '/agents?tab=skills', group: 'more' },
   { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'more' },
+  { id: 'server-services', route: 'system', title: 'Services', path: '/system?tab=services', group: 'more' },
+  { id: 'server-backups', route: 'system', title: 'Backups', path: '/system?tab=backups', group: 'more' },
   { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'more' },
   { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'more' },
 ] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: 'overview' | 'workspace' | 'system' | 'more' }[]
@@ -54,7 +56,7 @@ export const gatewayCommandDestinations = gatewayDestinations
 const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string])[]>> = {
   activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
   agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills']],
-  system: [['overview', 'Overview'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files']],
+  system: [['overview', 'Overview'], ['services', 'Services'], ['backups', 'Backups'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files']],
   'companion-settings': [['identity', 'Identity & soul'], ['speaking', 'Speaking style'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['modes', 'Expression & modes'], ['harness', 'Harness']],
 }
 
@@ -125,7 +127,7 @@ export function gatewayConversationLink(sessionId: string, messageId?: string): 
   return messageId ? `${conversation}&message=${encodeURIComponent(messageId)}` : conversation
 }
 
-export const gatewaySystemSections = ['overview', 'processes', 'ports', 'containers', 'terminal', 'native-sessions', 'files'] as const
+export const gatewaySystemSections = ['overview', 'services', 'backups', 'processes', 'ports', 'containers', 'terminal', 'native-sessions', 'files'] as const
 export type GatewaySystemSection = typeof gatewaySystemSections[number]
 
 export function gatewaySystemSection(search: string): GatewaySystemSection {
