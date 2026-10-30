@@ -6,6 +6,16 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The Claude plan on the repository install, ready for its image.** `./install.sh --claude-plan`
+  adds the Claude plan runtime (`docker-compose.subscriptions.yml`, with its own two keys and the
+  sign-in in `.conker/subscriptions`), and `./conker providers claude login|status|logout` then
+  works there as on the Ubuntu layout. It needs a release that pins
+  `ghcr.io/conker-ai/subscriptions` by digest; `.github/workflows/publish-subscriptions.yml`
+  builds, checks, scans and publishes it for a `subscriptions-vX.Y.Z` tag, and until then
+  `SUBSCRIPTIONS_STATE=deferred` keeps it off. `conker update`, backups and the spending switch
+  now run the same overlays as `./conker`, so an update also keeps the agent sandbox's services,
+  which it used to remove. See [docs/reference/claude-plan-runtime.md](docs/reference/claude-plan-runtime.md).
+
 - **Server actions with receipts (the host helper, ADR-0014).** The private provider-control
   service now also runs a fixed list of server actions: service status, restart one service,
   list, verify and take backups. One at a time, never a shell, refused during a backup or a held

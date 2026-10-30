@@ -83,6 +83,17 @@ agent_sandbox_active() {
         && grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
 }
 
+# The Claude plan runtime: in this release (versions.env) and chosen by the owner (.env, written by
+# ./install.sh --claude-plan). The same rule as scripts/compose_overlays.py.
+claude_plan_released() {
+    [ "$LAYOUT" = repository ] \
+        && grep -qx 'SUBSCRIPTIONS_STATE=active' "$ROOT/versions.env" 2>/dev/null
+}
+
+claude_plan_active() {
+    claude_plan_released && grep -qx 'CONKER_CLAUDE_PLAN=on' "$ENV_FILE" 2>/dev/null
+}
+
 compose() {
     if [ "$LAYOUT" = repository ]; then
         local files=(-f "$ROOT/docker-compose.yml")
@@ -91,6 +102,9 @@ compose() {
         fi
         if agent_sandbox_active; then
             files+=(-f "$ROOT/docker-compose.sandbox.yml")
+        fi
+        if claude_plan_active; then
+            files+=(-f "$ROOT/docker-compose.subscriptions.yml")
         fi
         docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
             "${files[@]}" "$@"
@@ -554,22 +568,30 @@ print("\n  Secret values are not included.\n")
 '
 }
 
-# The Claude plan sign-in, held by the source-built layout's subscription runtime. The official
-# Claude Code CLI signs in here, in this terminal: it prints a link to open anywhere, and the code
-# that page shows is pasted back. No token is copied, and Pi never holds the sign-in.
+# The Claude plan sign-in, held by the subscription runtime (the source-built layout's service, or
+# docker-compose.subscriptions.yml here). The official Claude Code CLI signs in here, in this
+# terminal: it prints a link to open anywhere, and the code that page shows is pasted back. No
+# token is copied, and Pi never holds the sign-in.
 provider_claude() {
     local action=${1:-status} services
     case "$#:$action" in
         0:status|1:status|1:login|1:logout) ;;
         *) printf 'Use conker providers claude status|login|logout.\n' >&2; exit 2 ;;
     esac
-    [ "$LAYOUT" = ubuntu ] || unavailable 'providers claude' \
-        'It has no Claude plan runtime yet. Connect Claude with an Anthropic API key: conker providers set anthropic.'
-    services=$(compose config --services 2>/dev/null) || services=''
-    printf '%s\n' "$services" | grep -qx subscriptions || {
-        printf 'This deployment has no Claude plan runtime yet. Run deploy/ubuntu/prepare.py from the current source, then docker compose up -d.\n' >&2
-        exit 1
-    }
+    if [ "$LAYOUT" = repository ]; then
+        claude_plan_released || unavailable 'providers claude' \
+            'This release has no Claude plan runtime yet. Connect Claude with an Anthropic API key: conker providers set anthropic.'
+        claude_plan_active || {
+            printf 'The Claude plan runtime is off here. Turn it on with ./install.sh --claude-plan, then run this again.\n' >&2
+            exit 1
+        }
+    else
+        services=$(compose config --services 2>/dev/null) || services=''
+        printf '%s\n' "$services" | grep -qx subscriptions || {
+            printf 'This deployment has no Claude plan runtime yet. Run deploy/ubuntu/prepare.py from the current source, then docker compose up -d.\n' >&2
+            exit 1
+        }
+    fi
     if [ "$action" = login ]; then
         [ -t 0 ] && [ -t 1 ] || {
             printf 'Run conker providers claude login in a terminal: you paste the sign-in code there.\n' >&2
@@ -832,10 +854,13 @@ cmd_speech() {
 }
 
 usage() {
-    local limited='' claude_limited=' [unavailable in this layout]'
+    local limited='' claude_limited=''
     if [ "$LAYOUT" = ubuntu ]; then
         limited=' [unavailable in this layout]'
-        claude_limited=''
+    elif ! claude_plan_released; then
+        claude_limited=' [not in this release yet]'
+    elif ! claude_plan_active; then
+        claude_limited=' [after ./install.sh --claude-plan]'
     fi
     cat <<USAGE
 

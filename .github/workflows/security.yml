@@ -81,6 +81,14 @@ jobs:
               "ghcr.io/conker-ai/$image" || status=1
             echo "::endgroup::"
           done
+          # The Claude plan runtime, once a release pins it by digest.
+          subscriptions=$(pin SUBSCRIPTIONS_IMAGE)
+          if [ -n "$subscriptions" ]; then
+            echo "::group::$subscriptions"
+            docker run --rm -v trivy-cache:/root/.cache "$TRIVY" image --quiet --scanners vuln \
+              --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "$subscriptions" || status=1
+            echo "::endgroup::"
+          fi
           exit "$status"
 
       - name: Third-party images, as versions.env pins them
