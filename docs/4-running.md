@@ -54,6 +54,7 @@ conker config list   # every setting from the Settings screen
 conker backup        # a verified snapshot
 conker logs pi       # recent logs of one service
 conker stop / start / restart
+conker ops           # recent server actions and how they ended
 ```
 
 <details>
@@ -383,6 +384,30 @@ conker restore SNAPSHOT --into DIR  # restores into fresh, isolated volumes, hel
 
 A restore starts held and does not go straight back into service. Keep a copy on another
 machine. See [recovery](reference/recovery.md).
+
+### Server actions and the host helper
+
+The host helper is the private provider-control service (`conker providers install-ui-control`)
+grown to run a fixed list of server actions for the UI ([ADR-0014](adr/0014-server-actions-through-one-host-helper.md)).
+Only the gateway can reach it, and it runs the same `conker` commands, never a shell.
+
+```sh
+conker ops                                     # recent server actions, newest first
+conker ops show ID                             # one receipt as JSON
+conker ops run services.status                 # each service's state
+conker ops run services.restart service=memorygate
+conker ops run backup.list                     # the saved backup folder and its snapshots
+conker ops run backup.verify snapshot=snapshot-20261029T040000Z-1a2b3c4d
+conker ops run backup.run                      # back up to the saved folder, verify, keep the set number
+```
+
+One action runs at a time, and none starts while a backup or a held recovery is in progress.
+Each leaves a receipt in `state/host-ops/journal.jsonl` (`.conker/host-ops/` in the repository
+layout): what ran, when, done or failed and why. No secrets, no command output. **Unknown** means
+the action was cut off (the helper restarted, or `conker ops run` was interrupted); it is never
+retried by itself. Run the check the receipt names, then decide. `conker ops` reads the journal
+directly, so it works when the helper is down, and the plain commands (`conker restart SERVICE`,
+`conker backup`) keep working without it.
 
 ## C · Local Windows stack
 

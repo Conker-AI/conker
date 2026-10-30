@@ -6,6 +6,14 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Server actions with receipts (the host helper, ADR-0014).** The private provider-control
+  service now also runs a fixed list of server actions: service status, restart one service,
+  list, verify and take backups. One at a time, never a shell, refused during a backup or a held
+  recovery, each with a receipt that survives restarts and holds no secrets or output. An action
+  cut off mid-way shows as unknown with a check, and is never retried by itself. `conker ops`
+  lists and runs them from the server, with or without the helper; `conker restart SERVICE`
+  restarts one service. The UI comes next.
+
 - **Cron jobs: start from an idea.** Twelve ready-made AI jobs (morning brief, homework and
   deadlines, evening wrap-up, proactive check, event reminders, email triage, study group digest,
   freelance gig watcher, check-in, break reminder, weekly review, monthly spending report) sit
