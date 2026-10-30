@@ -598,7 +598,9 @@ export interface paths {
         put?: never;
         /**
          * Retry
-         * @description Draft this tool request again, from a new description when one is given.
+         * @description Draft this tool request again: from a new description (`description`, a fresh start),
+         *     with the owner's answer to the drafter's question (`answer`, the same draft goes on), or
+         *     as it was (empty body, answers kept).
          */
         post: operations["retry_change_requests__identity__retry_post"];
         delete?: never;
@@ -684,130 +686,6 @@ export interface paths {
         get: operations["handled_access_handled_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Listing
-         * @description Drafts made from chat messages that still wait for the owner.
-         */
-        get: operations["listing_workflow_proposals_get"];
-        put?: never;
-        /**
-         * Record
-         * @description Link one of the owner's messages to the editor draft made from it.
-         */
-        post: operations["record_workflow_proposals_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals/offers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Offers
-         * @description Offers Pi made to draft a workflow from one of the owner's messages.
-         */
-        get: operations["offers_workflow_proposals_offers_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals/offers/{offer_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Offer
-         * @description One offer: which chat and message to draft from.
-         */
-        get: operations["offer_workflow_proposals_offers__offer_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals/offers/{offer_id}/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dismiss Offer
-         * @description Decline an offer; nothing was drafted.
-         */
-        post: operations["dismiss_offer_workflow_proposals_offers__offer_id__dismiss_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals/published": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Published
-         * @description The owner published this draft; its Inbox items are done.
-         */
-        post: operations["published_workflow_proposals_published_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workflow-proposals/{proposal_id}/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dismiss
-         * @description Remove a draft from the Inbox without publishing it.
-         */
-        post: operations["dismiss_workflow_proposals__proposal_id__dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2469,26 +2347,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/workflow-drafts/draft": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Draft
-         * @description A proposed editor workflow for review; saves nothing.
-         */
-        post: operations["draft_workflow_drafts_draft_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/context/{session_id}/compact": {
         parameters: {
             query?: never;
@@ -3336,6 +3194,26 @@ export interface paths {
         put?: never;
         /** State */
         post: operations["state_jobs__identity__state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{identity}/adopt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adopt
+         * @description Take an AI job Conker made as the owner's own: its runs count as his from now on.
+         */
+        post: operations["adopt_jobs__identity__adopt_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4965,6 +4843,14 @@ export interface components {
             /** Replaces */
             replaces?: string | null;
         };
+        /**
+         * Adopt
+         * @description The owner takes a job Conker made as his own, at the revision he looked at.
+         */
+        Adopt: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
         /** AgentCollection */
         AgentCollection: {
             /**
@@ -5796,50 +5682,6 @@ export interface components {
             /** Costnotice */
             costNotice: string;
         };
-        /** Capability */
-        Capability: {
-            /** Id */
-            id: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "tool" | "workflow";
-            /** Name */
-            name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-            /** Inputs */
-            inputs?: components["schemas"]["CapabilityInput"][];
-            /**
-             * Version
-             * @default 1
-             */
-            version: number;
-        };
-        /** CapabilityInput */
-        CapabilityInput: {
-            /** Name */
-            name: string;
-            /**
-             * Type
-             * @default string
-             */
-            type: string;
-            /**
-             * Required
-             * @default false
-             */
-            required: boolean;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-        };
         /** Case */
         Case: {
             /** Name */
@@ -6210,6 +6052,8 @@ export interface components {
             privacy?: components["schemas"]["JobPrivacy"] | null;
             /** Turnedoff */
             turnedOff?: "chat_forgotten" | null;
+            /** Adoptedat */
+            adoptedAt?: number | null;
         };
         /** DefinitionSummary */
         DefinitionSummary: {
@@ -6253,6 +6097,8 @@ export interface components {
             createdBy: "owner" | "conker";
             /** Turnedoff */
             turnedOff?: "chat_forgotten" | null;
+            /** Adoptedat */
+            adoptedAt?: number | null;
         };
         /** Diagram */
         Diagram: {
@@ -6415,16 +6261,6 @@ export interface components {
             revision?: number | null;
             /** Detail */
             detail: string;
-        };
-        /** Exchange */
-        Exchange: {
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "owner" | "builder";
-            /** Content */
-            content: string;
         };
         /** Fields */
         Fields: {
@@ -6740,7 +6576,6 @@ export interface components {
              */
             execution: "not-triggered";
         };
-        JsonValue: unknown;
         /** Judge */
         Judge: {
             /** Request Id */
@@ -7316,6 +7151,16 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /**
+         * Published
+         * @description The owner published the drafted tool; `toolId` is the id Conker sees in its tool list.
+         */
+        Published: {
+            /** Toolid */
+            toolId: string;
+            /** Name */
+            name: string;
+        };
         /** QueueRevision */
         QueueRevision: {
             /** Expected Revision */
@@ -7388,19 +7233,6 @@ export interface components {
             expiresAt?: string | null;
             /** Expectedrevision */
             expectedRevision: number;
-        };
-        /** Record */
-        Record: {
-            /** Sessionid */
-            sessionId: string;
-            /** Messageid */
-            messageId: string;
-            /** Draftid */
-            draftId: string;
-            /** Name */
-            name: string;
-            /** Valid */
-            valid: boolean;
         };
         /** Remember */
         Remember: {
@@ -8379,44 +8211,15 @@ export interface components {
             acknowledgeCurrentCallMayOvershoot: true;
         };
         /**
-         * Published
-         * @description The owner published the drafted tool; `toolId` is the id Conker sees in its tool list.
-         */
-        pi__agents__tool_drafts__Published: {
-            /** Toolid */
-            toolId: string;
-            /** Name */
-            name: string;
-        };
-        /**
          * Retry
-         * @description Draft it again, from a new description when one is given.
+         * @description Draft it again: from a new description, which starts over; with the owner's answer to the
+         *     drafter's question, which goes on with the same draft; or as it was, answers kept.
          */
         pi__agents__tool_drafts__Retry: {
             /** Description */
             description?: string | null;
-        };
-        /** Request */
-        pi__agents__workflow_drafts__Request: {
-            /** Description */
-            description: string;
-            /** Draftid */
-            draftId?: string | null;
-            /** Conversation */
-            conversation?: components["schemas"]["Exchange"][];
-            /** Capabilities */
-            capabilities?: components["schemas"]["Capability"][];
-            /** Previous */
-            previous?: {
-                [key: string]: components["schemas"]["JsonValue"];
-            } | null;
-            /** Issues */
-            issues?: string[];
-        };
-        /** Published */
-        pi__agents__workflow_proposals__Published: {
-            /** Draftid */
-            draftId: string;
+            /** Answer */
+            answer?: string | null;
         };
         /** Privacy */
         pi__calls__call_models__Privacy: {
@@ -10152,7 +9955,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__agents__tool_drafts__Published"];
+                "application/json": components["schemas"]["Published"];
             };
         };
         responses: {
@@ -10258,244 +10061,6 @@ export interface operations {
                 "X-Pi-Key"?: string | null;
             };
             path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listing_workflow_proposals_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    record_workflow_proposals_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Record"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    offers_workflow_proposals_offers_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    offer_workflow_proposals_offers__offer_id__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                offer_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dismiss_offer_workflow_proposals_offers__offer_id__dismiss_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                offer_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    published_workflow_proposals_published_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["pi__agents__workflow_proposals__Published"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dismiss_workflow_proposals__proposal_id__dismiss_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                proposal_id: string;
-            };
             cookie?: never;
         };
         requestBody?: never;
@@ -14350,42 +13915,6 @@ export interface operations {
             };
         };
     };
-    draft_workflow_drafts_draft_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["pi__agents__workflow_drafts__Request"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     compact_context__session_id__compact_post: {
         parameters: {
             query?: never;
@@ -16522,6 +16051,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StateChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adopt_jobs__identity__adopt_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Adopt"];
             };
         };
         responses: {
