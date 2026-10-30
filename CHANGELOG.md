@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Pi 0.15.0 is pinned.** Artifacts can be exported at an earlier version (an optional `version`,
+  1 to 100, on the gateway's artifact download), and `conker apply tools` takes a `run_tool`
+  operation that runs any published tool by hand, as the browser's Run does, with the owner's and
+  the chat's keys. The dashboard's generated gateway API types are regenerated from this release.
 - **Search everything has no setting of its own.** Settings > Keyboard no longer shows a "Search
   everything" choice with only Ctrl+K in it; Ctrl+K (Cmd+K) always opens search while keyboard
   shortcuts are on.
