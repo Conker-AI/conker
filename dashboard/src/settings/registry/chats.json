@@ -44,13 +44,13 @@
           "title": "Access",
           "description": "What Conker may do without asking in a new chat.",
           "type": "select",
-          "default": "agent",
+          "default": "default",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
-              "value": "agent",
+              "value": "default",
               "label": "Agent's setting"
             },
             {
@@ -65,7 +65,14 @@
               "value": "full",
               "label": "Full access"
             }
-          ]
+          ],
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "newChatAccess"
+          }
         },
         {
           "id": "chats.default_incognito",
@@ -75,7 +82,7 @@
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.start",
@@ -119,7 +126,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "next-turn"
         },
         {
           "id": "chats.names.when",
@@ -149,7 +156,7 @@
           "default": "short",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "short",
@@ -312,7 +319,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.queue_max",
@@ -322,7 +329,7 @@
           "default": 5,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 5,
           "step": 1

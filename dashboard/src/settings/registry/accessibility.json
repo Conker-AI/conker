@@ -19,7 +19,7 @@
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "accessibility.large_targets",
@@ -36,7 +36,7 @@
           "title": "Captions for voice",
           "description": "Shows the words while Conker speaks.",
           "type": "toggle",
-          "default": false,
+          "default": true,
           "tier": "basic",
           "scope": "global",
           "effect": "stored"

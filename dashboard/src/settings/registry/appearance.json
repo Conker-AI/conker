@@ -16,7 +16,7 @@
           "title": "Theme",
           "description": "Light or dark, or follow this device.",
           "type": "select",
-          "default": "dark",
+          "default": "system",
           "tier": "basic",
           "scope": "device",
           "effect": "live",
@@ -341,7 +341,7 @@
           "default": "soft",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "sharp",
@@ -427,7 +427,7 @@
           "default": "open",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "open",
@@ -439,7 +439,7 @@
             },
             {
               "value": "auto",
-              "label": "Hide on small screens"
+              "label": "Collapse on small screens"
             }
           ]
         },
@@ -458,7 +458,7 @@
           ],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "projects",

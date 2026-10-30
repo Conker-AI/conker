@@ -15,15 +15,41 @@
           "id": "files.upload_limit",
           "title": "Largest upload",
           "description": "The largest file you can attach.",
-          "type": "number",
-          "default": 25,
+          "type": "select",
+          "default": "none",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
-          "min": 1,
-          "max": 500,
-          "step": 1,
-          "unit": "MB"
+          "effect": "live",
+          "options": [
+            {
+              "value": "none",
+              "label": "No limit"
+            },
+            {
+              "value": 10,
+              "label": "10 MB"
+            },
+            {
+              "value": 25,
+              "label": "25 MB"
+            },
+            {
+              "value": 50,
+              "label": "50 MB"
+            },
+            {
+              "value": 100,
+              "label": "100 MB"
+            },
+            {
+              "value": 250,
+              "label": "250 MB"
+            },
+            {
+              "value": 500,
+              "label": "500 MB"
+            }
+          ]
         },
         {
           "id": "files.types",

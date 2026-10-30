@@ -47,11 +47,18 @@
           "default": 15,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
-          "min": 5,
-          "max": 60,
-          "step": 5,
-          "unit": "minutes"
+          "effect": "live",
+          "min": 1,
+          "max": 15,
+          "step": 1,
+          "unit": "minutes",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "run_window_minutes"
+          }
         },
         {
           "id": "inbox.duplicates",
