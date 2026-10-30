@@ -6,6 +6,14 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Cron jobs: start from an idea.** Twelve ready-made AI jobs (morning brief, homework and
+  deadlines, evening wrap-up, proactive check, event reminders, email triage, study group digest,
+  freelance gig watcher, check-in, break reminder, weekly review, monthly spending report) sit
+  under the Cron jobs list. Picking one only fills in the New AI job form with its name,
+  instructions and timing; you change what you like and create it as usual, with your password.
+  The form can now pick the agent when you have more than one. A job's page shows what it does at
+  the top: its instructions when Pi sends them, otherwise a plain note that Pi keeps them.
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or
