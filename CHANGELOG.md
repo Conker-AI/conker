@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **More settings work, and tool settings live in ToolGate.** New-chat privacy, chat names, the
+  message queue, the largest upload ("No limit" by default), signing out, new-chat access and the
+  local model settings now do what they say. Tool and Terminal limits, safe search, the search
+  region, sites to skip, the time an approved action has to start, and lockdown are saved in
+  ToolGate's own settings (asking for the password; turning lockdown on does not), from Settings
+  and from `conker config` alike. Wake, sleep, units and local model settings start as "Not set";
+  the sidebar heading says Server.
 - **Deploy follow-ups.** Pi now knows the server's Ollama context length in both server layouts
   (`PI_OLLAMA_CONTEXT_LENGTH`, the same value as `OLLAMA_CONTEXT_LENGTH`), so the local context
   setting is capped to what the machine was sized for. `conker restart pi`, `conker restart` and
