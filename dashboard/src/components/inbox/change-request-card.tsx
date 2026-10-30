@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { BookmarkPlus, CalendarClock, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Textarea } from '@/components/ui/textarea'
+import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { toolDraftStatus, type ChangeRequest, type ToolDraftRequest } from '@/lib/gateway/change-requests'
 import { InboxCard } from './inbox-card'
 import { ReplyBox } from './reply-box'
@@ -34,7 +37,7 @@ function Details({ request }: { request: ChangeRequest }) {
     <p className="text-xs text-muted-foreground">It reads with tools that need no confirmation; anything that would change something still asks you.</p>
   </dl>
   if (request.kind === 'memory') return <p className="text-xs text-muted-foreground">Saved word for word. You can change or forget it any time in Memory.</p>
-  if (request.payload.status === 'drafting' || request.payload.status === 'failed') return null
+  if (request.payload.status === 'drafting' || request.payload.status === 'failed' || request.payload.status === 'needs_detail') return null
   const document = request.payload.document as { nodes?: Node[]; effect?: keyof typeof effects; credentialRefs?: string[]; inputs?: { name?: string }[] }
   const calls = (document.nodes ?? []).filter(node => node.type === 'tool_call' || node.type === 'workflow_call')
   return <dl className="grid gap-3 text-sm">
@@ -49,7 +52,7 @@ function Details({ request }: { request: ChangeRequest }) {
 
 /** The tool's steps in plain words, as Conker drafted them: what Review would open. */
 function Steps({ request }: { request: ToolDraftRequest }) {
-  const steps = request.payload.status === 'drafting' || request.payload.status === 'failed' ? [] : request.payload.steps
+  const steps = request.payload.status === 'drafting' || request.payload.status === 'failed' || request.payload.status === 'needs_detail' ? [] : request.payload.steps
   if (!steps.length) return null
   return <div className="flex flex-col gap-1">
     <p className="text-xs text-muted-foreground">What it does, step by step</p>
@@ -58,17 +61,62 @@ function Steps({ request }: { request: ToolDraftRequest }) {
 }
 
 function chatLink(sessionId: string) {
-  return <Button type="button" size="sm" variant="ghost" render={<Link to={`/chat?session=${encodeURIComponent(sessionId)}`} />}>Open the chat</Button>
+  return <Button type="button" size="sm" variant="ghost" render={<Link to={gatewayConversationLink(sessionId)} />}>Open the chat</Button>
+}
+
+/** What Conker asked and what he said, once a question was answered: the same list on any status. */
+function conversationOf(request: ChangeRequest) {
+  return request.kind === 'tool_draft' ? request.payload.conversation ?? [] : []
+}
+
+function Conversation({ turns }: { turns: ReturnType<typeof conversationOf> }) {
+  return <div className="flex flex-col gap-2">
+    <p className="text-xs text-muted-foreground">Questions and answers so far</p>
+    <ul className="flex flex-col gap-2">{turns.map((turn, index) => <li key={index}>
+      <p className="text-xs text-muted-foreground">{turn.role === 'builder' ? 'Conker asked' : 'You said'}</p>
+      <p className="whitespace-pre-wrap">{turn.content}</p>
+    </li>)}</ul>
+  </div>
+}
+
+/**
+ * The drafter asked a question: it is shown plainly with a box and Answer. Nothing is cleared
+ * until Pi took the answer, so a failed send keeps what he typed.
+ */
+function AnswerForm({ question, askedIn, busy, onAnswer }: { question: string | null | undefined; askedIn: string | null | undefined; busy: boolean; onAnswer: (text: string) => Promise<boolean> }) {
+  const id = useId(), [text, setText] = useState('')
+  const submit = async (event?: FormEvent) => {
+    event?.preventDefault()
+    if (busy || !text.trim()) return
+    if (await onAnswer(text.trim())) setText('')
+  }
+  return <form className="flex flex-col gap-3" onSubmit={event => void submit(event)}>
+    <div className="flex flex-col gap-1">
+      <p className="text-xs text-muted-foreground">Conker needs one detail to draft this tool</p>
+      <p id={`${id}-question`} className="whitespace-pre-wrap text-sm font-medium leading-6">{question?.trim() || 'It didn’t say what it needs. Tell it more about the tool.'}</p>
+    </div>
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>Your answer</Label>
+      <Textarea id={id} aria-describedby={`${id}-question`} value={text} maxLength={4000} disabled={busy} placeholder="Type your answer. Nothing is created yet."
+        onChange={event => setText(event.target.value)}
+        onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void submit() } }} />
+    </div>
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" size="sm" disabled={busy || !text.trim()}>{busy ? 'Sending…' : 'Answer'}</Button>
+      {askedIn && chatLink(askedIn)}
+    </div>
+  </form>
 }
 
 /**
  * One thing Conker asked to create. Approving makes it real; Don't creates nothing; Change creates
  * nothing and sends his words to that chat. A tool request fills in while Conker drafts it: a calm
- * progress line, then Review (ready) or the reason with Try again and Change (failed).
+ * progress line, then Review (ready) or the reason with Try again and Change (failed). When the
+ * drafter asked a question (needs_detail) the card shows it with a box and Answer.
  */
-export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecline, onRetry, onLater }: {
+export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecline, onRetry, onAnswer, onLater }: {
   request: ChangeRequest; now: number; busy: boolean; error: string | null
-  onApprove: () => void; onDecline: (reply?: string) => void; onRetry?: (description?: string) => void; onLater?: () => void
+  onApprove: () => void; onDecline: (reply?: string) => void; onRetry?: (description?: string) => void; onAnswer?: (text: string) => Promise<boolean>; onLater?: () => void
 }) {
   const [changing, setChanging] = useState(false), [words, setWords] = useState('')
   const status = request.kind === 'tool_draft' ? toolDraftStatus(request) : null
@@ -79,13 +127,21 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   const text = request.kind === 'memory' ? request.payload.text : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
   // A title that already says it all is not repeated underneath.
   const summary = text && !request.title.includes(text.trim()) ? text : undefined
+  const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined
   if (request.kind === 'tool_draft' && status === 'drafting') {
     // Working: nothing to decide yet, so no answers and no Later; only the chat it came from.
     return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} footer={footer} actions={<>
       <p role="status" className="flex items-center gap-2 text-sm"><Spinner aria-hidden="true" className="size-4 text-muted-foreground motion-reduce:animate-none" />Conker is drafting this tool…</p>
       <p className="text-xs text-muted-foreground">You can leave this page. The draft shows up here when it’s ready.</p>
       {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
-    </>} />
+    </>}>{talk}</InboxCard>
+  }
+  if (request.kind === 'tool_draft' && request.payload.status === 'needs_detail') {
+    // Waiting for him: the question, a box and Answer. The chat it was asked in is one tap away.
+    const { question, askedIn } = request.payload
+    return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} onLater={onLater}
+      footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error} Your answer is kept.</p> : undefined}
+      actions={<AnswerForm question={question} askedIn={askedIn} busy={busy || !onAnswer} onAnswer={text => onAnswer?.(text) ?? Promise.resolve(false)} />}>{talk}</InboxCard>
   }
   if (request.kind === 'tool_draft' && status === 'failed') {
     const reason = request.payload.status === 'failed' && request.payload.error ? request.payload.error : 'Conker couldn’t draft this tool.'
@@ -101,7 +157,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
     return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} onLater={onLater} footer={footer} actions={<>
       <p className="text-sm text-destructive-foreground"><span className="font-medium">Couldn’t draft it:</span> {reason}</p>
       {answers}
-    </>} />
+    </>}>{talk}</InboxCard>
   }
   const answers = changing && request.sessionId
     ? <ReplyBox label="What should Conker do instead?" placeholder="Your words go to Conker in that chat. Nothing is created." value={words} busy={busy}
@@ -114,6 +170,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   return <InboxCard icon={icon} title={request.title} summary={summary}
     meta={meta} actions={<>{request.kind === 'tool_draft' && <Steps request={request} />}{answers}</>} onLater={onLater} footer={footer}>
     <Details request={request} />
+    {talk}
     {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
   </InboxCard>
 }

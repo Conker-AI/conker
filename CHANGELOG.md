@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Answer the drafter in the Inbox.** When Conker asks a question while drafting a tool
+  (`needs_detail`), its Inbox card shows the question, a box and an Answer button, plus an
+  "Open the chat" link when the question was also posted in that chat. The card turns into
+  "drafting" from Pi's reply; a failed send keeps your text, and a question already answered says
+  so. "Details" lists what Conker asked and what you said. Needs Pi with drafter questions.
 - **Workflow drafting goes through tool requests.** `python scripts/conker.py workflow draft` is
   now `conker tool draft` under its older name (Pi drafts in the background; the draft waits in
   the Inbox), and `workflow from-chat SESSION MESSAGE_ID` files a tool request from your own

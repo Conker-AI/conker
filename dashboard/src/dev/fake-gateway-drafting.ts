@@ -24,6 +24,7 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     base('a', 'ai_job', 'Cron job: Morning study check', 'Every day at 08:00, check the study chats and calendar for deadlines this week and tell me only if something needs me.', { name: 'Morning study check', instructions: 'Check the study group chats and my calendar for deadlines in the next 7 days. If something is new or close, tell me what it is and what I could do about it. If nothing needs me, reply NOTHING.', agentId: 'companion', timing: { kind: 'daily', time: '08:00', day: 0, hours: 24 }, timeZone: 'Asia/Jerusalem', enabled: true }, 600),
     base('d', 'tool_draft', 'Tool: Weekly reading list', 'Every Sunday, find three long reads about the topics I study and send me the links.', { description: 'Every Sunday, find three long reads about the topics I study and send me the links.', status: 'drafting' }, 40),
     base('b', 'tool_draft', 'Tool: Study group digest', 'Reads the last day of the study group chat and lists deadlines and open questions.', ready('A tool that sums up my study group chat', 'Study group digest'), 3600),
+    base('f', 'tool_draft', 'Tool: Search the web for me', 'Search the web and bring me the best three links.', { description: 'Search the web and bring me the best three links.', status: 'needs_detail', question: 'Which search engine should it use, and should it read the pages or only list the links?', askedIn: session }, 1200),
     base('e', 'tool_draft', 'Tool: Post my notes to Telegram', 'Send my lecture notes to the study group on Telegram.', { description: 'Send my lecture notes to the study group on Telegram.', status: 'failed', error: 'None of your tools can send Telegram messages. Connect Telegram in Tools, then try again.' }, 5400, null),
     base('c', 'memory', 'Remember: physics exam', 'The physics exam is on Thursday 30 October, room 204.', { text: 'The physics exam is on Thursday 30 October, room 204.' }, 7200),
   ]
@@ -31,8 +32,8 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
   // When each drafting request "finishes"; the seeded one keeps drafting long enough to look at.
   const finishing = new Map<string, number>([[`creq_${'d'.repeat(32)}`, Date.now() + 90_000]])
   const submissions = new Map<string, string>()
-  const draftSoon = (request: Json, description: string) => {
-    request.payload = { description, status: 'drafting' }
+  const draftSoon = (request: Json, description: string, conversation?: Json[]) => {
+    request.payload = { description, status: 'drafting', ...(conversation ? { conversation } : {}) }
     request.summary = description.slice(0, 600)
     finishing.set(String(request.id), Date.now() + 8000)
   }
@@ -41,11 +42,14 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
       const at = finishing.get(String(request.id))
       if (request.kind !== 'tool_draft' || at === undefined || at > Date.now()) continue
       finishing.delete(String(request.id))
-      const description = String((request.payload as Json).description)
+      const description = String((request.payload as Json).description), conversation = (request.payload as Json).conversation as Json[] | undefined
       const name = toolName(description)
-      request.payload = /telegram/i.test(description)
-        ? { description, status: 'failed', error: 'None of your tools can send Telegram messages. Connect Telegram in Tools, then try again.' }
-        : ready(description, name)
+      request.payload = {
+        ...(/telegram/i.test(description)
+          ? { description, status: 'failed', error: 'None of your tools can send Telegram messages. Connect Telegram in Tools, then try again.' }
+          : ready(description, name)),
+        ...(conversation ? { conversation } : {}),
+      }
     }
   }
   const editor = createFakeEditorDrafts()
@@ -74,6 +78,15 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     }
     const index = open.findIndex(item => item.id === act[1])
     if (index < 0) return fail(409)
+    if (act[2] === 'retry' && typeof body?.answer === 'string') {
+      // The drafter's question: only a card that is asking takes an answer (409 not_asking otherwise).
+      const request = open[index], payload = request.payload as Json
+      if (request.kind !== 'tool_draft' || payload.status !== 'needs_detail') return fail(409)
+      if (/fail/i.test(body.answer)) return fail(500)
+      const asked = String(payload.question ?? 'Tell me more.'), talk = (payload.conversation as Json[] | undefined) ?? []
+      draftSoon(request, String(payload.description), [...talk, { role: 'builder', content: asked }, { role: 'owner', content: body.answer }])
+      return structuredClone(request)
+    }
     if (act[2] === 'retry') {
       const request = open[index], payload = request.payload as Json
       if (request.kind !== 'tool_draft' || payload.status === 'drafting') return fail(409)
