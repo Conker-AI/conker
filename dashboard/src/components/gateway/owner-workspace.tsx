@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
-import { ArrowLeft, CheckCheck, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Check, CheckCheck, CircleAlert, RefreshCw, TriangleAlert } from 'lucide-react'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import { IdeaCard } from './proposals-panel'
 import { useProposals } from './proposals-state'
@@ -18,6 +18,10 @@ import { ChangeRequestCard } from '@/components/inbox/change-request-card'
 import { useChangeRequests } from '@/components/inbox/change-requests'
 import { HandledList } from '@/components/inbox/handled-list'
 import { AskCard } from '@/components/inbox/ask-card'
+import { useApprovalFollow } from '@/components/inbox/approval-follow'
+import { approvalProgressText } from '@/components/inbox/approval-progress'
+import { inboxSummary } from '@/components/inbox/inbox-summary'
+import { Spinner } from '@/components/ui/spinner'
 import { useAsks } from '@/components/inbox/asks'
 import type { AsksClient } from '@/lib/gateway/asks'
 import type { AccessClient } from '@/lib/gateway/access'
@@ -37,13 +41,14 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
   const [selected, setSelected] = useState<OwnerRequest | null>(null)
   const [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
-  const [loadError, setLoadError] = useState<unknown>(null)
+  const [loadError, setLoadError] = useState<unknown>(null), [listed, setListed] = useState(false)
   const [filter, setFilter] = useState<'all' | 'decisions' | 'ideas' | 'checks'>('all')
   const [undo, setUndo] = useState<{ key: string; title: string } | null>(null)
   const ideas = useProposals(proposals, active && !requestId)
   const notes = useAgentNotes(checks, active && !requestId)
   const requests = useChangeRequests(changes, drafts, active && !requestId)
   const questions = useAsks(asks, active && !requestId)
+  const approvals = useApprovalFollow(client, active)
   const { isLater, later, restore } = useLater()
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
@@ -80,7 +85,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         const page = await request(signal => client.listRequests({ limit: 50, ...(more && nextCursor ? { cursor: nextCursor } : {}), signal }))
         if (!mounted.current || ticket !== generation.current || epoch !== state.getState().epoch) return
         setRows(values => more ? [...new Map([...values, ...page.results].map(row => [row.id, row])).values()] : page.results)
-        setCursor(page.nextCursor)
+        setCursor(page.nextCursor); setListed(true)
       }
     } catch (failure) { if (mounted.current && ticket === generation.current && epoch === state.getState().epoch) setLoadError(failure) }
     finally { if (mounted.current && ticket === generation.current && epoch === state.getState().epoch) setLoading(false) }
@@ -108,14 +113,16 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     if (retry ? !previous?.checked || previous.status !== status : Boolean(previous) || !(status === 'approved' ? eligibility.approve : eligibility.reject)) return
     // Do it and Don't send no words; Change sends his (they go to Conker as his next message).
     const submittedNote = retry ? previous!.note : note ?? state.getState().notes[id] ?? ''
-    state.setState({ pendingId: id }); setError(null); setNotice(null)
+    state.setState({ pendingId: id }); setError(null); setNotice(null); approvals.clearSettled()
     try {
       const updated = await request(signal => client.decide(id, status, submittedNote, { signal }))
       if (!mounted.current || state.getState().epoch !== epoch) return
       if (selectedId.current === id) { generation.current++; setLoading(false); setSelected(updated) }
       setRows(values => values.map(row => row.id === id ? updated : row))
       state.setState(value => { const attempts = { ...value.attempts }; delete attempts[id]; const notes = { ...value.notes }; if (notes[id] === submittedNote) delete notes[id]; return { attempts, notes } })
-      if (!selectedId.current || selectedId.current === id) setNotice(updated.status === 'approved' ? 'Done. Conker is doing it now; the chat shows how it went.' : submittedNote.trim() ? 'Nothing was done. Your words went to Conker in that chat.' : 'Nothing was done.')
+      // Approved is not done: the line follows the saved request until it says the action ran.
+      if (updated.status === 'approved') approvals.follow(updated)
+      else if (!selectedId.current || selectedId.current === id) setNotice(submittedNote.trim() ? 'Nothing was done. Your words went to Conker in that chat.' : 'Nothing was done.')
     } catch (failure) {
       if (!mounted.current || state.getState().epoch !== epoch) return
       if (!selectedId.current || selectedId.current === id) { generation.current++; setLoading(false); setError(failure instanceof OwnerDecisionError ? failure.message : gatewayError(failure).message) }
@@ -132,7 +139,6 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const nowIdeas = (ideas.items ?? []).filter(item => !isLater(ideaKey(item.id)))
   const laterIdeas = (ideas.items ?? []).filter(item => isLater(ideaKey(item.id)))
   const nowNotes = notes.items.filter(item => !isLater(checkKey(item.id))), laterNotes = notes.items.filter(item => isLater(checkKey(item.id)))
-  const showDecisions = filter === 'all' || filter === 'decisions', showIdeas = filter === 'all' || filter === 'ideas', showNotes = filter === 'all' || filter === 'checks'
   const nowChanges = requests.items.filter(item => !isLater(changeKey(item.id))), laterChanges = requests.items.filter(item => isLater(changeKey(item.id)))
   // A tool Conker is still drafting is shown, but it does not need him yet.
   const waitingChanges = nowChanges.filter(item => !isDrafting(item))
@@ -140,6 +146,17 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const needsCount = nowDecisions.length + waitingChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length
   const today = new Date(now).toDateString()
   const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
+  // Nothing is summarized until every source answered; a source that failed is named, never counted as empty.
+  const summary = inboxSummary([
+    { answered: listed, failed: loadError !== null },
+    { answered: !proposals || ideas.items !== null, failed: ideas.error !== null },
+    { answered: notes.answered, failed: notes.error !== null },
+    { answered: requests.answered, failed: requests.error !== null },
+    { answered: questions.answered, failed: questions.error !== null },
+  ], needsCount, decidedToday)
+  // Filters only once everything loaded: a count for a source that didn't load would be a guess.
+  const view = summary.state === 'ready' ? filter : 'all'
+  const showDecisions = view === 'all' || view === 'decisions', showIdeas = view === 'all' || view === 'ideas', showNotes = view === 'all' || view === 'checks'
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
   const card = (row: OwnerRequest, detail = false) => <ApprovalCard key={row.id} request={row} now={now} detail={detail}
     note={retained.notes[row.id] ?? ''} attempt={retained.attempts[row.id]} busy={busy || loading} processing={retained.pendingId === row.id}
@@ -156,26 +173,34 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
       {requestId ? <div className="flex items-center justify-between gap-3"><Button size="sm" variant="ghost" render={<Link to="/inbox" />}><ArrowLeft />Inbox</Button>{refreshButton}</div> : <>
         <div className="flex flex-col gap-3">
-          {/* A failed load is never summarized as "All clear". */}
-          <p className="text-sm text-muted-foreground">{loadError !== null || ideas.error !== null ? 'Part of your Inbox didn’t load' : needsCount ? `${needsCount} ${needsCount === 1 ? 'needs' : 'need'} you` : 'All clear'}{loadError === null && <> · {decidedToday} decided today</>}</p>
-          {loadError === null && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
+          {/* Never "All clear" while loading or when part of the Inbox failed to load. */}
+          <p className="text-sm text-muted-foreground"><span className={summary.state === 'loading' ? 'conker-reveal' : undefined}>{summary.text}</span></p>
+          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
             {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + waitingChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
       </>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
+      {approvals.followed.map(({ request, progress }) => <p key={request.id} role="status" className="flex items-start gap-2 text-sm leading-6">
+        {progress === 'working' ? <Spinner aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground motion-reduce:animate-none" />
+          : progress === 'ran' ? <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground" />
+            : progress === 'failed' ? <CircleAlert aria-hidden="true" className="mt-1 size-4 shrink-0 text-destructive-foreground" />
+              : <TriangleAlert aria-hidden="true" className="mt-1 size-4 shrink-0 text-warning-foreground" />}
+        <span className="min-w-0">{approvalProgressText(progress, request, now)}{progress === 'unknown' && <> <Button type="button" size="xs" variant="outline" onClick={() => approvals.check(request.id)}>Check again</Button></>}</span>
+      </p>)}
       {ideas.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{ideas.notice}</p>}
       {questions.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{questions.notice.text}{questions.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={questions.notice.link.to}>{questions.notice.link.label}</Link></>}</p>}
       {requests.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{requests.notice.text}{requests.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={requests.notice.link.to}>{requests.notice.link.label}</Link></>}</p>}
       {undo && !requestId && <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Moved “{undo.title}” to Later.
         <Button type="button" size="xs" variant="outline" onClick={() => { restore(undo.key); setUndo(null) }}>Undo</Button></p>}
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
-      {loadError !== null && <InlineError error={loadError} onRetry={() => load()} />}
+      {(requestId || summary.state !== 'loading') && loadError !== null && <InlineError error={loadError} title={requestId ? undefined : 'Permission requests didn’t load'} onRetry={() => load()} />}
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
+        {summary.state === 'loading' ? <ListSkeleton rows={3} label="Loading your Inbox…" /> : <>
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
-        {loading && !rows.length && <ListSkeleton rows={3} label="Loading your Inbox…" />}
         {showDecisions && requests.error !== null && <InlineError error={requests.error} title="Conker’s requests didn’t load" onRetry={() => requests.load()} />}
         {showDecisions && questions.error !== null && <InlineError error={questions.error} title="Conker’s questions didn’t load" onRetry={() => questions.load()} />}
+        {showNotes && notes.error !== null && <InlineError error={notes.error} title="Notes from your AI jobs didn’t load" onRetry={() => notes.load()} />}
         {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
           {showDecisions && nowDecisions.map(row => card(row))}
           {showDecisions && nowChanges.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
@@ -185,14 +210,15 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
           {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}
           {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
             onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
-        </section> : !loading && loadError === null && <Empty className="py-10 md:py-14">
+        </section> : summary.state === 'ready' && <Empty className="py-10 md:py-14">
           <EmptyHeader>
             <EmptyMedia variant="icon"><CheckCheck className="text-success-foreground" /></EmptyMedia>
-            <EmptyTitle>{filter === 'all' ? 'Nothing needs you' : filter === 'decisions' ? 'No decisions waiting' : filter === 'checks' ? 'Nothing new from your AI jobs' : 'No new ideas'}</EmptyTitle>
-            <EmptyDescription>{filter === 'ideas' ? 'Conker looks once a day, after a model is chosen for Proposals in Settings.' : `You decided ${decidedToday} today. New requests from Conker appear here.`}</EmptyDescription>
+            <EmptyTitle>{view === 'all' ? 'Nothing needs you' : view === 'decisions' ? 'No decisions waiting' : view === 'checks' ? 'Nothing new from your AI jobs' : 'No new ideas'}</EmptyTitle>
+            <EmptyDescription>{view === 'ideas' ? 'Conker looks once a day, after a model is chosen for Proposals in Settings.' : `You decided ${decidedToday} today. New requests from Conker appear here.`}</EmptyDescription>
           </EmptyHeader>
         </Empty>}
-        {laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
+        </>}
+        {summary.state !== 'loading' && laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
           <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>
           <ul className="flex flex-col divide-y rounded-xl border">
             {[...(showDecisions ? laterDecisions.map(row => ({ key: decisionKey(row.id), title: row.title || 'Review this action', kind: 'Permission' })) : []),
@@ -208,7 +234,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         </section>}
         <Accordion>{access && <AccordionItem value="handled"><AccordionTrigger>Handled</AccordionTrigger><AccordionContent><HandledList client={access} now={now} /></AccordionContent></AccordionItem>}<AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
-          {!earlierRows.length && <p className="text-sm text-muted-foreground">No earlier requests.</p>}
+          {!earlierRows.length && <p className="text-sm text-muted-foreground">{loadError !== null ? 'Earlier requests didn’t load.' : listed ? 'No earlier requests.' : 'Loading…'}</p>}
           {cursor && <Button variant="outline" disabled={loading || busy} onClick={() => void load(true, cursor)}>Load older requests</Button>}
         </AccordionContent></AccordionItem></Accordion>
         <p className="text-xs text-muted-foreground">Your answer here continues the chat it came from; you don’t need to open it.</p>

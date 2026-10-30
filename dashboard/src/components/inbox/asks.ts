@@ -35,5 +35,6 @@ export function useAsks(client: AsksClient | undefined, active: boolean) {
     if (!client) return
     void act(ask, () => client.dismiss(ask.id), { text: 'Closed without an answer. Nothing was sent.' })
   }, [act, client])
-  return { items: client ? items ?? [] : [], error, pending, failure, notice, load, answer, dismiss }
+  // Answered once the first read came back (or failed); no client means nothing to wait for.
+  return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, pending, failure, notice, load, answer, dismiss }
 }

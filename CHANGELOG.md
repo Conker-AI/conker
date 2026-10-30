@@ -13,6 +13,14 @@ which module versions a release pins.
   words. New-chat starters are words ("Plan my day") instead of five bare icons. The square box and
   resize grip around the text box are gone, and Auto no longer names an unset "Jev".
 
+- **The Inbox and Server tell the truth.** The Inbox shows "Loading your Inbox…" and a placeholder
+  until every source has answered, and a source that failed says it didn't load; it never says
+  "All clear" before that. After Send it (or Do it), the line says "Approved. Sending now…" and
+  follows the saved request until ToolGate has run it ("ran at 14:02; the chat shows how it
+  went"), shows when it can no longer run, and after a minute without word says it isn't
+  confirmed yet, with Check again. A fresh device follows its own light or dark setting. Healthy
+  Server checks say OK, and messages point to Server, not System.
+
 - **The Claude plan on the repository install, ready for its image.** `./install.sh --claude-plan`
   adds the Claude plan runtime (`docker-compose.subscriptions.yml`, with its own two keys and the
   sign-in in `.conker/subscriptions`), and `./conker providers claude login|status|logout` then

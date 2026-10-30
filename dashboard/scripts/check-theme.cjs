@@ -100,4 +100,6 @@ onSystemChange()
 assert.ok(classes.has('light') && !classes.has('dark'), 'system appearance follows OS changes')
 cleanup()
 assert.equal(onSystemChange, undefined, 'system appearance listener is removed on cleanup')
-console.log('Theme checks passed: mode inheritance, HSL imports, tracking, shadow scale/precedence, radius migration/override/reset, color reset, font deduplication, system mode/listener cleanup.')
+// A fresh device follows its own light or dark setting until the owner picks one.
+assert.match(fs.readFileSync(path.join(__dirname, '..', 'src/App.tsx'), 'utf8'), /<ThemeProvider defaultTheme="system"/, 'the app follows the device theme by default')
+console.log('Theme checks passed: mode inheritance, HSL imports, tracking, shadow scale/precedence, radius migration/override/reset, color reset, font deduplication, system mode/listener cleanup, device theme by default.')

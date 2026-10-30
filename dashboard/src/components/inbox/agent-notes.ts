@@ -23,5 +23,6 @@ export function useAgentNotes(client: AgentNotesClient | undefined, active: bool
     setItems(current => current?.filter(item => item.id !== note.id) ?? current)
     void client?.dismissNote(note.id).catch(() => { void load() })
   }, [client, load])
-  return { items: client ? items ?? [] : [], error, load, open }
+  // Answered once the first read came back (or failed); no client means nothing to wait for.
+  return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, load, open }
 }

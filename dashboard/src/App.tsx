@@ -26,7 +26,8 @@ function App() {
 
   return (
     <div className="font-sans antialiased">
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      {/* Follow the device until the owner picks Light or Dark in Settings > Appearance (ledger: Theme default). */}
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <ToastProvider>
         <SidebarConfigProvider>
           <ThemeRuntime />
