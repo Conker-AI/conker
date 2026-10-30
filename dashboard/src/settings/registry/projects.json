@@ -14,12 +14,12 @@
         {
           "id": "projects.tasks_home",
           "title": "Tasks on Home",
-          "description": "Shows open tasks on Home.",
+          "description": "Shows your completed tasks on Home.",
           "type": "toggle",
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "projects.tasks_from_chats",

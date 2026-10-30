@@ -327,26 +327,64 @@
           "id": "models.local.keep_loaded",
           "title": "Keep loaded",
           "description": "How long a local model stays in memory after use.",
-          "type": "number",
-          "default": 5,
+          "type": "select",
+          "default": "unset",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "min": 0,
-          "max": 1440,
-          "step": 1,
-          "unit": "minutes"
+          "effect": "live",
+          "options": [
+            {
+              "value": "unset",
+              "label": "Not set"
+            },
+            {
+              "value": "5",
+              "label": "5 minutes"
+            },
+            {
+              "value": "30",
+              "label": "30 minutes"
+            },
+            {
+              "value": "60",
+              "label": "1 hour"
+            },
+            {
+              "value": "240",
+              "label": "4 hours"
+            },
+            {
+              "value": "720",
+              "label": "12 hours"
+            },
+            {
+              "value": "1440",
+              "label": "1 day"
+            },
+            {
+              "value": "until_restart",
+              "label": "Until a restart"
+            }
+          ]
         },
         {
           "id": "models.local.context",
           "title": "Local context size",
           "description": "How much text a local model reads at once.",
           "type": "select",
-          "default": "8192",
+          "default": "unset",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
+            {
+              "value": "unset",
+              "label": "Not set"
+            },
+            {
+              "value": "2048",
+              "label": "2,048"
+            },
             {
               "value": "4096",
               "label": "4,096"
@@ -373,7 +411,7 @@
           "default": 0,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 0,
           "max": 64,
           "step": 1

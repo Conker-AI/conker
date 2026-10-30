@@ -108,7 +108,14 @@
           "default": "Asia/Jerusalem",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live",
+          "home": {
+            "service": "pi",
+            "path": "/owner/preferences",
+            "key": "preferences",
+            "verify": true,
+            "field": "quietHours.timeZone"
+          }
         },
         {
           "id": "you.time_zone_auto",
@@ -241,11 +248,15 @@
           "title": "Units",
           "description": "Units for distance, weight and temperature.",
           "type": "select",
-          "default": "metric",
+          "default": "unset",
           "tier": "advanced",
           "scope": "global",
           "effect": "next-turn",
           "options": [
+            {
+              "value": "unset",
+              "label": "Not set"
+            },
             {
               "value": "metric",
               "label": "Metric"
@@ -267,7 +278,7 @@
           "title": "Wake time",
           "description": "When your day usually starts.",
           "type": "time",
-          "default": "07:00",
+          "default": null,
           "tier": "basic",
           "scope": "global",
           "effect": "next-turn"
@@ -277,7 +288,7 @@
           "title": "Sleep time",
           "description": "When your day usually ends.",
           "type": "time",
-          "default": "23:00",
+          "default": null,
           "tier": "basic",
           "scope": "global",
           "effect": "next-turn"

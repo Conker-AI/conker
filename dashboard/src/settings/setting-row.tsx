@@ -33,7 +33,7 @@ export function SettingRow({ setting, state, custom }: { setting: Setting; state
           {changed && <span aria-label="Changed from the default" title="Changed from the default" className="size-1.5 rounded-full bg-primary" />}
           {setting.effect === 'stored' && <Badge variant="outline" size="sm" title="Your choice is saved; the feature that uses it is still being built.">Not used yet</Badge>}
           {setting.scope === 'device' && <Badge variant="secondary" size="sm">This device</Badge>}
-          {setting.home?.service === 'pi' && setting.home.verify && <Lock aria-label="Saving asks for your password" className="size-3.5 text-muted-foreground" />}
+          {setting.home?.service !== 'browser' && setting.home?.verify &&<Lock aria-label="Saving asks for your password" className="size-3.5 text-muted-foreground" />}
         </div>
         <p className="mt-0.5 text-sm leading-5 text-muted-foreground">{setting.description}</p>
         {blocked && dependency && <p className="mt-1 text-xs text-muted-foreground">Turn on {dependency.title} first.</p>}
