@@ -24,7 +24,8 @@ async function shoot(browser, width, theme) {
         page.on('pageerror', error => errors.push(error.message))
         page.setDefaultTimeout(15000)
         await page.goto(`${base}${address}`)
-        await page.locator('main').first().waitFor()
+        // The boot screen is a main marked as a status; wait for the app's own.
+        await page.locator('main:not([role="status"])').first().waitFor()
         // Skeletons mark themselves busy; a screen that stays busy is shot as it is.
         await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 10000 }).catch(() => {})
         await page.waitForTimeout(500)
