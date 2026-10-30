@@ -6,6 +6,14 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Server actions with receipts (the host helper, ADR-0014).** The private provider-control
+  service now also runs a fixed list of server actions: service status, restart one service,
+  list, verify and take backups. One at a time, never a shell, refused during a backup or a held
+  recovery, each with a receipt that survives restarts and holds no secrets or output. An action
+  cut off mid-way shows as unknown with a check, and is never retried by itself. `conker ops`
+  lists and runs them from the server, with or without the helper; `conker restart SERVICE`
+  restarts one service. The UI comes next.
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or
