@@ -23,6 +23,9 @@
 #   ./install.sh --yes           accept every default, ask nothing
 #   ./install.sh --dry-run       do everything except pull and start
 #   ./install.sh --check         only check the machine, change nothing
+#   ./install.sh --claude-plan   also run the Claude plan runtime, when this release has it
+#                                (then sign in once: ./conker providers claude login)
+#   ./install.sh --no-claude-plan  stop running it
 
 set -euo pipefail
 
@@ -33,6 +36,7 @@ readonly LOW_MEMORY_GB=6
 ASSUME_YES=0
 DRY_RUN=0
 CHECK_ONLY=0
+CLAUDE_PLAN_CHOICE=""
 
 # --- how this talks ---------------------------------------------------------
 # Colour only when a terminal is actually attached. Piped into a file or a log,
@@ -71,8 +75,10 @@ while [ $# -gt 0 ]; do
         -y|--yes)    ASSUME_YES=1 ;;
         -n|--dry-run) DRY_RUN=1 ;;
         --check)     CHECK_ONLY=1 ;;
+        --claude-plan)    CLAUDE_PLAN_CHOICE=on ;;
+        --no-claude-plan) CLAUDE_PLAN_CHOICE=off ;;
         -h|--help)
-            sed -n '2,30p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+            sed -n '2,/^$/p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
             exit 0 ;;
         *) die "I do not know the option '$1'." "Run './install.sh --help' to see what it accepts." ;;
     esac
@@ -279,6 +285,8 @@ ask_questions() {
     fi
     say ""
 
+    choose_claude_plan
+
     if owner_terminal_active; then
         CONKER_TERMINAL_WORKSPACE=$(keep_optional CONKER_TERMINAL_WORKSPACE)
         if [ -z "$CONKER_TERMINAL_WORKSPACE" ]; then
@@ -304,6 +312,37 @@ ask_questions() {
         CONKER_WORKSPACES_DIR="${CONKER_WORKSPACES_DIR/#\~/$HOME}"
         say ""
     fi
+}
+
+# The Claude plan runtime (docker-compose.subscriptions.yml) runs only when this release pins its
+# image and the owner chose it. A re-run keeps the choice, --claude-plan and --no-claude-plan
+# change it, and a person at a terminal is asked once.
+choose_claude_plan() {
+    CONKER_CLAUDE_PLAN=$(keep_optional CONKER_CLAUDE_PLAN)
+    case "$CONKER_CLAUDE_PLAN" in on|off) ;; *) CONKER_CLAUDE_PLAN="" ;; esac
+    if ! claude_plan_released; then
+        if [ "$CLAUDE_PLAN_CHOICE" = on ]; then
+            warn "This release does not include the Claude plan runtime yet, so it stays off."
+            info "Connect Claude with an Anthropic API key meanwhile:  ./conker providers set anthropic"
+            say ""
+        fi
+        return 0
+    fi
+    if [ -n "$CLAUDE_PLAN_CHOICE" ]; then
+        CONKER_CLAUDE_PLAN=$CLAUDE_PLAN_CHOICE
+        return 0
+    fi
+    [ -z "$CONKER_CLAUDE_PLAN" ] || return 0
+    say "  ${BOLD}Use a Claude plan (Pro or Max) here as well?${OFF}"
+    info "Optional. Adds Claude Code's own runtime. You sign in once, in a terminal, and"
+    info "Conker uses it only for what you give a Claude model in Settings. An Anthropic"
+    info "API key works without it."
+    if ask_yes_no "Add the Claude plan runtime?" n; then
+        CONKER_CLAUDE_PLAN=on
+    else
+        CONKER_CLAUDE_PLAN=off
+    fi
+    say ""
 }
 
 # ============================================================================
@@ -467,6 +506,11 @@ write_env() {
         "$(sha256_secret "$MEMORYGATE_PI_SERVICE_KEY")" "$(sha256_secret "$TOOLGATE_PI_SERVICE_KEY")")
     # Empty means the default in docker-compose.yml (24h).
     CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)
+    # The Claude plan runtime's two keys: the control key stays inside it, and Pi gets only the
+    # inference key. Made even while it is off, so turning it on later changes no other key. They
+    # protect no stored data, so a short one is made again.
+    SUBSCRIPTIONS_CONTROL_KEY=$(keep_or_make_long SUBSCRIPTIONS_CONTROL_KEY)
+    SUBSCRIPTIONS_INFERENCE_KEY=$(keep_or_make_long SUBSCRIPTIONS_INFERENCE_KEY)
 
     mkdir -p "$CONKER_BACKUP_DIR/memorygate"
     # Memory backups are the owner's alone. A folder an older Docker run created as root cannot
@@ -479,6 +523,11 @@ write_env() {
     chmod 700 "$ROOT/.conker/provider-control"
     mkdir -p "$ROOT/.conker/chatgpt-inference"
     chmod 700 "$ROOT/.conker/chatgpt-inference"
+    if claude_plan_active; then
+        # The Claude plan sign-in. Made here, as the owner, before Docker would make it as root.
+        mkdir -p "$ROOT/.conker/subscriptions"
+        chmod 700 "$ROOT/.conker/subscriptions"
+    fi
     if [ -n "$OPENROUTER_KEY" ]; then
         printf '%s' "$OPENROUTER_KEY" | python3 "$ROOT/scripts/provider_secrets.py" \
             --directory "$provider_dir" import-active openrouter >/dev/null
@@ -569,6 +618,8 @@ CONKER_WORKSPACES_DIR=${CONKER_WORKSPACES_DIR:-}
 CONKER_DOCKER_GID=${CONKER_DOCKER_GID:-}
 # How long a local model stays loaded after its last use; empty is 24h.
 CONKER_OLLAMA_KEEP_ALIVE=$CONKER_OLLAMA_KEEP_ALIVE
+# The Claude plan runtime: on or off (./install.sh --claude-plan or --no-claude-plan).
+CONKER_CLAUDE_PLAN=${CONKER_CLAUDE_PLAN:-}
 # Pi and the gateway run as you, so they can read your private provider files.
 CONKER_UID=$(id -u)
 CONKER_GID=$(id -g)
@@ -599,6 +650,8 @@ PI_TOOLGATE_KEY=$PI_TOOLGATE_KEY
 MEMORYGATE_PI_SERVICE_KEY=$MEMORYGATE_PI_SERVICE_KEY
 TOOLGATE_PI_SERVICE_KEY=$TOOLGATE_PI_SERVICE_KEY
 PI_SERVICE_KEYS_SHA256=$PI_SERVICE_KEYS_SHA256
+SUBSCRIPTIONS_CONTROL_KEY=$SUBSCRIPTIONS_CONTROL_KEY
+SUBSCRIPTIONS_INFERENCE_KEY=$SUBSCRIPTIONS_INFERENCE_KEY
 ENV
     chmod 600 "$tmp"
     mv "$tmp" "$ENV_FILE"
@@ -623,6 +676,15 @@ agent_sandbox_active() {
     grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
 }
 
+claude_plan_released() {
+    grep -qx 'SUBSCRIPTIONS_STATE=active' "$ROOT/versions.env"
+}
+
+# The same rule as ./conker and scripts/compose_overlays.py, read from the choice being written.
+claude_plan_active() {
+    claude_plan_released && [ "${CONKER_CLAUDE_PLAN:-}" = on ]
+}
+
 compose() {
     local files=(-f "$ROOT/docker-compose.yml")
     if owner_terminal_active; then
@@ -630,6 +692,9 @@ compose() {
     fi
     if agent_sandbox_active; then
         files+=(-f "$ROOT/docker-compose.sandbox.yml")
+    fi
+    if claude_plan_active; then
+        files+=(-f "$ROOT/docker-compose.subscriptions.yml")
     fi
     docker compose --env-file "$ROOT/versions.env" --env-file "$ENV_FILE" \
         "${files[@]}" "$@"
@@ -839,6 +904,22 @@ wait_for_health() {
                 DEGRADED+=("${labels[$i]} reports ${status:-no status}") ;;
         esac
     done
+
+    claude_plan_active || return 0
+    local runtime="" stop_at=$(( $(date +%s) + 60 ))
+    while [ "$(date +%s)" -lt "$stop_at" ]; do
+        runtime=$(compose exec -T subscriptions python /app/subscription_runtime.py status 2>/dev/null || true)
+        [ -n "$runtime" ] && break
+        sleep 2
+    done
+    if printf '%s' "$runtime" | grep -q '"connected": true'; then
+        good "Claude plan (signed in)"
+    elif printf '%s' "$runtime" | grep -q '"available": true'; then
+        good "Claude plan runtime (sign in once: ./conker providers claude login)"
+    else
+        warn "Claude plan runtime — not answering"
+        DEGRADED+=("The Claude plan runtime did not answer; see ./conker logs subscriptions")
+    fi
 }
 
 # ============================================================================
@@ -866,6 +947,9 @@ finish() {
     info "First-run setup, starting with your browser password: ./conker setup"
     info "Trust this installation's local TLS certificate before signing in; see docs/reference/browser-auth.md."
     info "The connected dashboard is served by the authenticated gateway."
+    if claude_plan_active; then
+        info "Claude plan: sign in once with ./conker providers claude login (backups leave the sign-in out)."
+    fi
     say ""
     say "  ${BOLD}Your backups are in:${OFF}"
     say "     ${BOLD}${CONKER_BACKUP_DIR}${OFF}"

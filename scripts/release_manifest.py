@@ -28,6 +28,7 @@ REQUIRED_KEYS = {
     "CONKER_DASHBOARD_REVISION",
     "OWNER_TERMINAL_STATE",
     "AGENT_SANDBOX_STATE",
+    "SUBSCRIPTIONS_STATE",
     *GATE_VERSION_KEYS.values(),
     *THIRD_PARTY_IMAGE_KEYS.values(),
 }
@@ -181,6 +182,23 @@ def validate_manifest(
                 "active agent sandbox requires TOOLGATE_VERSION at least 0.6.0"
             )
 
+    # The Claude plan runtime: our own image, published by .github/workflows/publish-subscriptions.yml.
+    subscriptions_state = values["SUBSCRIPTIONS_STATE"]
+    if subscriptions_state not in {"deferred", "active"}:
+        raise ManifestError("SUBSCRIPTIONS_STATE must be deferred or active")
+    subscriptions_image = values.get("SUBSCRIPTIONS_IMAGE")
+    if subscriptions_state == "deferred" and subscriptions_image:
+        raise ManifestError("deferred Claude plan runtime must not name an image")
+    if subscriptions_state == "active" and not (
+        subscriptions_image
+        and DIGEST_IMAGE_RE.fullmatch(subscriptions_image)
+        and subscriptions_image.startswith("ghcr.io/conker-ai/subscriptions@sha256:")
+    ):
+        raise ManifestError(
+            "active Claude plan runtime requires SUBSCRIPTIONS_IMAGE as "
+            "ghcr.io/conker-ai/subscriptions@sha256:<digest>"
+        )
+
     capabilities = {
         "owner-terminal": {
             "state": terminal_state,
@@ -190,6 +208,10 @@ def validate_manifest(
         "agent-sandbox": {
             "state": sandbox_state,
             "image": sandbox_image if sandbox_state == "active" else None,
+        },
+        "subscriptions": {
+            "state": subscriptions_state,
+            "image": subscriptions_image if subscriptions_state == "active" else None,
         },
     }
 

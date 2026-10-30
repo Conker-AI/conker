@@ -17,6 +17,37 @@ which module versions a release pins.
   CHAT_ID --window TOKENS --reserve TOKENS` starts them through the pi container, like `conker
   config`, and the error names the chat.
 
+- **The Claude plan on the repository install, ready for its image.** `./install.sh --claude-plan`
+  adds the Claude plan runtime (`docker-compose.subscriptions.yml`, with its own two keys and the
+  sign-in in `.conker/subscriptions`), and `./conker providers claude login|status|logout` then
+  works there as on the Ubuntu layout. It needs a release that pins
+  `ghcr.io/conker-ai/subscriptions` by digest; `.github/workflows/publish-subscriptions.yml`
+  builds, checks, scans and publishes it for a `subscriptions-vX.Y.Z` tag, and until then
+  `SUBSCRIPTIONS_STATE=deferred` keeps it off. `conker update`, backups and the spending switch
+  now run the same overlays as `./conker`, so an update also keeps the agent sandbox's services,
+  which it used to remove. See [docs/reference/claude-plan-runtime.md](docs/reference/claude-plan-runtime.md).
+
+- **Server actions with receipts (the host helper, ADR-0014).** The private provider-control
+  service now also runs a fixed list of server actions: service status, restart one service,
+  list, verify and take backups. One at a time, never a shell, refused during a backup or a held
+  recovery, each with a receipt that survives restarts and holds no secrets or output. An action
+  cut off mid-way shows as unknown with a check, and is never retried by itself. `conker ops`
+  lists and runs them from the server, with or without the helper; `conker restart SERVICE`
+  restarts one service. The UI comes next.
+
+- **Cron jobs: start from an idea.** Twelve ready-made AI jobs (morning brief, homework and
+  deadlines, evening wrap-up, proactive check, event reminders, email triage, study group digest,
+  freelance gig watcher, check-in, break reminder, weekly review, monthly spending report) sit
+  under the Cron jobs list. Picking one only fills in the New AI job form with its name,
+  instructions and timing; you change what you like and create it as usual, with your password.
+  The form can now pick the agent when you have more than one. A job's page shows what it does at
+  the top: its instructions when Pi sends them, otherwise a plain note that Pi keeps them.
+- **`conker import chatgpt|claude PATH`** previews a ChatGPT or Claude data export (the zip, its
+  folder or `conversations.json`; only that file is read) and with `--yes` imports exactly that
+  file into Pi: archived, read-only chats labelled with where they came from, and your own words
+  offered to memory as outside content. Re-importing adds nothing. Works in the installed launcher
+  and `scripts/conker.py`; needs the Pi with `/imports` (docs/reference/import.md).
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or

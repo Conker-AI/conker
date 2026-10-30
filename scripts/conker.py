@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+import assistant_imports
 import conker_models
 import conker_toolgate
 import tool_drafts
@@ -505,6 +506,12 @@ def main():
             ),
             args,
             emit=tool_drafts.emit,
+        )
+    elif args.command == "import":
+        return assistant_imports.run(
+            assistant_imports.dev_caller(pi_call, request, config),
+            args,
+            emit=assistant_imports.emit,
         )
     elif args.command == "inbox":
         return inbox_operation(args, config, request)

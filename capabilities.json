@@ -111,8 +111,8 @@
     },
     {
       "id": "service-lifecycle", "name": "Local service lifecycle and logs", "authority": "conker-host", "state": "active",
-      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker start", "conker stop", "conker restart", "conker logs"], "deploymentRequirements": ["Docker Compose", "docker-compose.yml"],
-      "evidence": [{"path": "conker", "contains": "start)     [ \"$#\" -eq 1"}, {"path": "conker", "contains": "logs)      [ \"$#\" -le 3"}]
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker start", "conker stop", "conker restart", "conker restart SERVICE", "conker logs", "conker ops", "conker ops show ID", "conker ops run services.status", "conker ops run services.restart service=NAME"], "deploymentRequirements": ["Docker Compose", "docker-compose.yml", "host helper journal outside Docker volumes (state/host-ops)"],
+      "evidence": [{"path": "conker", "contains": "start)     [ \"$#\" -eq 1"}, {"path": "conker", "contains": "logs)      [ \"$#\" -le 3"}, {"path": "scripts/host_ops.py", "contains": "\"services.restart\""}, {"path": "docs/adr/0014-server-actions-through-one-host-helper.md", "contains": "Unknown, never retried."}]
     },
     {
       "id": "local-model-download", "name": "Local model download", "authority": "conker-host", "state": "active",
@@ -121,8 +121,8 @@
     },
     {
       "id": "verified-backup", "name": "Verified coordinated backup", "authority": "conker-host", "state": "active",
-      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker backup", "conker verify-backup"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
-      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}]
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker backup", "conker verify-backup", "conker ops run backup.list", "conker ops run backup.verify snapshot=NAME", "conker ops run backup.run"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
+      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/host_ops.py", "contains": "self._conker(\"setup\", \"run\", \"protection\")"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}]
     },
     {
       "id": "held-recovery", "name": "Isolated held restore and readiness review", "authority": "conker-host", "state": "active",
@@ -240,8 +240,8 @@
     {
       "id": "provider-secret-management", "name": "Write-only hosted provider credentials and paid-request policy", "authority": "conker-host", "state": "active", "gatewayRoutes": ["/api/host/providers"], "uiRoutes": ["/settings"],
       "cliCommands": ["conker providers status", "conker providers set PROVIDER", "conker providers verify PROVIDER", "conker providers discard PROVIDER REVISION", "conker providers activate PROVIDER REVISION", "conker providers recover PROVIDER REVISION", "conker providers record-revoked PROVIDER REVISION --issuer-confirmed", "conker providers spending status|on|off|recover", "conker providers install-ui-control", "conker providers claude status|login|logout"],
-      "deploymentRequirements": ["Linux systemd user provider-control worker", "private Gateway-only Unix socket", "operation-bound password proof", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi and decision sidecar recreation", "held recovery credential reconciliation", "Claude plan runtime service with its own sign-in folder (source-built Ubuntu layout)"],
-      "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "provider_restart_runtime"}, {"path": "dashboard/src/components/gateway/provider-credentials.tsx", "contains": "Save key"}, {"path": "scripts/recovery_backup.py", "contains": "config/provider-state.json"}, {"path": "conker", "contains": "subscription_runtime.py login"}, {"path": "deploy/ubuntu/prepare.py", "contains": "services/subscriptions/Dockerfile"}]
+      "deploymentRequirements": ["Linux systemd user provider-control worker", "private Gateway-only Unix socket", "operation-bound password proof", "owner-only provider secret directory", "read-only Pi credential file mounts", "fixed provider verification egress", "Pi and decision sidecar recreation", "held recovery credential reconciliation", "Claude plan runtime service with its own sign-in folder (built on the Ubuntu layout; the published, digest-pinned image in docker-compose.subscriptions.yml on the repository install)"],
+      "evidence": [{"path": "scripts/provider_secrets.py", "contains": "Verify the staged credential again before activation."}, {"path": "conker", "contains": "provider_restart_runtime"}, {"path": "dashboard/src/components/gateway/provider-credentials.tsx", "contains": "Save key"}, {"path": "scripts/recovery_backup.py", "contains": "config/provider-state.json"}, {"path": "conker", "contains": "subscription_runtime.py login"}, {"path": "deploy/ubuntu/prepare.py", "contains": "services/subscriptions/Dockerfile"}, {"path": "docker-compose.subscriptions.yml", "contains": "network_mode: service:pi"}]
     },
     {
       "id": "settings-registry", "name": "Every setting from one registry, read and changed in its own home", "authority": "pi", "state": "active",

@@ -37,6 +37,8 @@ async function main() {
   result = { schemaVersion: 1, results: [run], nextCursor: null }; assert.deepEqual((await client.runs(jobId)).results, [run])
   result = run; await client.provisionBudget(runId); await client.resume(runId); await client.reconcile(runId)
   result = { ...run, replayed: false }; await client.cancel(runId)
+  result = { ...job, definition: { ...job.definition, instructions: 'Tell me what today holds.' } }; assert.equal((await client.get(jobId)).definition.instructions, 'Tell me what today holds.', 'A job page can show its own words')
+  result = { ...job, definition: { ...job.definition, instructions: 'x'.repeat(4001) } }; await assert.rejects(client.get(jobId), error => error.kind === 'invalid-response', 'Instructions stay within what Pi stores')
   result = { ...job, authority: 'execute' }; await assert.rejects(client.get(jobId), error => error.kind === 'invalid-response')
   result = { ...job, definition: { ...job.definition, target: { ...job.definition.target, args: { secret: true } } } }; await assert.rejects(client.get(jobId), error => error.kind === 'invalid-response')
   const conflict = createGatewayJobsClient({ request: async () => { throw new GatewayError('http', 409) } })
@@ -113,6 +115,8 @@ async function main() {
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')
   assert.match(ui, /Try again resends the same request, so it can’t run twice/, 'An unknown outcome retries with the same request identity')
   assert.match(ui, /Inputs and results stay on your server/, 'Receipts and inputs are not shown in the browser')
+  assert.match(ui, /What it does/, 'A job page shows what the job does')
+  assert.match(ui, /doesn’t send them to this page yet/, 'A Pi that keeps the instructions to itself is said plainly, not hidden')
   console.log('Gateway Jobs passed: redacted DTOs, exact routes, durable manual admission, recovery controls, and no browser authoring of raw targets.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -50,7 +50,7 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
   }
   const editor = createFakeEditorDrafts()
   return function handle(path: string, method: string, body: Json | undefined, fail: Fail): Json {
-    if (path.startsWith('/api/owner/editor-drafts')) return editor(path, method, body, fail)
+    if (path.startsWith('/api/owner/editor-drafts') || path === '/api/pi/tools') return editor(path, method, body, fail)
     settle()
     if (path === '/api/control/pi/change-requests' && method === 'GET') return { schemaVersion: 1, results: structuredClone(open) }
     if (path === '/api/control/pi/tool-drafts' && method === 'POST') {
@@ -102,14 +102,51 @@ function slug(name: string) {
 /**
  * Preview-only Tools editor drafts, revision-checked like ToolGate's. Its check is the editor's
  * own live rules (the real one is ToolGate's graph check); publishing honours "Let Conker use it".
+ * Two tools come published so Tools can run them by hand: a run takes a moment, an input with
+ * "fail" in it fails at a step, "unknown" loses its answer, and the email one asks first.
  */
 function createFakeEditorDrafts() {
   type Draft = { id: string; revision: number; updated_at: string; document: Json }
   type Version = { draft_id: string; revision: number; automation_id: string; version: number; digest: string; published_at: string; authorization: string; available: boolean; conkerMayUse: boolean }
-  const drafts = new Map<string, Draft>(), versions = new Map<string, Version[]>()
+  const drafts = new Map<string, Draft>(), versions = new Map<string, Version[]>(), runs = new Map<string, Json[]>()
   const hex = (length: number) => Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join('')
   const automation = (id: string) => `editor-${[...id].map(char => char.charCodeAt(0).toString(16)).join('').padEnd(32, '0').slice(0, 32)}`
+  const seed = (id: string, name: string, description: string, inputs: Json[], authorization: string, age: number) => {
+    const node = (key: string, type: string, label: string, y: number, config: Json) => ({ id: key, type, label, position: { x: 0, y }, config })
+    const document = { id, name, description, kind: 'workflow', inputs, outputs: [], credentialRefs: [], effect: authorization === 'auto' ? 'read' : 'write', agentVisible: true, budgets: { maxSteps: 20, maxLoopItems: 10, timeoutMs: 10000 },
+      nodes: [node('start', 'input', 'Start', 0, {}), node('read', 'tool_call', 'Read the chat', 120, { tool: 'research.fetch', args: { url: '$input.chat' } }), node('done', 'return', 'Done', 240, { value: '$steps.read' })],
+      edges: [{ id: 'e1', source: 'start', target: 'read' }, { id: 'e2', source: 'read', target: 'done' }] }
+    const time = new Date(Date.now() - age).toISOString()
+    drafts.set(id, { id, revision: 1, updated_at: time, document })
+    versions.set(id, [{ draft_id: id, revision: 1, automation_id: automation(id), version: 1, digest: hex(64), published_at: time, authorization, available: true, conkerMayUse: true }])
+  }
+  const deadlines = { deadlines: [{ what: 'Physics worksheet', due: 'Fri 31 Oct', from: 'Dana' }, { what: 'Lab report draft', due: 'Mon 3 Nov', from: 'Noa' }, { what: 'Read chapter 4', due: 'Wed 5 Nov', from: 'Group' }] }
+  seed('study-group-digest', 'Study group digest', 'Reads the study group chat and lists the deadlines in it.', [
+    { name: 'chat', type: 'string', required: true, description: 'Which chat to read, by its name.' },
+    { name: 'days', type: 'number', required: false, description: 'How many days back to read. Leave empty for the last day.' },
+    { name: 'only_new', type: 'boolean', required: true, description: 'Skip deadlines it already told you about.' },
+    { name: 'include_questions', type: 'boolean', required: false },
+    { name: 'skip_people', type: 'array', required: false, description: 'Messages from these people are left out.' },
+    { name: 'filters', type: 'object', required: false, description: 'Advanced: extra filters for the reader.' },
+  ], 'auto', 86_400_000)
+  seed('email-weekly-summary', 'Email the weekly summary', 'Emails your weekly summary to one address.', [{ name: 'to', type: 'string', required: true, description: 'The email address to send it to.' }], 'owner_confirmation', 172_800_000)
+  const past = `editor_${'5'.repeat(32)}`
+  runs.set('study-group-digest', [{ action_id: past, version: 1, digest: versions.get('study-group-digest')![0].digest, created_at: new Date(Date.now() - 20 * 3600_000).toISOString(), args: { chat: 'Physics 101', only_new: false }, response: { code: 'OK', action_id: past, message: 'Automation completed', result: { code: 'OK', result: deadlines }, steps: [] } }])
+  const answer = (id: string, version: Version, body: Json): Json => {
+    const args = body.args as Json | undefined, action = String(body.action_id), words = JSON.stringify(args ?? {})
+    if (version.authorization !== 'auto' && !body.approval_request_id) return { code: 'CONFIRMATION_REQUIRED', action_id: action, message: 'Automation queued for owner review', request_id: `req_${action.slice(7, 23)}` }
+    if (/unknown/i.test(words)) return { code: 'OUTCOME_UNKNOWN', action_id: action, message: 'Dispatch is recorded but its outcome is not confirmed. Do not repeat it.' }
+    if (/fail/i.test(words)) return { code: 'WORKFLOW_FAILED', action_id: action, message: 'Workflow failed', result: { code: 'WORKFLOW_FAILED', message: 'The chat wasn’t found.', node_id: 'read' },
+      steps: [{ nodeId: 'start', label: 'Start', type: 'input', status: 'completed', output: args }, { nodeId: 'read', label: 'Read the chat', type: 'tool_call', status: 'failed', error: `No chat is called “${String(args?.chat ?? '')}”.` }, { nodeId: 'done', label: 'Done', type: 'return', status: 'skipped' }] }
+    const result = id === 'email-weekly-summary' ? `Sent the weekly summary to ${String(args?.to ?? '')}.` : deadlines
+    return { code: 'OK', action_id: action, message: 'Automation completed', result: { code: 'OK', result }, steps: [{ nodeId: 'start', label: 'Start', type: 'input', status: 'completed' }, { nodeId: 'read', label: 'Read the chat', type: 'tool_call', status: 'completed' }, { nodeId: 'done', label: 'Done', type: 'return', status: 'completed' }] }
+  }
   return function handle(path: string, method: string, body: Json | undefined, fail: Fail): Json {
+    // What Pi lists next to its own tools: each published tool Conker may use, as ToolGate names it.
+    if (path === '/api/pi/tools') return { results: [...versions.values()].flatMap(history => {
+      const version = history.at(-1)!, document = drafts.get(version.draft_id)!.document
+      return version.conkerMayUse && version.available ? [{ id: `workflow:${version.automation_id}:${version.version}:${version.digest}`, name: document.name, description: document.description, inputs: (document.inputs as Json[]).map(({ name, type, required, description }) => ({ name, type, required, ...(description ? { description } : {}) })) }] : []
+    }) }
     if (path === '/api/owner/editor-drafts' && method === 'GET') return { items: [...drafts.values()].map(item => ({ id: item.id, revision: item.revision, updated_at: item.updated_at, name: item.document.name, kind: item.document.kind })), next_after: null }
     const match = path.match(/^\/api\/owner\/editor-drafts\/([a-zA-Z][a-zA-Z0-9_-]{0,63})(?:\/(validation|publications|publish|access|runs))?$/)
     if (!match) return fail(404)
@@ -137,8 +174,15 @@ function createFakeEditorDrafts() {
       if (method === 'POST') latest.conkerMayUse = body?.enabled === true
       return { actor_id: 'preview-key', actor_name: 'Conker', automation_id: latest.automation_id, enabled: latest.conkerMayUse, required_scopes: [`automation:${latest.automation_id}`] }
     }
-    if (operation === 'runs' && method === 'GET') return { items: [] }
-    if (operation === 'runs' && method === 'POST') return { code: 'COMPLETED', action_id: body?.action_id, message: 'Preview run: nothing left this tab.', result: { preview: true }, steps: [] }
+    if (operation === 'runs' && method === 'GET') return { items: structuredClone(runs.get(id) ?? []) }
+    if (operation === 'runs' && method === 'POST') {
+      const version = history.find(item => item.version === body?.version)
+      if (!version || version.digest !== body?.digest) return fail(409)
+      const response = answer(id, version, body!), rows = runs.get(id) ?? [], known = rows.find(row => row.action_id === body?.action_id)
+      if (known) known.response = response
+      else runs.set(id, [{ action_id: body?.action_id, version: version.version, digest: version.digest, created_at: new Date().toISOString(), args: body?.args, response }, ...rows].slice(0, 30))
+      return structuredClone(response)
+    }
     return fail(404)
   }
 }
