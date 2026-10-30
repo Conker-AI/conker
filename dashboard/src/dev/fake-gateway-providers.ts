@@ -63,7 +63,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
-    if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts')) return requests(path, method, body, fail)
+    if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts') || path === '/api/pi/tools') return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
     if (path.startsWith('/api/control/pi/owner/')) return ownerSettings(path, method, body, fail)
