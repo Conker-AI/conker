@@ -587,6 +587,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/change-requests/{identity}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry
+         * @description Draft this tool request again, from a new description when one is given.
+         */
+        post: operations["retry_change_requests__identity__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-requests/{identity}/published": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Published
+         * @description The owner published this request's tool. The first time, Conker says in the chat that
+         *     asked that it is live (a stored message, not a model call).
+         */
+        post: operations["published_change_requests__identity__published_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/change-requests/{identity}/decline": {
         parameters: {
             query?: never;
@@ -602,6 +643,27 @@ export interface paths {
          *     with it (Change) go to that chat as his next message.
          */
         post: operations["decline_change_requests__identity__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tool-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New
+         * @description File a tool request without a chat; drafting starts at once and the answer does not
+         *     wait for it. The same request_id gives back the same request.
+         */
+        post: operations["new_tool_drafts_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2275,6 +2337,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/messages/{message_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download */
+        get: operations["download_sessions__session_id__messages__message_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/models/configuration": {
         parameters: {
             query?: never;
@@ -2287,6 +2366,46 @@ export interface paths {
         put?: never;
         /** Save */
         post: operations["save_models_configuration_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/inference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Infer
+         * @description One prompt for one of the calling service's model roles.
+         */
+        post: operations["infer_inference_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/inference/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage
+         * @description Recent service calls and the last day's totals; no prompt or answer text.
+         */
+        get: operations["usage_inference_usage_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4088,6 +4207,91 @@ export interface paths {
          * @description Delivery progress is server state; a model cannot hide this notice.
          */
         get: operations["memory_status_memory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{source}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview */
+        post: operations["preview_imports__source__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{source}/{digest}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save */
+        post: operations["save_imports__source___digest__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chats */
+        get: operations["chats_imports_chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/chats/{chat_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chat */
+        get: operations["chat_imports_chats__chat_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5997,6 +6201,15 @@ export interface components {
             requireBudget: boolean;
             /** Budgetallowanceid */
             budgetAllowanceId?: string | null;
+            /**
+             * Createdby
+             * @default owner
+             * @enum {string}
+             */
+            createdBy: "owner" | "conker";
+            privacy?: components["schemas"]["JobPrivacy"] | null;
+            /** Turnedoff */
+            turnedOff?: "chat_forgotten" | null;
         };
         /** DefinitionSummary */
         DefinitionSummary: {
@@ -6004,8 +6217,12 @@ export interface components {
             name: string;
             /** Instructionsconfigured */
             instructionsConfigured: boolean;
+            /** Instructions */
+            instructions: string;
             /** Agentid */
             agentId: string;
+            /** Agentname */
+            agentName?: string | null;
             timing: components["schemas"]["Timing"];
             /** Timezone */
             timeZone: string;
@@ -6028,6 +6245,14 @@ export interface components {
             requireBudget: boolean;
             /** Budgetallowanceconfigured */
             budgetAllowanceConfigured: boolean;
+            /**
+             * Createdby
+             * @default owner
+             * @enum {string}
+             */
+            createdBy: "owner" | "conker";
+            /** Turnedoff */
+            turnedOff?: "chat_forgotten" | null;
         };
         /** Diagram */
         Diagram: {
@@ -6325,6 +6550,37 @@ export interface components {
             /** Expected Id */
             expected_id?: string | null;
         };
+        /** InferenceAnswer */
+        InferenceAnswer: {
+            /** Text */
+            text: string;
+            /** Model */
+            model: string;
+            /** Provider */
+            provider: string;
+        };
+        /** InferenceRequest */
+        InferenceRequest: {
+            /**
+             * Role
+             * @description memory-sorting (MemoryGate) or tool-text (ToolGate): the caller's own role.
+             */
+            role: string;
+            /** System */
+            system: string;
+            /** Prompt */
+            prompt: string;
+            /** Max Tokens */
+            max_tokens: number;
+            /**
+             * Json
+             * @description Ask the model for JSON where it can.
+             * @default false
+             */
+            json: boolean;
+            /** Request Id */
+            request_id: string;
+        };
         /** Instantiate */
         Instantiate: {
             /** Expected Revision */
@@ -6431,6 +6687,22 @@ export interface components {
             results: components["schemas"]["JobView"][];
             /** Nextcursor */
             nextCursor?: string | null;
+        };
+        /**
+         * JobPrivacy
+         * @description The chat an AI job was asked for in was private, so the job's own chat is too.
+         */
+        JobPrivacy: {
+            /**
+             * Memorydisabled
+             * @default false
+             */
+            memoryDisabled: boolean;
+            /**
+             * Harnessdisabled
+             * @default false
+             */
+            harnessDisabled: boolean;
         };
         /** JobView */
         JobView: {
@@ -6609,6 +6881,16 @@ export interface components {
              */
             execution: "not-wired";
         };
+        /**
+         * NewDraft
+         * @description A tool request made without a chat; the same request_id gives back the same request.
+         */
+        NewDraft: {
+            /** Description */
+            description: string;
+            /** Request Id */
+            request_id: string;
+        };
         /** NewSave */
         NewSave: {
             /** Text */
@@ -6741,6 +7023,12 @@ export interface components {
             /** Idletimeoutminutes */
             idleTimeoutMinutes: number;
             planAlerts?: components["schemas"]["PlanAlerts"];
+            /**
+             * Newchataccess
+             * @default default
+             * @enum {string}
+             */
+            newChatAccess: "default" | "ask" | "ai" | "full";
         };
         /** Phase */
         Phase: {
@@ -7028,11 +7316,6 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
-        /** Published */
-        Published: {
-            /** Draftid */
-            draftId: string;
-        };
         /** QueueRevision */
         QueueRevision: {
             /** Expected Revision */
@@ -7196,7 +7479,10 @@ export interface components {
              * @enum {string}
              */
             answerMode: "manual" | "router";
-            /** Roles */
+            /**
+             * Roles
+             * @description One assignment for each model role: answer, thinking, routing, context-selection, summarization, memory-ranking, search-ranking, proposals, drafting, reviewer, memory-sorting, tool-text.
+             */
             roles: {
                 [key: string]: components["schemas"]["Assignment"];
             };
@@ -8092,6 +8378,24 @@ export interface components {
              */
             acknowledgeCurrentCallMayOvershoot: true;
         };
+        /**
+         * Published
+         * @description The owner published the drafted tool; `toolId` is the id Conker sees in its tool list.
+         */
+        pi__agents__tool_drafts__Published: {
+            /** Toolid */
+            toolId: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * Retry
+         * @description Draft it again, from a new description when one is given.
+         */
+        pi__agents__tool_drafts__Retry: {
+            /** Description */
+            description?: string | null;
+        };
         /** Request */
         pi__agents__workflow_drafts__Request: {
             /** Description */
@@ -8108,6 +8412,11 @@ export interface components {
             } | null;
             /** Issues */
             issues?: string[];
+        };
+        /** Published */
+        pi__agents__workflow_proposals__Published: {
+            /** Draftid */
+            draftId: string;
         };
         /** Privacy */
         pi__calls__call_models__Privacy: {
@@ -9791,6 +10100,82 @@ export interface operations {
             };
         };
     };
+    retry_change_requests__identity__retry_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["pi__agents__tool_drafts__Retry"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    published_change_requests__identity__published_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["pi__agents__tool_drafts__Published"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     decline_change_requests__identity__decline_post: {
         parameters: {
             query?: never;
@@ -9806,6 +10191,42 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["Decline"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_tool_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewDraft"];
             };
         };
         responses: {
@@ -10041,7 +10462,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Published"];
+                "application/json": components["schemas"]["pi__agents__workflow_proposals__Published"];
             };
         };
         responses: {
@@ -13595,7 +14016,7 @@ export interface operations {
         parameters: {
             query?: {
                 version?: number | null;
-                format?: "native" | "docx" | "xlsx";
+                format?: "native" | "docx" | "pdf" | "pptx" | "xlsx";
             };
             header?: {
                 "X-Pi-Owner-Key"?: string | null;
@@ -13603,6 +14024,43 @@ export interface operations {
             };
             path: {
                 identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_sessions__session_id__messages__message_id__download_get: {
+        parameters: {
+            query: {
+                format: "docx" | "pdf" | "pptx" | "xlsx";
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+                message_id: string;
             };
             cookie?: never;
         };
@@ -13675,6 +14133,96 @@ export interface operations {
                 "application/json": components["schemas"]["pi__models__roles__Update"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    infer_inference_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Service-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InferenceAnswer"];
+                };
+            };
+            /** @description Missing or invalid service key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The role is not this service's */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `no_model` or `unavailable`: the caller falls back */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    usage_inference_usage_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -17768,6 +18316,180 @@ export interface operations {
                 "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_imports__source__preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                source: "chatgpt" | "claude";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_imports__source___digest__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                source: "chatgpt" | "claude";
+                digest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_imports_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chats_imports_chats_get: {
+        parameters: {
+            query?: {
+                source?: ("chatgpt" | "claude") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_imports_chats__chat_id__get: {
+        parameters: {
+            query?: {
+                after?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Release pins:** Pi 0.13.0, ToolGate 0.10.0 (with its sandbox image), MemoryGate 0.7.0. The
+  dashboard reads the new job fields (who made a job, whether forgetting a chat turned it off, the
+  agent's name) and shows the agent's name on the job page.
+
 - **A calmer message box.** The composer shows the text box, Agent, Mode, voice typing and Send.
   Template, model, skills, Think, this chat's access and Incognito (and the call notes on a new chat)
   sit behind one plain More, which names anything not at its default ("More · Think · Incognito";

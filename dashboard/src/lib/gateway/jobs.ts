@@ -31,6 +31,7 @@ const watchCreate = z.object({ toolId, args: z.record(z.string().max(200), z.str
 // instructions: the job's own words, for the owner's job page; a Pi that keeps them to itself omits them.
 const definition = z.object({
   name: z.string().min(1).max(80), instructionsConfigured: z.boolean(), instructions: z.string().min(1).max(4000).optional(), agentId: z.string().min(1).max(200),
+  agentName: z.string().min(1).max(80).nullable().optional(), createdBy: z.enum(['owner', 'conker']).optional(), turnedOff: z.literal('chat_forgotten').nullable().optional(),
   timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target, watch: watchSummary.nullable().optional(),
   overlap: z.literal('skip'), requireBudget: z.boolean(), budgetAllowanceConfigured: z.boolean(),
 }).strict().refine(value => value.enabled === (value.state === 'enabled'), 'Job state is inconsistent.')
