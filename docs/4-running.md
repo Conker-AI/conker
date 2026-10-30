@@ -120,6 +120,7 @@ conker setup run rehearsal --finalize
 conker providers status       # secret-free hosted-provider revisions and state
 conker providers claude login # Ubuntu layout: sign in to the Claude plan once, in this terminal
 conker tool draft "Show free disk space" # Pi drafts a tool; the draft waits in the Inbox
+conker context budget CHAT_ID --window 32768 --reserve 2048 # start one chat's context settings
 conker logs pi
 conker stop
 conker start

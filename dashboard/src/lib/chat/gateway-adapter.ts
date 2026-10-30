@@ -1,10 +1,10 @@
 import type { Action, Attempt, ChatContract, ChatMessage, ChatTurnOutcome, Generation, RecoveryAction, Submission } from './contract'
 import type { RuntimeMessage, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { turnDetails } from './turn-details'
-import { canReleaseTaskConflict, canSubmitRuntime, hasActiveRuntimeTurn, type UncertainTurn } from '@/components/gateway/runtime-state'
+import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, hasActiveRuntimeTurn, type TurnCheck, type UncertainTurn } from '@/components/gateway/runtime-state'
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
 import { memoryFeedback } from './memory-feedback'
-import { sameTurnOutcome, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
+import { parkedTurn, sameTurnOutcome, turnCheckCopy, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
 
 export type GatewayChatState = {
   sessionId: string; epoch: number; active: boolean; current: RuntimeSessionDetail | null
@@ -18,6 +18,8 @@ export type GatewayChatState = {
   operationPending?: boolean
   /** Nothing of this chat could be read yet (the observation failed before any history loaded). */
   historyUnavailable?: boolean
+  /** The owner's latest check of an unconfirmed action in this chat. */
+  turnCheck?: TurnCheck | null
 }
 export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
@@ -90,8 +92,12 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     previewText: preview?.text ?? '', resetVersion: preview?.resetVersion ?? 0, end: preview?.end,
     stop: action(value => value.inFlight?.requestId === flight.requestId && !value.inFlight.stopping && value.sendPending, handler => handler.stop(), 'Stop is already requested.'),
   } : null
-  const outcomes: ChatTurnOutcome[] = isForgotten(state) ? [] : visibleTurnOutcomes(state.current?.turns ?? [], !!generation).map(turn => {
-    const copy = turnOutcomeCopy(turn)
+  const check = !isForgotten(state) && state.turnCheck && state.current?.turns.some(turn => turn.id === state.turnCheck!.turnId) ? state.turnCheck : null
+  // While Pi works on a checked turn, or once it is answered, the check's own card below stands for it.
+  const visible = isForgotten(state) ? [] : visibleTurnOutcomes(state.current?.turns ?? [], !!generation).filter(turn => !check || turn.id !== check.turnId || parkedTurn(turn.status))
+  const recoverable = (value: GatewayChatState) => value.current?.status === 'open' && !value.operationPending && !value.detailPending && !value.sendPending && !value.attempt
+  const outcomes: ChatTurnOutcome[] = visible.map(turn => {
+    const copy = turnOutcomeCopy(turn), mine = check && check.turnId === turn.id ? check : null
     const eligible = (value: GatewayChatState) => !isForgotten(value) && value.current?.turns.some(saved => sameTurnOutcome(turn, saved)) === true
     const control = (label: string, run: (handlers: GatewayChatHandlers) => void | Promise<void>, ready: (value: GatewayChatState) => boolean = () => true, primary = false) => ({ label, primary, action: action(value => eligible(value) && ready(value), run, 'The saved turn changed or a request is in progress. Check its current status first.') })
     const controls = [control('Check saved history', handler => handler.checkHistory(), value => !value.operationPending && !value.detailPending && !value.sendPending && !value.inFlight)]
@@ -100,9 +106,13 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     else if (turn.action || turn.acted || ['outcome_unknown', 'action_in_progress', 'awaiting_budget'].includes(turn.status)) review('Review saved action', 'run')
     if (copy.modelUnavailable) review('Review models', 'models')
     if (copy.toolUnavailable) review('Review tools', 'tools')
-    if (handlers().resumeTurn && (turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted)) controls.push(control(turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval', handler => handler.resumeTurn?.(turn.id), value => value.current?.status === 'open' && !value.operationPending && !value.detailPending && !value.sendPending && !value.attempt, true))
-    return { id: turn.id, title: copy.title, description: copy.description, consequence: copy.consequence, recordedAt: turn.endedAt ?? turn.startedAt, controls }
+    if (handlers().resumeTurn && (turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted)) controls.push(control(turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval', handler => handler.resumeTurn?.(turn.id), recoverable, true))
+    // Pi asks ToolGate about the same action id; the action itself is never sent again.
+    if (handlers().resumeTurn && checkableTurn(turn.status)) controls.push(control(!mine ? 'Check what happened' : mine.phase === 'checking' ? 'Checking…' : 'Check again', handler => handler.resumeTurn?.(turn.id), recoverable, true))
+    return { id: turn.id, title: copy.title, description: copy.description, consequence: copy.consequence, recordedAt: turn.endedAt ?? turn.startedAt, controls, ...(mine ? { status: turnCheckCopy(mine).status } : {}) }
   })
+  const checked = check && !visible.some(turn => turn.id === check.turnId) ? state.current?.turns.find(turn => turn.id === check.turnId) : undefined
+  if (check && checked) outcomes.push({ id: checked.id, ...turnCheckCopy(check), consequence: 'A check never sends the action again.', recordedAt: checked.endedAt ?? checked.startedAt, controls: [] })
   return {
     source: 'gateway', sessionId: state.sessionId, messages, outcomes, history: state.detailPending ? 'loading' : state.error || state.historyUnavailable ? 'error' : 'ready',
     activeAgentName: state.activeAgentName,

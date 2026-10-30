@@ -125,7 +125,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   else if (path === '/api/pi/sessions') { title = 'Create a conversation'; target = 'New conversation'; details.push('Creates one persisted conversation.') }
   else if (/^\/api\/pi\/sessions\/.+\/turns$/.test(path)) { title = 'Send a conversation turn'; target = `Conversation ${parts[4]}`; if (typeof body.text === 'string') details.push(`${[...body.text].length.toLocaleString()} characters from your submitted draft.`); details.push('The runtime may call its configured model and tools.') }
   else if (/^\/api\/pi\/sessions\/.+\/fork$/.test(path)) { title = 'Fork a conversation'; target = `Conversation ${parts[4]}` }
-  else if (/^\/api\/pi\/turns\/.+\/resume$/.test(path)) { title = 'Resume a recorded turn'; target = `Turn ${parts[4]}`; details.push('Resumes the existing runtime operation.') }
+  else if (/^\/api\/pi\/turns\/.+\/resume$/.test(path)) { title = 'Continue or check a saved turn'; target = `Turn ${parts[4]}`; details.push('An approved action runs once. An action that already ran, or whose result is unknown, is only checked with your tools and never sent again.') }
   else if (path === '/api/pi/tasks') { title = 'Create task tracking'; target = safeId(body.session_id) ? `Conversation ${body.session_id}` : 'New task'; details.push('Records task metadata; does not start execution.') }
   else if (/^\/api\/pi\/tasks\/.+\/(update|transition|archive)$/.test(path)) {
     title = path.endsWith('/update') ? 'Update task metadata' : path.endsWith('/transition') ? 'Record task status' : body.archived === false ? 'Restore task tracking' : 'Archive task tracking'

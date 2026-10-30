@@ -58,8 +58,6 @@ tests, but not yet exercised end to end on an installed stack.
 - **An answer can be lost** if Pi restarts while delivering it.
 - **The profile photo is kept per browser** for now.
 - **Some settings say "Not used yet":** they are saved, and the feature that reads them comes later.
-- When a chat has no context settings, the error suggests `conker context budget`, a command that
-  exists only in the development CLI.
 
 Open work is tracked in [GitHub issues](https://github.com/Conker-AI/conker/issues).
 

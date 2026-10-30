@@ -21,7 +21,9 @@ BUDGET_RULE = (
     "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller "
     "than the window, and other input of 0 or more."
 )
-NO_SETTINGS = "This chat has no context settings yet. Start with: context budget SESSION --window N --reserve N"
+# The installed launcher runs `conker context budget` too (scripts/context_cli.py).
+START = "conker context budget {session} --window TOKENS --reserve TOKENS"
+NO_SETTINGS = "This chat has no context settings yet. Start them with: " + START
 ITEM_TEXT_ERROR = "Use 1-500 characters of text."
 
 
@@ -51,11 +53,7 @@ def register(commands):
     instructions.add_argument("file", nargs="?", type=Path)
     instructions.add_argument("--clear", action="store_true")
 
-    budget = subparsers.add_parser("budget", help="Set context budget limits")
-    budget.add_argument("session")
-    budget.add_argument("--window", type=int, required=True)
-    budget.add_argument("--reserve", type=int, required=True)
-    budget.add_argument("--other", type=int, default=None)
+    add_budget(subparsers)
 
     summary_edit = subparsers.add_parser("summary-edit", help="Edit the chat summary")
     summary_edit.add_argument("session")
@@ -124,6 +122,23 @@ def register(commands):
     compaction.add_argument("session")
 
 
+def add_budget(subparsers):
+    """The budget subcommand, shared with the installed launcher's `conker context budget`."""
+    budget = subparsers.add_parser(
+        "budget", help="Start a chat's context settings, or change its budget"
+    )
+    budget.add_argument("session")
+    budget.add_argument(
+        "--window", type=int, required=True, help="The model's context size, in tokens"
+    )
+    budget.add_argument(
+        "--reserve", type=int, required=True, help="Tokens kept free for the answer"
+    )
+    budget.add_argument(
+        "--other", type=int, default=None, help="Tokens of other input, such as tools"
+    )
+
+
 def pi_call(request, config, path, body=None, *, query=None, **kwargs):
     """Make a Pi service call with consistent error handling."""
     try:
@@ -181,7 +196,7 @@ def operation(args, config, request):
         identity(args.message, MESSAGE, "message identity")
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
-            raise ValueError(NO_SETTINGS)
+            raise ValueError(NO_SETTINGS.format(session=args.session))
 
         policy = copy.deepcopy(policy_response["policy"])
         revision = policy_response["revision"]
@@ -215,7 +230,7 @@ def operation(args, config, request):
 
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
-            raise ValueError(NO_SETTINGS)
+            raise ValueError(NO_SETTINGS.format(session=args.session))
 
         policy = copy.deepcopy(policy_response["policy"])
         policy["sessionInstructions"] = text
@@ -397,7 +412,8 @@ def operation(args, config, request):
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
             raise ValueError(
-                "Set context settings before compacting: context budget SESSION --window N --reserve N"
+                "Set context settings before compacting: "
+                + START.format(session=args.session)
             )
 
         summary_response = pi_call(request, config, f"/context/{args.session}/summary")

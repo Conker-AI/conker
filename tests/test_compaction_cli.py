@@ -275,7 +275,10 @@ def test_compact_null_policy_stops_after_one_get(invoke, capsys, tmp_path):
     )
     assert len(calls) == 1
     assert calls[0][0].full_url == "http://127.0.0.1:18551/context/ses_a"
-    assert "Set context settings before compacting" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert (
+        "Set context settings before compacting: conker context budget ses_a" in error
+    )
 
 
 def test_compact_pi_pinned_refusal_prints_details(invoke, capsys, tmp_path):

@@ -413,7 +413,7 @@ def test_reset_get_and_the_errors_the_owner_sees(capsys):
         run(fake, capsys, "get", id="chat.output.length")
     with pytest.raises(ValueError, match="global"):
         run(fake, capsys, "get", id="search.semantic", chat="ses_1")
-    with pytest.raises(ValueError, match="context budget"):
+    with pytest.raises(ValueError, match="conker context budget ses_1 --window"):
         run(
             fake,
             capsys,

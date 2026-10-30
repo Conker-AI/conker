@@ -1,9 +1,12 @@
 import type { RuntimeTurn } from '@/lib/gateway/runtime'
+import type { TurnCheck } from '@/components/gateway/runtime-state'
 
 const unfinished = new Set(['awaiting_approval', 'awaiting_budget', 'acted_no_reply', 'action_in_progress', 'outcome_unknown'])
 const terminal = new Set(['failed', 'interrupted', 'cancelled', 'canceled'])
 const uncertainActions = new Set(['dispatching', 'in_progress', 'outcome_unknown', 'unknown'])
 export type TurnDestination = 'run' | 'approval' | 'models' | 'tools'
+/** Pi has parked this turn and waits for the owner or for a result. */
+export const parkedTurn = (status: string) => unfinished.has(status)
 
 /** Latest failure remains visible; older completed attempts don't compete with newer replies. */
 export function visibleTurnOutcomes(turns: readonly RuntimeTurn[], answering = false): RuntimeTurn[] {
@@ -24,8 +27,8 @@ export function turnOutcomeCopy(turn: RuntimeTurn) {
   const description = turn.status === 'awaiting_approval' ? 'Review the exact requested action, then continue after approving it.'
     : turn.status === 'awaiting_budget' ? 'Tool work is paused on a spending decision. Review the saved action before continuing.'
     : turn.status === 'acted_no_reply' ? turn.acted ? 'The turn has no completed reply. You can check its saved status or ask for the missing reply.' : 'The turn reports a missing reply, but its action record is incomplete. Check saved history before continuing.'
-    : turn.status === 'action_in_progress' ? 'Conker is still waiting for a confirmed action result. Check the saved status before starting more work.'
-    : turn.status === 'outcome_unknown' ? 'The saved record does not establish whether the action completed. Review it before deciding what to do next.'
+    : turn.status === 'action_in_progress' ? 'Conker is still waiting for the action’s result. Check what happened asks your tools about it without sending it again.'
+    : turn.status === 'outcome_unknown' ? 'This action was running when something stopped, so its result was never confirmed. Check what happened asks your tools about it without sending it again.'
     : turn.status === 'interrupted' ? 'Work was interrupted before the turn finished. Check the saved outcome before continuing.'
     : ['cancelled', 'canceled'].includes(turn.status) ? 'Generation was stopped. Any messages and recorded work remain in this chat.'
     : modelUnavailable ? 'The configured model could not answer. Review model availability, or choose another answer model before sending a new request.'
@@ -37,4 +40,19 @@ export function turnOutcomeCopy(turn: RuntimeTurn) {
 
 export function sameTurnOutcome(a: RuntimeTurn, b: RuntimeTurn) {
   return a.id === b.id && a.status === b.status && a.acted === b.acted && a.endedAt === b.endedAt && a.approvalRequestId === b.approvalRequestId && a.action?.id === b.action?.id && a.action?.state === b.action?.state
+}
+
+/** Plain words for each step of checking an unconfirmed action; after the check, the saved turn's new status picks them. */
+export function turnCheckCopy(check: TurnCheck): { title: string; description: string; status: string } {
+  const description = `Conker ${check.phase === 'checking' ? 'is asking' : 'asked'} your tools what became of an action whose result was never confirmed.`
+  if (check.phase === 'checking') return { title: 'Checking what happened', description, status: 'Checking with your tools… The action is not sent again.' }
+  if (check.phase === 'failed') return { title: 'Couldn’t check what happened', description, status: `${check.reason} The action was not sent again.` }
+  const status = ({
+    complete: 'Done. Your tools had the result, and the reply about it is above. The action was not sent again.',
+    acted_no_reply: 'Done, but the reply is missing. The action finished; ask only for the reply and it won’t run again.',
+    outcome_unknown: 'Still unknown. Your tools have no final result for this action yet. Nothing was sent again; try again later, or review the saved action.',
+    action_in_progress: 'Still running. Your tools say this action hasn’t finished yet. Nothing was sent again; check again in a minute.',
+    awaiting_approval: 'Checked. This action needs your approval again before it can run.',
+  } as Record<string, string>)[check.status ?? ''] ?? `Checked. This turn is now ${(check.status ?? 'saved').replaceAll('_', ' ')}.`
+  return { title: 'Checked what happened', description, status }
 }

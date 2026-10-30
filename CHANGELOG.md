@@ -13,6 +13,16 @@ which module versions a release pins.
   went"), shows when it can no longer run, and after a minute without word says it isn't
   confirmed yet, with Check again. A fresh device follows its own light or dark setting. Healthy
   Server checks say OK, and messages point to Server, not System.
+- **"Check what happened" for an action whose result was never confirmed.** When something stopped
+  while an action was running, the chat card now has a Check what happened button: Pi asks your
+  tools about the same action and never sends it again. The card says what it found in plain
+  words: checking, done (the reply appears), still unknown or still running (check again later),
+  or why it could not check.
+
+- **`conker context budget` works on an installed stack.** A chat starts with no context settings,
+  and the error said to run a command only the development CLI had. Now `./conker context budget
+  CHAT_ID --window TOKENS --reserve TOKENS` starts them through the pi container, like `conker
+  config`, and the error names the chat.
 
 - **The Claude plan on the repository install, ready for its image.** `./install.sh --claude-plan`
   adds the Claude plan runtime (`docker-compose.subscriptions.yml`, with its own two keys and the

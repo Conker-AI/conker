@@ -177,7 +177,10 @@ def test_rule_on_null_policy_exits_with_no_settings(invoke, capsys):
     assert run("rule", "ses_a", "msg_b", "pin") == 1
     assert len(calls) == 1
     check_headers(0)
-    assert NO_SETTINGS in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert NO_SETTINGS.format(session="ses_a") in error
+    # The command it names is one the owner has, on an installed stack too.
+    assert "conker context budget ses_a --window TOKENS --reserve TOKENS" in error
 
 
 def test_budget_creates_policy_on_null_and_updates_existing(invoke, capsys):
