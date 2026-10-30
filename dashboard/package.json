@@ -19,6 +19,7 @@
     "check:daily-overview": "node scripts/check-daily-overview.cjs",
     "check:character": "node scripts/check-character.cjs",
     "check:tools": "node scripts/check-tool-workspace.cjs",
+    "check:tool-run": "node scripts/check-tool-run.cjs",
     "check:jobs": "node scripts/check-jobs.cjs && node scripts/check-job-starters.cjs",
     "check:system": "node scripts/check-system-runtime.cjs",
     "check:preferences": "node scripts/check-owner-preferences.cjs",
