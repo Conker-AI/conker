@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Search everything has no setting of its own.** Settings > Keyboard no longer shows a "Search
+  everything" choice with only Ctrl+K in it; Ctrl+K (Cmd+K) always opens search while keyboard
+  shortcuts are on.
 - **Server keeps its pages in the sidebar.** The tab row on top of Server repeated the sidebar's
   sub-items, so it now shows only while the sidebar is collapsed. Services replaced Containers in
   that list; every container on the server is one link away at the bottom of Services. A service
@@ -411,9 +414,6 @@ Found by running it, rather than by reasoning about it:
   API.** True, and no use to anyone. Now it names the port and the two ways
   out. The preflight check cannot always catch it — under Docker Desktop the
   port is bound on the host, which a check inside the VM cannot see.
-- **Search everything has no setting of its own.** Settings > Keyboard no longer shows a "Search
-  everything" choice with only Ctrl+K in it; Ctrl+K (Cmd+K) always opens search while keyboard
-  shortcuts are on.
 
 ### Security
 
