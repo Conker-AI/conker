@@ -311,6 +311,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/host/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Host Operations
+         * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
+         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
+         *     with the password proof bound to the exact body. Answers are the helper's own.
+         */
+        post: operations["host_operations_api_host_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/host/ops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Host Operations
+         * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
+         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
+         *     with the password proof bound to the exact body. Answers are the helper's own.
+         */
+        get: operations["host_operations_api_host_ops_get"];
+        put?: never;
+        /**
+         * Host Operations
+         * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
+         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
+         *     with the password proof bound to the exact body. Answers are the helper's own.
+         */
+        post: operations["host_operations_api_host_ops_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/host/ops/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Host Operations
+         * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
+         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
+         *     with the password proof bound to the exact body. Answers are the helper's own.
+         */
+        get: operations["host_operations_api_host_ops__identity__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/terminal": {
         parameters: {
             query?: never;
@@ -373,6 +445,72 @@ export interface paths {
         put?: never;
         /** Terminal Write */
         post: operations["terminal_write_api_terminal__identity___operation__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/control/pi/artifacts/{identity}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Artifact Download
+         * @description One artifact as a file: DOCX, PDF, PPTX or XLSX, or CSV for a table and JSON for a
+         *     chart, diagram or media.
+         */
+        get: operations["artifact_download_api_control_pi_artifacts__identity__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/control/pi/sessions/{session_id}/messages/{message_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Answer Download
+         * @description One completed chat answer as a DOCX, PDF, PPTX or XLSX file.
+         */
+        get: operations["answer_download_api_control_pi_sessions__session_id__messages__message_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/control/pi/imports/{source}/{step}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import File
+         * @description A ChatGPT or Claude export's `conversations.json` as the raw body, up to 128 MB.
+         *
+         *     `preview` saves nothing, so the signed-in session is enough. An import (named by the
+         *     previewed file's SHA-256) saves chats and offers his words to memory, so it asks for the
+         *     password: the proof covers this path with an empty body, the path's digest names the file,
+         *     and a body with another digest is refused before Pi receives all of it.
+         */
+        post: operations["import_file_api_control_pi_imports__source___step__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -651,6 +789,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/tools/{identity}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tool Runs
+         * @description Run any tool by hand, and read its recent runs. A run uses the chat's own key, as when
+         *     Conker runs it, and asks for the password; a tool that asks still makes an approval
+         *     request (CONFIRMATION_REQUIRED), resumed with the same action_id.
+         */
+        get: operations["tool_runs_api_owner_tools__identity__runs_get"];
+        put?: never;
+        /**
+         * Tool Runs
+         * @description Run any tool by hand, and read its recent runs. A run uses the chat's own key, as when
+         *     Conker runs it, and asks for the password; a tool that asks still makes an approval
+         *     request (CONFIRMATION_REQUIRED), resumed with the same action_id.
+         */
+        post: operations["tool_runs_api_owner_tools__identity__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/owner/editor-capabilities": {
         parameters: {
             query?: never;
@@ -784,6 +950,62 @@ export interface paths {
         get: operations["editor_publication_api_owner_editor_drafts__identity__publications_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/tool-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tool Settings
+         * @description How tools run: ToolGate's owner settings document (time limits, the Terminal's
+         *     resources, web search, the run window). A save replaces the document at the revision
+         *     he saw, so it asks for the password; ToolGate refuses a stale revision (409).
+         */
+        get: operations["tool_settings_api_owner_tool_settings_get"];
+        /**
+         * Tool Settings
+         * @description How tools run: ToolGate's owner settings document (time limits, the Terminal's
+         *     resources, web search, the run window). A save replaces the document at the revision
+         *     he saw, so it asks for the password; ToolGate refuses a stale revision (409).
+         */
+        put: operations["tool_settings_api_owner_tool_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner/lockdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lockdown
+         * @description ToolGate's lockdown: no tool or workflow runs and no agent files a request. Turning it
+         *     on only takes power away, so his session is enough; turning it off gives the power back,
+         *     so it asks for the password.
+         */
+        get: operations["lockdown_api_owner_lockdown_get"];
+        put?: never;
+        /**
+         * Lockdown
+         * @description ToolGate's lockdown: no tool or workflow runs and no agent files a request. Turning it
+         *     on only takes power away, so his session is enough; turning it off gives the power back,
+         *     so it asks for the password.
+         */
+        post: operations["lockdown_api_owner_lockdown_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1364,6 +1586,130 @@ export interface operations {
             };
         };
     };
+    host_operations_api_host_read_post: {
+        parameters: {
+            query?: {
+                identity?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    host_operations_api_host_ops_get: {
+        parameters: {
+            query?: {
+                identity?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    host_operations_api_host_ops_post: {
+        parameters: {
+            query?: {
+                identity?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    host_operations_api_host_ops__identity__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     terminal_create_api_terminal_post: {
         parameters: {
             query?: never;
@@ -1444,6 +1790,101 @@ export interface operations {
             path: {
                 identity: string;
                 operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    artifact_download_api_control_pi_artifacts__identity__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_download_api_control_pi_sessions__session_id__messages__message_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_file_api_control_pi_imports__source___step__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                step: string;
             };
             cookie?: never;
         };
@@ -2029,6 +2470,68 @@ export interface operations {
             };
         };
     };
+    tool_runs_api_owner_tools__identity__runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tool_runs_api_owner_tools__identity__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     editor_capabilities_api_owner_editor_capabilities_get: {
         parameters: {
             query?: never;
@@ -2344,6 +2847,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tool_settings_api_owner_tool_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    tool_settings_api_owner_tool_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    lockdown_api_owner_lockdown_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    lockdown_api_owner_lockdown_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

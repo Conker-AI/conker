@@ -10,6 +10,8 @@ which module versions a release pins.
   jobs Conker created. It asks for your password, then treats the job as yours: it keeps running
   even if the chat that made it is forgotten, and "Made by" says "you". If the job changed in the
   meantime, it reloads and asks you to try again.
+- **Pi 0.14.0 and ToolGate 0.11.0 are pinned.** Pi 0.14.0 brings the gateway routes the new screens use (file downloads and chat imports, server actions through the host helper, ToolGate settings and lockdown, owner tool runs, making a Conker job your own), the drafter asking its question in the chat, job runs kept out of memory, and the old workflow-proposal routes removed. ToolGate 0.11.0 ships with a new agent sandbox image, pinned by digest. The dashboard's generated Pi and gateway API types are regenerated from these releases.
+
 - **Export answers and artifacts, import old chats.** Every finished answer has an Export menu
   next to Copy: Word, PDF, PowerPoint, and Excel when the answer holds a table. Artifacts have the
   same menu, plus their CSV, JSON or source text. When Pi can't make a file, the menu says why in
