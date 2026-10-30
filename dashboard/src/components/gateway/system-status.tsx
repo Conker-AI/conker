@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from '@/components/design-system/primitives'
 import { GatewayPageFrame } from './page-frame'
+import { RecentServerActions } from './server-action-parts'
 import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/control'
 
 const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
@@ -49,6 +50,7 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
         </div>)}</dl></CollectionSection>)}
         <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.</p>
       </>}
+      <RecentServerActions client={client.hostOps} />
     </div>
   </GatewayPageFrame>
 }

@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { createGatewayEditorDrafts } from './editor-drafts'
 import { createGatewayProjectsClient } from './projects'
 import { createGatewayArtifactsClient } from './artifacts'
+import { createGatewayExportsClient } from './exports'
+import { createGatewayImportsClient } from './imports'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
@@ -10,6 +12,7 @@ import { createAccessClient } from './access'
 import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
+import { createGatewayHostOpsClient } from './host-ops'
 import { createGatewayTeamsClient } from './teams'
 import { createNativeSessionsClient } from './native-sessions'
 import { createMemoryCorrectionsClient } from './memory-corrections'
@@ -282,7 +285,7 @@ export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'me
 }
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
-export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession'>, onCurrentSessionRevoked: () => void) {
+export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void) {
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
   return {
@@ -303,6 +306,10 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
+    /** Answers and artifacts as Word, PDF, PowerPoint, Excel, CSV or JSON files. */
+    exports: createGatewayExportsClient(auth),
+    /** ChatGPT and Claude exports, kept as read-only chats. */
+    imports: createGatewayImportsClient(auth),
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
     asks: createAsksClient(auth),
@@ -316,6 +323,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       async resume(...args: Parameters<GatewayHostInventoryClient['resume']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).resume(...args) },
       async configured(...args: Parameters<GatewayHostInventoryClient['configured']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).configured(...args) },
     },
+    hostOps: createGatewayHostOpsClient(auth),
     teams: createGatewayTeamsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),

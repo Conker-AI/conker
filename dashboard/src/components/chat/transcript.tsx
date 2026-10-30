@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { Copy, Link, MoreHorizontal } from 'lucide-react'
 import { CompanionPortrait } from '@/components/companion-portrait'
 import { MessageActionButton } from '@/components/message-action-button'
+import { AnswerExportMenu, type ExportStatus } from '@/components/export-menu'
 import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,7 @@ function Answer({ text, streaming }: { text: string; streaming?: boolean }) {
 }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(''), [exported, setExported] = useState<ExportStatus | null>(null)
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const createdAt = new Date(message.createdAt)
   const shortTime = createdAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -36,6 +37,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
     {message.memory && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
     <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
+      {message.export && message.content.kind === 'text' && <AnswerExportMenu text={message.content.text} run={message.export.run} onStatus={setExported} />}
       {moreActions.length > 0 && <DropdownMenu>
         <DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="More message actions" />}><MoreHorizontal /></DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuGroup>{moreActions.map(kind => {
@@ -52,6 +54,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
       {message.details && <span className="text-muted-foreground">· {message.details}</span>}
     </div>
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
+    {exported && <p role={exported.tone === 'failed' ? 'alert' : 'status'} className={cn('mt-1 text-xs', exported.tone === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>{exported.text}</p>}
   </article>
 }
 

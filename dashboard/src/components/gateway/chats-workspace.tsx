@@ -8,6 +8,8 @@ import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
+import type { GatewayImportsClient } from '@/lib/gateway/imports'
+import { ImportedChatsLine } from './imported-chats-line'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
@@ -15,9 +17,11 @@ import { useChatDirectory } from './use-chat-directory'
 
 const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
 
-export function GatewayChatsWorkspace({ runtime, authStore, conversationState, sourcePrivacy }: {
+export function GatewayChatsWorkspace({ runtime, authStore, conversationState, sourcePrivacy, imports }: {
   runtime: GatewayRuntimeClient; authStore: GatewayAuthStore
   conversationState: GatewayRuntimeWorkspaceState; sourcePrivacy: GatewaySourcePrivacyState
+  /** ChatGPT and Claude imports live under Chats, kept apart from Conker's own chats. */
+  imports?: GatewayImportsClient
 }) {
   const directory = useChatDirectory(runtime, authStore, conversationState, sourcePrivacy)
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
@@ -51,6 +55,7 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
           title={session.title ? `${session.title}${session.titleTruncated ? '…' : ''}` : 'Untitled chat'}
           sub={session.summaryPreview ? `${session.summaryPreview}${session.summaryTruncated ? '…' : ''}` : 'Continue this conversation'} meta={when(session.createdAt)} />)}
       </ListCard>
+      {imports && <ImportedChatsLine client={imports} />}
       <p className="text-xs text-muted-foreground">{snapshot}</p>
     </div>
   </GatewayPageFrame>

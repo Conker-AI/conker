@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, Download, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
+import { Archive, ArrowLeft, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArtifactPreview } from '@/components/artifacts/native-preview'
 import { ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
@@ -16,7 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import type { GatewayActivityClient, GatewayTask } from '@/lib/gateway/activity'
-import { downloadAnswerFile } from '@/lib/rich-answer'
+import { ExportMenu, type ExportChoice, type ExportStatus } from '@/components/export-menu'
+import { useHasTable } from '@/lib/use-has-table'
+import { artifactFormats, exportLabels, exportNames } from '@/lib/gateway/exports'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { emptyGatewayArtifactContent, GatewayArtifactMutationError, normalizeGatewayArtifactContent, type GatewayArtifact, type GatewayArtifactContent, type GatewayArtifactSummary } from '@/lib/gateway/artifacts'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -29,6 +31,8 @@ const availabilityLabels: Record<GatewayArtifactSummary['availability'], string>
   'source-unavailable': 'Source unavailable', 'source-changed': 'Source changed', 'privacy-unknown': 'Privacy unavailable',
 }
 const taskId = /^tsk_[0-9a-f]{32}$/
+// A version as it is saved: its text, CSV or JSON (inert, never run).
+const savedSourceLabels: Record<GatewayArtifactContent['kind'], string> = { markdown: 'Markdown (.md)', code: 'Code file', html: 'HTML source (.txt)', table: 'CSV (.csv)', chart: 'JSON (.json)', diagram: 'JSON (.json)', media: 'JSON (.json)' }
 
 function mutationMessage(error: unknown) { return error instanceof GatewayArtifactMutationError ? error.message : gatewayError(error).message }
 function artifactSummary(artifact: GatewayArtifact): GatewayArtifactSummary {
@@ -78,26 +82,34 @@ function draftFrom(artifact: GatewayArtifact): Draft {
 
 function ArtifactEditor({ initial, control, onChanged }: { initial: GatewayArtifact; control: GatewayControlClient; onChanged: (artifact: GatewayArtifact) => void }) {
   const [artifact, setArtifact] = useState(initial), [draft, setDraft] = useState(() => draftFrom(initial)), [tab, setTab] = useState('preview'), [selectedVersion, setSelectedVersion] = useState<number | null>(null)
-  const [pending, setPending] = useState(false), [exporting, setExporting] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null), [archive, setArchive] = useState(false)
+  const [pending, setPending] = useState(false), [exported, setExported] = useState<ExportStatus | null>(null), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null), [archive, setArchive] = useState(false)
   const latest = artifact.versions.at(-1), selected = artifact.versions.find(item => item.version === selectedVersion) ?? latest
   const current = latest!
   const historical = !!selected && selected.version !== latest?.version
   const dirty = !!latest && (draft.title !== latest.title || draft.source !== sourceText(latest.content) || draft.note.trim() !== '')
   let parsed: GatewayArtifactContent | null = selected?.content ?? null, parseError: string | null = null
   if (!historical && latest && dirty) try { parsed = parseSource(latest.content.kind, draft.source, draft.language) } catch (cause) { parsed = null; parseError = cause instanceof Error ? cause.message : 'Source is invalid.' }
-  const adopt = (saved: GatewayArtifact, message?: string) => { setArtifact(saved); setDraft(draftFrom(saved)); setSelectedVersion(null); setError(null); setNotice(message ?? null); onChanged(saved) }
+  const adopt = (saved: GatewayArtifact, message?: string) => { setExported(null); setArtifact(saved); setDraft(draftFrom(saved)); setSelectedVersion(null); setError(null); setNotice(message ?? null); onChanged(saved) }
   const mutate = async (operation: () => Promise<GatewayArtifact>, message: string) => { setPending(true); setError(null); setNotice(null); try { adopt(await operation(), message); return true } catch (cause) { setError(mutationMessage(cause)); return false } finally { setPending(false) } }
   const reload = async () => { setPending(true); setError(null); try { adopt(await control.artifacts.get(artifact.id), 'Reloaded the saved artifact.') } catch (cause) { setError(gatewayError(cause).message) } finally { setPending(false) } }
   const save = async () => { if (!parsed) return; await mutate(() => control.artifacts.append(artifact.id, { content: parsed!, title: draft.title, ...(draft.note.trim() ? { note: draft.note } : {}), preserveCitations: draft.preserveCitations }, artifact.revision), 'Saved as a new version.') }
-  const exportVersion = async () => {
-    if (!selected) return; setExporting(true); setError(null); setNotice(null)
-    try { const result = await control.artifacts.export(artifact.id, selected.version); downloadAnswerFile(result.text, result.filename, result.mime); setNotice(`Exported version ${result.version}.`) } catch (cause) { setError(gatewayError(cause).message) } finally { setExporting(false) }
+  // Pi makes documents, decks, spreadsheets, CSV and JSON from the current version (owner downloads);
+  // an earlier version exports as it was saved.
+  const table = useHasTable(selected?.content.kind === 'markdown' ? selected.content.text : null)
+  const savedSource = async () => {
+    const result = await control.artifacts.export(artifact.id, selected!.version)
+    return { blob: new Blob([result.text], { type: result.mime }), filename: result.filename }
   }
+  const madeByPi = selected ? artifactFormats(selected.content, table) : []
+  const exportChoices: ExportChoice[] = !selected ? [] : historical ? [{ id: 'source', label: savedSourceLabels[selected.content.kind], name: 'file', run: savedSource }] : [
+    ...madeByPi.map(format => ({ id: format, label: exportLabels[format], name: exportNames[format], run: () => control.exports.artifact(artifact.id, format) })),
+    ...(['markdown', 'code', 'html'].includes(selected.content.kind) ? [{ id: 'source', label: savedSourceLabels[selected.content.kind], name: 'file', run: savedSource }] : []),
+  ]
   const unavailable = !artifact.contentIncluded || !selected
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={artifact.title} description="Every version is kept, with where it came from." density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" render={<Link to="/artifacts" />}><ArrowLeft />Artifacts</Button><Button variant="outline" disabled={pending || dirty} onClick={() => setArchive(true)}>{artifact.archivedAt ? <RotateCcw /> : <Archive />}{artifact.archivedAt ? 'Restore' : 'Archive'}</Button></div>} /></div>
     {unavailable ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="max-w-2xl space-y-4"><Badge variant="outline">{availabilityLabels[artifact.availability]}</Badge><h2 className="text-lg font-medium">Artifact content is unavailable</h2><p className="text-sm leading-6 text-muted-foreground">The source changed, was forgotten or removed, or its privacy could not be verified. History bodies, preview, editing and export are blocked.</p><p className="text-xs text-muted-foreground">Its name and version count are kept; the content is no longer shown.</p></div></div> : <>
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 sm:px-6"><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="Artifact view"><TabsTrigger value="preview">Preview</TabsTrigger><TabsTrigger value="source">Source</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList></Tabs><div className="ml-auto flex items-center gap-2"><span className="hidden text-xs text-muted-foreground sm:inline">Version {selected.version}{historical ? ' · historical' : ''}</span><Button size="sm" variant="outline" disabled={pending || exporting} onClick={() => void exportVersion()}><Download />{exporting ? 'Exporting…' : 'Export'}</Button></div></div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 sm:px-6"><Tabs value={tab} onValueChange={setTab}><TabsList aria-label="Artifact view"><TabsTrigger value="preview">Preview</TabsTrigger><TabsTrigger value="source">Source</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList></Tabs><div className="ml-auto flex items-center gap-2"><span className="hidden text-xs text-muted-foreground sm:inline">Version {selected.version}{historical ? ' · historical' : ''}</span><ExportMenu choices={exportChoices} note={historical && madeByPi.some(format => format !== 'csv' && format !== 'json') ? 'Word, PDF and PowerPoint use the current version. Open it from History to export those.' : undefined} disabled={pending} onStatus={status => { setError(null); setNotice(null); setExported(status) }} /></div></div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'preview' && <div className="p-4 sm:p-6">{parsed ? <ArtifactPreview content={parsed} citations={(selected.citations ?? []).map(item => ({ id: item.id, label: item.label, ...(item.href ? { href: item.href } : {}), ...(item.excerpt ? { excerpt: item.excerpt } : {}) }))} /> : <p role="alert" className="text-sm text-destructive-foreground">{parseError}</p>}</div>}
         {tab === 'source' && <div className="space-y-5 p-4 sm:p-6"><p className="text-xs leading-5 text-muted-foreground">{historical ? 'Historical source is read-only. Restore it from History to create a new current version.' : artifact.archivedAt ? 'Restore this artifact before editing.' : 'Saving adds a new version. Earlier versions never change.'}</p>
@@ -109,7 +121,7 @@ function ArtifactEditor({ initial, control, onChanged }: { initial: GatewayArtif
         </div>}
         {tab === 'history' && <div className="space-y-4 p-4 sm:p-6"><p className="text-sm text-muted-foreground">Restoring appends a copy as a new version. Existing versions remain unchanged.</p><div className="divide-y rounded-lg border">{artifact.versions.slice().reverse().map(item => <RecordItem key={item.version} title={`Version ${item.version}: ${item.title}`} description={item.note} meta={<><span>{new Date(item.createdAt).toLocaleString()}</span><span>{item.author === 'owner' ? 'Owner' : 'Copied response'}</span>{item.restoredFromVersion && <span>Restored from version {item.restoredFromVersion}</span>}</>} actions={<><Button size="sm" variant="outline" disabled={pending || dirty} onClick={() => { setSelectedVersion(item.version); setTab('preview') }}>View</Button>{item.version !== current.version && <Button size="sm" variant="outline" disabled={pending || dirty || !!artifact.archivedAt || artifact.availability !== 'available'} onClick={() => void mutate(() => control.artifacts.restore(artifact.id, item.version, artifact.revision), `Restored version ${item.version} as a new version.`)}>Restore</Button>}</>} />)}</div></div>}
       </div>
-      <div className="shrink-0 border-t px-4 py-3 sm:px-6"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 text-sm text-muted-foreground">{error ? <span role="alert" className="text-destructive-foreground">{error} <button type="button" className="underline underline-offset-4" onClick={() => void reload()}>Reload current artifact</button></span> : notice ? <span role="status">{notice}</span> : dirty ? 'Unsaved draft. Save or reset before opening history actions.' : `${artifact.versionCount} ${artifact.versionCount === 1 ? 'version' : 'versions'}`}</div>{!historical && <div className="flex gap-2"><Button variant="outline" disabled={pending || !dirty} onClick={() => setDraft(draftFrom(artifact))}>Reset</Button><Button disabled={pending || !!artifact.archivedAt || !dirty || !!parseError || !draft.title.trim()} onClick={() => void save()}><Save />{pending ? 'Saving…' : 'Save new version'}</Button></div>}</div></div>
+      <div className="shrink-0 border-t px-4 py-3 sm:px-6"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 text-sm text-muted-foreground">{error ? <span role="alert" className="text-destructive-foreground">{error} <button type="button" className="underline underline-offset-4" onClick={() => void reload()}>Reload current artifact</button></span> : exported ? <span role={exported.tone === 'failed' ? 'alert' : 'status'} className={exported.tone === 'failed' ? 'text-destructive-foreground' : undefined}>{exported.text}</span> : notice ? <span role="status">{notice}</span> : dirty ? 'Unsaved draft. Save or reset before opening history actions.' : `${artifact.versionCount} ${artifact.versionCount === 1 ? 'version' : 'versions'}`}</div>{!historical && <div className="flex gap-2"><Button variant="outline" disabled={pending || !dirty} onClick={() => setDraft(draftFrom(artifact))}>Reset</Button><Button disabled={pending || !!artifact.archivedAt || !dirty || !!parseError || !draft.title.trim()} onClick={() => void save()}><Save />{pending ? 'Saving…' : 'Save new version'}</Button></div>}</div></div>
     </>}
     <ConfirmationDialog open={archive} onOpenChange={setArchive} title={artifact.archivedAt ? `Restore ${artifact.title}?` : `Archive ${artifact.title}?`} description={artifact.archivedAt ? 'It comes back to your active artifacts with every version kept.' : 'It becomes read-only. Every version and where it came from are kept.'} actionLabel={artifact.archivedAt ? 'Restore artifact' : 'Archive artifact'} actionVariant={artifact.archivedAt ? 'default' : 'destructive'} pending={pending} error={error} onConfirm={() => void mutate(() => control.artifacts.archive(artifact.id, !artifact.archivedAt, artifact.revision), artifact.archivedAt ? 'Artifact restored.' : 'Artifact archived.').then(saved => saved && setArchive(false))} />
   </div>

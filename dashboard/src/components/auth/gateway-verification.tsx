@@ -24,7 +24,7 @@ function VerificationForm({ store }: { store: GatewayVerificationStore }) {
     <p className="text-xs leading-5 text-muted-foreground">Your password authorizes this submitted operation once. No operation is sent until verification succeeds. Closing this prompt keeps it unsent.</p>
     <div className="space-y-2"><Label htmlFor="gateway-operation-password">Owner password</Label><Input id="gateway-operation-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} /><p className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is cleared from this form before verification.</p></div>
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error.message}</p>}
-  </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => store.getState().cancel()}>Cancel operation</Button><Button type="submit" disabled={!password || pending}>{pending ? 'Verifying…' : 'Verify and submit'}</Button></FormActions></form>
+  </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => store.getState().cancel()}>Cancel operation</Button><Button type="submit" disabled={!password || pending}>{pending ? 'Verifying…' : challenge.action ?? 'Verify and submit'}</Button></FormActions></form>
 }
 
 /** Sibling of GatewayBoundary: a busy task dialog cannot disable this independent password prompt. */

@@ -6,11 +6,29 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Export answers and artifacts, import old chats.** Every finished answer has an Export menu
+  next to Copy: Word, PDF, PowerPoint, and Excel when the answer holds a table. Artifacts have the
+  same menu, plus their CSV, JSON or source text. When Pi can't make a file, the menu says why in
+  plain words ("Tables over 10,000 cells export only as Excel"). "Import from ChatGPT or Claude"
+  under the Chats list brings in an export: choose conversations.json (a .zip gets told how to
+  open it), see how many chats, from when and some titles, then Import (asks for your password).
+  Imported chats live in their own read-only list under Chats, with no message box, and say how
+  many of your messages are waiting to be offered to memory.
 - **Answer the drafter in the Inbox.** When Conker asks a question while drafting a tool
   (`needs_detail`), its Inbox card shows the question, a box and an Answer button, plus an
   "Open the chat" link when the question was also posted in that chat. The card turns into
   "drafting" from Pi's reply; a failed send keeps your text, and a question already answered says
   so. "Details" lists what Conker asked and what you said. Needs Pi with drafter questions.
+- **Server actions in the app.** Server > Services lists every service with its state, health,
+  start time and automatic restarts; a service's details have Restart, which asks for the password
+  in a sheet that says what it pauses ("Conker can't recall or save memories until it is back").
+  Server > Backups says where the backups are and what that place does not protect against ("Same
+  computer: lost if this PC dies"), the free space and the backups in the folder, with Back up now
+  (Conker pauses for a few minutes) and Check this backup. Each action shows the host helper's
+  receipt: working, done, failed with its reason, or can't tell with a Check that only reads. One
+  runs at a time and nothing is retried by itself. Overview lists recent server actions, also the
+  ones run with `conker ops run`. When the helper isn't running, the pages say so and give the
+  commands that still work on the server.
 
 - **More settings work, and tool settings live in ToolGate.** New-chat privacy, chat names, the
   message queue, the largest upload ("No limit" by default), signing out, new-chat access and the

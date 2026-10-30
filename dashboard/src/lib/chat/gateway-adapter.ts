@@ -1,5 +1,8 @@
 import type { Action, Attempt, ChatContract, ChatMessage, ChatTurnOutcome, Generation, RecoveryAction, Submission } from './contract'
 import type { RuntimeMessage, RuntimeSessionDetail } from '@/lib/gateway/runtime'
+import type { AnswerExportFormat } from '@/lib/gateway/exports'
+import type { GatewayDownload } from '@/lib/gateway/file-transfer'
+import { GatewayError } from '@/lib/gateway/transport'
 import { turnDetails } from './turn-details'
 import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, hasActiveRuntimeTurn, type TurnCheck, type UncertainTurn } from '@/components/gateway/runtime-state'
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
@@ -25,6 +28,8 @@ export type GatewayChatHandlers = {
   setDraft: (text: string) => void; send: () => void | Promise<void>; checkHistory: () => void | Promise<void>
   stop: () => void | Promise<void>; copy: (message: RuntimeMessage, kind: 'copy' | 'link') => Promise<void>
   saveArtifact: (message: RuntimeMessage) => void | Promise<void>
+  /** Absent when this workspace has no export route. */
+  exportAnswer?: (message: RuntimeMessage, format: AnswerExportFormat) => Promise<GatewayDownload>
   refreshMemory?: (messageId: string) => void
   resumeTurn?: (turnId: string) => void | Promise<void>
   reviewTurn?: (turnId: string, destination: TurnDestination) => void
@@ -50,10 +55,20 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
       edit: unsupported, retry: unsupported, fork: unsupported, pin: unsupported, rateUp: unsupported, rateDown: unsupported, redact: unsupported,
       saveArtifact: saveArtifactAction(message),
     },
+    ...exportAction(message),
   }))
   function messageAction(message: RuntimeMessage, kind: 'copy' | 'link'): Action {
     return action(value => !isForgotten(value) && value.current?.messages.some(item => item.id === message.id && item.content.kind === 'text') === true,
       handler => handler.copy(read().current!.messages.find(item => item.id === message.id)!, kind), 'Message content is unavailable.')
+  }
+  /** A saved reply exports as a file; Pi checks again that it is a finished answer it may read. */
+  function exportAction(message: RuntimeMessage): Pick<ChatMessage, 'export'> {
+    if (!handlers().exportAnswer || message.role !== 'assistant' || message.content.kind !== 'text' || isForgotten(state)) return {}
+    return { export: { run: async format => {
+      const value = read(), latest = value.current?.messages.find(item => item.id === message.id), exporter = handlers().exportAnswer
+      if (!exporter || !value.active || value.epoch !== state.epoch || value.sessionId !== state.sessionId || isForgotten(value) || latest?.content.kind !== 'text') throw new GatewayError('validation')
+      return exporter(latest, format)
+    } } }
   }
   function saveArtifactAction(message: RuntimeMessage): Action {
     return action(value => !isForgotten(value) && value.current?.status === 'open' && value.current.messages.some(item => item.id === message.id && item.role === 'assistant' && item.content.kind === 'text') === true,

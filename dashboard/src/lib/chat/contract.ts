@@ -1,3 +1,6 @@
+import type { AnswerExportFormat } from '@/lib/gateway/exports'
+import type { GatewayDownload } from '@/lib/gateway/file-transfer'
+
 /** Presentation of one selected conversation. Adapters own persistence and eligibility. */
 export type Content = { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 export type Action<Args extends unknown[] = []> =
@@ -13,6 +16,8 @@ export type ChatMessage = {
   memory?: MessageMemoryFeedback
   /** Saved turn facts for a reply: model, duration and cost. */
   details?: string
+  /** Download this completed answer as a file; absent where it can't be exported. */
+  export?: { run: (format: AnswerExportFormat) => Promise<GatewayDownload> }
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'
