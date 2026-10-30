@@ -12,7 +12,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { belongsBehindMore, useComposerMoreValue } from '@/components/chat/composer-more'
 import { cn } from '@/lib/utils'
 
-/** This chat's access switch over the agent's and tools' settings, behind the composer's More. Loads fresh on open. */
+/** This chat's access switch over the agent's and tools' settings. Sits behind the composer's More; loads fresh on open. */
 export function GatewaySessionAccessControl({ client, sessionId, disabled }: { client: GatewayControlClient; sessionId: string; disabled: boolean }) {
   const [open, setOpen] = useState(false), [saved, setSaved] = useState<OwnerSessionSettings | null>(null)
   const [draft, setDraft] = useState<ChatAccess>('default'), [delegate, setDelegate] = useState<boolean | null>(null)
