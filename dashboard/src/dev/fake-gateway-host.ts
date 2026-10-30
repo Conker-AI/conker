@@ -1,7 +1,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST'; body?: Json; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }
 type Receipt = { id: string; operation: string; arguments: Record<string, string>; argumentsDigest: string; source: 'ui' | 'cli'; startedAt: string; endedAt: string | null; outcome: 'working' | 'done' | 'failed' | 'unknown'; reason: string | null; check: { operation: string; arguments: Record<string, string> } | null }
 
 /**
