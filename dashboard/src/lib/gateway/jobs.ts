@@ -28,8 +28,9 @@ const watchSummary = z.object({
   lastCheckedAt: z.number().finite().nonnegative().nullable(), problem: z.enum(['needs_approval', 'no_credential', 'failed']).nullable(),
 }).strict()
 const watchCreate = z.object({ toolId, args: z.record(z.string().max(200), z.string().max(4000)), everyMinutes: z.number().int().min(5).max(1440) }).strict()
+// instructions: the job's own words, for the owner's job page; a Pi that keeps them to itself omits them.
 const definition = z.object({
-  name: z.string().min(1).max(80), instructionsConfigured: z.boolean(), agentId: z.string().min(1).max(200),
+  name: z.string().min(1).max(80), instructionsConfigured: z.boolean(), instructions: z.string().min(1).max(4000).optional(), agentId: z.string().min(1).max(200),
   timing, timeZone: z.string().min(1).max(100), enabled: z.boolean(), state: z.enum(['enabled', 'paused']), target, watch: watchSummary.nullable().optional(),
   overlap: z.literal('skip'), requireBudget: z.boolean(), budgetAllowanceConfigured: z.boolean(),
 }).strict().refine(value => value.enabled === (value.state === 'enabled'), 'Job state is inconsistent.')

@@ -86,6 +86,8 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
       const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))
       const watch = body?.watch as Json | undefined
+      // Preview of a Pi that shows a job's own words on its page; the seeded jobs keep them to themselves.
+      Object.assign(created.definition as Json, { instructions: String(body?.instructions ?? ''), agentId: String(body?.agentId ?? 'companion') })
       if (body?.clock === false) ((created.definition as Json).target as Json).clock = false
       if (watch) (created.definition as Json).watch = { toolId: watch.toolId, everyMinutes: watch.everyMinutes, inputsConfigured: Object.keys((watch.args ?? {}) as Json).length > 0, lastCheckedAt: null, problem: null }
       jobs().push(created)
