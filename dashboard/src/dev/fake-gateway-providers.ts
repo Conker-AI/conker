@@ -58,6 +58,13 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     const watched = job(`job_${'9'.repeat(32)}`, 'Study group messages', { kind: 'interval', time: '00:00', day: 0, hours: 24 }, 'Asia/Jerusalem')
     ;(watched.definition as Json).watch = { toolId: 'mcp.telegram.messages', everyMinutes: 5, inputsConfigured: true, lastCheckedAt: now() - 120, problem: null }
     jobs().push(watched)
+    // Made by Conker: one running, one turned off because its chat was forgotten (preview of "Make this job mine").
+    const made = job(`job_${'a'.repeat(32)}`, 'Morning news digest', { kind: 'daily', time: '07:30', day: 0, hours: 24 }, 'Asia/Jerusalem')
+    Object.assign(made.definition as Json, { createdBy: 'conker', adoptedAt: null, turnedOff: null, agentName: 'Companion', instructions: 'Each morning, tell me the three news items that matter for my studies.' })
+    jobs().push(made)
+    const forgotten = job(`job_${'b'.repeat(32)}`, 'Exam countdown', { kind: 'daily', time: '20:00', day: 0, hours: 24 }, 'Asia/Jerusalem')
+    Object.assign(forgotten.definition as Json, { createdBy: 'conker', adoptedAt: null, turnedOff: 'chat_forgotten', enabled: false, state: 'paused' })
+    jobs().push(forgotten)
   }
   const access = createFakeAccess(session, now), asks = createFakeAsks(session, now), ownerSettings = createFakeOwnerSettings()
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
@@ -82,6 +89,16 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
       if (!target) return fail(404)
       ;((target.definition as Json).target as Json).webhook = !hook[2]
       return hook[2] ? { jobId: hook[1], revoked: true } : { jobId: hook[1], token: `hook_${'P'.repeat(43)}`, header: 'X-Conker-Hook-Token', path: `/hooks/${hook[1]}` }
+    }
+    const adopt = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/adopt$/)
+    if (adopt && method === 'POST') {
+      const target = jobs().find(item => item.id === adopt[1])
+      if (!target) return fail(404)
+      if (body?.expected_revision !== target.revision) return fail(409)
+      const config = target.definition as Json
+      Object.assign(config, { createdBy: 'owner', adoptedAt: new Date().toISOString() })
+      target.revision = Number(target.revision) + 1
+      return structuredClone(target)
     }
     if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
       const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))

@@ -92,6 +92,9 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     const length = typeof body.text === 'string' ? body.text.length : 0
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }
   }
+  if (/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/adopt$/.test(path)) {
+    return { title: 'Make this job yours', path, target: `Cron job ${parts[5]}`, details: ['Treats it as your own job: it keeps running even if the chat that made it is forgotten.'] }
+  }
   if (path === '/api/control/pi/jobs/agent') {
     return { title: 'Create a cron job', path, target: safeName(body.name) ?? 'New cron job', details: ['Each run, Conker carries out your instructions with its tools. Anything that would change or send something still asks you.'] }
   }

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Make a job Conker made your own.** A cron job page now has a "Make this job mine" button for
+  jobs Conker created. It asks for your password, then treats the job as yours: it keeps running
+  even if the chat that made it is forgotten, and "Made by" says "you". If the job changed in the
+  meantime, it reloads and asks you to try again.
 - **More settings work, and tool settings live in ToolGate.** New-chat privacy, chat names, the
   message queue, the largest upload ("No limit" by default), signing out, new-chat access and the
   local model settings now do what they say. Tool and Terminal limits, safe search, the search
