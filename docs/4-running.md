@@ -100,7 +100,7 @@ conker apply calls call.json # start, steer, interrupt, end, or send a typed cal
 conker speech status         # secret-free host speech readiness
 conker speech configure      # guided host-only speech setup with hidden key input
 conker speech disable        # remove speech configuration and recreate Pi
-conker apply tools tool.json # save, publish, grant, or durably run a workflow
+conker apply tools tool.json # save, publish, grant, or durably run a workflow or tool
 conker setup                  # guided first run; it continues where you left off
 conker setup status           # verified first-run state and next operation
 conker setup run companion --accept # keep the supplied durable harness profile
@@ -295,11 +295,14 @@ Tool workflow inspection includes `tool-capabilities`, `workflow-capabilities`,
 `tool-drafts`, and the identity-bound `tool-draft`, `tool-validation`,
 `tool-publications`, and `tool-runs` views. `conker inspect tool-access DRAFT_ID
 VERSION DIGEST` binds access review to one immutable publication. `conker apply
-tools FILE` accepts only `save`, `publish`, `access`, or `run`. Drafts remain inert;
-publish creates an immutable pinned version but grants and runs nothing. Access and
-run require both the owner credential and the distinct scoped execution credential.
-Runs require a stable `editor_...` action ID, bound version and digest, and at most
-32 KiB of JSON arguments; approval resumes the same recorded action ID. Delete,
+tools FILE` accepts only `save`, `publish`, `access`, `run`, or `run_tool`. Drafts
+remain inert; publish creates an immutable pinned version but grants and runs nothing.
+Access, run and run_tool require both the owner credential and the distinct scoped
+execution credential. Runs require a stable `editor_...` action ID, bound version and
+digest, and at most 32 KiB of JSON arguments; approval resumes the same recorded action
+ID. `run_tool` runs one published tool by hand, as the browser's Run does:
+`{"operation": "run_tool", "id": TOOL_ID, "action_id": "owner_...", "args": {...}}`,
+plus `approval_request_id` when resuming an approval, with the same 32 KiB limit. Delete,
 arbitrary paths, raw credential binding, alternate execution, and automatic retries
 are unavailable.
 
