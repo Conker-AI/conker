@@ -62,6 +62,7 @@ def test_an_older_deployment_gets_the_new_keys_and_keeps_every_other(tmp_path):
         "toolgate_pi",
         "subscriptions_control",
         "subscriptions_inference",
+        "memorygate_import",
     ):
         del older[name]
     older["toolgate_pi"] = "short"
@@ -76,6 +77,7 @@ def test_an_older_deployment_gets_the_new_keys_and_keeps_every_other(tmp_path):
     assert len(keys["toolgate_pi"]) >= 32
     assert env["toolgate"]["TOOLGATE_PI_SERVICE_KEY"] == keys["toolgate_pi"]
     assert env["pi"]["PI_SUBSCRIPTION_KEY"] == keys["subscriptions_inference"]
+    assert env["pi"]["PI_MEMORYGATE_IMPORT_KEY"] == keys["memorygate_import"]
     if sys.platform != "win32":
         assert keyfile.stat().st_mode & 0o777 == 0o600
     # A second run with every key present changes nothing.
@@ -196,6 +198,26 @@ def test_ollama_keeps_a_model_loaded_a_day_unless_the_owner_says_otherwise(tmp_p
         in installer
     )
     assert "\nCONKER_OLLAMA_KEEP_ALIVE=$CONKER_OLLAMA_KEEP_ALIVE\n" in installer
+
+
+def test_pi_knows_the_context_length_ollama_was_given(tmp_path):
+    # Pi caps the owner's models.local.context to it (pi/models/local_settings.py).
+    _, env = generated(tmp_path)
+    assert env["pi"]["PI_OLLAMA_CONTEXT_LENGTH"] == "8192"
+    assert (
+        env["pi"]["PI_OLLAMA_CONTEXT_LENGTH"] == env["ollama"]["OLLAMA_CONTEXT_LENGTH"]
+    )
+
+    services = yaml.safe_load(
+        (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    )["services"]
+    assert services["pi"]["environment"]["PI_OLLAMA_CONTEXT_LENGTH"] == (
+        "${CONKER_MODEL_CONTEXT:-8192}"
+    )
+    assert (
+        services["pi"]["environment"]["PI_OLLAMA_CONTEXT_LENGTH"]
+        == services["ollama"]["environment"]["OLLAMA_CONTEXT_LENGTH"]
+    )
 
 
 def test_the_repository_compose_wires_the_service_keys_to_pi(tmp_path):

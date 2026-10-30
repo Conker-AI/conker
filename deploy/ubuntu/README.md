@@ -89,7 +89,9 @@ part of backups.
    image identities unless their upgrade was separately intended and reviewed.
 5. Build or pull the matching application images, start the existing Compose
    project, and install the refreshed launcher. Never remove state volumes or
-   reset the owner password as part of an ordinary update.
+   reset the owner password as part of an ordinary update. Then run
+   `conker setup import-listener`: MemoryGate creates its listener for imported
+   chats only through its admin API, so preparation can only make the key.
 6. Verify gateway sign-in, service health, real chat, memory, cancellation and
    existing records through the tailnet URL. Keep the verified snapshot and
    previous images until the user journey succeeds. Rollback after a database

@@ -79,9 +79,11 @@ def initialize():
                 "GATEWAY_DASHBOARD_DIR": str(ROOT / "dashboard/dist")},
         },
     }
+    import import_listener
     from service_keys import ensure
     from workspace_memory import prepare
     ensure(config, "http://127.0.0.1:8051")
+    import_listener.ensure(config)
     config, _ = prepare(config)
     # Exclusive creation and owner-only permissions on POSIX. Windows follows
     # the user's profile ACL; this is local development, not a sandbox boundary.

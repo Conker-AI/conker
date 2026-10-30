@@ -68,6 +68,14 @@ def test_tool_draft_files_the_request_in_pi_and_waits_for_it(ubuntu_cli, tmp_pat
     assert filed.returncode == 0 and "Drafting." in filed.stdout
     assert len(json.loads(state.read_text(encoding="utf-8"))) == 1
 
+    state.unlink()
+    answered = ubuntu_cli("tool", "answer", "creq_" + "b" * 32, "All of them")
+    assert answered.returncode == 0, answered.stderr
+    assert [call[:3] for call in json.loads(state.read_text(encoding="utf-8"))] == [
+        ["POST", "/change-requests/creq_" + "b" * 32 + "/retry", {"answer": "All of them"}],
+        ["GET", "/change-requests/creq_" + "b" * 32, None],
+    ]
+
 
 def test_tool_draft_checks_its_arguments_before_docker(ubuntu_cli):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"

@@ -17,6 +17,27 @@ which module versions a release pins.
   ones run with `conker ops run`. When the helper isn't running, the pages say so and give the
   commands that still work on the server.
 
+- **Workflow drafting goes through tool requests.** `python scripts/conker.py workflow draft` is
+  now `conker tool draft` under its older name (Pi drafts in the background; the draft waits in
+  the Inbox), and `workflow from-chat SESSION MESSAGE_ID` files a tool request from your own
+  message. Gone: the terminal questions, `--all-tools`, `--id`, `workflow accept` (Pi's offers)
+  and the `wfp_`/`wfo_` Inbox items; `workflow dismiss creq_...` declines a tool request, and
+  `workflow publish ... --request creq_...` tells Pi the requested tool is live. Needs Pi with
+  the old workflow routes retired (Pi `## Unreleased`).
+- **`conker tool answer creq_... "..."`** answers the drafter's question on a tool request
+  (`needs_detail`, asked in the chat that made it), as the chat and the Inbox do, and waits for
+  the draft. `conker tool draft` exits 4 when the drafter asks.
+
+- **Deploy follow-ups.** Pi now knows the server's Ollama context length in both server layouts
+  (`PI_OLLAMA_CONTEXT_LENGTH`, the same value as `OLLAMA_CONTEXT_LENGTH`), so the local context
+  setting is capped to what the machine was sized for. `conker restart pi`, `conker restart` and
+  the host helper's `services.restart` of Pi restart the services sharing Pi's network namespace
+  (the Claude plan runtime, Laya) after it, instead of leaving them without a network. Imported
+  chats can reach memory: every installer makes the key of MemoryGate's listener for imported chats
+  and gives it to Pi, and creates the listener once MemoryGate answers (`./install.sh`,
+  `workspace.py up`; on the Ubuntu layout `conker setup import-listener` after start, because
+  MemoryGate creates listeners only through its admin API).
+
 - **Release pins:** Pi 0.13.0, ToolGate 0.10.0 (with its sandbox image), MemoryGate 0.7.0. The
   dashboard reads the new job fields (who made a job, whether forgetting a chat turned it off, the
   agent's name) and shows the agent's name on the job page.
