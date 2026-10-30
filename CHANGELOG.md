@@ -6,6 +6,16 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Deploy follow-ups.** Pi now knows the server's Ollama context length in both server layouts
+  (`PI_OLLAMA_CONTEXT_LENGTH`, the same value as `OLLAMA_CONTEXT_LENGTH`), so the local context
+  setting is capped to what the machine was sized for. `conker restart pi`, `conker restart` and
+  the host helper's `services.restart` of Pi restart the services sharing Pi's network namespace
+  (the Claude plan runtime, Laya) after it, instead of leaving them without a network. Imported
+  chats can reach memory: every installer makes the key of MemoryGate's listener for imported chats
+  and gives it to Pi, and creates the listener once MemoryGate answers (`./install.sh`,
+  `workspace.py up`; on the Ubuntu layout `conker setup import-listener` after start, because
+  MemoryGate creates listeners only through its admin API).
+
 - **Release pins:** Pi 0.13.0, ToolGate 0.10.0 (with its sandbox image), MemoryGate 0.7.0. The
   dashboard reads the new job fields (who made a job, whether forgetting a chat turned it off, the
   agent's name) and shows the agent's name on the job page.

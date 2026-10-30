@@ -234,7 +234,17 @@ cmd_restart() {
             exit 2
         }
     fi
-    compose restart "$@" && cmd_status
+    compose restart "$@" || return 1
+    # Restarting Pi (alone or with everything) gives it a new network namespace; the services
+    # that share it restart after it, so they join the new one.
+    if [ "$#" -eq 0 ] || [ "$1" = pi ]; then
+        local services service
+        services=$(pi_network_services) || return 1
+        for service in $services; do
+            compose restart "$service" || return 1
+        done
+    fi
+    cmd_status
 }
 cmd_doctor()  { compose exec -T gateway python -m gateway doctor; }
 cmd_inspect() {
@@ -403,6 +413,16 @@ cmd_setup() {
             [ "$#" -eq 0 ] || { printf 'Use conker setup protection.\n' >&2; exit 2; }
             compose exec -T gateway python -m gateway setup-protection
             ;;
+        import-listener)
+            # MemoryGate's listener for imported chats; MemoryGate creates one only through its
+            # admin API, so this runs on a started stack. The key goes on stdin, never argv.
+            [ "$#" -eq 0 ] || { printf 'Use conker setup import-listener.\n' >&2; exit 2; }
+            command -v python3 >/dev/null 2>&1 || {
+                printf 'Python 3.11+ is required for setup. Install python3, then retry.\n' >&2
+                exit 1
+            }
+            python3 "$SOURCE_ROOT/scripts/import_listener.py" --root "$ROOT" --layout "$LAYOUT"
+            ;;
         configure)
             local step=${1:-}
             shift || true
@@ -543,16 +563,25 @@ except Exception:
     return 1
 }
 
-# Pi and the services that share its network namespace (the source-built layout's Laya and Claude
-# plan sidecars): recreating Pi alone would leave them without a network.
-recreate_pi() {
-    compose up -d --no-deps --force-recreate pi || return 1
+# The services that share Pi's network namespace and run here (the Claude plan runtime, and Laya
+# on the source-built layout). Pi's namespace is new whenever Pi restarts or is recreated, so they
+# follow it each time; otherwise they are left without a network.
+pi_network_services() {
     local services service
     services=$(compose config --services) || return 1
     for service in decisions subscriptions; do
         if printf '%s\n' "$services" | grep -qx "$service"; then
-            compose up -d --no-deps --force-recreate "$service" || return 1
+            printf '%s\n' "$service"
         fi
+    done
+}
+
+recreate_pi() {
+    compose up -d --no-deps --force-recreate pi || return 1
+    local services service
+    services=$(pi_network_services) || return 1
+    for service in $services; do
+        compose up -d --no-deps --force-recreate "$service" || return 1
     done
 }
 
@@ -943,6 +972,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Record the exact ToolGate policy reviewed with inspect boundaries
   ${BOLD}setup${OFF} protection
               Show the saved off-machine backup destination and retention policy
+  ${BOLD}setup${OFF} import-listener
+              Let imported chats reach memory: create MemoryGate's listener (install.sh does it)
   ${BOLD}setup${OFF} configure protection --destination DIR [--retention COPIES]
               Save the policy used by both setup UI and the host verifier
   ${BOLD}setup${OFF} run protection
