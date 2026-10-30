@@ -264,6 +264,15 @@ cmd_tool() {
     python3 "$SOURCE_ROOT/scripts/tool_draft_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
 }
 
+# conker import chatgpt|claude PATH: preview an export, or import it with --yes.
+cmd_import() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for conker import. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    python3 "$SOURCE_ROOT/scripts/import_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
+}
+
 cmd_key() {
     [ "$LAYOUT" = repository ] || unavailable key \
         'This layout has separate scoped credentials; there is no single admin key to reveal.'
@@ -846,6 +855,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Read and change the settings of the Settings screen (--chat CHAT_ID for one chat)
   ${BOLD}tool${OFF} draft "DESCRIPTION" [--no-wait]
               Have Conker make a tool; the draft waits in the Inbox for review
+  ${BOLD}import${OFF} chatgpt|claude PATH [--yes]
+              Preview a ChatGPT or Claude export, then import it as read-only chats
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
   ${BOLD}backup${OFF} [--destination DIR]
               Create a verified snapshot (stops writers during capture)
@@ -931,6 +942,7 @@ case "$command" in
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
     config)    shift; cmd_config "$@" ;;
     tool)      shift; cmd_tool "$@" ;;
+    import)    shift; cmd_import "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
     logs)      [ "$#" -le 3 ] || { usage >&2; exit 2; }; shift; cmd_logs "$@" ;;
     model)     [ "$#" -eq 2 ] || { usage >&2; exit 2; }; shift; cmd_model "$@" ;;
