@@ -436,8 +436,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.3.0 |
-| ToolGate | v0.2.2 |
-| MemoryGate | v0.2.0 |
-| SystemGate | v0.2.2 |
-| Embeddings | v0.1.2 |
+| Pi | v0.15.0 |
+| ToolGate | v0.11.0 |
+| MemoryGate | v0.7.0 |
+| SystemGate | v0.4.0 |
+| Embeddings | v0.1.4 |
