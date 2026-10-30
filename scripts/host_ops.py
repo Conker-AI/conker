@@ -288,6 +288,7 @@ class HostOps:
             names = {row["service"] for row in self._containers() if not row["oneShot"]}
             if arguments["service"] not in names:
                 raise refused("This installation has no service with that name.")
+            # `conker restart pi` also restarts the services sharing Pi's network namespace.
             return self._conker("restart", arguments["service"])
         destination = self._destination()
         if operation.name == "backup.run":

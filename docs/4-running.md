@@ -117,6 +117,9 @@ conker setup run rehearsal --review-memory
 conker setup run rehearsal --start-approval
 conker setup run rehearsal --finish-approval REQUEST_ID
 conker setup run rehearsal --finalize
+conker setup import-listener  # let imported chats reach memory (install.sh does it; Ubuntu: after start)
+conker ops                    # server actions run by the host helper, and how each ended
+conker ops run services.restart service=pi # the same action as the UI, with a receipt
 conker providers status       # secret-free hosted-provider revisions and state
 conker providers claude login # Ubuntu layout: sign in to the Claude plan once, in this terminal
 conker tool draft "Show free disk space" # Pi drafts a tool; the draft waits in the Inbox
@@ -408,7 +411,9 @@ layout): what ran, when, done or failed and why. No secrets, no command output. 
 the action was cut off (the helper restarted, or `conker ops run` was interrupted); it is never
 retried by itself. Run the check the receipt names, then decide. `conker ops` reads the journal
 directly, so it works when the helper is down, and the plain commands (`conker restart SERVICE`,
-`conker backup`) keep working without it.
+`conker backup`) keep working without it. Restarting Pi (`conker restart pi`, the
+`services.restart` action, or `conker restart`) also restarts the services that share its network
+namespace, the Claude plan runtime and Laya, after it, so they are not left without a network.
 
 ## C · Local Windows stack
 
@@ -460,7 +465,7 @@ There are two ways to connect it, and they differ by layout:
 | Layout | Claude plan (subscription) | Anthropic API key (billed per request) |
 |---|---|---|
 | Source-built Ubuntu (`deploy/ubuntu`) | `conker providers claude login`, once | `conker providers set anthropic` |
-| Repository install (`./install.sh`) | Not yet (see below) | `conker providers set anthropic` |
+| Repository install (`./install.sh`) | `./install.sh --claude-plan`, once a release pins the image ([Claude plan runtime](reference/claude-plan-runtime.md)) | `conker providers set anthropic` |
 | Windows workspace (C) | Settings > Providers, or `python scripts/conker.py auth claude login`, after `workspace.py enhance` | Not wired |
 
 **Claude plan on the Ubuntu layout.** The Claude plan runtime is its own service,
@@ -492,11 +497,11 @@ answers with a key only after `conker providers spending on`: until then the pro
 "paid models are disabled", which is why a server with a key can still say not configured.
 Settings > Providers does the same after `conker providers install-ui-control`.
 
-**Repository install, plan sign-in.** Not packaged yet: this layout runs only published,
-digest-pinned images, and `conker update` resolves each to a registry digest and rolls back with
-`--no-build`, so a locally built runtime would break that guarantee. The plan: publish `services/subscriptions` as a release image,
-pin it in `versions.env`, add it in an overlay selected by a capability state (as the agent
-sandbox is), and wire `PI_SUBSCRIPTION_URL`/`KEY` and its two keys in `install.sh`.
+**Repository install, plan sign-in.** The same runtime, from the published image pinned by
+digest in `versions.env`, as the overlay `docker-compose.subscriptions.yml`:
+`./install.sh --claude-plan` adds it and its two keys. Until a release pins the image the
+capability stays deferred and `--claude-plan` changes nothing; use the API key meanwhile.
+Steps, boundaries and the release checklist: [Claude plan runtime](reference/claude-plan-runtime.md).
 
 ### Which command makes a tool
 

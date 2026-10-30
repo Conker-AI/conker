@@ -37,8 +37,13 @@ that are new since the last one. If an import stops halfway, run it again.
 Only your own messages, whole and at most 16,000 characters; the other assistant's replies stay in
 the archive. Nothing is offered when you skipped memory at setup or new chats start private. Your
 words reach MemoryGate through its import listener, as an outside source with the normal
-admission rules; until that listener is set up they wait. Pi's guide (`docs/imports.md` in Pi) has
-the one-time listener setup (`PI_MEMORYGATE_IMPORT_SOURCE`, `PI_MEMORYGATE_IMPORT_KEY`).
+admission rules; until that listener is set up they wait. The installers set it up: each makes
+the listener's key and gives it to Pi (`PI_MEMORYGATE_IMPORT_SOURCE`, `PI_MEMORYGATE_IMPORT_KEY`),
+and because MemoryGate creates a listener only through its admin API, the listener itself is made
+once MemoryGate runs: `./install.sh` does it after its health check, `workspace.py up` after
+MemoryGate answers, and on the source-built Ubuntu layout run `conker setup import-listener` once
+after starting (again any time; an existing listener keeps whether you turned it off). Pi's guide
+(`docs/imports.md` in Pi) explains the listener itself.
 
 ## Limits and refusals
 

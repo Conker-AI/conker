@@ -32,7 +32,9 @@ same service from the published, digest-pinned image in `docker-compose.subscrip
 release pins the image, an Anthropic API key is the way to connect Claude there. See
 [Claude plan runtime](claude-plan-runtime.md). Both layouts give MemoryGate and ToolGate their
 own keys for Pi's `/inference` at `http://pi:8050`, with Pi holding only
-`PI_SERVICE_KEYS_SHA256`.
+`PI_SERVICE_KEYS_SHA256`. Both give Pi Ollama's context length (`PI_OLLAMA_CONTEXT_LENGTH`) and the
+source and key of MemoryGate's listener for imported chats; `install.sh` creates the listener
+after its health check, and the Ubuntu layout with `conker setup import-listener` after start.
 
 Laya remains one explicit packaging difference. Ubuntu is a source-build deployment
 and builds its decision sidecar from the reviewed Companion source. The repository
