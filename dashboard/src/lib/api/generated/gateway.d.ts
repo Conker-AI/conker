@@ -461,7 +461,7 @@ export interface paths {
         /**
          * Artifact Download
          * @description One artifact as a file: DOCX, PDF, PPTX or XLSX, or CSV for a table and JSON for a
-         *     chart, diagram or media.
+         *     chart, diagram or media. An optional `version` (1 to 100) exports an earlier version.
          */
         get: operations["artifact_download_api_control_pi_artifacts__identity__download_get"];
         put?: never;
