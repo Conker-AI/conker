@@ -6,6 +6,22 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
+  steps, progress or a callout, drawn with Conker's own components from an `openui` block
+  ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or
+  a sent form is your next message, sent like the composer's; nothing else runs. A part that cannot
+  be drawn says "Couldn't show this part" with its source one tap away. Settings, Chats,
+  Interactive answers: Auto (hosted models only), On, Off. Needs the Pi with the pinned catalog
+  prompt; CI checks the two match. The dashboard installs with `ignore-scripts`, so no dependency
+  runs code (or install telemetry) at install time.
+
+- **Eleven shell settings now change the screen they name, at once.** Corners, how the sidebar
+  starts, which places it shows, bigger focus outlines, keyboard shortcuts and the search keys,
+  how many waiting items Home shows, the Home greeting (with an "encouraging" line only when you
+  decided something today), the plan allowance tile and ring, the completed tasks on Home, and the
+  memory map. Screens read them through one `useServerSetting` hook that checks each saved value
+  against the settings registry and falls back to its default.
+
 - **19 more settings work now.** About you (what Conker calls you, pronouns, about you, people,
   goals, units, wake, sleep, your week, focus), instructions for every chat, simpler wording,
   project sources, research depth and recency, results per search, web page size, which plan

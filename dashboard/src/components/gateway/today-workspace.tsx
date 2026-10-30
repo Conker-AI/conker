@@ -16,7 +16,8 @@ import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { useOwnerProfile } from '@/lib/owner-profile'
 import { cn } from '@/lib/utils'
-import { buildHome, HOME_CHART_DAYS, type HomeNeed, type PlanRow } from './home-model'
+import { useServerSetting } from '@/settings/server-setting'
+import { buildHome, earnedLine, HOME_CHART_DAYS, HOME_NEEDS_LIMIT, type HomeNeed, type PlanRow } from './home-model'
 import { usePlanUsage } from './home-plan'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
@@ -133,21 +134,30 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
   const { status: setupStatus, error: setupError } = useGatewaySetupStatus(control)
   const [plan, reloadPlan] = usePlanUsage(control.plans)
   const setupSummary = setupStatus && setupStatus.state !== 'complete' ? summarizeSetup(setupStatus) : null
+  // Settings > Home and Projects: how many waiting items, the greeting, and which tiles show.
+  const needsLimit = useServerSetting('home.needs_count', HOME_NEEDS_LIMIT)
+  const greetingStyle = useServerSetting<'none' | 'short' | 'encouraging'>('home.greeting', 'short')
+  const planRing = useServerSetting<'home' | 'composer' | 'both' | 'off'>('home.plan_ring', 'both')
+  const showPlan = planRing === 'home' || planRing === 'both', showTasks = useServerSetting('projects.tasks_home', true)
 
-  const home = buildHome(data)
+  const home = buildHome(data, undefined, needsLimit)
   const missing = (source: Source) => !!failed?.sources.has(source) && !loaded.has(source)
   const waiting = (source: Source) => loading && !loaded.has(source)
   const retry = () => { void load(); void reloadPlan() }
   const allFailed = !!failed && failed.sources.size === sources.length && loaded.size === 0
   const peak = Math.max(0, ...home.runDays.map(item => item.count))
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
+  const counted = (source: Source) => !waiting(source) && !missing(source)
+  const earned = greetingStyle === 'encouraging' && counted('requests') && counted('proposals') ? earnedLine(home.decidedToday, counted('runs') ? home.runsToday : 0) : null
+  const layout = !showPlan && !showTasks ? 'no-plan-done' : !showPlan ? 'no-plan' : !showTasks ? 'no-done' : undefined
 
   return <GatewayPageFrame>
     <div className="home-overview mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-5">
       <PageHeader actionsOnly title="Home" actions={<WorkspaceAction iconOnly aria-label="Refresh Home" title="Refresh Home" disabled={loading} onClick={retry}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
-      <div className="min-w-0">
-        <p className="text-xl font-semibold leading-7">{greeting()}{name}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
+      <div className="min-w-0 space-y-1">
+        {greetingStyle !== 'none' && <p className="text-xl font-semibold leading-7">{greeting()}{name}</p>}
+        <p className="text-sm text-muted-foreground">{new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
+        {earned && <p className="text-sm">{earned}</p>}
       </div>
       {(setupSummary || setupError) && <Link to="/setup" className="flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
         <CircleDashed className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -157,7 +167,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
       </Link>}
       {allFailed && <InlineError error={failed.error} onRetry={() => Promise.all([load(), reloadPlan()])} />}
 
-      <div className="home-bento">
+      <div className="home-bento" data-layout={layout}>
         <Tile area="needs" label="Needs you" icon={<Inbox />} count={missing('requests') ? null : home.needsTotal}
           link={home.needsTotal > 0 && <TileLink to="/inbox">{home.needsTotal > home.needs.length ? `All ${home.needsTotal} in Inbox` : 'Open Inbox'}</TileLink>} className="home-needs">
           {waiting('requests') ? <TileLoading rows={3} /> : missing('requests') ? <TileFailed onRetry={retry} />
@@ -166,7 +176,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
           {missing('proposals') && !missing('requests') && <p className="text-xs text-muted-foreground">Ideas didn’t load; decisions above are current.</p>}
         </Tile>
 
-        <Tile area="plan" label="Plan allowance" icon={<Gauge />}>
+        {showPlan && <Tile area="plan" label="Plan allowance" icon={<Gauge />}>
           {plan.status === 'loading' ? <TileLoading rows={3} /> : plan.status === 'failed' ? <TileFailed onRetry={() => void reloadPlan()} />
             : plan.status === 'unsupported' ? <><p className="text-sm font-medium">Not connected yet</p><p className="text-sm text-muted-foreground">Your server doesn’t report plan limits yet. They show here after the next Conker update.</p></>
               : !plan.rows.length ? <><p className="text-sm font-medium">No readings yet</p><p className="text-sm text-muted-foreground">Limits show here once Conker reads a connected Claude or ChatGPT plan.</p></>
@@ -174,7 +184,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
                   <ul className="flex flex-col gap-3">{plan.rows.map(row => <PlanLine key={row.key} row={row} />)}</ul>
                   {plan.checkedAt !== null && <p className="mt-auto text-xs text-muted-foreground">{plan.stale ? `Last checked ${when(plan.checkedAt)} · may be out of date` : `Checked ${when(plan.checkedAt)}`}</p>}
                 </>}
-        </Tile>
+        </Tile>}
 
         <Tile area="coming" label="Coming up" icon={<CalendarClock />} link={<TileLink to="/jobs">Cron jobs</TileLink>}>
           {waiting('jobs') ? <TileLoading /> : missing('jobs') ? <TileFailed onRetry={retry} />
@@ -197,7 +207,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
           </>}
         </Tile>
 
-        <Tile area="done" label="Completed" icon={<ListChecks />} count={missing('tasks') ? null : home.completed.filter(item => item.today).length || null} link={<TileLink to="/activity">Tasks</TileLink>}>
+        {showTasks && <Tile area="done" label="Completed" icon={<ListChecks />} count={missing('tasks') ? null : home.completed.filter(item => item.today).length || null} link={<TileLink to="/activity">Tasks</TileLink>}>
           {waiting('tasks') ? <TileLoading rows={4} /> : missing('tasks') ? <TileFailed onRetry={retry} />
             : home.completed.length ? <ul className="flex flex-col divide-y">{home.completed.map(task => <li key={task.id}>
               <Link to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} className="flex min-w-0 items-start gap-3 py-2.5 text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
@@ -207,7 +217,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
               </Link>
             </li>)}</ul>
               : <p className="text-sm text-muted-foreground">No completed tasks yet.</p>}
-        </Tile>
+        </Tile>}
 
         <Tile area="decided" label="Decided by you" icon={<ShieldCheck />}>
           {waiting('requests') ? <TileLoading rows={1} /> : missing('requests') ? <TileFailed onRetry={retry} /> : <>

@@ -7,11 +7,17 @@ import type { Setting, SettingValue } from './registry'
 const PREFIX = 'conker.setting.'
 export const DEVICE_EVENT = 'conker-device-setting'
 
-export function readDeviceValue(id: string, fallback: SettingValue): SettingValue {
+/** What this browser holds for a setting, or `undefined` when it holds nothing. */
+export function storedDeviceValue(id: string): unknown {
   try {
     const raw = window.localStorage.getItem(PREFIX + id)
-    return raw === null ? fallback : JSON.parse(raw) as SettingValue
-  } catch { return fallback }
+    return raw === null ? undefined : JSON.parse(raw)
+  } catch { return undefined }
+}
+
+export function readDeviceValue(id: string, fallback: SettingValue): SettingValue {
+  const value = storedDeviceValue(id)
+  return value === undefined ? fallback : value as SettingValue
 }
 
 export function readDeviceSetting(setting: Setting): SettingValue {
@@ -28,7 +34,10 @@ export function writeDeviceSetting(setting: Setting, value: SettingValue) {
 
 /** A server setting remembered here too, so the page paints with it before the server answers. */
 export function cacheServerSetting(id: string, value: unknown) {
-  try { window.localStorage.setItem(PREFIX + 'cache.' + id, JSON.stringify(value)) } catch { /* optional */ }
+  try {
+    if (value === undefined) window.localStorage.removeItem(PREFIX + 'cache.' + id)
+    else window.localStorage.setItem(PREFIX + 'cache.' + id, JSON.stringify(value))
+  } catch { /* optional */ }
 }
 
 export function cachedServerSetting(id: string): unknown {

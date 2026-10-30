@@ -2,6 +2,7 @@ import { unified } from "unified"
 import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
+import { isAnswerUiLanguage } from "@/components/answer-ui/fence"
 
 /** Generated links never get to execute a protocol or silently load remote media. */
 export function safeAnswerUrl(value: string | undefined): string | undefined {
@@ -29,7 +30,7 @@ export function csvFromRows(rows: string[][]): string {
   }).join(",")).join("\r\n")
 }
 
-type TextNode = { type: string; value?: string; alt?: string; url?: string; children?: TextNode[]; position?: { start: { offset?: number } } }
+type TextNode = { type: string; value?: string; alt?: string; url?: string; lang?: string | null; children?: TextNode[]; position?: { start: { offset?: number } } }
 const reader = unified().use(remarkParse).use(remarkGfm).use(remarkMath)
 
 /** Read semantic cell contents before KaTeX creates parallel visual/MathML trees. */
@@ -49,9 +50,10 @@ export function tableRowsFromMarkdown(markdown: string, startOffset?: number): s
   return (table?.children || []).map(row => (row.children || []).map(cellText))
 }
 
-/** Speech reads content, without markup delimiters, citation tokens or UI controls. */
+/** Speech reads content, without markup delimiters, citation tokens or UI controls (interactive parts included). */
 export function readableAnswer(markdown: string): string {
   const visit = (node: TextNode): string => {
+    if (node.type === "code" && isAnswerUiLanguage(node.lang ?? "")) return ""
     if (node.type === "html" || node.type === "definition" || node.type === "footnoteDefinition" || node.type === "footnoteReference") return ""
     if (node.type === "image") return node.alt ? `Image: ${node.alt}` : ""
     if (node.type === "link" && citationId(node.url)) return ""

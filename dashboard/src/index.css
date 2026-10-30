@@ -190,6 +190,19 @@
   scroll-behavior: auto !important;
 }
 
+/* Corners (Settings, Appearance): Soft keeps the theme's radius; Sharp and Round use the template's
+   own smallest and largest radius steps (config/theme-customizer-constants.ts). */
+:root[data-corners="sharp"] { --radius: 0.3rem; }
+:root[data-corners="round"] { --radius: 1rem; }
+
+/* Bigger focus outlines (Settings, Accessibility): a 3 px outline in the text color around whatever
+   has keyboard focus, on top of its usual ring; the text color keeps 3:1 against every surface
+   (ledger: Non-text contrast; WCAG 2.4.13 asks for at least 2 px). */
+:root[data-focus="large"] :focus-visible {
+  outline: 3px solid var(--foreground);
+  outline-offset: 2px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
