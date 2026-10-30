@@ -66,7 +66,7 @@ export function GatewayServerServices({ client }: { client: GatewayHostOpsClient
     {error && !status ? <HostReadError error={error} onRetry={read} commands={commands} />
       : !status ? <CollectionLoading label="Reading your services…" />
         : <>
-          <WorkspaceSection divided={false} title={servicesSummary(status)} description={`Read ${when(now)}. Open a service to restart it; it asks for your password first.`} />
+          <WorkspaceSection divided={false} title={servicesSummary(status, lasting.filter(item => restartingNow(actions, item.service)).map(item => item.service))} description={`Read ${when(now)}. Open a service to restart it; it asks for your password first.`} />
           {error ? <HostReadError error={error} onRetry={read} commands={commands} /> : null}
           {hold && <Alert variant="warning"><TriangleAlert /><AlertTitle>Restarts are waiting</AlertTitle><AlertDescription>{hold}</AlertDescription></Alert>}
           {actions.busy && 'operation' in actions.busy && actions.busy.operation !== 'services.restart' && <p role="status" className="flex items-center gap-2 text-sm"><RunStateMark state="working" />{receiptTitle(actions.busy)} Restarts wait until it ends.</p>}
@@ -78,6 +78,10 @@ export function GatewayServerServices({ client }: { client: GatewayHostOpsClient
     <p className="text-sm text-muted-foreground">Every container on this server, also ones outside Conker: <Link to="/system?tab=containers" className="font-medium text-foreground underline underline-offset-4">Containers</Link></p>
   </div></GatewayPageFrame>
 }
+
+/** A restart is being sent or running, so the service's last read state is old news. */
+const restartingNow = (actions: ServerActions, service: string) =>
+  actions.latest(`service:${service}`)?.outcome === 'working' || actions.attempts[`service:${service}`]?.state === 'sending'
 
 function StateIcon({ item }: { item: HostService }) {
   if (item.oneShot) return <CircleMinus className="size-4 text-muted-foreground" />
@@ -95,7 +99,7 @@ function ServiceRow({ now, item, open, actions, hold, finding, checking, onCheck
   const recent = receipt && (receipt.outcome === 'working' || now - Date.parse(receiptTime(receipt)) < DAY) ? receipt : null
   const blocked = !!actions.busy || !!hold || item.oneShot || !!attempt && attempt.state === 'lost'
   // The last read predates the restart, so its "Running" is old news until the list is read again.
-  const state = recent?.outcome === 'working' || attempt?.state === 'sending' ? 'Restarting…'
+  const state = restartingNow(actions, item.service) ? 'Restarting…'
     : recent?.outcome === 'done' && now < Date.parse(receiptTime(recent)) ? 'Restarted, reading its state…'
       : serviceState(item, now)
   const trailing = attempt?.state === 'lost' ? <span className="flex items-center gap-1.5"><RunStateMark state="unknown" />Can’t tell</span>
