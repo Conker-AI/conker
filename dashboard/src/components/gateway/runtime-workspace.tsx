@@ -553,7 +553,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       else if (destination === 'tools') navigate('/tools')
     },
     refreshMemory: memoryRead.refresh,
-    copy: copyMessage, saveArtifact, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
+    copy: copyMessage, saveArtifact, exportAnswer: control ? (message, format) => control.exports.answer(message.sessionId, message.id, format) : undefined, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
     send: submit, stop: stopAnswer, checkHistory,
     check: () => attempt?.requestId ? checkSubmission() : checkHistory(),
     retrySameRequest: () => { if (selected && attempt?.requestId) return dispatchSubmission(attempt.requestedSessionId ?? selected, attempt.text, attempt.requestId, attempt.taskBinding) },

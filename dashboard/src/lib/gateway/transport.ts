@@ -10,7 +10,10 @@ export const memoryForgetErrorCodes = ['revision_conflict', 'work_active', 'forg
 export type MemoryForgetErrorCode = typeof memoryForgetErrorCodes[number]
 export const memoryCorrectionErrorCodes = ['not_configured', 'unavailable', 'not_found', 'request_conflict', 'change_pending', 'work_active', 'in_progress', 'invalid_request', 'revision_conflict'] as const
 type MemoryCorrectionErrorCode = typeof memoryCorrectionErrorCodes[number]
-type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode
+// The host helper's refusals (ADR-0014). Its messages are fixed plain words from its operation table.
+export const hostOpsErrorCodes = ['host_unavailable', 'host_busy', 'host_operation_refused', 'operation_id_conflict', 'invalid_host_operation', 'unknown_operation_id'] as const
+type HostOpsErrorCode = typeof hostOpsErrorCodes[number]
+type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -37,13 +40,16 @@ export class GatewayError extends Error {
   readonly status?: number
   readonly turnId?: string
   readonly code?: GatewayErrorCode
-  constructor(kind: GatewayErrorKind, status?: number, turnId?: string, code?: GatewayErrorCode) {
+  /** Only the host helper's own plain-word reason; never other upstream text. */
+  readonly detail?: string
+  constructor(kind: GatewayErrorKind, status?: number, turnId?: string, code?: GatewayErrorCode, detail?: string) {
     super(messages[kind])
     this.name = 'GatewayError'
     this.kind = kind
     this.status = status
     this.turnId = turnId
     this.code = code
+    this.detail = detail
   }
 }
 export function gatewayError(error: unknown): GatewayError {
@@ -118,6 +124,8 @@ routes.POST.unshift(/^\/api\/control\/pi\/projects$/, /^\/api\/control\/pi\/proj
 // Artifact list responses are metadata-only; content is bounded to explicit detail and inert export routes.
 routes.GET.unshift(/^\/api\/control\/pi\/artifacts(?:\/artifact_[0-9a-f]{32}(?:\/export)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/artifacts(?:\/from-message)?$/, /^\/api\/control\/pi\/artifacts\/artifact_[0-9a-f]{32}\/(?:versions|restore|archive)$/)
+// Imported ChatGPT and Claude chats are read-only archive reads; previewing and importing a file go through file-transfer.ts.
+routes.GET.unshift(/^\/api\/control\/pi\/imports(?:\/chats(?:\/imp_[0-9a-f]{32})?)?$/)
 // Job views redact target inputs, allowance identities and receipts; browser writes use exact recovery actions only.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|adopt|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
@@ -157,6 +165,11 @@ routes.POST.unshift(/^\/api\/control\/pi\/characters\/companion\/(?:save|import|
 // Host inventory is a fixed read-only ToolGate observation. A refresh is a new durable request.
 routes.GET.unshift(/^\/api\/control\/pi\/system\/inventory\/(?:configured\/(?:services|containers)|[A-Za-z0-9_-]{16,100})$/)
 routes.POST.unshift(/^\/api\/control\/pi\/system\/inventory$/, /^\/api\/control\/pi\/system\/inventory\/[A-Za-z0-9_-]{16,100}\/resume$/)
+// Server actions (ADR-0014): two reads with the session (POST /host/read), receipts, and actions
+// that ask for the password bound to the exact id, operation and arguments.
+const hostOpsRoute = /^\/api\/host\/(?:read|ops(?:\/[A-Za-z0-9_.:-]{16,128})?)$(?![\s\S])/
+routes.GET.unshift(/^\/api\/host\/ops(?:\/[A-Za-z0-9_.:-]{16,128})?$(?![\s\S])/)
+routes.POST.unshift(/^\/api\/host\/(?:read|ops)$(?![\s\S])/)
 // Files are operator-configured, directory-listing-only roots. No content or mutation route is browser reachable.
 routes.GET.unshift(/^\/api\/control\/pi\/system\/files\/roots$/, /^\/api\/control\/pi\/system\/files\/listings\/[A-Za-z0-9_-]{16,100}$/)
 routes.POST.unshift(/^\/api\/control\/pi\/system\/files\/listings$/, /^\/api\/control\/pi\/system\/files\/listings\/[A-Za-z0-9_-]{16,100}\/resume$/)
@@ -180,6 +193,8 @@ conversationWrites.push(/^\/api\/control\/pi\/owner\/settings$/)
 conversationWrites.push(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
 // Dismissing an AI job's note hides one line; it grants and runs nothing.
 conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
+// Reading the server's services or backup folder changes nothing.
+conversationWrites.push(/^\/api\/host\/read$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
 /** Writes the signed-in session is enough for: conversation writes, and turning lockdown on. */
 export const needsNoPassword = (path: string, body?: Record<string, unknown>) => isConversationWrite(path) || lockdownRoute.test(path) && body?.enabled === true
@@ -224,7 +239,7 @@ export function snapshotGatewayOperation(path: string, body: unknown, method: 'P
   if ((!path.startsWith('/api/') && !isBrowserSessionRoute(path)) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
   return { method, path, body: JSON.parse(jsonBody(body, characterOperation({ method, path, body }) ? GATEWAY_CHARACTER_LIMIT : correctionOperation({ method, path, body }) ? 128000 : GATEWAY_JSON_LIMIT)) as Record<string, unknown> }
 }
-async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
+export async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
   if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
     await response.body?.cancel().catch(() => undefined)
     throw new GatewayError('invalid-response')
@@ -260,7 +275,7 @@ async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): P
   } catch { throw new GatewayError('invalid-response') }
 }
 /** Tells the connection banner whether the server answered, without the transport importing UI state. */
-function reportReachability(reachable: boolean) {
+export function reportReachability(reachable: boolean) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
     window.dispatchEvent(new CustomEvent('conker:gateway-reachability', { detail: reachable }))
   }
@@ -301,7 +316,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
     },
     async request(path: string, options: GatewayRequest & { csrfToken?: string; verificationToken?: string } = {}): Promise<Record<string, unknown>> {
       const method = options.method ?? 'GET'
-      if ((method !== 'GET' && method !== 'POST' && method !== 'PUT') || typeof path !== 'string' || path.length > 2048 || (!/^\/[A-Za-z0-9/_.-]+$/.test(path) && !correctionRoute.test(path)) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
+      if ((method !== 'GET' && method !== 'POST' && method !== 'PUT') || typeof path !== 'string' || path.length > 2048 || (!/^\/[A-Za-z0-9/_.-]+$/.test(path) && !correctionRoute.test(path) && !hostOpsRoute.test(path)) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (correctionRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
       if (nativeSessionsRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
       if (codexSessionsRoute.test(path) && options.query !== undefined && (path !== codexSessionsPath || Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'archived' ? typeof value !== 'boolean' : key === 'cursor' ? typeof value !== 'string' || value.length > 8192 || !/^[A-Za-z0-9_-]+$(?![\s\S])/.test(value) : true))) throw new GatewayError('validation')
@@ -338,6 +353,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         if (!response.ok) {
           let turnId: string | undefined
           let code: GatewayErrorCode | undefined
+          let detail: string | undefined
           if ([409, 503].includes(response.status) && /^\/api\/pi\/(sessions\/[A-Za-z0-9_-]+\/turns|turns\/[A-Za-z0-9_-]+\/resume)$/.test(path)) {
             try {
               const value = await responseObject(response)
@@ -359,8 +375,19 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && (value.detail.code === 'invalid_history_cursor' || value.detail.code === 'invalid_history_request')) code = value.detail.code
             } catch { /* Only fixed directory codes survive; upstream text is never displayed. */ }
+          } else if (hostOpsRoute.test(path) && [404, 409, 422, 503].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              // The helper's {error, message}, passed through as is, or wrapped as {detail: {code, message}}.
+              const body = object(value.detail) ? value.detail : value
+              const found = typeof body.error === 'string' ? body.error : body.code
+              if (hostOpsErrorCodes.includes(found as HostOpsErrorCode)) {
+                code = found as HostOpsErrorCode
+                if (typeof body.message === 'string' && body.message.length <= 300 && /^[^\p{Cc}\p{Cf}]+$/u.test(body.message)) detail = body.message
+              }
+            } catch { /* Fixed host codes and the helper's short reason only. */ }
           } else await response.body?.cancel().catch(() => undefined)
-          throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code)
+          throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code, detail)
         }
         return await responseObject(response, path.startsWith('/auth/') ? GATEWAY_JSON_LIMIT : correctionRoute.test(path) ? path.includes('/memories/') ? 256 * 1024 : GATEWAY_JSON_LIMIT : path === '/api/pi/sessions/history' ? GATEWAY_HISTORY_LIMIT : codexSessionsRoute.test(path) ? path === codexSessionsPath ? 2 * 1024 * 1024 : GATEWAY_JSON_LIMIT : nativeSessionsRoute.test(path) ? path === '/api/host/claude/sessions' ? 1024 * 1024 : path.endsWith('/output') ? 512 * 1024 : GATEWAY_JSON_LIMIT : characterResponseRoute.test(path) ? GATEWAY_CHARACTER_LIMIT : GATEWAY_RESPONSE_LIMIT)
       } catch (error) {

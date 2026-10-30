@@ -10,14 +10,18 @@ const aiJob = z.object({
 }).passthrough()
 // Pi's own check notes are plain strings; ToolGate's check answers objects with a message.
 const issue = z.union([z.string().max(2000), z.object({ message: z.string().max(2000) }).passthrough()]).transform(value => typeof value === 'string' ? value : value.message)
-const described = { description: z.string().max(4000) }
+// What the drafter and the owner said to each other; it can appear on any status once a question was answered.
+const conversation = z.array(z.object({ role: z.enum(['builder', 'owner']), content: z.string().max(20000) }).passthrough()).max(100)
+const described = { description: z.string().max(4000), conversation: conversation.nullish() }
 /**
  * A tool request fills in while Conker drafts it in the background: drafting, then ready (the
- * document and its steps in plain words) or failed (why). Requests filed before drafting moved to
- * the background have no status and are ready.
+ * document and its steps in plain words), failed (why) or needs_detail (the drafter asked him a
+ * question; `askedIn` is the chat it was posted in, set once it was). Requests filed before
+ * drafting moved to the background have no status and are ready.
  */
 const toolDraft = z.union([
   z.object({ ...described, status: z.literal('drafting') }).passthrough(),
+  z.object({ ...described, status: z.literal('needs_detail'), question: z.string().max(4000).nullish(), askedIn: z.string().min(1).max(200).nullish() }).passthrough(),
   z.object({ ...described, status: z.literal('failed'), error: z.string().max(2000).optional() }).passthrough(),
   z.object({ ...described, status: z.literal('ready').optional(), document: z.record(z.string(), z.unknown()), issues: z.array(issue).max(20), steps: z.array(z.string().max(500)).max(60).default([]) }).passthrough(),
 ])
@@ -40,12 +44,16 @@ const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/), toolName
 
 export type ChangeRequest = z.infer<typeof request>
 export type ToolDraftRequest = Extract<ChangeRequest, { kind: 'tool_draft' }>
-export type ToolDraftStatus = 'drafting' | 'ready' | 'failed'
+export type ToolDraftStatus = 'drafting' | 'ready' | 'failed' | 'needs_detail'
 
-/** Where a tool request is: Conker drafting it, a draft ready to review, or a failed attempt. */
+/** Where a tool request is: Conker drafting it, asking him something, a draft ready to review, or a failed attempt. */
 export function toolDraftStatus(request: ToolDraftRequest): ToolDraftStatus {
-  return request.payload.status === 'drafting' || request.payload.status === 'failed' ? request.payload.status : 'ready'
+  const status = request.payload.status
+  return status === 'drafting' || status === 'failed' || status === 'needs_detail' ? status : 'ready'
 }
+
+/** The drafter's question, when it asked one: it waits for his answer. */
+export const isAsking = (request: ChangeRequest) => request.kind === 'tool_draft' && toolDraftStatus(request) === 'needs_detail'
 
 /** Conker is still working on it: nothing to decide yet. */
 export const isDrafting = (request: ChangeRequest) => request.kind === 'tool_draft' && toolDraftStatus(request) === 'drafting'
@@ -90,6 +98,13 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     /** Drafts a failed tool request again, with new words when he changed them. Creates nothing real. */
     async retry(id: string, description?: string): Promise<ToolDraftRequest> {
       return toolRequest(await auth.request(`${path(id)}/retry`, { method: 'POST', body: description === undefined ? {} : { description: words(description) } }))
+    },
+    /**
+     * His answer to the drafter's question (1..4000 characters): Conker drafts again with it. Pi
+     * answers 409 `not_asking` when the card is no longer waiting, so the caller reads it again.
+     */
+    async answer(id: string, text: string): Promise<ToolDraftRequest> {
+      return toolRequest(await auth.request(`${path(id)}/retry`, { method: 'POST', body: { answer: words(text) } }))
     },
     /**
      * A new tool request from his own words (Tools, "Describe a new tool"); drafting starts in the
