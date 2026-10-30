@@ -62,6 +62,7 @@ async function checkPreviewRecovery() {
     if (name === './fake-gateway-providers') return load('src/dev/fake-gateway-providers.ts', inner => {
       if (inner === '@/lib/gateway/transport') return transport
       if (inner === './fake-gateway-drafting') return load('src/dev/fake-gateway-drafting.ts', drafting => { if (drafting === '@/lib/tool-workspace') return load('src/lib/tool-workspace.ts', () => require('zod')); throw Error(`Unexpected preview import: ${drafting}`) })
+      if (inner === './fake-gateway-host') return load('src/dev/fake-gateway-host.ts', host => { if (host === '@/lib/gateway/transport') return transport; throw Error(`Unexpected preview import: ${host}`) })
       throw Error(`Unexpected preview import: ${inner}`)
     })
     throw Error(`Unexpected preview import: ${name}`)

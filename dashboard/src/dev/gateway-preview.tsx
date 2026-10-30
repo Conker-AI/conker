@@ -58,7 +58,7 @@ function services() {
   const auth = { request: async (path, options = {}) => {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     failIfAsked(path)
-    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path) || fake.correctionVerificationEnabled(path))) {
+    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path) || fake.correctionVerificationEnabled(path) || fake.hostVerificationEnabled(path))) {
       await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)
     }
     return files.handles(path) ? files.request(path, options) : fake.request(path, options)
@@ -75,7 +75,7 @@ function services() {
   }, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock' | 'download' | 'upload'>
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
-    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: (askPassword || fake.subscriptionVerificationEnabled('/api/host/chatgpt') || fake.credentialVerificationEnabled('/api/host/providers') || fake.nativeSessionVerificationEnabled('/api/host/claude/sessions/preview/stop') || fake.correctionVerificationEnabled('/api/control/pi/memory/corrections')) ? Date.now() / 1000 + 86400 : null, setupRequired: false },
+    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: (askPassword || fake.subscriptionVerificationEnabled('/api/host/chatgpt') || fake.credentialVerificationEnabled('/api/host/providers') || fake.nativeSessionVerificationEnabled('/api/host/claude/sessions/preview/stop') || fake.correctionVerificationEnabled('/api/control/pi/memory/corrections') || fake.hostVerificationEnabled('/api/host/ops')) ? Date.now() / 1000 + 86400 : null, setupRequired: false },
     bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
   })), { dispose: () => undefined })
   return { fake, verification, workspace: {
