@@ -58,16 +58,23 @@
         {
           "id": "tools.timeout",
           "title": "Tool time limit",
-          "description": "How long one tool call may run.",
+          "description": "The most one tool call may take; tools with a shorter limit keep theirs.",
           "type": "number",
-          "default": 60,
+          "default": 180,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 5,
-          "max": 600,
+          "max": 180,
           "step": 5,
-          "unit": "seconds"
+          "unit": "seconds",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "tool_seconds"
+          }
         },
         {
           "id": "tools.result_limit",
@@ -134,14 +141,21 @@
           "title": "Command time limit",
           "description": "How long one Terminal command may run.",
           "type": "number",
-          "default": 30,
+          "default": 100,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 5,
           "max": 100,
           "step": 5,
-          "unit": "seconds"
+          "unit": "seconds",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "terminal_seconds"
+          }
         },
         {
           "id": "tools.terminal.memory",
@@ -151,11 +165,18 @@
           "default": 512,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "min": 128,
-          "max": 8192,
-          "step": 128,
-          "unit": "MB"
+          "effect": "live",
+          "min": 64,
+          "max": 512,
+          "step": 64,
+          "unit": "MB",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "terminal_memory_mb"
+          }
         },
         {
           "id": "tools.terminal.cpu",
@@ -165,24 +186,38 @@
           "default": 1,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "min": 1,
-          "max": 8,
-          "step": 1
+          "effect": "live",
+          "min": 0.1,
+          "max": 1,
+          "step": 0.1,
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "terminal_cpus"
+          }
         },
         {
           "id": "tools.terminal.workspace",
           "title": "Workspace size",
-          "description": "How much the agent's workspace may hold.",
+          "description": "How much the agent's workspace may hold; lowering it never deletes files.",
           "type": "number",
-          "default": 2000,
+          "default": 2048,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "min": 100,
-          "max": 20000,
-          "step": 100,
-          "unit": "MB"
+          "effect": "live",
+          "min": 16,
+          "max": 2048,
+          "step": 16,
+          "unit": "MB",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "terminal_workspace_mb"
+          }
         },
         {
           "id": "tools.terminal.keep",
@@ -314,7 +349,7 @@
           "default": "moderate",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "off",
@@ -328,7 +363,14 @@
               "value": "strict",
               "label": "Strict"
             }
-          ]
+          ],
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "web_safe_search"
+          }
         },
         {
           "id": "tools.web.results",
@@ -346,13 +388,21 @@
         {
           "id": "tools.web.region",
           "title": "Search region",
-          "description": "A region code for local results, such as il or us; empty searches everywhere.",
+          "description": "A two-letter country code for local results, such as il or us; empty searches everywhere.",
           "type": "text",
           "default": "",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "max_length": 10
+          "effect": "live",
+          "max_length": 2,
+          "pattern": "^(?:[A-Za-z]{2})?$",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "web_region"
+          }
         },
         {
           "id": "tools.web.engines",

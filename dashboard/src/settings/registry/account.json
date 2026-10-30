@@ -36,13 +36,17 @@
         {
           "id": "session.idle_timeout_minutes",
           "title": "Sign out when idle",
-          "description": "Signs this browser out after this long without use.",
+          "description": "Signs this browser out this long after you last entered your password.",
           "type": "select",
           "default": 15,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
+            {
+              "value": 0,
+              "label": "Server's limit"
+            },
             {
               "value": 5,
               "label": "5 minutes"
@@ -57,7 +61,7 @@
             },
             {
               "value": 60,
-              "label": "1 hour"
+              "label": "1 hour, if the server allows"
             }
           ],
           "home": {

@@ -99,7 +99,6 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <p className="text-sm leading-6">Owner: {owner}</p>
             <p className="text-sm leading-6 text-muted-foreground">This is an open fixture preview. Authentication and password changes need a backend; no password is stored.</p>
-            <OwnerPreferencesEditor section="account" />
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" render={<Link to="/setup" />}>Preview first-run setup</Button>
               <Button variant="outline" render={<Link to="/login" />}>Preview login</Button>
@@ -107,7 +106,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </RouteSection>
-      <RouteSection value="proactivity"><Card><CardHeader><CardTitle><h2>Proactivity</h2></CardTitle><CardDescription>When to interrupt, how much to suggest, and the limits you want. Configured only; delivery and enforcement are not connected.</CardDescription></CardHeader><CardContent><OwnerPreferencesEditor section="proactivity" /></CardContent></Card></RouteSection>
+      <RouteSection value="proactivity"><Card><CardHeader><CardTitle><h2>Proactivity</h2></CardTitle><CardDescription>When to interrupt, how much to suggest, and the limits you want. Configured only; delivery and enforcement are not connected.</CardDescription></CardHeader><CardContent><OwnerPreferencesEditor /></CardContent></Card></RouteSection>
     <ImportModal open={importOpen} onOpenChange={setImportOpen} onImport={theme => {
       preferences.setSelectedTheme("")
       preferences.setSelectedTweakcnTheme("")

@@ -67,9 +67,9 @@ async function steps(context, width, theme) {
   await choose('appearance.corners', 'Round')
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--radius').trim()), '1rem', 'Round corners apply at once')
   if (desktop) assert.equal(await sidebar.getAttribute('data-state'), 'expanded')
-  await choose('appearance.sidebar', 'Hide on small screens')
+  await choose('appearance.sidebar', 'Collapse on small screens')
   if (desktop) {
-    assert.equal(await sidebar.getAttribute('data-state'), 'expanded', '"Hide on small screens" keeps it open at 1280')
+    assert.equal(await sidebar.getAttribute('data-state'), 'expanded', '"Collapse on small screens" keeps it open at 1280')
     await page.setViewportSize({ width: 900, height: 900 })
     await page.waitForFunction(() => document.querySelector('[data-slot="sidebar"][data-state]')?.getAttribute('data-state') === 'collapsed')
     await page.setViewportSize({ width, height: 900 })
@@ -89,7 +89,6 @@ async function steps(context, width, theme) {
   // Accessibility, keyboard, Home, projects and memory.
   await go('/settings?group=accessibility'); await toggle('accessibility.focus')
   assert.equal(await page.evaluate(() => document.documentElement.dataset.focus), 'large')
-  await go('/settings?group=keyboard'); await choose('keyboard.palette', 'Ctrl+P')
   await go('/settings?group=home')
   await control('home.needs_count').fill('1'); await control('home.needs_count').press('Enter'); await changed('home.needs_count')
   await choose('home.greeting', 'Encouraging, when earned')
@@ -114,14 +113,11 @@ async function steps(context, width, theme) {
   assert.equal(await page.evaluate(() => getComputedStyle(document.activeElement).outlineWidth), '3px', 'the focused item has the 3 px outline')
   await page.screenshot({ path: name('4-home-focus') })
 
-  // Search opens with Ctrl+P; the sidebar button names the new keys.
+  // Search opens with Ctrl+K (Ctrl+P is not offered: it is the browser's Print); the sidebar button names the keys.
   await page.locator('body').click({ position: { x: width - 5, y: 5 } }).catch(() => {})
   await page.keyboard.press('Control+k')
-  await page.waitForTimeout(300)
-  assert.equal(await page.locator('[data-slot="command-dialog-popup"]').count(), 0, 'Ctrl+K no longer opens search')
-  await page.keyboard.press('Control+p')
   await page.locator('[data-slot="command-dialog-popup"]').waitFor()
-  await page.screenshot({ path: name('5-search-ctrl-p') })
+  await page.screenshot({ path: name('5-search-ctrl-k') })
   await page.keyboard.press('Escape')
   await page.locator('[data-slot="command-dialog-popup"]').waitFor({ state: 'detached' }).catch(() => {})
 
@@ -133,7 +129,7 @@ async function steps(context, width, theme) {
     await page.screenshot({ path: name('6-sidebar') })
     await page.keyboard.press('Escape')
   } else {
-    assert.equal(await page.getByRole('button', { name: 'Search (Ctrl P)' }).count(), 1)
+    assert.equal(await page.getByRole('button', { name: 'Search (Ctrl K)' }).count(), 1)
     await page.screenshot({ path: name('6-sidebar') })
   }
 
@@ -151,9 +147,9 @@ async function steps(context, width, theme) {
   assert.equal(await ring.count(), 0, 'the plan ring left the message box')
   await snap('8-chat')
 
-  // Keyboard shortcuts off: Ctrl+P and Ctrl+B do nothing, the button no longer names keys.
+  // Keyboard shortcuts off: Ctrl+K and Ctrl+B do nothing, the button no longer names keys.
   await go('/settings?group=keyboard'); await toggle('keyboard.shortcuts')
-  await page.keyboard.press('Control+p')
+  await page.keyboard.press('Control+k')
   await page.waitForTimeout(300)
   assert.equal(await page.locator('[data-slot="command-dialog-popup"]').count(), 0, 'shortcuts off: search stays closed')
   if (desktop) {

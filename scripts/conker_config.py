@@ -6,6 +6,8 @@ with no home of its own lives in Pi's owner settings document under its id. Noth
 `get` reads the home document, `set` changes one field of it and writes it back with the
 document's revision, so a concurrent change is refused (HTTP 409) instead of overwritten. Device
 settings (theme, text size) live in each browser, and custom ones have their own Settings screen.
+Settings for how tools run live in ToolGate's own document, reached with the owner key the gateway
+uses; its lockdown is a switch with no revision.
 """
 
 from __future__ import annotations
@@ -26,6 +28,10 @@ OWNER_SETTINGS = {
     "key": "values",
     "flat": True,
 }
+# ToolGate's lockdown: its answer is the document (`lockdown`, `reason`, `changed_by`) and a save
+# sends {"enabled": value}, with no revision. Turning it off from the host needs no password: the
+# host's owner key is the owner, as for every other home here.
+LOCKDOWN = "/v2/owner/lockdown"
 DATE = re.compile(r"\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
 MODEL_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
@@ -152,9 +158,16 @@ def parse(setting: dict, raw: str):
             return False
         raise ValueError("Use on or off.")
     if kind in {"number", "slider"}:
-        if not re.fullmatch(r"-?\d{1,12}", text):
+        step = setting.get("step", 1)
+        if isinstance(step, float) and not step.is_integer():
+            # A step like 0.1 (processors) takes decimals, kept to the step's places.
+            if not re.fullmatch(r"\d{1,6}(?:\.\d{1,6})?", text):
+                raise ValueError("Use a number such as 0.5.")
+            number = round(float(text), len(str(step).split(".")[1]))
+        elif not re.fullmatch(r"-?\d{1,12}", text):
             raise ValueError("Use a whole number.")
-        number = int(text)
+        else:
+            number = int(text)
         if "min" in setting and number < setting["min"]:
             raise ValueError(f"Use at least {setting['min']}.")
         if "max" in setting and number > setting["max"]:
@@ -226,18 +239,50 @@ def home(setting: dict, chat: str | None) -> str:
     return path
 
 
+def service(setting: dict) -> str:
+    """The service the request goes to: ToolGate's owner documents take the owner key."""
+    return (
+        "toolgate-owner"
+        if setting["home"]["service"] == "toolgate"
+        else setting["home"]["service"]
+    )
+
+
 def read(request, config, setting: dict, chat: str | None):
     """(revision, document) of the setting's home; the document is None when nothing is saved."""
-    value = request(config, setting["home"]["service"], home(setting, chat))
+    value = request(config, service(setting), home(setting, chat))
+    if setting["home"]["path"] == LOCKDOWN:
+        return 0, value
     return value.get("revision", 0), value.get(setting["home"]["key"])
+
+
+def at_rest(setting: dict, value):
+    """A ToolGate number back at its default is saved as null: today's limit, which follows
+    ToolGate's own when a release changes it."""
+    toolgate = setting["home"]["service"] == "toolgate"
+    return (
+        None
+        if toolgate and setting["type"] == "number" and value == setting["default"]
+        else value
+    )
+
+
+def shown(setting: dict, value):
+    """A ToolGate number left null keeps today's limit, which is the registry default."""
+    return (
+        setting["default"]
+        if value is None and setting["home"]["service"] == "toolgate"
+        else value
+    )
 
 
 def row(setting: dict, document) -> dict:
     flat = setting["home"].get("flat", False)
-    current = (
+    current = shown(
+        setting,
         value_at(document, setting["home"]["field"], flat)
         if document is not None
-        else None
+        else None,
     )
     stored = (
         flat and isinstance(document, dict) and setting["home"]["field"] in document
@@ -306,6 +351,20 @@ def config_operation(args, config, request) -> int:
             new = setting["default"]
         else:
             new = parse(setting, args.value)
+        if setting["home"]["path"] == LOCKDOWN:
+            saved = request(
+                config,
+                service(setting),
+                home(setting, chat),
+                {setting["home"]["key"]: new},
+            )
+            value = {
+                "id": setting["id"],
+                "value": saved.get(setting["home"]["field"]),
+                "effect": setting["effect"],
+            }
+            print(json.dumps(value, indent=2, ensure_ascii=False))
+            return 0
         revision, document = read(request, config, setting, chat)
         if document is None:
             # Only budget can start them: a window and reserve have no default to guess.
@@ -315,7 +374,7 @@ def config_operation(args, config, request) -> int:
             )
         saved = request(
             config,
-            setting["home"]["service"],
+            service(setting),
             home(setting, chat),
             {
                 "expected_revision": revision,
@@ -326,16 +385,23 @@ def config_operation(args, config, request) -> int:
                         if key != setting["home"]["field"]
                     }
                     if flat and args.operation == "reset"
-                    else with_value(document, setting["home"]["field"], new, flat)
+                    else with_value(
+                        document, setting["home"]["field"], at_rest(setting, new), flat
+                    )
                 ),
             },
+            # ToolGate replaces its whole document with PUT; Pi's homes take POST.
+            **({"method": "PUT"} if setting["home"]["service"] == "toolgate" else {}),
         )
         value = {
             "id": setting["id"],
             "value": setting["default"]
             if flat and args.operation == "reset"
-            else value_at(
-                saved.get(setting["home"]["key"]), setting["home"]["field"], flat
+            else shown(
+                setting,
+                value_at(
+                    saved.get(setting["home"]["key"]), setting["home"]["field"], flat
+                ),
             ),
             "revision": saved.get("revision"),
             "effect": setting["effect"],

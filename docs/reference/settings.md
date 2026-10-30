@@ -26,21 +26,21 @@ Who you are, where you are and how your days run.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Time zone**<br>`you.time_zone` | Your time zone for schedules, reminders and the daily ritual. (saved, not used yet) | `Asia/Jerusalem` | owner settings |
+| **Time zone**<br>`you.time_zone` | Your time zone for schedules, reminders and the daily ritual. (applies right away) | `Asia/Jerusalem` | pi `/owner/preferences` `quietHours.timeZone` |
 | **Follow this device's time zone**<br>`you.time_zone_auto` | Updates your time zone when you travel. (saved, not used yet) | on | owner settings |
 | **App language**<br>`you.app_language` | The language of Conker's screens. Choices: English, Hebrew, Russian. (saved, not used yet) | English | owner settings |
 | **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (saved, not used yet) | Same as your message | owner settings |
 | **Time format**<br>`you.time_format` | How times are written. Choices: 24-hour, 12-hour. (saved, not used yet) | 24-hour | owner settings |
 | **Date format**<br>`you.date_format` | How dates are written. Choices: 28 Oct 2026, Oct 28, 2026, 2026-10-28. (saved, not used yet) | 28 Oct 2026 | owner settings |
 | **First day of the week**<br>`you.week_start` | Where weeks start in calendars and weekly plans. Choices: Sunday, Monday. (saved, not used yet) | Sunday | owner settings |
-| **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Metric, Imperial. (applies from the next message) | Metric | owner settings |
+| **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Not set, Metric, Imperial. (applies from the next message) | Not set | owner settings |
 
 ### Your rhythm
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Wake time**<br>`you.wake` | When your day usually starts. (applies from the next message) | `07:00` | owner settings |
-| **Sleep time**<br>`you.sleep` | When your day usually ends. (applies from the next message) | `23:00` | owner settings |
+| **Wake time**<br>`you.wake` | When your day usually starts. (applies from the next message) | none | owner settings |
+| **Sleep time**<br>`you.sleep` | When your day usually ends. (applies from the next message) | none | owner settings |
 | **Your week**<br>`you.week` | Fixed parts of your week, like school, work or training, in your own words. (applies from the next message) | empty | owner settings |
 | **Best focus time**<br>`you.focus` | When Conker should plan your hardest work. Choices: Morning, Afternoon, Evening, Night, It varies. (applies from the next message) | It varies | owner settings |
 
@@ -52,7 +52,7 @@ How Conker looks on your screens.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Theme** (this device)<br>`appearance.theme` | Light or dark, or follow this device. Choices: Follow this device, Light, Dark. (applies right away) | Dark | this browser |
+| **Theme** (this device)<br>`appearance.theme` | Light or dark, or follow this device. Choices: Follow this device, Light, Dark. (applies right away) | Follow this device | this browser |
 | **Accent color**<br>`appearance.accent` | The color of main buttons and of things that need you. Choices: Neutral, Blue, Indigo, Purple, Magenta. (applies right away) | Neutral | owner settings |
 | **Switch theme automatically**<br>`appearance.theme_switch` | Changes between light and dark during the day. Choices: Off, At sunrise and sunset, At set times. (saved, not used yet) | Off | owner settings |
 | **Background tint**<br>`appearance.tint` | A light tint behind the content. Choices: None, Warm, Cool. (saved, not used yet) | None | owner settings |
@@ -75,12 +75,12 @@ How Conker looks on your screens.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Density**<br>`appearance.density` | How much fits on the screen. Choices: Comfortable, Compact, Spacious. (saved, not used yet) | Comfortable | owner settings |
-| **Corners**<br>`appearance.corners` | How round cards and buttons are. Choices: Sharp, Soft, Round. (saved, not used yet) | Soft | owner settings |
+| **Corners**<br>`appearance.corners` | How round cards and buttons are. Choices: Sharp, Soft, Round. (applies right away) | Soft | owner settings |
 | **Chat width**<br>`appearance.chat_width` | How wide messages can grow on large screens. Choices: Narrow, Medium, Wide, Full width. (saved, not used yet) | Medium | owner settings |
 | **Message style**<br>`appearance.message_style` | How messages are drawn in chats. Choices: Flat, Bubbles, Cards. (saved, not used yet) | Flat | owner settings |
 | **Portraits in chat**<br>`appearance.portraits` | Shows the agent's portrait next to its messages. (saved, not used yet) | on | owner settings |
-| **Sidebar**<br>`appearance.sidebar` | How the sidebar starts on large screens. Choices: Open, Collapsed, Hide on small screens. (saved, not used yet) | Open | owner settings |
-| **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Cron jobs, Server. (saved, not used yet) | Projects, Memory, Agents, Tools, Cron jobs, Server | owner settings |
+| **Sidebar**<br>`appearance.sidebar` | How the sidebar starts on large screens. Choices: Open, Collapsed, Collapse on small screens. (applies right away) | Open | owner settings |
+| **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Cron jobs, Server. (applies right away) | Projects, Memory, Agents, Tools, Cron jobs, Server | owner settings |
 | **Chat views**<br>`appearance.chat_views` | Which views a chat's title bar offers. Choices: Context, Thinking, Files, Browser, Terminal, Logs. (saved, not used yet) | Context, Thinking, Files, Browser, Terminal, Logs | owner settings |
 
 ### Motion and sound
@@ -110,10 +110,10 @@ What your first screen shows.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Tiles on Home**<br>`home.tiles` | Which tiles Home shows. Choices: Needs you, Today, Plan allowance, Running now, Coming up, Recent chats, Ideas, Done today, Your goals, Server health, Spending. (saved, not used yet) | Needs you, Plan allowance, Coming up, Done today | owner settings |
-| **Waiting items on Home**<br>`home.needs_count` | How many waiting items Home shows before the rest stay in the Inbox. 1 to 5. (saved, not used yet) | `3` | owner settings |
-| **Greeting**<br>`home.greeting` | The line at the top of Home. Choices: None, Short, Encouraging, when earned. (saved, not used yet) | Short | owner settings |
+| **Waiting items on Home**<br>`home.needs_count` | How many waiting items Home shows before the rest stay in the Inbox. 1 to 5. (applies right away) | `3` | owner settings |
+| **Greeting**<br>`home.greeting` | The line at the top of Home. Choices: None, Short, Encouraging, when earned. (applies right away) | Short | owner settings |
 | **Quick actions**<br>`home.quick_actions` | Buttons on Home for things you do often. Choices: New chat, Voice note, Add a memory, Run a tool, New cron job. (saved, not used yet) | New chat, Add a memory | owner settings |
-| **Plan usage ring**<br>`home.plan_ring` | Where your plan allowance ring shows. Choices: On Home, In the message box, Both, Off. (saved, not used yet) | Both | owner settings |
+| **Plan usage ring**<br>`home.plan_ring` | Where your plan allowance ring shows. Choices: On Home, In the message box, Both, Off. (applies right away) | Both | owner settings |
 
 ## Your day
 
@@ -143,9 +143,9 @@ Ways to make Conker easier to see, hear and use.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Bigger focus outlines**<br>`accessibility.focus` | Makes the keyboard focus easier to see. (saved, not used yet) | off | owner settings |
+| **Bigger focus outlines**<br>`accessibility.focus` | Makes the keyboard focus easier to see. (applies right away) | off | owner settings |
 | **Larger buttons**<br>`accessibility.large_targets` | Makes every button and link easier to tap. (saved, not used yet) | off | owner settings |
-| **Captions for voice**<br>`accessibility.captions` | Shows the words while Conker speaks. (saved, not used yet) | off | owner settings |
+| **Captions for voice**<br>`accessibility.captions` | Shows the words while Conker speaks. (saved, not used yet) | on | owner settings |
 | **Simpler wording**<br>`accessibility.simple_words` | Asks Conker to answer in short sentences and plain words. (applies from the next message) | off | owner settings |
 
 ## Keyboard
@@ -156,8 +156,8 @@ Shortcuts for working fast.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Keyboard shortcuts**<br>`keyboard.shortcuts` | Turns Conker's keyboard shortcuts on or off. (saved, not used yet) | on | owner settings |
-| **Search everything**<br>`keyboard.palette` | The keys that open search for places, chats and actions. Choices: Ctrl+K, Ctrl+P. (saved, not used yet) | Ctrl+K | owner settings |
+| **Keyboard shortcuts**<br>`keyboard.shortcuts` | Turns Conker's keyboard shortcuts on or off. (applies right away) | on | owner settings |
+| **Search everything**<br>`keyboard.palette` | The keys that open search for places, chats and actions. Choices: Ctrl+K. (applies right away) | Ctrl+K | owner settings |
 | **Shortcut list on ?**<br>`keyboard.cheat_sheet` | Pressing ? shows every shortcut. (saved, not used yet) | on | owner settings |
 | **Approve with Enter**<br>`keyboard.approve_enter` | Lets you approve the open Inbox card with Enter; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 
@@ -183,7 +183,7 @@ How requests, questions and the daily ritual work.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Requests wait**<br>`inbox.wait` | How long a request waits for your answer. Choices: Until you answer, One hour, One day, One week. (saved, not used yet) | Until you answer | owner settings |
-| **Time to run after you approve**<br>`inbox.run_window` | How long an approved action has to start. 5 to 60 minutes. (saved, not used yet) | `15` minutes | owner settings |
+| **Time to run after you approve**<br>`inbox.run_window` | How long an approved action has to start. 1 to 15 minutes. (applies right away) | `15` minutes | toolgate `/v2/owner/settings` `run_window_minutes` |
 | **Same request twice**<br>`inbox.duplicates` | What happens when Conker asks for the same action again. Choices: One card, Separate cards. (saved, not used yet) | One card | owner settings |
 
 ### Cards
@@ -243,17 +243,17 @@ How new chats start and how chats look and behave.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Mode**<br>`chats.default_mode` | How hard Conker works in a new chat. Choices: Auto, Fast, Balanced, Deep. (saved, not used yet) | Auto | owner settings |
-| **Access**<br>`chats.default_access` | What Conker may do without asking in a new chat. Choices: Agent's setting, Ask me, AI decides, Full access. (saved, not used yet) | Agent's setting | owner settings |
-| **Private by default**<br>`chats.default_incognito` | New chats remember nothing and stay out of search. (saved, not used yet) | off | owner settings |
+| **Access**<br>`chats.default_access` | What Conker may do without asking in a new chat. Choices: Agent's setting, Ask me, AI decides, Full access. (applies right away) | Agent's setting | pi `/owner/preferences` `newChatAccess` |
+| **Private by default**<br>`chats.default_incognito` | New chats remember nothing and stay out of search. (applies right away) | off | owner settings |
 | **A new chat starts with**<br>`chats.start` | What you see in an empty chat. Choices: Nothing, A greeting, Today's summary, A suggested request. (saved, not used yet) | Nothing | owner settings |
 
 ### Chat names
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Name chats automatically**<br>`chats.names.auto` | Gives each chat a short name and keeps it current; your own name stops it. (saved, not used yet) | on | owner settings |
+| **Name chats automatically**<br>`chats.names.auto` | Gives each chat a short name and keeps it current; your own name stops it. (applies from the next message) | on | owner settings |
 | **Rename when**<br>`chats.names.when` | When an automatic name changes. Choices: After the first answer, When the topic changes. (saved, not used yet) | When the topic changes | owner settings |
-| **Name style**<br>`chats.names.style` | How automatic names look. Choices: Short, Descriptive, With an emoji. (saved, not used yet) | Short | owner settings |
+| **Name style**<br>`chats.names.style` | How automatic names look. Choices: Short, Descriptive, With an emoji. (applies from the next message) | Short | owner settings |
 
 ### Suggestions
 
@@ -272,8 +272,8 @@ How new chats start and how chats look and behave.
 | **Send with**<br>`chats.send_with` | The key that sends a message. Choices: Enter, Ctrl+Enter. (saved, not used yet) | Enter | owner settings |
 | **Spell check**<br>`chats.spellcheck` | Marks spelling mistakes while you type. (saved, not used yet) | on | owner settings |
 | **Paste images as attachments**<br>`chats.paste_images` | Turns a pasted picture into an attachment. (saved, not used yet) | on | owner settings |
-| **Queue messages**<br>`chats.queue` | Lets you send more messages while Conker is still working. (saved, not used yet) | on | owner settings |
-| **Queued messages**<br>`chats.queue_max` | How many messages can wait in one chat. 1 to 5. (saved, not used yet) | `5` | owner settings |
+| **Queue messages**<br>`chats.queue` | Lets you send more messages while Conker is still working. (applies right away) | on | owner settings |
+| **Queued messages**<br>`chats.queue_max` | How many messages can wait in one chat. 1 to 5. (applies right away) | `5` | owner settings |
 
 ### Reading
 
@@ -378,7 +378,7 @@ How Conker searches the web and checks its answers.
 | **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (saved, not used yet) | `5` | owner settings |
 | **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (applies from the next message) | Any age | owner settings |
 | **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (saved, not used yet) | none | owner settings |
-| **Sites to skip**<br>`research.skip_sites` | Sites Conker never uses as sources. (saved, not used yet) | none | owner settings |
+| **Sites to skip**<br>`research.skip_sites` | Sites Conker never uses as sources or reads, such as example.com. (applies right away) | none | toolgate `/v2/owner/settings` `web_skip_sites` |
 
 ### Review
 
@@ -451,7 +451,7 @@ Uploads, answer shape and exports.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Largest upload**<br>`files.upload_limit` | The largest file you can attach. 1 to 500 MB. (saved, not used yet) | `25` MB | owner settings |
+| **Largest upload**<br>`files.upload_limit` | The largest file you can attach. Choices: No limit, 10 MB, 25 MB, 50 MB, 100 MB, 250 MB, 500 MB. (applies right away) | No limit | owner settings |
 | **Allowed files**<br>`files.types` | Which kinds of files you can attach. Choices: Images, Documents, Code, Audio, Video, Archives. (saved, not used yet) | Images, Documents, Code, Audio | owner settings |
 | **Keep uploads**<br>`files.keep_days` | Deletes uploads after this long; 0 keeps them. 0 to 3650 days. (saved, not used yet) | `0` days | owner settings |
 | **Add uploads to the project**<br>`files.to_project` | Files attached in a project chat join the project. (saved, not used yet) | on | owner settings |
@@ -513,9 +513,9 @@ Which AI answers, thinks and helps, and how.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Keep loaded**<br>`models.local.keep_loaded` | How long a local model stays in memory after use. 0 to 1440 minutes. (saved, not used yet) | `5` minutes | owner settings |
-| **Local context size**<br>`models.local.context` | How much text a local model reads at once. Choices: 4,096, 8,192, 16,384, 32,768. (saved, not used yet) | 8,192 | owner settings |
-| **CPU threads**<br>`models.local.threads` | How many processor threads local models use; 0 picks automatically. 0 to 64. (saved, not used yet) | `0` | owner settings |
+| **Keep loaded**<br>`models.local.keep_loaded` | How long a local model stays in memory after use. Choices: Not set, 5 minutes, 30 minutes, 1 hour, 4 hours, 12 hours, 1 day, Until a restart. (applies right away) | Not set | owner settings |
+| **Local context size**<br>`models.local.context` | How much text a local model reads at once. Choices: Not set, 2,048, 4,096, 8,192, 16,384, 32,768. (applies right away) | Not set | owner settings |
+| **CPU threads**<br>`models.local.threads` | How many processor threads local models use; 0 picks automatically. 0 to 64. (applies right away) | `0` | owner settings |
 | **Requests at once**<br>`models.local.parallel` | How many requests a local model handles together. 1 to 8. (saved, not used yet) | `1` | owner settings |
 | **Warm up at start**<br>`models.local.warm_up` | Loads the talking model when the server starts. (saved, not used yet) | off | owner settings |
 
@@ -562,7 +562,7 @@ What Conker remembers about you and for how long.
 | **Review new memories**<br>`memory.review` | How you check what Conker remembered. Choices: Never, One by one, Weekly digest. (saved, not used yet) | Never | owner settings |
 | **Forget events after**<br>`memory.event_days` | Forgets past events after this long; 0 keeps them. 0 to 3650 days. (saved, not used yet) | `0` days | owner settings |
 | **When memories disagree**<br>`memory.conflicts` | What happens when a new memory contradicts an old one. Choices: Ask you, Keep the newer, Keep both. (saved, not used yet) | Ask you | owner settings |
-| **Memory map**<br>`memory.map` | Shows memories as a map of connected things. (saved, not used yet) | on | owner settings |
+| **Memory map**<br>`memory.map` | Shows memories as a map of connected things. (applies right away) | on | owner settings |
 
 ## Proactivity and cron jobs
 
@@ -616,7 +616,7 @@ How Conker's tools, Terminal, browser and web search behave.
 |---|---|---|---|
 | **Tools that change your things**<br>`tools.defaults.change` | What new tools that change your things start with. Choices: Ask me, AI decides, Full access. (saved, not used yet) | AI decides | owner settings |
 | **Tools that send or post**<br>`tools.defaults.outward` | What new tools that reach other people start with. Choices: Ask me, AI decides. (saved, not used yet) | Ask me | owner settings |
-| **Tool time limit**<br>`tools.timeout` | How long one tool call may run. 5 to 600 seconds. (saved, not used yet) | `60` seconds | owner settings |
+| **Tool time limit**<br>`tools.timeout` | The most one tool call may take; tools with a shorter limit keep theirs. 5 to 180 seconds. (applies right away) | `180` seconds | toolgate `/v2/owner/settings` `tool_seconds` |
 | **Largest tool result**<br>`tools.result_limit` | The most a tool result may hold. 1 to 1024 KB. (saved, not used yet) | `64` KB | owner settings |
 | **Tool screens**<br>`tools.apps` | Whether tools may show their own small screens in a chat. Choices: Auto, Off. (saved, not used yet) | Auto | owner settings |
 | **Tools Conker drafts**<br>`tools.drafts` | What happens to a tool Conker drafts for you. Choices: Ask you, Save as a draft. (saved, not used yet) | Ask you | owner settings |
@@ -625,10 +625,10 @@ How Conker's tools, Terminal, browser and web search behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Command time limit**<br>`tools.terminal.time` | How long one Terminal command may run. 5 to 100 seconds. (saved, not used yet) | `30` seconds | owner settings |
-| **Command memory**<br>`tools.terminal.memory` | How much memory one Terminal command may use. 128 to 8192 MB. (saved, not used yet) | `512` MB | owner settings |
-| **Command CPUs**<br>`tools.terminal.cpu` | How many processors one Terminal command may use. 1 to 8. (saved, not used yet) | `1` | owner settings |
-| **Workspace size**<br>`tools.terminal.workspace` | How much the agent's workspace may hold. 100 to 20000 MB. (saved, not used yet) | `2000` MB | owner settings |
+| **Command time limit**<br>`tools.terminal.time` | How long one Terminal command may run. 5 to 100 seconds. (applies right away) | `100` seconds | toolgate `/v2/owner/settings` `terminal_seconds` |
+| **Command memory**<br>`tools.terminal.memory` | How much memory one Terminal command may use. 64 to 512 MB. (applies right away) | `512` MB | toolgate `/v2/owner/settings` `terminal_memory_mb` |
+| **Command CPUs**<br>`tools.terminal.cpu` | How many processors one Terminal command may use. 0.1 to 1. (applies right away) | `1` | toolgate `/v2/owner/settings` `terminal_cpus` |
+| **Workspace size**<br>`tools.terminal.workspace` | How much the agent's workspace may hold; lowering it never deletes files. 16 to 2048 MB. (applies right away) | `2048` MB | toolgate `/v2/owner/settings` `terminal_workspace_mb` |
 | **Keep the workspace**<br>`tools.terminal.keep` | When the agent's workspace is cleared. Choices: Keep it, Clear daily, Clear after each chat. (saved, not used yet) | Keep it | owner settings |
 | **Your own terminal**<br>`tools.terminal.owner` | A terminal for you on the server, apart from the agents' Terminal. (saved, not used yet) | off | owner settings |
 
@@ -646,9 +646,9 @@ How Conker's tools, Terminal, browser and web search behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Safe search**<br>`tools.web.safe_search` | Filters adult results from web searches. Choices: Off, Moderate, Strict. (saved, not used yet) | Moderate | owner settings |
+| **Safe search**<br>`tools.web.safe_search` | Filters adult results from web searches. Choices: Off, Moderate, Strict. (applies right away) | Moderate | toolgate `/v2/owner/settings` `web_safe_search` |
 | **Results per search**<br>`tools.web.results` | How many results one web search returns. 3 to 8. (applies from the next message) | `8` | owner settings |
-| **Search region**<br>`tools.web.region` | A region code for local results, such as il or us; empty searches everywhere. (saved, not used yet) | empty | owner settings |
+| **Search region**<br>`tools.web.region` | A two-letter country code for local results, such as il or us; empty searches everywhere. (applies right away) | empty | toolgate `/v2/owner/settings` `web_region` |
 | **Search engines**<br>`tools.web.engines` | Which engines web search asks; empty uses the defaults. (saved, not used yet) | none | owner settings |
 
 ## Money and limits
@@ -708,7 +708,7 @@ What Conker may do without asking you, and what always asks.
 |---|---|---|---|
 | **Always ask about**<br>`access.always_ask_kinds` | Kinds of actions that ask you every time. (saved, not used yet) | Banking, Passwords, Government, Health | owner settings |
 | **Pause everything**<br>`access.pause` | Stops every cron job and anything that would run without you. (saved, not used yet) | off | owner settings |
-| **Lockdown**<br>`access.lockdown` | Lets Conker only read until you turn it off. (saved, not used yet) | off | owner settings |
+| **Lockdown**<br>`access.lockdown` | Stops every tool and workflow run, read-only ones too, until you turn it off. (applies right away) | off | toolgate `/v2/owner/lockdown` `lockdown` |
 | **Ask for your password**<br>`access.reverify` | How often changes ask for your password again. Choices: Every time, Once every 10 minutes, Once per sign-in. (saved, not used yet) | Every time | owner settings |
 | **After outside content**<br>`access.outside` | How long a chat stays stricter after it read someone else's text. Choices: For the whole chat, Until you clear it. (saved, not used yet) | For the whole chat | owner settings |
 
@@ -720,7 +720,7 @@ What is kept, for how long, and what leaves your server.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Helper models in new chats**<br>`privacy.helpers` | Lets helper models (naming, summaries) see new chats. (saved, not used yet) | on | owner settings |
+| **Helper models in new chats**<br>`privacy.helpers` | Lets helper models (naming, summaries) see new chats. (applies right away) | on | owner settings |
 | **Hide secrets from online models**<br>`privacy.redact` | Removes passwords, keys and card numbers before anything goes to an online model. (saved, not used yet) | off | owner settings |
 
 ### How long things are kept
@@ -739,7 +739,7 @@ Your sign-in, devices and how Conker protects them.
 |---|---|---|---|
 | **Signed-in browsers**<br>`account.devices` | Every browser signed in to Conker; sign one out. (applies right away) | its own screen | Settings screen |
 | **Sign out**<br>`account.sign_out` | Ends this browser's session; your chats and settings stay on your server. (applies right away) | its own screen | Settings screen |
-| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out after this long without use. Choices: 5 minutes, 15 minutes, 30 minutes, 1 hour. (saved, not used yet) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
+| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out this long after you last entered your password. Choices: Server's limit, 5 minutes, 15 minutes, 30 minutes, 1 hour, if the server allows. (applies right away) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
 
 ### Security
 
@@ -788,7 +788,7 @@ How tasks and projects are tracked.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Tasks on Home**<br>`projects.tasks_home` | Shows open tasks on Home. (saved, not used yet) | on | owner settings |
+| **Tasks on Home**<br>`projects.tasks_home` | Shows your completed tasks on Home. (applies right away) | on | owner settings |
 | **Tasks from chats**<br>`projects.tasks_from_chats` | Whether Conker turns things you say into tasks. Choices: Ask you, Never. (saved, not used yet) | Ask you | owner settings |
 
 ### Projects

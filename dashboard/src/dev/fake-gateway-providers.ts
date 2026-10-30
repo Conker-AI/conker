@@ -2,7 +2,7 @@ import { GatewayError } from '@/lib/gateway/transport'
 import { createFakeChangeRequests } from './fake-gateway-drafting'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST'; body?: Json; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }
 
 /** Preview-only provider credential status; scenarios come from sessionStorage, nothing leaves the browser. */
 export function createFakeProviderCredentials() {
@@ -66,7 +66,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts') || path === '/api/pi/tools') return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
-    if (path.startsWith('/api/control/pi/owner/')) return ownerSettings(path, method, body, fail)
+    if (path.startsWith('/api/control/pi/owner/') || path === '/api/owner/tool-settings' || path === '/api/owner/lockdown') return ownerSettings(path, method, body, fail)
     if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
     if (path === '/api/control/pi/jobs/agent/notes' && method === 'GET') return { schemaVersion: 1, results: structuredClone(notes) }
     const dismiss = path.match(/^\/api\/control\/pi\/jobs\/agent\/notes\/(note_[0-9a-f]{32})\/dismiss$/)
@@ -97,12 +97,25 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
   }
 }
 
-/** Preview-only settings document and preferences, revision-checked like Pi's; changes stay in this tab. */
+/** Preview-only settings document, preferences and ToolGate settings, revision-checked like the real ones; changes stay in this tab. */
 function createFakeOwnerSettings() {
   const settings = { schemaVersion: 1, revision: 1, values: { 'appearance.accent': 'neutral', 'chats.names.auto': true } as Json }
   const preferences = { revision: 1, preferences: { quietHours: { enabled: true, start: '22:00', end: '07:00', timeZone: 'Asia/Jerusalem', urgentExceptions: false }, urgency: 'meaningful',
-    dailyBudget: { suggestions: 4, researchMinutes: 30, costCents: 0 }, idleTimeoutMinutes: 15, planAlerts: { enabled: true, percent: 80 } } as Json }
+    dailyBudget: { suggestions: 4, researchMinutes: 30, costCents: 0 }, idleTimeoutMinutes: 15, planAlerts: { enabled: true, percent: 80 }, newChatAccess: 'default' } as Json }
+  // ToolGate's document as it answers before the first save: numbers null keep today's limits.
+  const tools = { revision: 0, settings: { tool_seconds: null, terminal_seconds: null, terminal_memory_mb: null, terminal_cpus: null, terminal_workspace_mb: null,
+    web_safe_search: 'moderate', web_region: '', web_skip_sites: [], web_page_characters: null, run_window_minutes: null } as Json }
+  const lockdown = { lockdown: false, reason: '', changed_by: null as string | null }
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
+    if (path === '/api/owner/lockdown') {
+      if (method === 'POST') Object.assign(lockdown, { lockdown: body?.enabled === true, changed_by: 'owner' })
+      return structuredClone(lockdown)
+    }
+    if (path === '/api/owner/tool-settings') {
+      if (method === 'GET') return structuredClone(tools)
+      if (body?.expected_revision !== tools.revision) return fail(409)
+      return structuredClone(Object.assign(tools, { revision: tools.revision + 1, settings: structuredClone(body?.settings as Json) }))
+    }
     const document = path === '/api/control/pi/owner/settings' ? settings : path === '/api/control/pi/owner/preferences' ? preferences : null
     if (!document) return fail(404)
     if (method === 'GET') return structuredClone(document)
