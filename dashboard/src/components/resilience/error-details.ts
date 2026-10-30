@@ -48,8 +48,8 @@ export function failureTitle(error: unknown, fallback = 'Couldn’t load this') 
 /** What to do next when a read failed; the transport's own messages are written for actions. */
 const loadNextSteps: Partial<Record<GatewayErrorKind, string>> = {
   network: 'Check your connection. This refreshes by itself when your server answers again.',
-  dependency: 'Your server answered, but a service it needs isn’t running. Check System, then try again.',
-  http: 'Your server refused this request. Try again; if it repeats, check System.',
+  dependency: 'Your server answered, but a service it needs isn’t running. Check Server, then try again.',
+  http: 'Your server refused this request. Try again; if it repeats, check Server.',
   'invalid-response': 'Your server sent something this page can’t read. Try again; if it repeats, update Conker.',
   aborted: 'The request stopped before an answer came back. Try again.',
 }

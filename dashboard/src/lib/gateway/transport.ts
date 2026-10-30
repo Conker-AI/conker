@@ -23,7 +23,7 @@ const messages: Record<GatewayErrorKind, string> = {
   http: 'Your Conker server turned that down. Nothing was retried.',
   'login-rejected': 'That password didn’t match this Conker. Try again or reset it on the host.',
   'rate-limited': 'Too many login attempts. Wait before trying again.',
-  dependency: 'Part of Conker isn’t running right now. Nothing was retried; check System.',
+  dependency: 'Part of Conker isn’t running right now. Nothing was retried; check Server.',
   'browser-expired': 'Your browser session has expired. Sign in again.',
   'upstream-denied': 'That wasn’t allowed. You’re still signed in; nothing was retried.',
   'verification-failed': 'Couldn’t confirm it’s you. Nothing was retried; sign in again if this repeats.',

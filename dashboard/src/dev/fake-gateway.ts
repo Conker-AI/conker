@@ -606,7 +606,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if ((match = path.match(/^\/api\/owner\/requests\/([^/]+)\/decision$/))) {
       const item = approvals.find(row => row.id === match![1]) ?? fail(404)
       const status = String(options.body?.status)
-      Object.assign(item, { status, updated_at: iso(now()), reviewable: false, unavailable_reason: 'already_decided', decision: { status, actor: 'owner', note: String(options.body?.note ?? ''), at: iso(now()) } }); continueAfterDecision(sessions, item.id as string, status, String(options.body?.note ?? ''), () => nextId('msg'), now)
+      Object.assign(item, { status, updated_at: iso(now()), reviewable: false, unavailable_reason: 'already_decided', decision: { status, actor: 'owner', note: String(options.body?.note ?? ''), at: iso(now()) } }); continueAfterDecision(sessions, item, status, String(options.body?.note ?? ''), () => nextId('msg'), now)
       return item
     }
     if (path === '/api/pi/proposals') return { proposals: proposals.filter(item => item.state === 'open') }
