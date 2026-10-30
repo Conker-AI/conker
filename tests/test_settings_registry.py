@@ -247,7 +247,7 @@ def test_every_setting_speaks_the_same_way():
     [
         ("notifications.quiet_hours.enabled", "off", False),
         ("notifications.quiet_hours.start", "23:30", "23:30"),
-        ("notifications.quiet_hours.time_zone", "Europe/London", "Europe/London"),
+        ("you.time_zone", "Europe/London", "Europe/London"),
         ("companion.daily_budget.suggestions", "10", 10),
         ("session.idle_timeout_minutes", "30", 30),
         ("search.sources", "memory, projects", ["memory", "projects"]),
@@ -263,7 +263,7 @@ def test_values_are_parsed_into_their_type(identity, raw, value):
     [
         ("notifications.quiet_hours.enabled", "maybe"),
         ("notifications.quiet_hours.start", "25:00"),
-        ("notifications.quiet_hours.time_zone", "Mars/Base"),
+        ("you.time_zone", "Mars/Base"),
         ("companion.daily_budget.suggestions", "101"),
         ("session.idle_timeout_minutes", "7"),
         ("search.sources", "memory, memory"),

@@ -26,7 +26,7 @@ Who you are, where you are and how your days run.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Time zone**<br>`you.time_zone` | Your time zone for schedules, reminders and the daily ritual. (applies right away) | `Asia/Jerusalem` | pi `/owner/preferences` `quietHours.timeZone` |
+| **Time zone**<br>`you.time_zone` | Your time zone for schedules, reminders, quiet hours and the daily ritual. (applies right away) | `Asia/Jerusalem` | pi `/owner/preferences` `quietHours.timeZone` |
 | **Follow this device's time zone**<br>`you.time_zone_auto` | Updates your time zone when you travel. (saved, not used yet) | on | owner settings |
 | **App language**<br>`you.app_language` | The language of Conker's screens. Choices: English, Hebrew, Russian. (saved, not used yet) | English | owner settings |
 | **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (saved, not used yet) | Same as your message | owner settings |
@@ -229,7 +229,6 @@ When and how Conker gets your attention.
 | **Quiet hours**<br>`notifications.quiet_hours.enabled` | During these hours Conker starts no suggestions or research of its own. (applies right away) | on | pi `/owner/preferences` `quietHours.enabled` |
 | **Quiet hours start**<br>`notifications.quiet_hours.start` | When quiet hours begin each day. (applies right away) | `22:00` | pi `/owner/preferences` `quietHours.start` |
 | **Quiet hours end**<br>`notifications.quiet_hours.end` | When quiet hours end each day. (applies right away) | `07:00` | pi `/owner/preferences` `quietHours.end` |
-| **Quiet hours time zone**<br>`notifications.quiet_hours.time_zone` | The time zone quiet hours follow. (applies right away) | `Asia/Jerusalem` | pi `/owner/preferences` `quietHours.timeZone` |
 | **Urgent exceptions**<br>`notifications.quiet_hours.urgent_exceptions` | Lets something urgent through during quiet hours. (applies right away) | off | pi `/owner/preferences` `quietHours.urgentExceptions` |
 | **Quiet all day on**<br>`notifications.quiet_days` | Days with no notifications at all. Choices: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday. (saved, not used yet) | none | owner settings |
 | **Quiet during calls**<br>`notifications.quiet_in_calls` | Holds notifications while you are in a call. (saved, not used yet) | on | owner settings |

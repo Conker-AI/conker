@@ -103,7 +103,7 @@
         {
           "id": "you.time_zone",
           "title": "Time zone",
-          "description": "Your time zone for schedules, reminders and the daily ritual.",
+          "description": "Your time zone for schedules, reminders, quiet hours and the daily ritual.",
           "type": "timezone",
           "default": "Asia/Jerusalem",
           "tier": "basic",
