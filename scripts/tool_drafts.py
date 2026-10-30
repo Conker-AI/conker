@@ -6,6 +6,10 @@ command waits for that and prints the steps and any issues, or the reason it fai
 returns as soon as the request is filed). The draft then waits in the Inbox, the same card a chat
 request makes: nothing is saved in Tools, published or run from here.
 
+A request made in a chat can wait for an answer to the drafter's question (`needs_detail`):
+`conker tool answer creq_... "..."` answers it (POST /change-requests/{id}/retry with `answer`),
+as the chat and the Inbox do, and waits for the draft again.
+
 It is shared by the development CLI (scripts/conker.py) and the installed launcher
 (scripts/tool_draft_cli.py); each passes its own way of calling Pi.
 """
@@ -23,8 +27,31 @@ CHANGE_REQUEST = re.compile(r"creq_[a-f0-9]{32}")
 WAIT = 1800  # seconds; a small local model can take many minutes for one draft
 INTERVAL = 3
 STILL_DRAFTING = 3  # exit code: the draft is not finished yet; it will be in the Inbox
+ASKING = 4  # exit code: the drafter asks a question; answer it to go on
+STATUSES = {"drafting", "ready", "failed", "needs_detail"}
 # Terminal control characters (C0 except tab and newline, DEL, C1) in text from a model.
 CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def waiting_arguments(parser, *, filing=True):
+    """How a command that drafts waits; `filing` adds the request id that makes a retry safe."""
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Return at once; the draft appears in the Inbox when ready",
+    )
+    if filing:
+        parser.add_argument(
+            "--request-id",
+            help="Repeat an earlier request whose answer was lost; the same id files nothing new",
+        )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=WAIT,
+        help=f"Seconds to wait for the draft (default {WAIT})",
+    )
+    parser.add_argument("--json", action="store_true", help="Print the request as JSON")
 
 
 def register(commands):
@@ -35,28 +62,21 @@ def register(commands):
         help="Describe a tool; Pi drafts it in the background and it waits in the Inbox",
     )
     draft.add_argument("description", help="What the tool should do, in your words")
-    draft.add_argument(
-        "--no-wait",
-        action="store_true",
-        help="Return once the request is filed; the draft appears in the Inbox when ready",
+    waiting_arguments(draft)
+    answer = operations.add_parser(
+        "answer",
+        help="Answer the drafter's question on a tool request; drafting goes on",
     )
-    draft.add_argument(
-        "--request-id",
-        help="Repeat an earlier request whose answer was lost; the same id files nothing new",
-    )
-    draft.add_argument(
-        "--timeout",
-        type=int,
-        default=WAIT,
-        help=f"Seconds to wait for the draft (default {WAIT})",
-    )
-    draft.add_argument("--json", action="store_true", help="Print the request as JSON")
+    answer.add_argument("request", help="The request's id (creq_...)")
+    answer.add_argument("text", help="Your answer, in your words")
+    waiting_arguments(answer, filing=False)
 
 
 def status(request: dict) -> str:
-    """drafting, ready or failed. A request filed before background drafting counts as ready."""
+    """drafting, ready, failed or needs_detail. A request filed before background drafting
+    counts as ready."""
     value = (request.get("payload") or {}).get("status") or "ready"
-    if value not in {"drafting", "ready", "failed"}:
+    if value not in STATUSES:
         raise ValueError(f"Pi answered with an unknown draft status: {value!r}.")
     return value
 
@@ -82,6 +102,12 @@ def render(request: dict) -> str:
     lines = [f"{clean(request.get('title', 'Tool request'))}  ({request['id']})"]
     if state == "drafting":
         lines.append("Drafting. It will be in the Inbox when it is ready.")
+    elif state == "needs_detail":
+        lines.append("The drafter asks: " + clean(payload.get("question") or ""))
+        lines.append(
+            "Answer it in that chat, in the Inbox, or here: "
+            f'conker tool answer {request["id"]} "your answer"'
+        )
     elif state == "failed":
         lines.append(
             "The draft failed: " + clean(payload.get("error") or "no reason given.")
@@ -138,18 +164,38 @@ def wait(
     return request
 
 
+def answer(call, identity: str, text: str) -> dict:
+    """Answer the drafter's question: the same draft goes on with it."""
+    if not CHANGE_REQUEST.fullmatch(identity):
+        raise ValueError("Use the tool request's id, which starts with creq_.")
+    text = text.strip()
+    if not 1 <= len(text) <= 4000:
+        raise ValueError("Answer in 1 to 4,000 characters.")
+    return checked(call("POST", f"/change-requests/{identity}/retry", {"answer": text}))
+
+
 def run(call, args, *, emit=print, clock=time.monotonic, sleep=time.sleep) -> int:
-    """0 ready (or filed, with --no-wait), 1 failed, 3 still drafting when the time ran out."""
+    """0 ready (or filed, with --no-wait), 1 failed, 3 still drafting when the time ran out,
+    4 the drafter asks a question."""
     if args.timeout < 0:
         raise ValueError("Use a timeout of 0 seconds or more.")
-    request_id = args.request_id or "tooldraft_" + uuid.uuid4().hex
-    try:
-        request = start(call, args.description, request_id)
-    except OSError:
-        raise OSError(
-            "Pi did not confirm the request. Run the same command again with "
-            f"--request-id {request_id}: it files nothing twice."
-        ) from None
+    if getattr(args, "operation", "draft") == "answer":
+        try:
+            request = answer(call, args.request, args.text)
+        except OSError:
+            raise OSError(
+                f"Pi did not confirm the answer. Check request {args.request} in the Inbox "
+                "before answering again."
+            ) from None
+    else:
+        request_id = args.request_id or "tooldraft_" + uuid.uuid4().hex
+        try:
+            request = start(call, args.description, request_id)
+        except OSError:
+            raise OSError(
+                "Pi did not confirm the request. Run the same command again with "
+                f"--request-id {request_id}: it files nothing twice."
+            ) from None
     if not args.no_wait:
         try:
             request = wait(
@@ -168,6 +214,8 @@ def run(call, args, *, emit=print, clock=time.monotonic, sleep=time.sleep) -> in
     state = status(request)
     if state == "failed":
         return 1
+    if state == "needs_detail":
+        return ASKING
     return STILL_DRAFTING if state == "drafting" and not args.no_wait else 0
 
 

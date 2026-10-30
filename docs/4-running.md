@@ -123,6 +123,7 @@ conker ops run services.restart service=pi # the same action as the UI, with a r
 conker providers status       # secret-free hosted-provider revisions and state
 conker providers claude login # Ubuntu layout: sign in to the Claude plan once, in this terminal
 conker tool draft "Show free disk space" # Pi drafts a tool; the draft waits in the Inbox
+conker tool answer REQUEST_ID "All disks" # answer the drafter's question; drafting goes on
 conker context budget CHAT_ID --window 32768 --reserve 2048 # start one chat's context settings
 conker logs pi
 conker stop
@@ -509,9 +510,10 @@ Steps, boundaries and the release checklist: [Claude plan runtime](reference/cla
 background with the drafting model, checks it with ToolGate and repairs it, and the command
 waits and prints its steps and issues, or why it failed (`--no-wait` returns at once). The draft
 waits in the Inbox, the same card a chat request makes. Use it from both installed layouts and
-`python scripts/conker.py tool draft` in the workspace. `python scripts/conker.py workflow draft`
-is the older interactive builder of the development CLI (it asks questions in the terminal and
-saves straight into Tools); keep it for that.
+`python scripts/conker.py tool draft` in the workspace (`workflow draft` there is the same
+command under its older name). When the drafter asks a question about a request made in a chat,
+`conker tool answer REQUEST_ID "..."` answers it, as the chat and the Inbox do
+([workflow builder](reference/workflow-builder.md)).
 
 ## Security in one paragraph
 

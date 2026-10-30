@@ -208,3 +208,68 @@ def test_development_cli_shows_pis_refusal(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["conker.py", "tool", "draft", "Check the disk"])
     assert cli.cli() == 1
     assert "request_reused" in capsys.readouterr().err
+
+
+def test_a_question_from_the_drafter_says_how_to_answer_it():
+    asking = request("needs_detail", question="Which \x1b[2Jdisk?")
+    code, out = run(Pi(asking))
+    assert code == tool_drafts.ASKING
+    assert "The drafter asks: Which \\x1b[2Jdisk?" in out and "\x1b" not in out
+    assert f'conker tool answer {IDENTITY} "your answer"' in out
+
+
+def answering(**options):
+    return arguments(
+        operation="answer", request=IDENTITY, text=" Bing ", description=None, **options
+    )
+
+
+def test_an_answer_goes_on_with_the_same_draft_and_waits_for_it():
+    calls = []
+
+    def pi(method, path, body):
+        calls.append((method, path, body))
+        return request("drafting") if method == "POST" else request("ready", steps=[])
+
+    printed = []
+    code = tool_drafts.run(
+        pi, answering(), emit=printed.append, clock=lambda: 0, sleep=lambda _s: None
+    )
+    assert code == 0 and "No steps were drafted." in printed[0]
+    assert calls == [
+        ("POST", f"/change-requests/{IDENTITY}/retry", {"answer": "Bing"}),
+        ("GET", f"/change-requests/{IDENTITY}", None),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        ({"request": "creq_x"}, "creq_"),
+        ({"text": "  "}, "1 to 4,000"),
+        ({"text": "x" * 4001}, "1 to 4,000"),
+    ],
+)
+def test_a_bad_answer_is_refused_before_pi_is_called(options, message):
+    pi = Pi()
+    args = Namespace(**{**vars(answering()), **options})
+    with pytest.raises(ValueError, match=message):
+        tool_drafts.run(pi, args, emit=lambda _text: None)
+    assert pi.calls == []
+
+
+def test_development_cli_answers_through_retry(monkeypatch, capsys):
+    calls = []
+
+    def fake(config, service, path, body=None, **options):
+        calls.append((options.get("method"), path, body))
+        return request("drafting")
+
+    monkeypatch.setattr(cli, "read_config", dict)
+    monkeypatch.setattr(cli, "request", fake)
+    monkeypatch.setattr(
+        sys, "argv", ["conker.py", "tool", "answer", IDENTITY, "Bing", "--no-wait"]
+    )
+    assert cli.main() == 0
+    assert calls == [("POST", f"/change-requests/{IDENTITY}/retry", {"answer": "Bing"})]
+    assert "Drafting." in capsys.readouterr().out
