@@ -14,9 +14,9 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.12.0 | Conversations, model roles, access, Inbox, owner settings |
-| ToolGate | 0.9.1 | Tools, approvals, spending, the agent sandbox |
-| MemoryGate | 0.6.0 | Memory with sources |
+| Pi and the Gateway | 0.13.0 | Conversations, model roles for every AI job, access, Inbox, tool drafting, imports and exports |
+| ToolGate | 0.10.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
+| MemoryGate | 0.7.0 | Memory with sources; its AI through Pi |
 | SystemGate | 0.4.0 | Read-only view of the machine |
 | Embeddings | 0.1.4 | Text to vectors |
 | Agent sandbox | active | Terminal and Install packages for agents |
