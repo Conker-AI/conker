@@ -212,7 +212,16 @@ cmd_logs() {
 }
 cmd_start()   { compose up -d && cmd_status; }
 cmd_stop()    { compose stop && say "" && say "  Stopped. Nothing was deleted." && say ""; }
-cmd_restart() { compose restart && cmd_status; }
+cmd_restart() {
+    # One Compose service by name, or every service.
+    if [ "$#" -eq 1 ]; then
+        [[ "$1" =~ ^[a-z][a-z0-9-]{0,62}$ ]] || {
+            printf 'Use conker restart [SERVICE] with a service name from conker ops run services.status.\n' >&2
+            exit 2
+        }
+    fi
+    compose restart "$@" && cmd_status
+}
 cmd_doctor()  { compose exec -T gateway python -m gateway doctor; }
 cmd_inspect() {
     local resource=${1:-}
@@ -253,6 +262,16 @@ cmd_config() {
         exit 1
     }
     python3 "$SOURCE_ROOT/scripts/config_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
+}
+
+# conker ops: server actions and their receipts, from the helper's journal (ADR-0014).
+cmd_ops() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for conker ops. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m scripts.host_ops_cli \
+        --root "$ROOT" --source "$SOURCE_ROOT" --layout "$LAYOUT" "$@"
 }
 
 # conker tool draft: Pi drafts the described tool in the background; the draft waits in the Inbox.
@@ -855,6 +874,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Read and change the settings of the Settings screen (--chat CHAT_ID for one chat)
   ${BOLD}tool${OFF} draft "DESCRIPTION" [--no-wait]
               Have Conker make a tool; the draft waits in the Inbox for review
+  ${BOLD}ops${OFF} [show ID | run OPERATION [NAME=VALUE...]]
+              Server actions and their receipts, the same as the UI's (works without the helper)
   ${BOLD}import${OFF} chatgpt|claude PATH [--yes]
               Preview a ChatGPT or Claude export, then import it as read-only chats
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
@@ -875,7 +896,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Sign in to the Claude plan once, in this terminal
   ${BOLD}speech${OFF}    status|configure|disable
               Stage, verify, activate and reconcile hosted provider credentials
-  ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF}
+  ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF} [SERVICE]
   ${BOLD}update${OFF}      Stage, verify and roll back a pinned release${limited}
   ${BOLD}setup${OFF}       Guided first run, one plain question at a time
   ${BOLD}setup${OFF} status
@@ -942,13 +963,14 @@ case "$command" in
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
     config)    shift; cmd_config "$@" ;;
     tool)      shift; cmd_tool "$@" ;;
+    ops)       shift; cmd_ops "$@" ;;
     import)    shift; cmd_import "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
     logs)      [ "$#" -le 3 ] || { usage >&2; exit 2; }; shift; cmd_logs "$@" ;;
     model)     [ "$#" -eq 2 ] || { usage >&2; exit 2; }; shift; cmd_model "$@" ;;
     start)     [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_start ;;
     stop)      [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_stop ;;
-    restart)   [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_restart ;;
+    restart)   [ "$#" -le 2 ] || { usage >&2; exit 2; }; shift; cmd_restart "$@" ;;
     update)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_update ;;
     setup)     shift; cmd_setup "$@" ;;
     key)       [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_key ;;
