@@ -67,7 +67,8 @@ export function createHostOpId() {
 }
 
 export function createGatewayHostOpsClient(auth: Pick<GatewayAuthClient, 'request'>) {
-  const read = async <T>(operation: 'services.status' | 'backup.list', schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> => {
+  // A function declaration, not a generic arrow, so checks that read this file as TSX parse it.
+  async function read<T>(operation: 'services.status' | 'backup.list', schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
     const value = await auth.request('/api/host/read', { method: 'POST', body: { operation, arguments: {} }, signal })
     if (value.operation !== operation) throw new GatewayError('invalid-response')
     return parse(schema, value.result)
