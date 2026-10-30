@@ -12,6 +12,8 @@ export type SettingOption = { value: string | number; label: string }
 export type SettingHome =
   | { service: 'browser' }
   | { service: 'pi'; path: string; key: string; field: string; flat?: boolean; verify?: boolean }
+  /** ToolGate's settings document (`/v2/owner/settings`) or its lockdown switch (`/v2/owner/lockdown`), through the gateway. */
+  | { service: 'toolgate'; path: string; key: string; field: string; verify?: boolean }
 
 export type Setting = {
   id: string; title: string; description: string; type: SettingType; default: SettingValue

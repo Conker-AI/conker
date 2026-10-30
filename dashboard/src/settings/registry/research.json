@@ -99,13 +99,20 @@
         {
           "id": "research.skip_sites",
           "title": "Sites to skip",
-          "description": "Sites Conker never uses as sources.",
+          "description": "Sites Conker never uses as sources or reads, such as example.com.",
           "type": "tags",
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "max_items": 50
+          "effect": "live",
+          "max_items": 50,
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "web_skip_sites"
+          }
         }
       ]
     },

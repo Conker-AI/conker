@@ -45,8 +45,8 @@ export function subscribeServerSettings(listener: () => void) {
 function stored(id: string, entry: Setting | null | undefined): unknown {
   // Before the registry loads, a value saved in this browser marks a device setting.
   if (entry ? entry.scope === 'device' : storedDeviceValue(id) !== undefined) return storedDeviceValue(id)
-  // Settings with a home of their own (preferences, search) are read by their own screens.
-  if (entry?.home?.service === 'pi' && entry.home.path !== '/owner/settings') return undefined
+  // Settings with a home of their own (preferences, search, ToolGate) are read by their own screens.
+  if (entry?.home?.service === 'toolgate' || entry?.home?.service === 'pi' && entry.home.path !== '/owner/settings') return undefined
   return saved ? saved[id] : cachedServerSetting(id)
 }
 

@@ -5,7 +5,8 @@ The launcher runs this on the host for both deployment layouts. The registry is 
 source tree and every value is checked here before anything is sent. Each read or write is one
 `docker compose exec` into the pi container, where a short relay calls Pi on its own port with the
 recovery key Pi was started with: the key never leaves the container, and it reaches every home a
-setting can have, chat settings included, exactly like the development CLI.
+setting can have, chat settings included, exactly like the development CLI. ToolGate's settings
+are reached the same way from the gateway container, with the owner key the gateway already holds.
 """
 
 from __future__ import annotations
@@ -40,6 +41,34 @@ except urllib.error.HTTPError as error:
     status, body = error.code, error.read()
 sys.stdout.buffer.write(str(status).encode() + b"\\n" + body)
 """
+# Runs inside the gateway container: ToolGate's owner routes with the owner key the gateway holds.
+# Same output as RELAY.
+TOOLGATE_RELAY = """
+import os, sys, urllib.error, urllib.request
+class Stay(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *_args):
+        return None
+method, path = sys.argv[1:3]
+request = urllib.request.Request(
+    os.environ["GATEWAY_TOOLGATE_URL"].rstrip("/") + path,
+    data=sys.stdin.buffer.read() if method != "GET" else None,
+    method=method,
+    headers={"Content-Type": "application/json",
+             "X-ToolGate-Owner-Key": os.environ["GATEWAY_TOOLGATE_OWNER_KEY"]},
+)
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), Stay())
+try:
+    with opener.open(request, timeout=30) as response:
+        status, body = response.status, response.read()
+except urllib.error.HTTPError as error:
+    status, body = error.code, error.read()
+sys.stdout.buffer.write(str(status).encode() + b"\\n" + body)
+"""
+# Where each settings service is reached: its container, its relay and the name the owner reads.
+RELAYS = {
+    "pi": ("pi", RELAY, "Pi"),
+    "toolgate-owner": ("gateway", TOOLGATE_RELAY, "ToolGate"),
+}
 
 
 # A setting's home after its chat id is filled in: nothing that could leave Pi's own address.
@@ -47,7 +76,7 @@ HOME = re.compile(r"(?:/[A-Za-z0-9_-]+)+")
 
 
 class NotConfirmed(Exception):
-    """Pi did not answer, or refused the request."""
+    """The service did not answer, or refused the request."""
 
 
 def compose(root: Path, layout: str) -> list[str]:
@@ -74,7 +103,7 @@ def compose(root: Path, layout: str) -> list[str]:
 
 
 def reason(content: bytes) -> str:
-    """Pi's own words for a refusal, when it gave any."""
+    """The service's own words for a refusal, when it gave any."""
     try:
         detail = json.loads(content).get("detail")
     except (ValueError, AttributeError):
@@ -84,25 +113,29 @@ def reason(content: bytes) -> str:
     return f": {detail.rstrip('.')}" if isinstance(detail, str) and detail else ""
 
 
-def request(command: list[str], service: str, path: str, body=None):
-    """conker_config's request: one Pi call through the relay in the pi container."""
-    if service != "pi":
+def request(command: list[str], service: str, path: str, body=None, method=None):
+    """conker_config's request: one call through the relay in the service's container. A save
+    is a POST unless it names PUT (ToolGate replaces its whole settings document)."""
+    if service not in RELAYS:
         raise NotConfirmed(
             f"Settings kept by {service} cannot be reached from this host yet."
         )
+    container, relay, name = RELAYS[service]
     if not HOME.fullmatch(path):
-        raise ValueError(f"{path!r} is not a settings home in Pi.")
+        raise ValueError(f"{path!r} is not a settings home in {name}.")
+    if method not in (None, "PUT") or (method and body is None):
+        raise ValueError("Only a save may name its method, and only PUT.")
     try:
         result = subprocess.run(
             [
                 *command,
                 "exec",
                 "-T",
-                "pi",
+                container,
                 "python",
                 "-c",
-                RELAY,
-                "GET" if body is None else "POST",
+                relay,
+                method or ("GET" if body is None else "POST"),
                 path,
             ],
             input=b""
@@ -113,12 +146,14 @@ def request(command: list[str], service: str, path: str, body=None):
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
-        raise NotConfirmed("Pi did not answer. Check it with: conker status") from None
+        raise NotConfirmed(
+            f"{name} did not answer. Check it with: conker status"
+        ) from None
     status, _, content = result.stdout.partition(b"\n")
     if result.returncode or not status.isdigit():
         said = result.stderr.decode("utf-8", "replace").strip().splitlines()
         raise NotConfirmed(
-            "Pi did not answer in its container"
+            f"{name} did not answer in its container"
             + (f" ({said[-1][:200]})" if said else "")
             + ". Check it with: conker status"
         )
@@ -128,13 +163,13 @@ def request(command: list[str], service: str, path: str, body=None):
         )
     if status != b"200":
         raise NotConfirmed(
-            f"Pi refused it (HTTP {status.decode()}){reason(content)}."
+            f"{name} refused it (HTTP {status.decode()}){reason(content)}."
             + ("" if body is None else " Nothing was saved.")
         )
     try:
         return json.loads(content)
     except ValueError:
-        raise NotConfirmed("Pi answered with something other than JSON.") from None
+        raise NotConfirmed(f"{name} answered with something other than JSON.") from None
 
 
 def main(argv: list[str] | None = None) -> int:

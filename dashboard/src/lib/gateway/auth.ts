@@ -1,4 +1,4 @@
-import { GatewayError, gatewayError, isConversationWrite, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport, type GatewayVerifiedOperation } from './transport'
+import { GatewayError, gatewayError, needsNoPassword, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport, type GatewayVerifiedOperation } from './transport'
 import { describeGatewayOperation, type GatewayVerificationPrompt } from './verification'
 import { isImportSave, type GatewayDownload, type GatewayFileFormat, type GatewayFileTransfer } from './file-transfer'
 
@@ -200,9 +200,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
     },
     async request(path: string, options: GatewayRequest = {}): Promise<Record<string, unknown>> {
       const { onDispatch, ...requestOptions } = options
-      const post = requestOptions.method === 'POST'
+      const write = requestOptions.method === 'POST' || requestOptions.method === 'PUT' ? requestOptions.method : null
+      const post = write !== null
       if (post && requestOptions.query !== undefined) throw new GatewayError('validation')
-      const operation = post ? snapshotGatewayOperation(path, requestOptions.body) : null
+      const operation = write ? snapshotGatewayOperation(path, requestOptions.body, write) : null
       const signal = requestOptions.signal
       if (post && signal?.aborted) throw new GatewayError('verification-cancelled')
       const ticket = await serial(async () => {
@@ -216,7 +217,7 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       const current = () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
       if (!current()) throw new GatewayError(post ? 'verification-cancelled' : 'session-changed')
       let verificationToken: string | undefined
-      if (operation && !isConversationWrite(path)) {
+      if (operation && !needsNoPassword(path, operation.body)) {
         verificationToken = await proof(operation, ticket, current, signal)
         if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
       }

@@ -85,6 +85,12 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   if (/^\/api\/control\/pi\/imports\/(?:chatgpt|claude)\/[0-9a-f]{64}$/.test(path)) {
     return { title: `Import chats from ${parts[5] === 'claude' ? 'Claude' : 'ChatGPT'}`, path, target: 'The file you previewed', details: ['Saves read-only copies of the chats in that exact file. Chats already imported are skipped.', 'Your own messages are offered to memory if the preview said so.'] }
   }
+  if (path === '/api/owner/tool-settings') {
+    return { title: 'Save how tools run', path, target: 'ToolGate settings', details: ['Changes time limits, the Terminal’s resources, web search or the time an approved action has to start. None of them can go past ToolGate’s own limits.'] }
+  }
+  if (path === '/api/owner/lockdown') {
+    return { title: body.enabled ? 'Turn on lockdown' : 'Turn off lockdown', path, target: 'Every tool and workflow', details: [body.enabled ? 'No tool or workflow runs until you turn it off.' : 'Tools and workflows can run again; your access settings still decide what asks you first.'] }
+  }
   if (path === '/api/control/pi/memory/remember') {
     const length = typeof body.text === 'string' ? body.text.length : 0
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }

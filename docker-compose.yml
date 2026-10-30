@@ -131,6 +131,13 @@ services:
       # Hashes of the keys MemoryGate and ToolGate ask Pi for model text with. Empty until
       # ./install.sh runs again after an update; Pi then refuses both and they keep their own.
       PI_SERVICE_KEYS_SHA256: ${PI_SERVICE_KEYS_SHA256:-}
+      # Ollama's context length below, so the owner's local context setting never asks for more.
+      PI_OLLAMA_CONTEXT_LENGTH: ${CONKER_MODEL_CONTEXT:-8192}
+      # MemoryGate's listener for imported chats (scripts/import_listener.py). Both stay empty
+      # until ./install.sh writes the key and creates the listener; until then an import keeps
+      # the chats and its offers to memory wait.
+      PI_MEMORYGATE_IMPORT_SOURCE: ${MEMORYGATE_IMPORT_KEY:+assistant-imports}
+      PI_MEMORYGATE_IMPORT_KEY: ${MEMORYGATE_IMPORT_KEY:-}
     volumes:
       # The transcript. MemoryGate's evidence cites message ids from this
       # database, so losing it orphans every citation.

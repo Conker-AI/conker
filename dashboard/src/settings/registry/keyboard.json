@@ -19,7 +19,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "keyboard.palette",
@@ -29,15 +29,11 @@
           "default": "ctrl_k",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "ctrl_k",
               "label": "Ctrl+K"
-            },
-            {
-              "value": "ctrl_p",
-              "label": "Ctrl+P"
             }
           ]
         },
