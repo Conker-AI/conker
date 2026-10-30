@@ -5,7 +5,8 @@ export type Action<Args extends unknown[] = []> =
   | { availability: 'enabled'; run: (...args: Args) => void | Promise<void> }
 export type MessageAction = 'copy' | 'link' | 'edit' | 'retry' | 'fork' | 'pin' | 'rateUp' | 'rateDown' | 'redact' | 'saveArtifact'
 export type MessageMemoryFeedback = { label: string; description: string; checking: boolean; refresh: Action }
-export type ChatTurnOutcome = { id: string; title: string; description: string; consequence: string; recordedAt: string; controls: { label: string; action: Action; primary?: boolean }[] }
+/** `status` is the owner's latest check of this turn, in plain words. */
+export type ChatTurnOutcome = { id: string; title: string; description: string; consequence: string; recordedAt: string; controls: { label: string; action: Action; primary?: boolean }[]; status?: string }
 export type ChatMessage = {
   id: string; sessionId: string; sequence: number; role: 'user' | 'assistant' | 'system' | 'tool'
   createdAt: string; content: Content; agentId: string | null; agentName?: string; actions: Record<MessageAction, Action>

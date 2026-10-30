@@ -591,7 +591,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       } else if (turn.status === 'awaiting_approval' && decided && decided.status !== 'pending') {
         owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: "OK, I won't send it.", created_at: now() })
         Object.assign(turn, { status: 'complete', ended_at: now() })
-      }
+      } else if (turn.status === 'outcome_unknown') { await new Promise(resolve => setTimeout(resolve, 1500)); if (globalThis.sessionStorage?.getItem('conker-fake-check') === 'done') { owner.messages.push({ id: nextId('msg'), session_id: owner.id, seq: owner.messages.length + 1, role: 'assistant', content: 'I checked with your tools: the action finished once. It was not sent again.', created_at: now() }); Object.assign(turn, { status: 'complete', acted: 1, ended_at: now(), action: { id: 'act_preview_outcome', state: 'completed', job_id: null } }) } } // Preview: a check stays unknown unless conker-fake-check is "done".
       return { turn_id: turn.id, session_id: owner.id, status: turn.status }
     }
     if ((match = path.match(/^\/api\/pi\/runs\/([^/]+)$/)) && method === 'GET') {
