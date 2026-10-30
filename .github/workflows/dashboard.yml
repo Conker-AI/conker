@@ -35,11 +35,18 @@ jobs:
           repository: Conker-AI/pi
           ref: ${{ steps.pin.outputs.pi }}
           path: pinned-pi
-          sparse-checkout: docs
+          sparse-checkout: |
+            docs
+            pi/conversation
       - name: API types match the pinned Pi
         env:
           PI_DOCS: ${{ github.workspace }}/pinned-pi/docs
         run: npm run api:types:check
+      # Pi teaches models the catalog the dashboard draws; the pinned copy must be this catalog's prompt.
+      - name: Interactive answers catalog matches the pinned Pi
+        env:
+          PI_SOURCE: ${{ github.workspace }}/pinned-pi
+        run: npm run answer-ui:prompt:check
       - run: npm run lint
       - run: npm run design:check:test
       - run: npm run build
