@@ -31,6 +31,11 @@ which module versions a release pins.
   instructions and timing; you change what you like and create it as usual, with your password.
   The form can now pick the agent when you have more than one. A job's page shows what it does at
   the top: its instructions when Pi sends them, otherwise a plain note that Pi keeps them.
+- **`conker import chatgpt|claude PATH`** previews a ChatGPT or Claude data export (the zip, its
+  folder or `conversations.json`; only that file is read) and with `--yes` imports exactly that
+  file into Pi: archived, read-only chats labelled with where they came from, and your own words
+  offered to memory as outside content. Re-importing adds nothing. Works in the installed launcher
+  and `scripts/conker.py`; needs the Pi with `/imports` (docs/reference/import.md).
 
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
