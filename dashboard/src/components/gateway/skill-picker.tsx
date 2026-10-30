@@ -7,6 +7,8 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import type { SkillMetadata } from '@/lib/gateway/skills'
 import { gatewayError } from '@/lib/gateway/transport'
+import { useComposerMoreValue } from '@/components/chat/composer-more'
+import { cn } from '@/lib/utils'
 
 /** Selection is explicit and applies to the next submitted message only. */
 export function GatewaySkillPicker({ client, value, onChange, disabled, harnessDisabled = false }: { client: GatewayRuntimeClient; value: string[]; onChange: (ids: string[]) => void; disabled?: boolean; harnessDisabled?: boolean }) {
@@ -18,7 +20,8 @@ export function GatewaySkillPicker({ client, value, onChange, disabled, harnessD
     return () => controller.abort()
   }, [client, open, retry])
   const enabled = rows?.filter(row => row.enabled)
-  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger render={<Button type="button" variant="ghost" size="sm" disabled={disabled || harnessDisabled} aria-label={harnessDisabled ? 'Skills unavailable in No-harness mode' : `Skills for next message${value.length ? `: ${value.join(', ')}` : ''}`} className="max-w-full gap-1.5 rounded-full text-muted-foreground" />}><BookOpen className="size-4" /><span className="truncate">{harnessDisabled ? 'Skills off' : value.length ? value.join(', ') : 'Skills'}</span></PopoverTrigger>
+  useComposerMoreValue('skills', !harnessDisabled && value.length ? `Skills: ${value.join(', ')}` : null)
+  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger render={<Button type="button" variant="ghost" size="sm" disabled={disabled || harnessDisabled} aria-label={harnessDisabled ? 'Skills unavailable in No-harness mode' : `Skills for next message${value.length ? `: ${value.join(', ')}` : ''}`} className={cn('max-w-full gap-1.5 rounded-full font-normal', (harnessDisabled || !value.length) && 'text-muted-foreground')} />}><BookOpen className="size-4" /><span className="truncate">{harnessDisabled ? 'Skills off' : value.length ? value.join(', ') : 'Skills'}</span></PopoverTrigger>
     <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)] p-0"><div className="border-b p-3"><p className="text-sm font-medium">Skills for the next message</p><p className="mt-1 text-xs text-muted-foreground">Choose up to 3. Selection clears after the message is accepted.</p></div><Command><CommandInput placeholder="Find a skill…" /><CommandList aria-label="Skills for next message">
       {!!enabled?.length && <CommandEmpty>No matching skills.</CommandEmpty>}
       {!rows && !error && <p role="status" className="p-3 text-xs text-muted-foreground">Loading skills…</p>}

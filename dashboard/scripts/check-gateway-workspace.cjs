@@ -70,9 +70,9 @@ assert.match(workspaceSource, /matchMedia\('\(pointer: fine\) and \(min-width: 7
 assert.match(workspaceSource, /GatewayModelPicker compact[^\n]+[\s\S]*NewChatPrivacyControl[^\n]+[\s\S]*<NewChatMediaPlaceholders \/>[\s\S]*NewChatVoiceControl[^\n]+[\s\S]*aria-label="Send message"/,
   'The first-message composer toolbar must keep identity, privacy, call, dictation and send controls together')
 const extrasSource = fs.readFileSync(path.join(__dirname, '../src/components/gateway/new-chat-extras.tsx'), 'utf8')
-assert.match(extrasSource, /aria-label="Voice call unavailable before the first message"[\s\S]*aria-label="Video calls unavailable"/, 'Call and video placeholders stay honest about being unavailable')
-assert.match(extrasSource, /starters\.map\(item => <Tooltip key=\{item\.label\}>[\s\S]*aria-label=\{item\.label\}/,
-  'Icon-only conversation starters must keep accessible names and hover help')
+assert.match(extrasSource, /Voice call: send a message first, then call from the chat header\.[\s\S]*Video calls are not connected yet\./, 'Call and video placeholders stay honest about being unavailable (behind More)')
+assert.match(extrasSource, /starters\.map\(item => <Button key=\{item\.label\}[^\n]*\{item\.label\}<\/Button>/,
+  'Conversation starters show their words, so their names are visible and accessible')
 assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyControl|to="\/tools"[\s\S]{0,500}NewChatPrivacyControl/,
   'Global Memory and Tools destinations must not masquerade as per-chat composer controls')
 assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,

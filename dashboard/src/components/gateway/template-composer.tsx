@@ -5,13 +5,16 @@ import { LayoutTemplate, X } from 'lucide-react'
 import { TemplateFields } from '@/components/chat/template-fields'
 import { builtinTemplates, missingRequired } from '@/lib/chat/prompt-templates'
 import { chooseTemplate, changeTemplateValues, findTemplate, templateText, useTemplateEntry, useTemplateActive } from './template-store'
+import { useComposerMoreValue } from '@/components/chat/composer-more'
+import { cn } from '@/lib/utils'
 
 export function TemplatePicker({ draftKey, disabled }: { draftKey: string; disabled?: boolean }) {
   const active = useTemplateActive(draftKey)
   const entry = useTemplateEntry(draftKey)
   const template = entry ? findTemplate(entry.templateId) : null
+  useComposerMoreValue('template', template ? `Template: ${template.name}` : null)
   return <DropdownMenu>
-    <DropdownMenuTrigger render={<Button type="button" size="sm" variant="ghost" disabled={disabled} aria-label={`Prompt template: ${template ? template.name : "none"}`} />}><LayoutTemplate className="size-4" />{template ? template.name : "Template"}</DropdownMenuTrigger>
+    <DropdownMenuTrigger render={<Button type="button" size="sm" variant="ghost" className={cn('font-normal', !template && 'text-muted-foreground')} disabled={disabled} aria-label={`Prompt template: ${template ? template.name : "none"}`} />}><LayoutTemplate className="size-4" />{template ? template.name : "Template"}</DropdownMenuTrigger>
     <DropdownMenuContent align="start">
       {builtinTemplates.map(t => <DropdownMenuItem key={t.id} onClick={() => chooseTemplate(draftKey, t.id)}><div><div>{t.name}</div><div className="text-xs text-muted-foreground">{t.description}</div></div></DropdownMenuItem>)}
       {active && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => chooseTemplate(draftKey, null)}>No template</DropdownMenuItem></>}

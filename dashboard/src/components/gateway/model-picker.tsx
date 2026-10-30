@@ -7,6 +7,7 @@ import { BrainIcon } from '@/components/icons/animated/icons'
 import { ComposerSelectField, ComposerSelectTrigger } from './composer-select'
 import { useServerSetting } from '@/settings/server-setting'
 import { PlanUsageRing } from './plan-usage-ring'
+import { useComposerMoreValue } from '@/components/chat/composer-more'
 
 export function GatewayModelPicker({ client, value, onChange, disabled, manualRequired, compact = false, iconOnlyOnMobile = false }: { client: GatewayControlClient; value: string; onChange: (value: string) => void; disabled: boolean; manualRequired: boolean; compact?: boolean; iconOnlyOnMobile?: boolean }) {
   const [catalogue, setCatalogue] = useState<OwnerModelsConfiguration | null>(null)
@@ -36,6 +37,8 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   let planProvider: 'claude' | 'chatgpt' | null = null
   if (selectedModel?.providerId === 'claude-code') planProvider = 'claude'
   else if (selectedModel?.providerId === 'chatgpt') planProvider = 'chatgpt'
+  // In the composer, More names a chosen model, or that one must be chosen; the configured default needs no mention.
+  useComposerMoreValue('model', value ? models.find(model => model.id === value)?.name ?? (catalogue ? 'Model unavailable' : value) : manualRequired ? 'Choose a model' : null)
 
   const select = <Select value={value || 'configured'} disabled={disabled || !catalogue} onValueChange={value => { if (value !== null) onChange(value === 'configured' ? '' : value) }} items={[{ value: "configured", label: manualRequired ? "Choose an answer model" : catalogue?.roleSettings.answerMode === 'router' ? (compact ? 'Automatic' : 'Automatic · configured router') : (compact ? 'Default model' : 'Configured default model') }, ...models.map((model) => ({ value: model.id, label: model.name })), ...(value && !models.some(model => model.id === value) ? [{ value: value, label: "Selected model unavailable" }] : [])]}>
     {compact ? <ComposerSelectTrigger aria-label="Answer model" className={iconOnlyOnMobile ? "w-9 px-0 sm:w-auto sm:max-w-48 sm:px-2 [&>svg:last-child]:hidden sm:[&>svg:last-child]:block" : "w-auto max-w-48"} {...animationProps}>{iconOnlyOnMobile && <span className="sm:hidden"><AnimatedIconGlyph icon={BrainIcon} iconRef={iconRef} size={16} /></span>}<span className={iconOnlyOnMobile ? "sr-only sm:not-sr-only" : undefined}><SelectValue placeholder="Loading models…" /></span></ComposerSelectTrigger>

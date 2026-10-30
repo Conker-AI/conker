@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A calmer message box.** The composer shows the text box, Agent, Mode, voice typing and Send.
+  Template, model, skills, Think, this chat's access and Incognito (and the call notes on a new chat)
+  sit behind one plain More, which names anything not at its default ("More · Think · Incognito";
+  on a phone, in a line above the bar). Nothing was removed. Access and Incognito say their state in
+  words. New-chat starters are words ("Plan my day") instead of five bare icons. The square box and
+  resize grip around the text box are gone, and Auto no longer names an unset "Jev".
+
 - **The Inbox and Server tell the truth.** The Inbox shows "Loading your Inbox…" and a placeholder
   until every source has answered, and a source that failed says it didn't load; it never says
   "All clear" before that. After Send it (or Do it), the line says "Approved. Sending now…" and

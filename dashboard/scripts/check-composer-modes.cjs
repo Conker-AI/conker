@@ -19,7 +19,7 @@ const proposal = { complexity: 'hard', think: true, research: 'web', reasons: { 
 
 assert.deepEqual(modes.composerModes.map(mode => mode.id), ['auto', 'fast', 'balanced', 'deep'])
 assert.deepEqual(modes.modePresets.deep, { complexity: 'hard', think: true, research: 'deep' })
-assert.equal(modes.modeTarget('auto', null, true), null, 'Auto has no values until Jev answers')
+assert.equal(modes.modeTarget('auto', null, true), null, 'Auto has no values until the routing model answers')
 assert.deepEqual(modes.modeTarget('deep', null, false), { complexity: 'hard', think: false, research: 'deep' }, 'Thinking only where available')
 assert.equal(modes.effectiveMode('auto', { complexity: 'easy', think: false, research: 'off' }, null, true), 'auto')
 assert.equal(modes.effectiveMode('auto', { complexity: 'hard', think: true, research: 'web' }, proposal, true), 'auto')
@@ -51,6 +51,7 @@ for (const broken of [
   const runtime = fs.readFileSync(path.join(root, 'src/lib/gateway/runtime.ts'), 'utf8')
   assert.match(runtime, /options\.isAnalysis \? \{ is_analysis: true \}/, 'Hard complexity travels as Pi\'s analysis hint')
   const control = fs.readFileSync(path.join(root, 'src/components/gateway/mode-control.tsx'), 'utf8')
-  assert.doesNotMatch(control, /setInterval|Math\.random/, 'Auto shows only what Jev returned')
+  assert.doesNotMatch(control, /setInterval|Math\.random/, 'Auto shows only what the routing model returned')
+  for (const file of ['src/components/gateway/mode-control.tsx', 'src/components/gateway/composer-mode.ts']) assert.doesNotMatch(fs.readFileSync(path.join(root, file), 'utf8'), /Jev/, `${file} names no unset placeholder name`)
   console.log('Composer modes: presets, Custom detection, strict proposals, request shape and both send paths passed.')
 })().catch(error => { console.error(error); process.exit(1) })
