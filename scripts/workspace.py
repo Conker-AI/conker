@@ -350,10 +350,13 @@ def main():
     elif args.command == "up":
         if not (ROOT / "dashboard/dist/index.html").is_file():
             raise SystemExit("Build the dashboard first: python scripts/workspace.py build")
+        import import_listener
         from service_keys import ensure
-        # A workspace made before MemoryGate and ToolGate asked Pi for model text gets their keys
-        # here; a service already running picks its key up when it next starts.
-        if ensure(config, f"http://127.0.0.1:{PORTS['pi']}"):
+        # A workspace made before MemoryGate and ToolGate asked Pi for model text, or before Pi
+        # offered imported chats to memory, gets those keys here; a service already running picks
+        # its key up when it next starts.
+        changed = ensure(config, f"http://127.0.0.1:{PORTS['pi']}")
+        if import_listener.ensure(config) or changed:
             CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
         for service in order:
             if not owned_process(config, service):
@@ -368,6 +371,13 @@ def main():
             if not owned_listener(config, service):
                 raise SystemExit(f"{service} responded without a verified workspace listener; inspect before continuing.")
             print(f"{service}: responding")
+            if service == "memorygate":
+                # MemoryGate creates a listener only through its admin API, so once it answers.
+                try:
+                    import_listener.setup_workspace(config, PORTS["memorygate"])
+                    print("imported chats: can reach memory")
+                except (OSError, ValueError, KeyError) as error:
+                    print(f"imported chats: cannot reach memory yet ({error})")
         print(f"Conker is available at {ORIGIN}. Review System for dependency readiness.")
     elif args.command == "down":
         for service in reversed(order):

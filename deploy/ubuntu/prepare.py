@@ -21,6 +21,7 @@ BUILT_IN_TOOLS = (
 )
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
+from scripts.import_listener import pi_environment as import_listener_environment
 from scripts.provider_secrets import ProviderSecretError, SecretStore
 from scripts.release_manifest import ManifestError, load_release_manifest
 from scripts.service_keys import environments as service_environments
@@ -113,10 +114,12 @@ if fresh:
 else:
     keys = json.loads(keyfile.read_text())
 # Keys added after a deployment's first prepare: MemoryGate's and ToolGate's for asking Pi for
-# model text, and the Claude plan runtime's two. None protects stored data, so an older deployment
-# gets them here and every other key stays exactly as it is.
+# model text, the Claude plan runtime's two, and the key of MemoryGate's listener for imported
+# chats (scripts/import_listener.py; `conker setup import-listener` creates the listener after
+# start). None protects stored data, so an older deployment gets them here and every other key
+# stays exactly as it is.
 added = [name for name in ("memorygate_pi", "toolgate_pi", "subscriptions_control",
-    "subscriptions_inference") if not usable(keys.get(name))]
+    "subscriptions_inference", "memorygate_import") if not usable(keys.get(name))]
 keys.update({name: new_key() for name in added})
 if fresh or added:
     written = keyfile.with_name(keyfile.name + ".writing")
@@ -144,6 +147,8 @@ def preserved_pi_setting(name):
 keep_alive = os.environ.get("CONKER_OLLAMA_KEEP_ALIVE") or "24h"
 if not re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?(?:ms|s|m|h)?", keep_alive):
     raise SystemExit("CONKER_OLLAMA_KEEP_ALIVE must be a duration such as 24h, 30m or -1")
+# Ollama's context length. Pi gets it too, so the owner's local context setting never asks for more.
+context_length = "8192"
 env = {
     "postgres": {"POSTGRES_USER": "conker", "POSTGRES_DB": "conker", "POSTGRES_PASSWORD": keys["postgres"]},
     "gateway": {"GATEWAY_ORIGIN": origin, "GATEWAY_DB_PATH": "/auth/auth.db",
@@ -168,7 +173,9 @@ env = {
         "PI_DECISION_URL": "http://127.0.0.1:8060", "PI_DECISION_KEY": keys["decisions"],
         # Both workers idle until the owner acts: ideas need a Proposals model chosen in
         # Settings, and the scheduler runs only jobs the owner created.
-        "PI_PROPOSALS_ENABLED": "true", "PI_SCHEDULER_ENABLED": "true"},
+        "PI_PROPOSALS_ENABLED": "true", "PI_SCHEDULER_ENABLED": "true",
+        "PI_OLLAMA_CONTEXT_LENGTH": context_length,
+        **import_listener_environment(keys["memorygate_import"])},
     "toolgate": {"TOOLGATE_DATA_DIR": "/data", "TOOLGATE_ADMIN_KEY": keys["toolgate"],
         "TOOLGATE_OWNER_KEY_SHA256": digest("owner"), "TOOLGATE_VAULT_KEY_FILE": "/data/vault.key",
         "TOOLGATE_VAULT_SALT": keys["salt"], "TOOLGATE_CALLBACK_SECRET": keys["callback"],
@@ -188,7 +195,7 @@ env = {
     "decisions": {"DECISION_API_KEY": keys["decisions"], "DECISION_CPU_THREADS": "4",
         "DECISION_MODEL_PATH": "/models/hub/models--convaiinnovations--laya/snapshots/1c5edc17a7acd8701df6fc341c0d179f1c62c982",
         "DECISION_MODEL_ID": "laya-english@1c5edc17", "HF_HOME": "/models"},
-    "ollama": {"OLLAMA_CONTEXT_LENGTH": "8192", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "2", "OLLAMA_KEEP_ALIVE": keep_alive},
+    "ollama": {"OLLAMA_CONTEXT_LENGTH": context_length, "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "2", "OLLAMA_KEEP_ALIVE": keep_alive},
     "subscriptions": {"SUBSCRIPTIONS_CONTROL_KEY": keys["subscriptions_control"],
         "SUBSCRIPTIONS_INFERENCE_KEY": keys["subscriptions_inference"],
         "SUBSCRIPTIONS_CHATGPT_SOCKET": "/run/conker-chatgpt/inference.sock"},

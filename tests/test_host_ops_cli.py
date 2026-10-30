@@ -237,6 +237,35 @@ def test_conker_restart_takes_one_named_service(launcher):
     )
 
 
+def restarts(launcher) -> list[str]:
+    return [
+        call.rsplit(" restart", 1)[1].strip() or "everything"
+        for call in launcher.docker_log.read_text(encoding="utf-8").splitlines()
+        if " restart" in call
+    ]
+
+
+def test_restarting_pi_restarts_the_services_in_its_network_after_it(launcher):
+    # Restarting Pi gives it a new network namespace; its sharers must join the new one.
+    launcher.environment["FAKE_SERVICES"] = "pi gateway decisions subscriptions"
+    assert launcher("restart", "pi").returncode == 0
+    assert restarts(launcher) == ["pi", "decisions", "subscriptions"]
+
+    launcher.docker_log.unlink()
+    assert launcher("restart").returncode == 0
+    assert restarts(launcher) == ["everything", "decisions", "subscriptions"]
+
+    launcher.docker_log.unlink()
+    assert launcher("restart", "gateway").returncode == 0
+    assert restarts(launcher) == ["gateway"]
+
+    # A layout without them restarts Pi alone.
+    launcher.docker_log.unlink()
+    launcher.environment["FAKE_SERVICES"] = "pi gateway"
+    assert launcher("restart", "pi").returncode == 0
+    assert restarts(launcher) == ["pi"]
+
+
 INSPECT = json.dumps(
     [
         {
