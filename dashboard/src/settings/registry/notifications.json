@@ -225,7 +225,7 @@
           "related": [
             "notifications.quiet_hours.start",
             "notifications.quiet_hours.end",
-            "notifications.quiet_hours.time_zone"
+            "you.time_zone"
           ]
         },
         {
@@ -268,23 +268,6 @@
             "key": "preferences",
             "verify": true,
             "field": "quietHours.end"
-          }
-        },
-        {
-          "id": "notifications.quiet_hours.time_zone",
-          "title": "Quiet hours time zone",
-          "description": "The time zone quiet hours follow.",
-          "type": "timezone",
-          "default": "Asia/Jerusalem",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "live",
-          "home": {
-            "service": "pi",
-            "path": "/owner/preferences",
-            "key": "preferences",
-            "verify": true,
-            "field": "quietHours.timeZone"
           }
         },
         {

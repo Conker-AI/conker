@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One time zone setting.** Settings > Notifications no longer has its own quiet-hours time zone row,
+  which edited the same value as Settings > You > Time zone; quiet hours follow that one.
 - **Make a job Conker made your own.** A cron job page now has a "Make this job mine" button for
   jobs Conker created. It asks for your password, then treats the job as yours: it keeps running
   even if the chat that made it is forgotten, and "Made by" says "you". If the job changed in the
