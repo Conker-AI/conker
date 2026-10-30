@@ -14,6 +14,12 @@ which module versions a release pins.
   open it), see how many chats, from when and some titles, then Import (asks for your password).
   Imported chats live in their own read-only list under Chats, with no message box, and say how
   many of your messages are waiting to be offered to memory.
+- **Answer the drafter in the Inbox.** When Conker asks a question while drafting a tool
+  (`needs_detail`), its Inbox card shows the question, a box and an Answer button, plus an
+  "Open the chat" link when the question was also posted in that chat. The card turns into
+  "drafting" from Pi's reply; a failed send keeps your text, and a question already answered says
+  so. "Details" lists what Conker asked and what you said. Needs Pi with drafter questions.
+
 - **More settings work, and tool settings live in ToolGate.** New-chat privacy, chat names, the
   message queue, the largest upload ("No limit" by default), signing out, new-chat access and the
   local model settings now do what they say. Tool and Terminal limits, safe search, the search
