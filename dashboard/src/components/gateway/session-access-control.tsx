@@ -9,8 +9,10 @@ import type { ChatAccess } from '@/lib/gateway/access'
 import { CHAT_ACCESS } from './access-labels'
 import type { GatewayControlClient, OwnerSessionSettings } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
+import { belongsBehindMore, useComposerMoreValue } from '@/components/chat/composer-more'
+import { cn } from '@/lib/utils'
 
-/** This chat's access switch over the agent's and tools' settings. Loads fresh on open. */
+/** This chat's access switch over the agent's and tools' settings, behind the composer's More. Loads fresh on open. */
 export function GatewaySessionAccessControl({ client, sessionId, disabled }: { client: GatewayControlClient; sessionId: string; disabled: boolean }) {
   const [open, setOpen] = useState(false), [saved, setSaved] = useState<OwnerSessionSettings | null>(null)
   const [draft, setDraft] = useState<ChatAccess>('default'), [delegate, setDelegate] = useState<boolean | null>(null)
@@ -39,9 +41,10 @@ export function GatewaySessionAccessControl({ client, sessionId, disabled }: { c
     finally { setPending(false) }
   }
   const current = saved?.settings.access ?? 'default', label = CHAT_ACCESS.find(item => item.value === current)!.label
+  useComposerMoreValue('access', current === 'default' ? null : `Access: ${label}`)
   return <Popover open={open} onOpenChange={value => { if (!pending) { setOpen(value); if (value) { setPending(true); setError('') } } }}>
-    <PopoverTrigger render={<Button type="button" size="icon" className="size-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground" variant={current === 'default' ? 'ghost' : 'secondary'} aria-label={`Access in this chat: ${label}`} title={`Access: ${label}`} disabled={disabled} />}><ShieldCheck /></PopoverTrigger>
-    <PopoverContent align="end" sideOffset={8} className="w-[min(22rem,calc(100vw-1rem))] space-y-3 p-3">
+    <PopoverTrigger render={<Button type="button" size="sm" className={cn('font-normal', current === 'default' && 'text-muted-foreground')} variant={current === 'default' ? 'ghost' : 'secondary'} disabled={disabled} />}><ShieldCheck className="size-4" />Access: {label}</PopoverTrigger>
+    <PopoverContent align="start" sideOffset={8} className="w-[min(22rem,calc(100vw-1rem))] space-y-3 p-3">
       <div><p className="text-sm font-medium">Access in this chat</p><p className="mt-0.5 text-xs text-muted-foreground">What Conker may do without asking you, from the next message.</p></div>
       <RadioGroup value={draft} onValueChange={value => setDraft(value as ChatAccess)} disabled={!saved || pending || disabled} aria-label="Access in this chat" className="gap-2">
         {CHAT_ACCESS.map(item => <Label key={item.value} htmlFor={`chat-access-${item.value}`} className="flex cursor-pointer items-start gap-3 rounded-lg border p-2.5 has-data-checked:border-primary has-data-checked:bg-muted">
@@ -57,3 +60,4 @@ export function GatewaySessionAccessControl({ client, sessionId, disabled }: { c
     </PopoverContent>
   </Popover>
 }
+belongsBehindMore(GatewaySessionAccessControl)

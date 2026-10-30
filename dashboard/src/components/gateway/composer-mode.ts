@@ -5,7 +5,7 @@ export type ComposerMode = 'auto' | 'fast' | 'balanced' | 'deep'
 export type ModeValues = { complexity: Complexity; think: boolean; research: Research }
 
 export const composerModes: readonly { id: ComposerMode; label: string; description: string }[] = [
-  { id: 'auto', label: 'Auto', description: 'Jev chooses every setting for each message.' },
+  { id: 'auto', label: 'Auto', description: 'Conker chooses the settings for each message.' },
   { id: 'fast', label: 'Fast', description: 'Ordinary model, no thinking, no web.' },
   { id: 'balanced', label: 'Balanced', description: 'Ordinary model with web search.' },
   { id: 'deep', label: 'Deep', description: 'Stronger model, thinking and deep research.' },
@@ -17,7 +17,7 @@ export const modePresets: Record<Exclude<ComposerMode, 'auto'>, ModeValues> = {
   deep: { complexity: 'hard', think: true, research: 'deep' },
 }
 
-/** The values a mode asks for; thinking only where it is available. Auto has none until Jev answers. */
+/** The values a mode asks for; thinking only where it is available. Auto has none until the routing model answers. */
 export function modeTarget(mode: ComposerMode, proposal: AutoSettings | null, thinkAvailable: boolean): ModeValues | null {
   const source = mode === 'auto' ? proposal : modePresets[mode]
   return source ? { complexity: source.complexity, think: source.think && thinkAvailable, research: source.research } : null

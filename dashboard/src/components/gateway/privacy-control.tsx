@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
 import type { GatewayControlClient, OwnerSessionSettings } from '@/lib/gateway/control'
+import { belongsBehindMore, useComposerMoreValue } from '@/components/chat/composer-more'
+import { cn } from '@/lib/utils'
 
-/** Keyed by session; auth unmount cancels reads and queued verification. */
+/** Keyed by session, behind the composer's More; auth unmount cancels reads and queued verification. */
 export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }: { client: GatewayControlClient; sessionId: string; disabled: boolean; onPrivacy: (sessionId: string, harnessDisabled: boolean) => void }) {
   const [saved, setSaved] = useState<OwnerSessionSettings | null>(null)
   const [draft, setDraft] = useState({ memoryDisabled: false, harnessDisabled: false })
@@ -35,9 +37,10 @@ export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }
     finally { if (!lifetime.current?.signal.aborted) setPending(false) }
   }
   const active = saved?.settings.privacy.memoryDisabled || saved?.settings.privacy.harnessDisabled
+  useComposerMoreValue('incognito', active ? 'Incognito' : null)
   return <Popover open={open} onOpenChange={value => { if (!pending) { setOpen(value); if (value && saved) setDraft(saved.settings.privacy) } }}>
-    <PopoverTrigger render={<Button type="button" size="icon" className="size-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground" variant={active ? 'secondary' : 'ghost'} aria-label={active ? 'Incognito, custom settings active' : 'Incognito'} title="Incognito" aria-pressed={Boolean(active)} />}><HatGlasses /></PopoverTrigger>
-    <PopoverContent align="end" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
+    <PopoverTrigger render={<Button type="button" size="sm" className={cn('font-normal', !active && 'text-muted-foreground')} variant={active ? 'secondary' : 'ghost'} aria-pressed={Boolean(active)} />}><HatGlasses className="size-4" />Incognito: {active ? 'on' : 'off'}</PopoverTrigger>
+    <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
       <div><p className="text-sm font-medium">Chat privacy</p><p className="mt-0.5 text-xs text-muted-foreground">Controls future messages in this chat.</p></div>
       <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-memory" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Use memory</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall and learn useful details.</span></Label><Switch id="live-use-memory" checked={!draft.memoryDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, memoryDisabled: !value }))} /></div>
       <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Use assistant tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Route models and prepare tool actions.</span></Label><Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} /></div>
@@ -48,3 +51,4 @@ export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }
     </PopoverContent>
   </Popover>
 }
+belongsBehindMore(GatewayPrivacyControl)

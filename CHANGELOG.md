@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A calmer message box.** The composer shows the text box, Agent, Mode, voice typing and Send.
+  Template, model, skills, Think, this chat's access and Incognito (and the call notes on a new chat)
+  sit behind one plain More, which names anything not at its default ("More · Think · Incognito";
+  on a phone, in a line above the bar). Nothing was removed. Access and Incognito say their state in
+  words. New-chat starters are words ("Plan my day") instead of five bare icons. The square box and
+  resize grip around the text box are gone, and Auto no longer names an unset "Jev".
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or
