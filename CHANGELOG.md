@@ -31,6 +31,19 @@ which module versions a release pins.
   lists and runs them from the server, with or without the helper; `conker restart SERVICE`
   restarts one service. The UI comes next.
 
+- **Cron jobs: start from an idea.** Twelve ready-made AI jobs (morning brief, homework and
+  deadlines, evening wrap-up, proactive check, event reminders, email triage, study group digest,
+  freelance gig watcher, check-in, break reminder, weekly review, monthly spending report) sit
+  under the Cron jobs list. Picking one only fills in the New AI job form with its name,
+  instructions and timing; you change what you like and create it as usual, with your password.
+  The form can now pick the agent when you have more than one. A job's page shows what it does at
+  the top: its instructions when Pi sends them, otherwise a plain note that Pi keeps them.
+- **`conker import chatgpt|claude PATH`** previews a ChatGPT or Claude data export (the zip, its
+  folder or `conversations.json`; only that file is read) and with `--yes` imports exactly that
+  file into Pi: archived, read-only chats labelled with where they came from, and your own words
+  offered to memory as outside content. Re-importing adds nothing. Works in the installed launcher
+  and `scripts/conker.py`; needs the Pi with `/imports` (docs/reference/import.md).
+
 - **Interactive answers.** An answer can hold a table, a chart, choices to tap, a short form,
   steps, progress or a callout, drawn with Conker's own components from an `openui` block
   ([OpenUI](https://github.com/thesysdev/openui), `@openuidev/react-lang` 1.0.2). A tapped choice or

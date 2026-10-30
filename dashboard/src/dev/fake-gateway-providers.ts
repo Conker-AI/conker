@@ -63,7 +63,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
   const requests = createFakeChangeRequests(session, now, (name, timing, timeZone) => { const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, name, timing, timeZone); jobs().push(created); return created })
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     seed()
-    if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts')) return requests(path, method, body, fail)
+    if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts') || path === '/api/pi/tools') return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
     if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
     if (path.startsWith('/api/control/pi/owner/')) return ownerSettings(path, method, body, fail)
@@ -86,6 +86,8 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     if (path === '/api/control/pi/jobs/agent' && method === 'POST') {
       const created = job(`job_${crypto.randomUUID().replaceAll('-', '')}`, String(body?.name ?? 'AI job'), (body?.timing ?? { kind: 'interval', time: '00:00', day: 0, hours: 2 }) as Json, String(body?.timeZone ?? 'UTC'))
       const watch = body?.watch as Json | undefined
+      // Preview of a Pi that shows a job's own words on its page; the seeded jobs keep them to themselves.
+      Object.assign(created.definition as Json, { instructions: String(body?.instructions ?? ''), agentId: String(body?.agentId ?? 'companion') })
       if (body?.clock === false) ((created.definition as Json).target as Json).clock = false
       if (watch) (created.definition as Json).watch = { toolId: watch.toolId, everyMinutes: watch.everyMinutes, inputsConfigured: Object.keys((watch.args ?? {}) as Json).length > 0, lastCheckedAt: null, problem: null }
       jobs().push(created)
