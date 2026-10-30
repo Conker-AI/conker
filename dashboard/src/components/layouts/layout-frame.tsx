@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/design-system"
 import { PageContainer } from "./page-container"
 import { cn } from "@/lib/utils"
 import { useSidebarConfig } from "@/hooks/use-sidebar-config"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { useServerSetting } from "@/settings/server-setting"
 import {
   SidebarInset,
   SidebarProvider,
@@ -27,9 +29,26 @@ export interface LayoutFrameProps {
   variant?: "page" | "collection" | "conversation" | "workspace" | "canvas"
 }
 
+/**
+ * How the sidebar starts on large screens (Settings, Appearance): open, collapsed to icons, or open
+ * only from 1024 px up. The setting decides each start and applies at once when it changes; the
+ * collapse button and Ctrl+B still toggle it until the next start. Phones always use the drawer.
+ */
+function useSidebarStart() {
+  const start = useServerSetting<"open" | "collapsed" | "auto">("appearance.sidebar", "open")
+  const wide = useMediaQuery("lg")
+  const startOpen = start === "open" || start === "auto" && wide
+  const [open, setOpen] = React.useState(startOpen)
+  const [applied, setApplied] = React.useState(startOpen)
+  if (applied !== startOpen) { setApplied(startOpen); setOpen(startOpen) }
+  return [open, setOpen] as const
+}
+
 /** The page frame both modes share; the connected gateway passes its own sidebar and header. */
 export function LayoutFrame({ children, title, description, actions, status, header, sidebar, rail, beforeHeader, footer, reference, className, variant = "page", error }: LayoutFrameProps) {
   const { config } = useSidebarConfig()
+  const [sidebarOpen, setSidebarOpen] = useSidebarStart()
+  const shortcuts = useServerSetting("keyboard.shortcuts", true)
   const conversation = variant === "conversation" || variant === "canvas"
   const workspace = variant === "workspace"
   const collection = variant === "collection"
@@ -63,6 +82,9 @@ export function LayoutFrame({ children, title, description, actions, status, hea
 
   return (
     <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+      keyboardShortcut={shortcuts}
       style={
         {
           "--sidebar-width": "16rem",
