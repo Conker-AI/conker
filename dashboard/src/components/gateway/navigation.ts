@@ -41,6 +41,7 @@ export const gatewayDestinations = [
   { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'more' },
   { id: 'server-services', route: 'system', title: 'Services', path: '/system?tab=services', group: 'more' },
   { id: 'server-backups', route: 'system', title: 'Backups', path: '/system?tab=backups', group: 'more' },
+  { id: 'server-containers', route: 'system', title: 'Containers', path: '/system?tab=containers', group: 'more' },
   { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'more' },
   { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'more' },
 ] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: 'overview' | 'workspace' | 'system' | 'more' }[]
@@ -53,10 +54,12 @@ export const gatewaySidebarGroups = [
 export const gatewaySidebarDestinations = gatewayDestinations.filter(item => item.group !== 'more')
 export const gatewayCommandDestinations = gatewayDestinations
 
-const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string])[]>> = {
+// A third entry names the section a page opens from: it stays out of the section list and lights
+// up that section instead (Containers opens from Services, which replaced it in the list).
+const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string, string?])[]>> = {
   activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
   agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills']],
-  system: [['overview', 'Overview'], ['services', 'Services'], ['backups', 'Backups'], ['processes', 'Processes'], ['ports', 'Ports'], ['containers', 'Containers'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files']],
+  system: [['overview', 'Overview'], ['services', 'Services'], ['backups', 'Backups'], ['processes', 'Processes'], ['ports', 'Ports'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files'], ['containers', 'Containers', 'services']],
   'companion-settings': [['identity', 'Identity & soul'], ['speaking', 'Speaking style'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['modes', 'Expression & modes'], ['harness', 'Harness']],
 }
 
@@ -64,15 +67,17 @@ export function gatewayPageNavigation(pathname: string, search: string) {
   const route = resolveGatewayRoute(pathname)
   const params = new URLSearchParams(search)
   const definitions = route ? routeSections[route] ?? [] : []
-  const activeSection = definitions.find(([value]) => value === params.get('tab'))?.[0] ?? definitions[0]?.[0]
-  const destination = gatewayDestinations.find(item => item.route === route && new URLSearchParams(item.path.split('?')[1]).get('tab') === activeSection)
+  const requested = definitions.find(([value]) => value === params.get('tab'))
+  const shown = requested?.[0] ?? definitions[0]?.[0]
+  const activeSection = requested?.[2] ?? shown
+  const destination = gatewayDestinations.find(item => item.route === route && new URLSearchParams(item.path.split('?')[1]).get('tab') === shown)
     ?? gatewayDestinations.find(item => item.route === route)
   const title = route === 'chat' ? params.has('session') ? 'Chat' : 'New chat'
     : route === 'agents' && normalizedPath(pathname) !== '/agents' ? 'Edit agent'
       : route === 'tools' && params.has('draft') ? 'Workflow'
         : route === 'tools' && params.get('view') === 'mcp' ? 'MCP servers'
           : destination?.title ?? 'Conker'
-  const sections = definitions.map(([value, label], index) => {
+  const sections = definitions.filter(entry => !entry[2]).map(([value, label], index) => {
     const next = new URLSearchParams(search)
     if (index === 0) next.delete('tab'); else next.set('tab', value)
     return { value, label, to: `${gatewayDestinations.find(item => item.route === route)!.path.split('?')[0]}${next.size ? `?${next}` : ''}`, badge: undefined }

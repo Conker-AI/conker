@@ -40,6 +40,10 @@ assert.equal(gatewayPageNavigation('/agents/agent_0123456789abcdef0123456789abcd
 assert.equal(gatewayViewTitle('/agents', '?tab=skills'), 'Skills')
 assert.equal(gatewayViewTitle('/settings', '?tab=unknown'), 'Settings')
 assert.equal(gatewayViewTitle('/tools', '?view=mcp'), 'MCP servers')
+assert.deepEqual(gatewayPageNavigation('/system', '').sections.map(item => item.value), ['overview', 'services', 'backups', 'processes', 'ports', 'terminal', 'native-sessions', 'files'], 'Services replaced Containers in the Server list')
+assert.equal(gatewayPageNavigation('/system', '?tab=containers').activeSection, 'services', 'Containers opens from Services and lights it up')
+assert.equal(gatewayViewTitle('/system', '?tab=containers'), 'Containers')
+assert.equal(gatewaySystemSection('?tab=containers'), 'containers', 'old Containers links still open the page')
 assert.equal(gatewayPageNavigation('/agents', '?tab=teams&query=retain').sections.find(item => item.value === 'skills').to, '/agents?tab=skills&query=retain')
 
 for (const pathValue of ['/journal', '/login', '/chat/new', '/unknown']) assert.equal(resolveGatewayRoute(pathValue), null, `${pathValue} is not a connected workspace route`)
