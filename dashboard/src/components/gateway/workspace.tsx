@@ -53,6 +53,8 @@ const GatewayTeamsWorkspace = lazy(() => import('./teams-workspace').then(module
 const GatewaySkillsWorkspace = lazy(() => import('./skills-workspace').then(module => ({ default: module.GatewaySkillsWorkspace })))
 const GatewayFilesystemWorkspace = lazy(() => import('./filesystem-workspace').then(module => ({ default: module.GatewayFilesystemWorkspace })))
 const GatewayNativeSessionsPage = lazy(() => import('./native-sessions-page').then(module => ({ default: module.GatewayNativeSessionsPage })))
+const GatewayServerServices = lazy(() => import('./server-services').then(module => ({ default: module.GatewayServerServices })))
+const GatewayServerBackups = lazy(() => import('./server-backups').then(module => ({ default: module.GatewayServerBackups })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
 
 const workspaceFallback = <PageSkeleton label="Opening workspace…" />
@@ -98,7 +100,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {setupActive && <GatewaySetupProgress client={control} />}
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} asks={control.asks} drafts={control.editorDrafts} access={control.access} state={ownerState} active /></div>}
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} changes={control.changeRequests} /> : <GatewayToolsInventory client={control} />)}
-      {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
+      {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'services' ? <GatewayServerServices client={control.hostOps} /> : systemTab === 'backups' ? <GatewayServerBackups client={control.hostOps} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
       {memoryActive && <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />}
       {modelsActive && <SettingsScreen client={control} authStore={authStore} onSignOut={() => void signOut()} />}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}

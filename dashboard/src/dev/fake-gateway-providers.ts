@@ -1,5 +1,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 import { createFakeChangeRequests } from './fake-gateway-drafting'
+// The host helper's preview lives in its own file; re-exported here to keep fake-gateway.ts small.
+export { createFakeHostOps } from './fake-gateway-host'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }

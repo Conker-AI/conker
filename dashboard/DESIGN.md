@@ -63,6 +63,24 @@ screen size.
 On a phone the page's main action (`keepVisible`, e.g. New task) stays in the top bar and replaces the
 generic Ask Conker button; every other page action sits in the "…" menu, so the bar keeps one line.
 
+## Server actions (30 October)
+
+Server > Services and Server > Backups run the host helper's operations (ADR-0014) through the
+gateway: reads with the session, actions with the password bound to the exact id, operation and
+arguments. Both use the one template: rows with a state mark open their details in place, where the
+action sits after the facts. The password sheet names the effect ("Restart Memory. Conker can't
+recall or save memories until it is back.") and its button is named after the action. Each action
+shows the helper's receipt in the shared state words (Working with its step, Done only on the
+receipt, Failed with the helper's reason, Unknown with a Check that only reads); a lost answer is
+Unknown and is checked by its id. One action at a time: buttons wait while one runs, a backup lock
+or a held recovery shows why, and a 409 from the helper says "Didn't start: ... Nothing ran." The
+Backups page always says where the backups are and what that place does not protect against
+("Same computer: lost if this PC dies", from `separateDisk`); with no folder saved it gives the
+`conker setup configure protection` command. A 503 says the server helper isn't running and lists
+the commands that still work. Overview lists recent server actions, live first, then Unknown and
+Failed. Preview every state with `?preview-host=` (see `src/dev/fake-gateway-host.ts`);
+`scripts/server-actions-shots.cjs` takes the screenshots.
+
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.
