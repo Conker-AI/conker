@@ -11,7 +11,12 @@ type Documents = {
   settings: { revision: number; values: Record<string, unknown> } | null
   preferences: { revision: number; preferences: Record<string, unknown> } | null
   search: { revision: number; configuration: Record<string, unknown> } | null
+  tools: { revision: number; settings: Record<string, unknown> } | null
+  lockdown: { lockdown: boolean } | null
 }
+const NO_DOCUMENTS: Documents = { settings: null, preferences: null, search: null, tools: null, lockdown: null }
+/** ToolGate's lockdown is a switch: its answer is the document, and a save sends `{"enabled": value}`. */
+const LOCKDOWN = '/v2/owner/lockdown'
 
 function at(document: unknown, field: string): unknown {
   let value = document
@@ -38,7 +43,7 @@ function withField(document: Record<string, unknown>, field: string, value: unkn
  */
 export function useSettings(client: GatewayControlClient) {
   const { theme, setTheme } = useTheme()
-  const [documents, setDocuments] = useState<Documents>({ settings: null, preferences: null, search: null })
+  const [documents, setDocuments] = useState<Documents>(NO_DOCUMENTS)
   const [loadErrors, setLoadErrors] = useState<Partial<Record<keyof Documents, string>>>({})
   const [loading, setLoading] = useState(true)
   const [statuses, setStatuses] = useState<Record<string, RowStatus>>({})
@@ -48,15 +53,18 @@ export function useSettings(client: GatewayControlClient) {
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
-    const [settings, preferences, search] = await Promise.allSettled([client.settings.read(signal), client.settings.preferences(signal), client.search.settings(signal)])
+    const [settings, preferences, search, tools, lockdown] = await Promise.allSettled([client.settings.read(signal), client.settings.preferences(signal), client.search.settings(signal),
+      client.settings.tools(signal), client.settings.lockdown(signal)])
     if (signal?.aborted) return
     const next: Documents = {
       settings: settings.status === 'fulfilled' ? settings.value : null,
       preferences: preferences.status === 'fulfilled' ? preferences.value : null,
       search: search.status === 'fulfilled' ? search.value as Documents['search'] : null,
+      tools: tools.status === 'fulfilled' ? tools.value : null,
+      lockdown: lockdown.status === 'fulfilled' ? lockdown.value : null,
     }
     const message = (result: PromiseSettledResult<unknown>) => result.status === 'rejected' ? gatewayError(result.reason).message : undefined
-    setLoadErrors({ settings: message(settings), preferences: message(preferences), search: message(search) })
+    setLoadErrors({ settings: message(settings), preferences: message(preferences), search: message(search), tools: message(tools), lockdown: message(lockdown) })
     setDocuments(next); latest.current = next; setLoading(false)
     if (next.settings) publishServerSettings(next.settings)
   }, [client])
@@ -70,6 +78,7 @@ export function useSettings(client: GatewayControlClient) {
     const home = setting.home
     if (!home) return null
     if (home.service === 'browser') return 'browser'
+    if (home.service === 'toolgate') return home.path === LOCKDOWN ? 'lockdown' : home.path === '/v2/owner/settings' ? 'tools' : null
     return home.path === '/owner/settings' ? 'settings' : home.path === '/owner/preferences' ? 'preferences' : home.path === '/search/settings' ? 'search' : null
   }
 
@@ -82,6 +91,9 @@ export function useSettings(client: GatewayControlClient) {
     if (home === 'settings') return (documents.settings?.values[setting.id] as SettingValue | undefined) ?? setting.default
     if (home === 'preferences' && setting.home?.service === 'pi') return (at(documents.preferences?.preferences, setting.home.field) as SettingValue | undefined) ?? setting.default
     if (home === 'search' && setting.home?.service === 'pi') return (at(documents.search?.configuration, setting.home.field) as SettingValue | undefined) ?? setting.default
+    // A ToolGate number left null keeps today's limit, which is the registry default.
+    if (home === 'tools' && setting.home?.service === 'toolgate') return (at(documents.tools?.settings, setting.home.field) as SettingValue | undefined) ?? setting.default
+    if (home === 'lockdown' && setting.home?.service === 'toolgate') return (at(documents.lockdown, setting.home.field) as SettingValue | undefined) ?? setting.default
     return setting.default
   }, [documents, theme, device])
 
@@ -120,6 +132,14 @@ export function useSettings(client: GatewayControlClient) {
         } else if (home === 'search' && current.search && setting.home?.service === 'pi') {
           const saved = await client.search.save(withField(current.search.configuration, setting.home.field, next) as never, current.search.revision) as unknown as Documents['search']
           setDocuments(documents => ({ ...documents, search: saved })); latest.current = { ...latest.current, search: saved }
+        } else if (home === 'tools' && current.tools && setting.home?.service === 'toolgate') {
+          // Back at its default, a number goes back to null: today's limit, which follows ToolGate's own.
+          const stored = setting.type === 'number' && sameValue(next, setting.default) ? null : next
+          const saved = await client.settings.saveTools(withField(current.tools.settings, setting.home.field, stored), current.tools.revision)
+          setDocuments(documents => ({ ...documents, tools: saved })); latest.current = { ...latest.current, tools: saved }
+        } else if (home === 'lockdown' && current.lockdown) {
+          const saved = await client.settings.setLockdown(next === true)
+          setDocuments(documents => ({ ...documents, lockdown: saved })); latest.current = { ...latest.current, lockdown: saved }
         } else throw new GatewayError('dependency')
         report(setting.id, { state: 'saved' })
       } catch (cause) {

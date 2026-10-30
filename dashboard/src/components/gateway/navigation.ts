@@ -18,7 +18,7 @@ export type GatewayRoute =
 /**
  * The connected product's labels and destinations have one source of truth. Sidebar groups follow
  * the owner-approved structure (prototype v7): Overview (Home, Inbox, Chats), Workspace (Projects,
- * Memory, Agents, Tools, Cron jobs) and System (Server, Settings). `more` places stay reachable
+ * Memory, Agents, Tools, Cron jobs) and Server (Server, Settings). `more` places stay reachable
  * through search and links on the pages that own them.
  */
 export const gatewayDestinations = [
@@ -48,7 +48,7 @@ export type GatewayDestination = typeof gatewayDestinations[number]
 export const gatewaySidebarGroups = [
   { id: 'overview', label: 'Overview' },
   { id: 'workspace', label: 'Workspace' },
-  { id: 'system', label: 'System' },
+  { id: 'system', label: 'Server' },
 ] as const
 export const gatewaySidebarDestinations = gatewayDestinations.filter(item => item.group !== 'more')
 export const gatewayCommandDestinations = gatewayDestinations

@@ -89,6 +89,12 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/.test(path)) {
     return { title: body.enabled ? 'Let Conker use this tool' : 'Stop Conker using this tool', path, target: `Tool ${parts[4]}`, details: [body.enabled ? 'Conker can see and call it from now on. Your access settings still decide whether it asks you first.' : 'Conker can no longer see or call it. Nothing that already ran is undone.'] }
   }
+  if (path === '/api/owner/tool-settings') {
+    return { title: 'Save how tools run', path, target: 'ToolGate settings', details: ['Changes time limits, the Terminal’s resources, web search or the time an approved action has to start. None of them can go past ToolGate’s own limits.'] }
+  }
+  if (path === '/api/owner/lockdown') {
+    return { title: body.enabled ? 'Turn on lockdown' : 'Turn off lockdown', path, target: 'Every tool and workflow', details: [body.enabled ? 'No tool or workflow runs until you turn it off.' : 'Tools and workflows can run again; your access settings still decide what asks you first.'] }
+  }
   if (path === '/api/control/pi/memory/remember') {
     const length = typeof body.text === 'string' ? body.text.length : 0
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }

@@ -52,6 +52,23 @@ async function main() {
   }
   assert.equal(requests, 4)
 
+  // ToolGate's settings save with PUT and the password; lockdown on needs only the session, off asks.
+  const { needsNoPassword } = load('src/lib/gateway/transport.ts')
+  assert.equal(needsNoPassword('/api/owner/tool-settings', {}), false)
+  assert.equal(needsNoPassword('/api/owner/lockdown', { enabled: true }), true)
+  assert.equal(needsNoPassword('/api/owner/lockdown', { enabled: false }), false)
+  const sent = []
+  const toolTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async (url, init) => { sent.push([new URL(url).pathname, init.method, init.headers['X-CSRF-Token']]); return new Response('{}', { headers: { 'content-type': 'application/json' } }) } })
+  await toolTransport.request('/api/owner/tool-settings')
+  await toolTransport.request('/api/owner/tool-settings', { method: 'PUT', csrfToken: 'x'.repeat(43), body: {} })
+  await toolTransport.request('/api/owner/lockdown')
+  await toolTransport.request('/api/owner/lockdown', { method: 'POST', csrfToken: 'x'.repeat(43), body: { enabled: true } })
+  assert.deepEqual(sent.map(item => item[1]), ['GET', 'PUT', 'GET', 'POST'])
+  assert.equal(sent[1][2], 'x'.repeat(43), 'a PUT carries the CSRF token')
+  await assert.rejects(toolTransport.request('/api/owner/tool-settings', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation', 'ToolGate settings save only with PUT')
+  await assert.rejects(toolTransport.request('/api/owner/tool-settings', { method: 'PUT', body: {} }), error => error.kind === 'validation', 'a PUT needs the CSRF token')
+  await assert.rejects(toolTransport.request('/api/control/pi/owner/settings', { method: 'PUT', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation', 'no other route takes PUT')
+
   // The settings client sends whole revision-checked documents.
   const { createOwnerSettingsClient } = load('src/lib/gateway/owner-settings.ts')
   const calls = []
@@ -63,6 +80,25 @@ async function main() {
   assert.deepEqual(calls.at(-1), ['/api/control/pi/owner/settings', { method: 'POST', body: { expected_revision: 3, values: {} } }])
   reply = { schemaVersion: 1, revision: 9, values: {} }
   await assert.rejects(client.save({}, 3), error => error.kind === 'invalid-response', 'a save that skipped revisions is not trusted')
+  reply = { revision: 0, settings: { tool_seconds: null, web_safe_search: 'moderate' } }
+  assert.equal((await client.tools()).settings.web_safe_search, 'moderate')
+  assert.deepEqual(calls.at(-1), ['/api/owner/tool-settings', { signal: undefined }])
+  reply = { revision: 1, settings: { tool_seconds: 60, web_safe_search: 'moderate' } }
+  await client.saveTools({ tool_seconds: 60, web_safe_search: 'moderate' }, 0)
+  assert.deepEqual(calls.at(-1), ['/api/owner/tool-settings', { method: 'PUT', body: { expected_revision: 0, settings: { tool_seconds: 60, web_safe_search: 'moderate' } } }])
+  await assert.rejects(client.saveTools({}, 5), error => error.kind === 'invalid-response', 'a ToolGate save that skipped revisions is not trusted')
+  reply = { lockdown: true, reason: '', changed_by: 'owner' }
+  await client.setLockdown(true)
+  assert.deepEqual(calls.at(-1), ['/api/owner/lockdown', { method: 'POST', body: { enabled: true } }])
+  await assert.rejects(client.setLockdown(false), error => error.kind === 'invalid-response', 'a lockdown answer that did not change is not trusted')
+
+  // Every ToolGate home names a field of ToolGate's document, or its lockdown switch.
+  const toolFields = ['tool_seconds', 'terminal_seconds', 'terminal_memory_mb', 'terminal_cpus', 'terminal_workspace_mb', 'web_safe_search', 'web_region', 'web_skip_sites', 'web_page_characters', 'run_window_minutes']
+  for (const setting of settings.filter(item => item.home?.service === 'toolgate')) {
+    if (setting.home.path === '/v2/owner/lockdown') assert.deepEqual([setting.home.key, setting.home.field, setting.type], ['enabled', 'lockdown', 'toggle'], setting.id)
+    else assert.ok(setting.home.path === '/v2/owner/settings' && setting.home.key === 'settings' && toolFields.includes(setting.home.field), setting.id)
+    assert.equal(setting.home.verify, true, `${setting.id}: ToolGate saves ask for the password`)
+  }
   console.log(`Settings passed: ${groups.length} topics, ${settings.length} settings, one row template, every block and control present, password only where it guards something.`)
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

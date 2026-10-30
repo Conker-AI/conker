@@ -151,8 +151,9 @@ async function main() {
         assert.deepEqual(literal(node.arguments[1], file), setting.default, `${where}: the default must be the registry's`)
         if (setting.type === 'select') {
           const type = node.typeArguments?.[0]
-          assert.ok(type && ts.isUnionTypeNode(type), `${where}: name the options as the type`)
-          const named = type.types.map(member => ts.isLiteralTypeNode(member) && ts.isStringLiteral(member.literal) ? member.literal.text : member.getText()).sort()
+          // A select with one option names it alone.
+          assert.ok(type && (ts.isUnionTypeNode(type) || ts.isLiteralTypeNode(type)), `${where}: name the options as the type`)
+          const named = (ts.isUnionTypeNode(type) ? type.types : [type]).map(member => ts.isLiteralTypeNode(member) && ts.isStringLiteral(member.literal) ? member.literal.text : member.getText()).sort()
           assert.deepEqual(named, setting.options.map(option => String(option.value)).sort(), `${where}: the type must list exactly the registry's options`)
         }
         used.set(setting.id, (used.get(setting.id) ?? 0) + 1)

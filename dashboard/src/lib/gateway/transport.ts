@@ -55,7 +55,7 @@ export class GatewayError extends Error {
 export function gatewayError(error: unknown): GatewayError {
   return error instanceof GatewayError ? error : new GatewayError('network')
 }
-export type GatewayMethod = 'GET' | 'POST'
+export type GatewayMethod = 'GET' | 'POST' | 'PUT'
 export type GatewayRequest = {
   method?: GatewayMethod
   body?: Record<string, unknown>
@@ -77,6 +77,7 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/(sessions|tasks)$/,
     new RegExp(`^/api/pi/tasks/${ids}/(update|transition|archive)$`),
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
+  PUT: [],
 }
 // Diagnostics is the one shared owner-health contract used by the UI and host CLI.
 const correctionRoute = /^\/api\/control\/pi\/memory\/corrections(?:\/(?:pending|[A-Za-z0-9_-]{16,128}(?:\/retry)?|memories\/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}))?$(?![\s\S])/
@@ -140,6 +141,12 @@ routes.POST.unshift(...toolRequestRoutes)
 // (quiet hours, proactivity, budgets: saving asks for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
 routes.POST.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
+// ToolGate's settings for how tools run (saving asks for the password) and its lockdown switch:
+// turning it on only takes power away, so the session is enough; turning it off asks.
+const lockdownRoute = /^\/api\/owner\/lockdown$/
+routes.GET.unshift(/^\/api\/owner\/tool-settings$/, lockdownRoute)
+routes.PUT.unshift(/^\/api\/owner\/tool-settings$/)
+routes.POST.unshift(lockdownRoute)
 // Conker's questions: list, answer (his next message in that chat) and dismiss (sends nothing).
 routes.GET.unshift(/^\/api\/control\/pi\/asks(?:\/ask_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
@@ -187,6 +194,8 @@ conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{
 // Reading the server's services or backup folder changes nothing.
 conversationWrites.push(/^\/api\/host\/read$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
+/** Writes the signed-in session is enough for: conversation writes, and turning lockdown on. */
+export const needsNoPassword = (path: string, body?: Record<string, unknown>) => isConversationWrite(path) || lockdownRoute.test(path) && body?.enabled === true
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -219,14 +228,14 @@ function correctionOperation(value: unknown): boolean {
   const operation = object(value.operation) ? value.operation : value
   return operation.method === 'POST' && operation.path === '/api/control/pi/memory/corrections'
 }
-export type GatewayVerifiedOperation = { method: 'POST'; path: string; body: Record<string, unknown> }
+export type GatewayVerifiedOperation = { method: 'POST' | 'PUT'; path: string; body: Record<string, unknown> }
 export function isBrowserSessionRoute(path: string): boolean {
   return path === '/auth/sessions' || path === '/auth/revoke-all' || /^\/auth\/sessions\/[A-Za-z0-9_-]{16,128}\/revoke$/.test(path)
 }
 /** Capture the exact validated JSON before a password prompt can yield to other edits. */
-export function snapshotGatewayOperation(path: string, body: unknown): GatewayVerifiedOperation {
-  if ((!path.startsWith('/api/') && !isBrowserSessionRoute(path)) || !routes.POST.some(route => route.test(path))) throw new GatewayError('validation')
-  return { method: 'POST', path, body: JSON.parse(jsonBody(body, characterOperation({ method: 'POST', path, body }) ? GATEWAY_CHARACTER_LIMIT : correctionOperation({ method: 'POST', path, body }) ? 128000 : GATEWAY_JSON_LIMIT)) as Record<string, unknown> }
+export function snapshotGatewayOperation(path: string, body: unknown, method: 'POST' | 'PUT' = 'POST'): GatewayVerifiedOperation {
+  if ((!path.startsWith('/api/') && !isBrowserSessionRoute(path)) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
+  return { method, path, body: JSON.parse(jsonBody(body, characterOperation({ method, path, body }) ? GATEWAY_CHARACTER_LIMIT : correctionOperation({ method, path, body }) ? 128000 : GATEWAY_JSON_LIMIT)) as Record<string, unknown> }
 }
 async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
   if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
@@ -305,7 +314,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
     },
     async request(path: string, options: GatewayRequest & { csrfToken?: string; verificationToken?: string } = {}): Promise<Record<string, unknown>> {
       const method = options.method ?? 'GET'
-      if ((method !== 'GET' && method !== 'POST') || typeof path !== 'string' || path.length > 2048 || (!/^\/[A-Za-z0-9/_.-]+$/.test(path) && !correctionRoute.test(path) && !hostOpsRoute.test(path)) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
+      if ((method !== 'GET' && method !== 'POST' && method !== 'PUT') || typeof path !== 'string' || path.length > 2048 || (!/^\/[A-Za-z0-9/_.-]+$/.test(path) && !correctionRoute.test(path) && !hostOpsRoute.test(path)) || /\s/.test(path) || !routes[method].some(route => route.test(path))) throw new GatewayError('validation')
       if (correctionRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
       if (nativeSessionsRoute.test(path) && options.query !== undefined) throw new GatewayError('validation')
       if (codexSessionsRoute.test(path) && options.query !== undefined && (path !== codexSessionsPath || Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'archived' ? typeof value !== 'boolean' : key === 'cursor' ? typeof value !== 'string' || value.length > 8192 || !/^[A-Za-z0-9_-]+$(?![\s\S])/.test(value) : true))) throw new GatewayError('validation')
@@ -313,8 +322,8 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path) || observationRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/pi/sessions/history' && options.query !== undefined && Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'q' ? typeof value !== 'string' || [...value].length > 200 || value.includes('\0') || /[\uD800-\uDFFF]/u.test(value) : key === 'cursor' ? typeof value !== 'string' || !/^h1\.[a-f0-9]{64}\.[A-Za-z0-9_-]{1,128}$/.test(value) : true)) throw new GatewayError('validation')
-      if (method === 'POST' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
-      if (options.verificationToken !== undefined && (method !== 'POST' || !path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
+      if (method !== 'GET' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
+      if (options.verificationToken !== undefined && (method === 'GET' ||!path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()
       if (options.query) {
         const entries = Object.entries(options.query)
@@ -329,7 +338,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       const body = options.body === undefined ? undefined : jsonBody(options.body, characterOperation(options.body) || characterOperation({ method, path, body: options.body }) ? GATEWAY_CHARACTER_LIMIT : correctionOperation(options.body) || correctionOperation({ method, path, body: options.body }) ? 128000 : GATEWAY_JSON_LIMIT)
       const headers: Record<string, string> = { Accept: 'application/json' }
       if (body !== undefined) headers['Content-Type'] = 'application/json'
-      if (method === 'POST') headers['X-CSRF-Token'] = options.csrfToken!
+      if (method !== 'GET') headers['X-CSRF-Token'] = options.csrfToken!
       if (options.verificationToken) headers['X-Conker-Verification'] = options.verificationToken
       try {
         const response = await fetcher(`${origin}${path}${suffix}`, {

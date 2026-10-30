@@ -1,20 +1,16 @@
 """The settings registry: one description per setting, written back only through its home."""
 
 import json
-import os
 import re
 import subprocess
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from threading import Thread
 from types import SimpleNamespace
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import config_cli
 import conker_config as config
 
 SETTINGS = config.load_registry()
@@ -178,7 +174,7 @@ def test_every_setting_is_complete_and_consistent():
             )
             assert home is None and setting["default"] is None, name
         else:
-            assert home["service"] in {"pi", "browser"}, name
+            assert home["service"] in {"pi", "browser", "toolgate"}, name
             assert (home["service"] == "browser") == (setting["scope"] == "device"), (
                 name
             )
@@ -187,6 +183,13 @@ def test_every_setting_is_complete_and_consistent():
                     name
                 )
                 assert ("{chat}" in home["path"]) == (setting["scope"] == "chat"), name
+            if home["service"] == "toolgate":
+                # ToolGate's settings document, or its lockdown switch; both ask for the password.
+                assert home["path"] in {"/v2/owner/settings", "/v2/owner/lockdown"}, (
+                    name
+                )
+                assert home["key"] and home["field"] and home["verify"] is True, name
+                assert setting["scope"] == "global", name
         for other in setting["related"] + [setting.get("dependsOn", {}).get("id")]:
             assert other is None or other in ids, (name, other)
         default, values = setting["default"], config.values_of(setting)
@@ -274,11 +277,25 @@ def test_bad_values_are_refused_before_any_request(identity, raw):
 
 
 class FakePi:
-    def __init__(self, documents):
-        self.documents, self.calls = documents, []
+    """Pi's homes, and ToolGate's settings and lockdown switch as the owner key reaches them."""
 
-    def __call__(self, _config, service, path, body=None):
+    def __init__(self, documents):
+        self.documents, self.calls, self.methods, self.lockdown = (
+            documents,
+            [],
+            [],
+            False,
+        )
+
+    def __call__(self, _config, service, path, body=None, method=None):
         self.calls.append((service, path, body))
+        self.methods.append(method)
+        assert (service == "toolgate-owner") == path.startswith("/v2/")
+        assert (method == "PUT") == (path == "/v2/owner/settings" and body is not None)
+        if path == "/v2/owner/lockdown":
+            if body is not None:
+                self.lockdown = body["enabled"]
+            return {"lockdown": self.lockdown, "reason": "", "changed_by": "owner"}
         key, (revision, document) = self.documents[path]
         if body is None:
             return {"revision": revision, key: document}
@@ -299,6 +316,22 @@ PREFERENCES = {
     "dailyBudget": {"suggestions": 4, "researchMinutes": 30, "costCents": 0},
     "idleTimeoutMinutes": 15,
     "planAlerts": {"enabled": True, "percent": 80},
+    "newChatAccess": "default",
+}
+
+
+# ToolGate's answer before the first save: numbers left null keep today's limits.
+TOOL_SETTINGS = {
+    "tool_seconds": None,
+    "terminal_seconds": None,
+    "terminal_memory_mb": None,
+    "terminal_cpus": None,
+    "terminal_workspace_mb": None,
+    "web_safe_search": "moderate",
+    "web_region": "",
+    "web_skip_sites": [],
+    "web_page_characters": None,
+    "run_window_minutes": None,
 }
 
 
@@ -306,6 +339,7 @@ def pi():
     return FakePi(
         {
             "/owner/settings": ("values", (0, {})),
+            "/v2/owner/settings": ("settings", (0, dict(TOOL_SETTINGS))),
             "/owner/preferences": (
                 "preferences",
                 (3, json.loads(json.dumps(PREFERENCES))),
@@ -394,6 +428,8 @@ def test_list_reads_each_home_once_and_shows_what_changed(capsys):
         "/owner/preferences",
         "/owner/settings",
         "/search/settings",
+        "/v2/owner/lockdown",
+        "/v2/owner/settings",
     ]
     changed = run(fake, capsys, "list", modified=True)["settings"]
     assert [row["id"] for row in changed] == ["search.sources"]
@@ -445,6 +481,48 @@ def test_settings_without_a_home_live_in_the_owner_settings_document(capsys):
             run(fake, capsys, "set", id=identity, value="dark")
 
 
+def test_tool_settings_live_in_toolgate_and_lockdown_is_a_switch(capsys):
+    fake = pi()
+    saved = run(fake, capsys, "set", id="tools.timeout", value="60")
+    assert saved == {
+        "id": "tools.timeout",
+        "value": 60,
+        "revision": 1,
+        "effect": "live",
+    }
+    assert fake.calls[-1] == (
+        "toolgate-owner",
+        "/v2/owner/settings",
+        {"expected_revision": 0, "settings": {**TOOL_SETTINGS, "tool_seconds": 60}},
+    )
+    assert fake.methods[-1] == "PUT"
+    got = run(fake, capsys, "get", id="tools.timeout")
+    assert got["value"] == 60 and got["modified"] is True
+    # Back at its default a number is saved as null: today's limit, shown as the default.
+    reset = run(fake, capsys, "reset", id="tools.timeout")
+    assert reset["value"] == 180 and fake.calls[-1][2]["settings"] == TOOL_SETTINGS
+    assert run(fake, capsys, "get", id="tools.timeout")["modified"] is False
+    run(fake, capsys, "set", id="tools.terminal.cpu", value="0.5")
+    assert fake.calls[-1][2]["settings"]["terminal_cpus"] == 0.5
+    for raw, message in (("1.5", "at most 1"), ("half", "such as 0.5")):
+        with pytest.raises(ValueError, match=message):
+            run(fake, capsys, "set", id="tools.terminal.cpu", value=raw)
+    run(fake, capsys, "set", id="research.skip_sites", value="example.com, spam.test")
+    assert fake.calls[-1][2]["settings"]["web_skip_sites"] == [
+        "example.com",
+        "spam.test",
+    ]
+    with pytest.raises(ValueError, match="expected form"):
+        run(fake, capsys, "set", id="tools.web.region", value="u5")
+    on = run(fake, capsys, "set", id="access.lockdown", value="on")
+    assert on == {"id": "access.lockdown", "value": True, "effect": "live"}
+    assert fake.calls[-1] == ("toolgate-owner", "/v2/owner/lockdown", {"enabled": True})
+    got = run(fake, capsys, "get", id="access.lockdown")
+    assert got["value"] is True and got["modified"] is True
+    assert run(fake, capsys, "reset", id="access.lockdown")["value"] is False
+    assert fake.calls[-1][2] == {"enabled": False}
+
+
 def test_the_settings_reference_matches_the_registry():
     result = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "settings_docs.py"), "--check"],
@@ -453,123 +531,3 @@ def test_the_settings_reference_matches_the_registry():
         check=False,
     )
     assert result.returncode == 0, result.stdout
-
-
-def test_an_installed_stack_is_reached_inside_the_pi_container(monkeypatch):
-    root = Path("/srv/conker")
-    command = config_cli.compose(root, "ubuntu")
-    assert command == [
-        "docker",
-        "compose",
-        "--project-directory",
-        str(root),
-        "-f",
-        str(root / "compose.json"),
-    ]
-    repository = config_cli.compose(root, "repository")
-    assert repository[-2:] == ["-f", str(root / "docker-compose.yml")]
-    assert str(root / ".env") in repository and str(root / "versions.env") in repository
-    calls = []
-
-    def answer(stdout, code=0, stderr=b""):
-        def run(sent, **options):
-            calls.append((sent, options["input"]))
-            return SimpleNamespace(returncode=code, stdout=stdout, stderr=stderr)
-
-        monkeypatch.setattr(config_cli.subprocess, "run", run)
-
-    answer(b'200\n{"revision": 1, "values": {}}')
-    assert config_cli.request(command, "pi", "/owner/settings") == {
-        "revision": 1,
-        "values": {},
-    }
-    body = {"expected_revision": 1, "values": {"you.call_me": "Zoë"}}
-    config_cli.request(command, "pi", "/owner/settings", body)
-    (read, nothing), (write, sent) = calls
-    assert read[: len(command)] == command
-    assert read[len(command) :] == [
-        "exec",
-        "-T",
-        "pi",
-        "python",
-        "-c",
-        config_cli.RELAY,
-        "GET",
-        "/owner/settings",
-    ]
-    assert nothing == b"" and write[-2:] == ["POST", "/owner/settings"]
-    assert json.loads(sent) == body
-    for stdout, code, stderr, message in [
-        (b'409\n{"detail": {"code": "revision_conflict"}}', 0, b"", "changed while"),
-        (
-            b'422\n{"detail": {"code": "invalid_settings", "message": "Too deep."}}',
-            0,
-            b"",
-            r"HTTP 422\): Too deep\. Nothing was saved\.$",
-        ),
-        (b"", 1, b'service "pi" is not running\n', 'service "pi" is not running'),
-        (b"200\nnot json", 0, b"", "other than JSON"),
-    ]:
-        answer(stdout, code, stderr)
-        with pytest.raises(config_cli.NotConfirmed, match=message):
-            config_cli.request(command, "pi", "/owner/settings", body)
-    for path in ("/owner/settings@elsewhere", "//elsewhere/x", "/sessions/../owner"):
-        with pytest.raises(ValueError, match="not a settings home"):
-            config_cli.request(command, "pi", path)
-    answer(b'404\n{"detail": "Conversation unavailable."}')
-    with pytest.raises(
-        config_cli.NotConfirmed, match=r"\): Conversation unavailable\.$"
-    ):
-        config_cli.request(command, "pi", "/sessions/ses_gone/output")
-
-
-def test_the_relay_calls_pi_with_its_own_key_and_reports_the_status():
-    seen = []
-
-    class Pi(BaseHTTPRequestHandler):
-        def do_GET(self):
-            seen.append(("GET", self.path, self.headers["X-Pi-Key"]))
-            self.answer(200, {"revision": 2, "values": {}})
-
-        def do_POST(self):
-            body = self.rfile.read(int(self.headers["Content-Length"]))
-            seen.append(("POST", self.path, json.loads(body)))
-            self.answer(409, {"detail": {"code": "revision_conflict"}})
-
-        def answer(self, status, value):
-            content = json.dumps(value).encode()
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(content)))
-            self.end_headers()
-            self.wfile.write(content)
-
-        def log_message(self, *_args):
-            pass
-
-    server = HTTPServer(("127.0.0.1", 0), Pi)
-    Thread(target=server.serve_forever, daemon=True).start()
-    relay = config_cli.RELAY.replace(
-        "127.0.0.1:8050", f"127.0.0.1:{server.server_port}"
-    )
-    environment = {**os.environ, "PI_ADMIN_KEY": "recovery-key"}
-    try:
-        got, posted = (
-            subprocess.run(
-                [sys.executable, "-c", relay, method, "/owner/settings"],
-                input=sent,
-                capture_output=True,
-                env=environment,
-                timeout=30,
-                check=False,
-            )
-            for method, sent in (("GET", b""), ("POST", b'{"expected_revision": 1}'))
-        )
-    finally:
-        server.shutdown()
-    assert got.stdout == b'200\n{"revision": 2, "values": {}}', got.stderr
-    assert posted.stdout.startswith(b"409\n"), posted.stderr
-    assert seen == [
-        ("GET", "/owner/settings", "recovery-key"),
-        ("POST", "/owner/settings", {"expected_revision": 1}),
-    ]

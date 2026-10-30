@@ -26,18 +26,20 @@ function useDraft(value: SettingValue) {
 function NumberControl({ setting, id, value, disabled, onChange }: ControlProps) {
   const [draft, setDraft] = useDraft(value)
   const [problem, setProblem] = useState('')
+  // A step like 0.1 (processors) takes decimals, kept to the step's places; every other number is whole.
+  const places = Number.isInteger(setting.step ?? 1) ? 0 : String(setting.step).split('.')[1]?.length ?? 0
   const commit = () => {
     if (draft.trim() === '' && setting.default === null) { setProblem(''); if (value !== null) onChange(null); return }
-    const number = Number(draft)
-    if (!Number.isInteger(number) || (setting.min !== undefined && number < setting.min) || (setting.max !== undefined && number > setting.max)) {
-      setProblem(`Use a whole number from ${setting.min ?? 0} to ${setting.max ?? '∞'}.`); return
+    const number = places ? Number(Number(draft).toFixed(places)) : Number(draft)
+    if (!Number.isFinite(number) || !places && !Number.isInteger(number) || (setting.min !== undefined && number < setting.min) || (setting.max !== undefined && number > setting.max)) {
+      setProblem(`Use a ${places ? '' : 'whole '}number from ${setting.min ?? 0} to ${setting.max ?? '∞'}.`); return
     }
     setProblem('')
     if (number !== value) onChange(number)
   }
   return <div className="flex flex-col items-end gap-1">
     <div className="flex items-center gap-2">
-      <Input id={id} type="number" inputMode="numeric" className="w-28 text-right" min={setting.min} max={setting.max} step={setting.step ?? 1} value={draft} disabled={disabled} aria-invalid={Boolean(problem)}
+      <Input id={id} type="number" inputMode={places ? 'decimal' : 'numeric'} className="w-28 text-right" min={setting.min} max={setting.max} step={setting.step ?? 1} value={draft} disabled={disabled} aria-invalid={Boolean(problem)}
         onChange={event => setDraft(event.target.value)} onBlur={commit} onKeyDown={event => { if (event.key === 'Enter') commit() }} />
       {setting.unit && <span className="text-sm text-muted-foreground">{setting.unit}</span>}
     </div>

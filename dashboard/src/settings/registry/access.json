@@ -198,12 +198,19 @@
         {
           "id": "access.lockdown",
           "title": "Lockdown",
-          "description": "Lets Conker only read until you turn it off.",
+          "description": "Stops every tool and workflow run, read-only ones too, until you turn it off.",
           "type": "toggle",
           "default": false,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live",
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/lockdown",
+            "key": "enabled",
+            "verify": true,
+            "field": "lockdown"
+          }
         },
         {
           "id": "access.reverify",

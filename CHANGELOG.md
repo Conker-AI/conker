@@ -17,6 +17,13 @@ which module versions a release pins.
   ones run with `conker ops run`. When the helper isn't running, the pages say so and give the
   commands that still work on the server.
 
+- **More settings work, and tool settings live in ToolGate.** New-chat privacy, chat names, the
+  message queue, the largest upload ("No limit" by default), signing out, new-chat access and the
+  local model settings now do what they say. Tool and Terminal limits, safe search, the search
+  region, sites to skip, the time an approved action has to start, and lockdown are saved in
+  ToolGate's own settings (asking for the password; turning lockdown on does not), from Settings
+  and from `conker config` alike. Wake, sleep, units and local model settings start as "Not set";
+  the sidebar heading says Server.
 - **Workflow drafting goes through tool requests.** `python scripts/conker.py workflow draft` is
   now `conker tool draft` under its older name (Pi drafts in the background; the draft waits in
   the Inbox), and `workflow from-chat SESSION MESSAGE_ID` files a tool request from your own
@@ -27,7 +34,6 @@ which module versions a release pins.
 - **`conker tool answer creq_... "..."`** answers the drafter's question on a tool request
   (`needs_detail`, asked in the chat that made it), as the chat and the Inbox do, and waits for
   the draft. `conker tool draft` exits 4 when the drafter asks.
-
 - **Deploy follow-ups.** Pi now knows the server's Ollama context length in both server layouts
   (`PI_OLLAMA_CONTEXT_LENGTH`, the same value as `OLLAMA_CONTEXT_LENGTH`), so the local context
   setting is capped to what the machine was sized for. `conker restart pi`, `conker restart` and
