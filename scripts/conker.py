@@ -33,7 +33,7 @@ from conker_inputs import (
 )
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
-from conker_workflows import workflow_operation
+from conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from plan_limits import limits_operation
 from workspace import read_config
 
@@ -283,6 +283,10 @@ def main():
         memory_edit_operation(args) if args.command == "memory-edit" else None
     )
     config = read_config()
+
+    def pi_caller(method, path, body):
+        return pi_call(request, config, path, body, method=method)
+
     if args.command == "native":
         native = config["native_providers"]
         env = dict(os.environ)
@@ -497,16 +501,12 @@ def main():
         value = pi_call(request, config, "/definitions", query=query)
     elif args.command == "limits":
         value = limits_operation(args, config, request, pi_call)
+    elif args.command == "workflow" and args.operation in TOOL_REQUESTS:
+        return tool_request(args, config, request, pi_caller, emit=tool_drafts.emit)
     elif args.command == "workflow":
         value = workflow_operation(args, config, request)
     elif args.command == "tool":
-        return tool_drafts.run(
-            lambda method, path, body: pi_call(
-                request, config, path, body, method=method
-            ),
-            args,
-            emit=tool_drafts.emit,
-        )
+        return tool_drafts.run(pi_caller, args, emit=tool_drafts.emit)
     elif args.command == "import":
         return assistant_imports.run(
             assistant_imports.dev_caller(pi_call, request, config),

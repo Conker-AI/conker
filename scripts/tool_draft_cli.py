@@ -3,7 +3,8 @@
 The launcher runs this on the host for both deployment layouts. As for conker config
 (scripts/config_cli.py), each call is one `docker compose exec` into the pi container, where a
 short relay calls Pi on its own port with the key Pi was started with: the key never leaves the
-container. Only the two tool-request routes can be called.
+container. Only the tool-request routes can be called: filing one, reading it, and answering
+the drafter's question (`retry` with an answer).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from pathlib import Path
 import tool_drafts
 from config_cli import RELAY, compose, reason
 
-ROUTES = re.compile(r"/tool-drafts|/change-requests/creq_[a-f0-9]{32}")
+ROUTES = re.compile(r"/tool-drafts|/change-requests/creq_[a-f0-9]{32}(?:/retry)?")
 
 
 class Refused(Exception):

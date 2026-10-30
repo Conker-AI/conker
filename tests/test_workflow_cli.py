@@ -1,4 +1,4 @@
-"""conker workflow: Pi drafts from words, ToolGate stores and validates, the owner publishes."""
+"""conker workflow: drafting is a tool request in Pi; ToolGate stores and validates; the owner publishes."""
 
 import io
 import json
@@ -13,63 +13,37 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import conker as cli
 import conker_workflows as workflows
+import tool_drafts
 
-TOOLS = [
-    {
-        "id": "weather-now",
-        "name": "Weather now",
-        "description": "Weather",
-        "version": 2,
-        "inputs": [{"name": "city", "type": "string", "required": True}, {"name": ""}],
-    },
-]
+REQUEST = "creq_" + "a" * 32
+TOOL_ID = "workflow:morning-weather:1:" + "c" * 64
 DOCUMENT = {
     "id": "morning-weather",
     "name": "Morning weather",
     "description": "",
     "kind": "workflow",
     "nodes": [
-        {
-            "id": "start",
-            "type": "input",
-            "label": "Start",
-            "position": {"x": 0.0, "y": 0.0},
-            "config": {},
-        },
+        {"id": "start", "type": "input", "label": "Start", "config": {}},
         {
             "id": "fetch",
             "type": "tool_call",
             "label": "Fetch",
-            "position": {"x": 0.0, "y": 120.0},
             "config": {"tool": "weather-now", "args": {"city": "$input.city"}},
         },
-        {
-            "id": "done",
-            "type": "return",
-            "label": "Done",
-            "position": {"x": 0.0, "y": 240.0},
-            "config": {"value": "$last"},
-        },
+        {"id": "done", "type": "return", "label": "Done", "config": {"value": "$last"}},
     ],
-    "edges": [
-        {"id": "e1", "source": "start", "target": "fetch"},
-        {"id": "e2", "source": "fetch", "target": "done"},
-    ],
+    "edges": [],
     "inputs": [{"name": "city", "type": "string", "required": True}],
     "outputs": [],
-    "credentialRefs": [],
     "effect": "read",
     "agentVisible": False,
-    "budgets": {"maxSteps": 50, "maxLoopItems": 20, "timeoutMs": 15000},
 }
-
-
 CHAT = {
     "messages": [
         {
             "id": "msg_owner",
             "role": "user",
-            "content": "Every morning tell me the weather in Tel Aviv",
+            "content": " Every morning tell me the weather in Tel Aviv ",
         },
         {"id": "msg_reply", "role": "assistant", "content": "I can draft that."},
         {
@@ -82,209 +56,205 @@ CHAT = {
 }
 
 
-def ready(document=DOCUMENT, issues=()):
+def tool_request(status="ready", **payload):
     return {
-        "reply": "Reads the weather.",
-        "ready": True,
-        "document": document,
-        "issues": list(issues),
-        "modelId": "a",
-        "configurationRevision": 1,
+        "id": REQUEST,
+        "kind": "tool_draft",
+        "title": "Add the tool “Morning weather”",
+        "payload": {"description": "weather", "status": status, **payload},
+        "state": "open",
     }
 
 
-def refused(code, detail):
-    return HTTPError(
-        "http://x",
-        code,
-        "refused",
-        {},
-        io.BytesIO(json.dumps({"detail": detail}).encode()),
-    )
-
-
 class Services:
-    """ToolGate's editor routes and Pi's draft route, recorded."""
+    """ToolGate's editor routes and Pi's routes, recorded."""
 
-    def __init__(self, drafts, validations=((),), existing=(), publications=()):
-        self.drafts, self.validations = list(drafts), list(validations)
-        self.saved, self.existing, self.publications = (
-            {},
-            set(existing),
-            list(publications),
-        )
+    def __init__(self, publications=(), published=None):
+        self.publications, self.published = list(publications), published
         self.calls = []
-        self.offer_state = "open"
 
     def __call__(self, config, service, path, body=None, **options):
         self.calls.append((service, path, body, options))
         if path == "/v2/owner/editor-capabilities":
-            kind, after = options["query"]["kind"], options["query"].get("after")
-            if kind == "workflow":
+            if options["query"]["kind"] == "workflow":
                 return {"items": [], "next_after": None}
-            return (
-                {"items": TOOLS[:1], "next_after": "weather-now"}
-                if not after
-                else {"items": [{**TOOLS[0], "id": "news"}], "next_after": None}
-            )
+            return {
+                "items": [{"id": "weather-now", "authorization": "owner_confirmation"}],
+                "next_after": None,
+            }
         if path.startswith("/sessions/"):
             return CHAT
-        if path == "/workflow-proposals":
-            return {"id": "wfp_" + "1" * 32, **body}
-        if path.startswith("/workflow-proposals/offers/"):
-            state = "dismissed" if path.endswith("/dismiss") else self.offer_state
-            return {"sessionId": "ses_1", "messageId": "msg_owner", "state": state}
-        if path == "/workflow-proposals/published":
-            return {"draftId": body["draftId"], "closed": 1}
-        if path == "/workflow-drafts/draft":
-            reply = self.drafts.pop(0)
-            if isinstance(reply, Exception):
-                raise reply
-            return reply
-        identity = path.split("/")[4]
-        if path.endswith("/validation"):
-            issues = self.validations.pop(0)
+        if path.endswith("/decline"):
+            return {**tool_request(), "state": "declined"}
+        if path.endswith("/published"):
+            if isinstance(self.published, Exception):
+                raise self.published
             return {
-                "graph_valid": not issues,
-                "issues": [{"message": m} for m in issues],
+                **tool_request(),
+                "state": "approved",
+                "result": {"published": body},
+            }
+        if path.endswith("/validation"):
+            return {
+                "graph_valid": True,
+                "issues": [{"message": "x", "node_id": "fetch"}],
             }
         if path.endswith("/publications"):
             return {"items": self.publications}
         if path.endswith("/publish"):
-            return {"draft_id": identity, **body}
-        if body is not None:
-            revision = self.saved.get(identity, 0)
-            assert body["expected_revision"] == revision
-            self.saved[identity] = revision + 1
-            return {
-                "id": identity,
-                "revision": revision + 1,
-                "document": body["document"],
-            }
-        if identity in self.existing or identity in self.saved:
-            return {"id": identity, "revision": 1, "document": DOCUMENT}
-        raise HTTPError("http://x", 404, "missing", {}, io.BytesIO(b"{}"))
+            return {"draft_id": path.split("/")[4], "toolId": TOOL_ID, **body}
+        return {"id": "morning-weather", "revision": 2, "document": DOCUMENT}
 
     def to(self, path):
         return [call for call in self.calls if call[1] == path]
 
 
-def draft(services, answers=(), **values):
-    replies = list(answers)
-    values = {
-        "description": "Weather in Tel Aviv",
-        "id": None,
-        "all_tools": False,
+class Pi:
+    """Pi's tool-request routes as `conker tool draft` calls them."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, method, path, body):
+        self.calls.append((method, path, body))
+        return tool_request("ready", steps=["Fetch the weather"], issues=[])
+
+
+def waiting(**values):
+    return {
+        "no_wait": False,
+        "request_id": None,
+        "timeout": 30,
+        "json": False,
         **values,
     }
-    args = Namespace(operation="draft", **values)
-    return workflows.draft(
-        args, {}, services, answer=lambda question: replies.pop(0) if replies else ""
-    )
 
 
-def test_a_question_then_a_valid_draft_is_saved_unpublished():
-    services = Services(
-        [{"reply": "Which city?", "ready": False, "document": None}, ready()]
+def test_draft_files_a_tool_request_and_waits_for_it():
+    pi, printed = Pi(), []
+    args = Namespace(operation="draft", description="Weather in Tel Aviv", **waiting())
+    assert workflows.tool_request(args, {}, Services(), pi, emit=printed.append) == 0
+    method, path, body = pi.calls[0]
+    assert (method, path) == ("POST", "/tool-drafts")
+    assert body["description"] == "Weather in Tel Aviv"
+    assert tool_drafts.REQUEST_ID.fullmatch(body["request_id"])
+    assert "1. Fetch the weather" in printed[0]
+
+
+def test_from_chat_files_the_owners_own_message():
+    pi, services = Pi(), Services()
+    args = Namespace(
+        operation="from-chat", session="ses_1", message="msg_owner", **waiting()
     )
-    result = draft(services, answers=["Tel Aviv"])
-    assert result["saved"] and result["valid"] and result["revision"] == 1
-    assert result["steps"] == [
-        "Start (input)",
-        "Fetch (tool_call) -> tool weather-now",
-        "Done (return)",
-    ]
+    assert workflows.tool_request(args, {}, services, pi, emit=lambda _text: None) == 0
     assert (
-        result["next"]
-        == "Review it, then: conker workflow publish morning-weather --expected-revision 1"
+        pi.calls[0][2]["description"] == "Every morning tell me the weather in Tel Aviv"
     )
-    first, second = (call[2] for call in services.to("/workflow-drafts/draft"))
-    assert [item["id"] for item in first["capabilities"]] == ["weather-now", "news"]
-    assert first["capabilities"][0]["inputs"] == [
-        {"name": "city", "type": "string", "required": True, "description": ""}
-    ]
-    assert second["conversation"] == [
-        {"role": "builder", "content": "Which city?"},
-        {"role": "owner", "content": "Tel Aviv"},
-    ]
-    assert not any(call[1].endswith("/publish") for call in services.calls)
+    assert services.to("/sessions/ses_1")
 
 
-def test_a_question_without_an_answer_stops_before_saving():
-    services = Services([{"reply": "Which city?", "ready": False, "document": None}])
-    with pytest.raises(ValueError, match="The builder asks: Which city?"):
-        draft(services)
-    assert services.saved == {}
-
-
-def test_pi_issues_are_repaired_before_anything_is_saved():
-    services = Services(
-        [
-            ready(issues=["Step fetch uses 'bank', which is not an available tool."]),
-            ready(),
-        ]
+@pytest.mark.parametrize(
+    "message,error",
+    [
+        ("msg_reply", "only from your own messages"),
+        ("msg_gone", "only from your own messages"),
+        ("msg_missing", "not in that chat"),
+        ("../x", "ids that show prints"),
+    ],
+)
+def test_only_the_owners_own_messages_become_requests(message, error):
+    pi = Pi()
+    args = Namespace(
+        operation="from-chat", session="ses_1", message=message, **waiting()
     )
-    result = draft(services)
-    repair = services.to("/workflow-drafts/draft")[1][2]
-    assert repair["previous"] == DOCUMENT and repair["draftId"] == "morning-weather"
-    assert repair["issues"] == [
-        "Step fetch uses 'bank', which is not an available tool."
+    with pytest.raises(ValueError, match=error):
+        workflows.tool_request(args, {}, Services(), pi)
+    assert pi.calls == []
+
+
+def test_the_development_cli_drafts_through_the_tool_request(monkeypatch, capsys):
+    calls = []
+
+    def fake(config, service, path, body=None, **options):
+        calls.append((service, options.get("method"), path))
+        return tool_request("drafting" if path == "/tool-drafts" else "ready", steps=[])
+
+    monkeypatch.setattr(cli, "read_config", dict)
+    monkeypatch.setattr(cli, "request", fake)
+    monkeypatch.setattr(tool_drafts.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(sys, "argv", ["conker.py", "workflow", "draft", "Weather"])
+    assert cli.main() == 0
+    assert calls == [
+        ("pi", "POST", "/tool-drafts"),
+        ("pi", "GET", f"/change-requests/{REQUEST}"),
     ]
-    assert result["valid"] and services.saved == {"morning-weather": 1}
-
-
-def test_validation_issues_are_repaired_on_the_saved_draft():
-    services = Services(
-        [ready(), ready()], validations=[["Use exactly one Input node."], []]
+    assert "No steps were drafted." in capsys.readouterr().out
+    for old in (["--all-tools"], ["--id", "x"]):
+        monkeypatch.setattr(sys, "argv", ["conker.py", "workflow", "draft", "x", *old])
+        with pytest.raises(SystemExit):
+            cli.main()
+    monkeypatch.setattr(
+        sys, "argv", ["conker.py", "workflow", "accept", "wfo_" + "2" * 32]
     )
-    result = draft(services)
-    assert result["valid"] and result["revision"] == 2
-    assert services.to("/workflow-drafts/draft")[1][2]["issues"] == [
-        "Use exactly one Input node."
-    ]
+    with pytest.raises(SystemExit):
+        cli.main()
 
 
-def test_issues_left_after_repairs_are_reported():
-    bad = ["Node is disconnected from Input."]
-    services = Services([ready()] * 3, validations=[bad, bad, bad])
-    result = draft(services)
-    assert result["saved"] and not result["valid"] and result["issues"] == bad
-    assert result["next"].startswith("Fix it in the workflow editor")
-
-
-def test_an_existing_draft_is_never_overwritten():
-    services = Services([ready()], existing=["morning-weather"])
-    with pytest.raises(ValueError, match="already exists"):
-        draft(services)
-    assert services.saved == {}
-
-
-def test_pi_refusals_show_pis_message():
-    error = refused(
-        503,
-        {"code": "not_configured", "message": "Workflow drafts need a talking model."},
+def test_dismiss_declines_a_tool_request():
+    services = Services()
+    result = workflows.workflow_operation(
+        Namespace(operation="dismiss", request=REQUEST), {}, services
     )
-    with pytest.raises(
-        ValueError, match=r"Pi refused this \(not_configured\): Workflow drafts need"
-    ):
-        draft(Services([error]))
+    assert result["state"] == "declined"
+    assert services.to(f"/change-requests/{REQUEST}/decline")[0][2] == {}
+    for old in ("wfp_" + "1" * 32, "wfo_" + "2" * 32, "creq_x"):
+        with pytest.raises(ValueError, match="creq_"):
+            workflows.workflow_operation(
+                Namespace(operation="dismiss", request=old), {}, services
+            )
+
+
+def publish(services, **values):
+    args = Namespace(
+        **{
+            "operation": "publish",
+            "id": "morning-weather",
+            "expected_revision": 2,
+            "authorization": "owner_confirmation",
+            "request": None,
+            **values,
+        }
+    )
+    return workflows.workflow_operation(args, {}, services)
 
 
 def test_publish_names_the_reviewed_revision_and_asks_before_runs_by_default():
-    services = Services([], publications=[{"version": 1}, {"version": 3}])
-    args = Namespace(
-        operation="publish",
-        id="morning-weather",
-        expected_revision=2,
-        authorization="owner_confirmation",
-    )
-    result = workflows.workflow_operation(args, {}, services)
-    assert result == {
+    services = Services(publications=[{"version": 1}, {"version": 3}])
+    assert publish(services) == {
         "draft_id": "morning-weather",
+        "toolId": TOOL_ID,
         "expected_revision": 2,
         "expected_publication_version": 3,
         "authorization": "owner_confirmation",
-        "inbox": {"draftId": "morning-weather", "closed": 1},
+    }
+    assert not [call for call in services.calls if call[0] == "pi"]
+
+
+def test_publishing_for_a_tool_request_tells_pi_the_tool_is_live():
+    services = Services()
+    result = publish(services, request=REQUEST)
+    [(_, _, body, _)] = services.to(f"/change-requests/{REQUEST}/published")
+    assert body == {"toolId": TOOL_ID, "name": "Morning weather"}
+    assert result["toolRequest"]["state"] == "approved"
+    with pytest.raises(ValueError, match="creq_"):
+        publish(Services(), request="wfp_" + "1" * 32)
+
+
+def test_a_publish_stands_even_if_pi_does_not_confirm_the_request():
+    result = publish(Services(published=OSError("connection refused")), request=REQUEST)
+    assert result["draft_id"] == "morning-weather"
+    assert result["toolRequest"] == {
+        "note": "Pi did not confirm the tool request. The tool is published."
     }
 
 
@@ -294,11 +264,20 @@ def test_a_failed_publish_keeps_the_unconfirmed_error():
             return {"items": []}
         raise HTTPError("http://x", 502, "bad gateway", {}, io.BytesIO(b"{}"))
 
-    args = Namespace(
-        operation="publish", id="flow", expected_revision=1, authorization="auto"
-    )
     with pytest.raises(HTTPError):
-        workflows.workflow_operation(args, {}, request)
+        publish(request)
+
+
+def test_show_says_which_steps_ask_you_first():
+    result = workflows.workflow_operation(
+        Namespace(operation="show", id="morning-weather"), {}, Services()
+    )
+    assert result["steps"] == [
+        "Start (input)",
+        "Fetch (tool_call) -> tool weather-now, asks you first",
+        "Done (return)",
+    ]
+    assert result["issues"] == ["Step fetch: x"] and result["revision"] == 2
 
 
 def test_draft_ids_are_checked_before_any_request():
@@ -328,138 +307,6 @@ def test_the_capability_query_sends_only_known_options(monkeypatch):
     assert parse_qs(url.query) == {"kind": ["tool"], "limit": ["100"], "after": ["a"]}
 
 
-def test_output_the_model_mangled_is_retried_once_with_the_reason():
-    mangled = {
-        "code": "unusable",
-        "message": "The draft could not be used: the model did not return JSON.",
-    }
-    services = Services([refused(502, mangled), ready()])
-    result = draft(services)
-    retry = services.to("/workflow-drafts/draft")[1][2]
-    assert retry["issues"] == [
-        "Pi refused this (unusable): The draft could not be used: the model did not return JSON."
-    ]
-    assert result["valid"]
-    with pytest.raises(ValueError, match="unusable"):
-        draft(Services([refused(502, mangled), refused(502, mangled)]))
-
-
-def catalogue_item(identity, name, description, authorization="auto"):
-    return {
-        "id": identity,
-        "kind": "tool",
-        "name": name,
-        "description": description,
-        "inputs": [
-            {
-                "name": "query",
-                "type": "string",
-                "required": True,
-                "description": "q" * 300,
-            }
-        ],
-        "version": 1,
-        "authorization": authorization,
-    }
-
-
-CATALOGUE = [
-    catalogue_item("research.search", "Web search", "Search the web for pages"),
-    catalogue_item(
-        "system.inventory", "Host inventory", "Disks, processes and containers"
-    ),
-    catalogue_item(
-        "system.process-control",
-        "Process control",
-        "Stop processes",
-        "owner_confirmation",
-    ),
-    catalogue_item("approval.test-echo", "Echo", "Returns its input"),
-]
-
-
-def test_only_tools_that_share_words_with_the_request_are_offered():
-    chosen = workflows.relevant(
-        CATALOGUE, "Check free space on my disk and list running processes"
-    )
-    assert [item["id"] for item in chosen] == [
-        "system.inventory",
-        "system.process-control",
-    ]
-    assert [item["id"] for item in workflows.relevant(CATALOGUE, "xyzzy plugh")] == [
-        item["id"] for item in CATALOGUE
-    ]
-    many = [
-        catalogue_item(f"search-{n}", "Search", "Search the web") for n in range(20)
-    ]
-    assert len(workflows.relevant(many, "search the web")) == workflows.TOOLS
-
-
-def test_the_model_gets_compact_capabilities_without_authorization():
-    item = workflows.compact({**CATALOGUE[0], "description": "d" * 900})
-    assert "authorization" not in item and len(item["description"]) == 240
-    assert len(item["inputs"][0]["description"]) == 100
-
-
-def test_steps_say_which_tools_ask_you_first():
-    document = {
-        "nodes": [
-            {"label": "Start", "type": "input", "config": {}},
-            {
-                "label": "Stop it",
-                "type": "tool_call",
-                "config": {"tool": "system.process-control"},
-            },
-            {
-                "label": "Search",
-                "type": "tool_call",
-                "config": {"tool": "research.search"},
-            },
-        ]
-    }
-    assert workflows.steps(document, {"system.process-control"}) == [
-        "Start (input)",
-        "Stop it (tool_call) -> tool system.process-control, asks you first",
-        "Search (tool_call) -> tool research.search",
-    ]
-
-
-def test_all_tools_offers_the_whole_catalogue(monkeypatch):
-    monkeypatch.setattr(workflows, "capabilities", lambda request, config: CATALOGUE)
-    services = Services(
-        [{"reply": "What should it do?", "ready": False, "document": None}]
-    )
-    for all_tools, expected in ((False, 1), (True, 4)):
-        with pytest.raises(ValueError, match="The builder asks"):
-            draft(services, description="Search the web", all_tools=all_tools)
-        sent = services.to("/workflow-drafts/draft")[-1][2]["capabilities"]
-        assert len(sent) == expected
-        services.drafts.append(
-            {"reply": "What should it do?", "ready": False, "document": None}
-        )
-
-
-def test_questions_from_the_model_cannot_drive_the_terminal(monkeypatch, capsys):
-    monkeypatch.setattr(workflows.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr("builtins.input", lambda prompt: "Tel Aviv")
-    assert workflows.ask("\x1b]52;c;cGF5bG9hZA==\x07Which city?\x1b[2J") == "Tel Aviv"
-    shown = capsys.readouterr().err
-    assert "\x1b" not in shown and "\x07" not in shown
-    assert shown.startswith("\\x1b]52;c;cGF5bG9hZA==\\x07Which city?\\x1b[2J")
-
-
-def test_rare_shared_words_count_more_than_common_ones():
-    catalogue = [
-        catalogue_item(f"research.{name}", f"{name} search", "Searches")
-        for name in "abcdefg"
-    ]
-    catalogue.append(catalogue_item("research.web", "Web search", "Searches the web"))
-    assert (
-        workflows.relevant(catalogue, "search the web", limit=1)[0]["id"]
-        == "research.web"
-    )
-
-
 def test_validation_issues_name_their_step():
     assert workflows.problem(
         {"message": "Use a valid reference.", "node_id": "fetch"}
@@ -469,100 +316,16 @@ def test_validation_issues_name_their_step():
     ) == ("Use exactly one Input node.")
 
 
-def from_chat(services, message="msg_owner", **values):
-    args = Namespace(
-        operation="from-chat",
-        session="ses_1",
-        message=message,
-        id=None,
-        all_tools=False,
-        **values,
-    )
-    return workflows.workflow_operation(args, {}, services)
-
-
-def test_a_chat_message_becomes_a_draft_waiting_in_the_inbox():
-    services = Services([ready()])
-    result = from_chat(services)
-    assert services.to("/workflow-drafts/draft")[0][2]["description"] == (
-        "Every morning tell me the weather in Tel Aviv"
-    )
-    assert result["valid"] and result["inbox"] == {
-        "id": "wfp_" + "1" * 32,
-        "sessionId": "ses_1",
-        "messageId": "msg_owner",
-        "draftId": "morning-weather",
-        "name": "Morning weather",
-        "valid": True,
-    }
-
-
-@pytest.mark.parametrize(
-    "message,error",
-    [
-        ("msg_reply", "only from your own messages"),
-        ("msg_gone", "only from your own messages"),
-        ("msg_missing", "not in that chat"),
-        ("../x", "ids that show prints"),
-    ],
-)
-def test_only_the_owners_own_messages_become_drafts(message, error):
-    services = Services([])
-    with pytest.raises(ValueError, match=error):
-        from_chat(services, message=message)
-    assert services.to("/workflow-drafts/draft") == [] and services.saved == {}
-
-
-def test_a_draft_that_was_not_saved_is_not_put_in_the_inbox():
-    services = Services([ready(issues=["Step x uses 'y'"])] * 3)
-    result = from_chat(services)
-    assert not result["saved"] and "inbox" not in result
-    assert services.to("/workflow-proposals") == []
-
-
-def test_a_publish_stands_even_if_pi_does_not_confirm_the_inbox():
-    def request(config, service, path, body=None, **options):
-        if path.endswith("/publications"):
-            return {"items": []}
-        if service == "pi":
-            raise OSError("connection refused")
-        return {"draft_id": "flow", **body}
-
-    args = Namespace(
-        operation="publish", id="flow", expected_revision=1, authorization="auto"
-    )
-    result = workflows.workflow_operation(args, {}, request)
-    assert result["draft_id"] == "flow" and result["inbox"]["closed"] is None
-
-
-def test_dismissing_needs_an_inbox_item_id():
-    services = Services([])
-    with pytest.raises(ValueError, match="wfp_"):
-        workflows.workflow_operation(
-            Namespace(operation="dismiss", proposal="flow"), {}, services
+def test_refusals_show_the_services_message():
+    def refuse(config, service, path, body=None, **options):
+        detail = {"detail": {"code": "decided", "message": "Already decided."}}
+        raise HTTPError(
+            "http://pi", 409, "x", {}, io.BytesIO(json.dumps(detail).encode())
         )
 
-
-def test_accepting_an_offer_drafts_from_its_message():
-    services = Services([ready()])
-    args = Namespace(operation="accept", offer="wfo_" + "2" * 32, id=None, all_tools=False)
-    result = workflows.workflow_operation(args, {}, services)
-    assert services.to("/workflow-drafts/draft")[0][2]["description"] == (
-        "Every morning tell me the weather in Tel Aviv"
-    )
-    assert result["inbox"]["messageId"] == "msg_owner"
-
-
-def test_a_closed_or_malformed_offer_drafts_nothing():
-    services = Services([])
-    services.offer_state = "dismissed"
-    accept = Namespace(operation="accept", offer="wfo_" + "2" * 32, id=None, all_tools=False)
-    with pytest.raises(ValueError, match="already accepted or dismissed"):
-        workflows.workflow_operation(accept, {}, services)
-    with pytest.raises(ValueError, match="wfo_"):
-        workflows.workflow_operation(Namespace(**{**vars(accept), "offer": "x"}), {}, services)
-    assert services.to("/workflow-drafts/draft") == []
-    dismissed = workflows.workflow_operation(
-        Namespace(operation="dismiss", proposal="wfo_" + "2" * 32), {}, services
-    )
-    assert dismissed["state"] == "dismissed"
+    with pytest.raises(
+        ValueError, match=r"Pi refused this \(decided\): Already decided."
+    ):
+        workflows.workflow_operation(
+            Namespace(operation="dismiss", request=REQUEST), {}, refuse
+        )
