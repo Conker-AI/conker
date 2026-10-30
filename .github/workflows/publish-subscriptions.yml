@@ -1,0 +1,155 @@
+name: Publish the Claude plan runtime image
+
+# ghcr.io/conker-ai/subscriptions, from services/subscriptions/Dockerfile: the private bridge
+# (scripts/subscription_runtime.py) and the official Claude Code CLI, whose download the build
+# checks against its pinned SHA-512 (services/subscriptions/fetch_claude.py). The repository
+# install pins it by digest in versions.env (SUBSCRIPTIONS_IMAGE); the release steps are in
+# docs/reference/claude-plan-runtime.md.
+#
+# Tags only, and a published version never moves: `latest` is never published (ADR-0008), and a
+# version that already exists stops the run before anything is pushed. The image pushed is the
+# one checked and scanned here, not a second build. A pull request that changes this workflow or
+# the image runs every step up to the push.
+
+on:
+  push:
+    tags:
+      - "subscriptions-v*.*.*"
+  pull_request:
+    paths:
+      - ".github/workflows/publish-subscriptions.yml"
+      - "services/subscriptions/**"
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/conker-ai/subscriptions
+  # Trivy 0.75.0, pinned by digest like every image an owner runs; the same scan as the gates' images.
+  TRIVY: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      # Lets the registry record which workflow and commit produced the image.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: The tag names a version written down in the image's changelog
+        id: version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            echo "version=0.0.0-check" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#subscriptions-v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag $GITHUB_REF_NAME is not subscriptions-vX.Y.Z." >&2
+            exit 1
+          fi
+          if ! grep -q "^## ${VERSION}$" services/subscriptions/CHANGELOG.md; then
+            echo "services/subscriptions/CHANGELOG.md has no '## ${VERSION}' section." >&2
+            echo "Add the entry before tagging - a release nobody wrote down is not a release." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: A published version never moves
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "$IMAGE:$VERSION is already published. Tag a new version instead." >&2
+            exit 1
+          fi
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: type=raw,value=${{ steps.version.outputs.version }}
+
+      - name: Build
+        # Into the local engine, so the checks below look at exactly the image that is pushed.
+        uses: docker/build-push-action@v7
+        with:
+          # The repository root: the image copies the bridge from scripts/. Its .dockerignore
+          # (services/subscriptions/Dockerfile.dockerignore) admits only the files it needs.
+          context: .
+          file: services/subscriptions/Dockerfile
+          load: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=subscriptions
+          cache-to: type=gha,mode=max,scope=subscriptions
+
+      - name: Claude Code runs read-only, without a network
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: docker run --rm --network none --read-only "$IMAGE:$VERSION" /opt/claude/bin/claude --version
+
+      - name: Scan the image
+        # HIGH or CRITICAL problems that already have a fix fail here, before anything is pushed.
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY" \
+            image --quiet --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+            --exit-code 1 "$IMAGE:$VERSION"
+
+      - name: Nothing secret is baked in
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          found=$(docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c \
+            'find /app /opt/claude -type f 2>/dev/null' \
+            | grep -Ei '/\.env$|/\.env\.[^/]*$|\.db$|\.sqlite[0-9]?$|\.key$|\.pem$|credentials' || true)
+          if [ -n "$found" ]; then
+            echo "::error::secrets or state were baked into the image" >&2
+            echo "$found" >&2
+            exit 1
+          fi
+
+      - name: Push
+        id: push
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker push "$IMAGE:$VERSION" | tee "$RUNNER_TEMP/push.log"
+          digest=$(sed -n 's/.*digest: \(sha256:[0-9a-f]\{64\}\).*/\1/p' "$RUNNER_TEMP/push.log" | tail -1)
+          [ -n "$digest" ] || { echo "The registry reported no digest for the pushed image." >&2; exit 1; }
+          reference="$IMAGE@$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          {
+            echo "Pin in Conker's versions.env:"
+            echo
+            echo "    SUBSCRIPTIONS_STATE=active"
+            echo "    SUBSCRIPTIONS_IMAGE=$reference"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/attest-build-provenance@v4
+        # The image is already pushed by this point; as in the gates' workflows, a private
+        # repository cannot attest, and that must not report the publish as failed.
+        if: github.event_name == 'push' && !github.event.repository.private
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

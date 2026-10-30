@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
+try:  # imported as the scripts package, or run as a script with scripts/ on the path
+    from scripts.compose_overlays import overlay_files
+except ModuleNotFoundError:
+    from compose_overlays import overlay_files
+
 
 class UpdateError(RuntimeError):
     """An update could not be completed or safely recovered."""
@@ -260,6 +265,9 @@ class HostTransport:
             "-f",
             str(source / "docker-compose.yml"),
         ]
+        # The launcher's overlays: the release decides which exist, .env which optional ones run.
+        for overlay in overlay_files(source, self.env_file):
+            command.extend(["-f", str(overlay)])
         if override:
             command.extend(["-f", str(override)])
         command.extend(arguments)

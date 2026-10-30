@@ -93,21 +93,23 @@ again. Canceling password verification does not restore a submitted key draft.
 Paid requests require separate explicit authorization. Settings and
 `conker providers spending status|on|off|recover` use the same fixed host policy
 operation. It revision-checks the current flag, restarts Pi and the sidecars that share its
-network (Laya and, in the Ubuntu layout, the Claude plan runtime), and confirms the runtime flag.
+network (Laya on Ubuntu, and the Claude plan runtime where it runs), and confirms the runtime flag.
 An Anthropic, OpenAI or OpenRouter key answers nothing until spending is on: Pi reports the
 provider as not configured, "paid models are disabled". Failed rollback holds a redacted recovery marker.
 This switch is not a budget; provider-account limits still apply. Connecting a key
 does not enable spending, alter model roles or grant tool access.
 
-## Claude plan sign-in (Ubuntu layout)
+## Claude plan sign-in
 
-A Claude subscription is not an API key and is not stored here. The source-built Ubuntu layout
-runs it in its own `subscriptions` service: `conker providers claude login` runs the official
-`claude auth login --claudeai` in that service, in the owner's terminal, and the sign-in stays
-in `state/subscriptions`. `status` and `logout` use the same CLI. Pi holds only the runtime's
-inference key (`PI_SUBSCRIPTION_KEY`), never its control key or the sign-in; snapshots leave
-the folder out. The repository install has no such runtime yet and uses the API key above.
-See [Running Conker](../4-running.md#connect-claude).
+A Claude subscription is not an API key and is not stored here. It runs in its own
+`subscriptions` service (the source-built Ubuntu layout builds it; the repository install runs
+the published image after `./install.sh --claude-plan`): `conker providers claude login` runs
+the official `claude auth login --claudeai` in that service, in the owner's terminal, and the
+sign-in stays in `state/subscriptions` (`.conker/subscriptions` in the repository install).
+`status` and `logout` use the same CLI. Pi holds only the runtime's inference key
+(`PI_SUBSCRIPTION_KEY`), never its control key or the sign-in; snapshots leave the folder out. Until a release pins its image, the repository install uses the API key above.
+See [Claude plan runtime](claude-plan-runtime.md) and
+[Running Conker](../4-running.md#connect-claude).
 
 Verified backups include the secret-free provider `state.json` as
 `config/provider-state.json`, but deliberately omit every provider key file. Backup
