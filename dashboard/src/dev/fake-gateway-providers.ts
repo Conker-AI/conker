@@ -168,8 +168,13 @@ function createFakeAccess(session: string, now: () => number) {
 
 type FakeSession = { id: string; messages: Json[]; turns: Json[] }
 
-/** As Pi does after his Inbox decision: Do it runs and replies; a no closes; Change sends his words. */
-export function continueAfterDecision(sessions: FakeSession[], requestId: string, status: string, note: string, messageId: () => string, now: () => number) {
+/**
+ * As Pi does after his Inbox decision: Do it runs and replies; a no closes; Change sends his words.
+ * An approval is marked used a moment later, as ToolGate does when the resumed turn runs it.
+ */
+export function continueAfterDecision(sessions: FakeSession[], request: Json, status: string, note: string, messageId: () => string, now: () => number) {
+  const requestId = request.id as string
+  if (status === 'approved') setTimeout(() => Object.assign(request, { approval: { ...(request.approval as Json), consumed_at: new Date().toISOString() }, unavailable_reason: 'consumed' }), 2500)
   const owner = sessions.find(row => row.turns.some(turn => turn.approval_request_id === requestId && turn.status === 'awaiting_approval'))
   const turn = owner?.turns.find(row => row.approval_request_id === requestId)
   if (!owner || !turn) return
