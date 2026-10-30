@@ -16,7 +16,7 @@ function load(relative) {
 }
 
 const { createGatewayJobsClient, GatewayJobMutationError } = load('src/lib/gateway/jobs.ts')
-const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport, GatewayError, needsNoPassword } = load('src/lib/gateway/transport.ts')
 const jobId = `job_${'a'.repeat(32)}`, runId = `scheduled_${'b'.repeat(32)}`
 const job = {
   schemaVersion: 1, id: jobId, revision: 3, createdAt: 1, nextAt: 2,
@@ -111,12 +111,38 @@ async function main() {
   await hookTransport.request(`/api/control/pi/jobs/${jobId}/hook/revoke`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
   await assert.rejects(hookTransport.request(`/api/control/pi/jobs/${jobId}/hook/rotate`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation')
 
+  // Make this job mine: strict shape, exact route and body, a changed revision is a conflict, never a silent success.
+  const madeByConker = { ...aiJob, definition: { ...aiJob.definition, createdBy: 'conker', adoptedAt: null, turnedOff: 'chat_forgotten', enabled: false, state: 'paused' } }
+  agentReply = madeByConker; assert.equal((await agents.get(jobId)).definition.adoptedAt, null, 'adoptedAt may be null')
+  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, createdBy: 'owner', adoptedAt: '2026-10-30T09:15:00+00:00', turnedOff: null } }
+  assert.equal((await agents.adoptJob(jobId, 3)).definition.adoptedAt, '2026-10-30T09:15:00+00:00')
+  assert.deepEqual(agentCalls.at(-1)[0], `/api/control/pi/jobs/${jobId}/adopt`)
+  assert.deepEqual(agentCalls.at(-1)[1], { method: 'POST', body: { expected_revision: 3 } })
+  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, adoptedAt: 'yesterday' } }
+  await assert.rejects(agents.get(jobId), error => error.kind === 'invalid-response', 'adoptedAt is an ISO time')
+  await assert.rejects(agents.adoptJob(jobId, 0), error => error.kind === 'validation')
+  await assert.rejects(agents.adoptJob('job_bad', 3), error => error.kind === 'validation')
+  await assert.rejects(conflict.adoptJob(jobId, 3), error => error instanceof GatewayJobMutationError && error.outcome === 'conflict', 'A changed revision is a conflict')
+  await assert.rejects(uncertain.adoptJob(jobId, 3), error => error instanceof GatewayJobMutationError && error.outcome === 'unknown')
+  const adoptTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => new Response(JSON.stringify(aiJob), { headers: { 'content-type': 'application/json' } }) })
+  await adoptTransport.request(`/api/control/pi/jobs/${jobId}/adopt`, { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 3 } })
+  assert.match(fs.readFileSync(path.join(root, 'src/lib/gateway/verification.ts'), 'utf8'), /title: 'Make this job yours'/, 'The password prompt says what it is for')
+  assert.equal(needsNoPassword(`/api/control/pi/jobs/${jobId}/adopt`, { expected_revision: 3 }), false, 'Adopting asks for the password')
+
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')
   assert.match(ui, /Try again resends the same request, so it can’t run twice/, 'An unknown outcome retries with the same request identity')
   assert.match(ui, /Inputs and results stay on your server/, 'Receipts and inputs are not shown in the browser')
   assert.match(ui, /What it does/, 'A job page shows what the job does')
   assert.match(ui, /doesn’t send them to this page yet/, 'A Pi that keeps the instructions to itself is said plainly, not hidden')
+  assert.match(ui, /type="button"[^>]*onClick=\{\(\) => void makeMine\(\)\}[^>]*>\{adopting \? 'Making it yours…' : 'Make this job mine'\}/, 'A secondary button, with a sending state')
+  assert.match(ui, /job\.definition\.createdBy === 'conker' && <><Button type="button"/, 'Only jobs Conker made offer it')
+  assert.match(ui, /It can be turned back on after/, 'A job turned off with its chat says it can be turned on after')
+  assert.match(ui, /cause\.outcome === 'conflict'[\s\S]*control\.jobs\.get\(job\.id\)[\s\S]*nothing was changed/, 'A changed job is reloaded and said so')
+  assert.match(ui, /Could not make it yours: /, 'A failure says why')
+  assert.match(ui, /'Conker' : 'you'/, 'Made by becomes you once adopted')
+  assert.ok(ui.indexOf('await control.jobs.adoptJob') < ui.indexOf('This job is yours now'), 'Success is only said after the server answers')
+  assert.ok(ui.indexOf('await control.jobs.adoptJob') < ui.indexOf('This job is yours now') && /role=\{adoptNote\.ok \? 'status' : 'alert'\}/.test(ui), 'Success is only said after the server answers')
   console.log('Gateway Jobs passed: redacted DTOs, exact routes, durable manual admission, recovery controls, and no browser authoring of raw targets.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Make a job Conker made your own.** A cron job page now has a "Make this job mine" button for
+  jobs Conker created. It asks for your password, then treats the job as yours: it keeps running
+  even if the chat that made it is forgotten, and "Made by" says "you". If the job changed in the
+  meantime, it reloads and asks you to try again.
 - **Export answers and artifacts, import old chats.** Every finished answer has an Export menu
   next to Copy: Word, PDF, PowerPoint, and Excel when the answer holds a table. Artifacts have the
   same menu, plus their CSV, JSON or source text. When Pi can't make a file, the menu says why in

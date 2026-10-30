@@ -52,6 +52,7 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
   const [job, setJob] = useState(initial), [runs, setRuns] = useState<GatewayScheduledRun[] | null>(null)
   const target = job.definition.target, check = target.kind === 'agent' ? target : null, tool = target.kind === 'agent' ? null : target
   const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
+  const [adopting, setAdopting] = useState(false), [adoptNote, setAdoptNote] = useState<{ ok: boolean; text: string } | null>(null)
   const [confirmRun, setConfirmRun] = useState(false), [runRequest, setRunRequest] = useState<string | null>(null), [reviewedUnknown, setReviewedUnknown] = useState(false)
   const loadRuns = useCallback(async (markReviewed = false) => {
     setPending(true); setError(null)
@@ -64,10 +65,21 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
     control.jobs.runs(job.id, { limit: 100 }).then(page => active && setRuns(page.results)).catch(cause => active && setError(gatewayError(cause).message))
     return () => { active = false }
   }, [control, job.id])
-  const adoptJob = (saved: GatewayJob, message: string) => { setJob(saved); onChanged(saved); setNotice(message); setError(null) }
+  const applySaved = (saved: GatewayJob, message: string) => { setJob(saved); onChanged(saved); setNotice(message); setError(null) }
+  // "Make this job mine": the success line is only said after the server answers; a changed revision reloads the job and asks again.
+  const makeMine = async () => {
+    setAdopting(true); setAdoptNote(null)
+    try { const saved = await control.jobs.adoptJob(job.id, job.revision); applySaved(saved, ''); setNotice(null); setAdoptNote({ ok: true, text: saved.definition.turnedOff ? 'This job is yours now. It is still off: use Resume schedule to turn it back on.' : 'This job is yours now. It keeps running even if the chat that made it is forgotten.' }) }
+    catch (cause) {
+      if (cause instanceof GatewayJobMutationError && cause.outcome === 'conflict') {
+        try { const fresh = await control.jobs.get(job.id); setJob(fresh); onChanged(fresh); setAdoptNote({ ok: false, text: 'This job changed while you were looking, so nothing was changed. It is reloaded: check it, then try again.' }) }
+        catch (reload) { setAdoptNote({ ok: false, text: `This job changed, and reloading it failed (${gatewayError(reload).message}). Refresh, then try again.` }) }
+      } else setAdoptNote({ ok: false, text: cause instanceof GatewayJobMutationError && cause.outcome === 'unknown' ? 'Not sure it went through. Refresh the job to see whether it is yours now.' : `Could not make it yours: ${mutationMessage(cause)}` })
+    } finally { setAdopting(false) }
+  }
   const toggle = async () => {
     setPending(true); setError(null); setNotice(null)
-    try { adoptJob(await control.jobs.setEnabled(job.id, !job.definition.enabled, job.revision), job.definition.enabled ? 'Future automatic admission is paused.' : 'Future automatic admission is enabled.') }
+    try { applySaved(await control.jobs.setEnabled(job.id, !job.definition.enabled, job.revision), job.definition.enabled ? 'Future automatic admission is paused.' : 'Future automatic admission is enabled.') }
     catch (cause) { setError(mutationMessage(cause)) }
     finally { setPending(false) }
   }
@@ -100,7 +112,11 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
           : <p className="max-w-prose text-sm leading-6 text-muted-foreground">Your server keeps this job’s instructions but doesn’t send them to this page yet. Each run starts with them as the first message in its chat.</p>}
       </section>}
       <section className="space-y-4" aria-labelledby="job-definition-heading"><div className="flex flex-wrap items-center gap-2"><h2 id="job-definition-heading" className="text-lg font-semibold">Schedule</h2><Badge variant={job.definition.enabled ? 'default' : 'secondary'}>{job.definition.state === 'enabled' ? 'Enabled' : 'Paused'}</Badge></div>
-        <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Timing</dt><dd className="mt-1">{describeTiming(job)} · {job.definition.timeZone}</dd></div><div><dt className="text-xs text-muted-foreground">{job.definition.watch ? 'Last look' : check?.clock === false ? 'Starts' : 'Next run'}</dt><dd className="mt-1">{!job.definition.enabled ? 'Paused: it won’t run until you resume it' : check?.clock === false && !job.definition.watch ? 'Only from its webhook or Run now' : job.definition.watch ? job.definition.watch.lastCheckedAt ? when(job.definition.watch.lastCheckedAt, job.definition.timeZone) : 'Not yet' : when(job.nextAt, job.definition.timeZone)}</dd></div><div><dt className="text-xs text-muted-foreground">Agent</dt><dd className="mt-1 break-all">{job.definition.agentName ?? job.definition.agentId}</dd></div>{job.definition.createdBy === 'conker' && <div><dt className="text-xs text-muted-foreground">Made by</dt><dd className="mt-1">Conker</dd></div>}{job.definition.turnedOff === 'chat_forgotten' && <div><dt className="text-xs text-muted-foreground">Turned off</dt><dd className="mt-1">The chat that made it was forgotten</dd></div>}</dl>
+        <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Timing</dt><dd className="mt-1">{describeTiming(job)} · {job.definition.timeZone}</dd></div><div><dt className="text-xs text-muted-foreground">{job.definition.watch ? 'Last look' : check?.clock === false ? 'Starts' : 'Next run'}</dt><dd className="mt-1">{!job.definition.enabled ? 'Paused: it won’t run until you resume it' : check?.clock === false && !job.definition.watch ? 'Only from its webhook or Run now' : job.definition.watch ? job.definition.watch.lastCheckedAt ? when(job.definition.watch.lastCheckedAt, job.definition.timeZone) : 'Not yet' : when(job.nextAt, job.definition.timeZone)}</dd></div><div><dt className="text-xs text-muted-foreground">Agent</dt><dd className="mt-1 break-all">{job.definition.agentName ?? job.definition.agentId}</dd></div>{(job.definition.createdBy === 'conker' || job.definition.adoptedAt) && <div><dt className="text-xs text-muted-foreground">Made by</dt><dd className="mt-1">{job.definition.createdBy === 'conker' ? 'Conker' : 'you'}</dd></div>}{job.definition.turnedOff === 'chat_forgotten' && <div><dt className="text-xs text-muted-foreground">Turned off</dt><dd className="mt-1">The chat that made it was forgotten</dd></div>}</dl>
+        {(job.definition.createdBy === 'conker' || adoptNote) && <div className="space-y-1">
+          {job.definition.createdBy === 'conker' && <><Button type="button" variant="outline" disabled={pending || adopting} onClick={() => void makeMine()}>{adopting ? 'Making it yours…' : 'Make this job mine'}</Button>
+          <p className="max-w-prose text-sm leading-6 text-muted-foreground">{job.definition.turnedOff === 'chat_forgotten' ? 'Treats it as your own job: it keeps running even if the chat that made it is forgotten. It can be turned back on after.' : 'Treats it as your own job: it keeps running even if the chat that made it is forgotten.'}</p></>}
+          {adoptNote && <p role={adoptNote.ok ? 'status' : 'alert'} className={adoptNote.ok ? 'text-sm leading-6' : 'text-sm leading-6 text-destructive-foreground'}>{adoptNote.text}</p>}</div>}
         {job.definition.watch?.problem && <p role="alert" className="text-sm leading-6 text-warning-foreground">{problems[job.definition.watch.problem]}</p>}
         <p className="text-sm leading-6 text-muted-foreground">{check ? 'Each run uses tools that need no confirmation on its own. Anything that would change, send or create something waits for your OK in the Inbox. What it was asked and what it found are in its chat.' : job.definition.instructionsConfigured ? 'Its instructions are saved on your server.' : 'It has no instructions.'}</p>
       </section>

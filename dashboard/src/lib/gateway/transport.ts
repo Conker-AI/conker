@@ -128,7 +128,7 @@ routes.POST.unshift(/^\/api\/control\/pi\/artifacts(?:\/from-message)?$/, /^\/ap
 routes.GET.unshift(/^\/api\/control\/pi\/imports(?:\/chats(?:\/imp_[0-9a-f]{32})?)?$/)
 // Job views redact target inputs, allowance identities and receipts; browser writes use exact recovery actions only.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$/)
-routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
+routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|adopt|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
 // Plan usage is percentages per plan window only; dismissing an alert stays host-admin only.
 routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
 // Conker's requests: list, approve (asks for the password), decline (creates nothing) and record the
