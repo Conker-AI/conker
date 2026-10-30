@@ -1,0 +1,46 @@
+# The Claude plan runtime (services/subscriptions): the official Claude Code CLI behind a private
+# bridge, so the owner can sign in to a Claude plan once with `conker providers claude login`.
+#
+# Added on top of docker-compose.yml only when versions.env says SUBSCRIPTIONS_STATE=active (and
+# pins SUBSCRIPTIONS_IMAGE by digest) and .env says CONKER_CLAUDE_PLAN=on, which
+# `./install.sh --claude-plan` writes. ./conker, install.sh, conker update and recovery select it by
+# that rule (scripts/compose_overlays.py); nothing else does.
+#
+# - It shares Pi's network namespace, because Pi talks to a subscription runtime only at
+#   127.0.0.1, and it listens only there, on 8070. Nothing is published.
+# - Pi gets the inference key and nothing else. The control key and the sign-in stay here.
+# - With a subscription runtime set, Pi sends ChatGPT answers here too; they go on unchanged to the
+#   host's ChatGPT worker through its socket folder, mounted read-only.
+# - The sign-in lives in .conker/subscriptions, the owner's private folder (install.sh makes it,
+#   0700), because this runs as the owner and a fresh named volume would belong to root. Backups
+#   leave it out: sign in again after a restore onto another machine.
+services:
+  pi:
+    environment:
+      PI_SUBSCRIPTION_URL: http://127.0.0.1:8070
+      PI_SUBSCRIPTION_KEY: ${SUBSCRIPTIONS_INFERENCE_KEY:?run ./install.sh --claude-plan}
+
+  subscriptions:
+    image: ${SUBSCRIPTIONS_IMAGE:?an active release manifest pins the subscriptions image}
+    container_name: conker-subscriptions
+    restart: unless-stopped
+    # The owner's own user, like Pi: the ChatGPT socket folder is theirs alone.
+    user: "${CONKER_UID:-1000}:${CONKER_GID:-1000}"
+    network_mode: service:pi
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 1g
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    environment:
+      SUBSCRIPTIONS_CONTROL_KEY: ${SUBSCRIPTIONS_CONTROL_KEY:?run ./install.sh --claude-plan}
+      SUBSCRIPTIONS_INFERENCE_KEY: ${SUBSCRIPTIONS_INFERENCE_KEY:?run ./install.sh --claude-plan}
+      SUBSCRIPTIONS_CHATGPT_SOCKET: /run/conker-chatgpt/inference.sock
+    volumes:
+      - ./.conker/subscriptions:/state
+      - ./.conker/chatgpt-inference:/run/conker-chatgpt:ro
+    depends_on:
+      pi:
+        condition: service_started

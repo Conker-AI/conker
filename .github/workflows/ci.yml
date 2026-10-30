@@ -101,9 +101,10 @@ jobs:
         run: python -m pytest tests/test_recovery_docker.py -q
 
   subscription-runtime:
-    # The Claude plan runtime the source-built server layout builds (services/subscriptions): the
-    # image builds, the pinned Claude Code binary passes its checksum and runs read-only, signed
-    # out, and the bridge answers only with its keys. Nothing signs in.
+    # The Claude plan runtime (services/subscriptions), which the source-built server layout builds
+    # and the repository install pulls as a published image: the image builds, the pinned Claude
+    # Code binary passes its checksum and runs read-only, signed out, the bridge answers only with
+    # its keys, and the image passes the scan its publish workflow runs. Nothing signs in.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -145,6 +146,15 @@ jobs:
           # No host ChatGPT worker here, so ChatGPT is honestly unavailable.
           docker exec subscriptions python -c "$probe" /inference/status "$inference" \
             | python3 -c 'import json, sys; assert json.load(sys.stdin) == {"available": False, "connected": False}'
+
+      - name: Scan the image
+        # Trivy, pinned by digest: HIGH or CRITICAL problems that already have a fix fail here, as
+        # they would stop .github/workflows/publish-subscriptions.yml before the push.
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa \
+            image --quiet --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+            --exit-code 1 conker-subscriptions:ci
 
       - name: Runtime logs
         if: always()
