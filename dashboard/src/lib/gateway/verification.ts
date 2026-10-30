@@ -89,6 +89,9 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
   if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/.test(path)) {
     return { title: body.enabled ? 'Let Conker use this tool' : 'Stop Conker using this tool', path, target: `Tool ${parts[4]}`, details: [body.enabled ? 'Conker can see and call it from now on. Your access settings still decide whether it asks you first.' : 'Conker can no longer see or call it. Nothing that already ran is undone.'] }
   }
+  if (/^\/api\/control\/pi\/imports\/(?:chatgpt|claude)\/[0-9a-f]{64}$/.test(path)) {
+    return { title: `Import chats from ${parts[5] === 'claude' ? 'Claude' : 'ChatGPT'}`, path, target: 'The file you previewed', details: ['Saves read-only copies of the chats in that exact file. Chats already imported are skipped.', 'Your own messages are offered to memory if the preview said so.'] }
+  }
   if (path === '/api/owner/tool-settings') {
     return { title: 'Save how tools run', path, target: 'ToolGate settings', details: ['Changes time limits, the Terminal’s resources, web search or the time an approved action has to start. None of them can go past ToolGate’s own limits.'] }
   }
