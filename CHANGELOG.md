@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Answer the drafter in the Inbox.** When Conker asks a question while drafting a tool
+  (`needs_detail`), its Inbox card shows the question, a box and an Answer button, plus an
+  "Open the chat" link when the question was also posted in that chat. The card turns into
+  "drafting" from Pi's reply; a failed send keeps your text, and a question already answered says
+  so. "Details" lists what Conker asked and what you said. Needs Pi with drafter questions.
 - **Server actions in the app.** Server > Services lists every service with its state, health,
   start time and automatic restarts; a service's details have Restart, which asks for the password
   in a sheet that says what it pauses ("Conker can't recall or save memories until it is back").
