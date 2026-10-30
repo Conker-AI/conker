@@ -115,9 +115,14 @@ def test_claude_sign_in_rejects_unknown_operations(ubuntu_cli):
     assert not ubuntu_cli.docker_log.exists()
 
 
-def test_the_repository_layout_points_to_the_api_key_path(ubuntu_cli):
+def repository_launcher(
+    ubuntu_cli, versions: str | None, env: str = "CONKER_PORT=8050\n"
+):
+    """The same launcher as a repository installation, against the recording Docker."""
     companion = ubuntu_cli.deployment / "sources/companion"
-    (companion / ".env").write_text("CONKER_PORT=8050\n", encoding="utf-8")
+    (companion / ".env").write_text(env, encoding="utf-8")
+    if versions is not None:
+        (companion / "versions.env").write_text(versions, encoding="utf-8")
     shell = shutil.which("bash") or shutil.which("sh")
     if sys.platform == "win32":
         git = (
@@ -127,14 +132,64 @@ def test_the_repository_layout_points_to_the_api_key_path(ubuntu_cli):
         shell = str(git) if git.exists() else shell
     if not shell:
         pytest.skip("a POSIX shell is required")
-    result = subprocess.run(
-        [shell, str(companion / "conker"), "providers", "claude", "status"],
-        check=False,
-        input="",
-        capture_output=True,
-        text=True,
-        env={**ubuntu_cli.environment, "CONKER_LAYOUT": "repository"},
-        timeout=30,
+
+    def run(*arguments: str):
+        return subprocess.run(
+            [shell, str(companion / "conker"), *arguments],
+            check=False,
+            input="",
+            capture_output=True,
+            text=True,
+            env={**ubuntu_cli.environment, "CONKER_LAYOUT": "repository"},
+            timeout=30,
+        )
+
+    return run
+
+
+def test_the_repository_layout_points_to_the_api_key_path(ubuntu_cli):
+    # No manifest, or one where the Claude plan runtime is still deferred.
+    for versions in (None, "SUBSCRIPTIONS_STATE=deferred\n"):
+        launcher = repository_launcher(ubuntu_cli, versions)
+        result = launcher("providers", "claude", "status")
+        assert result.returncode == 3
+        assert "conker providers set anthropic" in result.stderr
+    assert "status|login|logout [not in this release yet]" in launcher("help").stdout
+    assert not ubuntu_cli.docker_log.exists()
+
+
+def test_the_repository_layout_asks_for_the_runtime_before_signing_in(ubuntu_cli):
+    launcher = repository_launcher(
+        ubuntu_cli, "SUBSCRIPTIONS_STATE=active\n", "CONKER_CLAUDE_PLAN=off\n"
     )
-    assert result.returncode == 3
-    assert "conker providers set anthropic" in result.stderr
+
+    result = launcher("providers", "claude", "status")
+
+    assert result.returncode == 1
+    assert "./install.sh --claude-plan" in result.stderr
+    assert (
+        "status|login|logout [after ./install.sh --claude-plan]"
+        in launcher("help").stdout
+    )
+    assert not ubuntu_cli.docker_log.exists()
+
+
+def test_the_repository_layout_signs_in_through_the_overlay(ubuntu_cli):
+    launcher = repository_launcher(
+        ubuntu_cli,
+        "AGENT_SANDBOX_STATE=active\nSUBSCRIPTIONS_STATE=active\n",
+        "CONKER_PORT=8050\nCONKER_CLAUDE_PLAN=on\n",
+    )
+
+    result = launcher("providers", "claude", "status")
+
+    assert result.returncode == 0, result.stderr
+    log = ubuntu_cli.docker_log.read_text(encoding="utf-8")
+    assert "docker-compose.sandbox.yml -f " in log
+    assert (
+        "docker-compose.subscriptions.yml exec -T subscriptions "
+        "python /app/subscription_runtime.py status"
+    ) in log
+    # The sign-in code is pasted in the owner's terminal, never through a pipe.
+    assert launcher("providers", "claude", "login").returncode == 2
+    assert "status|login|logout\n" in launcher("help").stdout

@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from compose_overlays import overlay_files
 from recovery_data import RecoveryError
 
 FORMAT = "conker-snapshot-1"
@@ -147,10 +148,12 @@ REPOSITORY_PROFILE = LayoutProfile(
     writers=(
         "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
         "searxng", "ollama", "qdrant", "owner-terminal",
-        "sandbox-runner", "package-proxy", "data-owner",
+        "sandbox-runner", "package-proxy", "subscriptions", "data-owner",
     ),
     excluded_mounts={
         "gateway": frozenset({"/run/conker-terminal", "/run/conker-providers"}),
+        # The Claude plan sign-in (docker-compose.subscriptions.yml), as on Ubuntu: not in snapshots.
+        "subscriptions": frozenset({"/state", "/run/conker-chatgpt"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
         "pi": frozenset({
             "/run/secrets/provider-openrouter",
@@ -165,7 +168,9 @@ REPOSITORY_PROFILE = LayoutProfile(
         "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
         "package-proxy": frozenset({"/run/conker-proxy"}),
     },
-    optional_services=frozenset({"owner-terminal", "sandbox-runner", "package-proxy", "data-owner"}),
+    optional_services=frozenset(
+        {"owner-terminal", "sandbox-runner", "package-proxy", "subscriptions", "data-owner"}
+    ),
 )
 
 
@@ -310,12 +315,9 @@ def compose_command(root: Path, profile: LayoutProfile) -> list[str]:
                 "-f", str(root / "docker-compose.yml"),
             ]
         )
-        versions_env = root / "versions.env"
-        if versions_env.is_file():
-            for line in versions_env.read_text(encoding="utf-8").splitlines():
-                if line.strip() == "AGENT_SANDBOX_STATE=active":
-                    command.extend(["-f", str(root / "docker-compose.sandbox.yml")])
-                    break
+        # The overlays the launcher runs, so their services are inventoried and stopped too.
+        for overlay in overlay_files(root):
+            command.extend(["-f", str(overlay)])
     else:
         command.extend(["-f", str(root / "compose.json")])
     return command

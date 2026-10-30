@@ -3,6 +3,7 @@ import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, History, Messag
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { ConfirmationDialog, FilterChip, ListCard, ListLine, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
@@ -12,6 +13,7 @@ import { createJobRunRequestId, GatewayJobMutationError, isAiJob, type GatewayJo
 import { NewAgentJobDialog } from './new-agent-job-dialog'
 import { AgentJobWebhook } from './agent-job-webhook'
 import { gatewayError } from '@/lib/gateway/transport'
+import { jobStarters, type JobStarter, type JobStarterWhen } from '@/lib/job-starters'
 
 const statusLabels: Record<GatewayScheduledRunStatus, string> = {
   ready: 'Queued', awaiting_budget: 'Waiting for budget', dispatching: 'Starting', completed: 'Completed', failed: 'Failed',
@@ -32,6 +34,11 @@ function describeTiming(job: GatewayJob) {
   if (timing.kind === 'interval') return `Every ${timing.hours} ${timing.hours === 1 ? 'hour' : 'hours'}`
   if (timing.kind === 'weekly') return `${days[timing.day]} at ${timing.time}`
   return `Daily at ${timing.time}`
+}
+/** A starter's timing in the same words as a saved job's. */
+function describeStarter(value: JobStarterWhen) {
+  if (value.kind === 'hours') return value.every === 1 ? 'Every hour' : `Every ${value.every} hours`
+  return value.kind === 'weekly' ? `${days[value.day]} at ${value.time}` : `Daily at ${value.time}`
 }
 function when(seconds: number, timeZone?: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short', ...(timeZone ? { timeZone } : {}) }).format(new Date(seconds * 1000))
@@ -88,6 +95,10 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={job.definition.name} description={check ? 'An AI job: each time it starts, Conker carries out your instructions with its tools, then tells you what needs you.' : 'What it does, when it runs, and how each run went.'} density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" render={<Link to="/jobs" />}><ArrowLeft />Cron jobs</Button>{check?.sessionId && <Button variant="outline" render={<Link to={`/chat?session=${encodeURIComponent(check.sessionId)}`} />}><MessagesSquare />Open its chat</Button>}<Button variant="outline" disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</Button><Button disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</Button></div>} /></div>
     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="max-w-4xl space-y-8">
+      {(check || job.definition.instructions) && <section className="space-y-3" aria-labelledby="job-instructions-heading"><h2 id="job-instructions-heading" className="text-lg font-semibold">What it does</h2>
+        {job.definition.instructions ? <p className="max-w-prose whitespace-pre-wrap break-words text-sm leading-6">{job.definition.instructions}</p>
+          : <p className="max-w-prose text-sm leading-6 text-muted-foreground">Your server keeps this job’s instructions but doesn’t send them to this page yet. Each run starts with them as the first message in its chat.</p>}
+      </section>}
       <section className="space-y-4" aria-labelledby="job-definition-heading"><div className="flex flex-wrap items-center gap-2"><h2 id="job-definition-heading" className="text-lg font-semibold">Schedule</h2><Badge variant={job.definition.enabled ? 'default' : 'secondary'}>{job.definition.state === 'enabled' ? 'Enabled' : 'Paused'}</Badge></div>
         <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Timing</dt><dd className="mt-1">{describeTiming(job)} · {job.definition.timeZone}</dd></div><div><dt className="text-xs text-muted-foreground">{job.definition.watch ? 'Last look' : check?.clock === false ? 'Starts' : 'Next run'}</dt><dd className="mt-1">{!job.definition.enabled ? 'Paused: it won’t run until you resume it' : check?.clock === false && !job.definition.watch ? 'Only from its webhook or Run now' : job.definition.watch ? job.definition.watch.lastCheckedAt ? when(job.definition.watch.lastCheckedAt, job.definition.timeZone) : 'Not yet' : when(job.nextAt, job.definition.timeZone)}</dd></div><div><dt className="text-xs text-muted-foreground">Agent</dt><dd className="mt-1 break-all">{job.definition.agentId}</dd></div></dl>
         {job.definition.watch?.problem && <p role="alert" className="text-sm leading-6 text-warning-foreground">{problems[job.definition.watch.problem]}</p>}
@@ -110,7 +121,9 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const [jobs, setJobs] = useState<GatewayJob[] | null>(null), [details, setDetails] = useState<Record<string, GatewayJob>>({})
   const [query, setQuery] = useState(''), [filter, setFilter] = useState<'all' | 'enabled' | 'paused'>('all'), [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null)
   const [listError, setListError] = useState<unknown>(null)
-  const [creating, setCreating] = useState(false)
+  // Each opening of the form gets a new key, so it starts blank or from the chosen idea.
+  const [creating, setCreating] = useState(false), [form, setForm] = useState<{ key: number; starter: JobStarter | null }>({ key: 0, starter: null })
+  const startNew = (starter: JobStarter | null = null) => { setForm(current => ({ key: current.key + 1, starter })); setCreating(true) }
   const load = useCallback(async () => { setLoading(true); setError(null); setListError(null); try { setJobs((await control.jobs.list({ limit: 100 })).results) } catch (cause) { setListError(cause); setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
   useEffect(() => { let active = true; control.jobs.list({ limit: 100 }).then(page => active && setJobs(page.results)).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } }); return () => { active = false } }, [control])
   const selected = match ? details[match[1]] : undefined
@@ -124,16 +137,24 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
-    <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New AI job</WorkspaceAction></>} />
+    <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => startNew()}><Plus />New AI job</WorkspaceAction></>} />
     {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}
     {error && (jobs ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Cron jobs didn’t load" onRetry={() => load()} />)}
     {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard query={query} onQueryChange={setQuery} label="Search cron jobs" placeholder="Search schedules…" count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
       filters={<>{chip('all', 'All', jobs.length)}{chip('enabled', 'Enabled', enabled)}{chip('paused', 'Paused', jobs.length - enabled)}</>}
-      emptyTitle={query ? 'No matching schedules' : filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={query ? 'Try another name or tool.' : 'Make an AI job: tell Conker what to do and when, and it works with its tools on that schedule.'} emptyAction={query ? undefined : <Button onClick={() => setCreating(true)}><Plus />New AI job</Button>} icon={<CalendarClock />}>
+      emptyTitle={query ? 'No matching schedules' : filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={query ? 'Try another name or tool.' : 'Make an AI job: tell Conker what to do and when, and it works with its tools on that schedule. Or start from an idea below.'} emptyAction={query ? undefined : <Button onClick={() => startNew()}><Plus />New AI job</Button>} icon={<CalendarClock />}>
       {visible.map(job => <ListLine key={job.id} to={`/jobs/${job.id}`} icon={isAiJob(job) ? <Sparkles /> : <History />} title={job.definition.name}
         sub={`${isAiJob(job) ? 'AI job · ' : ''}${describeTiming(job)} · ${job.definition.timeZone}`} meta={!job.definition.enabled ? 'Paused' : job.definition.watch ? job.definition.watch.problem ? 'Needs a look' : 'Watching' : job.definition.target.kind === 'agent' && job.definition.target.clock === false ? 'On webhook' : `Next ${soon(job.nextAt, job.definition.timeZone)}`} />)}
     </ListCard>}
     <p className="text-xs text-muted-foreground">AI jobs use tools that need no confirmation on their own and ask before changing anything. Other cron jobs run tools published on your server.</p>
-    <NewAgentJobDialog open={creating} onOpenChange={setCreating} client={control.jobs} loadTools={control.tools} onCreated={created => { setJobs(current => [...(current ?? []), created]); setCreating(false); navigate(`/jobs/${created.id}`) }} />
+    <section aria-labelledby="job-starters-heading" className="space-y-3 pt-2">
+      <div><h2 id="job-starters-heading" className="text-base font-semibold">Start from an idea</h2><p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">Ready-made AI jobs. Picking one fills in the New AI job form; change anything, then create it as usual.</p></div>
+      <Card className="min-w-0 gap-0 overflow-hidden p-0"><ul className="flex flex-col divide-y">{jobStarters.map(starter => <li key={starter.id}>
+        <button type="button" onClick={() => startNew(starter)} className="flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left outline-none hover:bg-accent focus-visible:bg-accent">
+          <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{starter.name}</span><span className="block text-sm text-muted-foreground">{starter.summary}</span></span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{describeStarter(starter.when)}</span>
+        </button></li>)}</ul></Card>
+    </section>
+    <NewAgentJobDialog key={form.key} starter={form.starter} open={creating} onOpenChange={setCreating} client={control.jobs} loadTools={control.tools} loadAgents={control.agents} onCreated={created => { setJobs(current => [...(current ?? []), created]); setCreating(false); navigate(`/jobs/${created.id}`) }} />
   </div></GatewayPageFrame>
 }

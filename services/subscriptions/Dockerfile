@@ -1,6 +1,8 @@
-# The Claude plan runtime of the source-built Ubuntu layout (deploy/ubuntu/prepare.py builds it from
-# the reviewed source export). Python runs the private bridge (scripts/subscription_runtime.py);
-# Claude Code is the official native binary at a pinned version, checked against its SHA-512.
+# The Claude plan runtime. The source-built Ubuntu layout builds it from the reviewed source export
+# (deploy/ubuntu/prepare.py); the repository install pulls it as ghcr.io/conker-ai/subscriptions,
+# published by .github/workflows/publish-subscriptions.yml. Python runs the private bridge
+# (scripts/subscription_runtime.py); Claude Code is the official native binary at a pinned
+# version, checked against its SHA-512.
 # Python 3.12.16, slim.
 FROM python:3.12.16-slim@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07
 ARG TARGETARCH=amd64

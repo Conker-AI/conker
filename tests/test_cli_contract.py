@@ -16,6 +16,7 @@ COMMANDS = {
     "apply",
     "config",
     "tool",
+    "ops",
     "tailscale",
     "backup",
     "verify-backup",

@@ -7,6 +7,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from scripts.compose_overlays import overlay_files
 from scripts.provider_secrets import ProviderSecretError, SecretStore
 
 
@@ -87,6 +88,9 @@ class PaidPolicy:
                 "-f",
                 str(self.root / "docker-compose.yml"),
             ]
+            # As the launcher runs it: Pi keeps the Claude plan runtime's address when recreated.
+            for overlay in overlay_files(self.root, self.environment):
+                command.extend(["-f", str(overlay)])
         return self.runner(
             [*command, *arguments],
             cwd=self.root,
