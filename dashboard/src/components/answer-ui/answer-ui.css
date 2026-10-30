@@ -1,0 +1,7 @@
+/* Interactive parts sit inside .rich-answer but are components, not prose: the answer's paragraph,
+   list and link styles must not reach them. Tables keep the answer table's look on purpose. */
+.rich-answer .answer-ui :is(p, ul, ol, h3, figure) { margin-block: 0; }
+.rich-answer .answer-ui :is(ul, ol) { list-style: none; padding-inline-start: 0; }
+.rich-answer .answer-ui li + li { margin-top: 0; }
+.rich-answer .answer-ui a[data-slot="button"] { text-decoration: none; }
+.rich-answer .answer-ui .answer-block { margin-block: 0; }
