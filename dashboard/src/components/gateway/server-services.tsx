@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CircleAlert, CircleCheck, CircleMinus, RefreshCw, RotateCcw, TriangleAlert } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -75,6 +75,7 @@ export function GatewayServerServices({ client }: { client: GatewayHostOpsClient
           {once.length > 0 && <CollectionSection title="Run once when Conker starts"><ul>{once.map(row)}</ul></CollectionSection>}
           {selected && !rows.some(item => item.service === selected) && <p role="status" className="text-sm text-muted-foreground">This service isn’t in this install.</p>}
         </>}
+    <p className="text-sm text-muted-foreground">Every container on this server, also ones outside Conker: <Link to="/system?tab=containers" className="font-medium text-foreground underline underline-offset-4">Containers</Link></p>
   </div></GatewayPageFrame>
 }
 
@@ -93,13 +94,17 @@ function ServiceRow({ now, item, open, actions, hold, finding, checking, onCheck
   // A row shows what happened to it today; older receipts stay in Recent server actions.
   const recent = receipt && (receipt.outcome === 'working' || now - Date.parse(receiptTime(receipt)) < DAY) ? receipt : null
   const blocked = !!actions.busy || !!hold || item.oneShot || !!attempt && attempt.state === 'lost'
+  // The last read predates the restart, so its "Running" is old news until the list is read again.
+  const state = recent?.outcome === 'working' || attempt?.state === 'sending' ? 'Restarting…'
+    : recent?.outcome === 'done' && now < Date.parse(receiptTime(recent)) ? 'Restarted, reading its state…'
+      : serviceState(item, now)
   const trailing = attempt?.state === 'lost' ? <span className="flex items-center gap-1.5"><RunStateMark state="unknown" />Can’t tell</span>
     : recent ? <span className="flex items-center gap-1.5"><RunStateMark state={recent.outcome} /><span className="max-sm:sr-only">{recent.outcome === 'working' ? 'Restarting' : recent.outcome === 'done' ? `Restarted ${when(receiptTime(recent))}` : recent.outcome === 'failed' ? 'Didn’t restart' : 'Can’t tell'}</span></span>
       : item.restarts > 0 && !item.oneShot ? `${item.restarts} ${item.restarts === 1 ? 'restart' : 'restarts'}` : undefined
   const details = open && <InlineDetails title={label} description={serviceJob(item.service) ?? undefined} onClose={onClose}>
     <OverlayBody><div className="flex flex-col gap-5">
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
-        <dt className="text-muted-foreground">State</dt><dd>{serviceState(item, now)}</dd>
+        <dt className="text-muted-foreground">State</dt><dd>{state}</dd>
         {!item.oneShot && <><dt className="text-muted-foreground">Started</dt><dd>{item.startedAt ? when(item.startedAt) : 'Not running'}</dd>
           <dt className="text-muted-foreground">Restarted by itself</dt><dd>{item.restarts === 0 ? 'Never' : `${item.restarts} ${item.restarts === 1 ? 'time' : 'times'}`}{item.restarts > 0 && <span className="text-muted-foreground"> (it stopped and Docker started it again)</span>}</dd></>}
       </dl>
@@ -119,5 +124,5 @@ function ServiceRow({ now, item, open, actions, hold, finding, checking, onCheck
     </div></OverlayBody>
   </InlineDetails>
   return <CollectionRow to={open ? '/system?tab=services' : `/system?tab=services&service=${encodeURIComponent(item.service)}`} expanded={open} details={details}
-    leading={<StateIcon item={item} />} title={label} description={serviceState(item, now)} trailing={trailing} />
+    leading={<StateIcon item={item} />} title={label} description={state} trailing={trailing} />
 }

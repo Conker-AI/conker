@@ -49,7 +49,7 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
   const onServer = page.route === 'system'
   const [serverOpen, setServerOpen] = useState(onServer)
   const serverSections = gatewayPageNavigation('/system', '').sections
-  const activeTab = new URLSearchParams(location.search).get('tab') ?? 'overview'
+  const activeTab = page.activeSection
 
   const place = (item: GatewayDestination) => {
     const Icon = icons[item.id]

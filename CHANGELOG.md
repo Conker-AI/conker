@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Server keeps its pages in the sidebar.** The tab row on top of Server repeated the sidebar's
+  sub-items, so it now shows only while the sidebar is collapsed. Services replaced Containers in
+  that list; every container on the server is one link away at the bottom of Services. A service
+  you restart says "Restarting…" right away instead of "Running" until the list is read again.
 - **One time zone setting.** Settings > Notifications no longer has its own quiet-hours time zone row,
   which edited the same value as Settings > You > Time zone; quiet hours follow that one.
 - **Make a job Conker made your own.** A cron job page now has a "Make this job mine" button for
