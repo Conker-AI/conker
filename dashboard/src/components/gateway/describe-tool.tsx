@@ -43,7 +43,7 @@ export function DescribeTool({ requests }: { requests: ChangeRequestsState }) {
       <h2 className="text-sm font-medium text-muted-foreground">Tool requests <span className="tabular-nums">{tools.length}</span></h2>
       {tools.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id}
         error={requests.failure?.id === request.id ? requests.failure.message : null}
-        onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={description => void requests.retry(request, description)} />)}
+        onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={description => void requests.retry(request, description)} onAnswer={text => requests.answer(request, text)} />)}
     </div>}
     {requests.notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{requests.notice.text}{requests.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={requests.notice.link.to}>{requests.notice.link.label}</Link></>}</p>}
   </section>

@@ -52,7 +52,7 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
       let decided: ChangeRequest
       if (request.kind === 'tool_draft') {
         if (!drafts) throw new Error('Tools are not available here.')
-        if (request.payload.status === 'drafting' || request.payload.status === 'failed') throw new Error('This draft isn’t ready yet.')
+        if (request.payload.status === 'drafting' || request.payload.status === 'failed' || request.payload.status === 'needs_detail') throw new Error('This draft isn’t ready yet.')
         let saved = savedAs.current.get(request.id)
         if (!saved) {
           let document
@@ -102,6 +102,24 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
     finally { setPending(null) }
   }, [client])
   /**
+   * His answer to the drafter's question: the card shows whatever Pi answers (drafting again). If
+   * Pi says it is no longer asking (409), the list is read again and he is told it was answered.
+   * Returns whether Pi took it, so the card keeps his text when it did not.
+   */
+  const answer = useCallback(async (request: ToolDraftRequest, text: string): Promise<boolean> => {
+    if (!client) return false
+    setPending(request.id); setFailure(null); setNotice(null)
+    try { replace(await client.answer(request.id, text)); return true }
+    catch (cause) {
+      if (cause instanceof GatewayError && cause.status === 409) {
+        await load()
+        setNotice({ text: 'That question was already answered.', link: request.sessionId ? { to: `/chat?session=${encodeURIComponent(request.sessionId)}`, label: 'Open the chat' } : undefined })
+      } else setFailure({ id: request.id, message: gatewayError(cause).message })
+      return false
+    }
+    finally { setPending(null) }
+  }, [client, load])
+  /**
    * A new tool from his own words. The same words keep the same submission id until Pi answers,
    * so trying again after a lost answer never files the request twice.
    */
@@ -115,7 +133,7 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
     finally { setPending(null) }
   }, [client])
   // Answered once the first read came back (or failed); no client means nothing to wait for.
-  return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, pending, failure, notice, load, approve, decline, retry, draft }
+  return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, pending, failure, notice, load, approve, decline, retry, answer, draft }
 }
 
 export type ChangeRequestsState = ReturnType<typeof useChangeRequests>

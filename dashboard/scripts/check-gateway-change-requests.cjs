@@ -36,7 +36,7 @@ async function main() {
   await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'A memory request is exactly its text')
 
   // A tool request fills in while Conker drafts it; requests filed before that have no status and are ready.
-  const { toolDraftStatus, isDrafting } = load('src/lib/gateway/change-requests.ts')
+  const { toolDraftStatus, isDrafting, isAsking } = load('src/lib/gateway/change-requests.ts')
   const drafting = { ...draft, payload: { description: 'A digest', status: 'drafting' } }
   const ready = { ...draft, payload: { description: 'A digest', status: 'ready', document: { id: 'digest', nodes: [] }, issues: [{ code: 'missing_tool', message: 'Step read uses a tool you do not have.', nodeId: 'read' }, 'A plain note'], steps: ['Read the chat.', 'List the deadlines.'] } }
   const failed = { ...draft, payload: { description: 'A digest', status: 'failed', error: 'Pi restarted while drafting. Try again.' } }
@@ -50,6 +50,22 @@ async function main() {
   assert.equal(listed[2].payload.error, 'Pi restarted while drafting. Try again.')
   reply = { schemaVersion: 1, results: [{ ...draft, payload: { description: 'A digest', status: 'thinking' } }] }
   await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'An unknown drafting state is not guessed')
+
+  // The drafter asked a question: needs_detail carries it, the chat it was asked in, and (on any status) what was said.
+  const asking = { ...draft, payload: { description: 'A digest', status: 'needs_detail', question: 'Which search engine?', askedIn: `ses_${'b'.repeat(16)}`, conversation: [{ role: 'builder', content: 'Which chat?' }, { role: 'owner', content: 'The study group.' }] } }
+  reply = { schemaVersion: 1, results: [asking, { ...asking, payload: { description: 'A digest', status: 'needs_detail' } }, { ...asking, payload: { description: 'A digest', status: 'needs_detail', question: null, askedIn: null, conversation: null } }, { ...drafting, payload: { ...drafting.payload, conversation: asking.payload.conversation } }, { ...failed, payload: { ...failed.payload, conversation: [] } }, { ...ready, payload: { ...ready.payload, conversation: asking.payload.conversation } }] }
+  const listedAsking = await client.list()
+  assert.deepEqual(listedAsking.map(toolDraftStatus), ['needs_detail', 'needs_detail', 'needs_detail', 'drafting', 'failed', 'ready'])
+  assert.deepEqual(listedAsking.map(isAsking), [true, true, true, false, false, false], 'Only needs_detail waits for his answer')
+  assert.deepEqual(listedAsking.map(isDrafting), [false, false, false, true, false, false], 'A question is for him: it counts as needing him')
+  assert.equal(listedAsking[0].payload.question, 'Which search engine?')
+  assert.equal(listedAsking[0].payload.askedIn, `ses_${'b'.repeat(16)}`)
+  assert.deepEqual(listedAsking[5].payload.conversation.map(turn => turn.role), ['builder', 'owner'], 'The conversation shows on any status')
+  for (const bad of [{ question: 5 }, { askedIn: '' }, { conversation: [{ role: 'system', content: 'x' }] }, { conversation: [{ role: 'owner' }] }, { conversation: 'hi' }])
+    for (const payload of [{ ...asking.payload, ...bad }, { ...drafting.payload, ...bad }].filter(item => 'conversation' in bad || item.status === 'needs_detail')) {
+      reply = { schemaVersion: 1, results: [{ ...asking, payload }] }
+      await assert.rejects(client.list(), error => error.kind === 'invalid-response', `Loose types are refused: ${JSON.stringify(bad)}`)
+    }
 
   reply = { ...job, state: 'approved', result: { jobId: `job_${'c'.repeat(32)}` }, decidedAt: 2 }
   await client.approve(id)
@@ -74,6 +90,13 @@ async function main() {
   await client.retry(id, '  A digest of the whole week ')
   assert.deepEqual(calls.at(-1), [`${base}/retry`, { method: 'POST', body: { description: 'A digest of the whole week' } }], 'Change sends his new words')
   await assert.rejects(client.retry(id, '  '), error => error.kind === 'validation', 'Blank words are never sent')
+  // The answer goes to the same retry route as `answer`, never with `description`; blank or oversized text is never sent.
+  reply = { ...asking, payload: { ...drafting.payload, conversation: asking.payload.conversation } }
+  assert.equal(toolDraftStatus(await client.answer(id, '  DuckDuckGo, and read the pages. ')), 'drafting', 'Pi answers with the card drafting again')
+  assert.deepEqual(calls.at(-1), [`${base}/retry`, { method: 'POST', body: { answer: 'DuckDuckGo, and read the pages.' } }])
+  await assert.rejects(client.answer(id, '   '), error => error.kind === 'validation')
+  await assert.rejects(client.answer(id, 'x'.repeat(4001)), error => error.kind === 'validation')
+  await assert.rejects(client.answer('creq_bad', 'yes'), error => error.kind === 'validation')
   await client.draft(' Sum up my study chat ', 'tooldraft_' + 'e'.repeat(32))
   assert.deepEqual(calls.at(-1), ['/api/control/pi/tool-drafts', { method: 'POST', body: { description: 'Sum up my study chat', request_id: 'tooldraft_' + 'e'.repeat(32) } }])
   await assert.rejects(client.draft('x'.repeat(4001), 'tooldraft_' + 'e'.repeat(32)), error => error.kind === 'validation', 'At most 4000 characters')
@@ -151,7 +174,18 @@ async function main() {
   assert.match(hook, /setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) void load\(\) \}, DRAFTING_POLL_MS\)/, 'It reads again only while the page is in view')
   assert.ok(hook.indexOf('navigate(`/tools?draft=') > hook.indexOf('client.saved('), 'Review opens the saved draft in Tools')
   const card = fs.readFileSync(path.join(root, 'src/components/inbox/change-request-card.tsx'), 'utf8')
-  for (const label of ['What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word', 'Conker is drafting this tool…', 'Couldn’t draft it:', 'Try again', 'Draft again', "'Review'", 'What it does, step by step']) assert.ok(card.includes(label), `The card shows: ${label}`)
+  // The answer box: a real form with one submit button, the typed text kept until Pi took it, 409 read again.
+  assert.match(card, /<form [^>]*onSubmit=/, 'The answer box is a form')
+  assert.match(card, /<Button type="submit" size="sm"[^>]*>\{busy \? 'Sending…' : 'Answer'\}<\/Button>/, 'Answer is the one submit button')
+  assert.equal((card.match(/type="submit"/g) ?? []).length, 1, 'Every other button is type="button"')
+  assert.match(card, /if \(await onAnswer\(text\.trim\(\)\)\) setText\(''\)/, 'The text is cleared only after Pi took the answer')
+  assert.match(card, /Your answer is kept\./, 'A failed send says the text is kept')
+  assert.match(card, /gatewayConversationLink\(sessionId\)/, 'The chat link uses the one chat route helper')
+  assert.match(card, /turn\.role === 'builder' \? 'Conker asked' : 'You said'/, 'The conversation reads Conker asked / You said')
+  assert.match(hook, /cause\.status === 409\) \{\s*await load\(\)/, 'A 409 reads the list again')
+  assert.match(hook, /That question was already answered\./, 'A 409 says the question was already answered')
+  assert.match(hook, /replace\(await client\.answer\(request\.id, text\)\)/, 'The card shows what Pi answered, never a made-up state')
+  for (const label of ['Conker needs one detail to draft this tool', 'Your answer', 'Questions and answers so far', 'What it does each run', 'Tools it calls', 'Connections it uses', 'Saved word for word', 'Conker is drafting this tool…', 'Couldn’t draft it:', 'Try again', 'Draft again', "'Review'", 'What it does, step by step']) assert.ok(card.includes(label), `The card shows: ${label}`)
   for (const file of ['src/components/gateway/owner-workspace.tsx', 'src/components/gateway/inbox-attention.tsx']) assert.match(fs.readFileSync(path.join(root, file), 'utf8'), /isDrafting\(item\)/, `${file}: a tool still being drafted does not count as needing him`)
   for (const file of ['src/components/inbox/reply-box.tsx', 'src/components/inbox/ask-card.tsx', 'src/components/inbox/approval-card.tsx', 'src/components/inbox/change-request-card.tsx', 'src/components/inbox/agent-note-card.tsx', 'src/components/gateway/proposals-panel.tsx', 'src/components/inbox/inbox-card.tsx', 'src/components/gateway/describe-tool.tsx']) {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
