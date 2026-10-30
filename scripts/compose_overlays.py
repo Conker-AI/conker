@@ -13,7 +13,11 @@ from pathlib import Path
 OVERLAYS = (
     ("docker-compose.terminal.yml", "OWNER_TERMINAL_STATE=active", None),
     ("docker-compose.sandbox.yml", "AGENT_SANDBOX_STATE=active", None),
-    ("docker-compose.subscriptions.yml", "SUBSCRIPTIONS_STATE=active", "CONKER_CLAUDE_PLAN=on"),
+    (
+        "docker-compose.subscriptions.yml",
+        "SUBSCRIPTIONS_STATE=active",
+        "CONKER_CLAUDE_PLAN=on",
+    ),
 )
 
 

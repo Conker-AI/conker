@@ -79,7 +79,8 @@ def install(tmp_path):
     home.mkdir()
     work = tmp_path / "conker"
     work.mkdir()
-    for name in ("install.sh", "conker", "docker-compose.yml", "docker-compose.sandbox.yml", "versions.env"):
+    for name in ("install.sh", "conker", "docker-compose.yml", "docker-compose.sandbox.yml",
+                 "docker-compose.subscriptions.yml", "versions.env"):
         shutil.copy(ROOT / name, work / name)
     shutil.copytree(ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     (work / "install.sh").chmod(0o755)
