@@ -157,7 +157,6 @@ Shortcuts for working fast.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Keyboard shortcuts**<br>`keyboard.shortcuts` | Turns Conker's keyboard shortcuts on or off. (applies right away) | on | owner settings |
-| **Search everything**<br>`keyboard.palette` | The keys that open search for places, chats and actions. Choices: Ctrl+K. (applies right away) | Ctrl+K | owner settings |
 | **Shortcut list on ?**<br>`keyboard.cheat_sheet` | Pressing ? shows every shortcut. (saved, not used yet) | on | owner settings |
 | **Approve with Enter**<br>`keyboard.approve_enter` | Lets you approve the open Inbox card with Enter; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 

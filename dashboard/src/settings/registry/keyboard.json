@@ -22,22 +22,6 @@
           "effect": "live"
         },
         {
-          "id": "keyboard.palette",
-          "title": "Search everything",
-          "description": "The keys that open search for places, chats and actions.",
-          "type": "select",
-          "default": "ctrl_k",
-          "tier": "basic",
-          "scope": "global",
-          "effect": "live",
-          "options": [
-            {
-              "value": "ctrl_k",
-              "label": "Ctrl+K"
-            }
-          ]
-        },
-        {
           "id": "keyboard.cheat_sheet",
           "title": "Shortcut list on ?",
           "description": "Pressing ? shows every shortcut.",
