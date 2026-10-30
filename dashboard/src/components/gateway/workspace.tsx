@@ -44,6 +44,8 @@ const GatewayActivityWorkspace = lazy(() => import('./activity-workspace').then(
 const GatewayAgentsWorkspace = lazy(() => import('./agents-workspace').then(module => ({ default: module.GatewayAgentsWorkspace })))
 const GatewayTodayWorkspace = lazy(() => import('./today-workspace').then(module => ({ default: module.GatewayTodayWorkspace })))
 const GatewayChatsWorkspace = lazy(() => import('./chats-workspace').then(module => ({ default: module.GatewayChatsWorkspace })))
+const GatewayChatImport = lazy(() => import('./chat-import').then(module => ({ default: module.GatewayChatImport })))
+const GatewayImportedChats = lazy(() => import('./imported-chats').then(module => ({ default: module.GatewayImportedChats })))
 const GatewayProjectsWorkspace = lazy(() => import('./projects-workspace').then(module => ({ default: module.GatewayProjectsWorkspace })))
 const GatewayArtifactsWorkspace = lazy(() => import('./artifacts-workspace').then(module => ({ default: module.GatewayArtifactsWorkspace })))
 const GatewayJobsWorkspace = lazy(() => import('./jobs-workspace').then(module => ({ default: module.GatewayJobsWorkspace })))
@@ -94,7 +96,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
     <ConnectionBanner probe={() => control.gatewayHealth()} />
     <ErrorBoundary resetKeys={[location.pathname, location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
-      {chatsActive && <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} />}
+      {chatsActive && (params.get('view') === 'import' ? <GatewayChatImport client={control.imports} /> : params.get('view') === 'imported' ? <GatewayImportedChats client={control.imports} /> : <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} imports={control.imports} />)}
       {setupActive && <GatewaySetupProgress client={control} />}
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} asks={control.asks} drafts={control.editorDrafts} access={control.access} state={ownerState} active /></div>}
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} changes={control.changeRequests} /> : <GatewayToolsInventory client={control} />)}

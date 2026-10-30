@@ -6,6 +6,15 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Export answers and artifacts, import old chats.** Every finished answer has an Export menu
+  next to Copy: Word, PDF, PowerPoint, and Excel when the answer holds a table. Artifacts have the
+  same menu, plus their CSV, JSON or source text. When Pi can't make a file, the menu says why in
+  plain words ("Tables over 10,000 cells export only as Excel"). "Import from ChatGPT or Claude"
+  under the Chats list brings in an export: choose conversations.json (a .zip gets told how to open it), see how
+  many chats, from when and some titles, then Import (asks for your password). Imported chats live
+  in their own read-only list under Chats, with no message box, and say how many of your messages
+  are waiting to be offered to memory.
+
 - **Release pins:** Pi 0.13.0, ToolGate 0.10.0 (with its sandbox image), MemoryGate 0.7.0. The
   dashboard reads the new job fields (who made a job, whether forgetting a chat turned it off, the
   agent's name) and shows the agent's name on the job page.

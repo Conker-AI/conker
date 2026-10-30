@@ -117,6 +117,8 @@ routes.POST.unshift(/^\/api\/control\/pi\/projects$/, /^\/api\/control\/pi\/proj
 // Artifact list responses are metadata-only; content is bounded to explicit detail and inert export routes.
 routes.GET.unshift(/^\/api\/control\/pi\/artifacts(?:\/artifact_[0-9a-f]{32}(?:\/export)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/artifacts(?:\/from-message)?$/, /^\/api\/control\/pi\/artifacts\/artifact_[0-9a-f]{32}\/(?:versions|restore|archive)$/)
+// Imported ChatGPT and Claude chats are read-only archive reads; previewing and importing a file go through file-transfer.ts.
+routes.GET.unshift(/^\/api\/control\/pi\/imports(?:\/chats(?:\/imp_[0-9a-f]{32})?)?$/)
 // Job views redact target inputs, allowance identities and receipts; browser writes use exact recovery actions only.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
@@ -215,7 +217,7 @@ export function snapshotGatewayOperation(path: string, body: unknown): GatewayVe
   if ((!path.startsWith('/api/') && !isBrowserSessionRoute(path)) || !routes.POST.some(route => route.test(path))) throw new GatewayError('validation')
   return { method: 'POST', path, body: JSON.parse(jsonBody(body, characterOperation({ method: 'POST', path, body }) ? GATEWAY_CHARACTER_LIMIT : correctionOperation({ method: 'POST', path, body }) ? 128000 : GATEWAY_JSON_LIMIT)) as Record<string, unknown> }
 }
-async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
+export async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): Promise<Record<string, unknown>> {
   if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
     await response.body?.cancel().catch(() => undefined)
     throw new GatewayError('invalid-response')
@@ -251,7 +253,7 @@ async function responseObject(response: Response, limit = GATEWAY_JSON_LIMIT): P
   } catch { throw new GatewayError('invalid-response') }
 }
 /** Tells the connection banner whether the server answered, without the transport importing UI state. */
-function reportReachability(reachable: boolean) {
+export function reportReachability(reachable: boolean) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
     window.dispatchEvent(new CustomEvent('conker:gateway-reachability', { detail: reachable }))
   }

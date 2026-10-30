@@ -27,7 +27,7 @@ type Message = { id: string; session_id: string; seq: number; role: 'user' | 'as
 type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
 
 const replies = [
-  "Here's a simple plan for the week:\n\n1. **Monday:** revision block before school, 45 minutes.\n2. **Tuesday and Thursday:** judo, so keep homework light.\n3. **Friday:** hand in the physics worksheet.\n\nWant me to put these in your calendar?",
+  "Here's a simple plan for the week:\n\n| Day | Plan |\n| --- | --- |\n| Monday | Revision block before school, 45 minutes |\n| Tuesday and Thursday | Judo, so keep homework light |\n| Friday | Hand in the physics worksheet |\n\nWant me to put these in your calendar?",
   'Sure. Short version: sunlight scatters off air molecules, and blue light scatters the most because its wavelength is shorter. That scattered blue reaches your eyes from every direction.',
   "I can do that. I'll draft it first so you can check it before anything is sent.",
 ]
