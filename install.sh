@@ -504,6 +504,11 @@ write_env() {
     TOOLGATE_PI_SERVICE_KEY=$(keep_or_make_long TOOLGATE_PI_SERVICE_KEY)
     PI_SERVICE_KEYS_SHA256=$(printf '{"memorygate":"%s","toolgate":"%s"}' \
         "$(sha256_secret "$MEMORYGATE_PI_SERVICE_KEY")" "$(sha256_secret "$TOOLGATE_PI_SERVICE_KEY")")
+    # The key of MemoryGate's listener for imported chats, which Pi offers imported messages
+    # through. MemoryGate compares it as given (it keeps no hash), so Pi gets the same value. It
+    # protects no stored data, so a short one is made again; create_import_listener creates the
+    # listener once MemoryGate answers.
+    MEMORYGATE_IMPORT_KEY=$(keep_or_make_long MEMORYGATE_IMPORT_KEY)
     # Empty means the default in docker-compose.yml (24h).
     CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)
     # The Claude plan runtime's two keys: the control key stays inside it, and Pi gets only the
@@ -650,6 +655,7 @@ PI_TOOLGATE_KEY=$PI_TOOLGATE_KEY
 MEMORYGATE_PI_SERVICE_KEY=$MEMORYGATE_PI_SERVICE_KEY
 TOOLGATE_PI_SERVICE_KEY=$TOOLGATE_PI_SERVICE_KEY
 PI_SERVICE_KEYS_SHA256=$PI_SERVICE_KEYS_SHA256
+MEMORYGATE_IMPORT_KEY=$MEMORYGATE_IMPORT_KEY
 SUBSCRIPTIONS_CONTROL_KEY=$SUBSCRIPTIONS_CONTROL_KEY
 SUBSCRIPTIONS_INFERENCE_KEY=$SUBSCRIPTIONS_INFERENCE_KEY
 ENV
@@ -922,6 +928,17 @@ wait_for_health() {
     fi
 }
 
+# MemoryGate creates a listener only through its admin API, so this runs once it answers. It is
+# safe to repeat: an existing listener keeps the owner's choices and gets the key again.
+create_import_listener() {
+    if python3 "$ROOT/scripts/import_listener.py" --root "$ROOT" --layout repository >/dev/null 2>"$LOG"; then
+        good "Imported chats can reach memory"
+    else
+        warn "Imported chats cannot reach memory yet: $(tail -1 "$LOG")"
+        DEGRADED+=("MemoryGate's listener for imported chats is not set up; retry with ./conker setup import-listener")
+    fi
+}
+
 # ============================================================================
 # 5. What to tell them at the end
 # ============================================================================
@@ -1021,6 +1038,7 @@ main() {
     prepare_dashboard
     pull_and_start
     wait_for_health
+    create_import_listener
     if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
         if ! python3 "$ROOT/scripts/provider_control_install.py" --root "$ROOT" --source "$ROOT" --layout repository >/dev/null; then
             warn "Provider UI control could not start. Retry with: conker providers install-ui-control"
