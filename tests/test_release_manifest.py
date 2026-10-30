@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from scripts.release_manifest import ManifestError, parse_env, validate_manifest
+from scripts.release_manifest import (
+    GATE_VERSION_KEYS,
+    ManifestError,
+    parse_env,
+    validate_manifest,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "versions.env"
@@ -110,3 +116,16 @@ def test_cli_emits_a_normalized_machine_readable_contract():
     payload = json.loads(result.stdout)
     assert payload["conker_dashboard_revision"] == current_dashboard_tree()
     assert payload["gates"]["toolgate"] == parse_env(MANIFEST)["TOOLGATE_VERSION"]
+
+
+def test_changelog_pins_match_the_manifest():
+    """The release notes' "Pinned in this release" table says what versions.env pins."""
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = text.split("\n## Unreleased\n", 1)[1]
+    unreleased = re.split(r"^## ", unreleased, maxsplit=1, flags=re.MULTILINE)[0]
+    table = unreleased.split("\n### Pinned in this release\n", 1)[1]
+    rows = dict(re.findall(r"^\| (\w+) \| v(\S+) \|$", table, flags=re.MULTILINE))
+    values = parse_env(MANIFEST)
+    pinned = {name: values[GATE_VERSION_KEYS[name.lower()]] for name in rows}
+    assert {name.lower() for name in rows} == set(GATE_VERSION_KEYS), "one row per gate"
+    assert rows == pinned, "update CHANGELOG.md's Pinned in this release table with each pin"
