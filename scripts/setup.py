@@ -86,6 +86,11 @@ def load_protection_policy(path: Path) -> dict[str, object]:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise SetupError("protection policy is invalid JSON") from exc
+    return check_protection_policy(value)
+
+
+def check_protection_policy(value: object) -> dict[str, object]:
+    """The saved policy, exactly as Pi stores it; the host helper reads it the same way."""
     if not isinstance(value, dict) or set(value) != POLICY_FIELDS:
         raise SetupError("protection policy has an unsupported shape")
     destination = value["destination"]

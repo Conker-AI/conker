@@ -111,8 +111,8 @@
     },
     {
       "id": "service-lifecycle", "name": "Local service lifecycle and logs", "authority": "conker-host", "state": "active",
-      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker start", "conker stop", "conker restart", "conker logs"], "deploymentRequirements": ["Docker Compose", "docker-compose.yml"],
-      "evidence": [{"path": "conker", "contains": "start)     [ \"$#\" -eq 1"}, {"path": "conker", "contains": "logs)      [ \"$#\" -le 3"}]
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker start", "conker stop", "conker restart", "conker restart SERVICE", "conker logs", "conker ops", "conker ops show ID", "conker ops run services.status", "conker ops run services.restart service=NAME"], "deploymentRequirements": ["Docker Compose", "docker-compose.yml", "host helper journal outside Docker volumes (state/host-ops)"],
+      "evidence": [{"path": "conker", "contains": "start)     [ \"$#\" -eq 1"}, {"path": "conker", "contains": "logs)      [ \"$#\" -le 3"}, {"path": "scripts/host_ops.py", "contains": "\"services.restart\""}, {"path": "docs/adr/0014-server-actions-through-one-host-helper.md", "contains": "Unknown, never retried."}]
     },
     {
       "id": "local-model-download", "name": "Local model download", "authority": "conker-host", "state": "active",
@@ -121,8 +121,8 @@
     },
     {
       "id": "verified-backup", "name": "Verified coordinated backup", "authority": "conker-host", "state": "active",
-      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker backup", "conker verify-backup"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
-      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}]
+      "gatewayRoutes": [], "uiRoutes": [], "cliCommands": ["conker backup", "conker verify-backup", "conker ops run backup.list", "conker ops run backup.verify snapshot=NAME", "conker ops run backup.run"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
+      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/host_ops.py", "contains": "self._conker(\"setup\", \"run\", \"protection\")"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}]
     },
     {
       "id": "held-recovery", "name": "Isolated held restore and readiness review", "authority": "conker-host", "state": "active",

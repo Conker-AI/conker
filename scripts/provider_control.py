@@ -1,6 +1,7 @@
-"""Private Unix-socket bridge to the same host provider operations as conker CLI.
+"""Private Unix-socket bridge to the same host operations as conker CLI: the host helper.
 
-No TCP listener, shell command input, environment editor, or secret read route.
+Provider credentials, the ChatGPT sign-in and the fixed server actions of scripts/host_ops.py
+(ADR-0014). No TCP listener, shell command input, environment editor, or secret read route.
 Only the authenticated gateway mounts this socket directory.
 """
 
@@ -17,6 +18,7 @@ import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
+from scripts import host_ops
 from scripts.chatgpt_provider import (
     ChatGPTControl,
     ChatGPTError,
@@ -208,7 +210,7 @@ class ProviderControl:
         return self.status()
 
 
-def handler(control: ProviderControl, chatgpt=None):
+def handler(control: ProviderControl, chatgpt=None, host=None):
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -227,6 +229,8 @@ def handler(control: ProviderControl, chatgpt=None):
             self.wfile.write(content)
 
         def do_GET(self):
+            if self.path.startswith("/host/"):
+                return self.respond(*host_ops.route(host, "GET", self.path, None))
             if self.path == "/chatgpt" and chatgpt:
                 return self.respond(200, chatgpt.status())
             if self.path == "/chatgpt/limits" and chatgpt:
@@ -239,9 +243,12 @@ def handler(control: ProviderControl, chatgpt=None):
                 self.respond(503, {"error": "provider_control_unavailable"})
 
         def do_POST(self):
-            if self.path not in {"/providers", "/chatgpt"} or (
-                self.path == "/chatgpt" and not chatgpt
-            ):
+            if self.path not in {
+                "/providers",
+                "/chatgpt",
+                "/host/ops",
+                "/host/read",
+            } or (self.path == "/chatgpt" and not chatgpt):
                 return self.respond(404, {"error": "unsupported_operation"})
             length = self.headers.get("Content-Length", "")
             if (
@@ -254,6 +261,8 @@ def handler(control: ProviderControl, chatgpt=None):
             self.connection.settimeout(10)
             try:
                 value = json.loads(self.rfile.read(int(length)).decode("utf-8"))
+                if self.path.startswith("/host/"):
+                    return self.respond(*host_ops.route(host, "POST", self.path, value))
                 result = (
                     chatgpt.apply(value)
                     if self.path == "/chatgpt"
@@ -388,6 +397,12 @@ def main():
                 parser.error("Provider control is already running.")
     control = ProviderControl(args.root, args.source, args.layout)
     control.status()
+    try:
+        host = host_ops.HostOps(args.root, args.source, args.layout)
+        # Actions cut off by the last stop become unknown now; none is run again.
+        host.settle()
+    except (OSError, ValueError):
+        host = None  # /host routes answer 503; provider control keeps working
     state = args.root / ("state" if args.layout == "ubuntu" else ".conker")
     chatgpt = ChatGPTControl(
         state, args.codex or Path.home() / "conker-model-runtime/bin/codex"
@@ -400,7 +415,7 @@ def main():
     inference_socket.chmod(0o600)
     threading.Thread(target=inference_server.serve_forever, daemon=True).start()
     with socketserver.UnixStreamServer(
-        str(args.socket), handler(control, chatgpt)
+        str(args.socket), handler(control, chatgpt, host)
     ) as server:
         args.socket.chmod(0o600)
         try:
