@@ -127,6 +127,12 @@ async function main() {
   assert.equal(words.backupPlace({ ...backups, separateDisk: true }).risk, 'Same computer: lost if this PC dies.')
   assert.match(words.backupPlace({ ...backups, separateDisk: false }).risk, /^Same computer and same disk/)
   assert.equal(words.servicesSummary(status), '1 of 2 services are running fine. Web search needs a look.')
+  // A restarting service is named, not counted as running from the last read (2026-10-31).
+  assert.equal(words.servicesSummary(status, ['memorygate']), 'Restarting Memory… Web search needs a look.')
+  assert.equal(words.servicesSummary(status, ['searxng']), 'Restarting Web search… The other service is running.')
+  const three = { ...status, services: [...status.services, { ...status.services[0], service: 'pi' }] }
+  assert.equal(words.servicesSummary(three, ['pi']), 'Restarting Pi… 1 of the other 2 are running fine. Web search needs a look.')
+  assert.equal(words.servicesSummary(three, ['memorygate', 'pi']), 'Restarting Memory and Pi… Web search needs a look.')
   assert.equal(words.receiptTitle({ operation: 'services.restart', arguments: { service: 'pi' }, outcome: 'unknown' }), 'Can’t tell if Pi restarted')
   assert.equal(words.receiptTitle({ operation: 'backup.run', arguments: {}, outcome: 'done' }), 'Backed up and checked')
   const order = words.sortReceipts(['done', 'failed', 'working', 'unknown'].map((outcome, index) => receipt(`ui_order_${index}_0000000000`, 'backup.run', {}, outcome))).map(row => row.outcome)
@@ -143,6 +149,7 @@ async function main() {
   assert.match(parts, /The server helper isn’t running/); assert.match(parts, /The command line on the server still works/)
   assert.match(parts, /Nothing is retried by itself/); assert.match(parts, /Didn’t start: \{message\} Nothing ran\./)
   assert.match(services, /actions\.busy/, 'One action at a time: Restart waits while another runs')
+  assert.match(services, /servicesSummary\(status, lasting\.filter\(item => restartingNow\(actions, item\.service\)\)/, 'The summary counts a restarting service as restarting')
   assert.doesNotMatch(hook + services + backupsUi, /setInterval/, 'Only receipts are polled, one timer at a time')
   assert.doesNotMatch(hook, /start\([^)]*\)\s*\)\s*\.catch\(\s*\(\)\s*=>\s*start/, 'Never resent by itself')
   assert.match(hook, /client\.receipt\(attempt\.id/, 'A lost start is checked by its id, not sent again')

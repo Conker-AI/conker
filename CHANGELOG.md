@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Services says what is restarting.** While a restart runs, the summary on Server > Services
+  names the restarting service and counts only the others, instead of repeating "All N services
+  are running." from the last read.
 - **Pi 0.15.0 is pinned.** Artifacts can be exported at an earlier version (an optional `version`,
   1 to 100, on the gateway's artifact download), and `conker apply tools` takes a `run_tool`
   operation that runs any published tool by hand, as the browser's Run does, with the owner's and

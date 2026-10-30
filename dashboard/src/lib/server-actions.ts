@@ -56,13 +56,20 @@ export function span(milliseconds: number) {
   const days = Math.round(hours / 24)
   return `${days} days`
 }
-export function servicesSummary(status: HostServicesStatus) {
+/** `restarting`: services with a restart being sent or running; their last read state is old news. */
+export function servicesSummary(status: HostServicesStatus, restarting: string[] = []) {
   const lasting = status.services.filter(row => !row.oneShot)
-  const fine = lasting.filter(serviceFine)
   if (!lasting.length) return 'No services are running in this install.'
-  if (fine.length === lasting.length) return `All ${lasting.length} services are running.`
-  const off = lasting.filter(row => !serviceFine(row)).map(row => serviceLabel(row.service))
-  return `${fine.length} of ${lasting.length} services are running fine. ${list(off)} ${off.length === 1 ? 'needs' : 'need'} a look.`
+  const busy = lasting.filter(row => restarting.includes(row.service))
+  const rest = lasting.filter(row => !restarting.includes(row.service))
+  const fine = rest.filter(serviceFine)
+  const off = rest.filter(row => !serviceFine(row)).map(row => serviceLabel(row.service))
+  const look = `${list(off)} ${off.length === 1 ? 'needs' : 'need'} a look.`
+  if (!busy.length) return fine.length === lasting.length ? `All ${lasting.length} services are running.` : `${fine.length} of ${lasting.length} services are running fine. ${look}`
+  const head = `Restarting ${list(busy.map(row => serviceLabel(row.service)))}…`
+  if (!rest.length) return head
+  if (!off.length) return `${head} ${rest.length === 1 ? 'The other service is' : `The other ${rest.length} services are`} running.`
+  return fine.length ? `${head} ${fine.length} of the other ${rest.length} are running fine. ${look}` : `${head} ${look}`
 }
 const list = (items: string[]) => items.length < 3 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`
 
