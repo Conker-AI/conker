@@ -63,7 +63,7 @@ export function saveDownload(file: GatewayDownload) {
 }
 
 const artifactId = z.string().regex(/^artifact_[0-9a-f]{32}$/), sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/), messageId = z.string().regex(/^msg_[0-9a-f]{16}$/)
-const check = <T>(schema: z.ZodType<T>, value: unknown): T => { const result = schema.safeParse(value); if (!result.success) throw new GatewayError('validation'); return result.data }
+function check<T>(schema: z.ZodType<T>, value: unknown): T { const result = schema.safeParse(value); if (!result.success) throw new GatewayError('validation'); return result.data }
 
 export function createGatewayExportsClient(auth: Pick<GatewayAuthClient, 'download'>) {
   return {

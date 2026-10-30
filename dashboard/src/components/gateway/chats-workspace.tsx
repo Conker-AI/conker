@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, ChevronRight, MessageSquare, RefreshCw, Upload } from 'lucide-react'
+import { MessageSquare, RefreshCw } from 'lucide-react'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
 import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
@@ -10,6 +9,7 @@ import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import type { GatewayImportsClient } from '@/lib/gateway/imports'
+import { ImportedChatsLine } from './imported-chats-line'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
@@ -23,8 +23,6 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
   /** ChatGPT and Claude imports live under Chats, kept apart from Conker's own chats. */
   imports?: GatewayImportsClient
 }) {
-  const [imported, setImported] = useState<number | null>(null)
-  useEffect(() => { let active = true; imports?.chats({ limit: 1 }).then(page => { if (active) setImported(page.total) }).catch(() => undefined); return () => { active = false } }, [imports])
   const directory = useChatDirectory(runtime, authStore, conversationState, sourcePrivacy)
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
   const rows = directory.rows.filter(row => !row.forgotten && !forgotten.includes(row.id))
@@ -57,12 +55,7 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
           title={session.title ? `${session.title}${session.titleTruncated ? '…' : ''}` : 'Untitled chat'}
           sub={session.summaryPreview ? `${session.summaryPreview}${session.summaryTruncated ? '…' : ''}` : 'Continue this conversation'} meta={when(session.createdAt)} />)}
       </ListCard>
-      {/* One slot for old chats from ChatGPT or Claude: how to bring them in, then where they are. */}
-      {imported !== null && <Link to={imported ? '/chats?view=imported' : '/chats?view=import'} className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg border px-4 py-3 outline-none hover:bg-accent focus-visible:bg-accent">
-        {imported ? <Archive aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /> : <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
-        <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{imported ? 'Imported chats' : 'Import from ChatGPT or Claude'}</span><span className="block truncate text-sm text-muted-foreground">{imported ? `${imported.toLocaleString()} ${imported === 1 ? 'chat' : 'chats'}, read-only` : 'Read-only copies of old chats'}</span></span>
-        <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-      </Link>}
+      {imports && <ImportedChatsLine client={imports} />}
       <p className="text-xs text-muted-foreground">{snapshot}</p>
     </div>
   </GatewayPageFrame>
