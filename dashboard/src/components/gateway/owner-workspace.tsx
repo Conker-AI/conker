@@ -194,7 +194,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       {undo && !requestId && <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Moved “{undo.title}” to Later.
         <Button type="button" size="xs" variant="outline" onClick={() => { restore(undo.key); setUndo(null) }}>Undo</Button></p>}
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
-      {(requestId || summary.state !== 'loading') && loadError !== null && <InlineError error={loadError} onRetry={() => load()} />}
+      {(requestId || summary.state !== 'loading') && loadError !== null && <InlineError error={loadError} title={requestId ? undefined : 'Permission requests didn’t load'} onRetry={() => load()} />}
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
         {summary.state === 'loading' ? <ListSkeleton rows={3} label="Loading your Inbox…" /> : <>
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}

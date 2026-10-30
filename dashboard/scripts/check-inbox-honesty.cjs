@@ -61,6 +61,7 @@ assert.ok(!inbox.includes('Done. Conker is doing it now'), 'The Inbox no longer 
 assert.match(inbox, /inboxSummary\(\[/, 'The Inbox summary waits for every source')
 for (const source of ['listed', 'ideas.items !== null', 'notes.answered', 'requests.answered', 'questions.answered']) assert.ok(inbox.includes(source), `The summary waits for ${source}`)
 assert.match(inbox, /notes\.error !== null && <InlineError/, 'A failed AI job notes read is shown')
+assert.ok(inbox.includes('Permission requests didn’t load'), 'A failed decisions read is named')
 assert.match(inbox, /approvals\.follow\(updated\)/, 'An approval is followed until it ran')
 for (const file of ['src/components/inbox/agent-notes.ts', 'src/components/inbox/asks.ts', 'src/components/inbox/change-requests.ts']) assert.match(read(file), /answered: !client \|\| items !== null \|\| error !== null/, `${file} says when it answered`)
 const server = read('src/components/gateway/system-status.tsx')
