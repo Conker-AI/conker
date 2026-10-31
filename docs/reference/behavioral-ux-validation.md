@@ -4,7 +4,7 @@ Date: 2026-10-04. Companion to the [Conker playbook](behavioral-ux-playbook.md).
 
 ## Deliverables And Scope
 
-- Installed an original `behavioral-ux` skill in `C:/Users/The1a/.codex/skills/behavioral-ux`, with UI metadata and four routed references: evidence, perception/interaction, motivation/agency, and evaluation.
+- Installed an original `behavioral-ux` skill in `~/.codex/skills/behavioral-ux`, with UI metadata and four routed references: evidence, perception/interaction, motivation/agency, and evaluation.
 - Created the Conker playbook and this validation/resource-review record in the repository. Existing UI, runtime, design-contract, dependency, and dirty-worktree changes were preserved.
 - No unrelated application, connector, notification service, third-party executable, or analytics dependency was installed. The skill has no executable scripts or external-tool dependencies.
 - The skill is discoverable by its name and description; automatic invocation remains at its default. It will be available to skill discovery on the next turn. It can also be named as `$behavioral-ux`. This is saved guidance, not a claim of permanently training a model.
