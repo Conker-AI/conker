@@ -3,7 +3,8 @@
 Docs drift: a page is renamed or a section moved and the links pointing at it rot silently,
 because no test read them. This walks every tracked `*.md`, takes the inline links outside
 fenced code blocks, ignores web, mail and pure-anchor targets, and resolves the rest against
-the linking file's folder. A link that used to be broken and was left that way on purpose is
+the linking file's folder. An absolute path counts as broken: it resolves only on the machine
+that wrote it. A link that used to be broken and was left that way on purpose is
 listed in KNOWN_BROKEN with a reason; the set may only shrink, and an entry that now resolves
 fails the test like any other stale list.
 """
@@ -18,6 +19,7 @@ LINK = re.compile(r"\[([^\]]*)\]\(([^)]*)\)")
 FENCE = re.compile(r"^\s*(?:```|~~~)")
 TITLE = re.compile(r'\s+"[^"]*"$')
 IGNORED_PREFIXES = ("http://", "https://", "mailto:")
+ABSOLUTE = re.compile(r"^(?:[A-Za-z]:[\\/]|[\\/])")
 
 # Links left broken on purpose, as (file, line text, target); each needs a reason.
 KNOWN_BROKEN: set[tuple[str, str, str]] = set()
@@ -58,7 +60,7 @@ def test_relative_doc_links_resolve():
     for name in tracked_markdown():
         file = REPO / name
         for number, line, target in relative_targets(file.read_text(encoding="utf-8")):
-            if (file.parent / target).exists():
+            if not ABSOLUTE.match(target) and (file.parent / target).exists():
                 continue
             entry = (name, line, target)
             seen.add(entry)

@@ -9,10 +9,10 @@ from the Ubuntu deployment and from the fixture preview.
 
 ## Start and stop
 
-Start Docker Desktop first. In PowerShell, from `C:\Users\The1a\dev\companion`:
+Start Docker Desktop first. In PowerShell, from `$HOME\dev\companion`:
 
 ```powershell
-$conkerPython = 'C:/Users/The1a/.cache/conker-memory-check/Scripts/python.exe'
+$conkerPython = "$HOME/.cache/conker-memory-check/Scripts/python.exe"
 & $conkerPython scripts/local_stack.py status
 & $conkerPython scripts/local_stack.py start postgres
 & $conkerPython scripts/local_stack.py start memorygate
@@ -43,10 +43,10 @@ The public certificate is `.local-run/gateway/tls.crt`. Keep `tls.key` private.
 The initial owner password used for local acceptance is in the ignored file
 `.local-run/gateway/initial-owner-password.txt`. It is not committed or displayed
 in the integration report. Replace it with your own passphrase using the existing
-host command, from `C:\Users\The1a\dev\gates\pi`:
+host command, from `$HOME\dev\gates\pi`:
 
 ```powershell
-& 'C:/Users/The1a/.cache/conker-memory-check/Scripts/python.exe' -m gateway reset-password --db 'C:/Users/The1a/dev/companion/.local-run/gateway/auth.db'
+& "$HOME/.cache/conker-memory-check/Scripts/python.exe" -m gateway reset-password --db "$HOME/dev/companion/.local-run/gateway/auth.db"
 ```
 
 This command prompts interactively and revokes existing browser sessions. After

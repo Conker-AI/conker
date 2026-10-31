@@ -8,7 +8,7 @@ Design for the owner's useful outcomes first, with broader adoption later. Keep 
 
 The owner's latest instructions, actual gateway contracts, shared components, and [dashboard design contract](../../dashboard/DESIGN.md) remain implementation authorities. Older reference descriptions may conflict with the active gateway UI. This playbook does not reconcile or rewrite them, replace theme tokens, authorize new features, or add runtime dependencies.
 
-The reusable skill is installed at `C:/Users/The1a/.codex/skills/behavioral-ux/SKILL.md`. Its [evidence register](C:/Users/The1a/.codex/skills/behavioral-ux/references/evidence.md) identifies 17 evidence groups, source access limits, and distinctions between findings, standards, heuristics, and hypotheses. It is local guidance, not model training. See [validation and resource review](behavioral-ux-validation.md) for what was actually checked.
+The reusable skill is installed locally at `~/.codex/skills/behavioral-ux/SKILL.md`. Its evidence register (`references/evidence.md` in that folder) identifies 17 evidence groups, source access limits, and distinctions between findings, standards, heuristics, and hypotheses. It is local guidance, not model training. See [validation and resource review](behavioral-ux-validation.md) for what was actually checked.
 
 ## How To Make A Decision
 
