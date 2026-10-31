@@ -9,6 +9,7 @@ import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gat
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
 import { createFakeSetup } from './fake-gateway-setup'
+import { createFakeSystem } from './fake-gateway-system'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -104,6 +105,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       evidence: [{ messageId: `msg_${(30001).toString(16).padStart(16, '0')}`, available: true, sessionId: previewSessions.sky, excerpt: 'Summarize what I studied this week', createdAt: now() - 9000 }] },
   ]
   const setupHandle = createFakeSetup(preview, approvals, now, iso, fail)
+  const systemHandle = createFakeSystem(now, iso, fail)
   const sessionRow = (item: Session) => ({ id: item.id, parent_id: null, title: item.title, status: 'open', created_at: item.created_at, closed_at: null, summary: null })
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
@@ -128,8 +130,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
   const characterHistory: Json[] = [{ revision: 1, created_at: now() - 7200, restored_from: null }]
   const characterVersions = new Map<number, Json>([[1, structuredClone(character)]])
-  let hostInventory: Json | null = null
-  let fileListing: Json | null = null
   let browserCall: Json | null = null
   let terminalLease: string | null = null
   let terminalOutput = new TextEncoder().encode('\u001b[1mPreview owner shell\u001b[0m\r\nowner@conker:/workspace/conker$ ')
@@ -164,43 +164,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     privacy: { memory: false, harness: false }, events: [callEvent('event', 'Call started · English; no recording')], requests: [],
     eventsTruncated: false, requestsTruncated: false, capabilities: { typedTurns: true, speech: 'bounded-audio-turns', camera: 'unavailable', perception: 'unavailable', emotion: 'unavailable', characterVoice: 'adapter-dependent; inspect call capabilities', channels: 'client-owned capture; preferences gate transport', rawMediaRetention: 'none', audioReplay: 'unavailable', interruption: 'cooperative; in-flight effects cannot be recalled' },
     authority: 'none', execution: 'typed-and-audio-turns', contentIncluded: true, audioIncluded: false, retention: 'transcript-persisted; raw-media-none',
-  })
-  const sampleDirectory = (rootId: string, path: string): Json => {
-    const rows: Record<string, Json[]> = {
-      '': [
-        { name: 'dashboard', path: 'dashboard', kind: 'directory' },
-        { name: 'docs', path: 'docs', kind: 'directory' },
-        { name: 'README.md', path: 'README.md', kind: 'file' },
-      ],
-      dashboard: [
-        { name: 'src', path: 'dashboard/src', kind: 'directory' },
-        { name: 'package.json', path: 'dashboard/package.json', kind: 'file' },
-      ],
-      'dashboard/src': [
-        { name: 'components', path: 'dashboard/src/components', kind: 'directory' },
-        { name: 'App.tsx', path: 'dashboard/src/App.tsx', kind: 'file' },
-      ],
-      docs: [{ name: 'README.md', path: 'docs/README.md', kind: 'file' }],
-    }
-    return { mode: 'observed', rootId, path, truncated: false, sampledAt: iso(now()), entries: rows[path] ?? [] }
-  }
-  const hostObservation = (): Json => ({
-    mode: 'observed', status: 'partial', sampledAt: iso(now()), ageSeconds: 0, collectionSeconds: 0.18,
-    sourceScopes: { process: 'configured-procfs', network: 'collector-namespace', containers: 'configured-docker-daemon' },
-    processes: { status: 'ok', truncated: false, errors: [], results: [
-      { id: `process_${'1'.repeat(64)}`, name: 'conker-pi', status: 'sleeping', createdAt: now() - 3600, memoryBytes: 73400320 },
-      { id: `process_${'2'.repeat(64)}`, name: 'gateway', status: 'sleeping', createdAt: now() - 3500, memoryBytes: 49283072 },
-    ] },
-    containers: { status: 'ok', truncated: false, errors: [], results: [
-      { id: `container_${'3'.repeat(64)}`, name: 'conker-pi', status: 'running', imageConfigured: true },
-      { id: `container_${'4'.repeat(64)}`, name: 'conker-gateway', status: 'running', imageConfigured: true },
-    ] },
-    ports: { status: 'partial', truncated: false, errors: ['process_link_unavailable'], results: [
-      { id: `port_${'5'.repeat(64)}`, kind: 'listener', addressScope: 'loopback', hostPort: 8050, targetPort: null, protocol: 'tcp', processId: `process_${'2'.repeat(64)}`, containerId: null, state: 'listening' },
-      { id: `port_${'6'.repeat(64)}`, kind: 'container-binding', addressScope: 'all-interfaces', hostPort: 443, targetPort: 8050, protocol: 'tcp', processId: null, containerId: `container_${'4'.repeat(64)}`, state: 'declared-binding' },
-    ] },
-    unavailableFieldCount: 1,
-    capabilities: { inspection: true, processActions: false, containerActions: false, portMutation: false, terminal: false, files: false },
   })
   const projectView = (id: string, revision: number, fields: Json, links: Json[] = [], archivedAt: number | null = null): Json => ({
     schemaVersion: 1, id, revision, ...fields, createdAt: now() - 5400, updatedAt: now() - 900, archivedAt, links,
@@ -696,40 +659,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       characterVersions.set(characterRevision, structuredClone(character)); characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: null })
       return { agentId: 'companion', revision: characterRevision, profile: character }
     }
-    if (path === '/api/control/pi/system/inventory/configured/services' && method === 'GET') return {
-      schemaVersion: 1, kind: 'services', status: 'configured', results: [{ id: `service_${'7'.repeat(64)}`, kind: 'service', name: 'system:conker-api.service' }],
-      requiresApproval: true, observed: false, authority: 'none', contentIncluded: true, execution: 'not-triggered',
-    }
-    if (path === '/api/control/pi/system/inventory/configured/containers' && method === 'GET') return {
-      schemaVersion: 1, kind: 'containers', status: 'configured', results: [{ id: `container_${'8'.repeat(64)}`, kind: 'container', name: null }],
-      requiresApproval: true, observed: false, authority: 'none', contentIncluded: true, execution: 'not-triggered',
-    }
-    if (path === '/api/control/pi/system/inventory' && method === 'POST') {
-      const requestId = String(options.body?.request_id)
-      hostInventory = { schemaVersion: 1, requestId, state: 'complete', limit: Number(options.body?.limit ?? 100), approvalRequired: false, errorCode: null,
-        observation: hostObservation(), receiptStatus: null, currentAgeSeconds: 0, createdAt: now(), updatedAt: now(), source: 'toolgate/system.inventory',
-        refreshRequiresNewRequest: true, authority: 'none', contentIncluded: true, execution: 'read-only-observation' }
-      return hostInventory
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/system\/inventory\/([A-Za-z0-9_-]{16,100})(?:\/resume)?$/))) {
-      if (!hostInventory || hostInventory.requestId !== match[1]) return fail(404)
-      return hostInventory
-    }
-    if (path === '/api/control/pi/system/files/roots' && method === 'GET') return {
-      schemaVersion: 1, mode: 'configured', code: null, roots: [{ id: 'project', path: '/workspace/conker' }],
-      capabilities: { list: true, read: false, write: false }, authority: 'none', execution: 'directory-listing-only', contentIncluded: false,
-    }
-    if (path === '/api/control/pi/system/files/listings' && method === 'POST') {
-      const requestId = String(options.body?.request_id), rootId = String(options.body?.root_id), relative = String(options.body?.path ?? ''), limit = Number(options.body?.limit ?? 200)
-      fileListing = { schemaVersion: 1, requestId, state: 'complete', limit, rootId, path: relative, approvalRequired: false, errorCode: null,
-        listing: sampleDirectory(rootId, relative), receiptStatus: null, currentAgeSeconds: 0, createdAt: now(), updatedAt: now(), source: 'toolgate/system.files-list',
-        refreshRequiresNewRequest: true, authority: 'none', contentIncluded: false, execution: 'directory-listing-only' }
-      return fileListing
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/system\/files\/listings\/([A-Za-z0-9_-]{16,100})(?:\/resume)?$/))) {
-      if (!fileListing || fileListing.requestId !== match[1]) return fail(404)
-      return fileListing
-    }
+    const systemHandled = systemHandle(path, method, options)
+    if (systemHandled !== undefined) return systemHandled
     if (path === '/api/control/pi/calls/browser/capabilities' && method === 'GET') return {
       schemaVersion: 1, typedTurns: true, language: 'en', speechInput: 'unconfigured', speechOutput: 'unconfigured', inputMimeTypes: ['audio/wav'], outputMimeTypes: ['audio/wav'], maxAudioBytes: 10485760, maxAudioSeconds: 120, camera: 'unavailable', perception: 'unavailable', rawMediaRetention: 'none', transcriptRetention: 'persisted-with-call-conversation', devices: 'client-owned; not captured by Pi', authority: 'none',
     }
