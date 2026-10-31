@@ -221,4 +221,14 @@ assert.match(sidebar, /setOpenMobile\(false, 'content'\)/, 'New chat and destina
 const appbarSource = fs.readFileSync(path.join(root, 'src/components/design-system/workspace-chrome.tsx'), 'utf8')
 assert.match(appbarSource, /showSidebarTrigger = isMobile \|\| state === 'collapsed'/, 'The real mobile opener remains mounted behind the Sheet')
 
+// Links still written as /settings?tab=X open a topic only if the settings screen maps X to one.
+const settingsScreen = fs.readFileSync(path.join(root, 'src/settings/settings-screen.tsx'), 'utf8')
+const oldTabs = new Map([...settingsScreen.match(/const OLD_TABS[^=]*= \{([\s\S]*?)\n\}/)[1].matchAll(/(\w+): \{ group: '([\w-]+)'/g)].map(match => [match[1], match[2]]))
+const topics = new Set(fs.readdirSync(path.join(root, 'src/settings/registry')).filter(file => file.endsWith('.json')).map(file => JSON.parse(fs.readFileSync(path.join(root, 'src/settings/registry', file), 'utf8')).id))
+for (const group of oldTabs.values()) assert.ok(topics.has(group), `Old settings tab maps to a missing topic: ${group}`)
+const sourceFiles = directory => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? sourceFiles(path.join(directory, entry.name)) : /\.tsx?$/.test(entry.name) ? [path.join(directory, entry.name)] : [])
+for (const file of sourceFiles(path.join(root, 'src'))) for (const [, tab] of fs.readFileSync(file, 'utf8').matchAll(/\/settings\?tab=([\w-]+)/g)) {
+  assert.ok(oldTabs.has(tab), `${path.relative(root, file)} links to /settings?tab=${tab}, which opens no topic`)
+}
+
 console.log('Connected navigation, route continuity and mobile sidebar focus restoration/lifetime fences passed.')
