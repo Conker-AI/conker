@@ -165,7 +165,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       { id: 'research.search', name: 'Web search', authorization: 'auto', executionType: 'http', usageLimits: { max_per_minute: 10, max_per_hour: 80, max_runtime_seconds: 30 }, definitionDigest: '3'.repeat(64) },
     ],
   }
-  const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelId: null })
+  const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelIds: [] })
   const models: { revision: number; configuration: Json } = { revision: 1, configuration: {
     providers: [{ id: 'ollama', name: 'Local (Ollama)', enabled: true }],
     models: [

@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Backup models per role.** Settings > Models: a role set to "Try backup models in order" lists
+  its backups as numbered rows you add, move up or down, or remove; Pi tries them in that order when
+  the model before fails. From the terminal, `conker models --role ROLE --model MODEL --backup
+  MODEL...` does the same. The role card no longer runs past the screen edge on a phone.
+- **Suggested next messages from the terminal.** `conker suggest SESSION [--count N]` asks the
+  helper model for one to three messages you might send next; nothing is sent or saved.
 - **Services says what is restarting.** While a restart runs, the summary on Server > Services
   names the restarting service and counts only the others, instead of repeating "All N services
   are running." from the last read.

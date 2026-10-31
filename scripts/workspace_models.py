@@ -96,7 +96,7 @@ def configuration_for(model, installed, roles):
             "modelId": None,
             "timeoutMs": 120000,
             "failure": "stop",
-            "fallbackModelId": None,
+            "fallbackModelIds": [],
         }
         for role in roles
     }
