@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, History, MessagesSquare, Play, Plus, RefreshCw, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, MessagesSquare, Play, Plus, RefreshCw, RotateCcw } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,8 @@ import { ConfirmationDialog, FilterChip, ListCard, ListLine, PageHeader, Workspa
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { createJobRunRequestId, GatewayJobMutationError, isAiJob, type GatewayJob, type GatewayScheduledRun, type GatewayScheduledRunStatus } from '@/lib/gateway/jobs'
 import { NewAgentJobDialog } from './new-agent-job-dialog'
@@ -159,7 +161,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
     {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard query={query} onQueryChange={setQuery} label="Search cron jobs" placeholder="Search schedules…" count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
       filters={<>{chip('all', 'All', jobs.length)}{chip('enabled', 'Enabled', enabled)}{chip('paused', 'Paused', jobs.length - enabled)}</>}
       emptyTitle={query ? 'No matching schedules' : filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={query ? 'Try another name or tool.' : 'Make an AI job: tell Conker what to do and when, and it works with its tools on that schedule. Or start from an idea below.'} emptyAction={query ? undefined : <Button onClick={() => startNew()}><Plus />New AI job</Button>} icon={<CalendarClock />}>
-      {visible.map(job => <ListLine key={job.id} to={`/jobs/${job.id}`} icon={isAiJob(job) ? <Sparkles /> : <History />} title={job.definition.name}
+      {visible.map(job => <ListLine key={job.id} to={`/jobs/${job.id}`} icon={<IdentityMark brand={serviceIn(job.definition.name)} kind="job" name={job.definition.name} size="sm" />} title={job.definition.name}
         sub={`${isAiJob(job) ? 'AI job · ' : ''}${describeTiming(job)} · ${job.definition.timeZone}`} meta={!job.definition.enabled ? 'Paused' : job.definition.watch ? job.definition.watch.problem ? 'Needs a look' : 'Watching' : job.definition.target.kind === 'agent' && job.definition.target.clock === false ? 'On webhook' : `Next ${soon(job.nextAt, job.definition.timeZone)}`} />)}
     </ListCard>}
     <p className="text-xs text-muted-foreground">AI jobs use tools that need no confirmation on their own and ask before changing anything. Other cron jobs run tools published on your server.</p>

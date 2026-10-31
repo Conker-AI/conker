@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { CollectionPanel, CollectionRow, CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { GatewayPageFrame } from './page-frame'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import type { SavedCheck, ToolDefinition } from '@/lib/tool-workspace'
@@ -53,7 +55,7 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
     <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" render={<Link to="/tools" />}>Available tools</Button><Button size="sm" onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</Button></div>
     {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(''); setDraft(null); setPage(null); setRefresh(value => value + 1) }}>Reload drafts</Button></div>}
     {!page && !error && <p role="status">Loading draft…</p>}
-    {page && <CollectionPanel query={query} onQueryChange={setQuery} label="Search loaded drafts" placeholder="Search loaded drafts…" count={items.length} unit="drafts" emptyTitle="No matching drafts" emptyDescription="Create a draft or adjust your search."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
+    {page && <CollectionPanel query={query} onQueryChange={setQuery} label="Search loaded drafts" placeholder="Search loaded drafts…" count={items.length} unit="drafts" emptyTitle="No matching drafts" emptyDescription="Create a draft or adjust your search."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} leading={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
     {page?.next_after && <Button variant="outline" disabled={busy} onClick={() => void more()}>Load more drafts</Button>}
     <NewToolDialog drafts={client} open={creating} onOpenChange={setCreating} />
   </GatewayPageFrame>

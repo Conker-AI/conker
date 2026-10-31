@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Cable, RefreshCw } from 'lucide-react'
 import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, InlineDetails, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -103,7 +105,7 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!tools && !error && <CollectionLoading label="Loading MCP tools…" />}
     {tools && <CollectionPanel query={query} onQueryChange={setQuery} label="Search MCP tools" placeholder="Search tools or servers…" count={rows.length} unit={rows.length === 1 ? 'tool' : 'tools'} emptyTitle={query ? 'No matching MCP tools' : 'Connect your first MCP server'} emptyDescription={query ? 'Try another tool name or server.' : 'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'} emptyAction={!query && <Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
-      <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
+      <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.url)} kind="mcp" name={tool.name} />} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
     </CollectionPanel>}
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     <p className="text-xs text-muted-foreground">MCP calls use your existing tool approvals and execution history. Public HTTPS servers are supported; local stdio servers and MCP OAuth are not yet available.</p>
