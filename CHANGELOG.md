@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Calmer, consistent motion.** Dialogs, sheets, menus, selects, tooltips, popovers and toasts
+  share four durations and one enter and one exit curve; closing is quicker than opening, and the
+  command palette opens instantly. Settings > Appearance > Animations: Reduced (and Follow this
+  device, when the device asks for less motion) keeps fades and colour changes but nothing slides,
+  grows or spins; Off makes every change instant.
 - **Backup models per role.** Settings > Models: a role set to "Try backup models in order" lists
   its backups as numbered rows you add, move up or down, or remove; Pi tries them in that order when
   the model before fails. From the terminal, `conker models --role ROLE --model MODEL --backup
