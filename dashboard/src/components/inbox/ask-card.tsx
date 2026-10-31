@@ -27,13 +27,11 @@ export function AskCard({ ask, now, busy, error, onAnswer, onDismiss, onLater }:
       {ask.options.map(option => <Button key={option} type="button" size="sm" variant="outline" disabled={busy} onClick={() => onAnswer(option, true)}>{option}</Button>)}
       <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setReplying(true)}>Reply</Button>
     </div>
-  return <InboxCard icon={<MessageCircleQuestion />} title={ask.question}
-    meta={<><span>Conker asks</span><span className="max-w-48 truncate">{ask.chatTitle}</span><span>{age(ask.createdAt, now)}</span></>}
-    actions={answers} onLater={onLater} footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined}>
-    <p className="text-muted-foreground">Your answer goes to Conker in that chat, as if you typed it there. Anything it then does follows your access settings.</p>
-    <div className="flex flex-wrap gap-2">
+  return <InboxCard icon={<MessageCircleQuestion />} title={ask.question} source={<>Conker asks · {ask.chatTitle || 'a chat'}</>} openLabel="Answer"
+    actions={answers} onLater={onLater} footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined}
+    facts={[['Chat', ask.chatTitle || 'Untitled chat'], ['Asked', `${age(ask.createdAt, now)} · ${new Date(ask.createdAt * 1000).toLocaleString()}`], ['Your answer', 'Goes to that chat as if you typed it there; anything Conker then does follows your access settings']]}
+    advanced={<div className="flex flex-wrap gap-2">
       <Button type="button" size="sm" variant="ghost" render={<Link to={`/chat?session=${encodeURIComponent(ask.sessionId)}`} />}>Open the chat</Button>
       <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onDismiss}>Don’t answer</Button>
-    </div>
-  </InboxCard>
+    </div>} />
 }
