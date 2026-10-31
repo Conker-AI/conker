@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Bot, BookOpen, ChevronRight, Clock3, Folder, House, Inbox, MessagesSquare, Plus, Search, Server, Settings2, Wrench, type LucideIcon } from 'lucide-react'
+import { ChevronRight, Plus, Search, Server } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -13,14 +14,14 @@ import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { gatewayPageNavigation, gatewaySidebarDestinations, gatewaySidebarGroups, type GatewayDestination } from './navigation'
 import { useSearchShortcut } from './search-shortcut'
-
-const icons: Partial<Record<GatewayDestination['id'], LucideIcon>> = {
-  today: House, inbox: Inbox, chats: MessagesSquare, projects: Folder, memory: BookOpen, agents: Bot, tools: Wrench,
-  jobs: Clock3, system: Server, settings: Settings2,
-}
+import { placeIcons } from './page-icons'
 /** Places the owner can hide (Settings, Appearance, Sidebar places); Home, Inbox, Chats and Settings always show. */
 const optional: Partial<Record<GatewayDestination['id'], string>> = { projects: 'projects', memory: 'memory', agents: 'agents', tools: 'tools', jobs: 'jobs', system: 'server' }
 const ALL_PLACES = ['projects', 'memory', 'agents', 'tools', 'jobs', 'server']
+
+// The current place: a bar on the left edge in the primary colour, the icon at full strength;
+// other places keep muted icons. Collapsed to icons, the tile background alone marks it.
+const activeMark = "relative [&>svg]:text-muted-foreground data-[active=true]:[&>svg]:text-foreground data-[active=true]:font-semibold data-[active=true]:before:absolute data-[active=true]:before:inset-y-1.5 data-[active=true]:before:left-0 data-[active=true]:before:w-0.5 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary group-data-[collapsible=icon]:before:hidden"
 
 /**
  * Places, never actions (the owner's rule): Ask Conker and Search sit above them. No profile,
@@ -52,11 +53,11 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
   const activeTab = page.activeSection
 
   const place = (item: GatewayDestination) => {
-    const Icon = icons[item.id]
+    const Icon = placeIcons[item.id]
     const active = page.destination?.id === item.id || (item.id === 'chats' && page.route === 'chat')
     const count = item.id === 'inbox' ? attention : null
     return <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton isActive={active} tooltip={count ? `${item.title} · ${count} waiting for you` : item.title} render={<Link to={item.path} aria-current={active ? 'page' : undefined} onClick={afterNavigate} />}>
+      <SidebarMenuButton className={activeMark} isActive={active} tooltip={count ? `${item.title} · ${count} waiting for you` : item.title} render={<Link to={item.path} aria-current={active ? 'page' : undefined} onClick={afterNavigate} />}>
         {Icon && <Icon aria-hidden="true" />}<span>{item.title}</span>
       </SidebarMenuButton>
       {!!count && <SidebarMenuBadge aria-label={`${count} waiting for you`}>{count}</SidebarMenuBadge>}
@@ -85,7 +86,7 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
         <SidebarMenu>
           {gatewaySidebarDestinations.filter(item => item.group === group.id && shown(item)).map(item => item.id !== 'system' ? place(item)
             : <Collapsible key={item.id} open={serverOpen || onServer} onOpenChange={setServerOpen} render={<SidebarMenuItem />}>
-              <CollapsibleTrigger render={<SidebarMenuButton className="group/server" isActive={onServer} tooltip={item.title} />}>
+              <CollapsibleTrigger render={<SidebarMenuButton className={cn(activeMark, 'group/server')} isActive={onServer} tooltip={item.title} />}>
                 <Server aria-hidden="true" /><span>{item.title}</span>
                 <ChevronRight className="ml-auto transition-transform group-data-panel-open/server:rotate-90 motion-reduce:transition-none" aria-hidden="true" />
               </CollapsibleTrigger>
