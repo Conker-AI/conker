@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **A Claude model name can no longer read as a command-line option.** The native Claude runtime
+  puts the model on argv after `--model`; a name such as `-p` passed the old pattern. Names now
+  start with a letter or digit.
+- **The local dev stack keeps its key files owner-only.** `local_stack.py` sets umask 077 for every
+  command, and rewrites `.local-run/postgres/environment` as 0600 on POSIX even when an older run
+  left it readable.
 - **Owner terminal admits the real Gateway.** The terminal overlay let in UID 0, but the Gateway
   has run as the owner's UID since 27 October, so an activated terminal would have refused it. The
   overlay now admits `${CONKER_UID:-1000}`, the Gateway's own `user:`. The install log in the

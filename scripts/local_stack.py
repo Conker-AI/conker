@@ -93,6 +93,14 @@ def initialize():
         CONFIG.chmod(0o600)
 
 
+def write_private(path, text):
+    """Write a file holding keys, owner-only on POSIX even when it already existed."""
+    with path.open("w", encoding="utf-8") as stream:
+        stream.write(text)
+    if os.name == "posix":
+        path.chmod(0o600)
+
+
 def listening(port):
     with socket.socket() as connection:
         connection.settimeout(0.25)
@@ -176,6 +184,8 @@ def main():
     parser.add_argument("command", choices=["init", "start", "stop", "serve", "status"])
     parser.add_argument("service", nargs="?", choices=SERVICES)
     args = parser.parse_args()
+    # Every file this run, or a service it starts, creates is owner-only (keys, databases, logs).
+    os.umask(0o077)
     if args.command == "init":
         initialize()
         print("Local configuration ready; credentials were not printed.")
@@ -224,8 +234,7 @@ def main():
         if args.command != "start":
             parser.error("Use start postgres; PostgreSQL runs in Docker.")
         env_path = STATE / "postgres/environment"
-        with env_path.open("w", encoding="utf-8") as stream:
-            stream.write("".join(f"{key}={value}\n" for key, value in config["environments"]["postgres"].items()))
+        write_private(env_path, "".join(f"{key}={value}\n" for key, value in config["environments"]["postgres"].items()))
         existing = subprocess.run(["docker", "container", "inspect", postgres_name],
                                   capture_output=True, check=False)
         if existing.returncode == 0:

@@ -223,3 +223,18 @@ def test_claude_expired_attempt_clears_identity(native_sign_in):
     assert processes[0].terminations == 1
     with pytest.raises(ValueError):
         native.apply({"operation": "cancel", "loginId": pending["loginId"]})
+
+
+@pytest.mark.parametrize("model", ["-p", "--verbose", "-"])
+def test_a_claude_model_that_reads_as_an_option_is_refused_before_launch(tmp_path, model):
+    from native_claude import Claude
+
+    native = Claude(tmp_path / "claude.exe", tmp_path / "own-auth")
+    with (
+        patch("native_claude.subprocess.Popen") as run,
+        pytest.raises(ValueError, match="Invalid native inference request"),
+    ):
+        native.complete(
+            {"model": model, "messages": [{"role": "user", "content": "hi"}], "timeout": 30}
+        )
+    run.assert_not_called()

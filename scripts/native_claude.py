@@ -212,7 +212,8 @@ class Claude:
         timeout = value.get("timeout")
         if (
             not isinstance(model, str)
-            or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}", model)
+            # The model goes on argv after --model: a leading "-" would read as an option.
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}", model)
             or type(timeout) not in (int, float)
             or not 1 <= timeout <= 180
             or not isinstance(messages, list)
