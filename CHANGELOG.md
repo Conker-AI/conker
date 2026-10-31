@@ -37,6 +37,11 @@ which module versions a release pins.
 - **Services says what is restarting.** While a restart runs, the summary on Server > Services
   names the restarting service and counts only the others, instead of repeating "All N services
   are running." from the last read.
+- **Pi 0.15.1 is pinned.** Fixes only: a declined turn that already acted no longer blocks its
+  queue, two webhook calls at once start one job, a repeated setup memory review answers instead of
+  failing, a malformed local model settings document no longer fails an Ollama answer, a
+  quiet-hours pause keeps the last failure, and one sent memory offer no longer hides another's
+  failure. The generated gateway API types are regenerated from it.
 - **Pi 0.15.0 is pinned.** Artifacts can be exported at an earlier version (an optional `version`,
   1 to 100, on the gateway's artifact download), and `conker apply tools` takes a `run_tool`
   operation that runs any published tool by hand, as the browser's Run does, with the owner's and
@@ -467,7 +472,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.15.0 |
+| Pi | v0.15.1 |
 | ToolGate | v0.11.0 |
 | MemoryGate | v0.7.0 |
 | SystemGate | v0.4.0 |
