@@ -20,7 +20,7 @@ export const tickets: Ticket[] = [
       {
         label: "Message",
         value:
-          "Hi Daniel, is open mat running this Friday at 17:00? I’d like to come if there’s space. Thanks, Alexey",
+          "Hi Daniel, is open mat running this Friday at 17:00? I’d like to come if there’s space. Thanks, Sam",
       },
     ],
     delta:
@@ -43,7 +43,7 @@ export const tickets: Ticket[] = [
     wants: "Permanently delete 47 PDF files after reading them.",
     source: "/chat/reading#intent",
     args: [
-      { label: "Folder", value: "/home/alexey/Downloads" },
+      { label: "Folder", value: "/home/sam/Downloads" },
       { label: "Files", value: "47" },
       { label: "Matching", value: "*.pdf" },
     ],

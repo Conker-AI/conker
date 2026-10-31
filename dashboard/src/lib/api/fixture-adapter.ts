@@ -66,7 +66,7 @@ export function createFixtureClient(): ConkerClient {
       emotions: { neutral: "default", happy: "portrait", thinking: "portrait", concerned: "default", celebrating: "portrait" },
     },
     threads, messages: {}, conversations: {}, modelsConfiguration: createModelsConfiguration(),
-    replyRequests: [], auth: { status: "unconfigured", ownerName: "Alexey" },
+    replyRequests: [], auth: { status: "unconfigured", ownerName: "Sam" },
     connections: connectionConfig.read(),
     terminal,
     files,

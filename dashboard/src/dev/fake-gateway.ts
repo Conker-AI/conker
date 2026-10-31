@@ -99,7 +99,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const approvals: Json[] = [{
     id: 'req_email_coach', kind: 'verification', title: 'Send an email to coach', details: 'Conker drafted this email and needs your OK before sending it.',
     actor: 'Conker', severity: 'normal', status: 'pending', created_at: iso(now() - 120), updated_at: iso(now() - 120), decision: null,
-    action: { subject_type: 'tool', subject_id: 'email.send', version: 3, args: { to: 'coach@judo-club.example', subject: 'Friday open mat', body: 'Hi coach, is the open mat on Friday still happening? Thanks, Alexey' } },
+    action: { subject_type: 'tool', subject_id: 'email.send', version: 3, args: { to: 'coach@judo-club.example', subject: 'Friday open mat', body: 'Hi coach, is the open mat on Friday still happening? Thanks, Sam' } },
     approval: { expires_at: null, consumed_at: null, origin_valid: true }, reviewable: true, unavailable_reason: null, card: 'send',
   }]
   const proposals: Json[] = [
