@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, RefreshCw } from 'lucide-react'
 import { PageHeader, WorkspaceAction, CollectionLoading, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
@@ -50,7 +52,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
     {value?.status === 'ok' && <>
       <CollectionPanel query={query} onQueryChange={setQuery} label="Search available tools" placeholder="Search tools…" count={rows.length} unit="tools" emptyTitle={query ? 'No matching tools' : 'No tools available here'} emptyDescription={query ? 'Try a tool name or description.' : 'The tool service is reachable, but this workspace does not currently have tools available.'}>
-        <CollectionSection title="Available"><ul>{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools' : `/tools?tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
+        <CollectionSection title="Available"><ul>{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools' : `/tools?tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.description)} kind="tool" name={tool.name} />} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
       </CollectionPanel>
       {params.get('tool') && !selected && <p role="status" className="text-sm text-muted-foreground">This tool is no longer available here.</p>}
       {/* A linked tool hidden by the search still opens, below the list. */}

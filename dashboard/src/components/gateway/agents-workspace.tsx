@@ -5,6 +5,8 @@ import { CollectionLoading, FilterChip, FormActions, ListCard, ListLine, Overlay
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -128,7 +130,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
         filters={archivedCount ? <>{chip('active', 'Active', (agents?.length ?? 0) - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
         emptyTitle={query ? 'No matching agents' : showing === 'archived' ? 'No archived agents' : 'No agents yet'} emptyDescription={query ? 'Try a different name or role.' : showing === 'archived' ? 'Archived agents keep their history.' : 'Create an agent for a focused kind of work.'}
         emptyAction={query || showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
-        {shown.map(item => <ListLine key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={item.archived_at === null ? <Bot /> : <Archive />} title={item.configuration.name} sub={item.configuration.role}
+        {shown.map(item => <ListLine key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={<IdentityMark brand={serviceIn(item.configuration.name, item.configuration.role)} kind="agent" name={item.configuration.name} size="sm" />} title={item.configuration.name} sub={item.configuration.role}
           meta={item.kind === 'companion' ? 'Primary' : `Revision ${item.revision}`} />)}
       </ListCard>
     </div>

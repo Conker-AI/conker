@@ -1,6 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { BookmarkPlus, CalendarClock, Wrench } from 'lucide-react'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
@@ -120,11 +122,13 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
 }) {
   const [changing, setChanging] = useState(false), [words, setWords] = useState('')
   const status = request.kind === 'tool_draft' ? toolDraftStatus(request) : null
-  const icon = request.kind === 'ai_job' ? <CalendarClock /> : request.kind === 'tool_draft' ? <Wrench /> : <BookmarkPlus />
   const action = request.kind === 'ai_job' ? 'Create job' : request.kind === 'tool_draft' ? 'Review' : 'Remember'
   const meta = <><span>{request.kind === 'tool_draft' && !request.sessionId ? 'Your tool request' : 'Conker’s request'}</span><span>{age(request.createdAt, now)}</span></>
   const footer = error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined
   const text = request.kind === 'memory' ? request.payload.text : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
+  // A tool or job request that names a service shows its logo (a Telegram tool reads as Telegram at a glance).
+  const brand = request.kind === 'memory' ? null : serviceIn(request.title, text)
+  const icon = brand ? <IdentityMark brand={brand} className="size-full border-0 bg-transparent" /> : request.kind === 'ai_job' ? <CalendarClock /> : request.kind === 'tool_draft' ? <Wrench /> : <BookmarkPlus />
   // A title that already says it all is not repeated underneath.
   const summary = text && !request.title.includes(text.trim()) ? text : undefined
   const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined

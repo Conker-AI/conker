@@ -5,6 +5,8 @@ import { CollectionSearch, ConfirmationDialog, FilterChip, FormActions, ListCard
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
+import { IdentityMark } from '@/components/brand/identity-mark'
+import { serviceIn } from '@/components/brand/service'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -182,7 +184,7 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
       emptyTitle={query ? 'No matching projects' : !projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
       emptyDescription={query ? 'Try a different name or description.' : !projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
       emptyAction={query ? undefined : <Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
-      {visible.map(item => <ListLine key={item.id} to={`/projects/${item.id}`} icon={item.archivedAt === null ? <FolderKanban /> : <Archive />} title={item.name} sub={item.description || 'No description'}
+      {visible.map(item => <ListLine key={item.id} to={`/projects/${item.id}`} icon={<IdentityMark brand={serviceIn(item.name, item.description)} kind="project" name={item.name} size="sm" />} title={item.name} sub={item.description || 'No description'}
         meta={item.archivedAt === null ? `${item.links.length} ${item.links.length === 1 ? 'reference' : 'references'}` : 'Read-only'} />)}
     </ListCard>}
     <CreateProjectDialog client={control.projects} open={creating || createRequested} onOpenChange={setCreateOpen} onCreated={project => { update(project); setCreating(false); navigate(`/projects/${project.id}`) }} />
