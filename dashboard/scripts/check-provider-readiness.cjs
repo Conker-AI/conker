@@ -111,7 +111,6 @@ async function actualComponentCases() {
   const configuration = { providers: [], models: [], defaultModelId: null, roleSettings: { roles: {} } }
   h.models[0].resolve({ revision: 1, configuration }); h.reads[0].resolve([row()]); await h.settle()
   assert.match(text(h.section()), /Ready/)
-  // New assertions
   const tree = h.render()
   assert.equal(walk(tree).find(node => node.props?.title === 'Runtime readiness'), undefined, 'no node anywhere in the tree has props.title === "Runtime readiness"')
   assert.equal(walk(tree).find(node => node.props?.className?.includes('max-w-3xl')), undefined, 'no node\'s className contains max-w-3xl')
@@ -123,24 +122,10 @@ async function actualComponentCases() {
   assert.ok(detailsNode, 'there is a details node')
   assert.equal(text(detailsNode.props.children), 'Advanced: model list', 'the details summary text is "Advanced: model list"')
   assert.ok(walk(detailsNode).some(node => node.type === 'ModelsProviders'), 'the ModelsProviders node is inside a details node')
-  // Test with resolved reads[0] to check Connect button and Ready state
-  h.reads[0] = { resolve: () => {}, signal: { aborted: false } }
-  h.reads[0].resolve([row()])
-  await h.settle()
-  const updatedTree = h.render()
-  // Find the specific ChatGPT row by looking for a div that contains "ChatGPT subscription" but not all the other content
-  const allRows = walk(updatedTree).filter(node => text(node).includes('ChatGPT subscription'))
-  const chatgptRow = allRows.find(node => {
-    const nodeText = text(node)
-    return nodeText.includes('ChatGPT subscription') && !nodeText.includes('Claude subscription')
-  })
-  assert.ok(chatgptRow, 'chatgpt row exists')
-  const sheetTrigger = chatgptRow.props?.children?.[1]?.props?.children?.[1]?.props?.children?.[0]
-  assert.ok(sheetTrigger, 'chatgpt SheetTrigger exists')
-  assert.equal(sheetTrigger.props?.children, 'Connect', 'chatgpt row\'s trigger text is Connect when not ready')
-  const ollamaRow = walk(updatedTree).find(node => text(node).includes('Local model') && !text(node).includes('Refresh'))
-  assert.ok(ollamaRow, 'ollama row exists')
-  assert.match(text(ollamaRow), /Local model.*previous-model.*Ready/, 'ollama row shows Local model, previous-model and Ready')
+  const rows = walk(tree).filter(node => typeof node.props?.className === 'string' && node.props.className.includes('min-h-16'))
+  const chatgptRow = rows.find(node => text(node).startsWith('ChatGPT subscription'))
+  assert.equal(text(walk(chatgptRow).find(node => node.type === 'SheetTrigger')), 'Connect', 'chatgpt row offers Connect when it has no status')
+  assert.match(text(rows.find(node => text(node).startsWith('Local model'))), /^Local modelprevious-modelReady$/, 'ollama row shows its name, model and Ready')
   const editor = h.editor(); h.section().props.action.props.onClick(); await h.settle()
   assert.doesNotMatch(text(h.section()), /Ready/); assert.match(text(h.section()), /Last checked model: previous-model/)
   assert.equal(h.models.length, 1, 'Health refresh does not reread or replace an unsaved catalogue')

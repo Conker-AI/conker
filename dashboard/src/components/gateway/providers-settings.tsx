@@ -57,15 +57,15 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
   const Frame = embedded ? 'div' : GatewayPageFrame
   const chip = (value?: ProviderStatus) => health.phase === 'checking' ? 'Checking…' : health.phase !== 'current' ? 'Unavailable' : !value ? 'Not connected' : value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Connected, not tested' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
   const badgeVariant = (value?: ProviderStatus) => health.phase === 'checking' ? 'outline' : health.phase !== 'current' ? 'error' : !value ? 'outline' : value.busy ? 'info' : value.status === 'ok' ? 'success' : value.status === 'unverified' ? 'warning' : value.status === 'not_configured' ? 'outline' : 'error'
-  const sheet = (title: string, label: 'Connect' | 'Manage', body: React.ReactNode) => <Sheet><SheetTrigger render={<Button variant="outline" size="sm" aria-label={label + ' ' + title} />}>{label}</SheetTrigger><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{title}</SheetTitle></SheetHeader><SheetPanel>{body}</SheetPanel></SheetContent></Sheet>
-  const providerRow = (key: string, name: string, value?: ProviderStatus, sheet?: React.ReactNode) => <div key={key} className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-medium break-words">{name}</p>{value?.model && <p className="text-xs text-muted-foreground break-words">{health.phase !== 'current' ? 'Last checked model: ' : ''}{value.model}</p>}</div><div className="flex items-center gap-2">{value && <Badge variant={badgeVariant(value)}>{chip(value)}</Badge>}{sheet}</div></div>
+  const sheet = (title: string, label: 'Connect' | 'Manage', body: React.ReactNode) => <Sheet><SheetTrigger render={<Button variant="outline" size="sm" aria-label={label + ' ' + title} />}>{label}</SheetTrigger><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{title}</SheetTitle></SheetHeader><SheetPanel className="pt-12!">{body}</SheetPanel></SheetContent></Sheet>
+  const providerRow = (key: string, name: string, value?: ProviderStatus, sheet?: React.ReactNode) => <div key={key} className="flex min-h-16 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-medium break-words">{name}</p>{value?.model && <p className="text-xs text-muted-foreground break-words">{health.phase !== 'current' ? 'Last checked model: ' : ''}{value.model}</p>}</div><div className="flex shrink-0 items-center gap-2">{value && <Badge variant={badgeVariant(value)}>{chip(value)}</Badge>}{sheet}</div></div>
   const byId = (id: string) => health.rows.find(row => row.id === id)
   const chatgptValue = byId('chatgpt')
   const claudeValue = byId('claude-code')
   const chatgptSheet = sheet('ChatGPT subscription', chatgptValue && (chatgptValue.busy || chatgptValue.status === 'ok' || chatgptValue.status === 'unverified') ? 'Manage' : 'Connect', <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />)
   const claudeSheet = sheet('Claude subscription', claudeValue && (claudeValue.busy || claudeValue.status === 'ok' || claudeValue.status === 'unverified') ? 'Manage' : 'Connect', <NativeClaudeConnection client={client} authStore={authStore} />)
   return <Frame><div className="w-full space-y-7">
-    <WorkspaceSection title="Connections" action={<Button variant="ghost" size="sm" className="aria-disabled:opacity-50" disabled={health.phase === 'inactive'} aria-disabled={health.phase === 'checking'} aria-busy={health.phase === 'checking'} onClick={() => { if (health.phase === 'current' || health.phase === 'unavailable') void health.refresh() }}><RefreshCw />{health.phase === 'checking' ? 'Checking…' : health.phase === 'unavailable' ? 'Try again' : 'Refresh'}</Button>}>
+    <WorkspaceSection title="Connections" divided={false} action={<Button variant="ghost" size="sm" className="aria-disabled:opacity-50" disabled={health.phase === 'inactive'} aria-disabled={health.phase === 'checking'} aria-busy={health.phase === 'checking'} onClick={() => { if (health.phase === 'current' || health.phase === 'unavailable') void health.refresh() }}><RefreshCw />{health.phase === 'checking' ? 'Checking…' : health.phase === 'unavailable' ? 'Try again' : 'Refresh'}</Button>}>
       {health.phase === 'checking' && <p role="status" className="text-sm text-muted-foreground">Checking provider readiness…</p>}
       {health.phase === 'unavailable' && <p role="status" className="text-sm text-muted-foreground">Provider readiness could not be checked. Try again to read the current status.</p>}
       {health.phase !== 'current' && health.rows.length > 0 && <p className="text-xs text-muted-foreground">Provider and model names below are from the last successful check.</p>}
@@ -73,12 +73,12 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
         {providerRow('chatgpt', 'ChatGPT subscription', chatgptValue, chatgptSheet)}
         {providerRow('claude-code', 'Claude subscription', claudeValue, claudeSheet)}
         {health.rows.filter(row => row.id !== 'chatgpt' && row.id !== 'claude-code').map(row => providerRow(row.id, names[row.id] ?? row.id, row))}
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3">
+        <div className="flex min-h-16 items-center justify-between gap-3 py-3">
           <div className="min-w-0">
             <p className="text-sm font-medium break-words">API keys</p>
             <p className="text-xs text-muted-foreground break-words">OpenAI, OpenRouter, Anthropic. Keys stay on your server.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {sheet('API keys', 'Manage', <ProviderCredentials client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} />)}
           </div>
         </div>
