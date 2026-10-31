@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **"Manage models" and "Connections" links open the right settings topic.** Seven links still
+  written as `/settings?tab=models` or `?tab=connections` (chat composer, chat rail, chat header,
+  Home, Server, Tools, daily news) opened "You", because the settings screen mapped only four old
+  tabs. Both now open their topic (Models, Integrations), and the navigation check fails on any
+  `/settings?tab=` link that opens no topic.
 - **Claude plan answers no longer reach for Claude Code's own memory.** Claude Code's default
   prompt gives it a memory folder inside the sign-in directory, and Sonnet answered "remember
   this" with a read of that file (tools are off, so nothing ran, but the reply was lost and showed

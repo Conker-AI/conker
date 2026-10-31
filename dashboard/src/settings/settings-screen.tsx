@@ -21,7 +21,8 @@ import { useSettings, type SettingsState } from './use-settings'
 
 /** Links from before the topics existed (`?tab=`) open the matching topic. */
 const OLD_TABS: Record<string, { group: string; focus?: string }> = {
-  general: { group: 'you' }, providers: { group: 'models', focus: 'models.providers' }, access: { group: 'access' }, search: { group: 'search' },
+  general: { group: 'you' }, models: { group: 'models' }, providers: { group: 'models', focus: 'models.providers' }, connections: { group: 'integrations' },
+  access: { group: 'access' }, search: { group: 'search' },
 }
 
 function ChatScopeRow({ setting }: { setting: Setting }) {
