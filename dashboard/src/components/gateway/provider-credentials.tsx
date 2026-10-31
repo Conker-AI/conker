@@ -6,7 +6,7 @@ import { useCredentialState } from './use-credential-state'
 import { CredentialFeedback } from './credential-feedback'
 import { useCredentialFocus } from './credential-focus'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import type { ProviderCredential, ProviderCredentialOperation } from '@/lib/gateway/provider-control'
+import type { HostedProviderId, ProviderCredential, ProviderCredentialOperation } from '@/lib/gateway/provider-control'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { FormActions, OverlayBody, TaskDialogContent, WorkspaceSection } from '@/components/design-system'
 
-const names = { openrouter: 'OpenRouter', openai: 'OpenAI API', anthropic: 'Anthropic' }
+const names = { openrouter: 'OpenRouter', openai: 'OpenAI API', anthropic: 'Anthropic API' }
 const state = (record: ProviderCredential) => record.activationPending ? 'Recovery required' : record.stagedRevision
   ? record.verificationStale ? 'Verification expired' : record.verificationStatus === 'verified' ? 'Verified key ready to activate' : record.verificationStatus === 'rejected' ? 'Key rejected' : record.verificationStatus === 'unavailable' ? 'Verification unavailable' : 'Key saved, not verified'
   : record.configured ? 'Active key on server' : 'Not connected'
@@ -34,7 +34,8 @@ function RevocationRecord({ record, pending, apply }: { record: ProviderCredenti
   </details>
 }
 
-export function ProviderCredentials({ client, authStore, onChanged }: { client: GatewayControlClient; authStore: GatewayAuthStore; onChanged: () => void }) {
+/** `only` shows one provider's key (the row the owner opened); the spending switch covers all of them. */
+export function ProviderCredentials({ client, authStore, onChanged, only }: { client: GatewayControlClient; authStore: GatewayAuthStore; onChanged: () => void; only?: HostedProviderId }) {
   const control = useCredentialState(client, authStore)
   const { value, selected, secret } = control
   const current = control.phase === 'current'
@@ -48,11 +49,11 @@ export function ProviderCredentials({ client, authStore, onChanged }: { client: 
     if (await control.apply(operation)) onChanged()
   }
   const close = () => { control.close() }
-  return <WorkspaceSection title="Connect a provider" description="API keys stay write-only on your Conker host. OpenAI API billing is separate from a ChatGPT subscription." action={<Button ref={recoveryAction} size="sm" variant="outline" className="aria-disabled:opacity-50" aria-disabled={busy} aria-busy={busy} disabled={control.phase === 'inactive'} onClick={() => { if (!busy) void control.refresh() }}><RefreshCw />{control.phase === 'checking' ? 'Checking…' : control.phase === 'uncertain' || control.phase === 'unavailable' ? 'Check status' : 'Refresh'}</Button>}>
+  return <WorkspaceSection title={only ? names[only] : 'Connect a provider'} description="API keys stay write-only on your Conker host. OpenAI API billing is separate from a ChatGPT subscription." action={<Button ref={recoveryAction} size="sm" variant="outline" className="aria-disabled:opacity-50" aria-disabled={busy} aria-busy={busy} disabled={control.phase === 'inactive'} onClick={() => { if (!busy) void control.refresh() }}><RefreshCw />{control.phase === 'checking' ? 'Checking…' : control.phase === 'uncertain' || control.phase === 'unavailable' ? 'Check status' : 'Refresh'}</Button>}>
     {!selected && <CredentialFeedback {...control} />}
     {!current && value && <p className="text-xs text-muted-foreground">Provider revisions and spending policy below are from the last successful check. Actions need current status.</p>}
     {value && !value.available && <p className="text-sm text-muted-foreground">Provider setup is unavailable on this installation. The host provider-control service must be installed first; no keys can be sent.</p>}
-    {value?.available && <fieldset aria-disabled={!current || value.policyRecoveryRequired} className="divide-y"><legend className="sr-only">Hosted provider credentials</legend>{value.providers.map(record => <div key={record.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-3">
+    {value?.available && <fieldset aria-disabled={!current || value.policyRecoveryRequired} className="divide-y"><legend className="sr-only">Hosted provider credentials</legend>{value.providers.filter(record => !only || record.id === only).map(record => <div key={record.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0"><p className="text-sm font-medium">{names[record.id]}</p><p className="text-xs text-muted-foreground">{!current ? 'Last checked: ' : ''}{state(record)}</p></div>
       <div className="flex flex-wrap gap-2">
         {record.activationPending && record.stagedRevision ? <Button size="sm" variant="outline" aria-disabled={!current || value?.policyRecoveryRequired} className="aria-disabled:opacity-50" onClick={() => void apply({ operation: 'recover', provider: record.id, revision: record.stagedRevision! })}>Recover previous key</Button>
