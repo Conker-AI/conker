@@ -51,7 +51,8 @@ import {
   type WorkspaceRecord,
 } from "@/lib/tool-workspace";
 import { ToolCanvas } from "./tool-canvas";
-import { Choice, NodeFields, ToolConfiguration } from "./tool-fields";
+import { Choice, ToolConfiguration } from "./tool-fields";
+import { NodeFields } from "./tool-node-fields";
 import { ToolTestPanel } from "./tool-test-panel";
 
 type EditorMode = "build" | "source" | "configure";
