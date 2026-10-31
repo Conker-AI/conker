@@ -33,6 +33,10 @@ jobs:
         with:
           node-version: "24.11.1"
 
+      # package.json overrides minimatch to 11 (GHSA-g3hv-75wg-m249; no eslint or openapi-typescript
+      # release has it yet). eslint and typescript-eslint use only its named exports;
+      # @redocly/openapi-core calls it as a function only when it fetches a remote URL, which
+      # scripts/api-types.mjs never does (it passes parsed documents). Drop the override once they catch up.
       - name: npm packages, moderate advisories and above
         working-directory: dashboard
         run: npm audit --audit-level=moderate
