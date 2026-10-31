@@ -167,7 +167,7 @@ an answer model checks its exact local route and saves the selection only after 
 successful test. Failed tests leave settings alone, and concurrent owner changes
 take precedence. No setup test runs merely from opening the page.
 
-Providers' Runtime readiness refresh preserves unsaved model choices. Pending or
+Providers' Connections refresh preserves unsaved model choices. Pending or
 failed checks label retained names as last-checked evidence and remove Ready
 labels. Provider and model-catalogue reads have a 15-second deadline with explicit
 retry; an older read cannot replace a newer saved model revision. A successful
