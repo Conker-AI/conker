@@ -2,8 +2,7 @@ import { ThemeRuntime } from "@/components/theme-customizer/runtime"
 import { BrowserRouter as Router } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
-import { lazy, Suspense, useEffect } from 'react'
-import { initGTM } from '@/utils/analytics'
+import { lazy, Suspense } from 'react'
 import { runtimeMode } from '@/lib/runtime-mode'
 import { ToastProvider } from '@/components/ui/toast'
 import { ErrorBoundary } from '@/components/resilience/error-boundary'
@@ -19,11 +18,6 @@ const FixtureWorkspace = import.meta.env.DEV ? lazy(() => import('@/components/f
 const legacyFixtureShell = import.meta.env.DEV && import.meta.env.VITE_CONKER_FIXTURE_SHELL === 'legacy'
 
 function App() {
-  // Initialize GTM on app load
-  useEffect(() => {
-    initGTM();
-  }, []);
-
   return (
     <div className="font-sans antialiased">
       {/* Follow the device until the owner picks Light or Dark in Settings > Appearance (ledger: Theme default). */}
