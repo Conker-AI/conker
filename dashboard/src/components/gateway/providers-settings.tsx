@@ -18,10 +18,10 @@ import { ProviderCredentials } from './provider-credentials'
 import { useProviderReadiness } from './use-provider-readiness'
 import { readRuntimeWithDeadline } from './runtime-read-deadline'
 
-const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', 'claude-code': 'Claude Code subscription', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic API' }
-const brands: Record<string, BrandId> = { chatgpt: 'openai', 'claude-code': 'claude', openai: 'openai', anthropic: 'anthropic', openrouter: 'openrouter', ollama: 'ollama' }
+const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', 'claude-code': 'Claude Code subscription', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic API', gemini: 'Google Gemini API', xai: 'xAI API (Grok)', mistral: 'Mistral API', deepseek: 'DeepSeek API', groq: 'Groq API' }
+const brands: Record<string, BrandId> = { chatgpt: 'openai', 'claude-code': 'claude', openai: 'openai', anthropic: 'anthropic', openrouter: 'openrouter', ollama: 'ollama', gemini: 'gemini', xai: 'xai', mistral: 'mistral', deepseek: 'deepseek', groq: 'groq' }
 /** Providers that connect with an API key, in the order the owner sees them. */
-const keyed: HostedProviderId[] = ['openai', 'anthropic', 'openrouter']
+const keyed: HostedProviderId[] = ['openai', 'anthropic', 'gemini', 'xai', 'mistral', 'deepseek', 'groq', 'openrouter']
 const ownerIdentity = (authStore: GatewayAuthStore) => {
   const auth = authStore.getState()
   return auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed ? auth.session.sessionId : null
@@ -34,7 +34,7 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
   const [models, setModels] = useState<ChatGPTStatus['models']>([])
   const [error, setError] = useState('')
   const [saveSource, setSaveSource] = useState<typeof source | null>(null), [reload, setReload] = useState(0)
-  // One credential panel for the three API-key rows, so one status read and one spending switch.
+  // One credential panel for the API-key rows, so one status read and one spending switch.
   const [keysOpen, setKeysOpen] = useState(false), [keyProvider, setKeyProvider] = useState<HostedProviderId>('openai')
   const pending = saveSource === source
   const health = useProviderReadiness(client, authStore, reload)
@@ -83,7 +83,7 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
       {health.phase !== 'current' && health.rows.length > 0 && <p className="text-xs text-muted-foreground">Provider and model names below are from the last successful check.</p>}
       <div className="space-y-5">
         {group('Subscription sign-in', <>{providerRow('chatgpt', 'ChatGPT subscription', chatgptValue, chatgptSheet)}{providerRow('claude-code', 'Claude subscription', claudeValue, claudeSheet)}</>)}
-        {group('API key', keyed.map(id => providerRow(id, names[id], byId(id), keyButton(id))), 'Gemini, Grok, Mistral, DeepSeek and other models: connect OpenRouter. Keys stay on your server.')}
+        {group('API key', keyed.map(id => providerRow(id, names[id], byId(id), keyButton(id))), 'Other models: connect OpenRouter. Keys stay on your server.')}
         {otherRows.length > 0 && group('On this server', otherRows.map(row => providerRow(row.id, names[row.id] ?? row.id, row)))}
       </div>
       <Sheet open={keysOpen} onOpenChange={setKeysOpen}><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{names[keyProvider]}</SheetTitle></SheetHeader><SheetPanel className="pt-12!"><ProviderCredentials only={keyProvider} client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></SheetPanel></SheetContent></Sheet>

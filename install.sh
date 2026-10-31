@@ -682,6 +682,11 @@ agent_sandbox_active() {
     grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
 }
 
+# Gemini, xAI, Mistral, DeepSeek and Groq keys: released once the pinned Pi reads them.
+direct_providers_active() {
+    grep -qx 'DIRECT_PROVIDERS_STATE=active' "$ROOT/versions.env"
+}
+
 claude_plan_released() {
     grep -qx 'SUBSCRIPTIONS_STATE=active' "$ROOT/versions.env"
 }
@@ -698,6 +703,9 @@ compose() {
     fi
     if agent_sandbox_active; then
         files+=(-f "$ROOT/docker-compose.sandbox.yml")
+    fi
+    if direct_providers_active; then
+        files+=(-f "$ROOT/docker-compose.direct-providers.yml")
     fi
     if claude_plan_active; then
         files+=(-f "$ROOT/docker-compose.subscriptions.yml")

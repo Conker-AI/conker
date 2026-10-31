@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { FormActions, OverlayBody, TaskDialogContent, WorkspaceSection } from '@/components/design-system'
 
-const names = { openrouter: 'OpenRouter', openai: 'OpenAI API', anthropic: 'Anthropic API' }
+const names: Record<HostedProviderId, string> = { openrouter: 'OpenRouter', openai: 'OpenAI API', anthropic: 'Anthropic API', gemini: 'Google Gemini API', xai: 'xAI API (Grok)', mistral: 'Mistral API', deepseek: 'DeepSeek API', groq: 'Groq API' }
 const state = (record: ProviderCredential) => record.activationPending ? 'Recovery required' : record.stagedRevision
   ? record.verificationStale ? 'Verification expired' : record.verificationStatus === 'verified' ? 'Verified key ready to activate' : record.verificationStatus === 'rejected' ? 'Key rejected' : record.verificationStatus === 'unavailable' ? 'Verification unavailable' : 'Key saved, not verified'
   : record.configured ? 'Active key on server' : 'Not connected'
@@ -53,6 +53,7 @@ export function ProviderCredentials({ client, authStore, onChanged, only }: { cl
     {!selected && <CredentialFeedback {...control} />}
     {!current && value && <p className="text-xs text-muted-foreground">Provider revisions and spending policy below are from the last successful check. Actions need current status.</p>}
     {value && !value.available && <p className="text-sm text-muted-foreground">Provider setup is unavailable on this installation. The host provider-control service must be installed first; no keys can be sent.</p>}
+    {value?.available && only && !value.providers.some(record => record.id === only) && <p role="status" className="text-sm text-muted-foreground">{names[only]} keys need a Conker update: the AI runtime on this server does not read them yet. No key can be saved until then.</p>}
     {value?.available && <fieldset aria-disabled={!current || value.policyRecoveryRequired} className="divide-y"><legend className="sr-only">Hosted provider credentials</legend>{value.providers.filter(record => !only || record.id === only).map(record => <div key={record.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0"><p className="text-sm font-medium">{names[record.id]}</p><p className="text-xs text-muted-foreground">{!current ? 'Last checked: ' : ''}{state(record)}</p></div>
       <div className="flex flex-wrap gap-2">

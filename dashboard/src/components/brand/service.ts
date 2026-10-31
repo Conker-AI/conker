@@ -5,7 +5,7 @@ import type { BrandId } from './brand-icons'
 const serviceWords: [string, BrandId][] = ([
   ['google calendar', 'googlecalendar'], ['google drive', 'googledrive'], ['chatgpt', 'openai'], ['openai', 'openai'],
   ['claude', 'claude'], ['anthropic', 'anthropic'], ['gemini', 'gemini'], ['grok', 'xai'], ['xai', 'xai'],
-  ['mistral', 'mistral'], ['deepseek', 'deepseek'], ['openrouter', 'openrouter'], ['ollama', 'ollama'],
+  ['mistral', 'mistral'], ['deepseek', 'deepseek'], ['groq', 'groq'], ['openrouter', 'openrouter'], ['ollama', 'ollama'],
   ['tiktok', 'tiktok'], ['github', 'github'], ['gmail', 'gmail'], ['telegram', 'telegram'], ['youtube', 'youtube'],
   ['google', 'google'], ['discord', 'discord'], ['notion', 'notion'], ['twitter', 'x'], ['x.com', 'x'],
   ['whatsapp', 'whatsapp'], ['spotify', 'spotify'], ['reddit', 'reddit'], ['instagram', 'instagram'], ['dropbox', 'dropbox'],

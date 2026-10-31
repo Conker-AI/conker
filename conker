@@ -83,6 +83,12 @@ agent_sandbox_active() {
         && grep -qx 'AGENT_SANDBOX_STATE=active' "$ROOT/versions.env"
 }
 
+# Gemini, xAI, Mistral, DeepSeek and Groq keys: released once the pinned Pi reads them.
+direct_providers_active() {
+    [ "$LAYOUT" = repository ] \
+        && grep -qx 'DIRECT_PROVIDERS_STATE=active' "$ROOT/versions.env"
+}
+
 # The Claude plan runtime: in this release (versions.env) and chosen by the owner (.env, written by
 # ./install.sh --claude-plan). The same rule as scripts/compose_overlays.py.
 claude_plan_released() {
@@ -102,6 +108,9 @@ compose() {
         fi
         if agent_sandbox_active; then
             files+=(-f "$ROOT/docker-compose.sandbox.yml")
+        fi
+        if direct_providers_active; then
+            files+=(-f "$ROOT/docker-compose.direct-providers.yml")
         fi
         if claude_plan_active; then
             files+=(-f "$ROOT/docker-compose.subscriptions.yml")
@@ -540,6 +549,18 @@ provider_call() {
         --directory "$(provider_directory)" "$@"
 }
 
+# A provider this release's Pi reads (scripts/provider_records.py). Unknown names pass, so the
+# secret store gives its own answer for them.
+provider_released() {
+    PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
+import sys
+from pathlib import Path
+from scripts.provider_records import PROVIDERS, released_providers
+name, versions = sys.argv[1], Path(sys.argv[2])
+raise SystemExit(0 if name not in PROVIDERS or name in released_providers(versions) else 1)
+' "$1" "$SOURCE_ROOT/versions.env"
+}
+
 provider_runtime_configured() {
     local provider=$1 expected=${2:-configured} _attempt result
     for _attempt in $(seq 1 30); do
@@ -597,8 +618,13 @@ provider_restore_runtime() {
     provider_call complete-rollback "$provider" "$revision" >/dev/null
 }
 
+# Status lists only the providers this release's Pi reads.
+provider_status() {
+    provider_call status --release "$SOURCE_ROOT/versions.env"
+}
+
 provider_status_human() {
-    provider_call status | python3 -c '
+    provider_status | python3 -c '
 import json, sys
 value = json.load(sys.stdin)
 print("\nHosted providers\n")
@@ -675,7 +701,7 @@ cmd_providers() {
             ;;
         status)
             if [ "${1:-}" = --json ] && [ "$#" -eq 1 ]; then
-                provider_call status
+                provider_status
             elif [ "$#" -eq 0 ]; then
                 provider_status_human
             else
@@ -686,6 +712,10 @@ cmd_providers() {
             recovery_guard
             local provider=${1:-} secret=''
             [ -n "$provider" ] || { printf 'Use conker providers set PROVIDER [--stdin].\n' >&2; exit 2; }
+            provider_released "$provider" || {
+                printf '%s keys need a newer Conker release: this one pins a Pi that does not read them.\n' "$provider" >&2
+                exit 1
+            }
             if [ "${2:-}" = --stdin ] && [ "$#" -eq 2 ]; then
                 provider_call stage "$provider"
             elif [ "$#" -eq 1 ] && [ -t 0 ]; then

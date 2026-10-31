@@ -23,6 +23,7 @@ try:
         ProviderSecretError,
         empty_record,
         now,
+        released_providers,
         validate_record,
         verify_provider,
     )
@@ -35,6 +36,7 @@ except ModuleNotFoundError:
         ProviderSecretError,
         empty_record,
         now,
+        released_providers,
         validate_record,
         verify_provider,
     )
@@ -191,7 +193,7 @@ class SecretStore:
 
     def _provider(self, state: dict, provider: str) -> dict:
         if provider not in PROVIDERS:
-            raise ProviderSecretError("Choose openrouter, openai or anthropic.")
+            raise ProviderSecretError("Choose a provider: " + ", ".join(PROVIDERS) + ".")
         saved = state["providers"].setdefault(provider, empty_record())
         if set(saved) != set(empty_record()):
             raise ProviderSecretError(
@@ -505,7 +507,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--directory", type=Path, required=True)
     commands = result.add_subparsers(dest="command", required=True)
     commands.add_parser("initialize")
-    commands.add_parser("status")
+    # --release VERSIONS_ENV lists only the providers that release's Pi reads.
+    commands.add_parser("status").add_argument("--release", type=Path)
     for name in (
         "stage",
         "import-active",
@@ -542,6 +545,9 @@ def main(argv: list[str] | None = None) -> int:
             value = store.status()
         elif arguments.command == "status":
             value = store.status()
+            if arguments.release is not None:
+                released = released_providers(arguments.release)
+                value["providers"] = [row for row in value["providers"] if row["id"] in released]
         elif arguments.command == "stage":
             value = store.stage(arguments.provider, _secret_from_stdin())
         elif arguments.command == "import-active":

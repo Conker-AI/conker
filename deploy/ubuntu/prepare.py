@@ -22,6 +22,7 @@ BUILT_IN_TOOLS = (
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
 from scripts.import_listener import pi_environment as import_listener_environment
+from scripts.provider_records import FIRST_PROVIDERS, PROVIDERS
 from scripts.provider_secrets import ProviderSecretError, SecretStore
 from scripts.release_manifest import ManifestError, load_release_manifest
 from scripts.service_keys import environments as service_environments
@@ -78,6 +79,11 @@ if terminal["state"] == "active":
         )
     except TerminalWorkspaceError as exc:
         raise SystemExit(f"Terminal workspace rejected: {exc}") from exc
+# Gemini, xAI, Mistral, DeepSeek and Groq keys: mounted once the release's Pi reads them.
+direct_providers = (
+    tuple(name for name in PROVIDERS if name not in FIRST_PROVIDERS)
+    if release["capabilities"]["direct-providers"]["state"] == "active" else ()
+)
 sandbox = release["capabilities"]["agent-sandbox"]
 sandbox_workspaces = None
 docker_gid = None
@@ -211,6 +217,8 @@ if terminal_workspace is not None:
     })
 if sandbox_workspaces is not None:
     env["toolgate"]["TOOLGATE_SANDBOX_SOCKET"] = "/run/conker-sandbox/runner.sock"
+for provider in direct_providers:
+    env["pi"][f"PI_{provider.upper()}_KEY_FILE"] = f"/run/secrets/provider-{provider}"
 provider_store = SecretStore(state / "provider-secrets")
 provider_store.initialize()
 for provider, name in (
@@ -282,6 +290,7 @@ services["pi"]["volumes"] = [
     "./state/provider-secrets/openai.key:/run/secrets/provider-openai:ro",
     "./state/provider-secrets/anthropic.key:/run/secrets/provider-anthropic:ro",
     "./state/speech/speech.key:/run/secrets/speech:ro",
+    *(f"./state/provider-secrets/{name}.key:/run/secrets/provider-{name}:ro" for name in direct_providers),
 ]
 services["pi"]["depends_on"] = ["memorygate", "toolgate", "ollama"]
 services["gateway"].update(command=["python", "-m", "gateway", "serve"], ports=["127.0.0.1:18050:8050"],

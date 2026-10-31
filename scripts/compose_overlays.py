@@ -13,6 +13,7 @@ from pathlib import Path
 OVERLAYS = (
     ("docker-compose.terminal.yml", "OWNER_TERMINAL_STATE=active", None),
     ("docker-compose.sandbox.yml", "AGENT_SANDBOX_STATE=active", None),
+    ("docker-compose.direct-providers.yml", "DIRECT_PROVIDERS_STATE=active", None),
     (
         "docker-compose.subscriptions.yml",
         "SUBSCRIPTIONS_STATE=active",
