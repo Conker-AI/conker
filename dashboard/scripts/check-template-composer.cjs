@@ -11,7 +11,7 @@ assert.match(composerSource, /input\?: ReactNode/, "composer.tsx has input?: Rea
 assert.match(composerSource, /{input}/, "composer.tsx renders {input} when given")
 
 // runtime-workspace.tsx checks
-const workspaceSource = fs.readFileSync(path.join(root, "src/components/gateway/runtime-workspace.tsx"), "utf8")
+const workspaceSource = ["runtime-workspace", "new-chat-view", "open-chat-view"].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), "utf8")).join("\n")
 assert.match(workspaceSource, /from '.\/composer-parts'/, "runtime-workspace.tsx imports from ./composer-parts")
 assert.match(workspaceSource, /useTemplateActive\(selected \?\? 'new'\)/, "runtime-workspace.tsx has useTemplateActive(selected ?? 'new')")
 assert.equal((workspaceSource.match(/<TemplatePicker /g) || []).length, 2, "Exactly two <TemplatePicker> elements")
