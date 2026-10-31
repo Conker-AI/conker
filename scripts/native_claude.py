@@ -12,7 +12,6 @@ from contextlib import nullcontext
 from pathlib import Path
 from urllib.parse import urlsplit
 
-
 SYSTEM_PROMPT = (
     "You are the text model behind Conker, a personal companion. The input is a JSON "
     "conversation. Reply as the assistant to its last message, following its system messages "
