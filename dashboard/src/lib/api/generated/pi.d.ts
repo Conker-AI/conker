@@ -2078,6 +2078,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suggest */
+        post: operations["suggest_sessions__session_id__suggestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/artifacts": {
         parameters: {
             query?: never;
@@ -5257,6 +5274,11 @@ export interface components {
             /** Versions */
             versions: components["schemas"]["ArtifactVersion"][];
         };
+        /** Ask */
+        Ask: {
+            /** Count */
+            count?: number | null;
+        };
         /** Assignment */
         Assignment: {
             /** Enabled */
@@ -5272,8 +5294,11 @@ export interface components {
              * @enum {string}
              */
             failure: "stop" | "fallback";
-            /** Fallbackmodelid */
-            fallbackModelId: string | null;
+            /**
+             * Fallbackmodelids
+             * @description Backup models tried in this order after the role's model fails.
+             */
+            fallbackModelIds: string[];
         };
         /** AutoName */
         AutoName: {
@@ -13263,6 +13288,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AutoName"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_sessions__session_id__suggestions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Ask"];
             };
         };
         responses: {

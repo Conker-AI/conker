@@ -1817,7 +1817,11 @@ export interface operations {
     };
     artifact_download_api_control_pi_artifacts__identity__download_get: {
         parameters: {
-            query?: never;
+            query: {
+                format: "docx" | "pdf" | "pptx" | "xlsx" | "csv" | "json";
+                /** @description An earlier version to export, 1 to 100; the current one when left out. */
+                version?: number;
+            };
             header?: never;
             path: {
                 identity: string;
@@ -1848,7 +1852,9 @@ export interface operations {
     };
     answer_download_api_control_pi_sessions__session_id__messages__message_id__download_get: {
         parameters: {
-            query?: never;
+            query: {
+                format: "docx" | "pdf" | "pptx" | "xlsx";
+            };
             header?: never;
             path: {
                 session_id: string;
