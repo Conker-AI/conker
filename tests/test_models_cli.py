@@ -1,4 +1,4 @@
-"""conker models --role: point one model role at one model, keeping everything else as saved."""
+"""conker models --role: point one model role at one model and its backups, keeping the rest."""
 
 import copy
 import sys
@@ -15,7 +15,7 @@ ROLE = {
     "modelId": None,
     "timeoutMs": 120000,
     "failure": "stop",
-    "fallbackModelId": None,
+    "fallbackModelIds": [],
 }
 SAVED = {
     "revision": 4,
@@ -53,9 +53,9 @@ class Pi:
 
 def test_a_role_gets_one_model_and_nothing_else_changes():
     saved = copy.deepcopy(SAVED)
-    # An old fallback outside the new single-model choice would be refused by Pi; it is cleared.
+    # Old backups outside the new single-model choice would be refused by Pi; they are cleared.
     saved["configuration"]["roleSettings"]["roles"]["drafting"].update(
-        eligibleModelIds=["local-3b"], fallbackModelId="local-3b"
+        eligibleModelIds=["local-3b"], failure="fallback", fallbackModelIds=["local-3b"]
     )
     pi = Pi(saved)
     conker_models.set_role(pi, {}, "drafting", "strong")
@@ -88,12 +88,13 @@ def test_off_switches_the_role_off_and_keeps_its_choice():
     [
         ("drafts", "strong", "No model role called drafts"),
         ("drafting", "gpt-9", "No model called gpt-9"),
+        ("drafting", "strong", "No model called gpt-9"),
     ],
 )
 def test_unknown_names_change_nothing(role, model, message):
     pi = Pi()
     with pytest.raises(ValueError, match=message):
-        conker_models.set_role(pi, {}, role, model)
+        conker_models.set_role(pi, {}, role, model, ["gpt-9"] if model == "strong" else [])
     assert pi.posts == []
 
 
@@ -102,3 +103,17 @@ def test_without_settings_it_asks_for_a_talking_model_first():
     with pytest.raises(ValueError, match="talking model first"):
         conker_models.set_role(pi, {}, "drafting", "strong")
     assert pi.posts == []
+
+
+def test_backups_are_tried_in_the_order_given():
+    pi = Pi()
+    conker_models.set_role(pi, {}, "drafting", "strong", ["local-3b"])
+    drafting = pi.posts[0]["configuration"]["roleSettings"]["roles"]["drafting"]
+    assert drafting == {
+        **ROLE,
+        "enabled": True,
+        "eligibleModelIds": ["strong", "local-3b"],
+        "modelId": "strong",
+        "failure": "fallback",
+        "fallbackModelIds": ["local-3b"],
+    }

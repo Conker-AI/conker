@@ -64,7 +64,7 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
   }
 
   function removeModel(id: string) {
-    if (draft.defaultModelId === id || Object.values(draft.roleSettings?.roles ?? {}).some(role => role.modelId === id || role.fallbackModelId === id)) {
+    if (draft.defaultModelId === id || Object.values(draft.roleSettings?.roles ?? {}).some(role => role.modelId === id || role.fallbackModelIds.includes(id))) {
       setError('Choose another default, primary, or fallback model before removing this entry.')
       return
     }

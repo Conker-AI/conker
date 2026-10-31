@@ -233,6 +233,7 @@ def main():
         "message",
         "output",
         "title",
+        "suggest",
         "files",
     }:
         identity(args.session, r"[A-Za-z0-9_-]{1,128}", "conversation ID")
@@ -480,9 +481,10 @@ def main():
             else request(config, "pi", f"/sessions/{args.session}/thinking")
         )
     elif args.command == "models" and args.role:
-        if bool(args.model) == args.off or args.save:
-            raise ValueError("Use --role ROLE with exactly one of --model ID or --off.")
-        value = conker_models.set_role(request, config, args.role, None if args.off else args.model)
+        if bool(args.model) == args.off or args.save or (args.off and args.backup):
+            raise ValueError("Use --role ROLE with --model ID [--backup ID]... or with --off.")
+        model = None if args.off else args.model
+        value = conker_models.set_role(request, config, args.role, model, args.backup or [])
     elif args.command == "models":
         value = request(
             config,
@@ -521,7 +523,7 @@ def main():
         value = context_operation(args, config, request)
     elif args.command == "message":
         value = message_operation(args, config, request)
-    elif args.command in {"output", "title"}:
+    elif args.command in {"output", "title", "suggest"}:
         value = chat_operation(args, config, request)
     elif args.command == "files":
         value = files_operation(args, config, request)

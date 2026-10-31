@@ -39,17 +39,17 @@ async function main() {
   slow.roles.reviewer.timeoutMs = 600000
   assert.deepEqual(modelRolesErrors(slow, config), [], 'A role may wait up to ten minutes, as Pi allows')
   // Choosing the answer model moves the Answer role (what Pi uses) and the default together.
-  const routed = { ...config, roleSettings: { ...settings, answerMode: 'router', roles: { ...settings.roles, answer: { ...settings.roles.answer, failure: 'fallback', fallbackModelId: primary, eligibleModelIds: [primary] } } } }
+  const routed = { ...config, roleSettings: { ...settings, answerMode: 'router', roles: { ...settings.roles, answer: { ...settings.roles.answer, failure: 'fallback', fallbackModelIds: [primary], eligibleModelIds: [primary] } } } }
   const chosen = withAnswerModel(routed, secondary)
   assert.equal(chosen.defaultModelId, secondary)
   assert.equal(chosen.roleSettings.answerMode, 'manual')
-  assert.deepEqual(chosen.roleSettings.roles.answer, { ...routed.roleSettings.roles.answer, enabled: true, modelId: secondary, eligibleModelIds: [primary, secondary], failure: 'stop', fallbackModelId: null })
+  assert.deepEqual(chosen.roleSettings.roles.answer, { ...routed.roleSettings.roles.answer, enabled: true, modelId: secondary, eligibleModelIds: [primary, secondary], failure: 'stop', fallbackModelIds: [] })
   assert.equal(withAnswerModel(chosen, secondary).roleSettings.roles.answer.eligibleModelIds.length, 2, 'Choosing again does not duplicate eligibility')
   assert.deepEqual(modelRolesErrors(chosen.roleSettings, chosen), [])
   assert.equal(routed.roleSettings.answerMode, 'router', 'The input is not mutated')
   // The ideas switch enables only the proposals role, with an eligible model, and turns it off again.
   const ideas = withIdeas(chosen, secondary)
-  assert.deepEqual(ideas.roleSettings.roles.proposals, { ...chosen.roleSettings.roles.proposals, enabled: true, modelId: secondary, eligibleModelIds: [...chosen.roleSettings.roles.proposals.eligibleModelIds, secondary], failure: 'stop', fallbackModelId: null })
+  assert.deepEqual(ideas.roleSettings.roles.proposals, { ...chosen.roleSettings.roles.proposals, enabled: true, modelId: secondary, eligibleModelIds: [...chosen.roleSettings.roles.proposals.eligibleModelIds, secondary], failure: 'stop', fallbackModelIds: [] })
   assert.deepEqual(ideas.roleSettings.roles.answer, chosen.roleSettings.roles.answer)
   assert.deepEqual(modelRolesErrors(ideas.roleSettings, ideas), [])
   assert.equal(withIdeas(ideas, null).roleSettings.roles.proposals.enabled, false)
@@ -66,7 +66,7 @@ async function main() {
   assert.equal(planModelRole({ configuration: config, settings, role: 'summarization' }).status, 'disabled')
   assert.equal(planModelRole({ configuration: config, settings, role: 'answer', failure: 'timeout' }).status, 'blocked')
   assert.equal(planModelRole({ configuration: { ...config, defaultModelId: secondary }, settings, role: 'answer' }).selectedModelId, primary, 'Changing the workspace default does not rewrite a role lock')
-  const fallback = { enabled: true, eligibleModelIds: [primary, crossProvider], modelId: primary, timeoutMs: 4000, failure: 'fallback', fallbackModelId: crossProvider }
+  const fallback = { enabled: true, eligibleModelIds: [primary, crossProvider], modelId: primary, timeoutMs: 4000, failure: 'fallback', fallbackModelIds: [crossProvider] }
   const helperSettings = structuredClone(settings)
   helperSettings.roles.summarization = structuredClone(fallback)
   assert.deepEqual(modelRolesErrors(helperSettings, config), [])
@@ -75,12 +75,19 @@ async function main() {
   assert.equal(plan.basis, 'fallback')
   assert.equal(plan.timeoutMs, 4000)
   assert.equal(planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', failure: 'timeout', attemptedModelIds: [primary, crossProvider] }).status, 'blocked', 'Exhausted primary/fallback attempts cannot loop')
+  // Backups are tried in the owner's order; one that already failed is never proposed again.
+  const ordered = structuredClone(helperSettings)
+  ordered.roles.summarization = { ...structuredClone(fallback), eligibleModelIds: [primary, crossProvider, secondary], fallbackModelIds: [crossProvider, secondary] }
+  assert.deepEqual(modelRolesErrors(ordered, config), [])
+  assert.equal(planModelRole({ configuration: config, settings: ordered, role: 'summarization', failure: 'timeout', attemptedModelIds: [primary] }).selectedModelId, crossProvider)
+  assert.equal(planModelRole({ configuration: config, settings: ordered, role: 'summarization', failure: 'timeout', attemptedModelIds: [primary, crossProvider] }).selectedModelId, secondary, 'The next backup follows the one that failed')
+  assert.equal(planModelRole({ configuration: config, settings: ordered, role: 'summarization', failure: 'timeout', attemptedModelIds: [primary, crossProvider, secondary] }).status, 'blocked')
   assert.equal(planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', failure: 'invalid-failure' }).status, 'blocked')
   const providerId = config.models.find(model => model.id === crossProvider).providerId
   plan = planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', allowedProviderIds: [providerId] })
   assert.equal(plan.selectedModelId, crossProvider, 'Runtime privacy/provider filters never widen the owner allowlist')
   assert.equal(planModelRole({ configuration: config, settings: helperSettings, role: 'summarization', allowedModelIds: [] }).status, 'blocked')
-  for (const invalid of [{ fallbackModelId: primary }, { fallbackModelId: 'unknown' }, { eligibleModelIds: [primary] }, { timeoutMs: 0 }, { timeoutMs: 600001 }, { timeoutMs: NaN }, { failure: 'retry-forever' }, { failure: 'stop' }, { eligibleModelIds: [primary, primary, crossProvider] }]) {
+  for (const invalid of [{ fallbackModelIds: [primary] }, { fallbackModelIds: ['unknown'] }, { fallbackModelIds: [] }, { fallbackModelIds: [crossProvider, crossProvider] }, { fallbackModelIds: Array.from({ length: 9 }, (_, index) => `backup-${index}`) }, { eligibleModelIds: [primary] }, { timeoutMs: 0 }, { timeoutMs: 600001 }, { timeoutMs: NaN }, { failure: 'retry-forever' }, { failure: 'stop' }, { eligibleModelIds: [primary, primary, crossProvider] }]) {
     const broken = structuredClone(helperSettings)
     Object.assign(broken.roles.summarization, invalid)
     assert.ok(modelRolesErrors(broken, config).length, JSON.stringify(invalid))
@@ -104,7 +111,7 @@ async function main() {
   const routerSettings = structuredClone(helperSettings)
   routerSettings.answerMode = 'router'
   assert.ok(modelRolesErrors(routerSettings, config).some(error => error.includes('routing decision')))
-  routerSettings.roles.routing = { ...structuredClone(fallback), failure: 'stop', fallbackModelId: null }
+  routerSettings.roles.routing = { ...structuredClone(fallback), failure: 'stop', fallbackModelIds: [] }
   routerSettings.roles.answer.eligibleModelIds.push(secondary)
   assert.deepEqual(modelRolesErrors(routerSettings, config), [])
   assert.equal(planModelRole({ configuration: config, settings: routerSettings, role: 'answer' }).status, 'needs-routing')
