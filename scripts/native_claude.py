@@ -12,6 +12,12 @@ from contextlib import nullcontext
 from pathlib import Path
 from urllib.parse import urlsplit
 
+SYSTEM_PROMPT = (
+    "You are the text model behind Conker, a personal companion. The input is a JSON "
+    "conversation. Reply as the assistant to its last message, following its system messages "
+    "exactly. You have no tools or memory of your own; when the conversation describes tools, "
+    "use only the format it gives."
+)
 
 def environment(home):
     keep = (
@@ -249,6 +255,10 @@ class Claude:
             "",
             "--max-turns",
             "1",
+            # Claude Code's default prompt makes it a coding agent with its own memory folder
+            # inside the sign-in directory; the model then answered with reads of that folder.
+            "--system-prompt",
+            SYSTEM_PROMPT,
         ]
         if cancellation:
             cancellation.check()

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Claude plan answers no longer reach for Claude Code's own memory.** Claude Code's default
+  prompt gives it a memory folder inside the sign-in directory, and Sonnet answered "remember
+  this" with a read of that file (tools are off, so nothing ran, but the reply was lost and showed
+  the path). The runtime now replaces that prompt with a fixed one.
 - **A Claude model name can no longer read as a command-line option.** The native Claude runtime
   puts the model on argv after `--model`; a name such as `-p` passed the old pattern. Names now
   start with a letter or digit.
