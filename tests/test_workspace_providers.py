@@ -95,6 +95,9 @@ def test_claude_native_request_disables_tools_and_does_not_copy_ambient_tokens(
         "conversation": messages
     }
     assert args[0][args[0].index("--mcp-config") + 1] == '{"mcpServers":{}}'
+    # Replaces Claude Code's own prompt, which carries a memory folder and coding instructions.
+    prompt = args[0][args[0].index("--system-prompt") + 1]
+    assert "Conker" in prompt and "no tools or memory" in prompt
     assert result["text"] == "answer"
 
 
