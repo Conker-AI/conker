@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { ShieldCheck, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cardLabels } from '@/lib/inbox-buttons'
 import type { OwnerDecision, OwnerRequest } from '@/lib/gateway/owner'
 import { canReleaseExpiredOwnerDecision, ownerDecisionEligibility, ownerUnavailableText, type RetainedOwnerDecision } from '@/components/gateway/owner-state'
-import { InboxCard } from './inbox-card'
+import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
 
 const humanize = (value: string) => {
@@ -58,10 +57,37 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       <Button type="button" size="sm" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected', false, '')}>{labels.no}</Button>
       <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} onClick={() => setChanging(true)}>Change</Button>
     </div> : null
-  return <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} summary={request.details || undefined}
-    meta={<><span>Permission</span><span>{request.actor || 'Conker'}</span><span>{relativeTime(request.createdAt, now)}</span>{state && <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span>}</>}
-    actions={answers} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
-    footer={processing && <p role="status" className="text-xs text-muted-foreground">Waiting for verification or the recorded decision…</p>}>
+  // Folded: the tool's own yes, one tap away (it runs exactly what opening the card shows). Deleting
+  // and paying never go from a folded card: Review opens it so the exact action is in view first.
+  const risky = request.card === 'delete' || request.card === 'pay'
+  const primary = open && !changing && eligibility.approve && !attempt && !risky
+    ? <Button type="button" size="sm" disabled={busy} onClick={() => onDecide('approved', false, '')}>{labels.yes}</Button> : undefined
+  const source = <>{request.actor || 'Conker'} · <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span></>
+  const facts: InboxFact[] = [
+    ['Asked by', request.actor || 'Conker'], ['Came', `${relativeTime(request.createdAt, now)} · ${timestamp(request.createdAt)}`],
+    ...(request.approval.expiresAt ? [['Expires', timestamp(request.approval.expiresAt)] as InboxFact] : []),
+    ['Status', humanize(request.status)], ['Type', request.action.subjectType ?? 'Unavailable'], ['Origin verified', request.approval.originValid ? 'Yes' : 'No'],
+    ['Request ID', <span className="break-all">{request.id}</span>], ['Subject ID', <span className="break-all">{request.action.subjectId ?? 'Unavailable'}</span>],
+    ['Version', request.action.version ?? 'Unavailable'], ['Updated', timestamp(request.updatedAt)],
+    ...(request.approval.consumedAt ? [['Consumed', timestamp(request.approval.consumedAt)] as InboxFact] : []),
+  ]
+  return <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} source={source} summary={request.details || undefined}
+    primary={primary} openLabel={open && risky && !attempt ? 'Review' : undefined} actions={answers} facts={facts} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
+    footer={processing && <p role="status" className="text-xs text-muted-foreground">Waiting for verification or the recorded decision…</p>}
+    advanced={<>
+      <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-6 text-foreground" tabIndex={0} aria-label="Exact action arguments">{JSON.stringify(request.action.args, null, 2)}</pre>
+      {!attempt && request.status === 'pending' && eligibility.reject && <div className="flex flex-col gap-3">
+        {expired && <>
+          <p>You can still close this saved request. This cannot authorize or run the expired action.</p>
+          <Label htmlFor={`expired-note-${request.id}`}>Note (optional)</Label>
+          <Textarea id={`expired-note-${request.id}`} value={note} maxLength={2000} disabled={busy} onChange={event => onNote(event.target.value)} />
+        </>}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {expired && <Button type="button" variant="outline" disabled={busy} onClick={() => onDecide('rejected')}>Deny expired request</Button>}
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => onDecide('dismissed')}>Dismiss request</Button>
+        </div>
+      </div>}
+    </>}>
     {request.action.args === null ? <p className="text-muted-foreground">Complete arguments are unavailable. Approval is disabled.</p>
       : <dl className="flex flex-col gap-3">{Object.entries(request.action.args).map(([key, value]) => <div key={key} className="grid min-w-0 gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"><dt className="break-words text-muted-foreground">{humanize(key)}</dt><dd className="min-w-0"><ArgumentValue value={value} /></dd></div>)}</dl>}
     {expired && !attempt && <p className="text-muted-foreground">This request expired. Nothing was done.</p>}
@@ -75,23 +101,5 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
           : attempt.checked && request.status === 'pending' && <Button type="button" disabled={busy} onClick={() => onDecide(attempt.status, true)}>Retry identical decision</Button>}
       </div>
     </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went. {labels.no} and Change run nothing. Your password confirms the decision.</p>}
-    <Accordion><AccordionItem value="technical"><AccordionTrigger>Technical details</AccordionTrigger><AccordionContent><div className="flex flex-col gap-3 text-sm">
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 break-words"><dt>Request ID</dt><dd className="break-all">{request.id}</dd><dt>Type</dt><dd>{request.action.subjectType ?? 'Unavailable'}</dd><dt>Subject ID</dt><dd className="break-all">{request.action.subjectId ?? 'Unavailable'}</dd><dt>Version</dt><dd>{request.action.version ?? 'Unavailable'}</dd><dt>Origin verified</dt><dd>{request.approval.originValid ? 'Yes' : 'No'}</dd><dt>Status</dt><dd>{humanize(request.status)}</dd></dl>
-      <p>Created {timestamp(request.createdAt)} · Updated {timestamp(request.updatedAt)}</p>
-      {request.approval.expiresAt && <p>Expires {timestamp(request.approval.expiresAt)}</p>}
-      {request.approval.consumedAt && <p>Consumed {timestamp(request.approval.consumedAt)}</p>}
-      <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs leading-6" tabIndex={0} aria-label="Exact action arguments">{JSON.stringify(request.action.args, null, 2)}</pre>
-      {!attempt && request.status === 'pending' && eligibility.reject && <div className="flex flex-col gap-3">
-        {expired && <>
-          <p className="text-muted-foreground">You can still close this saved request. This cannot authorize or run the expired action.</p>
-          <Label htmlFor={`expired-note-${request.id}`}>Note (optional)</Label>
-          <Textarea id={`expired-note-${request.id}`} value={note} maxLength={2000} disabled={busy} onChange={event => onNote(event.target.value)} />
-        </>}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {expired && <Button type="button" variant="outline" disabled={busy} onClick={() => onDecide('rejected')}>Deny expired request</Button>}
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => onDecide('dismissed')}>Dismiss request</Button>
-        </div>
-      </div>}
-    </div></AccordionContent></AccordionItem></Accordion>
   </InboxCard>
 }

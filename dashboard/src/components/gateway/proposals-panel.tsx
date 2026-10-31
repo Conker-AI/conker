@@ -14,26 +14,25 @@ const age = (seconds: number) => {
 export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
   item: Proposal; pending: boolean; failure: string | null; onDecide: (decision: ProposalDecision) => void; onLater?: () => void
 }) {
-  return <InboxCard icon={<Lightbulb />} title={item.title} summary={item.suggestion}
-    meta={<><span>Idea</span><span>{age(item.createdAt)}</span></>}
+  const accept = <Button type="button" size="sm" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>
+  return <InboxCard icon={<Lightbulb />} title={item.title} source="Idea from Conker" summary={item.suggestion}
+    primary={accept}
     actions={<div className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" disabled={pending} onClick={() => onDecide('accept')}>Accept</Button>
+      {accept}
       <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => onDecide('decline')}>Not now</Button>
+      <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onDecide('never')}>Never suggest this</Button>
     </div>}
     onLater={onLater}
+    facts={[['From', 'Conker’s nightly pass'], ['Came', `${age(item.createdAt)} · ${new Date(item.createdAt * 1000).toLocaleString()}`], ['Not now', 'Hides this idea for 30 days']]}
+    advanced={<div className="flex flex-col gap-2">
+      <p>Why</p>
+      {item.evidence.length ? <ul className="flex flex-col gap-2">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words">{source.available
+        ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link>
+        : <span>This message was forgotten.</span>}</li>)}</ul>
+        : <p>No cited messages are available.</p>}
+    </div>}
     footer={failure && <p role="alert" className="text-sm text-destructive-foreground">{failure}</p>}>
     <p><span className="text-muted-foreground">Noticed: </span>{item.noticed}</p>
     <p><span className="text-muted-foreground">If you accept: </span>{item.ifApproved}</p>
-    <div className="flex flex-col gap-2">
-      <p className="text-muted-foreground">Why</p>
-      {item.evidence.length ? <ul className="flex flex-col gap-2">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words text-muted-foreground">{source.available
-        ? <Link className="rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring" to={gatewayConversationLink(source.sessionId, source.messageId)}>&ldquo;{source.excerpt}&rdquo;</Link>
-        : <span>This message was forgotten.</span>}</li>)}</ul>
-        : <p className="text-muted-foreground">No cited messages are available.</p>}
-    </div>
-    <p className="text-muted-foreground">Not now hides this idea for 30 days.</p>
-    <div className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onDecide('never')}>Never suggest this</Button>
-    </div>
   </InboxCard>
 }
