@@ -9,7 +9,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { toolDraftStatus, type ChangeRequest, type ToolDraftRequest } from '@/lib/gateway/change-requests'
-import { InboxCard } from './inbox-card'
+import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -123,7 +123,10 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   const [changing, setChanging] = useState(false), [words, setWords] = useState('')
   const status = request.kind === 'tool_draft' ? toolDraftStatus(request) : null
   const action = request.kind === 'ai_job' ? 'Create job' : request.kind === 'tool_draft' ? 'Review' : 'Remember'
-  const meta = <><span>{request.kind === 'tool_draft' && !request.sessionId ? 'Your tool request' : 'Conker’s request'}</span><span>{age(request.createdAt, now)}</span></>
+  const kind = request.kind === 'ai_job' ? 'AI job' : request.kind === 'tool_draft' ? 'Tool' : 'Memory'
+  // Who asked, when and in which chat: the record, one "Advanced" tap away.
+  const facts: InboxFact[] = [['From', request.kind === 'tool_draft' && !request.sessionId ? 'Your tool request' : 'Conker’s request'],
+    ['Came', `${age(request.createdAt, now)} · ${new Date(request.createdAt * 1000).toLocaleString()}`], ...(request.sessionId ? [['Chat', chatLink(request.sessionId)] as InboxFact] : [])]
   const footer = error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined
   const text = request.kind === 'memory' ? request.payload.text : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
   // A tool or job request that names a service shows its logo (a Telegram tool reads as Telegram at a glance).
@@ -134,18 +137,18 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined
   if (request.kind === 'tool_draft' && status === 'drafting') {
     // Working: nothing to decide yet, so no answers and no Later; only the chat it came from.
-    return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={request.title} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
       <p role="status" className="flex items-center gap-2 text-sm"><Spinner aria-hidden="true" className="size-4 text-muted-foreground motion-reduce:animate-none" />Conker is drafting this tool…</p>
       <p className="text-xs text-muted-foreground">You can leave this page. The draft shows up here when it’s ready.</p>
       {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
-    </>}>{talk}</InboxCard>
+    </>} />
   }
   if (request.kind === 'tool_draft' && request.payload.status === 'needs_detail') {
     // Waiting for him: the question, a box and Answer. The chat it was asked in is one tap away.
     const { question, askedIn } = request.payload
-    return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} onLater={onLater}
+    return <InboxCard icon={icon} title={request.title} source={`${kind} · Needs one detail`} openLabel="Answer" summary={summary} facts={facts} advanced={talk} onLater={onLater}
       footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error} Your answer is kept.</p> : undefined}
-      actions={<AnswerForm question={question} askedIn={askedIn} busy={busy || !onAnswer} onAnswer={text => onAnswer?.(text) ?? Promise.resolve(false)} />}>{talk}</InboxCard>
+      actions={<AnswerForm question={question} askedIn={askedIn} busy={busy || !onAnswer} onAnswer={text => onAnswer?.(text) ?? Promise.resolve(false)} />} />
   }
   if (request.kind === 'tool_draft' && status === 'failed') {
     const reason = request.payload.status === 'failed' && request.payload.error ? request.payload.error : 'Conker couldn’t draft this tool.'
@@ -158,10 +161,11 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
         <Button type="button" size="sm" variant="ghost" disabled={busy || !onRetry} onClick={() => { setWords(request.payload.description); setChanging(true) }}>Change</Button>
         {request.sessionId && chatLink(request.sessionId)}
       </div>
-    return <InboxCard icon={icon} title={request.title} summary={summary} meta={meta} onLater={onLater} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={request.title} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
+      primary={<Button type="button" size="sm" disabled={busy || !onRetry} onClick={() => onRetry?.()}>{busy ? 'Working…' : 'Try again'}</Button>} actions={<>
       <p className="text-sm text-destructive-foreground"><span className="font-medium">Couldn’t draft it:</span> {reason}</p>
       {answers}
-    </>}>{talk}</InboxCard>
+    </>} />
   }
   const answers = changing && request.sessionId
     ? <ReplyBox label="What should Conker do instead?" placeholder="Your words go to Conker in that chat. Nothing is created." value={words} busy={busy}
@@ -171,10 +175,9 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
       {request.sessionId && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setChanging(true)}>Change</Button>}
     </div>
-  return <InboxCard icon={icon} title={request.title} summary={summary}
-    meta={meta} actions={<>{request.kind === 'tool_draft' && <Steps request={request} />}{answers}</>} onLater={onLater} footer={footer}>
+  return <InboxCard icon={icon} title={request.title} source={request.kind === 'memory' ? 'Memory · To remember' : `${kind} · ${request.sessionId ? 'Conker’s request' : 'Your request'}`} summary={summary}
+    primary={!changing && <Button type="button" size="sm" disabled={busy} onClick={onApprove}>{busy ? 'Working…' : action}</Button>}
+    actions={<>{request.kind === 'tool_draft' && <Steps request={request} />}{answers}</>} facts={facts} advanced={talk} onLater={onLater} footer={footer}>
     <Details request={request} />
-    {talk}
-    {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
   </InboxCard>
 }
