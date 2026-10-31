@@ -4,13 +4,14 @@
  * the real screens and validators run unchanged. Never imported by the production entry.
  */
 import { GatewayError } from '@/lib/gateway/transport'
-import { createCharacterStudio } from '@/lib/api/character-defaults'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
 import { createFakeCalls } from './fake-gateway-calls'
 import { createFakeSetup } from './fake-gateway-setup'
 import { createFakeSystem } from './fake-gateway-system'
+import { createFakeCharacters } from './fake-gateway-characters'
+import { createFakeTerminal } from './fake-gateway-terminal'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -122,41 +123,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     agentProfile('companion', 'companion', 'Conker', 'Your daily companion', 'Help the owner think clearly, plan realistically, and stay in control.'),
     agentProfile(`agent_${'1'.repeat(32)}`, 'agent', 'Research partner', 'Focused research and synthesis', 'Investigate a question, distinguish evidence from inference, and return concise sourced findings.'),
   ]
-  let characterRevision = 1
-  let character: Json = {
-    name: 'Conker', mood: 'Thoughtful · ready to listen', personality: 'Curious and steady. Help me think clearly and stay in control.',
-    speakingStyle: 'Warm, direct, and concise. A little dry humour when it fits.', speakingPreset: 'custom',
-    portrait: '/conker.png', renderer: 'static', face: 'sprout', tone: 'green',
-    emotions: { neutral: 'default', happy: 'portrait', thinking: 'portrait', concerned: 'default', celebrating: 'portrait' },
-    studio: createCharacterStudio(),
-  }
-  const characterHistory: Json[] = [{ revision: 1, created_at: now() - 7200, restored_from: null }]
-  const characterVersions = new Map<number, Json>([[1, structuredClone(character)]])
-  let terminalLease: string | null = null
-  let terminalOutput = new TextEncoder().encode('\u001b[1mPreview owner shell\u001b[0m\r\nowner@conker:/workspace/conker$ ')
-  let terminalLine = ''
-  const appendTerminal = (text: string) => {
-    const next = new TextEncoder().encode(text), combined = new Uint8Array(terminalOutput.length + next.length)
-    combined.set(terminalOutput); combined.set(next, terminalOutput.length); terminalOutput = combined
-  }
-  const terminalBase64 = (value: Uint8Array) => {
-    let binary = ''
-    for (const byte of value) binary += String.fromCharCode(byte)
-    return btoa(binary)
-  }
-  const terminalInput = (value: string) => {
-    const binary = atob(value), bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
-    const text = new TextDecoder().decode(bytes)
-    for (const character of text) {
-      if (character === '\r' || character === '\n') {
-        appendTerminal(`\r\n${terminalLine.trim() === 'pwd' ? '/workspace/conker\r\n' : terminalLine.trim() ? `Preview received: ${terminalLine.trim()}\r\n` : ''}owner@conker:/workspace/conker$ `)
-        terminalLine = ''
-      } else if (character === '\u007f') {
-        if (terminalLine) { terminalLine = terminalLine.slice(0, -1); appendTerminal('\b \b') }
-      } else { terminalLine += character; appendTerminal(character) }
-    }
-    return bytes.length
-  }
+  const charactersHandle = createFakeCharacters(now, fail)
+  const terminalHandle = createFakeTerminal(fail)
   const projectView = (id: string, revision: number, fields: Json, links: Json[] = [], archivedAt: number | null = null): Json => ({
     schemaVersion: 1, id, revision, ...fields, createdAt: now() - 5400, updatedAt: now() - 900, archivedAt, links,
     authority: 'none', contentIncluded: false, grantsInherited: false,
@@ -355,27 +323,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     }
     // Failure-path switch: sessionStorage 'conker-fake-fail' = 'sessions' makes the chat list fail.
     if (method === 'GET' && path === '/api/pi/sessions' && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'sessions') fail(503)
-    if (path === '/api/terminal/current' && method === 'GET') return { lease: terminalLease, workspace: '/workspace/conker', maximumLifetimeSeconds: 600, commandsPersisted: false, outputPersisted: false }
-    if (path === '/api/terminal' && method === 'POST') {
-      const requestId = String(options.body?.requestId ?? '')
-      if (terminalLease && terminalLease !== requestId) fail(409)
-      const replayed = terminalLease === requestId
-      terminalLease = requestId
-      return { id: requestId, closed: false, replayed }
-    }
-    if ((match = path.match(/^\/api\/terminal\/([A-Za-z0-9_-]{16,100})$/)) && method === 'GET') {
-      if (terminalLease !== match[1]) return fail(404)
-      const cursor = Number(options.query?.cursor ?? 0)
-      if (!Number.isSafeInteger(cursor) || cursor < 0 || cursor > terminalOutput.length) return fail(422)
-      return { data: terminalBase64(terminalOutput.slice(cursor)), encoding: 'base64', cursor: terminalOutput.length, droppedBytes: 0, exitCode: null }
-    }
-    if ((match = path.match(/^\/api\/terminal\/([A-Za-z0-9_-]{16,100})\/(input|resize|close)$/)) && method === 'POST') {
-      if (terminalLease !== match[1]) return fail(404)
-      if (match[2] === 'input') { const acceptedBytes = terminalInput(String(options.body?.data ?? '')); return { acceptedBytes, automaticReplay: false } }
-      if (match[2] === 'resize') return { resized: true }
-      terminalLease = null
-      return { closed: true }
-    }
+    const terminalHandled = terminalHandle(path, method, options)
+    if (terminalHandled !== undefined) return terminalHandled
     if (method === 'GET' && path === '/api/pi/sessions/history') {
       if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'history') fail(503)
       const q = String(options.query?.q ?? '').trim().toLowerCase(), limit = Number(options.query?.limit ?? 50)
@@ -630,27 +579,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       if (action === 'reconcile') { run.status = 'completed'; run.execution = 'resolved'; run.receiptRecorded = true; run.outcomeCode = 'COMPLETED' }
       return action === 'cancel' ? { ...run, replayed: false } : run
     }
-    if (path === '/api/control/pi/characters/companion' && method === 'GET') {
-      const selected = options.query?.revision === undefined ? characterRevision : Number(options.query.revision)
-      return { agentId: 'companion', revision: selected, profile: characterVersions.get(selected) ?? fail(404) }
-    }
-    if (path === '/api/control/pi/characters/companion/history' && method === 'GET') return { results: characterHistory }
-    if (path === '/api/control/pi/characters/companion/export' && method === 'GET') {
-      const selected = options.query?.revision === undefined ? characterRevision : Number(options.query.revision)
-      return { format: 'conker-character', version: 1, character: characterVersions.get(selected) ?? fail(404) }
-    }
-    if (path === '/api/control/pi/characters/companion/import' && method === 'POST') {
-      let raw: Json
-      try { raw = JSON.parse(String(options.body?.text ?? '')) as Json } catch { return fail(422) }
-      if (raw.format !== 'conker-character' || raw.version !== 1 || !raw.character || typeof raw.character !== 'object') fail(422)
-      return { profile: raw.character, note: 'Imported into a draft. Review, then save with the current revision.' }
-    }
-    if (path === '/api/control/pi/characters/companion/save' && method === 'POST') {
-      if (Number(options.body?.expected_revision) !== characterRevision) fail(409)
-      character = structuredClone(options.body?.profile as Json); characterRevision += 1
-      characterVersions.set(characterRevision, structuredClone(character)); characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: null })
-      return { agentId: 'companion', revision: characterRevision, profile: character }
-    }
+    const charactersHandled = charactersHandle(path, method, options)
+    if (charactersHandled !== undefined) return charactersHandled
     const systemHandled = systemHandle(path, method, options)
     if (systemHandled !== undefined) return systemHandled
     const callsHandled = callsHandle(path, method, options)
@@ -671,13 +601,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       if (match[2] === 'update') { team.definition = structuredClone(options.body?.definition as Json); team.name = (team.definition as Json).name }
       else team.archived_at = match[2] === 'archive' ? now() : null
       team.revision = Number(team.revision) + 1; team.updated_at = now(); teamVersions.set(Number(team.revision), structuredClone(team.definition as Json)); return team
-    }
-    if (path === '/api/control/pi/characters/companion/restore' && method === 'POST') {
-      if (Number(options.body?.expected_revision) !== characterRevision) fail(409)
-      const selected = Number(options.body?.revision), prior = characterVersions.get(selected) ?? fail(404)
-      character = structuredClone(prior); characterRevision += 1; characterVersions.set(characterRevision, structuredClone(character))
-      characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: selected })
-      return { agentId: 'companion', revision: characterRevision, profile: character }
     }
     const setupHandledModels = setupHandle(path, method, options)
     if (setupHandledModels !== undefined) return setupHandledModels
