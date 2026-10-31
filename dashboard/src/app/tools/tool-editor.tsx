@@ -1,47 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ToolNode } from '@/lib/tool-workspace';
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  History,
-  List,
-  Maximize,
-  Minimize,
-  PanelBottom,
-  Plus,
-  Redo2,
-  Save,
-  TestTube2,
-  Trash2,
-  Undo2,
-  X,
-} from "lucide-react";
 import { type Connection } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  CollectionSearch,
-  WorkspaceInspector,
-  OverlayBody,
-  ConfirmationDialog,
-} from "@/components/design-system";
-import { ReferenceSection } from "@/components/reference-section";
+import { ConfirmationDialog } from "@/components/design-system";
 import { conkerClient } from "@/lib/api";
 import {
   createToolNode,
-  NODE_LABELS,
-  parseToolDraft,
   editorValidation,
   type JsonValue,
   type NodeKind,
@@ -50,21 +14,13 @@ import {
   type ToolRun,
   type WorkspaceRecord,
 } from "@/lib/tool-workspace";
-import { ToolCanvas } from "./tool-canvas";
-import { Choice, ToolConfiguration } from "./tool-fields";
-import { NodeFields } from "./tool-node-fields";
+import { ToolConfiguration } from "./tool-fields";
 import { ToolTestPanel } from "./tool-test-panel";
+import { ToolEditorToolbar, type EditorMode } from "./tool-editor-toolbar";
+import { ToolStepCanvas } from "./tool-editor-canvas";
+import { ToolStepInspector } from "./tool-editor-inspector";
+import { ToolSource } from "./tool-editor-source";
 
-type EditorMode = "build" | "source" | "configure";
-const stepTypes: NodeKind[] = [
-  "tool_call",
-  "workflow_call",
-  "set",
-  "calculation",
-  "condition",
-  "loop",
-  "return",
-];
 const drafts = new Map<
   string,
   {
@@ -369,138 +325,32 @@ export function ToolEditor({
       ref={workspace}
       className={`tools-workspace${expanded ? " tools-workspace-expanded" : ""}`}
     >
-      <div className="tools-toolbar">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Back to tool library"
-          disabled={busy}
-          onClick={() => { if (liveSave && (dirty || pendingEdits)) setLeave(true); else onBack(); }}
-        >
-          <ArrowLeft />
-        </Button>
-        <div className="tool-title">
-          <strong className="truncate text-sm">{definition.name}</strong>
-          <span className="text-xs text-muted-foreground">
-            {dirty ? "Unsaved draft" : "Draft"} · {liveSave ? "ToolGate draft" : "local preview"}
-          </span>
-        </div>
-        <Select
-          value={mode}
-          onValueChange={(v) => {
-            switchMode(v as EditorMode);
-          }}
-        >
-          <SelectTrigger aria-label="Editor view" className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="build">Build</SelectItem>
-            <SelectItem value="source">Source</SelectItem>
-            <SelectItem value="configure">Configure</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="tools-toolbar-spacer" />
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy || pendingEdits || !dirty}
-          onClick={() => void save()}
-        >
-          <Save />
-          Save
-        </Button>
-        <Button
-          size="sm"
-          disabled={
-            (!!liveSave && (!liveRun || dirty)) || busy || pendingEdits || (version === "draft" && issues.length > 0)
-          }
-          onClick={() => {
-            if (liveRun) { liveRun(); return; }
-            setPanel("test");
-            void test();
-          }}
-        >
-          <TestTube2 />
-          {liveRun ? 'Run' : 'Test'}
-        </Button>
-        <Popover>
-          <PopoverTrigger render={<Button
-              variant="outline"
-              size="icon"
-              aria-label="More tool actions" />}>
-              <ChevronDown />
-            </PopoverTrigger>
-          <PopoverContent align="end" className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              disabled={(!!liveSave && (!livePublish || dirty)) || busy || pendingEdits || issues.length > 0}
-              onClick={() =>
-                void task(async () => {
-                  if (livePublish) { livePublish(); return; }
-                  if (pendingEdits)
-                    throw new Error(
-                      "Apply or discard pending changes before publishing.",
-                    );
-                  await conkerClient.toolWorkspace.save(definition);
-                  const v = await conkerClient.toolWorkspace.publish(record.id);
-                  setNotice(
-                    `Preview v${v.version} published. No live tool or access was created.`,
-                  );
-                })
-              }
-            >
-              <Check />
-              {liveSave ? "Publish saved version" : "Publish preview version"}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={pendingEdits}
-              onClick={exportDefinition}
-            >
-              <Download />
-              Export definition
-            </Button>
-            <Button variant="ghost" disabled={!!liveSave && !liveHistory} onClick={() => liveHistory ? liveHistory() : setPanel("history")}>
-              <History />
-              Versions & runs
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={!!liveSave || pendingEdits}
-              onClick={() =>
-                void task(async () => {
-                  const copied = await conkerClient.toolWorkspace.create(
-                    `${definition.name} copy`,
-                    definition.kind,
-                  );
-                  await conkerClient.toolWorkspace.save({
-                    ...definition,
-                    id: copied.id,
-                    name: `${definition.name} copy`,
-                  });
-                  setNotice("Copy added to the tool library.");
-                })
-              }
-            >
-              <Copy />
-              Duplicate tool
-            </Button>
-            <Button variant="ghost" disabled={!!liveSave} onClick={() => setRemove(true)}>
-              <Trash2 />
-              Delete preview tool
-            </Button>
-          </PopoverContent>
-        </Popover>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={expanded ? "Restore workspace" : "Maximize workspace"}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? <Minimize /> : <Maximize />}
-        </Button>
-      </div>
+      <ToolEditorToolbar
+        definition={definition}
+        record={record}
+        busy={busy}
+        dirty={dirty}
+        pendingEdits={pendingEdits}
+        expanded={expanded}
+        mode={mode}
+        version={version}
+        issues={issues}
+        liveSave={liveSave}
+        livePublish={livePublish}
+        liveHistory={liveHistory}
+        liveRun={liveRun}
+        onBack={onBack}
+        setLeave={setLeave}
+        setPanel={setPanel}
+        setRemove={setRemove}
+        setExpanded={setExpanded}
+        setNotice={setNotice}
+        switchMode={switchMode}
+        save={save}
+        test={test}
+        task={task}
+        exportDefinition={exportDefinition}
+      />
       {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>}
       {error && (
         <div role="alert" className="tools-feedback text-destructive-foreground">
@@ -522,343 +372,73 @@ export function ToolEditor({
       <div className="tools-body">
         {mode === "build" && (
           <>
-            <div className="tools-canvas-column">
-              <div className="tools-build-controls">
-                <Popover open={palette} onOpenChange={setPalette}>
-                  <PopoverTrigger render={<Button variant="outline" size="sm" />}>
-                      <Plus />
-                      Add step
-                    </PopoverTrigger>
-                  <PopoverContent align="start" className="space-y-3">
-                    <CollectionSearch
-                      label="Search steps"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Find a step…"
-                    />
-                    {stepTypes
-                      .filter((t) =>
-                        NODE_LABELS[t]
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                      )
-                      .map((t) => {
-                        return (
-                          <Button
-                            key={t}
-                            variant="ghost"
-                            className="w-full justify-start"
-                            onClick={() => add(t)}
-                          >
-                            <Plus />
-                            {NODE_LABELS[t]}
-                          </Button>
-                        );
-                      })}
-                    <p className="text-xs text-muted-foreground">
-                      Model calls and arbitrary code need a connected runtime.
-                    </p>
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  variant={outline ? "secondary" : "ghost"}
-                  size="sm"
-                  aria-pressed={outline}
-                  onClick={() => setOutline(!outline)}
-                >
-                  <List />
-                  Steps
-                </Button>
-                <div className="tools-toolbar-spacer" />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Undo edit"
-                  disabled={!history.length || pendingEdits}
-                  onClick={undo}
-                >
-                  <Undo2 />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Redo edit"
-                  disabled={!future.length || pendingEdits}
-                  onClick={redo}
-                >
-                  <Redo2 />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-pressed={!!panel}
-                  disabled={!!liveSave && !liveRun}
-                  aria-label={liveRun ? 'Workflow runs' : 'Test panel'}
-                  onClick={() => liveRun ? liveRun() : setPanel(panel ? null : "test")}
-                >
-                  <PanelBottom />
-                  <span className="hidden sm:inline">{liveRun ? 'Runs' : 'Test panel'}</span>
-                </Button>
-              </div>
-              <div className="tools-canvas-row">
-                {outline && (
-                  <div className="tools-outline" aria-label="Workflow steps">
-                    {definition.nodes.map((n) => (
-                      <button
-                        key={n.id}
-                        className={`tool-outline-row ${n.id === selected ? "is-selected" : ""}`}
-                        onClick={() => setSelected(n.id)}
-                      >
-                        <span className="block font-medium">{n.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {NODE_LABELS[n.type]}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <ToolCanvas
-                  definition={definition}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onMove={(id, position) => {
-                    if (sourceDirty) {
-                      explainPendingEdits();
-                      return;
-                    }
-                    setDefinition((d) => ({
-                      ...d,
-                      nodes: d.nodes.map((n) =>
-                        n.id === id ? { ...n, position } : n,
-                      ),
-                    }));
-                    setSource(null);
-                  }}
-                  onConnect={connect}
-                  onRemoveEdge={(id) =>
-                    change({
-                      ...definition,
-                      edges: definition.edges.filter((e) => e.id !== id),
-                    })
-                  }
-                  run={canvasRun}
-                />
-              </div>
-            </div>
+            <ToolStepCanvas
+              definition={definition}
+              selected={selected}
+              setSelected={setSelected}
+              canvasRun={canvasRun}
+              palette={palette}
+              setPalette={setPalette}
+              query={query}
+              setQuery={setQuery}
+              outline={outline}
+              setOutline={setOutline}
+              history={history}
+              future={future}
+              panel={panel}
+              setPanel={setPanel}
+              pendingEdits={pendingEdits}
+              liveSave={liveSave}
+              liveRun={liveRun}
+              sourceDirty={sourceDirty}
+              connect={connect}
+              add={add}
+              undo={undo}
+              redo={redo}
+              explainPendingEdits={explainPendingEdits}
+              setDefinition={setDefinition}
+              setSource={setSource}
+              change={change}
+            />
             {node && (
-              <WorkspaceInspector
-                label="Tool step inspector"
-                title={node.label}
-                description={`${NODE_LABELS[node.type]} · ${node.id}`}
-                onClose={() => setSelected(null)}
-              >
-                <OverlayBody>
-                  <NodeFields
-                    capabilityPicker={capabilityPicker}
-                    key={node.id}
-                    node={node}
-                    definition={definition}
-                    run={canvasRun}
-                    records={records}
-                    argumentSource={argumentSources[node.id]}
-                    onArgumentSourceChange={(text) =>
-                      changeArgumentSource(node.id, text)
-                    }
-                    onChange={(next) =>
-                      change({
-                        ...definition,
-                        nodes: definition.nodes.map((n) =>
-                          n.id === next.id ? next : n,
-                        ),
-                      })
-                    }
-                  />
-                  <ReferenceSection title="Connections">
-                    {definition.edges
-                      .filter(
-                        (e) => e.source === node.id || e.target === node.id,
-                      )
-                      .map((e) => (
-                        <div key={e.id} className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 break-words text-xs">
-                            {
-                              definition.nodes.find((n) => n.id === e.source)
-                                ?.label
-                            }{" "}
-                            →{" "}
-                            {
-                              definition.nodes.find((n) => n.id === e.target)
-                                ?.label
-                            }
-                            {e.branch && ` (${e.branch})`}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Remove connection ${e.source} to ${e.target}`}
-                            onClick={() =>
-                              change({
-                                ...definition,
-                                edges: definition.edges.filter(
-                                  (edge) => edge.id !== e.id,
-                                ),
-                              })
-                            }
-                          >
-                            <X />
-                          </Button>
-                        </div>
-                      ))}
-                    {node.type !== "return" && (
-                      <>
-                        <Choice
-                          label="Connect to step"
-                          value={
-                            connectFrom === node.id
-                              ? (connectTo ?? "none")
-                              : "none"
-                          }
-                          options={[
-                            "none",
-                            ...definition.nodes
-                              .filter(
-                                (n) => n.id !== node.id && n.type !== "input",
-                              )
-                              .map((n) => n.id),
-                          ]}
-                          onChange={(id) => {
-                            setConnectFrom(node.id);
-                            setConnectTo(id);
-                          }}
-                        />
-                        {node.type === "condition" && (
-                          <Choice
-                            label="Branch"
-                            value={branch}
-                            options={["true", "false"]}
-                            onChange={setBranch}
-                          />
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={
-                            connectFrom !== node.id ||
-                            !connectTo ||
-                            connectTo === "none"
-                          }
-                          onClick={() =>
-                            connect({
-                              source: node.id,
-                              target: connectTo!,
-                              sourceHandle:
-                                node.type === "condition" ? branch : null,
-                              targetHandle: null,
-                            })
-                          }
-                        >
-                          Connect next step
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                          Replaces this output’s existing connection.
-                        </p>
-                      </>
-                    )}
-                  </ReferenceSection>
-                  {stepReceipt && (
-                    <ReferenceSection title="Last test output">
-                      <p className="text-xs">{stepReceipt.status}</p>
-                      <pre className="tool-json">
-                        {stepReceipt.error ??
-                          serial(stepReceipt.output ?? null)}
-                      </pre>
-                    </ReferenceSection>
-                  )}
-                  {node.type !== "input" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (argumentSources[node.id] !== undefined) {
-                          explainPendingEdits();
-                          return;
-                        }
-                        change({
-                          ...definition,
-                          nodes: definition.nodes.filter(
-                            (n) => n.id !== node.id,
-                          ),
-                          edges: definition.edges.filter(
-                            (e) => e.source !== node.id && e.target !== node.id,
-                          ),
-                        });
-                        setSelected(null);
-                      }}
-                    >
-                      <Trash2 />
-                      Remove step
-                    </Button>
-                  )}
-                </OverlayBody>
-              </WorkspaceInspector>
+              <ToolStepInspector
+                node={node}
+                definition={definition}
+                records={records}
+                capabilityPicker={capabilityPicker}
+                canvasRun={canvasRun}
+                argumentSources={argumentSources}
+                changeArgumentSource={changeArgumentSource}
+                change={change}
+                setSelected={setSelected}
+                connectFrom={connectFrom}
+                connectTo={connectTo}
+                setConnectFrom={setConnectFrom}
+                setConnectTo={setConnectTo}
+                branch={branch}
+                setBranch={setBranch}
+                connect={connect}
+                stepReceipt={stepReceipt}
+                explainPendingEdits={explainPendingEdits}
+                serial={serial}
+              />
             )}
           </>
         )}
         {mode === "source" && (
-          <div className="tool-source">
-            <div className="flex flex-wrap items-center gap-2 border-b p-3">
-              <span className="mr-auto text-xs text-muted-foreground">
-                definition.json · same draft as the canvas
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!sourceDirty}
-                onClick={() => {
-                  setSource(null);
-                  setError("");
-                }}
-              >
-                Discard source changes
-              </Button>
-              <Button
-                size="sm"
-                disabled={!sourceDirty}
-                onClick={() => {
-                  try {
-                    const parsed = parseToolDraft(source!);
-                    if (parsed.id !== record.id)
-                      throw new Error(
-                        "Keep the tool ID unchanged. Use Duplicate to create another tool.",
-                      );
-                    if (hasUnappliedFields) {
-                      explainPendingEdits();
-                      return;
-                    }
-                    change(parsed, true, true);
-                    setError("");
-                    setNotice("Source applied to the canvas.");
-                  } catch (e) {
-                    setError(
-                      e instanceof Error ? e.message : "Invalid definition",
-                    );
-                  }
-                }}
-              >
-                Apply source
-              </Button>
-            </div>
-            <Textarea
-              aria-label="Tool definition JSON"
-              className="tool-source-input"
-              spellCheck={false}
-              value={source ?? serial(definition)}
-              onChange={(e) => setSource(e.target.value)}
-            />
-            <p className="px-4 py-2 text-xs text-muted-foreground">
-              Structured workflow source. JavaScript/Python execution is not
-              connected.
-            </p>
-          </div>
+          <ToolSource
+            record={record}
+            definition={definition}
+            source={source}
+            sourceDirty={sourceDirty}
+            hasUnappliedFields={hasUnappliedFields}
+            setSource={setSource}
+            setError={setError}
+            setNotice={setNotice}
+            explainPendingEdits={explainPendingEdits}
+            change={change}
+            serial={serial}
+          />
         )}
         {mode === "configure" && (
           <div className="tool-config-scroll">
