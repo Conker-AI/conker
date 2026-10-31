@@ -37,6 +37,10 @@ which module versions a release pins.
 - **Services says what is restarting.** While a restart runs, the summary on Server > Services
   names the restarting service and counts only the others, instead of repeating "All N services
   are running." from the last read.
+- **Pi 0.16.0 is pinned.** A helper role can follow the answer model: saved with
+  `followAnswer: true`, it takes the answer role's model and backups, refilled on every save, so
+  Settings > Models shows side jobs on Auto. Off still turns a role off. The generated API types
+  are regenerated from it.
 - **Pi 0.15.1 is pinned.** Fixes only: a declined turn that already acted no longer blocks its
   queue, two webhook calls at once start one job, a repeated setup memory review answers instead of
   failing, a malformed local model settings document no longer fails an Ollama answer, a
@@ -472,7 +476,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.15.1 |
+| Pi | v0.16.0 |
 | ToolGate | v0.11.0 |
 | MemoryGate | v0.7.0 |
 | SystemGate | v0.4.0 |

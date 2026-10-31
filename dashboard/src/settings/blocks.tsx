@@ -7,6 +7,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { AccessDelegateBlock, AlwaysAskBlock, InboxButtonsBlock, ToolsUsableBlock } from './access-blocks'
 import { HelperRoleBlock, IdeasBlock, JumpTo, PlaceLink, ProfileBlock, TalkingModelBlock } from './blocks-parts'
+import { SideJobsBlock } from './side-jobs'
 
 /** The settings with a screen of their own, by the `component` name in the registry. */
 export function settingBlocks({ client, authStore, onSignOut }: { client: GatewayControlClient; authStore: GatewayAuthStore; onSignOut?: () => void }): Record<string, () => ReactNode> {
@@ -17,6 +18,7 @@ export function settingBlocks({ client, authStore, onSignOut }: { client: Gatewa
     'thinking-model': () => <HelperRoleBlock role="thinking" offLabel="Off" />,
     'reviewer-model': () => <HelperRoleBlock role="reviewer" offLabel="Same as the talking model" />,
     ideas: () => <IdeasBlock />,
+    'side-jobs': () => <SideJobsBlock />,
     providers: () => <GatewayProvidersSettings client={client} authStore={authStore} embedded />,
     'model-roles': () => <JumpTo target="models.providers">Edit roles under Providers and models</JumpTo>,
     'access-delegate': () => <AccessDelegateBlock />,

@@ -499,6 +499,7 @@ Which AI answers, thinks and helps, and how.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
+| **Side jobs**<br>`models.side_jobs` | Smaller jobs the AI does in the background, and which model does each. (applies right away) | its own screen | Settings screen |
 | **Model roles**<br>`models.roles` | Every role's model, backup, time limit and what happens on failure. (applies right away) | its own screen | Settings screen |
 | **Judge models**<br>`models.jobs.judge` | Which models judge answers, first choice first. (saved, not used yet) | none | owner settings |
 | **Fact-check models**<br>`models.jobs.fact_check` | Which models check facts, first choice first. (saved, not used yet) | none | owner settings |
