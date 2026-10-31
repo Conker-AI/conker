@@ -57,8 +57,8 @@ async function checkPreviewRecovery() {
   const transport = load('src/lib/gateway/transport.ts', () => { throw Error('Unexpected transport import') })
   const { createFakeGateway } = load('src/dev/fake-gateway.ts', name => {
     if (name === '@/lib/gateway/transport') return transport
-    if (name === '@/lib/api/character-defaults') return { createCharacterStudio: () => ({}) }
     if (name === '@/lib/gateway/search') return { searchSources: [] }
+    if (/^\.\/fake-gateway-(memory|calls|setup|system|characters|terminal|runtimes|status|teams|jobs)$/.test(name)) return load(`src/dev/${name.slice(2)}.ts`, inner => { if (inner === '@/lib/gateway/transport') return transport; if (inner === '@/lib/api/character-defaults') return { createCharacterStudio: () => ({}) }; throw Error(`Unexpected preview import: ${inner}`) })
     if (name === './fake-gateway-providers') return load('src/dev/fake-gateway-providers.ts', inner => {
       if (inner === '@/lib/gateway/transport') return transport
       if (inner === './fake-gateway-drafting') return load('src/dev/fake-gateway-drafting.ts', drafting => { if (drafting === '@/lib/tool-workspace') return load('src/lib/tool-workspace.ts', () => require('zod')); throw Error(`Unexpected preview import: ${drafting}`) })

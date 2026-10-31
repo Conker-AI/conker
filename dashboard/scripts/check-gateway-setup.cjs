@@ -186,7 +186,7 @@ async function main() {
     const progress = await fs.readFile(path.join(root, 'src/components/gateway/setup-progress.tsx'), 'utf8')
     const presentation = await fs.readFile(path.join(root, 'src/components/gateway/setup-presentation.ts'), 'utf8')
     const today = await fs.readFile(path.join(root, 'src/components/gateway/today-workspace.tsx'), 'utf8')
-    const preview = await fs.readFile(path.join(root, 'src/dev/fake-gateway.ts'), 'utf8')
+    const preview = (await Promise.all(['src/dev/fake-gateway.ts', 'src/dev/fake-gateway-setup.ts'].map(file => fs.readFile(path.join(root, file), 'utf8')))).join('\n')
     const statusHook = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-hook.ts'), 'utf8')
     const statusStore = await fs.readFile(path.join(root, 'src/components/gateway/setup-status-store.ts'), 'utf8')
     assert.ok(transport.includes('/^\\/api\\/control\\/pi\\/setup\\/status$/'),
