@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
 import { CollectionSearch } from '@/components/design-system'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { GatewayPageFrame } from '@/components/gateway/page-frame'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayControlClient } from '@/lib/gateway/control'
@@ -50,9 +48,10 @@ function GroupNav({ selected, onPick, query, onQuery, advanced, onAdvanced, chan
 }) {
   return <nav aria-label="Settings topics" className="flex flex-col gap-4">
     <CollectionSearch label="Search settings" placeholder="Search settings" compact value={query} onChange={event => onQuery(event.target.value)} />
-    <div className="flex flex-col gap-2.5 rounded-lg border px-3 py-2.5">
-      <Label htmlFor="settings-advanced" className="justify-between font-normal">Show advanced<Switch id="settings-advanced" checked={advanced} onCheckedChange={value => onAdvanced(value)} /></Label>
-      <Label htmlFor="settings-changed" className="justify-between font-normal">Changed only{changedCount > 0 && <span className="ml-auto pr-2 text-xs text-muted-foreground tabular-nums">{changedCount}</span>}<Switch id="settings-changed" checked={changedOnly} onCheckedChange={value => onChangedOnly(value)} /></Label>
+    {/* View filters, not settings: pressed chips, so "on" reads at a glance in both themes. */}
+    <div role="group" aria-label="Filter settings" className="flex flex-wrap gap-2">
+      <Button type="button" size="sm" variant={advanced ? 'secondary' : 'outline'} aria-pressed={advanced} className="rounded-full" onClick={() => onAdvanced(!advanced)}>{advanced && <Check aria-hidden="true" />}Advanced</Button>
+      <Button type="button" size="sm" variant={changedOnly ? 'secondary' : 'outline'} aria-pressed={changedOnly} className="rounded-full" onClick={() => onChangedOnly(!changedOnly)}>{changedOnly && <Check aria-hidden="true" />}Changed{changedCount > 0 && <span className="tabular-nums text-muted-foreground">{changedCount}</span>}</Button>
     </div>
     {CATEGORIES.map(category => {
       const groups = SETTINGS_GROUPS.filter(group => group.category === category.id)
@@ -72,8 +71,8 @@ function GroupNav({ selected, onPick, query, onQuery, advanced, onAdvanced, chan
 }
 
 /**
- * Settings: every setting in the registry, by topic, in one row template. Search, "Show advanced"
- * and "Changed only" work across all topics. On a phone the topic list comes first and a topic
+ * Settings: every setting in the registry, by topic, in one row template. Search and the "Advanced" and
+ * "Changed" chips work across all topics. On a phone the topic list comes first and a topic
  * opens on its own page; on wider screens they sit side by side.
  */
 export function SettingsScreen({ client, authStore, onSignOut }: { client: GatewayControlClient; authStore: GatewayAuthStore; onSignOut?: () => void }) {
