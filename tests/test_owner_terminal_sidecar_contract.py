@@ -132,6 +132,18 @@ def test_release_compose_keeps_legacy_gateway_terminal_disabled():
     assert "/workspace" not in gateway
 
 
+def test_terminal_overlay_admits_the_uid_the_gateway_runs_as():
+    base = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    gateway = base.split("  gateway:\n", 1)[1].split("\n  # ---", 1)[0]
+    user = next(line for line in gateway.splitlines() if line.strip().startswith("user:"))
+    uid = user.split('"')[1].split("}:")[0] + "}"
+    overlay = (ROOT / "docker-compose.terminal.yml").read_text(encoding="utf-8")
+    admitted = overlay.split("--gateway-uid\n", 1)[1].splitlines()[0].strip()
+
+    assert uid == "${CONKER_UID:-1000}"
+    assert admitted == f'- "{uid}"'
+
+
 def test_repository_terminal_overlay_matches_the_isolated_boundary():
     body = (ROOT / "docker-compose.terminal.yml").read_text(encoding="utf-8")
     gateway, terminal = body.split("  owner-terminal:\n", 1)
@@ -146,7 +158,7 @@ def test_repository_terminal_overlay_matches_the_isolated_boundary():
     assert 'read_only: true' in terminal
     assert 'cap_drop: [ALL]' in terminal
     assert 'security_opt: [no-new-privileges:true]' in terminal
-    assert "--gateway-uid\n      - \"0\"" in terminal
+    assert "--gateway-uid\n      - \"${CONKER_UID:-1000}\"" in terminal
     assert terminal.count("type: volume") == 1
     assert terminal.count("type: bind") == 1
     assert "env_file:" not in terminal

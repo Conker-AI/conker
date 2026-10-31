@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Owner terminal admits the real Gateway.** The terminal overlay let in UID 0, but the Gateway
+  has run as the owner's UID since 27 October, so an activated terminal would have refused it. The
+  overlay now admits `${CONKER_UID:-1000}`, the Gateway's own `user:`. The install log in the
+  temporary folder is readable by the owner only.
 - **Plainer chat wait, no tracker code.** After a reply finishes streaming, the chat says
   "Saving reply…" instead of "Preview ended. Waiting for saved history…". The dashboard no
   longer carries the template's dormant Google Tag Manager loader or its unused demo files.

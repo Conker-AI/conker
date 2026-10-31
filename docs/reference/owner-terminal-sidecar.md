@@ -190,11 +190,11 @@ and receives the sidecar's control GID only for the ephemeral socket mount. Dire
 mode `0770`, socket mode `0660` and `SO_PEERCRED` UID validation are all required;
 shared group access alone is not admission.
 
-The source-built Ubuntu Gateway runs as UID `1000`; the currently published repository
-Pi image retains its root Gateway process and is therefore admitted as UID `0`. Both
-values are explicit sidecar arguments, distinct from `65532`, and covered by resolved
-Compose checks. Moving the repository Gateway to a non-root image is a separate image
-and auth-volume migration, not an implicit change to this transport contract.
+The source-built Ubuntu Gateway runs as UID `1000`. The repository Gateway runs as the
+owner's UID (`CONKER_UID`, default `1000`, the same value as its `user:` line), so the
+overlay admits `${CONKER_UID:-1000}`. Both values are explicit sidecar arguments,
+distinct from `65532`, and a test keeps the overlay's value equal to the Gateway's
+`user:`.
 
 The supervisor refreshes `health.json` atomically on the ephemeral control volume.
 The health command requires the exact schema, a ready state, a recent monotonic

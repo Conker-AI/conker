@@ -1016,6 +1016,8 @@ main() {
     ENV_FILE="$ROOT/.env"
     LOG="${TMPDIR:-/tmp}/conker-install.$$.log"
     trap 'rm -f "$LOG"' EXIT
+    # Only the owner may read it: it collects error output from every step.
+    ( umask 077; : > "$LOG" )
 
     check_machine
     [ "$CHECK_ONLY" -eq 1 ] && { say ""; good "This machine can run Conker."; exit 0; }
