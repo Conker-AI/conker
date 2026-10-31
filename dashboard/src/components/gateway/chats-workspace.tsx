@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MessageSquare, RefreshCw } from 'lucide-react'
+import { MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
 import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
@@ -41,6 +41,7 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
     <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
       <PageHeader actionsOnly title="Chats" description="Find a conversation or start a new one." density="compact" actions={<>
         <WorkspaceAction iconOnly aria-label={directory.pending === 'refresh' ? 'Refreshing chats' : 'Refresh chats'} title="Refresh chats" onClick={() => void directory.refresh()} disabled={busy || directory.error === 'query'}><RefreshCw aria-hidden="true" className={directory.pending === 'refresh' ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>
+        <WorkspaceAction emphasis="primary" keepVisible onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}><SquarePen aria-hidden="true" />New chat</WorkspaceAction>
       </>} />
       {directory.changed && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-muted-foreground">{directory.changed === 'unverified' ? 'Refresh to check for newer chats.' : searching ? 'New chats may affect your search results.' : 'New chats are available.'}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => void directory.refresh()}>{directory.changed === 'unverified' ? 'Refresh chats' : searching ? 'Refresh results' : 'Show new chats'}</Button></div>}
       {directory.loaded && error && directory.error !== 'older' && directory.error !== 'cursor' && <p role="status" className="text-sm text-muted-foreground">{error}</p>}
