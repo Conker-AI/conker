@@ -213,7 +213,7 @@ async function main() {
 
   // Test Zod keeps the flag
   const controlTs = fs.readFileSync(path.join(root, 'src/lib/gateway/control.ts'), 'utf8')
-  assert.ok(controlTs.includes('followAnswer: z.boolean().optional().default(false)'), 'Zod schema should include followAnswer')
+  assert.ok(controlTs.includes('followAnswer: z.boolean().default(false)'), 'Zod schema should include followAnswer')
 
   // Test SIDE_JOBS has no auto on search-ranking and memory-ranking
   assert.equal(SIDE_JOBS.find(job => job.role === 'search-ranking').auto, false)

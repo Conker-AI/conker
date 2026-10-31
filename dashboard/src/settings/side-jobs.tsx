@@ -1,89 +1,44 @@
-import { ChevronDown } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SIDE_JOBS, sideJobChoice, withSideJob } from "@/lib/api/model-roles"
-import { useModels } from "./models"
+import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SIDE_JOBS, sideJobChoice, withSideJob, type ModelRoleAssignment } from '@/lib/api/model-roles'
+import { useModels } from './models'
 
+/** The smaller background jobs: Auto (same as the main model), Off, or one model each. */
 export function SideJobsBlock() {
-  const { value: models, save, pending } = useModels()
-
-  if (!models?.configuration) {
-    return <div className="text-sm text-muted-foreground">Loading models…</div>
-  }
-
-  const configuration = models.configuration
-  const autoCount = SIDE_JOBS.filter(job => job.auto && sideJobChoice(configuration.roleSettings.roles[job.role as keyof typeof configuration.roleSettings.roles]) === '__auto__').length
-  const offCount = SIDE_JOBS.filter(job => sideJobChoice(configuration.roleSettings.roles[job.role as keyof typeof configuration.roleSettings.roles]) === '__off__').length
-
-  const handleChoiceChange = (role: string, choice: string) => {
-    save(withSideJob(configuration, role, choice))
-  }
-
-  const resetAllToAuto = () => {
-    let updated = configuration
-    SIDE_JOBS.filter(job => job.auto).forEach(job => {
-      updated = withSideJob(updated, job.role, '__auto__')
-    })
-    save(updated)
-  }
-
-  const allAutoJobsAreAuto = SIDE_JOBS.filter(job => job.auto).every(job => sideJobChoice(configuration.roleSettings.roles[job.role as keyof typeof configuration.roleSettings.roles]) === '__auto__')
-
-  return (
-    <Collapsible defaultOpen={false}>
-      <CollapsibleTrigger>
-        <button className="flex w-full items-center justify-between rounded-md border p-3 text-left">
-          <span className="font-medium">Side jobs</span>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{autoCount} on Auto · {offCount} off</span>
-            <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+  const { value, enabled, pending, save, error } = useModels()
+  const saved = value?.configuration
+  if (!saved) return <p role={error ? 'alert' : 'status'} className="text-sm text-muted-foreground">{error || 'Loading models…'}</p>
+  const roles = saved.roleSettings.roles as Record<string, ModelRoleAssignment | undefined>
+  const choices = SIDE_JOBS.map(job => sideJobChoice(roles[job.role]))
+  const onAuto = choices.filter(choice => choice === '__auto__').length
+  const off = choices.filter(choice => choice === '__off__').length
+  const allAuto = SIDE_JOBS.every((job, index) => !job.auto || choices[index] === '__auto__')
+  const resetAll = () => void save(SIDE_JOBS.filter(job => job.auto).reduce((next, job) => withSideJob(next, job.role, '__auto__'), saved))
+  return <Collapsible defaultOpen={false}>
+    <CollapsibleTrigger className="group/side flex min-h-12 w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <span className="text-sm">{onAuto} on Auto · {off} off</span>
+      <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-panel-open/side:rotate-180" aria-hidden />
+    </CollapsibleTrigger>
+    <CollapsibleContent>
+      <div className="divide-y">
+        {SIDE_JOBS.map((job, index) => {
+          const current = roles[job.role]
+          // A model chosen elsewhere (such as a local ranking model) stays visible as the current choice.
+          const extra = current?.modelId && !enabled.some(model => model.id === current.modelId) ? saved.models.filter(model => model.id === current.modelId) : []
+          const items = [...(job.auto ? [{ value: '__auto__', label: 'Auto · same as main model' }] : []), { value: '__off__', label: job.offLabel },
+            ...[...enabled, ...extra].map(model => ({ value: model.id, label: model.name }))]
+          return <div key={job.role} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1"><label htmlFor={`side-job-${job.role}`} className="text-sm font-medium">{job.title}</label><p className="text-xs text-muted-foreground">{job.description}</p></div>
+            <Select value={choices[index]} disabled={pending} items={items} onValueChange={next => { if (next !== null && next !== choices[index]) void save(withSideJob(saved, job.role, String(next))) }}>
+              <SelectTrigger id={`side-job-${job.role}`} className="w-full sm:w-56 sm:shrink-0"><SelectValue /></SelectTrigger>
+              <SelectContent>{items.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-0 divide-y">
-        {SIDE_JOBS.map(job => {
-          const currentChoice = sideJobChoice(configuration.roleSettings.roles[job.role as keyof typeof configuration.roleSettings.roles])
-          const enabledModels = configuration.models.filter(model => model.enabled && configuration.providers.some(provider => provider.id === model.providerId && provider.enabled))
-          
-          return (
-            <div key={job.role} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
-                <div className="text-sm font-medium">{job.title}</div>
-                <div className="text-xs text-muted-foreground">{job.description}</div>
-              </div>
-              <Select
-                value={currentChoice}
-                onValueChange={choice => choice && handleChoiceChange(job.role as string, choice)}
-                disabled={pending}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {job.auto && (
-                    <SelectItem value="__auto__">Auto · same as main model</SelectItem>
-                  )}
-                  <SelectItem value="__off__">{job.offLabel}</SelectItem>
-                  {enabledModels.map(model => (
-                    <SelectItem key={model.id} value={model.id || ''}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )
         })}
-        <div className="pt-3">
-          <button
-            onClick={resetAllToAuto}
-            disabled={pending || allAutoJobsAreAuto}
-            className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Reset all to Auto
-          </button>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  )
+      </div>
+      <Button type="button" variant="ghost" size="sm" className="mt-1" disabled={pending || allAuto} onClick={resetAll}>Reset all to Auto</Button>
+    </CollapsibleContent>
+  </Collapsible>
 }

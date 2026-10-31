@@ -49,13 +49,7 @@ export function createFakeSetup(preview: { setupStep?: 'model' | 'memory' | 'cap
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     let match: RegExpMatchArray | null
     if (path === '/api/control/pi/models/configuration') {
-      if (method === 'POST') {
-        const config = options.body?.configuration as Json & { roleSettings?: ModelRolesConfiguration }
-        if (config && typeof config === 'object' && config.roleSettings) {
-          models.revision += 1
-          models.configuration = followAnswerRoles(config as { roleSettings: ModelRolesConfiguration })
-        }
-      }
+      if (method === 'POST') { models.revision += 1; models.configuration = followAnswerRoles(options.body?.configuration as Json & { roleSettings: ModelRolesConfiguration }) }
       return models
     }
     if (path === '/api/control/pi/setup/models') {
