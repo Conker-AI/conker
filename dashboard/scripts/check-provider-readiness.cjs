@@ -84,7 +84,7 @@ function componentHarness() {
   const subscriptions = new Map()
   const mocks = { react: hooks, zustand: { useStore(store) { if (!subscriptions.has(store)) subscriptions.set(store, store.subscribe(() => { dirty = true })); return store.getState() } },
     'lucide-react': { ExternalLink: 'svg', LogIn: 'svg', RefreshCw: 'svg' }, '@/app/settings/models-providers': { ModelsProviders: 'ModelsProviders' },
-    '@/components/ui/button': { Button: 'button' }, '@/components/design-system': { WorkspaceSection: 'section' }, './page-frame': { GatewayPageFrame: 'main' },
+    '@/components/ui/button': { Button: 'button' }, '@/components/ui/badge': { Badge: 'Badge' }, '@/components/ui/sheet': { Sheet: 'Sheet', SheetTrigger: 'SheetTrigger', SheetContent: 'SheetContent', SheetHeader: 'SheetHeader', SheetTitle: 'SheetTitle', SheetPanel: 'SheetPanel' }, '@/components/design-system': { WorkspaceSection: 'section' }, './page-frame': { GatewayPageFrame: 'main' },
     './chatgpt-connection': { ChatGPTConnection: function ChatGPTConnection() {} }, './native-claude-connection': { NativeClaudeConnection: 'NativeClaudeConnection' }, './provider-credentials': { ProviderCredentials: 'ProviderCredentials' } }
   const { GatewayProvidersSettings } = loader(mocks)('src/components/gateway/providers-settings.tsx')
   const authStore = createStore(() => owner('owner_A')), reads = [], models = [], writes = []
@@ -95,7 +95,7 @@ function componentHarness() {
   function render() { cursor = 0; dirty = false; tree = GatewayProvidersSettings({ client, authStore }); effects.splice(0).forEach(run => run()); return tree }
   return { render, reads, models, writes, authStore,
     async settle() { await flush(); for (let index = 0; dirty; index++) { assert.ok(index < 10); render(); await flush() } },
-    section: () => walk(tree).find(node => node.props?.title === 'Runtime readiness'),
+    section: () => walk(tree).find(node => node.props?.title === 'Connections'),
     editor: () => walk(tree).find(node => node.type === 'ModelsProviders'),
     credentials: () => walk(tree).find(node => node.type === 'ProviderCredentials'),
     button: label => walk(tree).find(node => node.type === 'button' && text(node) === label),
@@ -111,6 +111,36 @@ async function actualComponentCases() {
   const configuration = { providers: [], models: [], defaultModelId: null, roleSettings: { roles: {} } }
   h.models[0].resolve({ revision: 1, configuration }); h.reads[0].resolve([row()]); await h.settle()
   assert.match(text(h.section()), /Ready/)
+  // New assertions
+  const tree = h.render()
+  assert.equal(walk(tree).find(node => node.props?.title === 'Runtime readiness'), undefined, 'no node anywhere in the tree has props.title === "Runtime readiness"')
+  assert.equal(walk(tree).find(node => node.props?.className?.includes('max-w-3xl')), undefined, 'no node\'s className contains max-w-3xl')
+  const sheetContents = walk(tree).filter(node => node.type === 'SheetContent')
+  assert.equal(sheetContents.length, 3, 'there are exactly 3 SheetContent nodes')
+  assert.ok(sheetContents.every(sheet => sheet.props.portalProps?.keepMounted === true), 'every SheetContent node has props.portalProps.keepMounted === true')
+  assert.ok(sheetContents.some(sheet => walk(sheet).some(node => node.type?.name === 'ChatGPTConnection' || (typeof node.type === 'function' && node.type.name === 'ChatGPTConnection'))), 'the ChatGPTConnection node is inside a SheetContent')
+  const detailsNode = walk(tree).find(node => node.type === 'details')
+  assert.ok(detailsNode, 'there is a details node')
+  assert.equal(text(detailsNode.props.children), 'Advanced: model list', 'the details summary text is "Advanced: model list"')
+  assert.ok(walk(detailsNode).some(node => node.type === 'ModelsProviders'), 'the ModelsProviders node is inside a details node')
+  // Test with resolved reads[0] to check Connect button and Ready state
+  h.reads[0] = { resolve: () => {}, signal: { aborted: false } }
+  h.reads[0].resolve([row()])
+  await h.settle()
+  const updatedTree = h.render()
+  // Find the specific ChatGPT row by looking for a div that contains "ChatGPT subscription" but not all the other content
+  const allRows = walk(updatedTree).filter(node => text(node).includes('ChatGPT subscription'))
+  const chatgptRow = allRows.find(node => {
+    const nodeText = text(node)
+    return nodeText.includes('ChatGPT subscription') && !nodeText.includes('Claude subscription')
+  })
+  assert.ok(chatgptRow, 'chatgpt row exists')
+  const sheetTrigger = chatgptRow.props?.children?.[1]?.props?.children?.[1]?.props?.children?.[0]
+  assert.ok(sheetTrigger, 'chatgpt SheetTrigger exists')
+  assert.equal(sheetTrigger.props?.children, 'Connect', 'chatgpt row\'s trigger text is Connect when not ready')
+  const ollamaRow = walk(updatedTree).find(node => text(node).includes('Local model') && !text(node).includes('Refresh'))
+  assert.ok(ollamaRow, 'ollama row exists')
+  assert.match(text(ollamaRow), /Local model.*previous-model.*Ready/, 'ollama row shows Local model, previous-model and Ready')
   const editor = h.editor(); h.section().props.action.props.onClick(); await h.settle()
   assert.doesNotMatch(text(h.section()), /Ready/); assert.match(text(h.section()), /Last checked model: previous-model/)
   assert.equal(h.models.length, 1, 'Health refresh does not reread or replace an unsaved catalogue')
@@ -129,8 +159,8 @@ async function actualComponentCases() {
   assert.match(text(h.section()), /new-modelReady/); assert.match(text(h.section()), /ChatGPT subscriptionUnavailable/)
   h.section().props.action.props.onClick(); await h.settle()
   h.reads[3].resolve([row(null, 'unverified', 'openrouter'), row(null, 'unverified', 'chatgpt')]); await h.settle()
-  assert.match(text(h.section()), /OpenRouterConfigured, inference not verified/); assert.doesNotMatch(text(h.section()), /Ready/)
-  assert.match(text(h.section()), /ChatGPT subscriptionConfigured, inference not verified/); assert.doesNotMatch(text(h.section()), /Not connected/)
+  assert.match(text(h.section()), /OpenRouterConnected, not tested/); assert.doesNotMatch(text(h.section()), /Ready/)
+  assert.match(text(h.section()), /ChatGPT subscriptionConnected, not tested/); assert.doesNotMatch(text(h.section()), /Not connected/)
   h.section().props.action.props.onClick(); await h.settle()
   h.reads[4].resolve([row(null, 'unavailable', 'openrouter')]); await h.settle()
   assert.match(text(h.section()), /OpenRouterUnavailable/)

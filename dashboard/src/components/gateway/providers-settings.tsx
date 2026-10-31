@@ -5,7 +5,9 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { ChatGPTStatus } from '@/lib/gateway/chatgpt'
 import { ModelsProviders } from '@/app/settings/models-providers'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { WorkspaceSection } from '@/components/design-system'
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetPanel } from '@/components/ui/sheet'
 import { GatewayPageFrame } from './page-frame'
 import { ChatGPTConnection } from './chatgpt-connection'
 import { NativeClaudeConnection } from './native-claude-connection'
@@ -14,7 +16,6 @@ import { useProviderReadiness } from './use-provider-readiness'
 import { readRuntimeWithDeadline } from './runtime-read-deadline'
 
 const names: Record<string, string> = { ollama: 'Local model', decisions: 'Decisions (Laya)', 'claude-code': 'Claude Code subscription', chatgpt: 'ChatGPT subscription', openai: 'OpenAI API', openrouter: 'OpenRouter', anthropic: 'Anthropic' }
-const readiness = (value: ProviderStatus) => value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Configured, inference not verified' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
 const ownerIdentity = (authStore: GatewayAuthStore) => {
   const auth = authStore.getState()
   return auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed ? auth.session.sessionId : null
@@ -54,32 +55,53 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
   }, [client, authStore, source, reload])
   // Embedded: one row on the Settings screen, without its own page frame.
   const Frame = embedded ? 'div' : GatewayPageFrame
-  return <Frame><div className="w-full max-w-3xl space-y-7">
-    <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />
-    <NativeClaudeConnection client={client} authStore={authStore} />
-    <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">API-key providers</summary><ProviderCredentials client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></details>
-    <WorkspaceSection title="Runtime readiness" description="Connection and catalogue entries do not prove a model can answer." action={<Button variant="ghost" size="sm" className="aria-disabled:opacity-50" disabled={health.phase === 'inactive'} aria-disabled={health.phase === 'checking'} aria-busy={health.phase === 'checking'} onClick={() => { if (health.phase === 'current' || health.phase === 'unavailable') void health.refresh() }}><RefreshCw />{health.phase === 'checking' ? 'Checking…' : health.phase === 'unavailable' ? 'Try again' : 'Refresh'}</Button>}>
+  const chip = (value?: ProviderStatus) => health.phase === 'checking' ? 'Checking…' : health.phase !== 'current' ? 'Unavailable' : !value ? 'Not connected' : value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Connected, not tested' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
+  const badgeVariant = (value?: ProviderStatus) => health.phase === 'checking' ? 'outline' : health.phase !== 'current' ? 'error' : !value ? 'outline' : value.busy ? 'info' : value.status === 'ok' ? 'success' : value.status === 'unverified' ? 'warning' : value.status === 'not_configured' ? 'outline' : 'error'
+  const sheet = (title: string, label: 'Connect' | 'Manage', body: React.ReactNode) => <Sheet><SheetTrigger render={<Button variant="outline" size="sm" aria-label={label + ' ' + title} />}>{label}</SheetTrigger><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{title}</SheetTitle></SheetHeader><SheetPanel>{body}</SheetPanel></SheetContent></Sheet>
+  const providerRow = (key: string, name: string, value?: ProviderStatus, sheet?: React.ReactNode) => <div key={key} className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-medium break-words">{name}</p>{value?.model && <p className="text-xs text-muted-foreground break-words">{health.phase !== 'current' ? 'Last checked model: ' : ''}{value.model}</p>}</div><div className="flex items-center gap-2">{value && <Badge variant={badgeVariant(value)}>{chip(value)}</Badge>}{sheet}</div></div>
+  const byId = (id: string) => health.rows.find(row => row.id === id)
+  const chatgptValue = byId('chatgpt')
+  const claudeValue = byId('claude-code')
+  const chatgptSheet = sheet('ChatGPT subscription', chatgptValue && (chatgptValue.busy || chatgptValue.status === 'ok' || chatgptValue.status === 'unverified') ? 'Manage' : 'Connect', <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />)
+  const claudeSheet = sheet('Claude subscription', claudeValue && (claudeValue.busy || claudeValue.status === 'ok' || claudeValue.status === 'unverified') ? 'Manage' : 'Connect', <NativeClaudeConnection client={client} authStore={authStore} />)
+  return <Frame><div className="w-full space-y-7">
+    <WorkspaceSection title="Connections" action={<Button variant="ghost" size="sm" className="aria-disabled:opacity-50" disabled={health.phase === 'inactive'} aria-disabled={health.phase === 'checking'} aria-busy={health.phase === 'checking'} onClick={() => { if (health.phase === 'current' || health.phase === 'unavailable') void health.refresh() }}><RefreshCw />{health.phase === 'checking' ? 'Checking…' : health.phase === 'unavailable' ? 'Try again' : 'Refresh'}</Button>}>
       {health.phase === 'checking' && <p role="status" className="text-sm text-muted-foreground">Checking provider readiness…</p>}
       {health.phase === 'unavailable' && <p role="status" className="text-sm text-muted-foreground">Provider readiness could not be checked. Try again to read the current status.</p>}
       {health.phase !== 'current' && health.rows.length > 0 && <p className="text-xs text-muted-foreground">Provider and model names below are from the last successful check.</p>}
-      <dl className="divide-y text-sm">{health.rows.map(provider => <div key={provider.id} className="flex flex-wrap justify-between gap-2 py-3"><dt className="min-w-0 break-words">{names[provider.id] ?? provider.id}{provider.model && <span className="text-muted-foreground"> · {health.phase !== 'current' ? 'Last checked model: ' : ''}{provider.model}</span>}</dt><dd className="text-muted-foreground">{health.phase === 'checking' ? 'Checking…' : health.phase !== 'current' ? 'Unavailable' : readiness(provider)}</dd></div>)}</dl>
+      <div className="divide-y">
+        {providerRow('chatgpt', 'ChatGPT subscription', chatgptValue, chatgptSheet)}
+        {providerRow('claude-code', 'Claude subscription', claudeValue, claudeSheet)}
+        {health.rows.filter(row => row.id !== 'chatgpt' && row.id !== 'claude-code').map(row => providerRow(row.id, names[row.id] ?? row.id, row))}
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium break-words">API keys</p>
+            <p className="text-xs text-muted-foreground break-words">OpenAI, OpenRouter, Anthropic. Keys stay on your server.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {sheet('API keys', 'Manage', <ProviderCredentials client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} />)}
+          </div>
+        </div>
+      </div>
     </WorkspaceSection>
-    {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-    {value ? <ModelsProviders key={value.revision} serverManaged pending={pending} subscriptionModels={models} configuration={value.configuration ? { ...value.configuration, providers: value.configuration.providers.map(provider => ({ ...provider, endpoint: '', apiKeyDraft: '' })) } : { providers: [], models: [], defaultModelId: null }} onSave={async next => {
-      const identity = ownerIdentity(authStore)
-      if (!next.roleSettings || saving.current || !identity || !catalogueMounted.current) return false
-      saving.current = true; catalogueRead.current?.abort()
-      const controller = new AbortController(), epoch = ++catalogueEpoch.current
-      catalogueWrite.current = controller
-      const current = () => !controller.signal.aborted && catalogueMounted.current && epoch === catalogueEpoch.current && identity === ownerIdentity(authStore)
-      setSaveSource(source); setError('')
-      try {
-        const saved = await client.saveModels({ ...next, roleSettings: next.roleSettings, models: next.models.map(model => ({ ...model, routingDescription: model.routingDescription ?? '' })) }, value.revision, controller.signal)
-        if (!current()) return false
-        setCatalogue({ source, value: saved })
-        return true
-      } catch (error) { if (current()) setError(error instanceof Error ? error.message : 'Could not save model settings.'); return false }
-      finally { if (catalogueWrite.current === controller) { catalogueWrite.current = null; saving.current = false; if (catalogueMounted.current) setSaveSource(null) } }
-    }} /> : error ? <Button variant="outline" onClick={() => setReload(number => number + 1)}>Retry model settings</Button> : <p role="status" className="text-sm text-muted-foreground">Loading model settings...</p>}
+    <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Advanced: model list</summary>
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
+      {value ? <ModelsProviders key={value.revision} serverManaged pending={pending} subscriptionModels={models} configuration={value.configuration ? { ...value.configuration, providers: value.configuration.providers.map(provider => ({ ...provider, endpoint: '', apiKeyDraft: '' })) } : { providers: [], models: [], defaultModelId: null }} onSave={async next => {
+        const identity = ownerIdentity(authStore)
+        if (!next.roleSettings || saving.current || !identity || !catalogueMounted.current) return false
+        saving.current = true; catalogueRead.current?.abort()
+        const controller = new AbortController(), epoch = ++catalogueEpoch.current
+        catalogueWrite.current = controller
+        const current = () => !controller.signal.aborted && catalogueMounted.current && epoch === catalogueEpoch.current && identity === ownerIdentity(authStore)
+        setSaveSource(source); setError('')
+        try {
+          const saved = await client.saveModels({ ...next, roleSettings: next.roleSettings, models: next.models.map(model => ({ ...model, routingDescription: model.routingDescription ?? '' })) }, value.revision, controller.signal)
+          if (!current()) return false
+          setCatalogue({ source, value: saved })
+          return true
+        } catch (error) { if (current()) setError(error instanceof Error ? error.message : 'Could not save model settings.'); return false }
+        finally { if (catalogueWrite.current === controller) { catalogueWrite.current = null; saving.current = false; if (catalogueMounted.current) setSaveSource(null) } }
+      }} /> : error ? <Button variant="outline" onClick={() => setReload(number => number + 1)}>Retry model settings</Button> : <p role="status" className="text-sm text-muted-foreground">Loading model settings...</p>}
+    </details>
   </div></Frame>
 }
