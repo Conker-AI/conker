@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TaskDialogContent, OverlayBody, FormActions } from "@/components/design-system"
 import type { PortMappingInput, RuntimePort, SystemRuntimeSnapshot } from "@/lib/api/system-runtime-types"
-import { validatePortMapping } from "@/lib/api/system-runtime-fixture"
+import { validatePortMapping } from "@/lib/api/system-port-mapping"
 
 export function PortEditor({ port, snapshot, busy, error, onSave, onClose }: { port?: RuntimePort; snapshot: SystemRuntimeSnapshot; busy: boolean; error: string; onSave: (input: PortMappingInput) => Promise<void>; onClose: () => void }) {
   const [value, setValue] = useState<PortMappingInput>(() => ({ containerId: port?.containerId || snapshot.containers[0]?.id || "", hostAddress: port?.hostAddress || "127.0.0.1", hostPort: port?.hostPort || 8081, containerPort: port?.targetPort || 8080, protocol: port?.protocol || "tcp" }))
