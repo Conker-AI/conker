@@ -1,4 +1,4 @@
-"""Chat CLI provides output settings and chat names from the terminal."""
+"""Chat CLI provides output settings, chat names and suggestions from the terminal."""
 
 import io
 import json
@@ -226,3 +226,22 @@ def test_summary_draft_focus_validation_exits_without_request(invoke, capsys):
     assert run("context", "summary-draft", "ses_a", "--focus", focus) == 1
     assert len(calls) == 0
     assert "Focus text is limited to 500 characters." in capsys.readouterr().err
+
+
+def test_suggest_posts_the_count_or_leaves_it_to_the_setting(invoke):
+    run, calls, _, state, check_headers = invoke
+    answer = {"messageId": "msg_a", "suggestions": ["Tell me more"], "modelId": "jev"}
+    state["responses"] = [answer, answer]
+    assert run("suggest", "ses_a", "--count", "1") == 0
+    assert run("suggest", "ses_a") == 0
+    check_headers(0)
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/suggestions"
+    assert [json.loads(call[0].data) for call in calls] == [{"count": 1}, {}]
+
+
+def test_suggest_refuses_a_count_pi_would_refuse(invoke):
+    run, calls, _, _, _ = invoke
+    with pytest.raises(SystemExit):
+        run("suggest", "ses_a", "--count", "4")
+    assert run("suggest", "../x") == 1
+    assert calls == []
