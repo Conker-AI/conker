@@ -77,12 +77,15 @@ chat well and still draft badly; give drafting a stronger one while chat stays l
 
 ```bash
 python scripts/conker.py models --role drafting --model MODEL_ID
+python scripts/conker.py models --role drafting --model MODEL_ID --backup LOCAL_ID
 python scripts/conker.py models --role drafting --off
 ```
 
+With `--backup`, a draft that fails on the first model is tried on the next, in the order given.
+
 It sees only your description, its questions and your answers, and the list of capabilities. Each
-model call gets the drafting role's own time limit. A hosted model costs what that provider
-charges per draft.
+model call, backups included, gets the drafting role's own time limit. A hosted model costs what
+that provider charges per draft.
 
 ## What the drafter cannot do
 

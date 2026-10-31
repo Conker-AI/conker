@@ -1,4 +1,4 @@
-"""A chat's output settings and name from the CLI."""
+"""A chat's output settings, name and next-message suggestions from the CLI."""
 
 import re
 
@@ -8,7 +8,7 @@ LANGUAGE = r"auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}"
 
 
 def register(commands):
-    """Register the output and title areas."""
+    """Register the output, title and suggest areas."""
     output = commands.add_parser(
         "output", help="Read and change one chat's answer format, length and language"
     )
@@ -41,9 +41,23 @@ def register(commands):
         "session"
     )
 
+    suggest = commands.add_parser(
+        "suggest", help="Ask Jev what you might send next in one chat"
+    )
+    suggest.add_argument("session")
+    suggest.add_argument(
+        "--count",
+        type=int,
+        choices=[1, 2, 3],
+        help="How many suggestions; default is your chats.suggestions_count setting",
+    )
+
 
 def operation(args, config, request):
     """Run one output or title subcommand and return the value to print."""
+    if args.command == "suggest":
+        body = {} if args.count is None else {"count": args.count}
+        return pi_call(request, config, f"/sessions/{args.session}/suggestions", body)
     path = f"/sessions/{args.session}/{args.command}"
     if args.operation == "show":
         return pi_call(request, config, path)

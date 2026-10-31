@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { optionLabel, type Setting, type SettingValue } from './registry'
 import { useModels } from './models'
+import { OrderedModels } from './ordered-models'
 
 export type ControlProps = { setting: Setting; id: string; value: SettingValue; disabled: boolean; onChange: (value: SettingValue) => void }
 
@@ -85,23 +86,9 @@ function TagsControl({ setting, id, value, disabled, onChange }: ControlProps) {
 function ModelsControl({ id, value, disabled, onChange, setting }: ControlProps) {
   const { enabled, value: catalogue, error } = useModels()
   const chosen = Array.isArray(value) ? value : []
-  const name = (modelId: string) => enabled.find(model => model.id === modelId)?.name ?? modelId
-  const left = enabled.filter(model => !chosen.includes(model.id))
-  const move = (index: number, by: number) => { const next = [...chosen]; [next[index], next[index + by]] = [next[index + by], next[index]]; onChange(next) }
   if (!catalogue) return <p className="text-sm text-muted-foreground">{error || 'Loading models…'}</p>
-  return <div className="flex flex-col gap-2">
-    {chosen.length === 0 ? <p className="text-sm text-muted-foreground">None chosen: the talking model does this job.</p>
-      : <ol className="flex flex-col divide-y rounded-lg border">{chosen.map((modelId, index) => <li key={modelId} className="flex items-center gap-2 py-1.5 pr-1.5 pl-3 text-sm">
-        <span className="w-5 text-muted-foreground tabular-nums">{index + 1}</span><span className="min-w-0 flex-1 truncate">{name(modelId)}</span>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Move ${name(modelId)} up`} disabled={disabled || index === 0} onClick={() => move(index, -1)}><ArrowUp /></Button>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Move ${name(modelId)} down`} disabled={disabled || index === chosen.length - 1} onClick={() => move(index, 1)}><ArrowDown /></Button>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Remove ${name(modelId)}`} disabled={disabled} onClick={() => onChange(chosen.filter(other => other !== modelId))}><X /></Button>
-      </li>)}</ol>}
-    {left.length > 0 && chosen.length < (setting.max_items ?? 5) && <Select value={null} disabled={disabled} onValueChange={next => { if (next) onChange([...chosen, String(next)]) }} items={left.map(model => ({ value: model.id, label: model.name }))}>
-      <SelectTrigger id={id} className="w-full sm:w-72"><SelectValue placeholder={chosen.length ? 'Add a backup model' : 'Add a model'} /></SelectTrigger>
-      <SelectContent>{left.map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent>
-    </Select>}
-  </div>
+  return <OrderedModels id={id} chosen={chosen} options={enabled.map(model => ({ id: model.id, label: model.name }))} max={setting.max_items ?? 5} disabled={disabled}
+    empty="None chosen: the talking model does this job." placeholder={chosen.length ? 'Add a backup model' : 'Add a model'} onChange={onChange} />
 }
 
 function SliderControl({ setting, value, disabled, onChange }: ControlProps) {

@@ -12,8 +12,11 @@ export type ModelRoleAssignment = {
   modelId: string | null
   timeoutMs: number
   failure: "stop" | "fallback"
-  fallbackModelId: string | null
+  /** Backups tried in this order after the model fails; empty when the role stops on failure. */
+  fallbackModelIds: string[]
 }
+/** Pi tries at most this many backups for one role. */
+export const MAX_BACKUPS = 8
 export type ModelRolesConfiguration = {
   answerMode: "manual" | "router"
   roles: Record<ModelRole, ModelRoleAssignment>
@@ -25,7 +28,7 @@ function enabledModels(configuration: ModelsConfiguration): CatalogueModel[] {
 
 export function createModelRoles(configuration: ModelsConfiguration): ModelRolesConfiguration {
   const defaultId = enabledModels(configuration).find(model => model.id === configuration.defaultModelId)?.id || null
-  const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelId: null })
+  const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelIds: [] })
   return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, reviewer: empty(), thinking: empty(), routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty(), "memory-sorting": empty(), "tool-text": empty() } }
 }
 
@@ -43,19 +46,21 @@ export function modelRolesErrors(value: ModelRolesConfiguration, configuration: 
     if (configuration.models.some(model => assignment.eligibleModelIds.includes(model.id) && model.providerId === 'decisions' && model.route !== decisionRoute)) errors.push(`${label}: this decision classifier cannot perform this role.`)
     if (!Number.isSafeInteger(assignment.timeoutMs) || assignment.timeoutMs < 100 || assignment.timeoutMs > 600000) errors.push(`${label}: timeout must be 100–600,000 milliseconds.`)
     if (!["stop", "fallback"].includes(assignment.failure)) errors.push(`${label}: choose stop or explicit fallback on failure.`)
-    for (const id of [assignment.modelId, assignment.fallbackModelId]) if (id !== null && (typeof id !== "string" || !known.has(id) || !assignment.eligibleModelIds.includes(id))) errors.push(`${label}: selected and fallback models must belong to its eligible list.`)
-    if (assignment.modelId && assignment.fallbackModelId === assignment.modelId) errors.push(`${label}: fallback must differ from the primary model.`)
-    if (assignment.failure === "stop" && assignment.fallbackModelId !== null) errors.push(`${label}: remove the fallback or explicitly enable it.`)
+    const backups = assignment.fallbackModelIds
+    if (!Array.isArray(backups) || backups.length > MAX_BACKUPS || new Set(backups).size !== backups.length) { errors.push(`${label}: list each backup model once, at most ${MAX_BACKUPS}.`); continue }
+    if ([assignment.modelId, ...backups].some(id => id !== null && (typeof id !== "string" || !known.has(id) || !assignment.eligibleModelIds.includes(id)))) errors.push(`${label}: selected and backup models must belong to its eligible list.`)
+    if (assignment.modelId && backups.includes(assignment.modelId)) errors.push(`${label}: backups must differ from the primary model.`)
+    if (assignment.failure === "stop" && backups.length) errors.push(`${label}: remove the backups or explicitly enable them.`)
     if (assignment.enabled) {
       if (!assignment.modelId || !enabled.has(assignment.modelId)) errors.push(`${label}: choose an enabled primary model and provider.`)
-      if (assignment.failure === "fallback" && (!assignment.fallbackModelId || !enabled.has(assignment.fallbackModelId))) errors.push(`${label}: choose an enabled fallback model and provider.`)
+      if (assignment.failure === "fallback" && (!backups.length || backups.some(id => !enabled.has(id)))) errors.push(`${label}: choose enabled backup models and providers.`)
       if (!assignment.eligibleModelIds.some(id => enabled.has(id))) errors.push(`${label}: no eligible models are enabled.`)
     }
   }
   if (value.answerMode === "manual" && value.roles.answer?.failure !== "stop") errors.push("A manual answer lock must stop on failure; it cannot silently switch models.")
   if (value.answerMode === "router" && (!value.roles.answer?.enabled || !value.roles.routing?.enabled)) errors.push("Router mode needs an enabled answer role and routing decision role.")
   const routing = value.roles.routing
-  if (value.answerMode === 'router' && routing && configuration.models.some(model => model.providerId === 'decisions' && [routing.modelId, routing.fallbackModelId].includes(model.id)) && (value.roles.answer?.eligibleModelIds.length ?? 0) > 8) errors.push('Laya supports a shortlist of at most eight talking models.')
+  if (value.answerMode === 'router' && routing && configuration.models.some(model => model.providerId === 'decisions' && [routing.modelId].concat(routing.fallbackModelIds ?? []).includes(model.id)) && (value.roles.answer?.eligibleModelIds.length ?? 0) > 8) errors.push('Laya supports a shortlist of at most eight talking models.')
   if (configuration.models.some(model => model.id === configuration.defaultModelId && model.providerId === 'decisions')) errors.push('A decision classifier cannot be the default talking model.')
   return errors
 }
@@ -122,30 +127,32 @@ export function planModelRole(input: {
   }
   if (input.failure || !eligible.some(model => model.id === selected)) {
     if (locked) return { ...result, reason: "The manually locked answer model failed or is unavailable. Review the choice; no substitute was selected." }
-    if (assignment.failure !== "fallback" || !assignment.fallbackModelId || assignment.fallbackModelId === selected) return { ...result, reason: "The selected model failed or is unavailable. This role has no distinct permitted fallback." }
-    selected = assignment.fallbackModelId
+    const backups = assignment.failure === "fallback" ? assignment.fallbackModelIds.filter(id => id !== selected) : []
+    if (!backups.length) return { ...result, reason: "The selected model failed or is unavailable. This role has no distinct permitted backup." }
+    // The first backup still available, so one that already failed is not proposed again.
+    selected = backups.find(id => eligible.some(model => model.id === id)) ?? backups[0]
     basis = "fallback"
   }
   const model = eligible.find(model => model.id === selected)
   if (!model) return { ...result, reason: "No eligible configured model is available under the current restrictions." }
-  return { ...result, status: "planned", selectedModelId: model.id, providerId: model.providerId, route: model.route, timeoutMs: assignment.timeoutMs, basis, reason: basis === "fallback" ? "Explicit fallback proposed after failure or unavailability; no provider was contacted." : "Configured model proposed; capabilities and dispatch authorization still require verification." }
+  return { ...result, status: "planned", selectedModelId: model.id, providerId: model.providerId, route: model.route, timeoutMs: assignment.timeoutMs, basis, reason: basis === "fallback" ? "Backup model proposed after failure or unavailability; no provider was contacted." : "Configured model proposed; capabilities and dispatch authorization still require verification." }
 }
 
 /**
  * Makes one model answer every chat. Pi answers with the Answer role's model, not the default
- * route, so both move together: manual mode, the model eligible and selected, no fallback.
+ * route, so both move together: manual mode, the model eligible and selected, no backups.
  */
 export function withAnswerModel<T extends { defaultModelId: string | null; roleSettings: ModelRolesConfiguration }>(configuration: T, modelId: string): T {
   const answer = configuration.roleSettings.roles.answer
   const eligibleModelIds = answer.eligibleModelIds.includes(modelId) ? answer.eligibleModelIds : [...answer.eligibleModelIds, modelId]
   return { ...configuration, defaultModelId: modelId, roleSettings: { ...configuration.roleSettings, answerMode: "manual",
-    roles: { ...configuration.roleSettings.roles, answer: { ...answer, enabled: true, modelId, eligibleModelIds, failure: "stop", fallbackModelId: null } } } }
+    roles: { ...configuration.roleSettings.roles, answer: { ...answer, enabled: true, modelId, eligibleModelIds, failure: "stop", fallbackModelIds: [] } } } }
 }
 
 /** Turns the daily ideas pass on with one model, or off. Other roles are untouched. */
 export function withIdeas<T extends { roleSettings: ModelRolesConfiguration }>(configuration: T, modelId: string | null): T {
   const proposals = configuration.roleSettings.roles.proposals
   const eligibleModelIds = modelId === null || proposals.eligibleModelIds.includes(modelId) ? proposals.eligibleModelIds : [...proposals.eligibleModelIds, modelId]
-  const next = modelId === null ? { ...proposals, enabled: false } : { ...proposals, enabled: true, modelId, eligibleModelIds, failure: "stop" as const, fallbackModelId: null }
+  const next = modelId === null ? { ...proposals, enabled: false } : { ...proposals, enabled: true, modelId, eligibleModelIds, failure: "stop" as const, fallbackModelIds: [] }
   return { ...configuration, roleSettings: { ...configuration.roleSettings, roles: { ...configuration.roleSettings.roles, proposals: next } } }
 }
