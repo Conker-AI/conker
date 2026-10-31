@@ -12,6 +12,7 @@ Supported resources are:
 | `agents` | owner | `/agents` |
 | `approvals` | ToolGate owner | `/v2/owner/requests` |
 | `artifacts` | owner | `/artifacts` |
+| `asks` | owner | `/asks` |
 | `boundaries` | owner | `/setup/boundaries` |
 | `change-requests` | owner | `/change-requests` |
 | `character` | owner | `/characters/companion` |
@@ -23,6 +24,7 @@ Supported resources are:
 | `inventory-services` | owner | `/system/inventory/configured/services` |
 | `jobs` | owner | `/jobs` |
 | `memory` | owner | `/memory/objects` |
+| `memory-edit-pending` | owner | `/memory/corrections/pending` |
 | `models` | owner | `/models/configuration` |
 | `projects` | owner | `/projects` |
 | `setup` | owner | `/setup/status` |

@@ -40,6 +40,10 @@ Writes check the revision and never retry automatically. Run `conker context bud
 
 `title auto SESSION` - Ask Jev to name the chat now. Unnamed chats are also named automatically after their first answer.
 
+## Suggestions
+
+`suggest SESSION [--count N]` - Ask Jev for 1 to 3 messages you might send next, from the last answer and your message before it. The count defaults to your `chats.suggestions_count` setting. Nothing is sent or saved; excluded, redacted and forgotten messages never reach Jev, and a chat with helper models off is refused.
+
 ## Messages
 
 `message list SESSION [--limit N] [--cursor MESSAGE]` - Show messages including those inherited from a parent chat.
@@ -96,9 +100,11 @@ Writes check the revision and never retry automatically. Run `conker context bud
 
 `models` - Show the model catalogue and which model plays each role.
 
-`models --role ROLE --model MODEL` - Point one role at one model and switch it on; everything else
-stays as saved. `models --role ROLE --off` switches it off. Example: `models --role drafting
---model MODEL` lets the workflow builder use a stronger model while chat stays on yours.
+`models --role ROLE --model MODEL [--backup MODEL]...` - Point one role at one model and switch it
+on; everything else stays as saved. Each `--backup` is tried in the order given when the model
+before it fails; without one the role stops on failure. `models --role ROLE --off` switches it
+off. Example: `models --role drafting --model MODEL` lets the workflow builder use a stronger
+model while chat stays on yours.
 
 ## Model Profiles
 

@@ -44,7 +44,7 @@ for (const broken of [
   assert.deepEqual(await client.propose('Best laptop?', { sessionId: 'ses_1', harnessDisabled: true }), proposal)
   assert.deepEqual(calls[0], { target: '/api/pi/models/auto-settings', options: { method: 'POST', body: { text: 'Best laptop?', session_id: 'ses_1', harness_disabled: true } } })
 
-  const workspace = fs.readFileSync(path.join(root, 'src/components/gateway/runtime-workspace.tsx'), 'utf8')
+  const workspace = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
   assert.equal((workspace.match(/<ModeControl /g) ?? []).length, 2, 'Both composers carry the mode control')
   assert.match(workspace, /promotedDraft\.researchMode, Boolean\(modeHints\.current\.new\?\.isAnalysis\)\)/, 'A new chat sends the complexity chosen on its draft')
   assert.match(workspace, /saved\.researchMode, Boolean\(modeHints\.current\[id\]\?\.isAnalysis\)\)/, 'Replies send the complexity on screen')
