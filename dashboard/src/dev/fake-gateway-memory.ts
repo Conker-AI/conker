@@ -16,7 +16,7 @@ export function createFakeMemory(fail: (status: number) => never) {
   const card = (type: string, id: string, title: string, preview: string, memoryType?: string) => ({ type, id, title, preview, preview_truncated: false, status: 'active',
     confidence: 0.9, available_fields: ['content'], ...(memoryType ? { memory_type: memoryType } : {}), connections: { supports: 1, mentions: 1 } })
   const memories = [
-    card('memory', 'mem_judo', 'Trains judo on Tuesdays and Thursdays', 'Alexey trains judo on Tuesday and Thursday evenings, so homework should be light on those days.', 'fact'),
+    card('memory', 'mem_judo', 'Trains judo on Tuesdays and Thursdays', 'Sam trains judo on Tuesday and Thursday evenings, so homework should be light on those days.', 'fact'),
     card('memory', 'mem_physics', 'Physics worksheet due Fridays', 'The weekly physics worksheet is handed in every Friday.', 'fact'),
     card('memory', 'mem_revision', 'Prefers short morning revision', 'Revision works best as a 45-minute block before school.', 'context'),
     card('entity', 'ent_coach', 'Coach', 'Judo coach at the club; contacted by email about open mat.'),
