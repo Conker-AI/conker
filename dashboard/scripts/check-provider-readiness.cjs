@@ -84,7 +84,7 @@ function componentHarness() {
   const subscriptions = new Map()
   const mocks = { react: hooks, zustand: { useStore(store) { if (!subscriptions.has(store)) subscriptions.set(store, store.subscribe(() => { dirty = true })); return store.getState() } },
     'lucide-react': { ExternalLink: 'svg', LogIn: 'svg', RefreshCw: 'svg' }, '@/app/settings/models-providers': { ModelsProviders: 'ModelsProviders' },
-    '@/components/ui/button': { Button: 'button' }, '@/components/design-system': { WorkspaceSection: 'section' }, './page-frame': { GatewayPageFrame: 'main' },
+    '@/components/ui/button': { Button: 'button' }, '@/components/ui/badge': { Badge: 'Badge' }, '@/components/ui/sheet': { Sheet: 'Sheet', SheetTrigger: 'SheetTrigger', SheetContent: 'SheetContent', SheetHeader: 'SheetHeader', SheetTitle: 'SheetTitle', SheetPanel: 'SheetPanel' }, '@/components/design-system': { WorkspaceSection: 'section' }, './page-frame': { GatewayPageFrame: 'main' },
     './chatgpt-connection': { ChatGPTConnection: function ChatGPTConnection() {} }, './native-claude-connection': { NativeClaudeConnection: 'NativeClaudeConnection' }, './provider-credentials': { ProviderCredentials: 'ProviderCredentials' } }
   const { GatewayProvidersSettings } = loader(mocks)('src/components/gateway/providers-settings.tsx')
   const authStore = createStore(() => owner('owner_A')), reads = [], models = [], writes = []
@@ -95,7 +95,7 @@ function componentHarness() {
   function render() { cursor = 0; dirty = false; tree = GatewayProvidersSettings({ client, authStore }); effects.splice(0).forEach(run => run()); return tree }
   return { render, reads, models, writes, authStore,
     async settle() { await flush(); for (let index = 0; dirty; index++) { assert.ok(index < 10); render(); await flush() } },
-    section: () => walk(tree).find(node => node.props?.title === 'Runtime readiness'),
+    section: () => walk(tree).find(node => node.props?.title === 'Connections'),
     editor: () => walk(tree).find(node => node.type === 'ModelsProviders'),
     credentials: () => walk(tree).find(node => node.type === 'ProviderCredentials'),
     button: label => walk(tree).find(node => node.type === 'button' && text(node) === label),
@@ -111,6 +111,21 @@ async function actualComponentCases() {
   const configuration = { providers: [], models: [], defaultModelId: null, roleSettings: { roles: {} } }
   h.models[0].resolve({ revision: 1, configuration }); h.reads[0].resolve([row()]); await h.settle()
   assert.match(text(h.section()), /Ready/)
+  const tree = h.render()
+  assert.equal(walk(tree).find(node => node.props?.title === 'Runtime readiness'), undefined, 'no node anywhere in the tree has props.title === "Runtime readiness"')
+  assert.equal(walk(tree).find(node => node.props?.className?.includes('max-w-3xl')), undefined, 'no node\'s className contains max-w-3xl')
+  const sheetContents = walk(tree).filter(node => node.type === 'SheetContent')
+  assert.equal(sheetContents.length, 3, 'there are exactly 3 SheetContent nodes')
+  assert.ok(sheetContents.every(sheet => sheet.props.portalProps?.keepMounted === true), 'every SheetContent node has props.portalProps.keepMounted === true')
+  assert.ok(sheetContents.some(sheet => walk(sheet).some(node => node.type?.name === 'ChatGPTConnection' || (typeof node.type === 'function' && node.type.name === 'ChatGPTConnection'))), 'the ChatGPTConnection node is inside a SheetContent')
+  const detailsNode = walk(tree).find(node => node.type === 'details')
+  assert.ok(detailsNode, 'there is a details node')
+  assert.equal(text(detailsNode.props.children), 'Advanced: model list', 'the details summary text is "Advanced: model list"')
+  assert.ok(walk(detailsNode).some(node => node.type === 'ModelsProviders'), 'the ModelsProviders node is inside a details node')
+  const rows = walk(tree).filter(node => typeof node.props?.className === 'string' && node.props.className.includes('min-h-16'))
+  const chatgptRow = rows.find(node => text(node).startsWith('ChatGPT subscription'))
+  assert.equal(text(walk(chatgptRow).find(node => node.type === 'SheetTrigger')), 'Connect', 'chatgpt row offers Connect when it has no status')
+  assert.match(text(rows.find(node => text(node).startsWith('Local model'))), /^Local modelprevious-modelReady$/, 'ollama row shows its name, model and Ready')
   const editor = h.editor(); h.section().props.action.props.onClick(); await h.settle()
   assert.doesNotMatch(text(h.section()), /Ready/); assert.match(text(h.section()), /Last checked model: previous-model/)
   assert.equal(h.models.length, 1, 'Health refresh does not reread or replace an unsaved catalogue')
@@ -129,8 +144,8 @@ async function actualComponentCases() {
   assert.match(text(h.section()), /new-modelReady/); assert.match(text(h.section()), /ChatGPT subscriptionUnavailable/)
   h.section().props.action.props.onClick(); await h.settle()
   h.reads[3].resolve([row(null, 'unverified', 'openrouter'), row(null, 'unverified', 'chatgpt')]); await h.settle()
-  assert.match(text(h.section()), /OpenRouterConfigured, inference not verified/); assert.doesNotMatch(text(h.section()), /Ready/)
-  assert.match(text(h.section()), /ChatGPT subscriptionConfigured, inference not verified/); assert.doesNotMatch(text(h.section()), /Not connected/)
+  assert.match(text(h.section()), /OpenRouterConnected, not tested/); assert.doesNotMatch(text(h.section()), /Ready/)
+  assert.match(text(h.section()), /ChatGPT subscriptionConnected, not tested/); assert.doesNotMatch(text(h.section()), /Not connected/)
   h.section().props.action.props.onClick(); await h.settle()
   h.reads[4].resolve([row(null, 'unavailable', 'openrouter')]); await h.settle()
   assert.match(text(h.section()), /OpenRouterUnavailable/)

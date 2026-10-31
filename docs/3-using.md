@@ -102,16 +102,16 @@ sign-in is pending and pause when the page is hidden, offline or their check lim
 is reached; the card offers a manual check. A ChatGPT device code belongs to one
 sign-in attempt and is not saved across page reloads.
 
-**Runtime readiness > Refresh** checks provider status without changing your
+**Connections > Refresh** checks provider status without changing your
 model draft. While a check is pending or unavailable, retained names are labeled
 as last checked. A stalled check offers **Try again** after 15 seconds. An
-OpenRouter catalogue can be cached, so its presence means **Configured, inference
-not verified**. An explicit model test in Setup verifies a response for the saved
+OpenRouter catalogue can be cached, so its presence means **Connected, not
+tested**. An explicit model test in Setup verifies a response for the saved
 configuration; opening Settings does not run that test or spend inference usage.
 
-API-key providers are a separate connection with their own spending controls.
+API keys (the **API keys** row) are a separate connection with their own spending controls.
 If saving a key or changing spending cannot be confirmed, use **Check status**
-in the API-key panel before another action. This reads the server without repeating the
+in the API keys sheet before another action. This reads the server without repeating the
 change; the earlier request may still finish. A refresh temporarily labels
 retained settings as last checked. Changing the owner or server connection clears
 an unsent key. See [Hosted provider credentials](reference/provider-credentials.md)
