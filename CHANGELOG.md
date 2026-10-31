@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Plainer chat wait, no tracker code.** After a reply finishes streaming, the chat says
+  "Saving reply…" instead of "Preview ended. Waiting for saved history…". The dashboard no
+  longer carries the template's dormant Google Tag Manager loader or its unused demo files.
 - **Calmer, consistent motion.** Dialogs, sheets, menus, selects, tooltips, popovers and toasts
   share four durations and one enter and one exit curve; closing is quicker than opening, and the
   command palette opens instantly. Settings > Appearance > Animations: Reduced (and Follow this
