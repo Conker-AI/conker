@@ -42,6 +42,7 @@ COMPONENTS = {
     "ideas",
     "providers",
     "model-roles",
+    "side-jobs",
     "reviewer-model",
     "access-delegate",
     "tools-usable",

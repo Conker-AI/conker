@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { GatewayControlClient, OwnerModelSettings } from '@/lib/gateway/control'
 import { gatewayError } from '@/lib/gateway/transport'
+import { toastManager } from '@/components/ui/toast'
+import { notifyDone } from '@/components/resilience/notify'
 import { ModelsContext } from './models'
 
 type Configuration = NonNullable<OwnerModelSettings['configuration']>
@@ -17,8 +19,21 @@ export function ModelsProvider({ client, children }: { client: GatewayControlCli
   }, [client, retry])
   const save = useCallback(async (next: Configuration) => {
     if (!value) return
+    const before = value.configuration
     setPending(true); setError('')
-    try { setValue(await client.saveModels(next, value.revision)) }
+    try {
+      const result = await client.saveModels(next, value.revision)
+      setValue(result)
+      // Undo saves the configuration from before this save against the revision it produced.
+      const undo = async () => {
+        if (!before) return
+        setPending(true); setError('')
+        try { setValue(await client.saveModels(before, result.revision)); notifyDone('Change undone') }
+        catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not undo the change.') }
+        finally { setPending(false) }
+      }
+      toastManager.add({ type: 'success', title: 'Saved', timeout: 4000, actionProps: { children: 'Undo', onClick: () => void undo() } })
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save model settings.') }
     finally { setPending(false) }
   }, [client, value])

@@ -14,6 +14,8 @@ export type ModelRoleAssignment = {
   failure: "stop" | "fallback"
   /** Backups tried in this order after the model fails; empty when the role stops on failure. */
   fallbackModelIds: string[]
+  /** Auto: Pi uses the answer role's model and backups. */
+  followAnswer: boolean
 }
 /** Pi tries at most this many backups for one role. */
 export const MAX_BACKUPS = 8
@@ -28,7 +30,7 @@ function enabledModels(configuration: ModelsConfiguration): CatalogueModel[] {
 
 export function createModelRoles(configuration: ModelsConfiguration): ModelRolesConfiguration {
   const defaultId = enabledModels(configuration).find(model => model.id === configuration.defaultModelId)?.id || null
-  const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelIds: [] })
+  const empty = (): ModelRoleAssignment => ({ enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 30000, failure: "stop", fallbackModelIds: [], followAnswer: false })
   return { answerMode: "manual", roles: { answer: { ...empty(), enabled: !!defaultId, modelId: defaultId, eligibleModelIds: defaultId ? [defaultId] : [] }, reviewer: empty(), thinking: empty(), routing: empty(), "context-selection": empty(), summarization: empty(), "memory-ranking": empty(), proposals: empty(), "search-ranking": empty(), "memory-sorting": empty(), "tool-text": empty() } }
 }
 
@@ -155,4 +157,98 @@ export function withIdeas<T extends { roleSettings: ModelRolesConfiguration }>(c
   const eligibleModelIds = modelId === null || proposals.eligibleModelIds.includes(modelId) ? proposals.eligibleModelIds : [...proposals.eligibleModelIds, modelId]
   const next = modelId === null ? { ...proposals, enabled: false } : { ...proposals, enabled: true, modelId, eligibleModelIds, failure: "stop" as const, fallbackModelIds: [] }
   return { ...configuration, roleSettings: { ...configuration.roleSettings, roles: { ...configuration.roleSettings.roles, proposals: next } } }
+}
+
+export const SIDE_JOBS = [
+  { role: 'routing', title: 'Choosing a model', description: 'Picks the model for each message when the main model is Auto.', auto: true, offLabel: 'Off' },
+  { role: 'context-selection', title: 'Choosing context', description: 'Picks which earlier messages and notes go into an answer.', auto: true, offLabel: 'Off' },
+  { role: 'summarization', title: 'Summaries', description: 'Shortens long chats so they still fit.', auto: true, offLabel: 'Off' },
+  { role: 'search-ranking', title: 'Search ranking', description: 'Orders search results by meaning.', auto: false, offLabel: 'Off' },
+  { role: 'memory-ranking', title: 'Memory ranking', description: 'Orders recalled memories by meaning.', auto: false, offLabel: 'Off' },
+  { role: 'memory-sorting', title: 'Sorting new memories', description: 'Decides how each new memory is filed.', auto: true, offLabel: 'Local model on your server' },
+  { role: 'tool-text', title: 'AI steps in your tools', description: 'Writes the text for AI steps inside your tools.', auto: true, offLabel: 'Local model on your server' },
+] as const
+
+export function sideJobChoice(assignment: ModelRoleAssignment | undefined | unknown): string {
+  if (!assignment || typeof assignment !== 'object') return '__off__'
+  const cast = assignment as ModelRoleAssignment
+  if (!cast.enabled) return '__off__'
+  if (cast.followAnswer) return '__auto__'
+  return cast.modelId ?? '__off__'
+}
+
+export function withSideJob<T extends { roleSettings: ModelRolesConfiguration }>(
+  configuration: T,
+  role: string,
+  choice: string
+): T {
+  const roles = configuration.roleSettings.roles
+  const current = roles[role as keyof typeof roles] as ModelRoleAssignment | undefined
+  const answer = roles.answer
+
+  // Initialize role if missing
+  const base = current ?? { enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop' as const, fallbackModelIds: [], followAnswer: false }
+
+  let next: ModelRoleAssignment
+
+  if (choice === '__auto__') {
+    // Copy from answer role the way Pi does it
+    const eligibleModelIds = answer.modelId ? ([answer.modelId, ...answer.fallbackModelIds].filter((id, i, arr) => arr.indexOf(id) === i)) : []
+    next = {
+      ...base,
+      enabled: true,
+      followAnswer: true,
+      modelId: answer.modelId,
+      eligibleModelIds,
+      failure: answer.fallbackModelIds.length > 0 ? answer.failure : 'stop',
+      fallbackModelIds: answer.fallbackModelIds
+    }
+  } else if (choice === '__off__') {
+    next = { ...base, enabled: false, followAnswer: false }
+  } else {
+    // Specific model ID
+    const eligibleModelIds = base.eligibleModelIds.includes(choice) ? base.eligibleModelIds : [...base.eligibleModelIds, choice]
+    next = {
+      ...base,
+      enabled: true,
+      followAnswer: false,
+      modelId: choice,
+      eligibleModelIds,
+      failure: 'stop',
+      fallbackModelIds: []
+    }
+  }
+
+  return {
+    ...configuration,
+    roleSettings: {
+      ...configuration.roleSettings,
+      roles: {
+        ...configuration.roleSettings.roles,
+        [role]: next
+      }
+    }
+  }
+}
+
+export function followAnswerRoles<T extends { roleSettings: ModelRolesConfiguration }>(configuration: T): T {
+  const roles = configuration.roleSettings.roles
+  const answer = roles.answer
+  const updated = { ...roles }
+
+  for (const [roleName, assignment] of Object.entries(roles)) {
+    if (roleName === 'answer') continue
+    if (assignment.followAnswer === true) {
+      const eligibleModelIds = answer.modelId ? ([answer.modelId, ...answer.fallbackModelIds].filter((id, i, arr) => arr.indexOf(id) === i)) : []
+      updated[roleName as keyof typeof updated] = {
+        ...assignment,
+        modelId: answer.modelId,
+        eligibleModelIds,
+        failure: answer.fallbackModelIds.length > 0 ? answer.failure : 'stop',
+        fallbackModelIds: answer.fallbackModelIds
+      }
+    }
+  }
+
+  return { ...configuration, roleSettings: { ...configuration.roleSettings, roles: updated } }
 }

@@ -5299,6 +5299,12 @@ export interface components {
              * @description Backup models tried in this order after the role's model fails.
              */
             fallbackModelIds: string[];
+            /**
+             * Followanswer
+             * @description Auto: use the answer role's model and backups. Every save fills them in again, so a change of the answer model reaches this role.
+             * @default false
+             */
+            followAnswer: boolean;
         };
         /** AutoName */
         AutoName: {
