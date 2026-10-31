@@ -3,6 +3,8 @@
  * capability choices, the boundary receipt and protection policy, the owner rehearsal evidence,
  * and the computed setup status, all in the real routes' wire shapes.
  */
+import { followAnswerRoles } from '../lib/api/model-roles'
+import type { ModelRolesConfiguration } from '../lib/api/model-roles'
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
 
@@ -27,7 +29,7 @@ export function createFakeSetup(preview: { setupStep?: 'model' | 'memory' | 'cap
       { id: 'research.search', name: 'Web search', authorization: 'auto', executionType: 'http', usageLimits: { max_per_minute: 10, max_per_hour: 80, max_runtime_seconds: 30 }, definitionDigest: '3'.repeat(64) },
     ],
   }
-  const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelIds: [] })
+  const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelIds: [], followAnswer: false })
   const models: { revision: number; configuration: Json } = { revision: 1, configuration: {
     providers: [{ id: 'ollama', name: 'Local (Ollama)', enabled: true }],
     models: [
@@ -47,7 +49,13 @@ export function createFakeSetup(preview: { setupStep?: 'model' | 'memory' | 'cap
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     let match: RegExpMatchArray | null
     if (path === '/api/control/pi/models/configuration') {
-      if (method === 'POST') { models.revision += 1; models.configuration = options.body?.configuration as Json }
+      if (method === 'POST') {
+        const config = options.body?.configuration as Json & { roleSettings?: ModelRolesConfiguration }
+        if (config && typeof config === 'object' && config.roleSettings) {
+          models.revision += 1
+          models.configuration = followAnswerRoles(config as { roleSettings: ModelRolesConfiguration })
+        }
+      }
       return models
     }
     if (path === '/api/control/pi/setup/models') {

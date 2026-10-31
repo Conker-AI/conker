@@ -150,6 +150,77 @@ async function main() {
     await assert.rejects(isolated.streamReply(sessionId, { signal: new AbortController().signal }, () => {}), /enabled model/)
     assert.equal((await isolated.load()).conversations[sessionId].messages.length, count, 'Blocked route creates no replacement-model response')
   }
-  console.log('Model role checks passed: explicit eligibility, manual lock, typed routing choices, timeout/provider fallback, privacy separation, no secret copying and isolated Models API round-trip.')
+  // Side jobs tests
+  const { SIDE_JOBS, sideJobChoice, withSideJob, followAnswerRoles } = load('src/lib/api/model-roles.ts')
+
+  // Test withSideJob with '__auto__'
+  const autoConfig = withSideJob({ ...config, roleSettings: settings }, 'summarization', '__auto__')
+  assert.equal(autoConfig.roleSettings.roles.summarization.enabled, true)
+  assert.equal(autoConfig.roleSettings.roles.summarization.followAnswer, true)
+  assert.equal(autoConfig.roleSettings.roles.summarization.modelId, settings.roles.answer.modelId)
+
+  // Every other role deep-equals the input's
+  for (const role of MODEL_ROLES) {
+    if (role === 'summarization') continue
+    assert.deepEqual(autoConfig.roleSettings.roles[role], settings.roles[role], `Role ${role} should be unchanged`)
+  }
+
+  // Router-mode answer with backups copies failure and backups
+  const routerConfig = structuredClone(config)
+  routerConfig.roleSettings = structuredClone(settings)
+  routerConfig.roleSettings.answerMode = 'router'
+  routerConfig.roleSettings.roles.answer = { ...settings.roles.answer, failure: 'fallback', fallbackModelIds: ['b', 'c'] }
+  const autoRouterConfig = withSideJob(routerConfig, 'summarization', '__auto__')
+  assert.equal(autoRouterConfig.roleSettings.roles.summarization.failure, 'fallback')
+  assert.deepEqual(autoRouterConfig.roleSettings.roles.summarization.fallbackModelIds, ['b', 'c'])
+  assert.deepEqual(autoRouterConfig.roleSettings.roles.summarization.eligibleModelIds, [settings.roles.answer.modelId, 'b', 'c'])
+
+  // Test '__off__'
+  const offConfig = withSideJob({ ...config, roleSettings: settings }, 'summarization', '__off__')
+  assert.equal(offConfig.roleSettings.roles.summarization.enabled, false)
+  assert.equal(offConfig.roleSettings.roles.summarization.followAnswer, false)
+  assert.equal(offConfig.roleSettings.roles.summarization.modelId, settings.roles.summarization.modelId) // unchanged
+
+  // Test specific model ID
+  const modelConfig = withSideJob({ ...config, roleSettings: settings }, 'summarization', secondary)
+  assert.equal(modelConfig.roleSettings.roles.summarization.enabled, true)
+  assert.equal(modelConfig.roleSettings.roles.summarization.followAnswer, false)
+  assert.equal(modelConfig.roleSettings.roles.summarization.modelId, secondary)
+  assert.equal(modelConfig.roleSettings.roles.summarization.failure, 'stop')
+  assert.deepEqual(modelConfig.roleSettings.roles.summarization.fallbackModelIds, [])
+  assert.ok(modelConfig.roleSettings.roles.summarization.eligibleModelIds.includes(secondary))
+  assert.equal(modelConfig.roleSettings.roles.summarization.eligibleModelIds.filter(id => id === secondary).length, 1, 'ID appears only once')
+
+  // Test sideJobChoice returns the three kinds
+  assert.equal(sideJobChoice({ enabled: true, followAnswer: true, modelId: 'x' }), '__auto__')
+  assert.equal(sideJobChoice({ enabled: false, followAnswer: false, modelId: 'x' }), '__off__')
+  assert.equal(sideJobChoice({ enabled: true, followAnswer: false, modelId: 'x' }), 'x')
+  assert.equal(sideJobChoice(undefined), '__off__')
+
+  // Test followAnswerRoles refills Auto roles after answer model changes
+  const followAnswerConfig = structuredClone(config)
+  followAnswerConfig.roleSettings = structuredClone(settings)
+  followAnswerConfig.roleSettings.roles.summarization = { enabled: true, followAnswer: true, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop', fallbackModelIds: [] }
+  followAnswerConfig.roleSettings.roles.answer.modelId = secondary
+  followAnswerConfig.roleSettings.roles.answer.fallbackModelIds = ['backup1', 'backup2']
+  const refilled = followAnswerRoles(followAnswerConfig)
+  assert.equal(refilled.roleSettings.roles.summarization.modelId, secondary)
+  assert.deepEqual(refilled.roleSettings.roles.summarization.fallbackModelIds, ['backup1', 'backup2'])
+  assert.equal(refilled.roleSettings.roles.summarization.timeoutMs, 120000) // unchanged
+  assert.equal(refilled.roleSettings.roles.summarization.enabled, true) // unchanged
+  assert.equal(refilled.roleSettings.roles.answer.modelId, secondary) // unchanged
+  assert.equal(refilled.roleSettings.roles.routing.followAnswer, false) // non-Auto role unchanged
+
+  // Test Zod keeps the flag
+  const controlTs = fs.readFileSync(path.join(root, 'src/lib/gateway/control.ts'), 'utf8')
+  assert.ok(controlTs.includes('followAnswer: z.boolean().optional().default(false)'), 'Zod schema should include followAnswer')
+
+  // Test SIDE_JOBS has no auto on search-ranking and memory-ranking
+  assert.equal(SIDE_JOBS.find(job => job.role === 'search-ranking').auto, false)
+  assert.equal(SIDE_JOBS.find(job => job.role === 'memory-ranking').auto, false)
+  assert.equal(SIDE_JOBS.find(job => job.role === 'routing').auto, true)
+  assert.equal(SIDE_JOBS.find(job => job.role === 'memory-sorting').auto, true)
+
+  console.log('Model role checks passed: explicit eligibility, manual lock, typed routing choices, timeout/provider fallback, privacy separation, no secret copying, isolated Models API round-trip, and side jobs Auto/Off/model choices.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

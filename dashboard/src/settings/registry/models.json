@@ -241,6 +241,17 @@
       "title": "AI jobs",
       "settings": [
         {
+          "id": "models.side_jobs",
+          "title": "Side jobs",
+          "description": "Smaller jobs the AI does in the background, and which model does each.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "global",
+          "effect": "live",
+          "component": "side-jobs"
+        },
+        {
           "id": "models.roles",
           "title": "Model roles",
           "description": "Every role's model, backup, time limit and what happens on failure.",
