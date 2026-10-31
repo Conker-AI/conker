@@ -85,7 +85,7 @@ function componentHarness() {
   const mocks = { react: hooks, zustand: { useStore(store) { if (!subscriptions.has(store)) subscriptions.set(store, store.subscribe(() => { dirty = true })); return store.getState() } },
     'lucide-react': { ExternalLink: 'svg', LogIn: 'svg', RefreshCw: 'svg' }, '@/app/settings/models-providers': { ModelsProviders: 'ModelsProviders' },
     '@/components/ui/button': { Button: 'button' }, '@/components/ui/badge': { Badge: 'Badge' }, '@/components/ui/sheet': { Sheet: 'Sheet', SheetTrigger: 'SheetTrigger', SheetContent: 'SheetContent', SheetHeader: 'SheetHeader', SheetTitle: 'SheetTitle', SheetPanel: 'SheetPanel' }, '@/components/design-system': { WorkspaceSection: 'section' }, './page-frame': { GatewayPageFrame: 'main' },
-    './chatgpt-connection': { ChatGPTConnection: function ChatGPTConnection() {} }, './native-claude-connection': { NativeClaudeConnection: 'NativeClaudeConnection' }, './provider-credentials': { ProviderCredentials: 'ProviderCredentials' } }
+    './chatgpt-connection': { ChatGPTConnection: function ChatGPTConnection() {} }, './native-claude-connection': { NativeClaudeConnection: 'NativeClaudeConnection' }, './provider-credentials': { ProviderCredentials: 'ProviderCredentials' }, '@/components/brand/identity-mark': { IdentityMark: 'IdentityMark' } }
   const { GatewayProvidersSettings } = loader(mocks)('src/components/gateway/providers-settings.tsx')
   const authStore = createStore(() => owner('owner_A')), reads = [], models = [], writes = []
   let client = { providers(signal) { const value = { signal, ...deferred() }; reads.push(value); return value.promise },
