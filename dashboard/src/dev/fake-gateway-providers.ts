@@ -6,9 +6,9 @@ export { createFakeHostOps } from './fake-gateway-host'
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }
 
-/** Preview-only provider credential status; scenarios come from sessionStorage, nothing leaves the browser. */
+/** Preview-only provider credential status (a release whose Pi reads every direct key); scenarios come from sessionStorage, nothing leaves the browser. */
 export function createFakeProviderCredentials() {
-  const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
+  const credentialStatus = { schemaVersion: 1, available: true, secretsIncluded: false, paidAllowed: false, policyRecoveryRequired: false, providers: ['openrouter', 'openai', 'anthropic', 'gemini', 'xai', 'mistral', 'deepseek', 'groq'].map(id => ({ id, configured: false, activeRevision: null, activeAt: null, stagedRevision: null as string | null, stagedAt: null, verificationStatus: null as string | null, verificationBasis: null, verifiedAt: null, verificationStale: false, activationPending: false, revokedRevisions: [], secretIncluded: false })) }
   return async function handle(method: string, options: Request, fail: (status: number) => never): Promise<Json> {
     const scenario = globalThis.sessionStorage?.getItem('conker-fake-credentials')
     if (scenario) {

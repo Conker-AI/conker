@@ -108,3 +108,44 @@ def test_each_provider_gets_its_own_header(monkeypatch):
         "openrouter.ai",
         "api.anthropic.com",
     )
+
+
+def test_the_direct_providers_use_their_own_hosts_and_headers(monkeypatch):
+    expected = {
+        "gemini": ("generativelanguage.googleapis.com", "x-goog-api-key", "sk-test"),
+        "xai": ("api.x.ai", "Authorization", "Bearer sk-test"),
+        "mistral": ("api.mistral.ai", "Authorization", "Bearer sk-test"),
+        "deepseek": ("api.deepseek.com", "Authorization", "Bearer sk-test"),
+        "groq": ("api.groq.com", "Authorization", "Bearer sk-test"),
+    }
+    for name, (host, header, value) in expected.items():
+        outcome, sent = checked(monkeypatch, name, Answer(200))
+        assert outcome == ("verified", "provider_credential_check")
+        assert sent["host"] == host and sent["headers"][header] == value
+        assert "anthropic-version" not in sent["headers"]
+
+
+def test_google_answers_a_wrong_key_with_400():
+    assert 400 in records.PROVIDERS["gemini"].rejected
+    assert all(400 not in records.PROVIDERS[name].rejected for name in records.FIRST_PROVIDERS)
+
+
+@pytest.mark.parametrize("name,result", [("gemini", "rejected"), ("openai", "unavailable")])
+def test_a_400_is_rejected_only_where_the_provider_means_a_wrong_key(monkeypatch, name, result):
+    (outcome, _), _sent = checked(monkeypatch, name, Answer(400))
+    assert outcome == result
+
+
+@pytest.mark.parametrize(
+    "lines,released",
+    [
+        (None, records.FIRST_PROVIDERS),
+        ("DIRECT_PROVIDERS_STATE=deferred\n", records.FIRST_PROVIDERS),
+        ("PI_VERSION=0.16.1\nDIRECT_PROVIDERS_STATE=active\n", tuple(records.PROVIDERS)),
+    ],
+)
+def test_a_release_offers_the_direct_providers_only_when_it_says_so(tmp_path, lines, released):
+    versions = tmp_path / "versions.env"
+    if lines is not None:
+        versions.write_text(lines, encoding="utf-8")
+    assert records.released_providers(versions) == released

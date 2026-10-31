@@ -233,3 +233,29 @@ def test_private_unix_socket_roundtrip(tmp_path):
         finally:
             server.shutdown()
             worker.join(timeout=5)
+
+
+def released(tmp_path, state):
+    source = tmp_path / "source"
+    source.mkdir(exist_ok=True)
+    (source / "versions.env").write_text(f"DIRECT_PROVIDERS_STATE={state}\n", encoding="utf-8")
+    return bridge(tmp_path)
+
+
+def test_a_release_without_direct_providers_keeps_the_three_rows(tmp_path):
+    # The Pi 0.16.0 gateway refuses a status with any row beyond these three.
+    control = released(tmp_path, "deferred")
+    ids = [row["id"] for row in control.status()["providers"]]
+    assert ids == ["openrouter", "openai", "anthropic"]
+    with pytest.raises(ProviderSecretError, match="Unsupported provider"):
+        stage(control, provider="gemini")
+    assert not control.store.staged_path("gemini").exists()
+
+
+def test_a_release_with_direct_providers_offers_every_row(tmp_path):
+    control = released(tmp_path, "active")
+    ids = [row["id"] for row in control.status()["providers"]]
+    assert ids == ["openrouter", "openai", "anthropic", "gemini", "xai", "mistral", "deepseek", "groq"]
+    saved = stage(control, provider="groq")
+    assert "synthetic-provider-key" not in json.dumps(saved)
+    assert control.store.staged_path("groq").read_bytes() == b"synthetic-provider-key"

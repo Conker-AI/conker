@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from compose_overlays import overlay_files
+from provider_records import PROVIDERS
 from recovery_data import RecoveryError
 
 FORMAT = "conker-snapshot-1"
@@ -138,6 +139,9 @@ class LayoutProfile:
     optional_services: frozenset[str] = frozenset()
 
 
+# Provider keys are host files the secret store owns, never part of a snapshot.
+PROVIDER_MOUNTS = frozenset(f"/run/secrets/provider-{name}" for name in PROVIDERS)
+
 REPOSITORY_PROFILE = LayoutProfile(
     name="repository",
     services=frozenset(REPOSITORY_SERVICES),
@@ -155,13 +159,7 @@ REPOSITORY_PROFILE = LayoutProfile(
         # The Claude plan sign-in (docker-compose.subscriptions.yml), as on Ubuntu: not in snapshots.
         "subscriptions": frozenset({"/state", "/run/conker-chatgpt"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
-        "pi": frozenset({
-            "/run/secrets/provider-openrouter",
-            "/run/secrets/provider-openai",
-            "/run/secrets/provider-anthropic",
-            "/run/secrets/speech",
-            "/run/conker-chatgpt",
-        }),
+        "pi": PROVIDER_MOUNTS | {"/run/secrets/speech", "/run/conker-chatgpt"},
         "postgres": frozenset({"/var/lib/postgresql/data"}),
         "systemgate": frozenset({"/host/proc", "/backups"}),
         "toolgate": frozenset({"/run/conker-sandbox"}),
@@ -192,13 +190,7 @@ UBUNTU_PROFILE = LayoutProfile(
         # restore onto another host.
         "subscriptions": frozenset({"/state", "/run/conker-chatgpt"}),
         "owner-terminal": frozenset({"/run/conker-terminal", "/workspace"}),
-        "pi": frozenset({
-            "/run/secrets/provider-openrouter",
-            "/run/secrets/provider-openai",
-            "/run/secrets/provider-anthropic",
-            "/run/secrets/speech",
-            "/run/conker-chatgpt",
-        }),
+        "pi": PROVIDER_MOUNTS | {"/run/secrets/speech", "/run/conker-chatgpt"},
         "postgres": frozenset({"/var/lib/postgresql/data"}),
         "systemgate": frozenset({"/host/proc", "/backups"}),
         "toolgate": frozenset({"/run/conker-sandbox"}),
@@ -260,7 +252,7 @@ PROVIDER_STATE_FIELDS = {
 }
 
 
-PROVIDER_IDS = {"openrouter", "openai", "anthropic"}
+PROVIDER_IDS = set(PROVIDERS)
 
 
 def write_json(path: Path, value: dict | list) -> None:

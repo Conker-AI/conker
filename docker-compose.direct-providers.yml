@@ -1,0 +1,24 @@
+# Direct API keys for Gemini, xAI, Mistral, DeepSeek and Groq, beside OpenRouter, OpenAI and
+# Anthropic in docker-compose.yml. Same rule as those: one key file per provider, owned by the
+# provider secret store (scripts/provider_secrets.py), mounted read-only, never in an environment
+# value, never in backups.
+#
+# Added on top of docker-compose.yml only when versions.env says DIRECT_PROVIDERS_STATE=active,
+# which the release sets together with a Pi that reads these keys (any release after 0.16.0).
+# ./conker, install.sh, conker update and recovery select it by that rule
+# (scripts/compose_overlays.py). install.sh and conker update create the key files before Compose
+# starts, so Docker never makes a directory in their place.
+services:
+  pi:
+    environment:
+      PI_GEMINI_KEY_FILE: /run/secrets/provider-gemini
+      PI_XAI_KEY_FILE: /run/secrets/provider-xai
+      PI_MISTRAL_KEY_FILE: /run/secrets/provider-mistral
+      PI_DEEPSEEK_KEY_FILE: /run/secrets/provider-deepseek
+      PI_GROQ_KEY_FILE: /run/secrets/provider-groq
+    volumes:
+      - ./.conker/provider-secrets/gemini.key:/run/secrets/provider-gemini:ro
+      - ./.conker/provider-secrets/xai.key:/run/secrets/provider-xai:ro
+      - ./.conker/provider-secrets/mistral.key:/run/secrets/provider-mistral:ro
+      - ./.conker/provider-secrets/deepseek.key:/run/secrets/provider-deepseek:ro
+      - ./.conker/provider-secrets/groq.key:/run/secrets/provider-groq:ro

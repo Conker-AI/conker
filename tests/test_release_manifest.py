@@ -97,6 +97,27 @@ def test_active_terminal_requires_exact_image_and_linux_acceptance_identity():
     assert normalized["capabilities"]["owner-terminal"]["state"] == "active"
 
 
+@pytest.mark.parametrize("state", ["", "on", "Active"])
+def test_direct_providers_state_is_deferred_or_active(state):
+    values = parse_env(MANIFEST)
+    values["DIRECT_PROVIDERS_STATE"] = state
+
+    with pytest.raises(ManifestError, match="DIRECT_PROVIDERS_STATE"):
+        validate_manifest(values)
+
+
+def test_active_direct_providers_need_a_pi_that_reads_their_keys():
+    values = parse_env(MANIFEST)
+    values["DIRECT_PROVIDERS_STATE"] = "active"
+    values["PI_VERSION"] = "0.16.0"
+    with pytest.raises(ManifestError, match="direct providers require PI_VERSION"):
+        validate_manifest(values)
+
+    values["PI_VERSION"] = "0.16.1"
+    normalized = validate_manifest(values)
+    assert normalized["capabilities"]["direct-providers"] == {"state": "active"}
+
+
 def test_stale_dashboard_revision_is_rejected():
     values = parse_env(MANIFEST)
 

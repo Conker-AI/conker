@@ -437,6 +437,9 @@ class HostTransport:
 
     def apply_services(self, candidate: dict[str, Any]) -> None:
         override = self._write_override(candidate["resolved_images"])
+        # Every provider's key file exists before Compose mounts it; else Docker makes a directory.
+        store = self.root / ".conker" / "provider-secrets"
+        self._run([sys.executable, str(self.root / "scripts/provider_secrets.py"), "--directory", str(store), "initialize"])
         self._run(
             self._compose_command("up", "-d", "--remove-orphans", override=override), timeout=900
         )

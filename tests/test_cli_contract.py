@@ -158,6 +158,28 @@ def test_provider_status_is_host_only_and_contains_no_secrets(ubuntu_cli):
     assert not ubuntu_cli.docker_log.exists()
 
 
+def test_a_release_with_an_older_pi_refuses_direct_provider_keys(ubuntu_cli):
+    # No DIRECT_PROVIDERS_STATE=active line: the pinned Pi would never read a Gemini key.
+    result = ubuntu_cli("providers", "set", "gemini", "--stdin")
+
+    assert result.returncode == 1
+    assert "need a newer Conker release" in result.stderr
+    assert not (ubuntu_cli.deployment / "state/provider-secrets/gemini.staged").exists()
+    assert not ubuntu_cli.docker_log.exists()
+
+
+def test_a_release_with_direct_providers_lists_every_provider(ubuntu_cli):
+    versions = ubuntu_cli.deployment / "sources/companion/versions.env"
+    versions.write_text("DIRECT_PROVIDERS_STATE=active\n", encoding="utf-8")
+
+    result = ubuntu_cli("providers", "status", "--json")
+
+    assert result.returncode == 0, result.stderr
+    assert [item["id"] for item in json.loads(result.stdout)["providers"]] == [
+        "openrouter", "openai", "anthropic", "gemini", "xai", "mistral", "deepseek", "groq",
+    ]
+
+
 def test_verified_provider_activation_recreates_pi_and_commits_revision(ubuntu_cli):
     from scripts.provider_secrets import SecretStore
 

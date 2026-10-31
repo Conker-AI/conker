@@ -73,7 +73,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
       return { title, path, target, details }
     }
     title = body.operation === 'stage' ? 'Save provider key' : body.operation === 'verify' ? 'Verify provider key' : body.operation === 'activate' ? 'Activate provider key' : body.operation === 'recover' ? 'Recover previous provider key' : body.operation === 'discard' ? 'Discard staged provider key' : 'Record provider revocation'
-    target = ['openrouter', 'openai', 'anthropic'].includes(String(body.provider)) ? String(body.provider) : 'Hosted provider'
+    target = ['openrouter', 'openai', 'anthropic', 'gemini', 'xai', 'mistral', 'deepseek', 'groq'].includes(String(body.provider)) ? String(body.provider) : 'Hosted provider'
     details.push(body.operation === 'activate' || body.operation === 'recover' ? 'Restarts the AI runtime. Active requests may be interrupted. Does not grant tool access or authorize paid models.' : body.operation === 'verify' ? 'Sends one credential check to the provider. Does not generate an answer.' : body.operation === 'record-revoked' ? 'Records your confirmation only. Does not revoke the key at its issuer.' : body.operation === 'discard' ? 'Deletes this staged key only. The active provider credential is unchanged.' : 'Stores a write-only key on your Conker host. Does not activate it or authorize paid models.')
     return { title, path, target, details }
   }

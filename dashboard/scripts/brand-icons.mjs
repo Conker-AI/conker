@@ -16,7 +16,7 @@ const simple = { version: "16.36.0", url: (name) => `https://unpkg.com/simple-ic
 const icons = {
   openai: [lobe, "openai"], claude: [lobe, "claude"], anthropic: [lobe, "anthropic"], gemini: [lobe, "gemini"],
   xai: [lobe, "grok"], mistral: [lobe, "mistral"], deepseek: [lobe, "deepseek"], openrouter: [lobe, "openrouter"],
-  ollama: [lobe, "ollama"],
+  groq: [lobe, "groq"], ollama: [lobe, "ollama"],
   tiktok: [simple, "tiktok"], github: [simple, "github"], gmail: [simple, "gmail"], telegram: [simple, "telegram"],
   youtube: [simple, "youtube"], google: [simple, "google"], googlecalendar: [simple, "googlecalendar"],
   googledrive: [simple, "googledrive"], discord: [simple, "discord"], notion: [simple, "notion"], x: [simple, "x"],

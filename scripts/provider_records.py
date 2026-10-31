@@ -9,6 +9,7 @@ import re
 import ssl
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 
 MAX_RESPONSE_BYTES = 65536
 REVISION = re.compile(r"credential_[0-9a-f]{32}")
@@ -27,6 +28,8 @@ class Provider:
     path: str
     header: str
     prefix: str
+    # The statuses that mean "this key is wrong". Google answers a bad key with 400.
+    rejected: frozenset[int] = frozenset({401, 403})
 
 
 PROVIDERS = {
@@ -45,8 +48,44 @@ PROVIDERS = {
         Provider(
             "anthropic", "api.anthropic.com", "/v1/models?limit=1", "x-api-key", ""
         ),
+        # Direct API keys for the other frontier labs: Pi releases after 0.16.0 read them.
+        Provider(
+            "gemini",
+            "generativelanguage.googleapis.com",
+            "/v1beta/models?pageSize=1",
+            "x-goog-api-key",
+            "",
+            frozenset({400, 401, 403}),
+        ),
+        Provider("xai", "api.x.ai", "/v1/models", "Authorization", "Bearer "),
+        # Mistral's full model list can pass the response cap; one model's card cannot.
+        Provider(
+            "mistral",
+            "api.mistral.ai",
+            "/v1/models/mistral-small-latest",
+            "Authorization",
+            "Bearer ",
+        ),
+        Provider("deepseek", "api.deepseek.com", "/models", "Authorization", "Bearer "),
+        Provider("groq", "api.groq.com", "/openai/v1/models", "Authorization", "Bearer "),
     )
 }
+# The providers every Pi release reads. The others are offered only once the release says the
+# pinned Pi reads them too (DIRECT_PROVIDERS_STATE=active in versions.env): an older gateway
+# refuses a status with rows it does not know, and an older Pi would never see the key.
+FIRST_PROVIDERS = ("openrouter", "openai", "anthropic")
+DIRECT_PROVIDERS_RELEASE = "DIRECT_PROVIDERS_STATE=active"
+
+
+def released_providers(versions_env: Path) -> tuple[str, ...]:
+    """The provider ids this release's Pi reads, in PROVIDERS order."""
+    try:
+        lines = {line.strip() for line in versions_env.read_text(encoding="utf-8").splitlines()}
+    except FileNotFoundError:
+        lines = set()
+    if DIRECT_PROVIDERS_RELEASE in lines:
+        return tuple(PROVIDERS)
+    return tuple(name for name in PROVIDERS if name in FIRST_PROVIDERS)
 
 
 def now() -> str:
@@ -182,7 +221,7 @@ def verify_provider(provider: Provider, secret: bytes) -> tuple[str, str]:
             return "unavailable", "response_too_large"
         if 200 <= response.status < 300:
             return "verified", "provider_credential_check"
-        if response.status in {401, 403}:
+        if response.status in provider.rejected:
             return "rejected", "provider_rejected"
         return "unavailable", f"provider_http_{response.status}"
     except (OSError, ssl.SSLError, http.client.HTTPException) as exc:

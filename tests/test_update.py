@@ -253,3 +253,20 @@ def test_host_git_rollback_restores_recorded_revision_without_reset_or_checkout(
     assert git("rev-parse", "HEAD") == prior_revision
     assert git("status", "--porcelain") == ""
     assert tracked.read_text(encoding="utf-8") == "prior\n"
+
+
+def test_services_start_only_after_every_provider_key_file_exists(tmp_path):
+    # An older update.py never created the new key files; Docker would make directories there.
+    transport = object.__new__(HostTransport)
+    transport.root = tmp_path
+    commands: list[list[str]] = []
+    transport._write_override = lambda images: tmp_path / "override.yml"
+    transport._compose_command = lambda *args, override: ["docker", "compose", *args]
+    transport._run = lambda command, **_: commands.append([str(part) for part in command])
+
+    transport.apply_services({"resolved_images": {}})
+
+    initialize, up = commands
+    assert initialize[-3:] == ["--directory", str(tmp_path / ".conker" / "provider-secrets"), "initialize"]
+    assert initialize[1] == str(tmp_path / "scripts/provider_secrets.py")
+    assert up[:3] == ["docker", "compose", "up"]

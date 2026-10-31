@@ -27,8 +27,8 @@ from scripts.chatgpt_provider import (
 )
 from scripts.plan_limits import read_chatgpt
 from scripts.provider_paid_policy import PaidPolicy
+from scripts.provider_records import released_providers
 from scripts.provider_secrets import (
-    PROVIDERS,
     REVISION,
     ProviderSecretError,
     SecretStore,
@@ -75,8 +75,13 @@ class ProviderControl:
         self.runner, self.verifier = runner, verifier
         self.policy = PaidPolicy(self.root, layout, runner=runner)
 
+    def released(self) -> tuple[str, ...]:
+        """The providers the pinned Pi reads; the gateway refuses a status with any other."""
+        return released_providers(self.source / "versions.env")
+
     def status(self) -> dict:
         value = self.store.status()
+        released = self.released()
         return {
             "schemaVersion": 1,
             "available": True,
@@ -85,6 +90,7 @@ class ProviderControl:
             "providers": [
                 {key: row[key] for key in PROJECTION_FIELDS}
                 for row in value["providers"]
+                if row["id"] in released
             ],
         }
 
@@ -110,7 +116,7 @@ class ProviderControl:
                 "Recover the spending policy before changing credentials."
             )
         provider, operation = value.get("provider"), value.get("operation")
-        if not isinstance(provider, str) or provider not in PROVIDERS:
+        if not isinstance(provider, str) or provider not in self.released():
             raise ProviderSecretError("Unsupported provider.")
         if any(
             (self.root / name).exists()

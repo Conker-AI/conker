@@ -29,6 +29,7 @@ REQUIRED_KEYS = {
     "OWNER_TERMINAL_STATE",
     "AGENT_SANDBOX_STATE",
     "SUBSCRIPTIONS_STATE",
+    "DIRECT_PROVIDERS_STATE",
     *GATE_VERSION_KEYS.values(),
     *THIRD_PARTY_IMAGE_KEYS.values(),
 }
@@ -199,6 +200,15 @@ def validate_manifest(
             "ghcr.io/conker-ai/subscriptions@sha256:<digest>"
         )
 
+    # Gemini, xAI, Mistral, DeepSeek and Groq keys (scripts/provider_records.py): the gateway and Pi
+    # of 0.16.0 know only OpenRouter, OpenAI and Anthropic, so the release turns them on with a Pi
+    # that reads them.
+    direct_state = values["DIRECT_PROVIDERS_STATE"]
+    if direct_state not in {"deferred", "active"}:
+        raise ManifestError("DIRECT_PROVIDERS_STATE must be deferred or active")
+    if direct_state == "active" and not _version_at_least(gates["pi"], "0.16.1"):
+        raise ManifestError("active direct providers require PI_VERSION newer than 0.16.0")
+
     capabilities = {
         "owner-terminal": {
             "state": terminal_state,
@@ -213,6 +223,7 @@ def validate_manifest(
             "state": subscriptions_state,
             "image": subscriptions_image if subscriptions_state == "active" else None,
         },
+        "direct-providers": {"state": direct_state},
     }
 
     return {

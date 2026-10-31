@@ -1,7 +1,7 @@
 # Hosted provider credentials
 
-Conker manages OpenRouter, OpenAI and Anthropic credentials on the host. Secret
-values are write-only. They never belong in browser storage or responses, model
+Conker manages API keys for OpenRouter, OpenAI, Anthropic, Google Gemini, xAI,
+Mistral, DeepSeek and Groq on the host. Secret values are write-only. They never belong in browser storage or responses, model
 configuration, command arguments, Compose environment values, logs or backup archives.
 
 Settings supports saving, verifying, discarding a staged key, activating and recovering
@@ -13,13 +13,32 @@ socket. It never receives a Docker socket, shell, file path or environment edito
 Repository installs store owner-only files under `.conker/provider-secrets/`.
 The isolated Ubuntu layout uses `state/provider-secrets/`. The directory is mode
 0700 and secret and metadata files are mode 0600 on POSIX hosts. Pi receives only
-the three active files as read-only mounts and reads them once at startup. Each
+the active key files as read-only mounts and reads them once at startup. Each
 credential has a random opaque revision; revisions are identifiers, not hashes or
 partial keys.
 
+## Which providers a release offers
+
+`openrouter`, `openai` and `anthropic` work with every release. `gemini`, `xai`,
+`mistral`, `deepseek` and `groq` need a Pi that reads their keys (any release after
+0.16.0), so a release turns them on with `DIRECT_PROVIDERS_STATE=active` in
+`versions.env`, beside that Pi. Until then Settings lists the first three only,
+`conker providers set` refuses the others, and Pi gets no mount for them. With the
+line active, `docker-compose.direct-providers.yml` (repository install) or
+`prepare.py` (Ubuntu) mounts their key files the same way as the first three, and
+`./install.sh` and `./conker update` create every key file before Compose starts.
+
+Each key is checked against the provider's own model list: Gemini at
+`generativelanguage.googleapis.com`, xAI at `api.x.ai`, DeepSeek at
+`api.deepseek.com` and Groq at `api.groq.com`. Mistral's list can be larger than
+the 64 KB answer the check reads, so its key is checked against one model's card
+(`mistral-small-latest` at `api.mistral.ai`). Google answers a wrong key with
+HTTP 400, so for Gemini that also counts as `rejected`.
+
 ## Add or rotate a credential
 
-Use `openrouter`, `openai` or `anthropic` as `PROVIDER`:
+Use one of `openrouter`, `openai`, `anthropic`, `gemini`, `xai`, `mistral`,
+`deepseek` or `groq` as `PROVIDER`:
 
 ```sh
 conker providers status
@@ -94,7 +113,7 @@ Paid requests require separate explicit authorization. Settings and
 `conker providers spending status|on|off|recover` use the same fixed host policy
 operation. It revision-checks the current flag, restarts Pi and the sidecars that share its
 network (Laya on Ubuntu, and the Claude plan runtime where it runs), and confirms the runtime flag.
-An Anthropic, OpenAI or OpenRouter key answers nothing until spending is on: Pi reports the
+A hosted API key (any of the providers above) answers nothing until spending is on: Pi reports the
 provider as not configured, "paid models are disabled". Failed rollback holds a redacted recovery marker.
 This switch is not a budget; provider-account limits still apply. Connecting a key
 does not enable spending, alter model roles or grant tool access.
