@@ -69,10 +69,10 @@ export function HelperRoleBlock({ role, offLabel }: { role: 'thinking' | 'review
   const current = saved?.roleSettings.roles[role as 'thinking']
   return <RoleMenu id={`${role}-model`} value={current?.enabled ? current.modelId ?? '__off__' : '__off__'} first={{ value: '__off__', label: offLabel }} onChange={modelId => {
     if (!saved) return
-    const assignment = current ?? { enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop' as const, fallbackModelId: null }
+    const assignment = current ?? { enabled: false, eligibleModelIds: [], modelId: null, timeoutMs: 120000, failure: 'stop' as const, fallbackModelIds: [] }
     const on = modelId !== '__off__'
     void save({ ...saved, roleSettings: { ...saved.roleSettings, roles: { ...saved.roleSettings.roles, [role]: { ...assignment, enabled: on,
-      ...(on ? { modelId, eligibleModelIds: [...new Set([...assignment.eligibleModelIds, modelId])], failure: 'stop' as const, fallbackModelId: null } : {}) } } } })
+      ...(on ? { modelId, eligibleModelIds: [...new Set([...assignment.eligibleModelIds, modelId])], failure: 'stop' as const, fallbackModelIds: [] } : {}) } } } })
   }} />
 }
 

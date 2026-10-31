@@ -227,6 +227,12 @@ def build_parser(description):
         "--model", help="The model ID for --role, as conker models lists it"
     )
     choice.add_argument("--off", action="store_true", help="Switch --role off")
+    models.add_argument(
+        "--backup",
+        action="append",
+        metavar="ID",
+        help="A backup model for --model, tried after it fails; repeat for more, first first",
+    )
     commands.add_parser(
         "profiles", help="Read-only model profiles from recorded outcomes"
     )
