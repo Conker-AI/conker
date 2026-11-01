@@ -57,7 +57,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
   return <>
     {visible && <GatewayHeader context={<><BackToChats /><ChatTitle control={knownForgotten ? undefined : control} sessionId={current && !knownForgotten ? current.id : null} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} title={knownForgotten ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || (selected ? 'Chat' : 'New chat')} /></>}>
       {control && !knownForgotten && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || historyLoading || Boolean(attempt)} />}
-      {control && current && !knownForgotten && <ChatContextControl key={`context:${current.id}`} control={control} sessionId={current.id} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} />}
+      {control && current && !knownForgotten && <ChatContextControl key={`context:${current.id}`} control={control} sessionId={current.id} lastMessageId={current.messages.at(-1)?.id ?? null} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} />}
       <DropdownMenu><DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="Chat options" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end">
         <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/memory" />}><Brain />Open memory</DropdownMenuItem>
