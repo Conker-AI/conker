@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat summary: edit, draft with AI, fold old messages, restore and continue in a new chat.** Long chats stay sharp with a summary panel that shows and edits the chat's summary, lets Conker draft it, folds old messages into it, restores earlier versions, and continues in a fresh chat that starts from the summary.
 - **Answers can be voted on, judged and fact-checked.** Under a saved answer you can give a thumbs up or down, have a model score its versions without knowing who wrote them (2 or more versions), and check its claims against its sources.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
