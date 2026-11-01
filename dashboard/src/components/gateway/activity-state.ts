@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla'
-import type { GatewayActivityEvent, GatewayActivityRun, GatewayTask, GatewayTaskCreate, GatewayTaskStatus } from '@/lib/gateway/activity'
+import type { GatewayActivityRun, GatewayTask, GatewayTaskCreate, GatewayTaskStatus } from '@/lib/gateway/activity'
 
 export type TaskDraft = { outcome: string; criteria: string; sessionId: string; parentTaskId: string; runIds: string[]; revision?: number; requestId?: string }
 export type ReviewDraft = { taskId: string; sessionId: string; status: GatewayTaskStatus; revision: number; note: string; checked: string[] }
@@ -24,7 +24,6 @@ export function createGatewayActivityWorkspaceState() {
 export type GatewayActivityWorkspaceState = ReturnType<typeof createGatewayActivityWorkspaceState>
 export const taskStatusLabels: Record<GatewayTaskStatus, string> = { planned: 'Planned', in_progress: 'In progress', blocked: 'Blocked', completed: 'Completed', cancelled: 'Cancelled' }
 export const activityLabel = (value: string) => value.replaceAll('_', ' ')
-export const eventLabel = (event: GatewayActivityEvent) => activityLabel(event.kind)
 export const isTerminalTask = (task: GatewayTask) => task.status === 'completed' || task.status === 'cancelled'
 export const taskTitle = (task: GatewayTask) => task.contentStatus === 'forgotten' ? 'Forgotten task' : task.outcome
 export const taskDraftKey = (taskId?: string) => taskId ? `edit:${taskId}` : 'create'

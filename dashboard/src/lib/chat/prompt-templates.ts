@@ -3,7 +3,6 @@ export type TemplateField = { id: string; label: string; type: FieldType; requir
 export type PromptTemplate = { id: string; name: string; description: string; fields: readonly TemplateField[] }
 export type FieldValue = string | string[] | boolean
 export type TemplateValues = Record<string, FieldValue>
-export const PROMPT_LIMIT = 16000
 
 export const builtinTemplates: readonly PromptTemplate[] = [
   {
