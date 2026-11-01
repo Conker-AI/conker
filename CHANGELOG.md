@@ -6,7 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
-- **CLI upload time and unknown time zone fixes.** Files uploaded from the CLI now send the lastModified time in milliseconds to match the dashboard, and the inbox handles unknown time zones gracefully.
+- **CLI file times and Inbox time zones.** `conker files upload` sends the file time in milliseconds, as the dashboard does, and `conker inbox` shows `-` for an unknown time zone instead of failing.
 - **Gemini, xAI, Mistral, DeepSeek and Groq connect directly.** Pi 0.17.0 is pinned and
   `DIRECT_PROVIDERS_STATE` is active: Settings > Providers saves an API key for each (stored as a
   file the Pi container reads, like the other keys), and Advanced > Add provider lists them for
