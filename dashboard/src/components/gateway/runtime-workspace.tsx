@@ -4,6 +4,7 @@ import { readDraftStart, rememberDraftStart, clearDraftStart, type PendingDraftS
 import { useThinkingCancellation } from './use-thinking-cancellation'
 import { applyThinkingCancellationRead } from './thinking-cancellation'
 import { useMemoryDelivery } from './use-memory-delivery'
+import { useMemoryUndo } from './use-memory-undo'
 import { useRuntimeObservation } from './use-runtime-observation'
 import { createRuntimeDetailReader } from './runtime-detail-read'
 import { useSessionDiscovery } from './session-discovery-context'
@@ -115,6 +116,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const selectedForMemory = useCallback(() => workspace.getState().selected, [workspace])
   const memoryRead = useMemoryDelivery({ client, authStore, privacy, sessionId: current?.id ?? null, messageKey: current?.messages.filter(message => message.role === 'user').at(-1)?.id ?? '',
     active: Boolean(active && visible && current?.status !== 'forgotten'), identity: auth.session?.sessionId ?? '', epoch: workspaceEpoch, selected: selectedForMemory })
+  const memoryUndo = useMemoryUndo(control, memoryRead.refresh)
   const draft = selected && !forgottenIds.includes(selected) ? selectedValue.text : ''
   const attempt = selected ? uncertain[selected] : undefined
   const manualRequired = Boolean(selected && harnessBySession?.[selected] && !selectedValue.modelId)
@@ -512,7 +514,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const activeAgentName = agentNames[activeAgentId] ?? (activeAgentId === 'companion' ? 'Conker' : 'Agent')
   const chatSnapshot: GatewayChatState = {
     operationPending: !!operation,
-    memoryRead: memoryRead.state,
+    memoryRead: memoryRead.state, memoryUndo: memoryUndo.status,
     sessionId: selected ?? '', epoch: workspace.getState().epoch, active: !!active, current, draft, pending, sendPending, detailPending: detailPending || historyLoading,
     activeAgentName, agentNames,
     forgotten: !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten' || !!attempt?.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId)),
@@ -529,7 +531,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       else if (destination === 'models') navigate('/settings?tab=providers')
       else if (destination === 'tools') navigate('/tools')
     },
-    refreshMemory: memoryRead.refresh,
+    refreshMemory: memoryRead.refresh, undoMemory: memoryUndo.undo,
     copy: copyMessage, saveArtifact, exportAnswer: control ? (message, format) => control.exports.answer(message.sessionId, message.id, format) : undefined, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
     send: submit, stop: stopAnswer, checkHistory,
     check: () => attempt?.requestId ? checkSubmission() : checkHistory(),

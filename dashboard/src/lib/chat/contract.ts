@@ -1,5 +1,6 @@
 import type { AnswerExportFormat } from '@/lib/gateway/exports'
 import type { GatewayDownload } from '@/lib/gateway/file-transfer'
+import type { MemoryUndoState } from './memory-undo'
 
 /** Presentation of one selected conversation. Adapters own persistence and eligibility. */
 export type Content = { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
@@ -7,7 +8,8 @@ export type Action<Args extends unknown[] = []> =
   | { availability: 'unsupported' | 'disabled'; reason: string }
   | { availability: 'enabled'; run: (...args: Args) => void | Promise<void> }
 export type MessageAction = 'copy' | 'link' | 'edit' | 'retry' | 'fork' | 'pin' | 'rateUp' | 'rateDown' | 'redact' | 'saveArtifact'
-export type MessageMemoryFeedback = { label: string; description: string; checking: boolean; refresh: Action }
+/** `memoryId` is set only while Memory holds an acknowledged, saved memory; Undo forgets exactly that memory. */
+export type MessageMemoryFeedback = { label: string; description: string; checking: boolean; refresh: Action; memoryId: string | null; undo: Action; undoState?: MemoryUndoState }
 /** `status` is the owner's latest check of this turn, in plain words. */
 export type ChatTurnOutcome = { id: string; title: string; description: string; consequence: string; recordedAt: string; controls: { label: string; action: Action; primary?: boolean }[]; status?: string }
 export type ChatMessage = {

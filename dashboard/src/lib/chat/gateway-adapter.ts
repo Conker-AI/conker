@@ -7,6 +7,7 @@ import { turnDetails } from './turn-details'
 import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, hasActiveRuntimeTurn, type TurnCheck, type UncertainTurn } from '@/components/gateway/runtime-state'
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
 import { memoryFeedback } from './memory-feedback'
+import type { MemoryUndoState } from './memory-undo'
 import { parkedTurn, sameTurnOutcome, turnCheckCopy, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
 
 export type GatewayChatState = {
@@ -18,6 +19,8 @@ export type GatewayChatState = {
   preview: { sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null
   focusedMessageId?: string | null
   memoryRead?: MemoryDeliveryWatchState | null
+  /** Progress of Undo on a "Remembered" note, by message id. */
+  memoryUndo?: Record<string, MemoryUndoState>
   operationPending?: boolean
   /** Nothing of this chat could be read yet (the observation failed before any history loaded). */
   historyUnavailable?: boolean
@@ -31,6 +34,8 @@ export type GatewayChatHandlers = {
   /** Absent when this workspace has no export route. */
   exportAnswer?: (message: RuntimeMessage, format: AnswerExportFormat) => Promise<GatewayDownload>
   refreshMemory?: (messageId: string) => void
+  /** Absent when this workspace has no owner control client. */
+  undoMemory?: (messageId: string, memoryId: string) => void
   resumeTurn?: (turnId: string) => void | Promise<void>
   reviewTurn?: (turnId: string, destination: TurnDestination) => void
 } & Record<RecoveryAction, () => void | Promise<void>>
@@ -46,7 +51,7 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
   const messages: ChatMessage[] = (state.current?.messages ?? []).map(message => ({ ...message,
     memoryDelivery: undefined,
     memory: !isForgotten(state) && message.role === 'user' && message.content.kind === 'text' && state.memoryRead !== undefined
-      ? memoryFeedback(message.id, state.memoryRead, action(value => !isForgotten(value) && value.memoryRead?.phase !== 'checking' && value.current?.messages.some(row => row.id === message.id && row.role === 'user' && row.content.kind === 'text') === true, handler => handler.refreshMemory?.(message.id), 'A memory status check is already in progress.')) : undefined,
+      ? memoryFeedback(message.id, state.memoryRead, action(value => !isForgotten(value) && value.memoryRead?.phase !== 'checking' && value.current?.messages.some(row => row.id === message.id && row.role === 'user' && row.content.kind === 'text') === true, handler => handler.refreshMemory?.(message.id), 'A memory status check is already in progress.'), undoMemory(message.id)) : undefined,
     ...(message.agentId && state.agentNames[message.agentId] ? { agentName: state.agentNames[message.agentId] } : {}),
     ...(message.role === 'assistant' && message.turnId && !isForgotten(state) ? turnDetails(state.current?.turns.find(turn => turn.id === message.turnId)) : {}),
     content: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : message.content,
@@ -57,6 +62,13 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     },
     ...exportAction(message),
   }))
+  /** Undo forgets the memory this message's own saved receipt names, and only while that receipt still says so. */
+  function undoMemory(messageId: string): { action: Action; state?: MemoryUndoState } {
+    const memoryId = state.memoryRead?.receipts[messageId]?.state === 'saved' ? state.memoryRead.receipts[messageId].memoryId : null
+    const fresh = (value: GatewayChatState) => { const receipt = value.memoryRead?.receipts[messageId]; return receipt?.state === 'saved' && receipt.memoryId === memoryId }
+    return { state: state.memoryUndo?.[messageId], action: !memoryId || !handlers().undoMemory ? unsupported
+      : action(value => !isForgotten(value) && fresh(value) && value.memoryUndo?.[messageId]?.phase !== 'working' && value.memoryUndo?.[messageId]?.phase !== 'forgotten', handler => handler.undoMemory?.(messageId, memoryId), 'Undo is already in progress.') }
+  }
   function messageAction(message: RuntimeMessage, kind: 'copy' | 'link'): Action {
     return action(value => !isForgotten(value) && value.current?.messages.some(item => item.id === message.id && item.content.kind === 'text') === true,
       handler => handler.copy(read().current!.messages.find(item => item.id === message.id)!, kind), 'Message content is unavailable.')
