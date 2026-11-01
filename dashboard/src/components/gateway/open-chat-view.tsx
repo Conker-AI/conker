@@ -18,7 +18,7 @@ import { ModelRoutingEvidence, TurnFailureGuidance } from './model-routing-evide
 import { memoryRetrievalSummary } from './plain-status'
 import { useState, type Dispatch, type RefObject, type SetStateAction, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Brain, Layers, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
+import { Brain, Layers, MoreHorizontal, RefreshCw, Sparkles, Wrench } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import type { TaskDispatchIntent } from './task-dispatch-state'
 import { PendingSubmissions } from './pending-submissions'
@@ -34,6 +34,7 @@ import { GatewaySessionAgentControl } from './session-agent-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { ModeControl, TemplateInput, TemplatePicker } from './composer-parts'
 import { ChatTitle } from './chat-title'
+import { nameChat } from './chat-title-actions'
 import { ChatOutputControl } from './chat-output-control'
 import { ChatContextControl } from './chat-context-control'
 import { ConversationViewMenuItems } from './conversation-views'
@@ -68,6 +69,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/memory" />}><Brain />Open memory</DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/tools" />}><Wrench />Open tools</DropdownMenuItem>
+        {phone && control && current && !knownForgotten && <DropdownMenuItem disabled={pending || historyLoading || Boolean(attempt)} onClick={() => void nameChat(control, current.id, refreshChat)}><Sparkles />Name this chat</DropdownMenuItem>}
         {phone && control && current && !knownForgotten && <DropdownMenuItem onClick={() => setContextOpen(true)}><Layers />Edit context</DropdownMenuItem>}
         {phone && shell?.showViews && <ConversationViewMenuItems onToggle={shell.toggleView} />}
       </DropdownMenuContent></DropdownMenu>
