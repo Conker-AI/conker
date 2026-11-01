@@ -31,6 +31,8 @@ const supportedProviders = [
   { id: 'ollama', name: 'Local Ollama' }, { id: 'decisions', name: 'Decisions (Laya)' },
   { id: 'chatgpt', name: 'ChatGPT subscription' },
   { id: 'openrouter', name: 'OpenRouter' }, { id: 'openai', name: 'OpenAI API' }, { id: 'anthropic', name: 'Anthropic' },
+  { id: 'gemini', name: 'Google Gemini API' }, { id: 'xai', name: 'xAI API (Grok)' }, { id: 'mistral', name: 'Mistral API' },
+  { id: 'deepseek', name: 'DeepSeek API' }, { id: 'groq', name: 'Groq API' },
 ]
 
 export function ModelsProviders({ configuration, pending, onSave, serverManaged = false, subscriptionModels = [] }: ModelsProvidersProps) {
