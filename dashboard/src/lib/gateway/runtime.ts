@@ -20,6 +20,8 @@ export type RuntimeMessage = {
   /** The turn that consumed or produced this message, when Pi recorded one. */
   turnId?: string
   memoryDelivery?: MemoryDelivery
+  /** The answer family of an assistant message that has retried versions; Pi lists every version in history. */
+  family?: { rootId: string; retryOf: string | null; selectedId: string; revision: number }
   content: { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
 }
 export type RuntimeMemory = {
@@ -163,12 +165,14 @@ function message(value: unknown, sessionId: string, forgotten: boolean, parseDel
   const agentId = row.agent_id === undefined || row.agent_id === null ? null : runtimeAgentId(row.agent_id)
   if (role !== 'assistant' && agentId !== null) return bad()
   const turnId = row.turn_id === undefined || row.turn_id === null ? null : id(row.turn_id)
+  const familyRow = role === 'assistant' && row.response_family != null ? record(row.response_family) : null
+  const family = familyRow ? { rootId: id(familyRow.root_message_id), retryOf: nullable(familyRow.retry_of, id), selectedId: id(familyRow.selected_message_id), revision: count(familyRow.revision) } : null
   let memoryDelivery: MemoryDelivery | undefined
   if (role === 'user' && content.kind === 'text' && row.memory_delivery != null) {
     try { memoryDelivery = parseDelivery(row.memory_delivery) }
     catch { memoryDelivery = { state: 'unavailable', reasonCode: 'invalid_receipt', admissionMethod: null, memoryId: null } }
   }
-  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(turnId ? { turnId } : {}), ...(memoryDelivery ? { memoryDelivery } : {}) }
+  return { id: id(row.id), sessionId, sequence, role, createdAt: date(row.created_at), content, agentId, ...(turnId ? { turnId } : {}), ...(memoryDelivery ? { memoryDelivery } : {}), ...(family ? { family } : {}) }
 }
 function turn(value: unknown, sessionId: string, forgotten = false): RuntimeTurn {
   const row = record(value)

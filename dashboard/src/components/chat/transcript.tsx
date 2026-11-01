@@ -6,6 +6,7 @@ import { AnswerExportMenu, type ExportStatus } from '@/components/export-menu'
 import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ToolRecord } from '@/components/chat/tool-record'
+import { AnswerTools } from '@/components/chat/answer-tools'
 import { MemoryNote } from '@/components/chat/memory-note'
 import { isMemoryNote } from '@/lib/chat/memory-feedback'
 import { useSmoothText } from '@/components/chat/use-smooth-text'
@@ -64,6 +65,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
       </DropdownMenu>}
       {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>}
     </div>
+    {message.role === 'assistant' && <AnswerTools message={message} />}
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
     {exported && <p role={exported.tone === 'failed' ? 'alert' : 'status'} className={cn('mt-1 text-xs', exported.tone === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>{exported.text}</p>}
   </article>

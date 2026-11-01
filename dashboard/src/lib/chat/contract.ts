@@ -20,6 +20,8 @@ export type ChatMessage = {
   details?: string
   /** Download this completed answer as a file; absent where it can't be exported. */
   export?: { run: (format: AnswerExportFormat) => Promise<GatewayDownload> }
+  /** An answer with retried versions: the shown version is `selectedId`; `versions` are every version's message id, oldest first. */
+  family?: { rootId: string; selectedId: string; revision: number; versions: string[] }
 }
 export type Generation = {
   id: string; sessionId: string; phase: 'starting' | 'streaming' | 'stopping' | 'ended'

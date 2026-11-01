@@ -13,7 +13,10 @@ type MemoryCorrectionErrorCode = typeof memoryCorrectionErrorCodes[number]
 // The host helper's refusals (ADR-0014). Its messages are fixed plain words from its operation table.
 export const hostOpsErrorCodes = ['host_unavailable', 'host_busy', 'host_operation_refused', 'operation_id_conflict', 'invalid_host_operation', 'unknown_operation_id'] as const
 type HostOpsErrorCode = typeof hostOpsErrorCodes[number]
-type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode
+/** Pi's coded refusals on the chat feature routes (answers, reviews, names, context); the UI words each one. */
+export const chatFeatureErrorCodes = ['revision_conflict', 'request_conflict', 'session_busy', 'session_closed', 'helpers_off', 'not_configured', 'unavailable', 'empty', 'invalid_title', 'too_few', 'too_many', 'no_sources', 'unknown_model', 'foreign_version', 'version_unavailable', 'version_context_conflict', 'retry_unavailable', 'source_unavailable', 'source_closed', 'retry_privacy_changed', 'fork_scope', 'fork_boundary', 'pin_after_boundary', 'summary_review', 'fork_limit', 'foreign_message', 'inactive_version', 'outside_boundary', 'turn_pending', 'boundary_changed', 'retrieval_pending', 'unavailable_pin', 'budget_overflow', 'missing_revision', 'no_settings', 'pinned', 'retrieve_rule', 'duplicate', 'not_replaceable', 'invalid_text', 'invalid_replace', 'owner_item', 'superseded', 'invalid_state', 'not_a_version', 'not_found'] as const
+export type ChatFeatureErrorCode = typeof chatFeatureErrorCodes[number]
+type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -182,6 +185,16 @@ routes.POST.unshift(/^\/api\/control\/pi\/collaboration\/teams$/, /^\/api\/contr
 // Terminal creation is password-verified. Operations on that admitted ephemeral lease use the signed-in session.
 routes.GET.unshift(/^\/api\/terminal\/current$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}$/)
 routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/)
+// Chat features (Pi browser_contract CHAT_READS / CHAT_WRITES, same exact ids): output settings,
+// names, answer families, fact checks, branching and context editing. Every write asks for the password.
+const chatSession = '/api/control/pi/sessions/ses_[0-9a-f]{16}'
+const chatContext = '/api/control/pi/context/ses_[0-9a-f]{16}'
+const chatMessage = 'msg_[0-9a-f]{16}'
+routes.GET.unshift(new RegExp(`^${chatSession}/(?:output|title|branch-history|response-families/${chatMessage}(?:/(?:judgements|votes))?|response-retries/[A-Za-z0-9_-]{16,128}|messages/${chatMessage}/fact-checks)$`),
+  new RegExp(`^${chatContext}(?:/(?:summary|items|compaction))?$`))
+routes.POST.unshift(new RegExp(`^${chatSession}/(?:output|title|title/auto|messages/${chatMessage}/(?:retry|fact-check|fork)|response-families/${chatMessage}/(?:select|judge|vote))$`),
+  new RegExp(`^${chatContext}(?:/(?:fork|summary|summary/restore|summary/draft|compact|items|items/(?:dec|thr)_[0-9a-f]{16}/state))?$`))
+const chatFeatureRoute = new RegExp(`^(?:${chatSession}|${chatContext})(?:/|$)`)
 /** Routine session writes need the signed-in session only (ADR-0010); every other write asks for the password. */
 const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
 conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
@@ -386,6 +399,11 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
                 if (typeof body.message === 'string' && body.message.length <= 300 && /^[^\p{Cc}\p{Cf}]+$/u.test(body.message)) detail = body.message
               }
             } catch { /* Fixed host codes and the helper's short reason only. */ }
+          } else if (chatFeatureRoute.test(path) && [403, 404, 409, 422, 503].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && chatFeatureErrorCodes.includes(value.detail.code as ChatFeatureErrorCode)) code = value.detail.code as ChatFeatureErrorCode
+            } catch { /* Known chat codes only; Pi's text is never displayed. */ }
           } else await response.body?.cancel().catch(() => undefined)
           throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code, detail)
         }
