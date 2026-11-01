@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The answer menu stays readable on phones.** Under 768 px the models for "Answer again with" are listed inside the menu instead of in a submenu that covered the other choices.
 - **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
   between the versions with ‹ n/m ›, and branch a new chat from that answer.
 - **Chat summary: edit, draft with AI, fold old messages, restore and continue in a new chat.** Long chats stay sharp with a summary panel that shows and edits the chat's summary, lets Conker draft it, folds old messages into it, restores earlier versions, and continues in a fresh chat that starts from the summary.
