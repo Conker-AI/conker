@@ -161,7 +161,7 @@ def _format_time(timestamp, day, tz):
             return dt.strftime("%H:%M")
         else:
             return dt.strftime("%a %H:%M")
-    except (ValueError, OSError):
+    except (ValueError, OSError, KeyError):
         return "-"
 
 
