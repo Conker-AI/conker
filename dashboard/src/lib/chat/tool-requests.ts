@@ -9,7 +9,7 @@ export function readToolRequest(text: string): ToolRequest | null {
   let inner = trimmed
   if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
     const lines = trimmed.split('\n')
-    if (lines.length >= 2) {
+    if (lines.length >= 2 && /^```(json)?$/i.test(lines[0].trim()) && lines[lines.length - 1].trim() === '```') {
       // Remove first line (``` or ```json) and last line (```)
       inner = lines.slice(1, -1).join('\n').trim()
     }
