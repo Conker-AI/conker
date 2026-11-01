@@ -7,7 +7,9 @@ import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ToolRecord } from '@/components/chat/tool-record'
 import { AnswerTools } from '@/components/chat/answer-tools'
+import { MessageContextRule, MessageContextRuleError, MessageRulesProvider } from '@/components/chat/message-context-rule'
 import { MemoryNote } from '@/components/chat/memory-note'
+import { useHasContextRule } from '@/lib/chat/answer-tools-context'
 import { isMemoryNote } from '@/lib/chat/memory-feedback'
 import { useSmoothText } from '@/components/chat/use-smooth-text'
 import { Button } from '@/components/ui/button'
@@ -30,6 +32,7 @@ function StreamingAnswer({ text, resetKey }: { text: string; resetKey: unknown }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const [notice, setNotice] = useState(''), [exported, setExported] = useState<ExportStatus | null>(null)
+  const hasRule = useHasContextRule(message)
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const createdAt = new Date(message.createdAt)
   const shortTime = createdAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -48,9 +51,10 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     {message.memory && isMemoryNote(message.memory) && <MemoryNote memory={message.memory} />}
     {message.memory && !isMemoryNote(message.memory) && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
-    <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
+    <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity', !hasRule && '[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {message.export && message.content.kind === 'text' && <AnswerExportMenu text={message.content.text} run={message.export.run} onStatus={setExported} />}
+      <MessageContextRule message={message} />
       {moreActions.length > 0 && <DropdownMenu>
         <DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="More message actions" />}><MoreHorizontal /></DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuGroup>{moreActions.map(kind => {
@@ -65,6 +69,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
       </DropdownMenu>}
       {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>}
     </div>
+    <MessageContextRuleError message={message} />
     {message.role === 'assistant' && <AnswerTools message={message} />}
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
     {exported && <p role={exported.tone === 'failed' ? 'alert' : 'status'} className={cn('mt-1 text-xs', exported.tone === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>{exported.text}</p>}
@@ -74,7 +79,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
   const pendingInput = chat.submission.kind === 'sending' && !chat.submission.inputSaved && chat.submission.attempt.input.kind === 'text' ? chat.submission.attempt.input.text : null
-  return <ChatAnswerReplies chat={chat}><div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
+  return <ChatAnswerReplies chat={chat}><MessageRulesProvider sessionId={chat.sessionId} reloadKey={`${chat.messages.length}:${chat.messages.at(-1)?.id ?? ''}`}><div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive-foreground">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
@@ -92,5 +97,5 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
     </section>)}
     {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
     {chat.history === 'error' && !chat.messages.length && <InlineError error={null} title="Messages didn’t load" description="Your draft is safe. This refreshes by itself when your server answers again." onRetry={chat.checkHistory.availability === 'enabled' ? chat.checkHistory.run : undefined} />}
-  </div></ChatAnswerReplies>
+  </div></MessageRulesProvider></ChatAnswerReplies>
 }
