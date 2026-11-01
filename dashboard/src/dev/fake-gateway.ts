@@ -39,8 +39,8 @@ const previewSessions = {
 
 type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant' | 'tool'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string; response_family?: Json }
 type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
-/** What the chat feature fixtures may read and change: the preview's chats and its id maker. */
-export type FakeChatStore = { sessions: Session[]; nextId: (prefix: string) => string }
+/** What the chat feature fixtures may read and change: the preview's chats, its id maker and each chat's context settings (owned by the context fixture; the summary fixture reads and bumps the revision). */
+export type FakeChatStore = { sessions: Session[]; nextId: (prefix: string) => string; contexts: Map<string, { revision: number; policy: Json | null }> }
 
 const replies = [
   "Here's a simple plan for the week:\n\n| Day | Plan |\n| --- | --- |\n| Monday | Revision block before school, 45 minutes |\n| Tuesday and Thursday | Judo, so keep homework light |\n| Friday | Hand in the physics worksheet |\n\nWant me to put these in your calendar?",
@@ -124,7 +124,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const setupHandle = createFakeSetup(preview, approvals, now, iso, fail)
   const systemHandle = createFakeSystem(now, iso, fail)
   const callsHandle = createFakeCalls(now, fail)
-  const chatStore: FakeChatStore = { sessions, nextId }
+  const chatStore: FakeChatStore = { sessions, nextId, contexts: new Map() }
   const chatHandles = [createFakeChatAnswers(now, fail, chatStore), createFakeChatReviews(now, fail, chatStore), createFakeChatNames(now, fail, chatStore), createFakeChatContext(now, fail, chatStore), createFakeChatSummary(now, fail, chatStore)]
   const sessionRow = (item: Session) => ({ id: item.id, parent_id: null, title: item.title, status: 'open', created_at: item.created_at, closed_at: null, summary: null })
   const tools = [
