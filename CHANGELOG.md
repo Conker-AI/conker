@@ -7,6 +7,12 @@ which module versions a release pins.
 ## Unreleased
 
 - **Ctrl+K search finds settings.** The command palette now searches all settings when you type at least two characters, showing up to eight matches with their group names.
+- **A memory Conker saves on its own shows as a quiet "Remembered" note with Undo.** Under your
+  message, only when Memory has acknowledged the save; every other state (pending, not added,
+  excluded, removed) keeps its explained status. Undo runs the
+  Memory screen's forget flow without its dialog (preview the current version, forget exactly that
+  version, re-read the receipt); the note then reads "Forgotten", and a failure keeps Undo available
+  with the usual plain message.
 - **CLI file times and Inbox time zones.** `conker files upload` sends the file time in milliseconds, as the dashboard does, and `conker inbox` shows `-` for an unknown time zone instead of failing.
 - **Gemini, xAI, Mistral, DeepSeek and Groq connect directly.** Pi 0.17.0 is pinned and
   `DIRECT_PROVIDERS_STATE` is active: Settings > Providers saves an API key for each (stored as a
