@@ -13028,8 +13028,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13062,8 +13062,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13100,8 +13100,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13134,8 +13134,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13172,8 +13172,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13211,8 +13211,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13245,8 +13245,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13283,8 +13283,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13950,8 +13950,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -13988,8 +13988,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -14026,8 +14026,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 session_id: string;
@@ -19019,8 +19019,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19061,8 +19061,8 @@ export interface operations {
                 cursor?: string | null;
             };
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19095,8 +19095,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19130,8 +19130,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19169,8 +19169,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19208,8 +19208,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19243,8 +19243,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19282,8 +19282,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19317,8 +19317,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19356,8 +19356,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19391,8 +19391,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
@@ -19430,8 +19430,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 sid: string;
