@@ -15,18 +15,16 @@ const states = { working: 'Working', blocked: 'Needs attention', done: 'Done', f
 const waiting = { permission_prompt: 'Native permission prompt', input_needed: 'Native input needed', sandbox_request: 'Native sandbox request', worker_request: 'Native worker request', dialog_open: 'Native dialog open' }
 export function GatewayNativeSessionsWorkspace({ client, authStore, providerControl }: { client: NativeSessionsClient; authStore: GatewayAuthStore; providerControl?: ReactNode }) {
   const state = useNativeSessions(client, authStore), { controller, selected } = state
-  const [search, setSearch] = useState({ controller, scope: state.scope, text: '' }), [copied, setCopied] = useState<NativeSession | null>(null)
+  const [copied, setCopied] = useState<NativeSession | null>(null)
   const [review, setReview] = useState<{ controller: typeof controller; scope: number; target: NativeSession } | null>(null)
   const [focusReview, setFocusReview] = useState<typeof review>(null), focusOrigin = useRef<typeof review>(null)
   const stopButton = useRef<HTMLButtonElement>(null), current = useRef({ controller, scope: state.scope, selected, review })
   useLayoutEffect(() => { current.current = { controller, scope: state.scope, selected, review } })
-  const query = search.controller === controller && search.scope === state.scope ? search.text : ''
-  const setQuery = (text: string) => setSearch({ controller, scope: state.scope, text })
   const operationPending = state.pending === 'verification' || state.pending === 'stop'
   const activeReview = review?.controller === controller && review.scope === state.scope && review.target === selected ? review : null
   const notice = state.stopNotice?.id === selected?.id && state.stopNotice?.identity === selected?.identity ? state.stopNotice : null
   const canStop = !!selected?.canStop && state.detailCurrent && !state.pending && (!notice || notice.checked)
-  const visible = (state.rows?.results ?? []).filter(row => `${row.name ?? ''} ${row.id} ${row.cwd}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+  const visible = state.rows?.results ?? []
   async function copy(row: NativeSession) {
     if (controller.store.getState().selected !== row || !controller.store.getState().active) return
     try { await navigator.clipboard.writeText(nativeAttachCommand(row.id)); if (current.current.controller === controller && current.current.selected === row) setCopied(row) } catch { /* The selectable command stays available. */ }
@@ -73,7 +71,7 @@ export function GatewayNativeSessionsWorkspace({ client, authStore, providerCont
     {!state.active && <p role="status" className="text-sm text-muted-foreground">Sign in to inspect native sessions.</p>}
     {state.listError && (state.rows ? <p role="status" className="text-sm text-muted-foreground">Couldn’t refresh. These are from the last check.</p> : state.active && <InlineError error={null} title="Native sessions didn’t load" onRetry={() => controller.list()} />)}
     {state.rows && <p className="text-xs leading-5 text-muted-foreground">Last checked native state. Refresh to observe changes.{state.rows.truncated ? ' The list is limited to 100 background sessions.' : ''}{state.rows.omittedCount > 0 ? ` ${state.rows.omittedCount} native ${state.rows.omittedCount === 1 ? 'entry is' : 'entries are'} omitted; this list does not cover all native work.` : ''}</p>}
-    <CollectionPanel query={query} onQueryChange={setQuery} label="Search native Claude sessions" placeholder="Search native sessions…" count={visible.length} unit="sessions" emptyTitle={query ? 'No matching background sessions' : 'No Claude background sessions found'} emptyDescription={query ? 'Try a session name, identity or working directory.' : 'Only Conker-owned, isolated Claude background sessions appear here. Use the native terminal for interactive work.'} icon={<TerminalSquare />} emptyContent={!state.rows ? state.pending === 'list' ? <CollectionLoading label="Checking native sessions…" /> : state.listError && state.active ? null : <p className="py-8 text-sm text-muted-foreground">{state.active ? 'Refresh sessions to check your server.' : 'Native session details are hidden while signed out.'}</p> : undefined}>
+    <CollectionPanel count={visible.length} unit="sessions" emptyTitle="No Claude background sessions found" emptyDescription={'Only Conker-owned, isolated Claude background sessions appear here. Use the native terminal for interactive work.'} icon={<TerminalSquare />} emptyContent={!state.rows ? state.pending === 'list' ? <CollectionLoading label="Checking native sessions…" /> : state.listError && state.active ? null : <p className="py-8 text-sm text-muted-foreground">{state.active ? 'Refresh sessions to check your server.' : 'Native session details are hidden while signed out.'}</p> : undefined}>
       <CollectionSection title="Claude background sessions"><ul>{visible.map(row => <li key={row.id}><RecordItem title={row.name || row.id} description={<span className="wrap-anywhere font-mono">{row.cwd}</span>} onOpen={() => { if (selected?.id === row.id) controller.close(selected); else controller.select(row) }} details={selected?.id === row.id ? details : undefined} selected={selected?.id === row.id} leading={<TerminalSquare className="size-4" />} meta={<><StatusBadge tone={row.state === 'blocked' || row.state === 'unknown' ? 'warning' : 'neutral'}>{states[row.state]}</StatusBadge><span className="wrap-anywhere">{row.id}</span><span>{new Date(row.startedAt).toLocaleString()}</span></>} /></li>)}</ul></CollectionSection>
     </CollectionPanel>
     {!shown && details}

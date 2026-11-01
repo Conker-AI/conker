@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ReferenceSection } from '@/components/reference-section'
-import { CollectionEmpty, WorkspaceSearch, RecordItem } from '@/components/design-system/primitives'
+import { CollectionEmpty, RecordItem } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import { InlineError } from '@/components/resilience/inline-error'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -57,7 +57,7 @@ const invalidateRead = (epoch: { current: number }) => { epoch.current++ }
 
 export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { client: GatewayControlClient; authStore: GatewayAuthStore; sourcePrivacy: GatewaySourcePrivacyState }) {
   const [page, setPage] = useState<MemoryLibrary | null>(null)
-  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? ''), [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [type, setType] = useState<MemoryObjectKind | 'all'>('all')
   const [params, setParams] = useSearchParams()
   const isMobile = useIsMobile()
@@ -84,7 +84,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   const targetQuery = params.get('q') ?? ''
   useEffect(() => {
     let active = true
-    void Promise.resolve().then(() => { if (active) { setSearch(targetQuery); setQuery(targetQuery) } })
+    void Promise.resolve().then(() => { if (active) { setQuery(targetQuery) } })
     return () => { active = false }
   }, [targetQuery])
   useEffect(() => {
@@ -183,7 +183,6 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   }
   const failed = !busy && !!error
   return <div ref={workspace} className={`memory-workspace${expanded ? ' memory-workspace-expanded' : ''}`}>
-    <WorkspaceSearch label="Search memory records" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} placeholder="Search your memory…" onSubmit={() => { setQuery(search); refresh() }} />
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
       {mapOn && <Select value={view} onValueChange={value => { if (value !== null) setView(value) }} items={[{ value: "network", label: "Map" }, { value: "hierarchy", label: "Tree" }, { value: "database", label: "List" }]}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>}
       <Select value={type} onValueChange={value => { if (value === null) return; setType(value as typeof type); refresh() }} items={[{ value: "all", label: "All memories" }, ...kinds.map((kind) => ({ value: kind, label: kindLabels[kind] }))]}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>

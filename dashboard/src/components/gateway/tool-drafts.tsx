@@ -25,8 +25,7 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
   const [params, setParams] = useSearchParams(), id = params.get('draft')
   const [page, setPage] = useState<Awaited<ReturnType<GatewayEditorDrafts['list']>> | null>(null)
   const [draft, setDraft] = useState<EditorDraft | null>(null)
-  const [error, setError] = useState(''), [query, setQuery] = useState('')
-  const [creating, setCreating] = useState(false), [busy, setBusy] = useState(false)
+  const [error, setError] = useState(''), [creating, setCreating] = useState(false), [busy, setBusy] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const lifetime = useRef<AbortController | null>(null)
   useEffect(() => {
@@ -49,13 +48,13 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
     finally { setBusy(false) }
   }
   if (id && draft) return <LiveDraftEditor key={id} draft={draft} client={client} changes={changes} request={draftOrigin(id, params.get('request'))} save={save} onBack={() => setParams({ view: 'drafts' })} />
-  const items = page?.items.filter(item => `${item.name} ${item.id}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
+  const items = page?.items ?? []
   return <GatewayPageFrame className="space-y-4">
     <PageHeader title="Tool drafts" actionsOnly />
     <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" render={<Link to="/tools" />}>Available tools</Button><Button size="sm" onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</Button></div>
     {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(''); setDraft(null); setPage(null); setRefresh(value => value + 1) }}>Reload drafts</Button></div>}
     {!page && !error && <p role="status">Loading draft…</p>}
-    {page && <CollectionPanel query={query} onQueryChange={setQuery} label="Search loaded drafts" placeholder="Search loaded drafts…" count={items.length} unit="drafts" emptyTitle="No matching drafts" emptyDescription="Create a draft or adjust your search."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} leading={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
+    {page && <CollectionPanel count={items.length} unit="drafts" emptyTitle="No drafts" emptyDescription="Create a draft to get started."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} leading={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
     {page?.next_after && <Button variant="outline" disabled={busy} onClick={() => void more()}>Load more drafts</Button>}
     <NewToolDialog drafts={client} open={creating} onOpenChange={setCreating} />
   </GatewayPageFrame>

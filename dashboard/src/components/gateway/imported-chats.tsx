@@ -33,7 +33,7 @@ export function GatewayImportedChats({ client }: { client: GatewayImportsClient 
 }
 
 function ImportedChatList({ client }: { client: GatewayImportsClient }) {
-  const [filter, setFilter] = useState<'all' | ImportSource>('all'), [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | ImportSource>('all')
   const [page, setPage] = useState<{ filter: string; rows: ImportedChat[]; total: number; next: number | null } | null>(null)
   const [error, setError] = useState<unknown>(null), [loadingMore, setLoadingMore] = useState(false), [offers, setOffers] = useState<ImportOffers | null>(null)
   const [totals, setTotals] = useState<Record<ImportSource, number> | null>(null)
@@ -50,7 +50,6 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
     return () => { active = false }
   }, [client])
   const current = page?.filter === filter ? page : null
-  const visible = (current?.rows ?? []).filter(row => (row.title ?? '').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const offersLine = offers && importOffersLine(offers)
   const chip = (value: typeof filter, label: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{label}</FilterChip>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
@@ -59,16 +58,16 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
     {offersLine && <p role="status" className="text-sm leading-6">{offersLine}</p>}
     {error && !current ? <InlineError error={error} title="Imported chats didn’t load" onRetry={() => fetchPage(filter, 0)} />
       : !current ? <ListSkeleton rows={4} label="Loading imported chats…" />
-        : <ListCard query={query} onQueryChange={setQuery} label="Search imported chats" placeholder="Search titles…" count={visible.length} unit={visible.length === 1 ? 'chat loaded' : 'chats loaded'}
+        : <ListCard count={current.rows.length} unit={current.rows.length === 1 ? 'chat loaded' : 'chats loaded'}
           filters={totals && totals.chatgpt > 0 && totals.claude > 0 ? <>{chip('all', 'All', totals.chatgpt + totals.claude)}{chip('chatgpt', 'ChatGPT', totals.chatgpt)}{chip('claude', 'Claude', totals.claude)}</> : undefined}
-          emptyTitle={query ? 'No matching imported chats' : filter === 'all' ? 'No imported chats yet' : `No chats imported from ${importSourceNames[filter]}`}
-          emptyDescription={query ? 'Try another title. Only loaded chats are searched.' : 'Import your ChatGPT or Claude export to read your old chats here.'}
-          emptyAction={query ? undefined : <Button render={<Link to="/chats?view=import" />}><Upload />Import from ChatGPT or Claude</Button>} icon={<Archive />}
+          emptyTitle={filter === 'all' ? 'No imported chats yet' : `No chats imported from ${importSourceNames[filter]}`}
+          emptyDescription={'Import your ChatGPT or Claude export to read your old chats here.'}
+          emptyAction={<Button render={<Link to="/chats?view=import" />}><Upload />Import from ChatGPT or Claude</Button>} icon={<Archive />}
           footer={current.rows.length > 0 && <>
             <Button variant="outline" size="sm" disabled={loadingMore || current.next === null} onClick={async () => { if (current.next === null) return; setLoadingMore(true); await fetchPage(filter, current.next); setLoadingMore(false) }}>{loadingMore ? 'Loading…' : current.next === null ? 'No more chats to load' : 'Load more'}</Button>
             <span className="text-xs text-muted-foreground">{error ? importRefusalMessage(error) : `${current.rows.length.toLocaleString()} of ${current.total.toLocaleString()} loaded`}</span>
           </>}>
-          {visible.map(row => <ListLine key={row.id} to={`/chats?view=imported&chat=${row.id}`} icon={<Archive />} title={row.title || 'Untitled chat'}
+          {current.rows.map(row => <ListLine key={row.id} to={`/chats?view=imported&chat=${row.id}`} icon={<Archive />} title={row.title || 'Untitled chat'}
             sub={`${importSourceNames[row.source]} · ${plural(row.messageCount, 'message')}`} meta={date(row.updatedAt ?? row.startedAt ?? row.importedAt)} />)}
         </ListCard>}
   </div></GatewayPageFrame>

@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One search.** Lists no longer have their own search boxes; the search in the app bar (Ctrl+K) finds
+  everything. The sidebar's search button is now the light/dark switch.
 - **Ctrl+K search finds settings.** The command palette now searches all settings when you type at least two characters, showing up to eight matches with their group names.
 - **Answer blocks refuse deep nesting and fix link encoding issues.** Deep block nesting (depth > 64) is caught as "too-large" to prevent stack overflow, chart slices and legends key by index instead of label to avoid React duplicate keys, approval request links encode the ticket ID, and external links use `noopener,noreferrer` for security.
 - **A memory Conker saves on its own shows as a quiet "Remembered" note with Undo.** Under your

@@ -17,7 +17,6 @@ import { useChangeRequests } from '@/components/inbox/change-requests'
 export function GatewayToolsInventory({ client }: { client: GatewayControlClient }) {
   const [value, setValue] = useState<ToolInventory | null>(null)
   const [error, setError] = useState('')
-  const [query, setQuery] = useState('')
   const [revision, setRevision] = useState(0), [creating, setCreating] = useState(false)
   const [params, setParams] = useSearchParams()
   // Tool requests (his own and Conker's) show here as in the Inbox, with the same card.
@@ -29,7 +28,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
     return () => controller.abort()
   }, [client, revision])
   const selected = value?.status === 'ok' ? value.results.find(tool => tool.id === params.get('tool')) : undefined
-  const rows = value?.results.filter(tool => `${tool.name} ${tool.id} ${tool.description}`.toLowerCase().includes(query.trim().toLowerCase())) ?? []
+  const rows = value?.results ?? []
   // Details open in place under the chosen tool; choosing it again closes them. A tool made in Tools
   // can be run from here; the rest list their inputs and say why not.
   const details = selected && <InlineDetails title={selected.name || 'Tool details'} onClose={() => setParams({})}>
@@ -51,7 +50,7 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
     {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
     {value?.status === 'ok' && <>
-      <CollectionPanel query={query} onQueryChange={setQuery} label="Search available tools" placeholder="Search tools…" count={rows.length} unit="tools" emptyTitle={query ? 'No matching tools' : 'No tools available here'} emptyDescription={query ? 'Try a tool name or description.' : 'The tool service is reachable, but this workspace does not currently have tools available.'}>
+      <CollectionPanel count={rows.length} unit="tools" emptyTitle="No tools available here" emptyDescription={'The tool service is reachable, but this workspace does not currently have tools available.'}>
         <CollectionSection title="Available"><ul>{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools' : `/tools?tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.description)} kind="tool" name={tool.name} />} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
       </CollectionPanel>
       {params.get('tool') && !selected && <p role="status" className="text-sm text-muted-foreground">This tool is no longer available here.</p>}

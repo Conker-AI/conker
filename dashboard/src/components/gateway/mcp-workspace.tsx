@@ -89,14 +89,14 @@ function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: Gatew
 }
 
 export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
-  const [tools, setTools] = useState<McpTool[] | null>(null), [query, setQuery] = useState(''), [error, setError] = useState(''), [reload, setReload] = useState(0)
+  const [tools, setTools] = useState<McpTool[] | null>(null), [error, setError] = useState(''), [reload, setReload] = useState(0)
   const [connecting, setConnecting] = useState(false), [connectingBusy, setConnectingBusy] = useState(false), [notice, setNotice] = useState('')
   const [params, setParams] = useSearchParams()
   const listGeneration = useRef(0)
   const selected = tools?.find(tool => tool.id === params.get('tool'))
   useEffect(() => { const controller = new AbortController(), generation = ++listGeneration.current; client.list(controller.signal).then(value => { if (!controller.signal.aborted && generation === listGeneration.current) { setTools(value); setError('') } }).catch(cause => { if (!controller.signal.aborted && generation === listGeneration.current) setError(message(cause)) }); return () => controller.abort() }, [client, reload])
   function saved(value: McpTool) { listGeneration.current++; setTools(current => [...(current ?? []).filter(item => item.id !== value.id), value].sort((a, b) => a.name.localeCompare(b.name))); setConnecting(false); setParams({ view: 'mcp', tool: value.id }); setNotice(`Saved ${value.name}.`) }
-  const rows = (tools ?? []).filter(tool => `${tool.name} ${tool.url} ${tool.description}`.toLowerCase().includes(query.toLowerCase()))
+  const rows = tools ?? []
   // Details open in place under the chosen tool; choosing it again closes them.
   const details = selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
   const shown = !!selected && rows.some(tool => tool.id === selected.id)
@@ -104,7 +104,7 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
     <PageHeader actionsOnly title="MCP tools" density="compact" actions={<><WorkspaceAction render={<Link to="/tools" />}>All tools</WorkspaceAction><WorkspaceAction iconOnly aria-label="Refresh MCP tools" onClick={() => setReload(value => value + 1)}><RefreshCw /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setConnecting(true)}><Cable />Connect server</WorkspaceAction></>} />
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!tools && !error && <CollectionLoading label="Loading MCP tools…" />}
-    {tools && <CollectionPanel query={query} onQueryChange={setQuery} label="Search MCP tools" placeholder="Search tools or servers…" count={rows.length} unit={rows.length === 1 ? 'tool' : 'tools'} emptyTitle={query ? 'No matching MCP tools' : 'Connect your first MCP server'} emptyDescription={query ? 'Try another tool name or server.' : 'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'} emptyAction={!query && <Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
+    {tools && <CollectionPanel count={rows.length} unit={rows.length === 1 ? 'tool' : 'tools'} emptyTitle="Connect your first MCP server" emptyDescription={'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'} emptyAction={<Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
       <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.url)} kind="mcp" name={tool.name} />} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
     </CollectionPanel>}
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}

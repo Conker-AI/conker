@@ -1,6 +1,6 @@
-import { useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Search, Server } from 'lucide-react'
+import { ChevronRight, Plus, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -9,11 +9,11 @@ import {
   SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
-import { UniversalSearchContext, useInboxAttention } from '@/lib/workspace-chrome'
+import { ModeToggle } from '@/components/mode-toggle'
+import { useInboxAttention } from '@/lib/workspace-chrome'
 import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { gatewayPageNavigation, gatewaySidebarDestinations, gatewaySidebarGroups, type GatewayDestination } from './navigation'
-import { useSearchShortcut } from './search-shortcut'
 import { placeIcons } from './page-icons'
 /** Places the owner can hide (Settings, Appearance, Sidebar places); Home, Inbox, Chats and Settings always show. */
 const optional: Partial<Record<GatewayDestination['id'], string>> = { projects: 'projects', memory: 'memory', agents: 'agents', tools: 'tools', jobs: 'jobs', system: 'server' }
@@ -24,16 +24,14 @@ const ALL_PLACES = ['projects', 'memory', 'agents', 'tools', 'jobs', 'server']
 const activeMark = "relative [&>svg]:text-muted-foreground data-[active=true]:[&>svg]:text-foreground data-[active=true]:font-semibold data-[active=true]:before:absolute data-[active=true]:before:inset-y-1.5 data-[active=true]:before:left-0 data-[active=true]:before:w-0.5 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary group-data-[collapsible=icon]:before:hidden"
 
 /**
- * Places, never actions (the owner's rule): Ask Conker and Search sit above them. No profile,
+ * Places, never actions (the owner's rule): Ask Conker and the theme switch sit above them. No profile,
  * help or status links; account and appearance live in Settings.
  */
 export function GatewaySidebar({ conversationState, badge }: { conversationState: GatewayRuntimeWorkspaceState; badge?: ReactNode }) {
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
   const page = gatewayPageNavigation(location.pathname, location.search)
-  const openSearch = useContext(UniversalSearchContext)
   const attention = useInboxAttention()
   const places = useServerSetting('appearance.sidebar_places', ALL_PLACES), shortcuts = useServerSetting('keyboard.shortcuts', true)
-  const searchKey = useSearchShortcut(), searchLabel = searchKey ? `Search · Ctrl ${searchKey.toUpperCase()}` : 'Search'
   const shown = (item: GatewayDestination) => !optional[item.id] || places.includes(optional[item.id]!)
   const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false, 'content') }, [isMobile, setOpenMobile])
   const newChat = useCallback(() => {
@@ -77,7 +75,7 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
       <div className="flex gap-2 group-data-[collapsible=icon]:flex-col">
         <Button className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden" onClick={newChat}><Plus />Ask Conker</Button>
         <Tooltip><TooltipTrigger render={<Button size="icon" className="hidden group-data-[collapsible=icon]:inline-flex" aria-label="Ask Conker" onClick={newChat} />}><Plus /></TooltipTrigger><TooltipPopup side="right">Ask Conker</TooltipPopup></Tooltip>
-        <Tooltip><TooltipTrigger render={<Button size="icon" variant="outline" aria-label={searchKey ? `Search (Ctrl ${searchKey.toUpperCase()})` : 'Search'} disabled={!openSearch} onClick={event => openSearch?.('', event.currentTarget)} />}><Search /></TooltipTrigger><TooltipPopup side="right">{searchLabel}</TooltipPopup></Tooltip>
+        <ModeToggle variant="outline" />
       </div>
     </SidebarHeader>
     <SidebarContent role="navigation" aria-label="Conker">
