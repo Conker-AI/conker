@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Gemini, xAI, Mistral, DeepSeek and Groq connect directly.** Pi 0.17.0 is pinned and
+  `DIRECT_PROVIDERS_STATE` is active: Settings > Providers saves an API key for each (stored as a
+  file the Pi container reads, like the other keys), and Advanced > Add provider lists them for
+  model roles.
 - **"Manage models" and "Connections" links open the right settings topic.** Seven links still
   written as `/settings?tab=models` or `?tab=connections` (chat composer, chat rail, chat header,
   Home, Server, Tools, daily news) opened "You", because the settings screen mapped only four old
@@ -481,7 +485,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.16.0 |
+| Pi | v0.17.0 |
 | ToolGate | v0.11.0 |
 | MemoryGate | v0.7.0 |
 | SystemGate | v0.4.0 |
