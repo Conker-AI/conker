@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { createToolDefinition } from '@/lib/tool-workspace'
+import { toolDraftId } from '@/lib/tool-draft-id'
 import type { GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 
 /** New tool, by hand: a name saves an empty draft and opens it in the editor. Nothing runs yet. */
@@ -18,7 +19,7 @@ export function NewToolDialog({ drafts, open, onOpenChange }: { drafts: Pick<Gat
     if (!name.trim() || busy) return
     setBusy(true); setError('')
     try {
-      const value = await drafts.save(createToolDefinition(`tool-${crypto.randomUUID()}`, name.trim()), 0, lifetime.current?.signal)
+      const value = await drafts.save(createToolDefinition(toolDraftId(name.trim(), crypto.randomUUID().slice(0, 8)), name.trim()), 0, lifetime.current?.signal)
       if (lifetime.current?.signal.aborted) return
       onOpenChange(false); setName('')
       navigate(`/tools?draft=${encodeURIComponent(value.id)}`)
