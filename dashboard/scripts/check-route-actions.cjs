@@ -5,67 +5,46 @@ const ts = require('typescript')
 const React = require('react')
 const root = path.resolve(__dirname, '..')
 
-// Load and extract the splitActionLabel function from workspace-chrome.tsx
-const workspaceChromeSource = fs.readFileSync(path.join(root, 'src/components/design-system/workspace-chrome.tsx'), 'utf8')
-
-// Assert by source text that splitActionLabel is exported
-assert.ok(workspaceChromeSource.includes('export function splitActionLabel'), 'splitActionLabel must be exported')
-
-// Assert that the mobile kept branch passes iconOnly: true (look for the exact pattern)
-const iconOnlyPattern = /iconOnly: true,\s*'aria-label': ariaLabel/
-assert.ok(iconOnlyPattern.test(workspaceChromeSource), 'Mobile kept actions must have iconOnly: true in the cloneElement call')
-
-// Assert that the group div's className has flex and shrink-0
-assert.ok(workspaceChromeSource.includes('className="flex shrink-0 items-center gap-1"'), 'Group div must have flex and shrink-0 classes')
-
-// Extract the splitActionLabel function text with regex
-const functionMatch = workspaceChromeSource.match(/export function splitActionLabel\(children: ReactNode\): \{ label: string; icons: ReactNode\[\] \} \{[\s\S]*?\n\}/)
-assert.ok(functionMatch, 'splitActionLabel function not found')
-
-// Transpile the extracted function - but recreate it locally to avoid module issues
-const functionBody = functionMatch[0].replace(/export function splitActionLabel\(children: ReactNode\): \{ label: string; icons: ReactNode\[\] \} \{/, '').replace(/\n\}$/, '')
-
-// Create the function using the real React Children and isValidElement
-function splitActionLabel(children) {
-  const array = React.Children.toArray(children)
-  const labelParts = []
-  const icons = []
-
-  array.forEach(child => {
-    if (typeof child === 'string') {
-      labelParts.push(child)
-    } else if (React.isValidElement(child)) {
-      // Non-string children are treated as icons
-      icons.push(child)
-    }
-  })
-
-  const label = labelParts.join('').trim().replace(/\s+/g, ' ')
-  return { label, icons }
+function load(file) {
+  const source = fs.readFileSync(path.join(root, file), 'utf8')
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const module = { exports: {} }
+  new Function('require', 'module', 'exports', compiled)(name => {
+    if (name === 'react') return React
+    throw new Error(`Unexpected import ${name}`)
+  }, module, module.exports)
+  return module.exports
 }
+const { splitActionLabel } = load('src/lib/route-actions.ts')
+const chrome = fs.readFileSync(path.join(root, 'src/components/design-system/workspace-chrome.tsx'), 'utf8')
 
-// Test the splitActionLabel function
 let checks = 0
 function check(name, test) { test(); checks++; process.stdout.write(`PASS ${name}\n`) }
 
-check('splitActionLabel(["New chat"]) -> label "New chat", no icons', () => {
-  const result = splitActionLabel(['New chat'])
-  assert.equal(result.label, 'New chat')
-  assert.deepEqual(result.icons, [])
+check('Words become the label and leave no icons', () => {
+  assert.deepEqual(splitActionLabel(['New chat']), { label: 'New chat', icons: [] })
+})
+check('An icon is kept apart from the words', () => {
+  const { label, icons } = splitActionLabel([React.createElement('svg', { key: 'i' }), ' New chat'])
+  assert.equal(label, 'New chat')
+  assert.equal(icons.length, 1)
+  assert.equal(icons[0].type, 'svg')
+})
+check('Spaces are trimmed and collapsed', () => {
+  assert.equal(splitActionLabel([' New ', ' chat ']).label, 'New chat')
+  assert.equal(splitActionLabel(['Alexey', "'s notes"]).label, "Alexey's notes")
+})
+check('Numbers count as words, empty children give nothing', () => {
+  assert.equal(splitActionLabel([3, ' new']).label, '3 new')
+  assert.deepEqual(splitActionLabel(null), { label: '', icons: [] })
+})
+check('On a phone the kept action turns icon-only and keeps its words as its name', () => {
+  assert.match(chrome, /splitActionLabel\(item\.props\.children\)/)
+  assert.match(chrome, /cloneElement\([^)]*\{ iconOnly: true, 'aria-label': name, title: name, children: icons \}\)/)
+  assert.match(chrome, /if \(!icons\.length\) return item/)
+})
+check('The kept action group never shrinks under the title', () => {
+  assert.ok(chrome.includes('className="flex shrink-0 items-center gap-1"'))
 })
 
-check('splitActionLabel with icon and text -> label "New chat", one icon', () => {
-  const icon = React.createElement('svg', { key: 'i' })
-  const result = splitActionLabel([icon, 'New chat'])
-  assert.equal(result.label, 'New chat')
-  assert.equal(result.icons.length, 1)
-  assert.equal(result.icons[0].type, 'svg')
-})
-
-check('splitActionLabel([" New ", "chat "] -> label "New chat"', () => {
-  const result = splitActionLabel([' New ', 'chat '])
-  assert.equal(result.label, 'New chat')
-  assert.deepEqual(result.icons, [])
-})
-
-console.log('Route actions: phone keeps the main action as a labelled icon.')
+console.log(`Route actions: phone keeps the main action as a labelled icon (${checks} checks).`)

@@ -1,30 +1,12 @@
-import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactElement, type ReactNode } from 'react'
 import { Menu, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { WorkspaceChromeContext, useInboxAttention, useWorkspaceChrome } from '@/lib/workspace-chrome'
+import { splitActionLabel } from '@/lib/route-actions'
 import { cn } from '@/lib/utils'
-
-/** Split action children into label text and icons for mobile icon-only rendering. */
-export function splitActionLabel(children: ReactNode): { label: string; icons: ReactNode[] } {
-  const array = Children.toArray(children)
-  const labelParts: string[] = []
-  const icons: ReactNode[] = []
-
-  array.forEach(child => {
-    if (typeof child === 'string') {
-      labelParts.push(child)
-    } else if (isValidElement(child)) {
-      // Non-string children are treated as icons
-      icons.push(child)
-    }
-  })
-
-  const label = labelParts.join('').trim().replace(/\s+/g, ' ')
-  return { label, icons }
-}
 
 type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
   emphasis?: 'quiet' | 'primary'; iconOnly?: boolean; menuItem?: boolean
@@ -85,18 +67,13 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
   const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
   // On a phone only the page's main action stays out of the menu, so the page name keeps its room.
   const keptRaw = isMobile ? items.filter(item => isValidElement<{ keepVisible?: boolean; emphasis?: string }>(item) && (item.props.keepVisible || item.props.emphasis === 'primary')).slice(-1) : items.slice(-1)
+  // On a phone the kept action shows its icon and keeps its words as the accessible name.
   const kept = keptRaw.map(item => {
-    if (!isMobile || !isValidElement(item)) return item
-    // Render kept actions icon-only on mobile
-    const existingAriaLabel = item.props['aria-label']
+    if (!isMobile || !isValidElement<{ children?: ReactNode; 'aria-label'?: string }>(item)) return item
     const { label, icons } = splitActionLabel(item.props.children)
-    const ariaLabel = existingAriaLabel || label
-    return cloneElement(item, {
-      iconOnly: true,
-      'aria-label': ariaLabel,
-      title: ariaLabel,
-      children: icons.length > 0 ? icons : item.props.children
-    })
+    if (!icons.length) return item
+    const name = item.props['aria-label'] || label
+    return cloneElement(item as ReactElement<WorkspaceActionProps>, { iconOnly: true, 'aria-label': name, title: name, children: icons })
   })
   const menu = items.filter(item => !keptRaw.includes(item))
   return <div ref={group} className="flex shrink-0 items-center gap-1">{items.length < 2 || !compact ? children : <>{kept}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
