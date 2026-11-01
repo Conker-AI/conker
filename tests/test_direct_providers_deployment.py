@@ -40,8 +40,8 @@ def test_the_direct_providers_are_the_five_new_labs():
     assert tuple(PROVIDERS)[:3] == FIRST_PROVIDERS
 
 
-def test_this_release_keeps_them_deferred_until_pi_reads_their_keys():
-    assert "DIRECT_PROVIDERS_STATE=deferred" in (ROOT / "versions.env").read_text(encoding="utf-8")
+def test_this_release_turns_them_on_with_a_pi_that_reads_their_keys():
+    assert "DIRECT_PROVIDERS_STATE=active" in (ROOT / "versions.env").read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("state,runs", [("deferred", False), ("active", True)])
