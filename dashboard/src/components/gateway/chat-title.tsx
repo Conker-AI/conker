@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import { notifyFailure } from '@/components/resilience/notify'
-import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
+import { nameChat, writeTitle } from './chat-title-actions'
 
 /** The open chat's name in the header. `onChanged` reloads the chat after a rename. */
 export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { control?: GatewayControlClient; sessionId: string | null; title: string; disabled: boolean; onChanged: () => void }) {
@@ -17,17 +16,9 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
   const busy = useRef(false)
   const cancelled = useRef(false)
 
-  if (!control || !sessionId) return <h2 className="min-w-0 truncate text-sm font-medium">{title}</h2>
+  if (!control || !sessionId) return <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{title}</h2>
 
-  // The server's revision is read right before each write, so a write only fails if the name changed in between.
-  const run = async (write: (revision: number) => Promise<unknown>) => {
-    try {
-      await write((await control.chatNames.title(sessionId)).revision)
-      onChanged()
-    } catch (error) {
-      notifyFailure('Could not rename the chat', chatFeatureMessage(error))
-    }
-  }
+  const run = (write: (revision: number) => Promise<unknown>) => writeTitle(control, sessionId, onChanged, write)
 
   const save = async () => {
     if (busy.current || cancelled.current) return
@@ -43,7 +34,7 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
 
   const autoName = async () => {
     setNaming(true)
-    await run(revision => control.chatNames.autoName(sessionId, revision))
+    await nameChat(control, sessionId, onChanged)
     setNaming(false)
   }
 
@@ -69,12 +60,12 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
     </h2>
   }
 
-  return <div className="flex min-w-0 items-center gap-1">
+  return <div className="flex min-w-0 flex-1 items-center gap-1">
     <h2 className="min-w-0 truncate text-sm font-medium">
       <Button
         variant="ghost"
         size="xs"
-        className="max-w-full font-medium"
+        className="max-w-full font-medium max-md:px-1"
         aria-label="Rename chat"
         title="Rename chat"
         disabled={disabled || naming}
@@ -83,7 +74,7 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
         <span className="truncate">{title}</span>
       </Button>
     </h2>
-    <Button variant="ghost" size="icon-xs" className="shrink-0" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
+    <Button variant="ghost" size="icon-xs" className="shrink-0 max-md:hidden" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
       {naming ? <Spinner /> : <Sparkles />}
     </Button>
   </div>

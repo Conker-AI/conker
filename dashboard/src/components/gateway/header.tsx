@@ -26,8 +26,8 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
     <AppbarBreadcrumbs crumbs={[{ title: page.title, to: location.pathname }]} />
   </div>}
     search={<UniversalSearchTrigger />}
-    actions={<>{children}{shell?.showViews && <div className="conker-shell-actions">
-      <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} compact={isMobile} />
+    actions={<>{children}{shell?.showViews && !isMobile && <div className="conker-shell-actions">
+      <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} />
     </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly data-ask-conker aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
     toolbar={toolbar} sections={<>{sections}{!sectionsInSidebar && <AppbarSections activeSection={page.activeSection} sections={page.sections} />}</>} />{shell?.panel}</>
 }

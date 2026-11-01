@@ -99,7 +99,7 @@ assert.match(header, /\{shell\?\.panel\}/, 'The chat bar renders the open view d
 const views = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-views.tsx'), 'utf8')
 const viewList = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-view-list.ts'), 'utf8')
 assert.deepEqual([...viewList.matchAll(/id: '([a-z]+)'/g)].map(match => match[1]), ['context', 'thinking', 'logs'], 'Conversation views are Context, Thinking and Logs, in that order')
-assert.match(header, /<ConversationViewStrip open=\{shell\.view\} onToggle=\{shell\.toggleView\} compact=\{isMobile\} \/>/, 'Phones fold the views strip into one menu')
+assert.match(header, /showViews && !isMobile && <div className="conker-shell-actions">\s*<ConversationViewStrip open=\{shell\.view\} onToggle=\{shell\.toggleView\} \/>/, 'Phones fold the views strip into the chat menu')
 assert.match(views, /aria-pressed=\{open === id\}/, 'The open view is announced on its strip button')
 assert.doesNotMatch(views, /setTimeout|setInterval|Math\.random/, 'Views show saved records only; no timers or invented steps')
 const tools = fs.readFileSync(path.join(root, 'src/components/gateway/tools-inventory.tsx'), 'utf8')

@@ -1,21 +1,21 @@
-import { Layers } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { WorkspaceAction } from '@/components/design-system/workspace-chrome'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import type { GatewayRuntimeClient, RuntimeSessionDetail, RuntimeThinking, RuntimeTurn } from '@/lib/gateway/runtime'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { conversationViews, type ConversationView } from './conversation-view-list'
 
-export function ConversationViewStrip({ open, onToggle, compact }: { open: ConversationView | null; onToggle: (view: ConversationView) => void; compact: boolean }) {
-  // Phones fold the strip into one button so the conversation title keeps its room.
-  if (compact) return <DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="Conversation views" title="Conversation views" />}><Layers /></DropdownMenuTrigger>
-    <DropdownMenuContent align="end" aria-label="Conversation views">{conversationViews.map(({ id, label, icon: Icon }) => <DropdownMenuItem key={id} data-conversation-view={id} onClick={() => onToggle(id)}><Icon aria-hidden="true" />{label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+export function ConversationViewStrip({ open, onToggle }: { open: ConversationView | null; onToggle: (view: ConversationView) => void }) {
   return <div className="conker-view-strip" role="group" aria-label="Conversation views">
     {conversationViews.map(({ id, label, icon: Icon }) => <button key={id} type="button" data-conversation-view={id} aria-label={label} title={label}
       aria-pressed={open === id} aria-controls={open === id ? 'conker-conversation-view' : undefined} onClick={() => onToggle(id)}><Icon aria-hidden="true" /></button>)}
   </div>
+}
+
+/** Phones fold the views strip into the chat's "..." menu so the conversation title keeps its room. */
+export function ConversationViewMenuItems({ onToggle }: { onToggle: (view: ConversationView) => void }) {
+  return <>{conversationViews.map(({ id, label, icon: Icon }) => <DropdownMenuItem key={id} data-conversation-view={id} onClick={() => onToggle(id)}><Icon aria-hidden="true" />{label}</DropdownMenuItem>)}</>
 }
 
 type Props = { view: ConversationView; detail: RuntimeSessionDetail | null; error: string | null; loading: boolean; onRetry: () => void; runtime: GatewayRuntimeClient; sourcePrivacy: GatewaySourcePrivacyState; active: boolean }
