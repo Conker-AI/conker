@@ -348,7 +348,7 @@ export function ThemeTab({
           variant="outline"
           size="sm"
           className="w-full cursor-pointer"
-          onClick={() => window.open('https://tweakcn.com/editor/theme', '_blank')}
+          onClick={() => window.open('https://tweakcn.com/editor/theme', '_blank', 'noopener,noreferrer')}
         >
           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
           Open Tweakcn

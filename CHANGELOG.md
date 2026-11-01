@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Answer blocks refuse deep nesting and fix link encoding issues.** Deep block nesting (depth > 64) is caught as "too-large" to prevent stack overflow, chart slices and legends key by index instead of label to avoid React duplicate keys, approval request links encode the ticket ID, and external links use `noopener,noreferrer` for security.
 - **A memory Conker saves on its own shows as a quiet "Remembered" note with Undo.** Under your
   message, only when Memory has acknowledged the save; every other state (pending, not added,
   excluded, removed) keeps its explained status. Undo runs the
