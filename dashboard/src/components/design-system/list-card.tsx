@@ -15,17 +15,10 @@ export function ListCard({ query, onQueryChange, label, placeholder, count, unit
   filters?: ReactNode; footer?: ReactNode; children: ReactNode
 }) {
   return <Card data-slot="list-card" className="min-w-0 gap-0 overflow-hidden p-0">
-    {onQueryChange && label && placeholder && (
-      <div className="flex items-center gap-3 border-b p-2">
-        <CollectionSearch compact label={label} placeholder={placeholder} value={query || ""} onChange={event => onQueryChange(event.target.value)} />
-        <span className="hidden shrink-0 pr-2 text-xs tabular-nums text-muted-foreground sm:inline">{count} {unit}</span>
-      </div>
-    )}
-    {!onQueryChange && (
-      <div className="flex items-center gap-3 border-b p-2">
-        <span className="hidden shrink-0 pr-2 text-xs tabular-nums text-muted-foreground sm:inline">{count} {unit}</span>
-      </div>
-    )}
+    <div className="flex items-center gap-3 border-b p-2">
+      {onQueryChange && label && placeholder && <CollectionSearch compact label={label} placeholder={placeholder} value={query ?? ""} onChange={event => onQueryChange(event.target.value)} />}
+      <span className={onQueryChange ? "hidden shrink-0 pr-2 text-xs tabular-nums text-muted-foreground sm:inline" : "px-2 text-xs tabular-nums text-muted-foreground"}>{count} {unit}</span>
+    </div>
     {filters && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 border-b px-2 py-1.5">{filters}</div>}
     <div className="min-w-0">
       {count ? <ul className="flex flex-col divide-y">{children}</ul>
