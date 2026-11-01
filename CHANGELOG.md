@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The chat features work live.** Pi 0.18.0 is pinned: the Gateway lets the owner's browser reach the chat
+  routes (names, output settings, answer versions, reviews, fact checks, summary and context editing), so
+  those screens use real chats instead of preview data. Every write still asks for the password.
+- **The message box no longer glows when you type in it.** A focused composer keeps a quiet outline instead of the bright focus ring.
 - **The chat title gets room in the phone header.** On a phone the chat's title no longer shrinks to a few pixels: Edit context and the Context, Thinking and Logs views moved into the chat's "..." menu.
 - **The answer menu stays readable on phones.** Under 768 px the models for "Answer again with" are listed inside the menu instead of in a submenu that covered the other choices.
 - **Chat names and output settings in the chat header and composer.** Rename a chat by clicking its title, let Conker name it automatically with the sparkles button, and choose how answers are written (format, length, language) in the composer's Output popover.
@@ -508,7 +512,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.17.0 |
+| Pi | v0.18.0 |
 | ToolGate | v0.11.0 |
 | MemoryGate | v0.7.0 |
 | SystemGate | v0.4.0 |
