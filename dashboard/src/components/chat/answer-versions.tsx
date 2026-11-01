@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, GitBranch, RefreshCw, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuSub, MenuSubPopup, MenuSubTrigger, MenuTrigger } from '@/components/ui/menu'
+import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuPopup, MenuSeparator, MenuSub, MenuSubPopup, MenuSubTrigger, MenuTrigger } from '@/components/ui/menu'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Popover, PopoverContent } from '@/components/ui/popover'
 import type { AnswerTools } from '@/lib/chat/answer-tools-context'
 import type { ChatMessage } from '@/lib/chat/contract'
@@ -15,6 +16,7 @@ const MOST_COMPARED = 3
 /** Versions of one answer: switch between versions, answer again with another model, compare models, branch a new chat from here. */
 export function AnswerVersions({ message, tools }: { message: ChatMessage; tools: AnswerTools }) {
   const navigate = useNavigate()
+  const phone = useIsMobile()
   const anchor = useRef<HTMLSpanElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +91,9 @@ export function AnswerVersions({ message, tools }: { message: ChatMessage; tools
   const toggle = (modelId: string, checked: boolean) =>
     setPicked(current => checked ? (current.length < MOST_COMPARED ? [...current, modelId] : current) : current.filter(id => id !== modelId))
 
+  const modelItems = models?.length ? models.map(model => <MenuItem key={model.id} onClick={() => void answerAgain(model.id)}>{model.name}</MenuItem>)
+    : <MenuItem disabled>{models ? 'No models are turned on.' : 'Loading models…'}</MenuItem>
+
   return <>
     {family && position >= 0 && versions.length >= 2 && <span className="flex items-center gap-0.5">
       <Button variant="ghost" size="icon-xs" aria-label="Previous version" title="Previous version" disabled={locked || position <= 0} onClick={() => step(-1)}>
@@ -106,13 +111,16 @@ export function AnswerVersions({ message, tools }: { message: ChatMessage; tools
           <RefreshCw aria-hidden />
         </MenuTrigger>
         <MenuPopup align="start">
-          <MenuSub>
-            <MenuSubTrigger>Answer again with…</MenuSubTrigger>
-            <MenuSubPopup>
-              {models?.length ? models.map(model => <MenuItem key={model.id} onClick={() => void answerAgain(model.id)}>{model.name}</MenuItem>)
-                : <MenuItem disabled>{models ? 'No models are turned on.' : 'Loading models…'}</MenuItem>}
-            </MenuSubPopup>
-          </MenuSub>
+          {phone
+            ? <MenuGroup>
+              <MenuGroupLabel>Answer again with</MenuGroupLabel>
+              {modelItems}
+              <MenuSeparator />
+            </MenuGroup>
+            : <MenuSub>
+              <MenuSubTrigger>Answer again with…</MenuSubTrigger>
+              <MenuSubPopup>{modelItems}</MenuSubPopup>
+            </MenuSub>}
           <MenuItem onClick={() => setComparing(true)}><Scale aria-hidden />Compare models…</MenuItem>
           <MenuSeparator />
           <MenuItem onClick={() => void branch()}><GitBranch aria-hidden />Branch from here</MenuItem>
