@@ -115,5 +115,3 @@ export function createGatewayProjectsClient(auth: Pick<GatewayAuthClient, 'reque
     },
   }
 }
-
-export type GatewayProjectsClient = ReturnType<typeof createGatewayProjectsClient>
