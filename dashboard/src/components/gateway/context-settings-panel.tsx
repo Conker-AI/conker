@@ -30,7 +30,7 @@ function Group({ title, description, error, children }: { title: string; descrip
 }
 
 function ItemRow({ item, children }: { item: ContextItem; children?: ReactNode }) {
-  return <li className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-md bg-muted/50 px-3 py-2">
+  return <li className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-md bg-muted px-3 py-2">
     <div className="min-w-0 flex-1 basis-40">
       <p className="break-words text-sm">{item.text}</p>
       {item.author === 'ai' && <p className="text-xs text-muted-foreground">Conker</p>}
@@ -188,7 +188,7 @@ export function ContextSettingsPanel({ client, sessionId, disabled, onChanged }:
         <ChevronRight className="size-3.5 transition-transform group-data-panel-open/earlier:rotate-90" aria-hidden="true" />Earlier ({earlier.length})
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <ul className="space-y-1.5 pt-1">{earlier.map(item => <li key={item.id} className="rounded-md bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <ul className="space-y-1.5 pt-1">{earlier.map(item => <li key={item.id} className="rounded-md border px-3 py-2 text-xs text-muted-foreground">
           <p className="break-words">{item.text}</p>
           <p>{item.author === 'ai' ? `Conker · ${stateWords[item.state]}` : stateWords[item.state]}</p>
         </li>)}</ul>
