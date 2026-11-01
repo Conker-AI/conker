@@ -7,6 +7,7 @@ which module versions a release pins.
 ## Unreleased
 
 - **The answer menu stays readable on phones.** Under 768 px the models for "Answer again with" are listed inside the menu instead of in a submenu that covered the other choices.
+- **Chat names and output settings in the chat header and composer.** Rename a chat by clicking its title, let Conker name it automatically with the sparkles button, and choose how answers are written (format, length, language) in the composer's Output popover.
 - **Chat context settings.** The Context sheet now edits what Conker keeps in mind for one chat: its instructions,
   the token budget, a rule per message, and the decisions and open questions Conker tracks.
 - **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
