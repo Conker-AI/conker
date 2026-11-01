@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import conker as cli
-from conker_inbox import render
+from conker_inbox import _format_time, render
 
 
 @pytest.fixture
@@ -385,6 +385,12 @@ def test_inbox_pi_refusal_exits(invoke, capsys):
     assert (
         "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
     )
+
+
+def test_inbox_time_with_an_unknown_zone_is_a_dash():
+    """Test that an unknown time zone returns a dash."""
+    result = _format_time(1_700_000_000, {"startsAt": 1_700_000_000}, "No/Such_Zone")
+    assert result == "-"
 
 
 def test_a_plan_alert_shows_when_its_window_resets():

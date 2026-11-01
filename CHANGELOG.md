@@ -7,6 +7,7 @@ which module versions a release pins.
 ## Unreleased
 
 - **Answer blocks refuse deep nesting and fix link encoding issues.** Deep block nesting (depth > 64) is caught as "too-large" to prevent stack overflow, chart slices and legends key by index instead of label to avoid React duplicate keys, approval request links encode the ticket ID, and external links use `noopener,noreferrer` for security.
+- **CLI file times and Inbox time zones.** `conker files upload` sends the file time in milliseconds, as the dashboard does, and `conker inbox` shows `-` for an unknown time zone instead of failing.
 - **Gemini, xAI, Mistral, DeepSeek and Groq connect directly.** Pi 0.17.0 is pinned and
   `DIRECT_PROVIDERS_STATE` is active: Settings > Providers saves an API key for each (stored as a
   file the Pi container reads, like the other keys), and Advanced > Add provider lists them for

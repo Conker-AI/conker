@@ -2,6 +2,7 @@
 
 import io
 import json
+import os
 import sys
 from pathlib import Path
 from urllib.error import HTTPError
@@ -318,6 +319,34 @@ def test_files_download_keeps_only_the_base_name(invoke, tmp_path, monkeypatch, 
     assert run("files", "download", "ses_a", attachment) == 0
     assert (tmp_path / "evil.txt").read_bytes() == b"payload"
     assert not (tmp_path.parent / "evil.txt").exists()
+
+
+def test_files_upload_sends_last_modified_in_milliseconds(invoke, tmp_path):
+    """Test file upload sends lastModified in milliseconds."""
+    run, calls, _, state, check_headers = invoke
+
+    # Create a test file and set its time
+    test_file = tmp_path / "test.txt"
+    test_file.write_bytes(b"content")
+    os.utime(test_file, (1_700_000_000.25, 1_700_000_000.25))
+
+    # Mock the upload response
+    state["responses"] = [
+        {
+            "id": "attachment_1234567890abcdef1234567890abcdef",
+            "name": "test.txt",
+            "size": 7,
+            "mediaType": "text/plain",
+            "processing": "completed",
+        }
+    ]
+
+    assert run("files", "upload", "ses_a", str(test_file)) == 0
+    assert len(calls) == 1
+    check_headers(0)
+
+    request = calls[0][0]
+    assert "lastModified=1700000000250" in request.full_url
 
 
 def test_files_upload_refusal_uses_the_shared_message(invoke, tmp_path, capsys):
