@@ -38,7 +38,7 @@ export const ChartPart = defineComponent({
     const name = props.title || `${type} chart`
     const axes = <><CartesianGrid vertical={false} /><XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={value => String(value).slice(0, 16)} /><YAxis tickLine={false} axisLine={false} width={48} /><ChartTooltip content={<ChartTooltipContent />} />{series.length > 1 && <ChartLegend content={<ChartLegendContent />} />}</>
     const chart = type === "pie"
-      ? <PieChart accessibilityLayer><ChartTooltip content={<ChartTooltipContent nameKey="label" hideLabel />} /><Pie data={rows} dataKey={keys[0]} nameKey="label" innerRadius="45%" isAnimationActive={false}>{rows.map((row, index) => <Cell key={index} fill={color(index)} />)}</Pie></PieChart>
+      ? <PieChart accessibilityLayer><ChartTooltip content={<ChartTooltipContent nameKey="label" hideLabel />} /><Pie data={rows} dataKey={keys[0]} nameKey="label" innerRadius="45%" isAnimationActive={false}>{rows.map((_, index) => <Cell key={index} fill={color(index)} />)}</Pie></PieChart>
       : type === "line"
         ? <LineChart accessibilityLayer data={rows}>{axes}{keys.map(key => <Line key={key} dataKey={key} type="linear" stroke={`var(--color-${key})`} strokeWidth={2} dot={rows.length <= 12} isAnimationActive={false} />)}</LineChart>
         : <BarChart accessibilityLayer data={rows}>{axes}{keys.map(key => <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={3} isAnimationActive={false} />)}</BarChart>
