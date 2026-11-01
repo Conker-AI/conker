@@ -186,7 +186,7 @@ then continue the waiting turn when prompted.
 ## Memory and chat privacy
 
 Open **Memory** to inspect retained evidence and memories with their sources.
-A message saying “I remember” does not prove delivery. Check its **Added to memory**
+A message saying “I remember” does not prove delivery. Check its **Remembered**
 receipt and the answer's retrieval details. Pending delivery can be checked
 without resending the message.
 
