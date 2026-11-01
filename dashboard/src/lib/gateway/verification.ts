@@ -32,6 +32,31 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     details.push('The source conversation is kept. Source, confidence and memory permissions are unchanged.')
     return { title, path, target, details }
   }
+  const chat = /^\/api\/control\/pi\/(sessions|context)\/(ses_[0-9a-f]{16})(\/.*)?$/.exec(path)
+  if (chat) {
+    const tail = (chat[3] ?? '').replace(/(?:msg|dec|thr)_[0-9a-f]{16}/g, ':id')
+    const named: Record<string, [string, string]> = {
+      '/output': ['Change answer format', 'Sets the format, length and language of the next answers in this chat.'],
+      '/title': ['Rename chat', 'Changes only the name shown in your chat list.'],
+      '/title/auto': ['Name chat automatically', 'A helper model reads this chat and names it.'],
+      '/messages/:id/retry': ['Answer again', 'Sends the same question to the chosen model. The earlier answer stays as a version.'],
+      '/messages/:id/fact-check': ['Check facts', 'A helper model checks the answer against the sources it used.'],
+      '/messages/:id/fork': ['Branch a new chat', 'Starts a new chat that continues from this message. This chat stays as it is.'],
+      '/response-families/:id/select': ['Show another version', 'Shows the chosen version of this answer; the next answers build on it.'],
+      '/response-families/:id/judge': ['Judge the versions', 'A helper model scores every version without seeing which model wrote it.'],
+      '/response-families/:id/vote': ['Vote on an answer', 'Records your vote on this version.'],
+      '': ['Change context settings', 'Replaces the instructions, budget and message rules this chat uses.'],
+      '/fork': ['Continue in a new chat', 'Closes this chat and starts a new one with its pinned messages and the reviewed summary.'],
+      '/summary': ['Save summary', 'Saves a new version of this chat’s summary. Older versions stay.'],
+      '/summary/restore': ['Restore summary', 'Saves an older summary as the newest version.'],
+      '/summary/draft': ['Draft a summary', 'A helper model proposes a summary. Nothing is saved.'],
+      '/compact': ['Fold messages into the summary', 'Saves the summary and lets the covered messages be summarised instead of sent in full.'],
+      '/items': ['Add a decision or open question', 'Adds it to what Conker keeps in mind for this chat.'],
+      '/items/:id/state': ['Change a decision or open question', 'Marks it done, withdrawn or active again.'],
+    }
+    const found = named[tail]
+    if (found) return { title: found[0], path, target: `Chat ${chat[2]}`, details: [found[1]] }
+  }
   if (path.startsWith('/api/owner/mcp/')) {
     let endpoint = 'Saved MCP server'
     try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }

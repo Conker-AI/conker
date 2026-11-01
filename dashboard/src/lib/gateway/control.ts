@@ -7,6 +7,11 @@ import { createGatewayImportsClient } from './imports'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
+import { createChatAnswersClient } from './chat-answers'
+import { createChatReviewsClient } from './chat-reviews'
+import { createChatNamesClient } from './chat-names'
+import { createChatContextClient } from './chat-context'
+import { createChatSummaryClient } from './chat-summary'
 import { createOwnerSettingsClient } from './owner-settings'
 import { createAccessClient } from './access'
 import { createGatewayPlansClient } from './plans'
@@ -314,6 +319,12 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
     asks: createAsksClient(auth),
+    /** Chat features: answer versions and reviews, names and output settings, context editing. */
+    chatAnswers: createChatAnswersClient(auth),
+    chatReviews: createChatReviewsClient(auth),
+    chatNames: createChatNamesClient(auth),
+    chatContext: createChatContextClient(auth),
+    chatSummary: createChatSummaryClient(auth),
     settings: createOwnerSettingsClient(auth),
     access: createAccessClient(auth),
     plans: createGatewayPlansClient(auth),

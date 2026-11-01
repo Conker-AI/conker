@@ -8,6 +8,11 @@ import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gat
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
 import { createFakeCalls } from './fake-gateway-calls'
+import { createFakeChatAnswers } from './fake-gateway-chat-answers'
+import { createFakeChatReviews } from './fake-gateway-chat-reviews'
+import { createFakeChatNames } from './fake-gateway-chat-names'
+import { createFakeChatContext } from './fake-gateway-chat-context'
+import { createFakeChatSummary } from './fake-gateway-chat-summary'
 import { createFakeSetup } from './fake-gateway-setup'
 import { createFakeSystem } from './fake-gateway-system'
 import { createFakeCharacters } from './fake-gateway-characters'
@@ -23,8 +28,8 @@ type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<st
 const now = () => Date.now() / 1000
 const iso = (seconds: number) => new Date(seconds * 1000).toISOString()
 let counter = 0
-const nextId = (prefix: string) => prefix === 'msg'
-  ? `msg_${(++counter).toString(16).padStart(16, '0')}`
+const nextId = (prefix: string) => prefix === 'msg' || prefix === 'ses'
+  ? `${prefix}_${(++counter).toString(16).padStart(16, '0')}`
   : `${prefix}_${Date.now().toString(36)}${(counter++).toString(36)}`
 const previewSessions = {
   week: `ses_${'1'.repeat(16)}`,
@@ -32,8 +37,10 @@ const previewSessions = {
   coach: `ses_${'3'.repeat(16)}`,
 }
 
-type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant' | 'tool'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string }
+type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant' | 'tool'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string; response_family?: Json }
 type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
+/** What the chat feature fixtures may read and change: the preview's chats, its id maker and each chat's context settings (owned by the context fixture; the summary fixture reads and bumps the revision). */
+export type FakeChatStore = { sessions: Session[]; nextId: (prefix: string) => string; contexts: Map<string, { revision: number; policy: Json | null }> }
 
 const replies = [
   "Here's a simple plan for the week:\n\n| Day | Plan |\n| --- | --- |\n| Monday | Revision block before school, 45 minutes |\n| Tuesday and Thursday | Judo, so keep homework light |\n| Friday | Hand in the physics worksheet |\n\nWant me to put these in your calendar?",
@@ -117,6 +124,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const setupHandle = createFakeSetup(preview, approvals, now, iso, fail)
   const systemHandle = createFakeSystem(now, iso, fail)
   const callsHandle = createFakeCalls(now, fail)
+  const chatStore: FakeChatStore = { sessions, nextId, contexts: new Map() }
+  const chatHandles = [createFakeChatAnswers(now, fail, chatStore), createFakeChatReviews(now, fail, chatStore), createFakeChatNames(now, fail, chatStore), createFakeChatContext(now, fail, chatStore), createFakeChatSummary(now, fail, chatStore)]
   const sessionRow = (item: Session) => ({ id: item.id, parent_id: null, title: item.title, status: 'open', created_at: item.created_at, closed_at: null, summary: null })
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
@@ -542,6 +551,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (systemHandled !== undefined) return systemHandled
     const callsHandled = callsHandle(path, method, options)
     if (callsHandled !== undefined) return callsHandled
+    for (const handle of chatHandles) { const handled = handle(path, method, options); if (handled !== undefined) return handled }
     const teamsHandled = teamsHandle(path, method, options)
     if (teamsHandled !== undefined) return teamsHandled
     const setupHandledModels = setupHandle(path, method, options)

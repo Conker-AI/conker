@@ -48,7 +48,12 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     return allowed(state) ? { availability: 'enabled', run: (...args) => { if (allowed(read())) return run(handlers(), ...args) } } : { availability: 'disabled', reason }
   }
   const isForgotten = (value: GatewayChatState) => value.forgotten || value.current?.status === 'forgotten' || value.attempt?.submission?.contentStatus === 'forgotten'
-  const messages: ChatMessage[] = (state.current?.messages ?? []).map(message => ({ ...message,
+  // Pi returns every version of a retried answer; show only the selected one, which carries the version list.
+  const rows = state.current?.messages ?? [], versions = new Map<string, string[]>()
+  for (const row of rows) if (row.family) versions.set(row.family.rootId, [...(versions.get(row.family.rootId) ?? []), row.id])
+  const shown = rows.filter(row => !row.family || row.family.selectedId === row.id || !rows.some(item => item.id === row.family?.selectedId))
+  const messages: ChatMessage[] = shown.map(message => ({ ...message,
+    family: message.family ? { rootId: message.family.rootId, selectedId: message.family.selectedId, revision: message.family.revision, versions: versions.get(message.family.rootId) ?? [message.id] } : undefined,
     memoryDelivery: undefined,
     memory: !isForgotten(state) && message.role === 'user' && message.content.kind === 'text' && state.memoryRead !== undefined
       ? memoryFeedback(message.id, state.memoryRead, action(value => !isForgotten(value) && value.memoryRead?.phase !== 'checking' && value.current?.messages.some(row => row.id === message.id && row.role === 'user' && row.content.kind === 'text') === true, handler => handler.refreshMemory?.(message.id), 'A memory status check is already in progress.'), undoMemory(message.id)) : undefined,

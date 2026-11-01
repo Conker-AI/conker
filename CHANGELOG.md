@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
+  families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
+  refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.
 - **One search.** Lists no longer have their own search boxes; the search in the app bar (Ctrl+K) finds
   everything. The sidebar's search button is now the light/dark switch.
 - **Ctrl+K search finds settings.** The command palette now searches all settings when you type at least two characters, showing up to eight matches with their group names.
