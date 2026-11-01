@@ -7,6 +7,10 @@ which module versions a release pins.
 ## Unreleased
 
 - **The chat title gets room in the phone header.** On a phone the chat's title no longer shrinks to a few pixels: Edit context and the Context, Thinking and Logs views moved into the chat's "..." menu.
+- **Chat context settings.** The Context sheet now edits what Conker keeps in mind for one chat: its instructions,
+  the token budget, a rule per message, and the decisions and open questions Conker tracks.
+- **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
+  between the versions with ‹ n/m ›, and branch a new chat from that answer.
 - **Chat summary: edit, draft with AI, fold old messages, restore and continue in a new chat.** Long chats stay sharp with a summary panel that shows and edits the chat's summary, lets Conker draft it, folds old messages into it, restores earlier versions, and continues in a fresh chat that starts from the summary.
 - **Answers can be voted on, judged and fact-checked.** Under a saved answer you can give a thumbs up or down, have a model score its versions without knowing who wrote them (2 or more versions), and check its claims against its sources.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
