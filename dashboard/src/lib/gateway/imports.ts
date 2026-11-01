@@ -43,7 +43,6 @@ export type ImportOffers = z.infer<typeof offers>
 export type ImportedChat = z.infer<typeof chatView>
 export type ImportedChatPage = z.infer<typeof chats>
 export type ImportedChatDetail = z.infer<typeof chat>
-export type ImportedMessage = z.infer<typeof message>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const parsed = schema.safeParse(value)

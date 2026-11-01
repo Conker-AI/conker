@@ -76,4 +76,3 @@ export function createGatewayExportsClient(auth: Pick<GatewayAuthClient, 'downlo
     },
   }
 }
-export type GatewayExportsClient = ReturnType<typeof createGatewayExportsClient>
