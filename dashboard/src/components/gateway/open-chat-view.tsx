@@ -16,9 +16,9 @@ import { GatewaySkillPicker } from './skill-picker'
 import { ThinkControl } from './think-control'
 import { ModelRoutingEvidence, TurnFailureGuidance } from './model-routing-evidence'
 import { memoryRetrievalSummary } from './plain-status'
-import type { Dispatch, RefObject, SetStateAction, ReactNode } from 'react'
+import { useState, type Dispatch, type RefObject, type SetStateAction, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Brain, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
+import { Brain, Layers, MoreHorizontal, RefreshCw, Wrench } from 'lucide-react'
 import { SubmissionRecovery } from './submission-recovery'
 import type { TaskDispatchIntent } from './task-dispatch-state'
 import { PendingSubmissions } from './pending-submissions'
@@ -36,6 +36,9 @@ import { ModeControl, TemplateInput, TemplatePicker } from './composer-parts'
 import { ChatTitle } from './chat-title'
 import { ChatOutputControl } from './chat-output-control'
 import { ChatContextControl } from './chat-context-control'
+import { ConversationViewMenuItems } from './conversation-views'
+import { useConnectedShell } from './workspace-shell-context'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { AnswerToolsContext } from '@/lib/chat/answer-tools-context'
 
 /** Open conversation: history transcript, turn details, pending submissions, recovery and the reply composer. */
@@ -53,15 +56,20 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
   setSessionAgents: Dispatch<SetStateAction<Record<string, string>>>; modeHints: RefObject<Record<string, { isAnalysis?: true }>>; headerExtra?: ReactNode; setDictating: Dispatch<SetStateAction<boolean>>
   dictating: boolean; templateActive: boolean; inspectSubmission: (saved: RuntimePendingSubmission) => Promise<void>; setSkillChoices: (id: string, skillIds: string[]) => void; setThinkChoice: (id: string, think: boolean) => void
 }) {
+  const phone = useIsMobile()
+  const shell = useConnectedShell()
+  const [contextOpen, setContextOpen] = useState(false)
   const refreshChat = () => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }
   return <>
     {visible && <GatewayHeader context={<><BackToChats /><ChatTitle control={knownForgotten ? undefined : control} sessionId={current && !knownForgotten ? current.id : null} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} title={knownForgotten ? 'Forgotten chat' : current?.title || safeSessions.find(item => item.id === selected)?.title || (selected ? 'Chat' : 'New chat')} /></>}>
       {control && !knownForgotten && <GatewayCallLauncher compact client={control.calls} conversationId={selected} disabled={pending || historyLoading || Boolean(attempt)} />}
-      {control && current && !knownForgotten && <ChatContextControl key={`context:${current.id}`} control={control} sessionId={current.id} lastMessageId={current.messages.at(-1)?.id ?? null} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} />}
+      {control && current && !knownForgotten && <ChatContextControl key={`context:${current.id}`} {...(phone ? { open: contextOpen, onOpenChange: setContextOpen } : {})} control={control} sessionId={current.id} lastMessageId={current.messages.at(-1)?.id ?? null} disabled={pending || historyLoading || Boolean(attempt)} onChanged={refreshChat} />}
       <DropdownMenu><DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="Chat options" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end">
         <DropdownMenuItem disabled={chat.checkHistory.availability !== 'enabled'} onClick={() => { if (chat.checkHistory.availability === 'enabled') void chat.checkHistory.run() }}><RefreshCw />Refresh this chat</DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/memory" />}><Brain />Open memory</DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/tools" />}><Wrench />Open tools</DropdownMenuItem>
+        {phone && control && current && !knownForgotten && <DropdownMenuItem onClick={() => setContextOpen(true)}><Layers />Edit context</DropdownMenuItem>}
+        {phone && shell?.showViews && <ConversationViewMenuItems onToggle={shell.toggleView} />}
       </DropdownMenuContent></DropdownMenu>
     </GatewayHeader>}
     {observation.error && current && <div className={`${conversationColumn} shrink-0 py-2`}><p role="status" className="text-sm text-muted-foreground">{'Chat updates are delayed. Showing the last saved history while checking again.'} <Button variant="link" size="sm" className="h-auto p-0" onClick={observation.refresh}>Check now</Button></p></div>}

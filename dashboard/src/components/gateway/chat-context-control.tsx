@@ -6,9 +6,10 @@ import { ContextSettingsPanel } from './context-settings-panel'
 import { ContextSummaryPanel } from './context-summary-panel'
 
 /** This chat's context: a header button that opens the context editor. `lastMessageId` is the chat's newest message (a context fork continues from it); `onChanged` reloads the chat after a change. */
-export function ChatContextControl({ control, sessionId, lastMessageId, disabled, onChanged }: { control: GatewayControlClient; sessionId: string; lastMessageId: string | null; disabled: boolean; onChanged: () => void }) {
-  return <Sheet>
-    <SheetTrigger render={<Button size="icon" variant="ghost" aria-label="Context" title="Context" />}><Layers /></SheetTrigger>
+/** Phones pass `open` and `onOpenChange` and open it from the chat's "..." menu instead of a header button. */
+export function ChatContextControl({ control, sessionId, lastMessageId, disabled, onChanged, open, onOpenChange }: { control: GatewayControlClient; sessionId: string; lastMessageId: string | null; disabled: boolean; onChanged: () => void; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  return <Sheet open={open} onOpenChange={onOpenChange}>
+    {open === undefined && <SheetTrigger render={<Button size="icon" variant="ghost" aria-label="Context" title="Context" />}><Layers /></SheetTrigger>}
     <SheetContent className="sm:max-w-lg">
       <SheetHeader><SheetTitle>Context</SheetTitle></SheetHeader>
       <SheetPanel className="space-y-8">

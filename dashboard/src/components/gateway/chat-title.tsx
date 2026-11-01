@@ -6,5 +6,5 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
   void sessionId
   void disabled
   void onChanged
-  return <h2 className="min-w-0 truncate text-sm font-medium">{title}</h2>
+  return <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{title}</h2>
 }
