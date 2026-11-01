@@ -25,7 +25,7 @@ export function ListSkeleton({ rows = 6, label = 'Loading…', className }: { ro
 /** A page's header and sections while its workspace opens. */
 export function PageSkeleton({ label = 'Opening…', className }: { label?: string; className?: string }) {
   return <div role="status" aria-label={label} aria-busy="true" className={cn('conker-reveal min-h-0 flex-1 overflow-hidden p-4 sm:p-6', className)}>
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="space-y-2"><Bar className="h-6 w-48" /><Bar className="w-72 max-w-full" /></div>
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="rounded-xl border p-4"><Bar className="mb-2 w-32" /><Row /><Row /><Row /></div>

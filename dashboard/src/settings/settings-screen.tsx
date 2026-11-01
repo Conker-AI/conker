@@ -116,7 +116,7 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
   }
 
   return <GatewayPageFrame className="p-0 sm:p-0">
-    <div className="mx-auto grid w-full max-w-6xl gap-6 p-4 sm:p-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
+    <div className="grid w-full gap-6 p-4 sm:p-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
       <aside className={cn('md:sticky md:top-0 md:max-h-[calc(100dvh-6rem)] md:self-start md:overflow-y-auto md:pb-6', (group || query.trim() || changedOnly) && 'hidden md:block')}>
         <GroupNav selected={group?.id ?? SETTINGS_GROUPS[0].id} onPick={pick} query={query} onQuery={setQuery} advanced={advanced} onAdvanced={value => state.set(advancedSetting, value)}
           changedOnly={changedOnly} onChangedOnly={setChangedOnly} changedCount={changed.length} />

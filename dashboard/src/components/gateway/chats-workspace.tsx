@@ -38,7 +38,7 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
     : <ListSkeleton rows={5} label={searching ? 'Searching chats…' : 'Loading chats…'} /> : undefined
   const olderNote = directory.error === 'older' || directory.error === 'cursor' ? error : !directory.nextCursor && !directory.error ? 'You’ve reached the end of these results.' : null
   return <GatewayPageFrame>
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader actionsOnly title="Chats" description="Find a conversation or start a new one." density="compact" actions={<>
         <WorkspaceAction iconOnly aria-label={directory.pending === 'refresh' ? 'Refreshing chats' : 'Refresh chats'} title="Refresh chats" onClick={() => void directory.refresh()} disabled={busy || directory.error === 'query'}><RefreshCw aria-hidden="true" className={directory.pending === 'refresh' ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>
         <WorkspaceAction emphasis="primary" keepVisible onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}><SquarePen aria-hidden="true" />New chat</WorkspaceAction>

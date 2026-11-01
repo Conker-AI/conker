@@ -108,7 +108,7 @@ function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; contr
   }
   return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={job.definition.name} description={check ? 'An AI job: each time it starts, Conker carries out your instructions with its tools, then tells you what needs you.' : 'What it does, when it runs, and how each run went.'} density="compact" actions={<div className="flex flex-wrap gap-2"><Button variant="outline" render={<Link to="/jobs" />}><ArrowLeft />Cron jobs</Button>{check?.sessionId && <Button variant="outline" render={<Link to={`/chat?session=${encodeURIComponent(check.sessionId)}`} />}><MessagesSquare />Open its chat</Button>}<Button variant="outline" disabled={pending} onClick={() => void toggle()}>{job.definition.enabled ? <CirclePause /> : <CirclePlay />}{job.definition.enabled ? 'Pause schedule' : 'Resume schedule'}</Button><Button disabled={pending || !!runRequest} onClick={() => setConfirmRun(true)}><Play />Run now</Button></div>} /></div>
-    <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="max-w-4xl space-y-8">
+    <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="space-y-8">
       {(check || job.definition.instructions) && <section className="space-y-3" aria-labelledby="job-instructions-heading"><h2 id="job-instructions-heading" className="text-lg font-semibold">What it does</h2>
         {job.definition.instructions ? <p className="max-w-prose whitespace-pre-wrap break-words text-sm leading-6">{job.definition.instructions}</p>
           : <p className="max-w-prose text-sm leading-6 text-muted-foreground">Your server keeps this job’s instructions but doesn’t send them to this page yet. Each run starts with them as the first message in its chat.</p>}
@@ -149,12 +149,12 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/jobs')}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
+    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate(‘/jobs’)}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.target.kind === 'agent' ? 'AI job' : job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
-  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+  return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => startNew()}><Plus />New AI job</WorkspaceAction></>} />
     {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}
     {error && (jobs ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Cron jobs didn’t load" onRetry={() => load()} />)}

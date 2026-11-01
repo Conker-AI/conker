@@ -168,7 +168,7 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
   }
   if (match) {
     if (selected) return <ProjectEditor key={selected.id} project={selected} control={control} runtime={runtime} activity={activity} onChanged={update} />
-    return <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Project didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft />Projects</Button></> : <ListSkeleton rows={3} label="Loading project…" />}</div>
+    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Project didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate(‘/projects’)}><ArrowLeft />Projects</Button></> : <ListSkeleton rows={3} label="Loading project…" />}</div>
   }
   const matches = (projects ?? []).filter(item => `${item.name} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length
@@ -176,7 +176,7 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
   const showing = archivedCount ? filter : 'active'
   const visible = matches.filter(item => (item.archivedAt !== null) === (showing === 'archived'))
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
-  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+  return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Projects" description="Keep related chats, tasks and guidance together without changing their permissions." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh projects" title="Refresh projects" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New project</WorkspaceAction></>} />
     {error && (projects ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Projects didn’t load" onRetry={() => load()} />)}
     {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard query={query} onQueryChange={setQuery} label="Search projects" placeholder="Search projects…" count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'}

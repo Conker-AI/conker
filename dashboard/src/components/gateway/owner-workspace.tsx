@@ -169,7 +169,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   const laterCount = (showDecisions ? laterDecisions.length + laterChanges.length + laterAsks.length : 0) + (showIdeas ? laterIdeas.length : 0) + (showNotes ? laterNotes.length : 0)
   return <GatewayPageFrame className="h-full">
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       {!requestId && <PageHeader title="Inbox" actionsOnly actions={refreshButton} />}
       {requestId ? <div className="flex items-center justify-between gap-3"><Button size="sm" variant="ghost" render={<Link to="/inbox" />}><ArrowLeft />Inbox</Button>{refreshButton}</div> : <>
         <div className="flex flex-col gap-3">

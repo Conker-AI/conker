@@ -59,7 +59,7 @@ export function GatewayServerBackups({ client }: { client: GatewayHostOpsClient 
   const hold = list?.recoveryHeld ? 'A recovery is held. Finish or abort it on the server with conker recovery-status first.'
     : list?.backupLock && run?.outcome !== 'working' ? 'A backup is running from the server, or one was cut off. Wait for it, or check the folder on the server before trying again.' : null
   const blocked = !!actions.busy || !!hold || !list?.ready || runAttempt?.state === 'lost'
-  return <GatewayPageFrame><div className="flex max-w-4xl flex-col gap-6">
+  return <GatewayPageFrame><div className="flex flex-col gap-6">
     <PageHeader actionsOnly title="Backups" actions={<WorkspaceAction iconOnly aria-label="Read backups again" title="Read backups again" disabled={!list && !error} onClick={() => { void read(); void actions.refresh() }}><RefreshCw /></WorkspaceAction>} />
     {error && !list ? <HostReadError error={error} onRetry={read} commands={commands} />
       : !list ? <CollectionLoading label="Reading your backup folder…" />

@@ -74,7 +74,7 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel }
 }
 
 function LoadingPage({ list }: { list: boolean }) {
-  return <GatewayPageFrame>{list ? <div className="mx-auto w-full max-w-3xl"><ListSkeleton rows={4} label="Loading agents…" /></div> : <CollectionLoading label="Loading agents…" />}</GatewayPageFrame>
+  return <GatewayPageFrame>{list ? <div className="w-full"><ListSkeleton rows={4} label="Loading agents…" /></div> : <CollectionLoading label="Loading agents…" />}</GatewayPageFrame>
 }
 
 export function GatewayAgentsWorkspace({ client, companion = false }: { client: GatewayControlClient; companion?: boolean }) {
@@ -108,7 +108,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
     } catch (cause) { setArchiveError(changedMessage(cause)) } finally { setArchivePending(false) }
   }
   if (!agents && !error) return <LoadingPage list={!companion && !editMatch} />
-  if (error) return <GatewayPageFrame><div className="mx-auto w-full max-w-3xl"><InlineError error={listError} title="Agents didn’t load" onRetry={() => load()} /></div></GatewayPageFrame>
+  if (error) return <GatewayPageFrame><div className="w-full"><InlineError error={listError} title="Agents didn’t load" onRetry={() => load()} /></div></GatewayPageFrame>
   if (companion) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <PageHeader actionsOnly title="Companion" description="Shape the identity and working instructions used by your primary personal agent." density="compact" actions={<WorkspaceAction render={<Link to="/companion" />}>Open chat</WorkspaceAction>} />
     {selected ? <AgentEditor key={`${selected.revision}:${resetNonce}`} client={client} profile={selected} companion onSaved={saved} onCancel={() => setResetNonce(value => value + 1)} /> : <div className="p-6 text-sm text-muted-foreground">The canonical Companion profile is missing. Check Server before continuing.</div>}
@@ -124,7 +124,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   const shown = visible.filter(item => (item.archived_at !== null) === (showing === 'archived'))
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   return <GatewayPageFrame>
-    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader actionsOnly title="Agents" description="Agents are focused helpers for recurring work. Each picks its model, tools and memory; your approval rules still apply." density="compact" actions={<WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
       <ListCard query={query} onQueryChange={setQuery} label="Search agents" placeholder="Search agents…" count={shown.length} unit={shown.length === 1 ? 'agent' : 'agents'}
         filters={archivedCount ? <>{chip('active', 'Active', (agents?.length ?? 0) - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}

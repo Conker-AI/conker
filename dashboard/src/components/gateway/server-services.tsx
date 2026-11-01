@@ -61,7 +61,7 @@ export function GatewayServerServices({ client }: { client: GatewayHostOpsClient
     : status?.backupLock ? 'A backup is running or was cut off, so restarts wait. Check the Backups page before trying again.' : null
   const row = (item: HostService) => <ServiceRow key={item.service} now={now} item={item} open={selected === item.service} actions={actions} hold={hold} finding={findings} checking={checking} onCheck={check}
     onClose={() => setParams(current => { const next = new URLSearchParams(current); next.delete('service'); return next })} />
-  return <GatewayPageFrame><div className="flex max-w-4xl flex-col gap-6">
+  return <GatewayPageFrame><div className="flex flex-col gap-6">
     <PageHeader actionsOnly title="Services" actions={<WorkspaceAction iconOnly aria-label="Read services again" title="Read services again" disabled={!status && !error} onClick={() => { void read(); void actions.refresh() }}><RefreshCw /></WorkspaceAction>} />
     {error && !status ? <HostReadError error={error} onRetry={read} commands={commands} />
       : !status ? <CollectionLoading label="Reading your services…" />

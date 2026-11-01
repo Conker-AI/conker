@@ -89,7 +89,7 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
     setError(null)
   }
 
-  return <GatewayPageFrame><div className="max-w-5xl space-y-6">
+  return <GatewayPageFrame><div className="space-y-6">
     <PageHeader actionsOnly title="Files" description="Browse names and folders inside roots configured by the server operator." density="compact" actions={root ? <WorkspaceAction disabled={pending} onClick={() => void request(root.id, currentPath)}><RefreshCw />{pending ? 'Checking…' : directory ? 'New listing' : 'Open root'}</WorkspaceAction> : undefined} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>Directory listing only</span><span aria-hidden="true">·</span><span>No file contents, editing, uploads, deletes, or shell access</span></div>
 
