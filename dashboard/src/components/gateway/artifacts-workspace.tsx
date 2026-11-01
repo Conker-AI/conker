@@ -145,7 +145,7 @@ export function GatewayArtifactsWorkspace({ control, activity }: { control: Gate
   }
   if (match) {
     if (selected) return <ArtifactEditor key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Artifact didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate(‘/artifacts’)}><ArrowLeft />Artifacts</Button></> : <ListSkeleton rows={3} label="Loading artifact…" />}</div>
+    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Artifact didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/artifacts')}><ArrowLeft />Artifacts</Button></> : <ListSkeleton rows={3} label="Loading artifact…" />}</div>
   }
   const archivedCount = (artifacts ?? []).filter(item => item.archivedAt !== null).length
   // Filter chips appear only once something is archived.

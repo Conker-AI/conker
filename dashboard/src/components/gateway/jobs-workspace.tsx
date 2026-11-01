@@ -149,7 +149,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate(‘/jobs’)}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
+    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/jobs')}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
   }
   const visible = (jobs ?? []).filter(job => (filter === 'all' || job.definition.state === filter) && `${job.definition.name} ${job.definition.target.kind === 'agent' ? 'AI job' : job.definition.target.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
