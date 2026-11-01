@@ -1,7 +1,7 @@
 import type { CharacterDraft } from "./api/character"
 
 /** Animated images cannot be paused reliably. Use a video loop instead. */
-function requireStillImage(bytes: Uint8Array, mime: string) {
+export function requireStillImage(bytes: Uint8Array, mime: string) {
   const label = (at: number, count: number) => String.fromCharCode(...bytes.slice(at, at + count))
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const png = bytes.length >= 8 && label(0, 8) === "\x89PNG\r\n\x1a\n"
