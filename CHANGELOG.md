@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat names and output settings in the chat header and composer.** Rename a chat by clicking its title, let Conker name it automatically with the sparkles button, and choose how answers are written (format, length, language) in the composer's Output popover.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
   refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.

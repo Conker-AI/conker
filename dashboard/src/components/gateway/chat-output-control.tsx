@@ -1,188 +1,99 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverTrigger, PopoverPopup } from '@/components/ui/popover'
-import { Select, SelectButton, SelectPopup, SelectItem } from '@/components/ui/select'
+import { useRef, useState } from 'react'
 import { AlignLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Spinner } from '@/components/ui/spinner'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import type { OutputFormat, OutputLength, ChatOutput } from '@/lib/gateway/chat-names'
+import type { ChatOutput, OutputFormat, OutputLength } from '@/lib/gateway/chat-names'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
+import { GatewayError } from '@/lib/gateway/transport'
 
-const formatOptions = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'text', label: 'Text' },
-  { value: 'list', label: 'List' },
-  { value: 'table', label: 'Table' },
-  { value: 'document', label: 'Document' },
-  { value: 'code', label: 'Code' },
-  { value: 'json', label: 'JSON' },
-] as const
+const formats = [['auto', 'Auto'], ['text', 'Text'], ['list', 'List'], ['table', 'Table'], ['document', 'Document'], ['code', 'Code'], ['json', 'JSON']] as const
+const lengths = [['auto', 'Auto'], ['short', 'Short'], ['medium', 'Medium'], ['long', 'Long']] as const
+const languages = [['auto', 'Auto'], ['en', 'English'], ['ru', 'Russian'], ['de', 'German'], ['fr', 'French'], ['es', 'Spanish']] as const
 
-const lengthOptions = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'short', label: 'Short' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'long', label: 'Long' },
-] as const
+const items = (pairs: readonly (readonly [string, string])[]) => pairs.map(([value, label]) => ({ value, label }))
+const labelOf = (pairs: readonly (readonly [string, string])[], value: string) => pairs.find(([code]) => code === value)?.[1] ?? value
 
-const languageOptions = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'en', label: 'English' },
-  { value: 'ru', label: 'Russian' },
-  { value: 'de', label: 'German' },
-  { value: 'fr', label: 'French' },
-  { value: 'es', label: 'Spanish' },
-] as const
+/** The trigger names only what is not Auto, for example "List · Short". */
+function summary(output: ChatOutput['output'] | undefined) {
+  if (!output) return 'Output'
+  const parts = [
+    output.format !== 'auto' && labelOf(formats, output.format),
+    output.length !== 'auto' && labelOf(lengths, output.length),
+    output.language !== 'auto' && labelOf(languages, output.language),
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : 'Output'
+}
+
+function Field({ label, value, options, disabled, onChange }: { label: string; value: string; options: readonly (readonly [string, string])[]; disabled: boolean; onChange: (value: string) => void }) {
+  return <div className="space-y-1">
+    <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <Select value={value} disabled={disabled} items={items(options)} onValueChange={next => { if (next !== null) onChange(next) }}>
+      <SelectTrigger size="sm" aria-label={label}><SelectValue /></SelectTrigger>
+      <SelectContent>{options.map(([code, text]) => <SelectItem key={code} value={code}>{text}</SelectItem>)}</SelectContent>
+    </Select>
+  </div>
+}
 
 /** Output settings for this chat, in the composer settings row. */
-export function ChatOutputControl({ control, sessionId, disabled }: { control: GatewayControlClient; sessionId: string; disabled: boolean }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [output, setOutput] = useState<ChatOutput | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+export function ChatOutputControl({ control, sessionId, disabled, onChanged }: { control: GatewayControlClient; sessionId: string; disabled: boolean; onChanged: () => void }) {
+  // Saving output settings changes nothing in the chat history, so there is nothing to reload.
+  void onChanged
+  const [saved, setSaved] = useState<ChatOutput | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const latest = useRef(0)
 
-  const loadOutput = async () => {
-    if (!control || !sessionId) return
-
-    setIsLoading(true)
-    setError(null)
+  const load = async (keepError = '') => {
+    const ticket = ++latest.current
+    setLoading(true)
+    setError(keepError)
     try {
-      const data = await control.chatNames.output(sessionId)
-      setOutput(data)
-    } catch (err) {
-      setError(chatFeatureMessage(err))
+      const result = await control.chatNames.output(sessionId)
+      if (ticket === latest.current) setSaved(result)
+    } catch (failure) {
+      if (ticket === latest.current) setError(chatFeatureMessage(failure))
     } finally {
-      setIsLoading(false)
+      if (ticket === latest.current) setLoading(false)
     }
   }
 
-  const saveOutput = async (updates: { format?: OutputFormat; length?: OutputLength; language?: string }) => {
-    if (!control || !sessionId || !output) return
-
+  const change = async (update: Partial<ChatOutput['output']>) => {
+    if (!saved) return
+    setSaving(true)
+    setError('')
     try {
-      const newOutput = await control.chatNames.saveOutput(
-        sessionId,
-        {
-          format: updates.format ?? output.output.format,
-          length: updates.length ?? output.output.length,
-          language: updates.language ?? output.output.language,
-        },
-        output.revision
-      )
-      setOutput(newOutput)
-      setError(null)
-    } catch (err) {
-      setError(chatFeatureMessage(err))
+      setSaved(await control.chatNames.saveOutput(sessionId, { ...saved.output, ...update }, saved.revision))
+    } catch (failure) {
+      const message = chatFeatureMessage(failure)
+      // A conflict means another tab changed it: show what is stored now, and say so.
+      if (failure instanceof GatewayError && failure.code === 'revision_conflict') await load(message)
+      else setError(message)
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
-    if (open) {
-      loadOutput()
-    }
-  }
+  const output = saved?.output
+  const language = output && languages.some(([code]) => code === output.language) ? languages : output ? [...languages, [output.language, output.language] as const] : languages
 
-  // Build trigger text
-  const getTriggerText = () => {
-    if (!output) return 'Output'
-
-    const parts = []
-    if (output.output.format !== 'auto') {
-      const format = formatOptions.find(f => f.value === output.output.format)
-      parts.push(format?.label || output.output.format)
-    }
-    if (output.output.length !== 'auto') {
-      const length = lengthOptions.find(l => l.value === output.output.length)
-      parts.push(length?.label || output.output.length)
-    }
-    if (output.output.language !== 'auto') {
-      const language = languageOptions.find(l => l.value === output.output.language)
-      parts.push(language?.label || output.output.language || '')
-    }
-
-    return parts.length > 0 ? parts.join(' · ') : 'Output'
-  }
-
-  // Add current language if it's not in the standard list
-  const getLanguageOptions = () => {
-    if (!output || output.output.language === 'auto') return languageOptions
-
-    const hasCustom = !languageOptions.some(opt => opt.value === output.output.language)
-    if (!hasCustom) return languageOptions
-
-    return [...languageOptions, { value: output.output.language, label: output.output.language || '' }]
-  }
-
-  return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
-      <PopoverTrigger>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          className="gap-1"
-        >
-          <AlignLeft className="h-3 w-3" />
-          <span>{getTriggerText()}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverPopup className="w-80 p-4">
-        {isLoading ? (
-          <div className="text-center text-sm text-muted-foreground py-4">Loading...</div>
-        ) : output ? (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-foreground">Format</label>
-              <Select value={output.output.format} onValueChange={(value) => saveOutput({ format: value as OutputFormat })}>
-                <SelectButton className="mt-1" size="sm" />
-                <SelectPopup>
-                  {formatOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectPopup>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-foreground">Length</label>
-              <Select value={output.output.length} onValueChange={(value) => saveOutput({ length: value as OutputLength })}>
-                <SelectButton className="mt-1" size="sm" />
-                <SelectPopup>
-                  {lengthOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectPopup>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-foreground">Language</label>
-              <Select value={output.output.language} onValueChange={(value) => saveOutput({ language: value })}>
-                <SelectButton className="mt-1" size="sm" />
-                <SelectPopup>
-                  {getLanguageOptions().map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                    ))}
-                </SelectPopup>
-              </Select>
-            </div>
-
-            {error && (
-              <p role="alert" className="text-xs text-destructive">{error}</p>
-            )}
-          </div>
-        ) : (
-          <div className="text-center text-sm text-muted-foreground py-4">
-            {error || 'Failed to load settings'}
-          </div>
-        )}
-      </PopoverPopup>
-    </Popover>
-  )
+  return <Popover onOpenChange={open => { if (open) void load() }}>
+    <PopoverTrigger render={<Button variant="ghost" size="sm" disabled={disabled} className="min-w-0 px-2 text-sm text-muted-foreground" />}>
+      <AlignLeft /><span className="truncate">{summary(output)}</span>
+    </PopoverTrigger>
+    <PopoverContent align="start" side="top" className="w-72 max-w-[calc(100vw-1rem)]">
+      <div className="space-y-3">
+        {loading && !output ? <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner className="size-4" />Loading…</p>
+          : output ? <>
+            <Field label="Format" value={output.format} options={formats} disabled={saving || loading} onChange={value => void change({ format: value as OutputFormat })} />
+            <Field label="Length" value={output.length} options={lengths} disabled={saving || loading} onChange={value => void change({ length: value as OutputLength })} />
+            <Field label="Language" value={output.language} options={language} disabled={saving || loading} onChange={value => void change({ language: value })} />
+          </> : null}
+        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+      </div>
+    </PopoverContent>
+  </Popover>
 }

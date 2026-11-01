@@ -1,118 +1,90 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Sparkles } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { notifyFailure } from '@/components/resilience/notify'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 
 /** The open chat's name in the header. `onChanged` reloads the chat after a rename. */
 export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { control?: GatewayControlClient; sessionId: string | null; title: string; disabled: boolean; onChanged: () => void }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(title)
-  const [isRenaming, setIsRenaming] = useState(false)
-  const [isAutoNaming, setIsAutoNaming] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(title)
+  const [renaming, setRenaming] = useState(false)
+  const [naming, setNaming] = useState(false)
+  // Enter and blur both save; these keep a second save from starting and keep Esc from saving.
+  const busy = useRef(false)
+  const cancelled = useRef(false)
 
-  if (!control || !sessionId) {
-    return <h2 className="min-w-0 truncate text-sm font-medium">{title}</h2>
-  }
+  if (!control || !sessionId) return <h2 className="min-w-0 truncate text-sm font-medium">{title}</h2>
 
-  const handleRename = async () => {
-    if (!control || !sessionId) return
-
-    const trimmed = editValue.trim()
-    if (!trimmed || trimmed === title) {
-      setIsEditing(false)
-      setEditValue(title)
-      return
-    }
-
-    setIsRenaming(true)
+  // The server's revision is read right before each write, so a write only fails if the name changed in between.
+  const run = async (write: (revision: number) => Promise<unknown>) => {
     try {
-      // Get current revision
-      const current = await control.chatNames.title(sessionId)
-      await control.chatNames.rename(sessionId, trimmed, current.revision)
-      setIsEditing(false)
-      setEditValue(trimmed)
+      await write((await control.chatNames.title(sessionId)).revision)
       onChanged()
     } catch (error) {
       notifyFailure('Could not rename the chat', chatFeatureMessage(error))
-    } finally {
-      setIsRenaming(false)
     }
   }
 
-  const handleAutoName = async () => {
-    if (!control || !sessionId) return
-
-    setIsAutoNaming(true)
-    try {
-      // Get current revision
-      const current = await control.chatNames.title(sessionId)
-      await control.chatNames.autoName(sessionId, current.revision)
-      onChanged()
-    } catch (error) {
-      notifyFailure('Could not rename the chat', chatFeatureMessage(error))
-    } finally {
-      setIsAutoNaming(false)
-    }
+  const save = async () => {
+    if (busy.current || cancelled.current) return
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === title) { setEditing(false); return }
+    busy.current = true
+    setRenaming(true)
+    await run(revision => control.chatNames.rename(sessionId, trimmed, revision))
+    busy.current = false
+    setRenaming(false)
+    setEditing(false)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleRename()
-    } else if (e.key === 'Escape') {
-      setIsEditing(false)
-      setEditValue(title)
-    }
+  const autoName = async () => {
+    setNaming(true)
+    await run(revision => control.chatNames.autoName(sessionId, revision))
+    setNaming(false)
   }
 
-  if (isEditing) {
-    return (
-      <h2 className="min-w-0 truncate text-sm font-medium">
-        <Input
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleRename}
-          onKeyDown={handleKeyDown}
-          maxLength={60}
-          autoFocus
-          className="h-6 text-sm font-medium px-2 py-1 border-border bg-background"
-          aria-label="Chat name"
-          disabled={isRenaming}
-        />
-      </h2>
-    )
+  if (editing) {
+    // On a phone the header cell is too narrow to type in, so the field spans the bar while editing.
+    return <h2 className="min-w-0 flex-1 text-sm font-medium max-sm:fixed max-sm:inset-x-3 max-sm:top-3 max-sm:z-30 max-sm:bg-background">
+      <Input
+        size="sm"
+        value={value}
+        onChange={event => setValue(event.target.value)}
+        onFocus={event => event.currentTarget.select()}
+        onBlur={() => void save()}
+        onKeyDown={event => {
+          if (event.key === 'Enter') { event.preventDefault(); void save() }
+          else if (event.key === 'Escape') { cancelled.current = true; setEditing(false) }
+        }}
+        maxLength={60}
+        autoFocus
+        disabled={renaming}
+        aria-label="Chat name"
+        className="max-w-sm text-sm font-medium max-sm:max-w-none"
+      />
+    </h2>
   }
 
-  return (
-    <div className="flex items-center gap-1 min-w-0">
-      <h2 className="min-w-0 truncate text-sm font-medium">
-        <Button
-          variant="ghost"
-          className="h-6 px-2 py-1 text-sm font-medium hover:bg-muted"
-          onClick={() => {
-            setIsEditing(true)
-            setEditValue(title)
-          }}
-          aria-label="Rename chat"
-          disabled={disabled || isRenaming || isAutoNaming}
-        >
-          <span className="truncate">{title}</span>
-        </Button>
-      </h2>
-      {!isEditing && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleAutoName}
-          aria-label="Name this chat"
-          disabled={disabled || isRenaming || isAutoNaming}
-          className="shrink-0"
-        >
-          <Sparkles className="h-3 w-3" />
-        </Button>
-      )}
-    </div>
-  )
+  return <div className="flex min-w-0 items-center gap-1">
+    <h2 className="min-w-0 truncate text-sm font-medium">
+      <Button
+        variant="ghost"
+        size="xs"
+        className="max-w-full font-medium"
+        aria-label="Rename chat"
+        title="Rename chat"
+        disabled={disabled || naming}
+        onClick={() => { cancelled.current = false; setValue(title); setEditing(true) }}
+      >
+        <span className="truncate">{title}</span>
+      </Button>
+    </h2>
+    <Button variant="ghost" size="icon-xs" className="shrink-0" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
+      {naming ? <Spinner /> : <Sparkles />}
+    </Button>
+  </div>
 }
