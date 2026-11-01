@@ -8,6 +8,7 @@ which module versions a release pins.
 
 - **Chat context settings.** The Context sheet now edits what Conker keeps in mind for one chat: its instructions,
   the token budget, a rule per message, and the decisions and open questions Conker tracks.
+- **Answers can be voted on, judged and fact-checked.** Under a saved answer you can give a thumbs up or down, have a model score its versions without knowing who wrote them (2 or more versions), and check its claims against its sources.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
   refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.
