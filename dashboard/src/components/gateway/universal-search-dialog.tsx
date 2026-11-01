@@ -28,7 +28,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
       <CommandInput ref={input} placeholder="Search Conker..." maxLength={200} />
       <CommandList className="max-h-[60dvh]">
         {pages.length > 0 && <CommandGroup><CommandGroupLabel>Pages</CommandGroupLabel>{pages.map(item => <CommandItem key={item.path} value={`page:${item.path}`} onClick={() => select(item.path)}>{item.title}</CommandItem>)}</CommandGroup>}
-        {settings.length > 0 && <CommandGroup><CommandGroupLabel>Settings</CommandGroupLabel>{settings.map(setting => <CommandItem key={setting.id} value={`setting:${setting.id}`} onClick={() => select(`/settings?group=${encodeURIComponent(setting.group)}&focus=${encodeURIComponent(setting.id)}`)}>{setting.title}<span className="text-xs text-muted-foreground">{SETTINGS_GROUPS.find(g => g.id === setting.group)?.title}</span></CommandItem>)}</CommandGroup>}
+        {settings.length > 0 && <CommandGroup><CommandGroupLabel>Settings</CommandGroupLabel>{settings.map(setting => <CommandItem key={setting.id} value={`setting:${setting.id}`} onClick={() => select(`/settings?group=${encodeURIComponent(setting.group)}&focus=${encodeURIComponent(setting.id)}`)} className="items-start"><div className="min-w-0 flex-1 space-y-1"><div className="break-words font-medium">{setting.title}</div><p className="text-xs text-muted-foreground">{SETTINGS_GROUPS.find(g => g.id === setting.group)?.title}</p></div></CommandItem>)}</CommandGroup>}
         {stages.map(stage => {
           const page = results[stage]
           const shown = page?.results.filter(item => stage !== 'metadata' || !exactRecords.has(`${item.source}:${item.recordId}`)) ?? []
