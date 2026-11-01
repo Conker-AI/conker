@@ -87,13 +87,19 @@ try {
     for (const url of ["https://example.com/a?b=1", "http://example.com", "mailto:someone@example.com"]) assert.equal(ui.checkedLink(url), url)
     assert.equal(ui.linkTarget({ steps: [{ type: "open_url", url: "javascript:x" }, { type: "continue_conversation", message: "x" }] }), undefined, "a mixed action is a reply, its link still checked when it runs")
   })
-  check("Oversized blocks are refused: characters, components and list lengths are capped", () => {
+  check("Oversized blocks are refused: characters, components, list lengths and depth are capped", () => {
     assert.equal(ui.blockProblem(`root = Stack([Text("${"x".repeat(ui.MAX_BLOCK_CHARACTERS)}")])`, { complete: true, streaming: false }), "too-large")
     assert.equal(ui.blockProblem(`root = Stack([${Array.from({ length: ui.MAX_BLOCK_NODES + 1 }, (_, index) => `Text("${index}")`).join(", ")}])`, { complete: true, streaming: false }), "too-large")
     assert.equal(ui.blockProblem(`root = Stack([Table(["A"], [${Array.from({ length: 201 }, (_, index) => `["${index}"]`).join(", ")}])])`, { complete: true, streaming: false }), "too-large")
     assert.equal(ui.blockProblem(`root = Stack([Table(["A"], [${Array.from({ length: 100 }, (_, index) => `["${index}"]`).join(", ")}])])`, { complete: true, streaming: false }), null)
     assert.equal(ui.blockProblem("x".repeat(ui.MAX_BLOCK_CHARACTERS + 1), { complete: false, streaming: true }), "too-large", "even while streaming")
     assert.ok(block(`root = Stack([Text("${"x".repeat(ui.MAX_BLOCK_CHARACTERS)}")])`).includes("too large"))
+    // A block nested 40 deep is refused
+    assert.equal(ui.blockProblem(`root = ${"Stack([".repeat(40)}Text("deep")${"])".repeat(40)}`, { complete: true, streaming: false }), "too-large")
+    // A block nested 10 deep is still drawn
+    assert.equal(ui.blockProblem(`root = ${"Stack([".repeat(10)}Text("deep")${"])".repeat(10)}`, { complete: true, streaming: false }), null)
+    // A block of lists nested thousands deep is refused without throwing
+    assert.notEqual(ui.blockProblem(`root = Stack([Table(["A"], ${"[".repeat(5000)}${"]".repeat(5000)})])`, { complete: true, streaming: false }), null)
   })
   check("A block still arriving draws what it has with nothing tappable; one that stopped there says it was cut off", () => {
     const partial = parts(samples.find(sample => sample.id === "streaming").text + "\n```")

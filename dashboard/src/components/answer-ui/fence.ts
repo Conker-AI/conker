@@ -6,6 +6,8 @@ const LANGUAGES = new Set(["openui", "openui-lang"])
 export const MAX_BLOCK_CHARACTERS = 16_000
 /** At most this many components in one block. */
 export const MAX_BLOCK_NODES = 300
+/** Maximum nesting depth for a block to prevent stack overflow. */
+export const MAX_BLOCK_DEPTH = 64
 
 export function isAnswerUiLanguage(language: string): boolean {
   return LANGUAGES.has(language.toLowerCase())
