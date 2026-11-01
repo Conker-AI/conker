@@ -18,6 +18,7 @@
     "check:workspace-primitives": "node scripts/check-workspace-primitives.mjs",
     "check:resilience": "node scripts/check-resilience.mjs",
     "check:daily-overview": "node scripts/check-daily-overview.cjs",
+    "check:run-checks": "node scripts/check-run-checks.cjs",
     "check:character": "node scripts/check-character.cjs",
     "check:character-media": "node scripts/check-character-media.cjs",
     "check:tools": "node scripts/check-tool-workspace.cjs",
