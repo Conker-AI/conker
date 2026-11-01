@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One search.** Lists no longer have their own search boxes; the search in the app bar (Ctrl+K) finds
+  everything. The sidebar's search button is now the light/dark switch.
 - **Gemini, xAI, Mistral, DeepSeek and Groq connect directly.** Pi 0.17.0 is pinned and
   `DIRECT_PROVIDERS_STATE` is active: Settings > Providers saves an API key for each (stored as a
   file the Pi container reads, like the other keys), and Advanced > Add provider lists them for

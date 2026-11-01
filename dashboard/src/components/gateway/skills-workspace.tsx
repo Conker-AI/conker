@@ -59,7 +59,7 @@ function SkillImport({ client, replacing, onSaved, onCancel, onPending }: { clie
 
 export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient }) {
   const [params, setParams] = useSearchParams(), selectedId = params.get('skill')
-  const [rows, setRows] = useState<SkillMetadata[] | null>(null), [query, setQuery] = useState(''), [reload, setReload] = useState(0)
+  const [rows, setRows] = useState<SkillMetadata[] | null>(null), [reload, setReload] = useState(0)
   const [error, setError] = useState<string | null>(null), [record, setRecord] = useState<SkillRecord | null>(null), [detailError, setDetailError] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ replacing: SkillRecord | null } | null>(null), [pending, setPending] = useState(false), [notice, setNotice] = useState<string | null>(null)
   const [editorPending, setEditorPending] = useState(false)
@@ -90,7 +90,7 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
     catch (cause) { if (mounted.current) setDetailError(errorMessage(cause)) }
     finally { mutating.current = false; if (mounted.current) setPending(false) }
   }
-  const visible = (rows ?? []).filter(row => `${row.name} ${row.description}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+  const visible = rows ?? []
   const selected = record?.id === selectedId ? record : null
   // Details open in place under the chosen skill; choosing it again closes them.
   const details = !!selectedId && !editor && <InlineDetails busy={pending} onClose={closeDetail} title={selected?.name ?? 'Skill source'} description={selected?.description ?? 'Inspect the saved instructions before selecting them in a chat.'}>
@@ -101,7 +101,7 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
   return <GatewayPageFrame>
     <div className="space-y-6">
       <PageHeader actionsOnly title="Skills" description="Reusable instructions you explicitly choose for a message." density="compact" actions={<WorkspaceAction keepVisible onClick={() => { setNotice(null); setEditor({ replacing: null }) }}><FileUp />Import skill</WorkspaceAction>} />
-      {!rows && !error ? <CollectionLoading label="Loading skills…" /> : error ? <div className="space-y-3"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Reload skills</Button></div> : <CollectionPanel query={query} onQueryChange={setQuery} label="Search skills" placeholder="Search skills…" count={visible.length} unit={visible.length === 1 ? 'skill' : 'skills'} emptyTitle={query ? 'No matching skills' : 'No skills yet'} emptyDescription={query ? 'Try another name or description.' : 'Import a SKILL.md file, then choose it beside the model in your chat.'} emptyAction={!query && <Button onClick={() => setEditor({ replacing: null })}><FileUp />Import skill</Button>} icon={<BookOpen />} hint="Enabled skills are available in the chat picker. They apply only when you select them; importing never runs scripts or grants tool access.">
+      {!rows && !error ? <CollectionLoading label="Loading skills…" /> : error ? <div className="space-y-3"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Reload skills</Button></div> : <CollectionPanel count={visible.length} unit={visible.length === 1 ? 'skill' : 'skills'} emptyTitle="No skills yet" emptyDescription={'Import a SKILL.md file, then choose it beside the model in your chat.'} emptyAction={<Button onClick={() => setEditor({ replacing: null })}><FileUp />Import skill</Button>} icon={<BookOpen />} hint="Enabled skills are available in the chat picker. They apply only when you select them; importing never runs scripts or grants tool access.">
         <CollectionSection title="Your skills">{visible.map(row => <CollectionRow key={row.id} to={row.id === selectedId ? '/agents?tab=skills' : `/agents?tab=skills&skill=${encodeURIComponent(row.id)}`} expanded={row.id === selectedId} details={row.id === selectedId && details} title={row.name} description={row.description} leading={<BookOpen className="size-5 text-muted-foreground" />} trailing={<><StatusBadge tone={row.enabled ? 'live' : 'neutral'}>{row.enabled ? 'Enabled' : 'Disabled'}</StatusBadge><span>Revision {row.revision}</span></>} />)}</CollectionSection>
       </CollectionPanel>}
       {!shown && details}

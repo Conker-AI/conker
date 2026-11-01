@@ -147,7 +147,7 @@ function ProjectEditor({ project: initial, control, runtime, activity, onChanged
 export function GatewayProjectsWorkspace({ control, runtime, activity }: { control: GatewayControlClient; runtime: GatewayRuntimeClient; activity: GatewayActivityClient }) {
   const location = useLocation(), navigate = useNavigate(), match = location.pathname.match(/^\/projects\/(project_[0-9a-f]{32})$/)
   const createRequested = new URLSearchParams(location.search).get('create') === '1'
-  const [projects, setProjects] = useState<GatewayProject[] | null>(null), [query, setQuery] = useState(''), [error, setError] = useState<string | null>(null), [creating, setCreating] = useState(createRequested), [loading, setLoading] = useState(false)
+  const [projects, setProjects] = useState<GatewayProject[] | null>(null), [error, setError] = useState<string | null>(null), [creating, setCreating] = useState(createRequested), [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<'active' | 'archived'>('active'), [listError, setListError] = useState<unknown>(null)
   const load = useCallback(async () => {
     setLoading(true); setError(null); setListError(null)
@@ -170,20 +170,19 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
     if (selected) return <ProjectEditor key={selected.id} project={selected} control={control} runtime={runtime} activity={activity} onChanged={update} />
     return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Project didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft />Projects</Button></> : <ListSkeleton rows={3} label="Loading project…" />}</div>
   }
-  const matches = (projects ?? []).filter(item => `${item.name} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length
   // Archived projects get their own chip only once there are some.
   const showing = archivedCount ? filter : 'active'
-  const visible = matches.filter(item => (item.archivedAt !== null) === (showing === 'archived'))
+  const visible = (projects ?? []).filter(item => (item.archivedAt !== null) === (showing === 'archived'))
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Projects" description="Keep related chats, tasks and guidance together without changing their permissions." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh projects" title="Refresh projects" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New project</WorkspaceAction></>} />
     {error && (projects ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Projects didn’t load" onRetry={() => load()} />)}
-    {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard query={query} onQueryChange={setQuery} label="Search projects" placeholder="Search projects…" count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'}
+    {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'}
       filters={archivedCount ? <>{chip('active', 'Active', projects.length - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
-      emptyTitle={query ? 'No matching projects' : !projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
-      emptyDescription={query ? 'Try a different name or description.' : !projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
-      emptyAction={query ? undefined : <Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
+      emptyTitle={!projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
+      emptyDescription={!projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
+      emptyAction={<Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
       {visible.map(item => <ListLine key={item.id} to={`/projects/${item.id}`} icon={<IdentityMark brand={serviceIn(item.name, item.description)} kind="project" name={item.name} size="sm" />} title={item.name} sub={item.description || 'No description'}
         meta={item.archivedAt === null ? `${item.links.length} ${item.links.length === 1 ? 'reference' : 'references'}` : 'Read-only'} />)}
     </ListCard>}

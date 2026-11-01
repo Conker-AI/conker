@@ -192,12 +192,12 @@ export function CollectionEmpty({ title, description, icon, onClear, clearLabel 
 }
 
 export function CollectionPanel({ query, onQueryChange, label, placeholder, count, unit, emptyTitle, emptyDescription, emptyAction, emptyContent, icon, filters, hint, children }: {
-  query: string; onQueryChange: (value: string) => void; label: string; placeholder: string; count: number; unit: string;
+  query?: string; onQueryChange?: (value: string) => void; label?: string; placeholder?: string; count: number; unit: string;
   emptyTitle: string; emptyDescription: string; emptyAction?: ReactNode; emptyContent?: ReactNode; icon?: ReactNode; filters?: ReactNode; hint?: ReactNode; children: ReactNode
 }) {
   return <div className="min-w-0 space-y-(--collection-section-gap)">
-    <CollectionToolbar search={<WorkspaceSearch label={label} placeholder={placeholder} value={query} onChange={event => onQueryChange(event.target.value)} />} filters={filters} count={count} unit={unit} />
-    {count ? children : emptyContent !== undefined ? emptyContent : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query.trim() ? () => onQueryChange("") : undefined} />}
+    <CollectionToolbar search={onQueryChange && label && placeholder ? <WorkspaceSearch label={label} placeholder={placeholder} value={query || ""} onChange={event => onQueryChange(event.target.value)} /> : undefined} filters={filters} count={count} unit={unit} />
+    {count ? children : emptyContent !== undefined ? emptyContent : <CollectionEmpty title={emptyTitle} description={emptyDescription} icon={icon} action={emptyAction} onClear={query?.trim() && onQueryChange ? () => onQueryChange("") : undefined} />}
     {hint && <p className="max-w-prose text-xs leading-5 text-muted-foreground">{hint}</p>}
   </div>
 }

@@ -26,7 +26,7 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
   const directory = useChatDirectory(runtime, authStore, conversationState, sourcePrivacy)
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
   const rows = directory.rows.filter(row => !row.forgotten && !forgotten.includes(row.id))
-  const searching = !!directory.query.trim(), busy = !!directory.pending
+  const busy = !!directory.pending
   const error = directory.error === 'query' ? 'Use up to 200 characters in your search.'
     : directory.error === 'cursor' ? 'This page link is no longer available. Refresh chats to continue.'
     : directory.error === 'older' ? 'Older chats could not be loaded. Your loaded results are still here.'
@@ -34,8 +34,8 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
     : directory.error ? directory.loaded ? 'Couldn’t refresh chats. Showing the last loaded results.' : 'Chats could not be loaded. Try refreshing.' : null
   const snapshot = directory.pending === 'refresh' ? 'Showing previously loaded chats while refreshing.' : 'Loaded chats are a snapshot. Refresh chats to include changes.'
   const emptyContent = !directory.loaded ? error
-    ? <InlineError error={null} title="Chats didn’t load" description={error} onRetry={directory.error === 'query' ? undefined : () => directory.refresh()} />
-    : <ListSkeleton rows={5} label={searching ? 'Searching chats…' : 'Loading chats…'} /> : undefined
+    ? <InlineError error={null} title="Chats didn’t load" description={error} onRetry={() => directory.refresh()} />
+    : <ListSkeleton rows={5} label="Loading chats…" /> : undefined
   const olderNote = directory.error === 'older' || directory.error === 'cursor' ? error : !directory.nextCursor && !directory.error ? 'You’ve reached the end of these results.' : null
   return <GatewayPageFrame>
     <div className="flex w-full min-w-0 flex-col gap-4">
@@ -43,13 +43,13 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
         <WorkspaceAction iconOnly aria-label={directory.pending === 'refresh' ? 'Refreshing chats' : 'Refresh chats'} title="Refresh chats" onClick={() => void directory.refresh()} disabled={busy || directory.error === 'query'}><RefreshCw aria-hidden="true" className={directory.pending === 'refresh' ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>
         <WorkspaceAction emphasis="primary" keepVisible onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}><SquarePen aria-hidden="true" />New chat</WorkspaceAction>
       </>} />
-      {directory.changed && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-muted-foreground">{directory.changed === 'unverified' ? 'Refresh to check for newer chats.' : searching ? 'New chats may affect your search results.' : 'New chats are available.'}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => void directory.refresh()}>{directory.changed === 'unverified' ? 'Refresh chats' : searching ? 'Refresh results' : 'Show new chats'}</Button></div>}
+      {directory.changed && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-muted-foreground">{directory.changed === 'unverified' ? 'Refresh to check for newer chats.' : 'New chats are available.'}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => void directory.refresh()}>{directory.changed === 'unverified' ? 'Refresh chats' : 'Show new chats'}</Button></div>}
       {directory.loaded && error && directory.error !== 'older' && directory.error !== 'cursor' && <p role="status" className="text-sm text-muted-foreground">{error}</p>}
-      <ListCard query={directory.query} onQueryChange={directory.setQuery} label="Search chats" placeholder="Search titles and summaries…" count={rows.length} unit={rows.length === 1 ? 'chat loaded' : 'chats loaded'}
-        emptyTitle={searching ? 'No matching chats' : directory.nextCursor ? 'No visible chats on this page' : 'No chats yet'} emptyDescription={searching ? 'Try another title or phrase.' : directory.nextCursor ? 'Load older chats to keep browsing.' : 'Start a conversation and it will appear here.'}
+      <ListCard count={rows.length} unit={rows.length === 1 ? 'chat loaded' : 'chats loaded'}
+        emptyTitle={directory.nextCursor ? 'No visible chats on this page' : 'No chats yet'} emptyDescription={directory.nextCursor ? 'Load older chats to keep browsing.' : 'Start a conversation and it will appear here.'}
         emptyContent={emptyContent} icon={<MessageSquare />} emptyAction={<Button onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}>Start a chat</Button>}
         footer={directory.loaded && <>
-          <Button variant="outline" size="sm" className="aria-disabled:opacity-50" aria-disabled={busy || !directory.nextCursor && directory.error !== 'cursor'} aria-busy={directory.pending === 'older'} onClick={() => { if (!busy) { if (directory.error === 'cursor') void directory.refresh(); else if (directory.nextCursor) void directory.older() } }}>{directory.pending === 'older' ? 'Loading…' : directory.error === 'cursor' ? 'Refresh chats' : directory.nextCursor ? searching ? 'Load more results' : 'Load older' : 'No more chats to load'}</Button>
+          <Button variant="outline" size="sm" className="aria-disabled:opacity-50" aria-disabled={busy || !directory.nextCursor && directory.error !== 'cursor'} aria-busy={directory.pending === 'older'} onClick={() => { if (!busy) { if (directory.error === 'cursor') void directory.refresh(); else if (directory.nextCursor) void directory.older() } }}>{directory.pending === 'older' ? 'Loading…' : directory.error === 'cursor' ? 'Refresh chats' : directory.nextCursor ? 'Load older' : 'No more chats to load'}</Button>
           {olderNote && <p role="status" className="text-xs text-muted-foreground">{olderNote}</p>}
         </>}>
         {rows.map(session => <ListLine key={session.id} to={`/chat?session=${encodeURIComponent(session.id)}`} icon={<MessageSquare />}

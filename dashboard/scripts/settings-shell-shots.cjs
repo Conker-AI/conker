@@ -129,7 +129,8 @@ async function steps(context, width, theme) {
     await page.screenshot({ path: name('6-sidebar') })
     await page.keyboard.press('Escape')
   } else {
-    assert.equal(await page.getByRole('button', { name: 'Search (Ctrl K)' }).count(), 1)
+    assert.equal(await page.getByRole('button', { name: 'Search Conker' }).count(), 1)
+    assert.equal(await page.locator('[data-sidebar="sidebar"]').getByRole('button', { name: /Switch to (light|dark) mode/ }).count(), 1)
     await page.screenshot({ path: name('6-sidebar') })
   }
 

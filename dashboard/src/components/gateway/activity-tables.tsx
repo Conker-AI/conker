@@ -20,7 +20,7 @@ export function GatewayTasksTable({ tasks, onOpen, filters, emptyAction }: { tas
     { accessorKey: 'sessionId', header: 'Source', cell: () => <span className="text-xs text-muted-foreground">Conversation</span> },
     { accessorKey: 'updatedAt', header: 'Updated', cell: ({ row }) => date(row.original.updatedAt) },
   ], [onOpen])
-  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded tasks…" itemLabel="tasks" toolbarFilters={filters} emptyState={emptyAction ? { title: 'No tasks yet', description: 'Write what you want done and how you’ll know it’s finished. Each task links to a chat.', action: emptyAction, icon: <ListChecks /> } : undefined} renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>You check it off</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
+  return <DataTable columns={columns} data={rows} itemLabel="tasks" toolbarFilters={filters} emptyState={emptyAction ? { title: 'No tasks yet', description: "Write what you want done and how you’ll know it’s finished. Each task links to a chat.", action: emptyAction, icon: <ListChecks /> } : undefined} renderItem={task => <RecordItem title={taskTitle(task)} description={taskStatusLabels[task.status]} meta={<><span>You check it off</span>{task.archivedAt && <span>Archived</span>}<span>{date(task.updatedAt)}</span></>} onOpen={() => onOpen(task)} />} />
 }
 
 export function GatewayRunsTable({ runs, onOpen }: { runs: GatewayActivityRun[]; onOpen: (run: GatewayActivityRun) => void }) {
@@ -31,7 +31,7 @@ export function GatewayRunsTable({ runs, onOpen }: { runs: GatewayActivityRun[];
     { accessorKey: 'model', header: 'Answer model', cell: ({ row }) => row.original.model || 'Not supplied' },
     { accessorKey: 'startedAt', header: 'Started', cell: ({ row }) => date(row.original.startedAt) },
   ], [onOpen])
-  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded attempts…" itemLabel="attempts" renderItem={run => <RecordItem title={runTitle(run)} description={plainStatus(run.status)} meta={<><span>{run.model || 'Model not supplied'}</span><span>{date(run.startedAt)}</span></>} onOpen={() => onOpen(run)} />} />
+  return <DataTable columns={columns} data={rows} itemLabel="attempts" renderItem={run => <RecordItem title={runTitle(run)} description={plainStatus(run.status)} meta={<><span>{run.model || 'Model not supplied'}</span><span>{date(run.startedAt)}</span></>} onOpen={() => onOpen(run)} />} />
 }
 
 export function GatewayEventsTable({ events, onOpen }: { events: GatewayActivityEvent[]; onOpen: (event: GatewayActivityEvent) => void }) {
@@ -42,5 +42,5 @@ export function GatewayEventsTable({ events, onOpen }: { events: GatewayActivity
     { accessorKey: 'sessionId', header: 'Source', cell: () => <span className="text-xs text-muted-foreground">Conversation</span> },
     { accessorKey: 'occurredAt', header: 'Recorded', cell: ({ row }) => date(row.original.occurredAt) },
   ], [onOpen])
-  return <DataTable columns={columns} data={rows} searchColumn="search" searchPlaceholder="Search loaded activity…" itemLabel="events" renderItem={event => <RecordItem title={plainStatus(event.kind)} description={`Order ${event.sequence}`} meta={<span>{date(event.occurredAt)}</span>} onOpen={() => onOpen(event)} />} />
+  return <DataTable columns={columns} data={rows} itemLabel="events" renderItem={event => <RecordItem title={plainStatus(event.kind)} description={`Order ${event.sequence}`} meta={<span>{date(event.occurredAt)}</span>} onOpen={() => onOpen(event)} />} />
 }
