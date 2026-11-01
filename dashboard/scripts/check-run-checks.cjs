@@ -4,23 +4,23 @@ const { pathToFileURL } = require("node:url")
 
 async function main() {
   const module = await import(pathToFileURL(__dirname + "/run-checks.mjs").href)
-  
+
   // Test parseArgs defaults
   assert.deepStrictEqual(module.parseArgs([]), { only: null, jobs: 1, list: false })
-  
+
   // Test parseArgs with all options
   const result = module.parseArgs(["--only=tool,chat", "--jobs=4", "--list"])
   assert.deepStrictEqual(result.only, ["tool", "chat"])
   assert.strictEqual(result.jobs, 4)
   assert.strictEqual(result.list, true)
-  
+
   // Test parseArgs errors
   assert.throws(() => module.parseArgs(["--jobs=0"]), /Usage:/)
   assert.throws(() => module.parseArgs(["--jobs=17"]), /Usage:/)
   assert.throws(() => module.parseArgs(["--jobs=x"]), /Usage:/)
   assert.throws(() => module.parseArgs(["--only="]), /Usage:/)
   assert.throws(() => module.parseArgs(["--bogus"]), /Usage:/)
-  
+
   // Test selectChecks
   const names = ["check:a-tool", "check:chat", "check:memory"]
   assert.deepStrictEqual(
@@ -31,7 +31,7 @@ async function main() {
     module.selectChecks(names, null),
     names
   )
-  
+
   // Test --list works without npm
   const listResult = spawnSync(
     process.execPath, 
@@ -46,8 +46,11 @@ async function main() {
   const lines = listResult.stdout.trim().split("\n")
   assert(lines.length > 0)
   assert(lines.every(line => line.startsWith("check:") && line.includes("tool")))
-  
+
   console.log("run-checks: --only, --jobs and --list parse and select as documented.")
 }
 
-main().catch(console.error)
+main().catch(error => {
+  console.error(error)
+  process.exit(1)
+})
