@@ -9,7 +9,7 @@ export function ApprovalRequest({ ticket }: { ticket: Ticket }) {
   const Icon = ticket.effect === "Deletion" ? Files : ticket.effect === "Proposal" ? CalendarDays : Mail
 
   return <Link
-    to={`/inbox/${ticket.id}`}
+    to={`/inbox/${encodeURIComponent(ticket.id)}`}
     data-slot="approval-request"
     aria-label={`${action}: ${ticket.request}`}
     className="group/request grid grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 gap-y-2 rounded-lg border bg-card px-4 py-3 transition-colors hover:border-input hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:grid-cols-[1rem_minmax(0,1fr)_auto]"

@@ -1,6 +1,6 @@
 import "./no-devtools"
 import { createParser, type ParseResult } from "@openuidev/react-lang"
-import { MAX_BLOCK_CHARACTERS, MAX_BLOCK_NODES } from "./fence"
+import { MAX_BLOCK_CHARACTERS, MAX_BLOCK_NODES, MAX_BLOCK_DEPTH } from "./fence"
 import { answerLibrary } from "./library"
 
 export type BlockProblem = "too-large" | "unknown-part" | "tools" | "cut-off" | "broken"
@@ -24,14 +24,15 @@ const isElement = (value: unknown): value is Element => !!value && typeof value 
 /** Counts components and checks every list against its limit; false once anything is too large. */
 function withinLimits(root: unknown): boolean {
   let nodes = 0
-  const visit = (value: unknown, owner?: string, prop?: string): boolean => {
+  const visit = (value: unknown, owner?: string, prop?: string, depth: number = 0): boolean => {
+    if (depth > MAX_BLOCK_DEPTH) return false
     if (Array.isArray(value)) {
       const limit = owner && prop ? LIST_LIMITS[`${owner}.${prop}`] : undefined
-      return (limit === undefined || value.length <= limit) && value.every(item => visit(item, owner, undefined))
+      return (limit === undefined || value.length <= limit) && value.every(item => visit(item, owner, undefined, depth + 1))
     }
     if (isElement(value)) {
       if (++nodes > MAX_BLOCK_NODES) return false
-      return Object.entries(value.props ?? {}).every(([key, item]) => visit(item, value.typeName, key))
+      return Object.entries(value.props ?? {}).every(([key, item]) => visit(item, value.typeName, key, depth + 1))
     }
     return true
   }

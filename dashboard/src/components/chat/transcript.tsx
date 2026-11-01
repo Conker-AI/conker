@@ -5,9 +5,14 @@ import { MessageActionButton } from '@/components/message-action-button'
 import { AnswerExportMenu, type ExportStatus } from '@/components/export-menu'
 import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
+import { ToolRecord } from '@/components/chat/tool-record'
+import { MemoryNote } from '@/components/chat/memory-note'
+import { isMemoryNote } from '@/lib/chat/memory-feedback'
+import { useSmoothText } from '@/components/chat/use-smooth-text'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { Action, ChatContract, ChatMessage, MessageAction } from '@/lib/chat/contract'
+import { foldToolRequests } from '@/lib/chat/tool-requests'
 import { cn } from '@/lib/utils'
 
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
@@ -15,6 +20,11 @@ const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => 
 
 function Answer({ text, streaming }: { text: string; streaming?: boolean }) {
   return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} streaming={streaming} /></Suspense>
+}
+
+function StreamingAnswer({ text, resetKey }: { text: string; resetKey: unknown }) {
+  const shown = useSmoothText(text, { streaming: true, resetKey })
+  return shown ? <Answer text={shown} streaming /> : null
 }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
@@ -30,11 +40,13 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const body = message.content.kind === 'unavailable'
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
     : message.role === 'assistant' ? <Answer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
+  if (message.role === 'tool' && message.content.kind === 'text') return <ToolRecord text={message.content.text} sequence={message.sequence} />
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="text-sm font-medium">{message.agentName ?? 'Conker'}</span></div>}
+    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>{message.details && ` · ${message.details}`}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
-    {message.memory && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
+    {message.memory && isMemoryNote(message.memory) && <MemoryNote memory={message.memory} />}
+    {message.memory && !isMemoryNote(message.memory) && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
     <div role="group" aria-label="Message actions" className={cn('mt-1.5 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-within:opacity-100', message.role === 'user' && 'absolute right-0 top-full mt-0')}>
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {message.export && message.content.kind === 'text' && <AnswerExportMenu text={message.content.text} run={message.export.run} onStatus={setExported} />}
@@ -50,8 +62,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
           </DropdownMenuItem>
         })}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>}
-      <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>
-      {message.details && <span className="text-muted-foreground">· {message.details}</span>}
+      {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>}
     </div>
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
     {exported && <p role={exported.tone === 'failed' ? 'alert' : 'status'} className={cn('mt-1 text-xs', exported.tone === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>{exported.text}</p>}
@@ -65,12 +76,12 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive-foreground">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}
-    {chat.messages.map(message => <div id={`record-${message.id}`} key={`${message.id}:${message.content.kind}`} className={cn('min-w-0 scroll-mt-4', chat.focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><ChatMessageRecord message={message} /></div>)}
+    {foldToolRequests(chat.messages).map(({ message }) => <div id={`record-${message.id}`} key={`${message.id}:${message.content.kind}`} className={cn('min-w-0 scroll-mt-4', chat.focusedMessageId === message.id && 'rounded-lg border border-primary/30 bg-muted p-3')}><ChatMessageRecord message={message} /></div>)}
     {pendingInput !== null && <article aria-label="Submitted message awaiting saved history" className="ml-auto flex min-w-0 max-w-[92%] flex-col items-end sm:max-w-[85%]">
       <p dir="auto" className="min-w-0 max-w-full whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-base leading-7 [overflow-wrap:anywhere]">{pendingInput}</p>
       <p role="status" className="mt-1.5 text-xs text-muted-foreground">Waiting for saved history</p>
     </article>}
-    {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Saving reply…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <Answer text={chat.generation.previewText} streaming />}</article>}
+    {chat.generation && <article aria-label={`${chat.activeAgentName} is writing`} aria-busy={chat.generation.phase !== 'ended'} className="min-w-0" data-reset-version={chat.generation.resetVersion}><p role="status" className="mb-2 text-sm text-muted-foreground">{chat.generation.phase === 'stopping' ? 'Stopping…' : chat.generation.phase === 'ended' ? 'Saving reply…' : `${chat.activeAgentName} is writing…`}</p>{chat.generation.previewText && <StreamingAnswer text={chat.generation.previewText} resetKey={chat.generation.resetVersion} />}</article>}
     {chat.outcomes?.map(outcome => <section key={outcome.id} aria-label={outcome.title} className="space-y-3 rounded-lg border bg-muted p-4">
       <div className="space-y-1"><h3 className="text-sm font-medium">{outcome.title}</h3><p className="text-sm leading-6 text-muted-foreground">{outcome.description}</p><p className="text-xs leading-5 text-muted-foreground">{outcome.consequence}</p></div>
       {outcome.status && <p role="status" className="text-sm leading-6 font-medium">{outcome.status}</p>}

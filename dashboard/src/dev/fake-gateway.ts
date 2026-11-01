@@ -32,7 +32,7 @@ const previewSessions = {
   coach: `ses_${'3'.repeat(16)}`,
 }
 
-type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string }
+type Message = { id: string; session_id: string; seq: number; role: 'user' | 'assistant' | 'tool'; content: string; created_at: number; agent_id?: string; memory_delivery?: Json; turn_id?: string }
 type Session = { id: string; title: string; summary?: string; created_at: number; messages: Message[]; turns: Json[]; thinking?: Json[] }
 
 const replies = [
@@ -55,8 +55,14 @@ function seed(): Session[] {
       { id: `msg_${(offset + index * 2 + 2).toString(16).padStart(16, '0')}`, session_id: id, seq: index * 2 + 2, role: 'assistant' as const, content: answer, created_at: start + offset + index * 120 + 8, turn_id: `trn_${offset}_${index}` },
     ]),
   })
+  const week = session(previewSessions.week, 'Plan my week', [['Help me plan this week around school and judo.', replies[0]]], 60000)
+  // A tool step as Pi records it: the model's request, the tool record, then the answer.
+  const step = (seq: number, role: Message['role'], content: string): Message => ({ id: `msg_${(60100 + seq).toString(16).padStart(16, '0')}`, session_id: week.id, seq, role, content, created_at: start + 60300 + seq, ...(role === 'user' ? {} : { turn_id: 'trn_60000_1' }) })
+  week.turns.push({ ...week.turns[0], id: 'trn_60000_1', started_at: start + 60303, ended_at: start + 60306 })
+  week.messages.push(step(3, 'user', 'How much space is my projects folder using?'), step(4, 'assistant', '{"tool":"sandbox.run","args":{"command":"du -sh projects"}}'),
+    step(5, 'tool', JSON.stringify({ tool: 'sandbox.run', ok: true, result: { exitCode: 0, stdout: '4.2G\tprojects\n', stderr: '', durationMs: 840, timedOut: false } })), step(6, 'assistant', 'Your projects folder uses 4.2 GB.'))
   return [
-    session(previewSessions.week, 'Plan my week', [['Help me plan this week around school and judo.', replies[0]]], 60000),
+    week,
     session(previewSessions.sky, 'Why is the sky blue?', [['Why is the sky blue? Two sentences.', replies[1]]], 30000),
     session(previewSessions.coach, 'Email to coach', [['Ask coach if Friday open mat is still on.', replies[2]]], 1000),
   ]
@@ -278,7 +284,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
         for (const session of sessions) {
           const privacy = (sessionSettings.get(session.id)?.settings as Json | undefined)?.privacy as Json | undefined
           if (privacy?.memoryDisabled || privacy?.harnessDisabled) continue
-          if (stage === 'text') for (const message of session.messages) add('conversations', message.id, session.title, message.content, `/chat?session=${session.id}&message=${message.id}`, message.role)
+          if (stage === 'text') for (const message of session.messages) if (message.role !== 'tool') add('conversations', message.id, session.title, message.content, `/chat?session=${session.id}&message=${message.id}`, message.role)
           else add('conversations', session.id, session.title, '', `/chat?session=${session.id}`)
         }
         for (const item of memories) add('memory', item.id, item.title, item.preview, `/memory?view=database&record=${item.id}&kind=${item.type}`)

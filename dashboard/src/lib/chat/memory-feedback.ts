@@ -1,8 +1,10 @@
 import type { MemoryDelivery } from '@/lib/gateway/memory-delivery'
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
 import type { Action, MessageMemoryFeedback } from './contract'
+import type { MemoryUndoState } from './memory-undo'
 
-const labels: Record<MemoryDelivery['state'], string> = { pending: 'Memory pending', saved: 'Added to memory', filtered: 'Not added to memory', unavailable: 'Memory status unavailable', excluded: 'Memory excluded', removed: 'Removed from memory' }
+const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
+const labels: Record<MemoryDelivery['state'], string> = { pending: 'Memory pending', saved: 'Remembered', filtered: 'Not added to memory', unavailable: 'Memory status unavailable', excluded: 'Memory excluded', removed: 'Removed from memory' }
 const explanation: Record<NonNullable<MemoryDelivery['reasonCode']>, string> = {
   queued: 'This message is queued for a memory check. Saving the chat does not confirm a memory write.',
   retry_scheduled: 'Memory has not acknowledged this message. Conker has scheduled another delivery attempt.',
@@ -16,7 +18,11 @@ const explanation: Record<NonNullable<MemoryDelivery['reasonCode']>, string> = {
   destination_unknown: 'The original memory destination could not be verified. This chat is kept.',
 }
 
-export function memoryFeedback(messageId: string, state: MemoryDeliveryWatchState | null, refresh: Action): MessageMemoryFeedback {
+/** True for the quiet "Remembered" / "Forgotten" note; every other state keeps its explained status. */
+export const isMemoryNote = (memory: MessageMemoryFeedback) => memory.memoryId !== null || memory.undoState?.phase === 'forgotten'
+
+/** Only an acknowledged, saved receipt becomes the quiet "Remembered" note with Undo; every other state keeps its explained status. */
+export function memoryFeedback(messageId: string, state: MemoryDeliveryWatchState | null, refresh: Action, undo: { action: Action; state?: MemoryUndoState } = { action: unsupported }): MessageMemoryFeedback {
   const receipt = state?.receipts[messageId]
   const checking = state === null || state.phase === 'checking'
   const unavailable = state?.phase === 'error'
@@ -29,8 +35,8 @@ export function memoryFeedback(messageId: string, state: MemoryDeliveryWatchStat
     : receipt.state === 'excluded' ? 'This message was excluded from memory. This chat is kept.'
     : 'A memory write has not been confirmed. This chat is kept.'
   return {
-    label: unavailable ? 'Memory status unavailable' : !receipt ? checking ? 'Checking memory status…' : 'Memory status not refreshed' : labels[receipt.state],
+    label: undo.state?.phase === 'forgotten' ? 'Forgotten' : unavailable ? 'Memory status unavailable' : !receipt ? checking ? 'Checking memory status…' : 'Memory status not refreshed' : labels[receipt.state],
     description: description + (state?.phase === 'paused' && receipt?.state === 'pending' ? ' Automatic status checks have paused. Check again whenever you need an update.' : ''),
-    checking, refresh,
+    checking, refresh, memoryId: receipt?.state === 'saved' ? receipt.memoryId : null, undo: undo.action, ...(undo.state ? { undoState: undo.state } : {}),
   }
 }

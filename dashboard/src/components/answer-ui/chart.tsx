@@ -38,14 +38,14 @@ export const ChartPart = defineComponent({
     const name = props.title || `${type} chart`
     const axes = <><CartesianGrid vertical={false} /><XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={value => String(value).slice(0, 16)} /><YAxis tickLine={false} axisLine={false} width={48} /><ChartTooltip content={<ChartTooltipContent />} />{series.length > 1 && <ChartLegend content={<ChartLegendContent />} />}</>
     const chart = type === "pie"
-      ? <PieChart accessibilityLayer><ChartTooltip content={<ChartTooltipContent nameKey="label" hideLabel />} /><Pie data={rows} dataKey={keys[0]} nameKey="label" innerRadius="45%" isAnimationActive={false}>{rows.map((row, index) => <Cell key={row.label} fill={color(index)} />)}</Pie></PieChart>
+      ? <PieChart accessibilityLayer><ChartTooltip content={<ChartTooltipContent nameKey="label" hideLabel />} /><Pie data={rows} dataKey={keys[0]} nameKey="label" innerRadius="45%" isAnimationActive={false}>{rows.map((_, index) => <Cell key={index} fill={color(index)} />)}</Pie></PieChart>
       : type === "line"
         ? <LineChart accessibilityLayer data={rows}>{axes}{keys.map(key => <Line key={key} dataKey={key} type="linear" stroke={`var(--color-${key})`} strokeWidth={2} dot={rows.length <= 12} isAnimationActive={false} />)}</LineChart>
         : <BarChart accessibilityLayer data={rows}>{axes}{keys.map(key => <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={3} isAnimationActive={false} />)}</BarChart>
     return <figure className="answer-block m-0 p-3" aria-label={name}>
       {props.title && <figcaption className="mb-2 text-sm font-medium">{props.title}</figcaption>}
       <ChartContainer config={config} className="aspect-auto h-60 w-full sm:h-72">{chart}</ChartContainer>
-      {type === "pie" && <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-hidden>{rows.map((row, index) => <li key={row.label} className="flex items-center gap-1.5"><span className="size-2.5 shrink-0 rounded-xs" style={{ background: color(index) }} />{row.label}</li>)}</ul>}
+      {type === "pie" && <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-hidden>{rows.map((row, index) => <li key={index} className="flex items-center gap-1.5"><span className="size-2.5 shrink-0 rounded-xs" style={{ background: color(index) }} />{row.label}</li>)}</ul>}
       <details className="mt-2 text-sm">
         <summary className="cursor-pointer rounded-sm text-xs font-medium text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">Chart data</summary>
         <div className="answer-table-scroll mt-2" tabIndex={0} aria-label="Chart data"><table>
