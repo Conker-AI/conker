@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat context settings.** The Context sheet now edits what Conker keeps in mind for one chat: its instructions,
+  the token budget, a rule per message, and the decisions and open questions Conker tracks.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
   refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.
