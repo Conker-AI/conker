@@ -8,6 +8,7 @@ which module versions a release pins.
 
 - **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
   between the versions with ‹ n/m ›, and branch a new chat from that answer.
+- **Answers can be voted on, judged and fact-checked.** Under a saved answer you can give a thumbs up or down, have a model score its versions without knowing who wrote them (2 or more versions), and check its claims against its sources.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
   refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.
