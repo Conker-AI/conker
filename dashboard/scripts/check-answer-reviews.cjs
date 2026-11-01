@@ -18,174 +18,258 @@ function load(relative) {
 const { createChatReviewsClient } = load('src/lib/gateway/chat-reviews.ts')
 const { createFakeChatReviews } = load('src/dev/fake-gateway-chat-reviews.ts')
 const { GatewayError } = load('src/lib/gateway/transport.ts')
-
 assert.equal(typeof createChatReviewsClient, 'function')
 assert.equal(typeof createFakeChatReviews, 'function')
+console.log('Answer reviews: client and preview fixture load.')
 
-// Create test data
-const now = () => Date.now() / 1000
-const fail = (status) => { throw new GatewayError('http', status) }
+const id = (prefix, n) => `${prefix}_${n.toString(16).padStart(16, '0')}`
+const A = id('ses', 1), B = id('ses', 2), user = id('msg', 1)
+const v1 = id('msg', 2), v2 = id('msg', 3), v3 = id('msg', 4), foreign = id('msg', 9), single = id('msg', 6), shortId = id('msg', 7)
+const family = (root, selected, retryOf, revision) => ({ root_message_id: root, retry_of: retryOf, selected_message_id: selected, revision })
+const text = 'Sunlight scatters in the air. Blue scatters the most. Sunsets look red because the light crosses more air.'
+const clock = { time: 1_700_000_000_000 }
+const now = () => clock.time
+const fail = status => { throw new GatewayError('http', status) }
 const store = {
   sessions: [
-    {
-      id: 'ses_1111111111111111',
-      title: 'Test chat',
-      created_at: now(),
-      messages: [
-        { id: 'msg_1111111111111111', session_id: 'ses_1111111111111111', seq: 1, role: 'user', content: 'Test question', created_at: now() },
-        { id: 'msg_2222222222222222', session_id: 'ses_1111111111111111', seq: 2, role: 'assistant', content: 'Short answer.', created_at: now(), response_family: { root_message_id: 'msg_2222222222222222', retry_of: null, selected_message_id: 'msg_2222222222222222', revision: 1 } },
-        { id: 'msg_3333333333333333', session_id: 'ses_1111111111111111', seq: 3, role: 'assistant', content: 'This is a much longer answer with more content to analyze and evaluate. It has multiple sentences and enough length to generate different scores for the judge functionality. The content should be sufficient for fact checking as well with various claims that can be verified.', created_at: now(), response_family: { root_message_id: 'msg_2222222222222222', retry_of: 'msg_2222222222222222', selected_message_id: 'msg_3333333333333333', revision: 2 } },
-        { id: 'msg_4444444444444444', session_id: 'ses_1111111111111111', seq: 4, role: 'assistant', content: 'Another version with moderate content length. This provides enough material for testing the deterministic scoring based on content length.', created_at: now(), response_family: { root_message_id: 'msg_2222222222222222', retry_of: 'msg_3333333333333333', selected_message_id: 'msg_4444444444444444', revision: 3 } },
-      ],
-      turns: []
-    },
-    {
-      id: 'ses_2222222222222222',
-      title: 'Single version chat',
-      created_at: now(),
-      messages: [
-        { id: 'msg_5555555555555555', session_id: 'ses_2222222222222222', seq: 1, role: 'user', content: 'Single question', created_at: now() },
-        { id: 'msg_6666666666666666', session_id: 'ses_2222222222222222', seq: 2, role: 'assistant', content: 'Single answer with no family.', created_at: now() },
-      ],
-      turns: []
-    }
+    { id: A, title: 'Three versions', created_at: 1, turns: [], messages: [
+      { id: user, session_id: A, seq: 1, role: 'user', content: 'Why is the sky blue?', created_at: 1 },
+      { id: v1, session_id: A, seq: 2, role: 'assistant', content: 'Short answer about air and light, nothing more.', created_at: 2, response_family: family(v1, v3, null, 1) },
+      { id: v2, session_id: A, seq: 3, role: 'assistant', content: text, created_at: 3, response_family: family(v1, v3, v1, 2) },
+      { id: v3, session_id: A, seq: 4, role: 'assistant', content: `${text} Violet scatters even more, but our eyes see it poorly.`, created_at: 4, response_family: family(v1, v3, v2, 3) },
+      { id: foreign, session_id: A, seq: 5, role: 'assistant', content: 'An answer that was never retried, so it has no family.', created_at: 5 },
+    ] },
+    { id: B, title: 'One version', created_at: 1, turns: [], messages: [
+      { id: single, session_id: B, seq: 1, role: 'assistant', content: text, created_at: 2, response_family: family(single, single, null, 1) },
+      { id: shortId, session_id: B, seq: 2, role: 'assistant', content: 'Too short.', created_at: 3 },
+    ] },
   ],
-  nextId: (prefix) => prefix === 'msg' || prefix === 'ses'
-    ? `${prefix}_${Date.now().toString(16).padStart(16, '0')}`
-    : `${prefix}_${Date.now().toString(36)}`
+  nextId: prefix => id(prefix, 1000),
+  contexts: new Map(),
 }
 
 const handle = createFakeChatReviews(now, fail, store)
-const auth = {
-  request: async (path, options = {}) => {
-    const value = handle(path, options.method ?? 'GET', { body: options.body })
-    if (value === undefined) throw new Error('unhandled ' + path)
-    return structuredClone(value)
-  }
+let requests = 0
+const call = (path, options = {}) => {
+  requests++
+  const value = handle(path, options.method ?? 'GET', { body: options.body })
+  if (value === undefined) throw new Error('unhandled ' + path)
+  return structuredClone(value)
 }
-
+const auth = { request: async (path, options = {}) => call(path, options) }
 const client = createChatReviewsClient(auth)
+const urls = { judge: (s, r) => `/api/control/pi/sessions/${s}/response-families/${r}/judge`, vote: (s, r) => `/api/control/pi/sessions/${s}/response-families/${r}/vote`, check: (s, m) => `/api/control/pi/sessions/${s}/messages/${m}/fact-check` }
 
-console.log('Answer reviews: client and preview fixture load.')
-
-async function runTests() {
-  let tests = 0, passed = 0
-
-  function test(name, fn) {
-    tests++
-    try {
-      fn()
-      passed++
-      console.log(`✓ ${name}`)
-    } catch (error) {
-      console.log(`✗ ${name}: ${error.message}`)
-    }
+async function refused(promise, kind, code) {
+  try { await promise } catch (error) {
+    assert.ok(error instanceof GatewayError, `a GatewayError, got ${error}`)
+    assert.equal(error.kind, kind)
+    if (code) assert.equal(error.code, code)
+    return
   }
+  assert.fail(`should have been refused as ${kind}${code ? ` ${code}` : ''}`)
+}
+async function noRequest(promise, kind) {
+  const before = requests
+  await refused(promise, kind)
+  assert.equal(requests, before, 'no request was sent')
+}
+const withReply = (change) => createChatReviewsClient({ request: async (path, options = {}) => change(call(path, options), path) })
 
+let cases = 0
+async function check(name, run) { await run(); cases++; console.log(`ok  ${name}`) }
 
-  // Test judge with too few versions
-  test('judge single version family gives too_few', async () => {
-    try {
-      await client.judge('ses_2222222222222222', 'msg_6666666666666666')
-      throw new Error('should have failed')
-    } catch (error) {
-      if (error.code !== 'too_few') throw error
-    }
+async function main() {
+  await check('the fixture answers in Pi shapes (snake_case ids and times)', async () => {
+    const raw = call(urls.judge(A, v1), { method: 'POST', body: { request_id: 'shape-check-request-1' } })
+    assert.deepEqual(Object.keys(raw).sort(), ['created_at', 'excluded', 'judgeModelId', 'replayed', 'request_id', 'rubric', 'scores', 'winner'])
+    assert.deepEqual(Object.keys(raw.scores[0]).sort(), ['message_id', 'reason', 'score'])
+    assert.equal(raw.created_at, clock.time / 1000)
+    const voted = call(urls.vote(A, v1), { method: 'POST', body: { message_id: v2, vote: 'up' } })
+    assert.deepEqual(Object.keys(voted).sort(), ['root_message_id', 'votes'])
+    call(urls.vote(A, v1), { method: 'POST', body: { message_id: v2, vote: 'clear' } })
+    const checked = call(urls.check(A, v2), { method: 'POST', body: { request_id: 'shape-check-request-2' } })
+    assert.deepEqual(Object.keys(checked).sort(), ['claims', 'counts', 'created_at', 'message_id', 'modelId', 'replayed', 'request_id', 'sources', 'sourcesTruncated'])
+    assert.deepEqual(Object.keys(checked.counts).sort(), ['contradicted', 'no-source', 'supported'])
   })
 
-  // Test judge happy path with 3 versions
-  test('judge 3 versions returns 3 scores and winner', async () => {
-    const result = await client.judge('ses_1111111111111111', 'msg_2222222222222222')
-    assert.equal(result.scores.length, 3)
-    assert.equal(typeof result.winner, 'string')
-    assert(result.scores.every(s => typeof s.score === 'number' && s.score >= 1 && s.score <= 10))
-    assert(result.scores.every(s => typeof s.reason === 'string'))
+  await check('judge: three versions give three scores and a winner among them, in camelCase', async () => {
+    const result = await client.judge(A, v1)
+    assert.deepEqual(result.scores.map(item => item.messageId), [v1, v2, v3])
+    assert.ok(result.scores.every(item => Number.isInteger(item.score) && item.score >= 1 && item.score <= 10 && item.reason.length > 0))
+    assert.ok(result.scores.some(item => item.messageId === result.winner))
+    assert.equal(result.winner, result.scores.reduce((best, item) => item.score > best.score ? item : best).messageId)
+    assert.deepEqual(result.excluded, [])
+    assert.equal(result.createdAt, clock.time / 1000)
+    assert.equal(result.rubric, '')
+    assert.ok(!('replayed' in result) && !('request_id' in result))
   })
 
-  // Test judgements list
-  test('judgements list returns judge results', async () => {
-    const results = await client.judgements('ses_1111111111111111', 'msg_2222222222222222')
-    assert.equal(Array.isArray(results), true)
-    if (results.length > 0) {
-      assert.equal(typeof results[0].winner, 'string')
-      assert.equal(Array.isArray(results[0].scores), true)
-    }
+  await check('judge: the model and rubric are sent only when given', async () => {
+    const sent = []
+    const spy = createChatReviewsClient({ request: async (path, options = {}) => { sent.push(options.body); return call(path, options) } })
+    await spy.judge(A, v1)
+    await spy.judge(A, v1, { modelId: null })
+    const result = await spy.judge(A, v1, { modelId: 'model-x', rubric: 'Prefer short answers.' })
+    assert.deepEqual(Object.keys(sent[0]), ['request_id'])
+    assert.deepEqual(Object.keys(sent[1]), ['request_id'])
+    assert.deepEqual(Object.keys(sent[2]).sort(), ['model_id', 'request_id', 'rubric'])
+    assert.equal(result.judgeModelId, 'model-x')
+    assert.equal(result.rubric, 'Prefer short answers.')
+    assert.equal(new Set(sent.map(item => item.request_id)).size, 3, 'every call has its own request id')
   })
 
-  // Test vote happy path
-  test('vote up works', async () => {
-    const result = await client.vote('ses_1111111111111111', 'msg_2222222222222222', 'msg_3333333333333333', 'up')
-    assert.equal(result.rootMessageId, 'msg_2222222222222222')
-    assert.equal(result.votes['msg_3333333333333333'], 'up')
+  await check('judgements: newest first', async () => {
+    const results = await client.judgements(A, v1)
+    assert.ok(results.length >= 2)
+    assert.equal(results[0].rubric, 'Prefer short answers.')
+    assert.equal(results[0].judgeModelId, 'model-x')
+    assert.ok(results.every(item => Array.isArray(item.scores) && typeof item.requestId === 'string'))
   })
 
-  // Test vote winner demotes previous winner
-  test('winner then winner on another version leaves one winner', async () => {
-    await client.vote('ses_1111111111111111', 'msg_2222222222222222', 'msg_3333333333333333', 'winner')
-    await client.vote('ses_1111111111111111', 'msg_2222222222222222', 'msg_4444444444444444', 'winner')
-    const result = await client.votes('ses_1111111111111111', 'msg_2222222222222222')
-    assert.equal(result.votes['msg_4444444444444444'], 'winner')
-    assert.equal(result.votes['msg_3333333333333333'], 'up')
+  await check('judge: a single-version family gives too_few', async () => {
+    await refused(client.judge(B, single), 'http', 'too_few')
   })
 
-  // Test vote on foreign message
-  test('vote on foreign message gives not_a_version', async () => {
-    try {
-      await client.vote('ses_1111111111111111', 'msg_2222222222222222', 'msg_9999999999999999', 'up')
-      throw new Error('should have failed')
-    } catch (error) {
-      if (error.code !== 'not_a_version') throw error
-    }
+  await check('judge: an unknown family is not_found', async () => {
+    await refused(client.judge(A, foreign), 'http')
+    await refused(client.judgements(A, foreign), 'http')
   })
 
-  // Test fact check happy path
-  test('fact check works on long answer', async () => {
-    const result = await client.factCheck('ses_1111111111111111', 'msg_3333333333333333')
-    assert.equal(result.messageId, 'msg_3333333333333333')
-    assert.equal(typeof result.modelId, 'string')
-    assert(Array.isArray(result.claims))
-    assert(typeof result.counts.supported, 'number')
-    assert(typeof result.counts.contradicted, 'number')
-    assert(typeof result.counts.noSource, 'number')
-    assert.equal(result.counts.supported + result.counts.contradicted + result.counts.noSource, result.claims.length)
-  })
-
-  // Test fact check on short answer
-  test('fact check on short answer gives no_sources', async () => {
-    try {
-      await client.factCheck('ses_1111111111111111', 'msg_2222222222222222')
-      throw new Error('should have failed')
-    } catch (error) {
-      if (error.code !== 'no_sources') throw error
-    }
-  })
-
-  // Test fact checks list
-  test('fact checks list returns results', async () => {
-    const results = await client.factChecks('ses_1111111111111111', 'msg_3333333333333333')
-    assert.equal(Array.isArray(results), true)
-    if (results.length > 0) {
-      assert.equal(typeof results[0].messageId, 'string')
-      assert(Array.isArray(results[0].claims))
-      assert(typeof results[0].counts, 'object')
-    }
-  })
-
-  // Test replay functionality
-  test('judge replay returns replayed: true', async () => {
-    const requestId = 'replay-test-request-id'
-    const first = await client.judge('ses_1111111111111111', 'msg_2222222222222222', { requestId })
-    const second = await client.judge('ses_1111111111111111', 'msg_2222222222222222', { requestId })
+  await check('judge: the same request id replays; other values with it are refused', async () => {
+    const body = { request_id: 'replay-request-id-001', rubric: 'Be strict.' }
+    const first = call(urls.judge(A, v1), { method: 'POST', body })
+    const second = call(urls.judge(A, v1), { method: 'POST', body })
+    assert.equal(first.replayed, false)
     assert.equal(second.replayed, true)
-    assert.equal(first.winner, second.winner)
+    assert.deepEqual({ ...second, replayed: false }, first)
+    await refused(Promise.resolve().then(() => call(urls.judge(A, v1), { method: 'POST', body: { ...body, rubric: 'Other.' } })), 'http', 'request_conflict')
   })
 
-  console.log(`Answer reviews: ${passed}/${tests} tests passed.`)
+  await check('judge: a bad body is Pi\'s plain 422', async () => {
+    for (const body of [{}, { request_id: 'short' }, { request_id: 'valid-request-id-0001', extra: 1 }, { request_id: 'valid-request-id-0001', rubric: 'x'.repeat(2001) }, { request_id: 'valid-request-id-0001', model_id: '' }]) {
+      await refused(Promise.resolve().then(() => call(urls.judge(A, v1), { method: 'POST', body })), 'http')
+    }
+  })
+
+  await check('votes: up, down, clear and back to empty', async () => {
+    assert.deepEqual(await client.votes(A, v1), {})
+    assert.deepEqual(await client.vote(A, v1, v2, 'up'), { [v2]: 'up' })
+    assert.deepEqual(await client.vote(A, v1, v3, 'down'), { [v2]: 'up', [v3]: 'down' })
+    assert.deepEqual(await client.votes(A, v1), { [v2]: 'up', [v3]: 'down' })
+    await client.vote(A, v1, v2, 'clear')
+    assert.deepEqual(await client.vote(A, v1, v3, 'clear'), {})
+  })
+
+  await check('votes: winner then winner on another version leaves one winner and demotes the first to up', async () => {
+    await client.vote(A, v1, v2, 'winner')
+    const result = await client.vote(A, v1, v3, 'winner')
+    assert.deepEqual(result, { [v2]: 'up', [v3]: 'winner' })
+    assert.equal(Object.values(result).filter(item => item === 'winner').length, 1)
+    assert.deepEqual(await client.votes(A, v1), result)
+  })
+
+  await check('votes: a message outside the family is not_a_version', async () => {
+    await refused(client.vote(A, v1, foreign, 'up'), 'http', 'not_a_version')
+    await refused(client.vote(A, v1, id('msg', 99), 'up'), 'http', 'not_a_version')
+    await refused(client.votes(A, foreign), 'http')
+  })
+
+  await check('votes: keys of the reply are message ids', async () => {
+    const wrong = withReply(value => ({ ...value, votes: { 'not a message id': 'up' } }))
+    await refused(wrong.votes(A, v1), 'invalid-response')
+    await refused(wrong.vote(A, v1, v2, 'up'), 'invalid-response')
+    const unknownVote = withReply(value => ({ ...value, votes: { [v2]: 'maybe' } }))
+    await refused(unknownVote.votes(A, v1), 'invalid-response')
+  })
+
+  await check('fact check: counts match the claims; marks, sources and camelCase fields come through', async () => {
+    const result = await client.factCheck(A, v3)
+    assert.equal(result.messageId, v3)
+    assert.equal(result.claims.length, 3)
+    assert.deepEqual(result.claims.map(item => item.mark), ['supported', 'no-source', 'contradicted'])
+    const count = mark => result.claims.filter(item => item.mark === mark).length
+    assert.deepEqual(result.counts, { supported: count('supported'), contradicted: count('contradicted'), noSource: count('no-source') })
+    assert.ok(result.claims.every(item => item.mark === 'no-source' ? item.sources.length === 0 : item.sources.length >= 1))
+    assert.deepEqual(result.sources, [{ id: 'cite:preview-1', title: 'Preview source', url: 'https://example.com/' }])
+    assert.equal(result.sourcesTruncated, false)
+    assert.equal(result.createdAt, clock.time / 1000)
+    assert.ok(!('replayed' in result) && !('request_id' in result) && !('created_at' in result))
+  })
+
+  await check('fact checks: newest first, kept per answer', async () => {
+    clock.time += 1000
+    const again = await client.factCheck(A, v3, 'model-y')
+    const results = await client.factChecks(A, v3)
+    assert.equal(results.length, 2)
+    assert.equal(results[0].requestId, again.requestId)
+    assert.equal(results[0].modelId, 'model-y')
+    assert.deepEqual(await client.factChecks(A, foreign), [])
+  })
+
+  await check('fact check: a short answer gives no_sources', async () => {
+    await refused(client.factCheck(B, shortId), 'http', 'no_sources')
+  })
+
+  await check('fact check: a user message or an unknown message is not_found', async () => {
+    await refused(client.factCheck(A, user), 'http')
+    await refused(client.factCheck(A, id('msg', 99)), 'http')
+    await refused(client.factChecks(A, user), 'http')
+  })
+
+  await check('validation: bad input is refused before any request', async () => {
+    const bad = [
+      client.judge('ses_1', v1), client.judge(A, 'msg_1'), client.judge(A, v1, { rubric: 'x'.repeat(2001) }), client.judge(A, v1, { modelId: '' }),
+      client.judgements('nope', v1), client.judgements(A, ''),
+      client.vote(A, v1, 'msg_x', 'up'), client.vote(A, v1, v2, 'sideways'), client.vote(A, '', v2, 'up'), client.vote('x', v1, v2, 'up'),
+      client.votes('x', v1), client.votes(A, 'x'),
+      client.factCheck('x', v2), client.factCheck(A, 'x'), client.factCheck(A, v2, ''),
+      client.factChecks('x', v2), client.factChecks(A, 'x'),
+    ]
+    for (const promise of bad) { promise.catch(() => {}) }
+    const before = requests
+    for (const promise of bad) await refused(promise, 'validation')
+    assert.equal(requests, before, 'client-side validation sent no request')
+    // The same checks one at a time, so each one proves that it alone sent nothing.
+    await noRequest(client.judge(A, v1, { rubric: 'x'.repeat(2001) }), 'validation')
+    await noRequest(client.vote(A, v1, v2, 'sideways'), 'validation')
+    await noRequest(client.factCheck(A, 'msg_zz'), 'validation')
+    // The longest allowed rubric is sent.
+    await client.judge(A, v1, { rubric: 'x'.repeat(2000) })
+  })
+
+  await check('invalid response: replies that break the shape are rejected', async () => {
+    const camel = withReply(value => ({ ...value, requestId: value.request_id, request_id: undefined }))
+    await refused(camel.judge(A, v1), 'invalid-response')
+    const score = withReply(value => ({ ...value, scores: value.scores.map(item => ({ ...item, score: 11 })) }))
+    await refused(score.judge(A, v1), 'invalid-response')
+    const winner = withReply(value => ({ ...value, winner: 'nobody' }))
+    await refused(winner.judge(A, v1), 'invalid-response')
+    const extra = withReply(value => ({ ...value, unexpected: true }))
+    await refused(extra.judge(A, v1), 'invalid-response')
+    await refused(extra.judgements(A, v1), 'invalid-response')
+    const list = withReply(value => ({ results: [{ ...value.results[0], created_at: 'yesterday' }] }))
+    await refused(list.judgements(A, v1), 'invalid-response')
+    const counts = withReply(value => ({ ...value, counts: { supported: 1, contradicted: 0, noSource: 0 } }))
+    await refused(counts.factCheck(A, v3), 'invalid-response')
+    const mark = withReply(value => ({ ...value, claims: value.claims.map(item => ({ ...item, mark: 'true' })) }))
+    await refused(mark.factCheck(A, v3), 'invalid-response')
+    const results = withReply(() => ({ results: [{}] }))
+    await refused(results.factChecks(A, v3), 'invalid-response')
+  })
+
+  await check('preview data: a fresh store gets one answer with several versions', async () => {
+    const fresh = { sessions: [{ id: A, title: 'Sky', created_at: 1, turns: [], messages: [
+      { id: user, session_id: A, seq: 1, role: 'user', content: 'Why?', created_at: 1 },
+      { id: v1, session_id: A, seq: 2, role: 'assistant', content: text, created_at: 2 },
+    ] }], nextId: (() => { let n = 100; return prefix => id(prefix, n++) })(), contexts: new Map() }
+    createFakeChatReviews(now, fail, fresh)
+    const versions = fresh.sessions[0].messages.filter(item => item.response_family)
+    assert.equal(versions.length, 3)
+    assert.ok(versions.every(item => item.response_family.root_message_id === v1 && item.response_family.selected_message_id === versions[2].id))
+  })
+
+  console.log(`Answer reviews: ${cases} cases passed.`)
 }
 
-runTests().catch(error => {
-  console.error('Test suite failed:', error)
-  process.exit(1)
-}).then(() => {
-  console.log('All tests completed successfully.')
-})
+main().catch(error => { console.error(error); process.exit(1) })

@@ -1,264 +1,173 @@
-/** Development-only preview fixture for answer reviews (judge, votes, fact checks). */
+/** Development-only preview fixture for answer reviews (judge, votes, fact checks). Answers in Pi's shapes. */
 import type { FakeChatStore } from './fake-gateway'
-import { GatewayError } from '@/lib/gateway/transport'
+import { GatewayError, type ChatFeatureErrorCode } from '@/lib/gateway/transport'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
+type Vote = 'up' | 'down' | 'winner'
 
-interface StoredJudgement {
-  requestId: string
-  judgeModelId: string
-  rubric: string
-  scores: { messageId: string; score: number; reason: string }[]
-  winner: string
-  excluded: string[]
-  createdAt: number
+const session = '(ses_[0-9a-f]{16})', message = '(msg_[0-9a-f]{16})'
+const base = `^/api/control/pi/sessions/${session}`
+const routes = {
+  judge: new RegExp(`${base}/response-families/${message}/judge$`),
+  judgements: new RegExp(`${base}/response-families/${message}/judgements$`),
+  vote: new RegExp(`${base}/response-families/${message}/vote$`),
+  votes: new RegExp(`${base}/response-families/${message}/votes$`),
+  factCheck: new RegExp(`${base}/messages/${message}/fact-check$`),
+  factChecks: new RegExp(`${base}/messages/${message}/fact-checks$`),
 }
-
-interface StoredVotes {
-  rootMessageId: string
-  votes: Record<string, 'up' | 'down' | 'winner'>
-}
-
-interface StoredFactCheck {
-  requestId: string
-  messageId: string
-  modelId: string
-  claims: { claim: string; mark: 'supported' | 'contradicted' | 'no-source'; sources: string[]; note: string }[]
-  counts: { supported: number; contradicted: number; noSource: number }
-  sources: { id: string; title: string; url: string }[]
-  sourcesTruncated: boolean
-  createdAt: number
-}
+const requestIdPattern = /^[A-Za-z0-9_-]{16,128}$/
+const refusal = (status: number, code: ChatFeatureErrorCode) => new GatewayError('http', status, undefined, code)
 
 export function createFakeChatReviews(now: () => number, fail: (status: number) => never, store: FakeChatStore) {
-  const judgementsByFamily = new Map<string, StoredJudgement[]>()
-  const votesByFamily = new Map<string, StoredVotes>()
-  const factChecksByMessage = new Map<string, StoredFactCheck[]>()
+  const judgementsByFamily = new Map<string, Json[]>()
+  const votesByFamily = new Map<string, Record<string, Vote>>()
+  const factChecksByMessage = new Map<string, Json[]>()
 
-  const messageId = /^msg_[0-9a-f]{16}$/
-  const requestId = /^[A-Za-z0-9_-]{16,128}$/
+  seedRetriedAnswer()
 
-  function findFamily(sessionId: string, rootId: string) {
-    store.sessions.find(s => s.id === sessionId)
-    const family = store.sessions.flatMap(s => s.messages).filter(m =>
-      m.response_family?.root_message_id === rootId
-    )
-    if (family.length === 0) fail(404)
-
-    return { family }
+  /** Preview data: one chat gets an answer that was retried twice, so the vote, judge and fact-check controls have something to act on. */
+  function seedRetriedAnswer() {
+    if (store.sessions.some(chat => chat.messages.some(item => item.response_family))) return
+    const chat = store.sessions.find(item => {
+      const last = item.messages[item.messages.length - 1]
+      return last?.role === 'assistant' && last.content.length >= 40
+    })
+    if (!chat) return
+    const root = chat.messages[chat.messages.length - 1]
+    const retries = [
+      'Short version: air scatters short wavelengths of sunlight the most, and blue is the shortest wavelength we see clearly. So the sky looks blue from every direction.',
+      'Sunlight is white, but it is a mix of colours. Air molecules scatter blue light far more than red. That scattered blue light reaches your eyes from all over the sky. At sunset the light crosses more air, so the blue is gone and red is left.',
+    ].map((content, index) => ({ ...root, id: store.nextId('msg'), seq: root.seq + index + 1, content, created_at: root.created_at + (index + 1) * 60 }))
+    const versions = [root, ...retries]
+    const selected = versions[versions.length - 1].id
+    versions.forEach((item, index) => { item.response_family = { root_message_id: root.id, retry_of: index === 0 ? null : versions[index - 1].id, selected_message_id: selected, revision: index + 1 } })
+    chat.messages.push(...retries)
   }
 
-  function findMessage(sessionId: string, messageId: string) {
-    store.sessions.find(s => s.id === sessionId)
-    const message = store.sessions.flatMap(s => s.messages).find(m => m.id === messageId)
-    if (!message) fail(404)
+  function chatOf(sessionId: string) {
+    const chat = store.sessions.find(item => item.id === sessionId)
+    return chat ?? fail(404)
+  }
+  /** The answer's versions in order; an unknown family is a 404. */
+  function familyOf(sessionId: string, rootId: string) {
+    const family = chatOf(sessionId).messages.filter(item => (item.response_family as Json | undefined)?.root_message_id === rootId)
+    if (family.length === 0) fail(404)
+    return [...family].sort((a, b) => a.seq - b.seq)
+  }
+  /** Pi's request models reject unknown fields and wrong types with one plain 422. */
+  function body(options: Request, allowed: Record<string, (value: unknown) => boolean>): Json {
+    const value = options.body
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return fail(422)
+    for (const [key, item] of Object.entries(value)) if (!allowed[key] || !allowed[key](item)) return fail(422)
+    if (!requestIdPattern.test(String(value.request_id))) return fail(422)
+    return value
+  }
+  const isModel = (value: unknown) => value === null || (typeof value === 'string' && value.length >= 1 && value.length <= 200)
 
-    if (message.role !== 'assistant') fail(404)
+  /** Same request id and same body replays the stored answer; the same id with other values is refused. */
+  function remember(list: Json[], request: Json, make: () => Json): Json {
+    const same = list.find(item => item.request_id === request.request_id)
+    if (same) {
+      if (JSON.stringify(same.__body) !== JSON.stringify(request)) throw refusal(409, 'request_conflict')
+      return { ...strip(same), replayed: true }
+    }
+    const made = { ...make(), __body: request }
+    list.unshift(made)
+    if (list.length > 20) list.pop()
+    return { ...strip(made), replayed: false }
+  }
+  const strip = (value: Json): Json => {
+    const { __body: _body, ...rest } = value
+    void _body
+    return rest
+  }
 
-    return { message }
+  function judge(sessionId: string, rootId: string, options: Request): Json {
+    const request = body(options, { request_id: () => true, model_id: isModel, rubric: value => typeof value === 'string' && [...value].length <= 2000 })
+    const family = familyOf(sessionId, rootId)
+    if (family.length < 2) throw refusal(409, 'too_few')
+    const key = `${sessionId}:${rootId}`, list = judgementsByFamily.get(key) ?? []
+    judgementsByFamily.set(key, list)
+    return remember(list, request, () => {
+      const scores = family.map((item, index) => ({
+        message_id: item.id,
+        score: Math.max(1, Math.min(10, 3 + Math.floor(item.content.length / 40))),
+        reason: index === 0 ? 'Clear, but short on detail.' : 'Covers the question with more detail.',
+      }))
+      const winner = scores.reduce((best, item) => item.score > best.score ? item : best)
+      return {
+        request_id: request.request_id, judgeModelId: typeof request.model_id === 'string' ? request.model_id : 'preview-judge', rubric: request.rubric ?? '',
+        scores, winner: winner.message_id, excluded: [], created_at: now() / 1000,
+      }
+    })
+  }
+
+  function vote(sessionId: string, rootId: string, options: Request): Json {
+    const value = options.body
+    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => key !== 'message_id' && key !== 'vote')
+      || typeof value.message_id !== 'string' || value.message_id.length < 1 || value.message_id.length > 128
+      || !['up', 'down', 'winner', 'clear'].includes(String(value.vote))) return fail(422)
+    const family = familyOf(sessionId, rootId)
+    if (!family.some(item => item.id === value.message_id)) throw refusal(422, 'not_a_version')
+    const key = `${sessionId}:${rootId}`, votes = votesByFamily.get(key) ?? {}
+    votesByFamily.set(key, votes)
+    if (value.vote === 'clear') delete votes[value.message_id]
+    else {
+      if (value.vote === 'winner') for (const id of Object.keys(votes)) if (votes[id] === 'winner') votes[id] = 'up'
+      votes[value.message_id] = value.vote as Vote
+    }
+    return { root_message_id: rootId, votes: { ...votes } }
+  }
+
+  function factCheck(sessionId: string, messageId: string, options: Request): Json {
+    const request = body(options, { request_id: () => true, model_id: isModel })
+    const answer = chatOf(sessionId).messages.find(item => item.id === messageId)
+    if (!answer || answer.role !== 'assistant') return fail(404)
+    if (answer.content.length < 40) throw refusal(409, 'no_sources')
+    const key = `${sessionId}:${messageId}`, list = factChecksByMessage.get(key) ?? []
+    factChecksByMessage.set(key, list)
+    return remember(list, request, () => {
+      const sentences = answer.content.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(item => item.length > 0)
+      const marks = ['supported', 'no-source', 'contradicted'] as const
+      const claims = (sentences.length > 0 ? sentences : [answer.content]).slice(0, 3).map((sentence, index) => {
+        const mark = marks[index % marks.length]
+        return {
+          claim: sentence.slice(0, 300), mark, sources: mark === 'no-source' ? [] : ['cite:preview-1'],
+          note: mark === 'supported' ? 'The source says the same.' : mark === 'contradicted' ? 'The source says something different.' : 'No source covers this.',
+        }
+      })
+      const counts = { supported: 0, contradicted: 0, 'no-source': 0 }
+      for (const claim of claims) counts[claim.mark]++
+      return {
+        request_id: request.request_id, message_id: messageId, modelId: typeof request.model_id === 'string' ? request.model_id : 'preview-checker', claims, counts,
+        sources: claims.some(claim => claim.sources.length > 0) ? [{ id: 'cite:preview-1', title: 'Preview source', url: 'https://example.com/' }] : [],
+        sourcesTruncated: false, created_at: now() / 1000,
+      }
+    })
   }
 
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
-    const judgeMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/response-families\/(msg_[0-9a-f]{16})\/judge$/)
-    const judgementsMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/response-families\/(msg_[0-9a-f]{16})\/judgements$/)
-    const voteMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/response-families\/(msg_[0-9a-f]{16})\/vote$/)
-    const votesMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/response-families\/(msg_[0-9a-f]{16})\/votes$/)
-    const factCheckMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/messages\/(msg_[0-9a-f]{16})\/fact-check$/)
-    const factChecksMatch = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/messages\/(msg_[0-9a-f]{16})\/fact-checks$/)
-
-    if (judgeMatch && method === 'POST') {
-      const [, sid, rid] = judgeMatch
-      const { family } = findFamily(sid, rid)
-
-      if (family.length < 2) {
-        throw new GatewayError('http', 409, undefined, 'too_few')
-      }
-
-      const body = options.body as Record<string, unknown>
-      if (!body || typeof body.request_id !== 'string' || !requestId.test(body.request_id)) {
-        fail(422)
-      }
-
-      const familyKey = `${sid}:${rid}`
-      const existing = judgementsByFamily.get(familyKey) || []
-      const replayed = existing.find(j => j.requestId === body.request_id)
-
-      if (replayed) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { requestId: _, ...response } = replayed
-        return { ...response, replayed: true }
-      }
-
-      // Generate deterministic scores based on content length
-      const scores = family.map((msg, index) => {
-        const contentLength = msg.content.length
-        const score = Math.max(1, Math.min(10, (contentLength % 10) + 1))
-        return {
-          messageId: msg.id,
-          score,
-          reason: `Version ${index + 1} analysis based on content structure.`,
-        }
-      })
-
-      const winner = scores.reduce((best, current) =>
-        current.score > best.score ? current : best
-      ).messageId
-
-      const judgement: StoredJudgement = {
-        requestId: body.request_id,
-        judgeModelId: 'fake-judge-model',
-        rubric: body.rubric || '',
-        scores,
-        winner,
-        excluded: [],
-        createdAt: now(),
-      }
-
-      existing.unshift(judgement)
-      if (existing.length > 20) existing.pop()
-      judgementsByFamily.set(familyKey, existing)
-
-      const { requestId, ...response } = judgement
-      return { ...response, replayed: false }
+    let match: RegExpMatchArray | null
+    if ((match = path.match(routes.judge))) return method === 'POST' ? judge(match[1], match[2], options) : undefined
+    if ((match = path.match(routes.judgements))) {
+      if (method !== 'GET') return undefined
+      familyOf(match[1], match[2])
+      return { results: (judgementsByFamily.get(`${match[1]}:${match[2]}`) ?? []).map(strip) }
     }
-
-    if (judgementsMatch && method === 'GET') {
-      const [, sid, rid] = judgementsMatch
-      findFamily(sid, rid) // Validate family exists
-
-      const familyKey = `${sid}:${rid}`
-      const results = judgementsByFamily.get(familyKey) || []
-      return { results }
+    if ((match = path.match(routes.vote))) return method === 'POST' ? vote(match[1], match[2], options) : undefined
+    if ((match = path.match(routes.votes))) {
+      if (method !== 'GET') return undefined
+      familyOf(match[1], match[2])
+      return { root_message_id: match[2], votes: { ...votesByFamily.get(`${match[1]}:${match[2]}`) } }
     }
-
-    if (voteMatch && method === 'POST') {
-      const [, sid, rid] = voteMatch
-      const { family } = findFamily(sid, rid)
-
-      const body = options.body as Record<string, unknown>
-      if (!body || typeof body.message_id !== 'string' || !messageId.test(body.message_id) ||
-          !['up', 'down', 'winner', 'clear'].includes(body.vote)) {
-        fail(422)
-      }
-
-      const messageExists = family.some(m => m.id === body.message_id)
-      if (!messageExists) {
-        throw new GatewayError('http', 422, undefined, 'not_a_version')
-      }
-
-      const familyKey = `${sid}:${rid}`
-      let votes = votesByFamily.get(familyKey)
-
-      if (!votes) {
-        votes = { rootMessageId: rid, votes: {} }
-        votesByFamily.set(familyKey, votes)
-      }
-
-      if (body.vote === 'clear') {
-        delete votes.votes[body.message_id]
-      } else {
-        // If voting winner, demote any previous winner to 'up'
-        if (body.vote === 'winner') {
-          Object.entries(votes.votes).forEach(([id, vote]) => {
-            if (vote === 'winner') votes.votes[id] = 'up'
-          })
-        }
-        votes.votes[body.message_id] = body.vote
-      }
-
-      return votes
+    if ((match = path.match(routes.factCheck))) return method === 'POST' ? factCheck(match[1], match[2], options) : undefined
+    if ((match = path.match(routes.factChecks))) {
+      if (method !== 'GET') return undefined
+      const answer = chatOf(match[1]).messages.find(item => item.id === match![2])
+      if (!answer || answer.role !== 'assistant') return fail(404)
+      return { results: (factChecksByMessage.get(`${match[1]}:${match[2]}`) ?? []).map(strip) }
     }
-
-    if (votesMatch && method === 'GET') {
-      const [, sid, rid] = votesMatch
-      findFamily(sid, rid) // Validate family exists
-
-      const familyKey = `${sid}:${rid}`
-      return votesByFamily.get(familyKey) || { rootMessageId: rid, votes: {} }
-    }
-
-    if (factCheckMatch && method === 'POST') {
-      const [, sid, mid] = factCheckMatch
-      const { message } = findMessage(sid, mid)
-
-      if (message.content.length < 40) {
-        throw new GatewayError('http', 409, undefined, 'no_sources')
-      }
-
-      const body = options.body as Record<string, unknown>
-      if (!body || typeof body.request_id !== 'string' || !requestId.test(body.request_id)) {
-        fail(422)
-      }
-
-      const messageKey = `${sid}:${mid}`
-      const existing = factChecksByMessage.get(messageKey) || []
-      const replayed = existing.find(fc => fc.requestId === body.request_id)
-
-      if (replayed) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { requestId: _, ...response } = replayed
-        return { ...response, replayed: true }
-      }
-
-      // Generate up to 3 claims from sentences
-      const sentences = message.content.split('.').filter(s => s.trim().length > 10)
-      const claims = sentences.slice(0, 3).map((sentence, index) => {
-        const marks: ('supported' | 'contradicted' | 'no-source')[] = ['supported', 'no-source', 'contradicted']
-        const mark = marks[index % marks.length]
-
-        return {
-          claim: sentence.trim() + '.',
-          mark,
-          sources: mark === 'no-source' ? [] : [`cite:preview-${index + 1}`],
-          note: `Analysis of claim ${index + 1}.`,
-        }
-      })
-
-      const counts = claims.reduce((acc, claim) => {
-        if (claim.mark === 'supported') acc.supported++
-        else if (claim.mark === 'contradicted') acc.contradicted++
-        else acc.noSource++
-        return acc
-      }, { supported: 0, contradicted: 0, noSource: 0 })
-
-      const sources = claims.flatMap(claim =>
-        claim.sources.map(sourceId => ({
-          id: sourceId,
-          title: 'Preview source',
-          url: 'https://example.com/',
-        }))
-      )
-
-      const factCheck: StoredFactCheck = {
-        requestId: body.request_id,
-        messageId: mid,
-        modelId: 'fake-fact-check-model',
-        claims,
-        counts,
-        sources,
-        sourcesTruncated: false,
-        createdAt: now(),
-      }
-
-      existing.unshift(factCheck)
-      if (existing.length > 20) existing.pop()
-      factChecksByMessage.set(messageKey, existing)
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { requestId: _, ...response } = factCheck
-      return { ...response, replayed: false }
-    }
-
-    if (factChecksMatch && method === 'GET') {
-      const [, sid, mid] = factChecksMatch
-      findMessage(sid, mid) // Validate message exists
-
-      const messageKey = `${sid}:${mid}`
-      const results = factChecksByMessage.get(messageKey) || []
-      return { results }
-    }
-
     return undefined
   }
 }
