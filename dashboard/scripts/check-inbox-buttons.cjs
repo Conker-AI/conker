@@ -18,8 +18,8 @@ assert.deepEqual(Object.keys(cardLabels), cardTemplates)
 // Test every yes and no is a non-empty trimmed string, and yes !== no for each
 for (const template of cardTemplates) {
   const labels = cardLabels[template]
-  assert(typeof labels.yes === 'string' && labels.yes.trim().length > 0, `${template} yes label must be non-empty trimmed string`)
-  assert(typeof labels.no === 'string' && labels.no.trim().length > 0, `${template} no label must be non-empty trimmed string`)
+  assert(typeof labels.yes === 'string' && labels.yes.length > 0 && labels.yes === labels.yes.trim(), `${template} yes label must be non-empty trimmed string`)
+  assert(typeof labels.no === 'string' && labels.no.length > 0 && labels.no === labels.no.trim(), `${template} no label must be non-empty trimmed string`)
   assert.notEqual(labels.yes, labels.no, `${template} yes and no labels must be different`)
 }
 
