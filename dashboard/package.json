@@ -48,6 +48,7 @@
     "check:server-actions": "node scripts/check-server-actions.cjs",
     "check:search": "node scripts/check-gateway-search.cjs && node scripts/check-universal-search-lifecycle.cjs",
     "check:context-policy": "node scripts/check-context-policy.cjs",
+    "check:message-context-rule": "node scripts/check-message-context-rule.cjs",
     "check:composer-modes": "node scripts/check-composer-modes.cjs",
     "check:composer": "node scripts/check-composer.cjs",
     "check:message-details": "node scripts/check-message-details.cjs",

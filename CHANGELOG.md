@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Set a context rule on one message.** In a live chat, the Layers button in a message's action bar keeps that message word for word, leaves it out, lets it be summarised or brings it back when relevant; "Default" clears the rule, and the rule's words show beside the button.
 - **The chat features work live.** Pi 0.18.0 is pinned: the Gateway lets the owner's browser reach the chat
   routes (names, output settings, answer versions, reviews, fact checks, summary and context editing), so
   those screens use real chats instead of preview data. Every write still asks for the password.
