@@ -7,6 +7,25 @@ import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { WorkspaceChromeContext, useInboxAttention, useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { cn } from '@/lib/utils'
 
+/** Split action children into label text and icons for mobile icon-only rendering. */
+export function splitActionLabel(children: ReactNode): { label: string; icons: ReactNode[] } {
+  const array = Children.toArray(children)
+  const labelParts: string[] = []
+  const icons: ReactNode[] = []
+
+  array.forEach(child => {
+    if (typeof child === 'string') {
+      labelParts.push(child)
+    } else if (isValidElement(child)) {
+      // Non-string children are treated as icons
+      icons.push(child)
+    }
+  })
+
+  const label = labelParts.join('').trim().replace(/\s+/g, ' ')
+  return { label, icons }
+}
+
 type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
   emphasis?: 'quiet' | 'primary'; iconOnly?: boolean; menuItem?: boolean
   /** The page's main action: it stays in the phone top bar instead of the "…" menu. */
@@ -65,9 +84,22 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
   }, [])
   const compact = isMobile || items.length > 2 || availableWidth === null || availableWidth < 224
   // On a phone only the page's main action stays out of the menu, so the page name keeps its room.
-  const kept = isMobile ? items.filter(item => isValidElement<{ keepVisible?: boolean; emphasis?: string }>(item) && (item.props.keepVisible || item.props.emphasis === 'primary')).slice(-1) : items.slice(-1)
-  const menu = items.filter(item => !kept.includes(item))
-  return <div ref={group}>{items.length < 2 || !compact ? children : <>{kept}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
+  const keptRaw = isMobile ? items.filter(item => isValidElement<{ keepVisible?: boolean; emphasis?: string }>(item) && (item.props.keepVisible || item.props.emphasis === 'primary')).slice(-1) : items.slice(-1)
+  const kept = keptRaw.map(item => {
+    if (!isMobile || !isValidElement(item)) return item
+    // Render kept actions icon-only on mobile
+    const existingAriaLabel = item.props['aria-label']
+    const { label, icons } = splitActionLabel(item.props.children)
+    const ariaLabel = existingAriaLabel || label
+    return cloneElement(item, {
+      iconOnly: true,
+      'aria-label': ariaLabel,
+      title: ariaLabel,
+      children: icons.length > 0 ? icons : item.props.children
+    })
+  })
+  const menu = items.filter(item => !keptRaw.includes(item))
+  return <div ref={group} className="flex shrink-0 items-center gap-1">{items.length < 2 || !compact ? children : <>{kept}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
     {menu.map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean }>(item) ? item.type === WorkspaceChoice ? cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile }) : <DropdownMenuItem key={index} disabled={item.props.disabled} render={cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })} /> : item)}
   </DropdownMenuContent></DropdownMenu></>}</div>
 }
