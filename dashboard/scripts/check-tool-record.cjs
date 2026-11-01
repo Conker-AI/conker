@@ -81,43 +81,37 @@ assert.deepEqual(readToolRecord('This is just plain text that cannot be parsed a
   raw: 'This is just plain text that cannot be parsed as JSON'
 })
 
-// Test summary cut at 80 chars with ellipsis
-const longText = 'This is a very long line that should definitely be truncated because it exceeds eighty characters limit'
-const expected = longText.slice(0, 80).trim() + '…'
-assert.equal(readToolRecord(`{"tool":"sandbox.run","result":{"stdout":"${longText}"}}`).summary, expected)
+// Summary: first non-empty line, at most 80 characters with the cut marked
+const longText = 'x'.repeat(100)
+assert.equal(readToolRecord(`{"tool":"sandbox.run","result":{"stdout":"${longText}"}}`).summary, `${'x'.repeat(79)}…`)
+assert.equal(readToolRecord(JSON.stringify({ tool: 'sandbox.run', result: { stdout: '\n  \nsecond line\nthird' } })).summary, 'second line')
+assert.equal(readToolRecord('{"tool":"sandbox.run","result":{"exitCode":0,"stdout":""}}').summary, 'ok')
 
-// Test label transformations
+// Labels
 assert.equal(readToolRecord('{"tool":"sandbox.run","result":{}}').label, 'Run')
 assert.equal(readToolRecord('{"tool":"web_search","result":{}}').label, 'Web search')
 assert.equal(readToolRecord('{"tool":"some_tool_name","result":{}}').label, 'Some tool name')
 assert.equal(readToolRecord('{"result":{}}').label, 'Tool')
+assert.equal(readToolRecord('{"tool":42,"result":{}}').tool, null)
 
-// Test duration null when absent
-assert.equal(readToolRecord('{"tool":"sandbox.run","result":{}}').durationMs, null)
+// Status: only a real non-zero exit code or ok:false fails; results without an exit code are ok
+assert.equal(readToolRecord('{"tool":"sandbox.run","ok":true,"result":{"exitCode":1}}').status, 'failed', 'A non-zero exit code fails even when the call itself went through')
+assert.equal(readToolRecord('{"tool":"web_search","result":{"items":[]}}').status, 'ok')
+assert.equal(readToolRecord('{"tool":"web_search","result":"plain"}').output, 'plain')
+assert.equal(readToolRecord('{"tool":"x","declined":""}').status, 'declined')
+assert.equal(readToolRecord('{"tool":"x"}').status, 'unknown')
 
-console.log('Tool record: all status cases, double encoding, unparseable text, summary truncation, label transformation, and duration handling work correctly.')
-
-// Mutation proof: make exitCode: 1 read as ok, see fail, restore, see pass
-console.log('\n=== Mutation proof ===')
-const originalSource = source
-const mutatedSource = source.replace('parsed.ok === false || parsed.result?.exitCode !== 0', 'parsed.ok === false || false')
-fs.writeFileSync(path.join(root, 'src/lib/chat/tool-record.ts'), mutatedSource)
-
-try {
-  const mutatedLoaded = { exports: {} }
-  new Function('require', 'module', 'exports', ts.transpileModule(mutatedSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => { throw new Error('Tool record must have no runtime dependencies') }, mutatedLoaded, mutatedLoaded.exports)
-  const { readToolRecord: mutatedReadToolRecord } = mutatedLoaded.exports
-  const result = mutatedReadToolRecord('{"tool":"sandbox.run","ok":false,"result":{"exitCode":1,"stdout":"","stderr":"Command failed","durationMs":500}}')
-  console.log('MUTATED: exitCode: 1 incorrectly reads as status:', result.status)
-  assert.notEqual(result.status, 'failed', 'Mutation should cause this to fail')
-} catch (e) {
-  console.log('MUTATED: Assertion failed as expected:', e.message)
-} finally {
-  fs.writeFileSync(path.join(root, 'src/lib/chat/tool-record.ts'), originalSource)
-  const restoredLoaded = { exports: {} }
-  new Function('require', 'module', 'exports', ts.transpileModule(originalSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => { throw new Error('Tool record must have no runtime dependencies') }, restoredLoaded, restoredLoaded.exports)
-  const { readToolRecord: restoredReadToolRecord } = restoredLoaded.exports
-  const result = restoredReadToolRecord('{"tool":"sandbox.run","ok":false,"result":{"exitCode":1,"stdout":"","stderr":"Command failed","durationMs":500}}')
-  console.log('RESTORED: exitCode: 1 correctly reads as status:', result.status)
-  assert.equal(result.status, 'failed', 'Restored version should correctly detect failure')
+// Never throws; non-objects are shown as text
+for (const value of ['null', '[1,2]', '42', '"just a string"', '', '{']) {
+  const view = readToolRecord(value)
+  assert.equal(view.status, 'unknown')
+  assert.equal(view.raw, value)
 }
+
+// Duration
+assert.equal(readToolRecord('{"tool":"sandbox.run","result":{}}').durationMs, null)
+assert.equal(readToolRecord('{"tool":"sandbox.run","result":{"durationMs":0}}').durationMs, 0)
+assert.equal(readToolRecord('{"tool":"sandbox.run","result":{"durationMs":"5"}}').durationMs, null)
+
+assert.doesNotMatch(source, /^\s*import\s/m, 'Tool record parsing has no imports')
+console.log('Tool record: every status, double encoding, non-object and unparseable text, summary cut, labels and duration.')
