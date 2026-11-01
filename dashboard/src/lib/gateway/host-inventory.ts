@@ -55,7 +55,6 @@ const configuredTargets = z.object({
 }).strict()
 
 export type GatewayHostInventory = z.infer<typeof inventory>
-export type GatewayHostObservation = z.infer<typeof observation>
 export type GatewayConfiguredTargets = z.infer<typeof configuredTargets>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {

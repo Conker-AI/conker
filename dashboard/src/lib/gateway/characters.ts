@@ -72,5 +72,3 @@ export function createGatewayCharactersClient(auth: Pick<GatewayAuthClient, 'req
     },
   }
 }
-
-export type GatewayCharactersClient = ReturnType<typeof createGatewayCharactersClient>
