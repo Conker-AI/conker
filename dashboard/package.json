@@ -51,6 +51,7 @@
     "check:composer-modes": "node scripts/check-composer-modes.cjs",
     "check:composer": "node scripts/check-composer.cjs",
     "check:message-details": "node scripts/check-message-details.cjs",
+    "check:turn-outcomes": "node scripts/check-turn-outcomes.cjs",
     "check:smooth-text": "node scripts/check-smooth-text.cjs",
     "check:tool-record": "node scripts/check-tool-record.cjs",
     "check:tool-requests": "node scripts/check-tool-requests.cjs",
