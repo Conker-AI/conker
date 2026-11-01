@@ -66,5 +66,3 @@ export function createOwnerSettingsClient(auth: Pick<GatewayAuthClient, 'request
     },
   }
 }
-
-export type OwnerSettingsClient = ReturnType<typeof createOwnerSettingsClient>

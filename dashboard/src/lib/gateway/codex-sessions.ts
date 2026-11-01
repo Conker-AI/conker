@@ -11,7 +11,6 @@ const envelope = { schemaVersion: z.literal(1), provider: z.literal('codex'), sc
 const page = z.object({ ...envelope, archived: z.boolean(), results: z.array(row).max(50), nextCursor: cursor.nullable() }).strict().refine(value => new Set(value.results.map(thread => thread.id)).size === value.results.length)
 const detail = z.object({ ...envelope, session: row }).strict()
 export type CodexThread = z.infer<typeof row>
-export type CodexThreads = z.infer<typeof page>
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false) { const result = schema.safeParse(value); if (!result.success) throw new GatewayError(input ? 'validation' : 'invalid-response'); return result.data }
 export function codexResumeCommand(id: string) { return `python scripts/conker.py native codex resume ${parse(codexThreadId, id, true)}` }
 export function createCodexSessionsClient(auth: Pick<GatewayAuthClient, 'request'>) {
