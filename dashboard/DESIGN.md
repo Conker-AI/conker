@@ -251,7 +251,7 @@ measurements; the UI neither estimates subscription costs nor treats missing
 cost as zero. Model-selection reasons keep their existing separate disclosure.
 
 Saved user messages have a quiet, persistent memory receipt beneath their text,
-separate from hover-only message actions. Added to memory means a verified
+separate from hover-only message actions. Remembered (with Undo) means a verified
 MemoryGate acknowledgement; chat persistence, model prose and scoring never
 create that claim. Filtered and excluded outcomes explicitly keep the chat.
 Original message privacy governs exclusion, and later forgetting masks earlier

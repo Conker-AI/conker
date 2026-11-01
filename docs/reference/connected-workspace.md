@@ -133,7 +133,7 @@ On Windows, uvicorn uses asyncio instead of the unsupported uvloop package.
   uninterrupted turn attempt. The receipt identifies reuse; usage records count
   only actual model calls. Ollama's reported cached prompt tokens are retained,
   with missing counters shown as unknown.
-- Saved user messages show a separate memory delivery status. “Added to memory”
+- Saved user messages show a separate memory delivery status. “Remembered” (with an Undo that forgets that memory)
   requires a valid MemoryGate acknowledgement; a saved chat or an assistant saying
   “I remember” is not that acknowledgement. Pending delivery can be checked again
   without resending the message.

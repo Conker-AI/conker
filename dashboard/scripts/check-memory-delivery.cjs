@@ -17,10 +17,11 @@ function load(relative) {
 }
 const { parseMemoryDelivery, parseMemoryDeliveryRead, createMemoryDeliveryClient } = load('src/lib/gateway/memory-delivery.ts')
 const { createGatewayRuntimeClient } = load('src/lib/gateway/runtime.ts')
-const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
 const { watchMemoryDelivery, memoryCheckDelays } = load('src/components/gateway/memory-delivery-watch.ts')
 const { gatewayChatContract } = load('src/lib/chat/gateway-adapter.ts')
 const { memoryFeedback } = load('src/lib/chat/memory-feedback.ts')
+const { createMemoryUndo } = load('src/lib/chat/memory-undo.ts')
 const { maskForgottenConversation } = load('src/components/gateway/source-privacy.ts')
 const wire = (state = 'saved', patch = {}) => ({ state, reason_code: state === 'pending' ? 'queued' : null, admission_method: state === 'saved' ? 'owner_requested' : state === 'filtered' ? 'filtered' : null, memory_id: state === 'saved' ? 'memory_one' : null, ...patch })
 const envelope = (rows = [{ message_id: 'message_one', ...wire() }], patch = {}) => ({ schemaVersion: 1, session_id: 'session_one', content_status: 'available', results: rows, truncated: false, ...patch })
@@ -90,6 +91,42 @@ async function hookLifecycle() {
   } finally { Object.assign(global, originals) }
 }
 
+async function undoFlow() {
+  const calls = [], published = [], refreshed = []
+  const preview = { memoryId: 'memory_one', revision: 7, text: 'Alexey trains judo on Fridays.' }
+  const build = control => createMemoryUndo({ control, createRequest: value => ({ requestId: `request_${calls.length}_aaaaaaaaaa`, memoryId: value.memoryId, revision: value.revision }),
+    publish: (id, state) => published.push([id, state.phase, state.message]), refresh: id => refreshed.push(id) })
+  // Preview first, then forget exactly the previewed memory and revision, then re-read the receipt.
+  let undo = build({ forgetPreview: async id => { calls.push(['preview', id]); return preview }, forgetMemory: async request => { calls.push(['forget', request.memoryId, request.revision]); return {} } })
+  await undo('message_one', 'memory_one')
+  assert.deepEqual(calls, [['preview', 'memory_one'], ['forget', 'memory_one', 7]])
+  assert.deepEqual(published.map(row => row.slice(0, 2)), [['message_one', 'working'], ['message_one', 'forgotten']]); assert.deepEqual(refreshed, ['message_one'])
+  // A changed memory is reviewed again; an uncertain answer repeats the same reviewed request.
+  calls.length = 0; published.length = 0
+  const failures = [new GatewayError('network'), null]
+  undo = build({ forgetPreview: async id => { calls.push(['preview', id]); return preview }, forgetMemory: async request => { calls.push(['forget', request.requestId]); const failure = failures.shift(); if (failure) throw failure; return {} } })
+  await undo('message_one', 'memory_one')
+  assert.equal(published.at(-1)[1], 'failed'); assert.match(published.at(-1)[2], /forget outcome is not confirmed/, 'Undo stays available with fixed copy')
+  await undo('message_one', 'memory_one')
+  assert.deepEqual(calls.map(row => row[0]), ['preview', 'forget', 'forget']); assert.equal(calls[1][1], calls[2][1], 'The retry repeats the same request identity')
+  assert.equal(published.at(-1)[1], 'forgotten')
+  // A conflict drops the reviewed request, so the next try previews the current version.
+  calls.length = 0
+  let conflict = true
+  undo = build({ forgetPreview: async id => { calls.push(['preview', id]); return preview }, forgetMemory: async () => { calls.push(['forget']); if (conflict) { conflict = false; throw new GatewayError('http', 409, undefined, 'revision_conflict') } return {} } })
+  await undo('message_one', 'memory_one'); assert.match(published.at(-1)[2], /changed since you reviewed/); await undo('message_one', 'memory_one')
+  assert.deepEqual(calls.map(row => row[0]), ['preview', 'forget', 'preview', 'forget'])
+  // A second press while one is running does nothing.
+  const gate = deferred(); calls.length = 0
+  undo = build({ forgetPreview: async id => { calls.push(['preview', id]); await gate.promise; return preview }, forgetMemory: async () => { calls.push(['forget']); return {} } })
+  const first = undo('message_one', 'memory_one'); await undo('message_one', 'memory_one'); gate.resolve(); await first
+  assert.deepEqual(calls.map(row => row[0]), ['preview', 'forget'])
+  // An aborted workspace publishes nothing after the fact.
+  const stop = new AbortController(); published.length = 0
+  undo = createMemoryUndo({ control: { forgetPreview: async () => { stop.abort(); return preview }, forgetMemory: async () => { assert.fail('Forget after abort') } }, createRequest: value => value, publish: (id, state) => published.push(state.phase), refresh() {}, signal: stop.signal })
+  await undo('message_one', 'memory_one'); assert.deepEqual(published, ['working'])
+}
+
 async function main() {
   if (process.argv[2]) {
     const backend = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
@@ -124,15 +161,32 @@ async function main() {
   const refreshes = [], handlers = { refreshMemory: id => refreshes.push(id) }
   const project = () => gatewayChatContract(state, () => state, () => handlers)
   const chat = project()
-  assert.equal(chat.messages[0].memory.label, 'Added to memory'); assert.ok(!JSON.stringify(chat).includes('memory_one'), 'Presentation does not expose memory identities')
+  assert.equal(chat.messages[0].memory.label, 'Remembered'); assert.equal(chat.messages[0].memory.memoryId, 'memory_one'); assert.equal(chat.messages[0].memory.undo.availability, 'unsupported', 'Undo needs an owner control client')
+  assert.ok(!JSON.stringify(chat).replace('"memoryId":"memory_one"', '').includes('memory_one'), 'Only the saved note carries the memory identity, as memoryId')
   await chat.messages[0].memory.refresh.run(); assert.deepEqual(refreshes, ['message_one'])
+  const undone = [], withoutUndo = state
+  handlers.undoMemory = (messageId, memoryId) => undone.push([messageId, memoryId])
+  const undoable = project().messages[0].memory; assert.equal(undoable.undo.availability, 'enabled')
+  await undoable.undo.run(); assert.deepEqual(undone, [['message_one', 'memory_one']])
+  state = { ...state, memoryUndo: { message_one: { phase: 'working' } } }; assert.equal(project().messages[0].memory.undo.availability, 'disabled', 'No second Undo while one runs')
+  state = { ...state, memoryUndo: { message_one: { phase: 'failed', message: 'Try again.' } } }; assert.equal(project().messages[0].memory.undo.availability, 'enabled', 'A failed Undo can be retried')
+  state = { ...state, memoryUndo: { message_one: { phase: 'forgotten' } } }; assert.equal(project().messages[0].memory.undo.availability, 'disabled'); assert.equal(project().messages[0].memory.label, 'Forgotten')
+  state = { ...withoutUndo, memoryRead: { ...withoutUndo.memoryRead, receipts: { message_one: parseMemoryDelivery(wire('removed')) } } }
+  assert.equal(project().messages[0].memory.undo.availability, 'unsupported', 'A receipt that is no longer saved offers no Undo'); assert.equal(project().messages[0].memory.memoryId, null)
+  state = withoutUndo; delete handlers.undoMemory; assert.equal(project().messages[0].memory.undo.availability, 'unsupported')
   state = { ...state, forgotten: true }; await chat.messages[0].memory.refresh.run(); assert.equal(refreshes.length, 1); assert.equal(project().messages[0].memory, undefined)
   assert.ok(!JSON.stringify(maskForgottenConversation(detail)).includes('memory_one'))
   state = { ...state, forgotten: false, memoryRead: undefined }; assert.equal(project().messages[0].memory, undefined, 'Native/older adapters without receipt capability retain their shape')
   const refresh = { availability: 'enabled', run() {} }
-  for (const [status, label] of [['saved', 'Added to memory'], ['filtered', 'Not added to memory'], ['excluded', 'Memory excluded'], ['removed', 'Removed from memory']]) {
+  for (const [status, label] of [['saved', 'Remembered'], ['filtered', 'Not added to memory'], ['excluded', 'Memory excluded'], ['removed', 'Removed from memory']]) {
     assert.equal(memoryFeedback('m', { phase: 'ready', receipts: { m: parseMemoryDelivery(wire(status)) }, truncated: false }, refresh).label, label)
   }
+  for (const status of ['pending', 'filtered', 'unavailable', 'excluded', 'removed']) {
+    const feedback = memoryFeedback('m', { phase: 'ready', receipts: { m: parseMemoryDelivery(wire(status)) }, truncated: false }, refresh)
+    assert.notEqual(feedback.label, 'Remembered', status); assert.equal(feedback.memoryId, null, `${status} offers no Undo target`)
+  }
+  assert.equal(memoryFeedback('m', null, refresh).memoryId, null); assert.equal(memoryFeedback('m', { phase: 'error', receipts: {}, truncated: false }, refresh).memoryId, null)
+  assert.equal(memoryFeedback('m', { phase: 'ready', receipts: { m: parseMemoryDelivery(wire('saved')) }, truncated: false }, refresh, { action: refresh, state: { phase: 'forgotten' } }).label, 'Forgotten')
   assert.match(memoryFeedback('old', { phase: 'ready', receipts: {}, truncated: true }, refresh).description, /latest 100/)
   assert.equal(memoryFeedback('m', null, refresh).label, 'Checking memory status…', 'Neither saved chat text nor model prose is a memory acknowledgement')
 
@@ -164,6 +218,7 @@ async function main() {
   watch = watchMemoryDelivery({ ...timer, read: async () => ({ sessionId: 'session_one', forgotten: true, results: [], truncated: false }), available: () => true, publish() {}, forgotten: () => forgotten++ })
   await timer.next(); assert.equal(forgotten, 1); assert.equal(timer.jobs.size, 0); watch.cancel()
   await hookLifecycle()
+  await undoFlow()
   console.log('Memory delivery: verified receipts, exact reads, privacy masking, truthful copy, bounded polling and stale-response fences passed')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })
