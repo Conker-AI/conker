@@ -14,7 +14,6 @@ const usageWindow = z.object({
 // Open alerts are shown by the Inbox; Home reads the windows only.
 const usage = z.object({ windows: z.array(usageWindow).max(40) })
 
-export type PlanWindow = z.infer<typeof usageWindow>
 export type PlanUsage = z.infer<typeof usage>
 
 export function createGatewayPlansClient(auth: Pick<GatewayAuthClient, 'request'>) {

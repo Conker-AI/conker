@@ -13,7 +13,6 @@ const page = z.object({ results: z.array(result).max(50), stage: z.enum(['metada
 export type SearchResult = z.infer<typeof result>
 export type SearchPage = z.infer<typeof page>
 export type SearchSettings = z.infer<typeof settings>
-export type SearchCapabilities = z.infer<typeof capabilities>
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value)
   if (!parsed.success) throw new GatewayError('invalid-response')

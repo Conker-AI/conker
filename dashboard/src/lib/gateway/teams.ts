@@ -102,5 +102,3 @@ export function createGatewayTeamsClient(auth: Pick<GatewayAuthClient, 'request'
     },
   }
 }
-
-export type GatewayTeamsClient = ReturnType<typeof createGatewayTeamsClient>

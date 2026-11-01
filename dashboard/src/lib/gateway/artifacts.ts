@@ -73,7 +73,6 @@ const nativeExport = z.object({
   provenance: z.literal('pi'), privateOrigin: z.boolean(), authority: z.literal('none'), contentIncluded: z.literal(true), execution: z.literal('not-wired'),
 }).strict()
 
-export type GatewayArtifactVersion = z.infer<typeof version>
 export type GatewayArtifactSummary = z.infer<typeof summary>
 export type GatewayArtifact = z.infer<typeof view>
 export type GatewayArtifactExport = z.infer<typeof nativeExport>
@@ -158,5 +157,3 @@ export function createGatewayArtifactsClient(auth: Pick<GatewayAuthClient, 'requ
     },
   }
 }
-
-export type GatewayArtifactsClient = ReturnType<typeof createGatewayArtifactsClient>
