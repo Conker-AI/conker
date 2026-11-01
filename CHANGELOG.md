@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
+  between the versions with ‹ n/m ›, and branch a new chat from that answer.
 - **Chat feature routes reach Pi.** The browser may now call Pi's chat feature routes (output settings, names, answer
   families, fact checks, branching and context editing) through the Gateway, each write behind the password; a check
   refuses malformed ids. Empty clients and screen slots are in place for the UI that follows.
