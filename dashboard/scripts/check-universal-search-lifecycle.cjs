@@ -130,6 +130,17 @@ async function componentCases() {
     if (name === './search-shortcut') return { useSearchShortcut: () => 'k' }
     if (name === './universal-search-state') return { searchStages: ['metadata', 'text', 'semantic'] }
     if (name === './navigation') return { gatewayCommandDestinations: [{ title: 'Needle page', path: '/settings' }] }
+    if (name === '@/settings/registry') return {
+      ALL_SETTINGS: [
+        { id: 'appearance.accent', title: 'Accent colour', group: 'appearance', keywords: [], options: [] },
+        { id: 'notifications.timezone', title: 'Time zone', group: 'notifications', keywords: [], options: [] }
+      ],
+      SETTINGS_GROUPS: [
+        { id: 'appearance', title: 'Appearance' },
+        { id: 'notifications', title: 'Notifications' }
+      ],
+      matches: (setting, query) => setting.title.toLowerCase().includes(query.toLowerCase())
+    }
     if (name === '@/lib/workspace-chrome') return { UniversalSearchContext: { Provider: 'Provider' } }
     return new Proxy({}, { get: (_, key) => key })
   }, target, target.exports)
@@ -156,6 +167,15 @@ async function componentCases() {
   assert.deepEqual(navigations, ['/settings?tab=search'], 'Search settings has its exact route, independently of the selected page command')
   navigations.length = 0; h.setOpen(true); render()
   find('CommandItem').find(item => item.props.value === 'page:/settings').props.onClick(); assert.deepEqual(navigations, ['/settings'], 'Page commands remain usable without record results')
+  // Settings search case
+  h.setOpen(true); h.store.setState({ query: 'accent' }); render()
+  const settingItems = find('CommandItem').filter(item => item.props.value?.startsWith('setting:'))
+  assert(settingItems.length > 0, 'Setting items appear for query "accent"')
+  const settingItem = settingItems.find(item => item.props.value === 'setting:appearance.accent')
+  assert(settingItem, 'Specific setting item appears for query "accent"')
+  navigations.length = 0; settingItem.props.onClick(); assert.deepEqual(navigations, ['/settings?group=appearance&focus=appearance.accent'], 'Setting item navigates to correct URL')
+  navigations.length = 0; h.store.setState({ query: 'a' }); render()
+  assert.equal(find('CommandItem').some(item => item.props.value?.startsWith('setting:')), false, 'No settings shown for single character query')
   finish(h)
 }
 async function main() { await privacyCases(); await queryCases(); await lifetimeCases(); await deadlineAndStageCases(); await componentCases(); console.log('Global search lifecycle passed: synchronous privacy clearing, known-source masking, stale activation/read fences, auth/epoch/deadline recovery, pagination, stage policy and whitespace continuity.') }

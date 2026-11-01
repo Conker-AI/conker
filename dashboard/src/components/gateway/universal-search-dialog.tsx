@@ -6,6 +6,7 @@ import { isQueryEdit } from '@/lib/command-query'
 import { searchStages as stages } from './universal-search-state'
 import type { useUniversalSearch } from './use-universal-search'
 import { gatewayCommandDestinations } from './navigation'
+import { ALL_SETTINGS, SETTINGS_GROUPS, matches } from '@/settings/registry'
 
 const labels = { metadata: 'Records', text: 'Exact retained text', semantic: 'Semantic matches' }
 
@@ -18,6 +19,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
   const input = useRef<HTMLInputElement | null>(null)
   const trimmed = query.trim()
   const pages = gatewayCommandDestinations.filter(item => !trimmed || item.title.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase()))
+  const settings = trimmed.length >= 2 ? ALL_SETTINGS.filter(s => matches(s, trimmed)).slice(0, 8) : []
   const gaps = [...new Set(Object.values(results).flatMap(page => page.coverage.filter(item => item.status !== 'searched').map(item => `${item.source}: ${item.status}`)))]
   const exactRecords = new Set(results.text?.results.map(item => `${item.source}:${item.recordId}`))
   return <CommandDialog open={open} onOpenChange={search.setOpen}>
@@ -26,6 +28,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
       <CommandInput ref={input} placeholder="Search Conker..." maxLength={200} />
       <CommandList className="max-h-[60dvh]">
         {pages.length > 0 && <CommandGroup><CommandGroupLabel>Pages</CommandGroupLabel>{pages.map(item => <CommandItem key={item.path} value={`page:${item.path}`} onClick={() => select(item.path)}>{item.title}</CommandItem>)}</CommandGroup>}
+        {settings.length > 0 && <CommandGroup><CommandGroupLabel>Settings</CommandGroupLabel>{settings.map(setting => <CommandItem key={setting.id} value={`setting:${setting.id}`} onClick={() => select(`/settings?group=${encodeURIComponent(setting.group)}&focus=${encodeURIComponent(setting.id)}`)}>{setting.title}<span className="text-xs text-muted-foreground">{SETTINGS_GROUPS.find(g => g.id === setting.group)?.title}</span></CommandItem>)}</CommandGroup>}
         {stages.map(stage => {
           const page = results[stage]
           const shown = page?.results.filter(item => stage !== 'metadata' || !exactRecords.has(`${item.source}:${item.recordId}`)) ?? []
@@ -37,7 +40,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
           {page.nextCursor && <CommandItem value={`more:${stage}`} disabled={pending} onClick={() => search.more(stage)}>Load more {labels[stage].toLowerCase()}</CommandItem>}
         </CommandGroup>
         })}
-        {trimmed && !pending && !pages.length && !Object.values(results).some(page => page.results.length) && !error && <p className="p-6 text-center text-sm text-muted-foreground">No matches in searched sources.</p>}
+        {trimmed && !pending && !pages.length && !settings.length && !Object.values(results).some(page => page.results.length) && !error && <p className="p-6 text-center text-sm text-muted-foreground">No matches in searched sources.</p>}
       </CommandList>
       <div className="space-y-2 border-t p-3 text-xs text-muted-foreground" aria-live="polite" onKeyDown={event => {
         // Native footer buttons own Enter; the command list otherwise also activates its highlighted result.
