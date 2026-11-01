@@ -53,7 +53,7 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
   const visible = (current?.rows ?? []).filter(row => (row.title ?? '').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const offersLine = offers && importOffersLine(offers)
   const chip = (value: typeof filter, label: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{label}</FilterChip>
-  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+  return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><Button variant="ghost" size="sm" render={<Link to="/chats" />}><ArrowLeft />Chats</Button>{!!current?.total && <Button variant="outline" size="sm" render={<Link to="/chats?view=import" />}><Upload />Import more</Button>}</div>
     <div className="space-y-1"><h2 className="text-lg font-semibold">Imported chats</h2><p className="text-sm leading-6 text-muted-foreground">Read-only copies of your ChatGPT and Claude chats. You can read them here; they can’t be continued.</p></div>
     {offersLine && <p role="status" className="text-sm leading-6">{offersLine}</p>}

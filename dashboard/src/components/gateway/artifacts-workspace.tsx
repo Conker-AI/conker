@@ -145,14 +145,14 @@ export function GatewayArtifactsWorkspace({ control, activity }: { control: Gate
   }
   if (match) {
     if (selected) return <ArtifactEditor key={selected.id} initial={selected} control={control} onChanged={update} />
-    return <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Artifact didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/artifacts')}><ArrowLeft />Artifacts</Button></> : <ListSkeleton rows={3} label="Loading artifact…" />}</div>
+    return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Artifact didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/artifacts')}><ArrowLeft />Artifacts</Button></> : <ListSkeleton rows={3} label="Loading artifact…" />}</div>
   }
   const archivedCount = (artifacts ?? []).filter(item => item.archivedAt !== null).length
   // Filter chips appear only once something is archived.
   const showing = archivedCount ? filter : 'active'
   const visible = (artifacts ?? []).filter(item => (showing === 'all' || (item.archivedAt !== null) === (showing === 'archived')) && item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
-  return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
+  return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New artifact</WorkspaceAction></>} />
     {error && (artifacts ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Artifacts didn’t load" onRetry={() => load()} />)}
     {!artifacts && !error ? <ListSkeleton rows={4} label="Loading artifacts…" /> : artifacts && <ListCard query={query} onQueryChange={setQuery} label="Search artifacts" placeholder="Search artifact titles…" count={visible.length} unit={visible.length === 1 ? 'artifact' : 'artifacts'}

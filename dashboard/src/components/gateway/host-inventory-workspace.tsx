@@ -67,7 +67,7 @@ export function GatewayHostInventoryWorkspace({ client, section }: { client: Gat
   }
   const rows = useMemo(() => sample?.observation?.[section].results ?? [], [sample, section])
   const observed = sample?.observation?.[section]
-  return <GatewayPageFrame><div className="max-w-5xl space-y-6">
+  return <GatewayPageFrame><div className="space-y-6">
     <PageHeader actionsOnly title={labels[section]} description="A read-only look at your server, with private details hidden. Looking never starts, stops or changes anything." density="compact" actions={<WorkspaceAction disabled={pending} onClick={() => void start()}><RefreshCw />{pending ? 'Checking…' : 'Take snapshot'}</WorkspaceAction>} />
     <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground"><ShieldCheck className="size-4" /><span>Read only. Command lines, users, raw IDs, images, addresses, terminals and files are never shown.</span></div>
     {error && <div className="flex items-start gap-3 text-sm text-destructive-foreground" role="alert"><CircleAlert className="mt-0.5 size-4 shrink-0" /><div><p>{error}</p>{sample && <Button className="mt-3" variant="outline" size="sm" onClick={() => void inspect(sample.requestId)}>Check saved request</Button>}</div></div>}
