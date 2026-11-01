@@ -75,7 +75,7 @@ def operation(args, config, request):
             query_params={
                 "name": args.path.name,
                 "type": mime_type,
-                "lastModified": int(args.path.stat().st_mtime),
+                "lastModified": int(args.path.stat().st_mtime * 1000),
             },
         )
     if args.operation == "list":
