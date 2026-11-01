@@ -7,6 +7,8 @@ which module versions a release pins.
 ## Unreleased
 
 - **Chat names and output settings in the chat header and composer.** Rename a chat by clicking its title, let Conker name it automatically with the sparkles button, and choose how answers are written (format, length, language) in the composer's Output popover.
+- **Chat context settings.** The Context sheet now edits what Conker keeps in mind for one chat: its instructions,
+  the token budget, a rule per message, and the decisions and open questions Conker tracks.
 - **Answer versions.** Under a saved answer you can answer again with another model, compare two or three models, switch
   between the versions with ‹ n/m ›, and branch a new chat from that answer.
 - **Chat summary: edit, draft with AI, fold old messages, restore and continue in a new chat.** Long chats stay sharp with a summary panel that shows and edits the chat's summary, lets Conker draft it, folds old messages into it, restores earlier versions, and continues in a fresh chat that starts from the summary.
