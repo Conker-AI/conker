@@ -11,8 +11,9 @@ const workspaceChromeSource = fs.readFileSync(path.join(root, 'src/components/de
 // Assert by source text that splitActionLabel is exported
 assert.ok(workspaceChromeSource.includes('export function splitActionLabel'), 'splitActionLabel must be exported')
 
-// Assert that the mobile kept branch passes iconOnly: true
-assert.ok(workspaceChromeSource.includes('iconOnly: true'), 'Mobile kept actions must have iconOnly: true')
+// Assert that the mobile kept branch passes iconOnly: true (look for the exact pattern)
+const iconOnlyPattern = /iconOnly: true,\s*'aria-label': ariaLabel/
+assert.ok(iconOnlyPattern.test(workspaceChromeSource), 'Mobile kept actions must have iconOnly: true in the cloneElement call')
 
 // Assert that the group div's className has flex and shrink-0
 assert.ok(workspaceChromeSource.includes('className="flex shrink-0 items-center gap-1"'), 'Group div must have flex and shrink-0 classes')
