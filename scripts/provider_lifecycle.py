@@ -47,7 +47,10 @@ def stop(process, config, port, launcher):
         raise SystemExit("Process identity no longer matches; nothing stopped.")
     # Windows venv Python can retain a launcher parent. Capture both exact service
     # processes, but never select Codex, Claude, supervisors or inference children.
-    candidates = [process, *process.children(recursive=True)]
+    try:
+        candidates = [process, *process.children(recursive=True)]
+    except psutil.NoSuchProcess:
+        candidates = [process]
     owned = []
     for candidate in candidates:
         try:
