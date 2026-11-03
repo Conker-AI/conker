@@ -38,7 +38,7 @@ export default function SettingsPage() {
   const owner = useConker(data => data.auth.ownerName)
   const [connections, setConnections] = useState(() => retainedConnections || structuredClone(currentConnections))
   const modelsConfiguration = useConker(data => data.modelsConfiguration)
-  const { saveConnections, saveModelsConfiguration, pending } = useConkerStore()
+  const { saveConnections, saveModelsConfiguration, pending, error } = useConkerStore()
   const [saved, setSaved] = useState(false)
   const connectionsDirty = JSON.stringify(connections) !== JSON.stringify(currentConnections)
 
@@ -93,10 +93,14 @@ export default function SettingsPage() {
           <CardContent>
             <form className="space-y-6" onSubmit={async event => {
               event.preventDefault()
-              setSaved(await saveConnections(connections))
+              try {
+                setSaved(await saveConnections(connections))
+              } catch {
+                setSaved(false)
+              }
             }}>
               <fieldset disabled={pending} className="min-w-0"><legend className="sr-only">Service connections</legend><ConnectionsFields value={connections} onChange={value => { setConnections(value); setSaved(false) }} /></fieldset>
-              <FormActions description={<span role="status">{saved ? "Saved for this preview. Connection not tested." : connectionsDirty ? "Unsaved changes · draft kept when navigating away" : "Connection draft is up to date"}</span>}>
+              <FormActions description={<span role="status">{saved ? "Saved for this preview. Connection not tested." : error ? `Save failed · ${error}` : connectionsDirty ? "Unsaved changes · draft kept when navigating away" : "Connection draft is up to date"}</span>}>
                 <Button type="button" variant="outline" disabled={pending || !connectionsDirty} onClick={() => { setConnections(currentConnections); setSaved(false) }}>Discard changes</Button>
                 <Button disabled={pending || !connectionsDirty}>{pending ? "Saving…" : "Save connection draft"}</Button>
               </FormActions>
