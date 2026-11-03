@@ -26,6 +26,7 @@ def main():
         assert turn and turn["status"] == "complete", "Choose a completed real recall turn"
         saved = db.execute("SELECT * FROM memory_contexts WHERE turn_id=?", (args.turn_id,)).fetchone()
         assert saved and saved["package"], "No saved memory context"
+        assert saved["status"] == "ok", "Memory context did not save successfully"
         package = json.loads(saved["package"])
         records = package["memories"]
         assert 2 <= len(records) <= 8, "At least two real retrieved memories are needed"
