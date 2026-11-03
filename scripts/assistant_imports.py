@@ -191,7 +191,7 @@ def render_result(result: dict) -> str:
     return "\n".join(lines)
 
 
-def run(call, args, *, emit=print) -> int:
+def run(call, args, *, emit=safe_emit) -> int:
     """Preview (the default) or, with --yes, import the export; 0 when Pi answered."""
     raw = read_export(args.path)
     if args.yes:
@@ -222,7 +222,7 @@ def dev_caller(pi_call, request, config):
     return call
 
 
-def emit(text: str) -> None:
+def safe_emit(text: str) -> None:
     """Print text; characters the output cannot encode (a redirected Windows pipe) are replaced."""
     encoding = sys.stdout.encoding or "utf-8"
     print(text.encode(encoding, errors="replace").decode(encoding))
