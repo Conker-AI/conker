@@ -49,7 +49,8 @@ for volume in volumes:
 # Copies of the adapter's writable-layer state must exist before container removal.
 assert (recovery / "pi-adapter-data").is_dir()
 assert (recovery / "pi-adapter-profile").is_dir()
-subprocess.run(["docker", "rm", *sorted(allowed)], check=True)
+existing = {item["Name"].lstrip("/") for item in all_containers}
+subprocess.run(["docker", "rm", *sorted(allowed & existing)], check=True)
 for volume in volumes:
     subprocess.run(["docker", "volume", "rm", volume], check=True)
 
