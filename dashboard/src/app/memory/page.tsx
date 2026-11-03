@@ -96,7 +96,7 @@ export default function MemoryPage() {
         <div className={`memory-stage${section === "database" ? " memory-stage-table" : ""}`}>
           {!visible.length ? (query || category !== "all") ? <CollectionEmpty title="No matching memories" description="Clear filters to return to the full workspace." onClear={clear} clearLabel="Clear filters" /> : <CollectionEmpty title="No memories yet" description="Saved memories will appear here once Conker records them." />
           : section === "database" ? <DataTable columns={columns} data={visible} itemLabel="records" renderItem={memory => <RecordItem title={memoryTitle(memory)} description={memory.text} onOpen={() => inspectMemory(memory)} meta={<><Badge variant="outline">{memory.category}</Badge><span>{memory.confidence} confidence</span></>} />} />
-          : <MemoryGraph key={`${section}:${demo}:${visible.map(memory => `${memory.id}:${memory.updatedAt || ""}`).join("|")}:${includeSources}`} graph={filteredGraph} hierarchy={section === "hierarchy"} selectedId={selection?.id || ""} focusRequest={focusRequest} onSelect={setSelection} />}
+          : <MemoryGraph key={`${section}:${demo}`} graph={filteredGraph} hierarchy={section === "hierarchy"} selectedId={selection?.id || ""} focusRequest={focusRequest} onSelect={setSelection} />}
         </div>
         {selection && <WorkspaceInspector onClose={closeInspector} title={selected ? memoryTitle(selected) : selection.label} description={selection.kind === "folder" ? "Parent–child organization" : selection.kind === "topic" ? "Shared topic connections" : demo ? "Illustrative record · not your personal data" : "Record and source evidence"}>
       <OverlayBody>{selected ? <>
