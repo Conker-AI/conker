@@ -448,6 +448,10 @@ write_env() {
     if [ -z "$GATEWAY_ORIGIN" ] && [ -f "$ENV_FILE" ]; then
         GATEWAY_ORIGIN=$(sed -n 's/^GATEWAY_ORIGIN=//p' "$ENV_FILE" | head -1)
     fi
+    case "$GATEWAY_ORIGIN" in
+        *:${CONKER_PORT:-8050}) ;;
+        https://localhost:*|http://localhost:*) GATEWAY_ORIGIN=https://localhost:${CONKER_PORT:-8050} ;;
+    esac
     GATEWAY_ORIGIN=${GATEWAY_ORIGIN:-https://localhost:${CONKER_PORT:-8050}}
     PI_DECISION_URL=$(keep_optional PI_DECISION_URL)
     PI_DECISION_KEY=$(keep_optional PI_DECISION_KEY)
