@@ -64,6 +64,13 @@ def test_enhancement_refuses_a_running_memorygate_before_source_changes(monkeypa
     assert "memorygate" in inspected
 
 
+def test_gateway_without_a_certificate_yet_is_waited_for(tmp_path, monkeypatch):
+    monkeypatch.setattr(workspace, "STATE", tmp_path)
+    monkeypatch.setattr(workspace.time, "sleep", lambda _seconds: None)
+    with pytest.raises(SystemExit, match="gateway did not become ready"):
+        workspace.wait_health("gateway", seconds=3)
+
+
 def test_unrelated_listener_is_never_adopted(tmp_path, monkeypatch):
     monkeypatch.setattr(workspace, "STATE", tmp_path)
     with socket.socket() as listener:

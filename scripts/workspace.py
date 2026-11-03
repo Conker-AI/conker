@@ -182,9 +182,10 @@ def wait_health(service, seconds=50):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 return None
         for _ in range(seconds):
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
-                        urllib.request.HTTPSHandler(context=context()), NoRedirect())
             try:
+                # The gateway writes its certificate at startup; until then context() raises OSError.
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                            urllib.request.HTTPSHandler(context=context()), NoRedirect())
                 headers = {"X-Decision-Key": read_config()["environments"]["decisions"]["DECISION_API_KEY"]} if service == "decisions" else {}
                 with opener.open(urllib.request.Request(url, headers=headers), timeout=4) as response:
                     if response.status == 200:
