@@ -20,6 +20,7 @@ import type { Connections } from "@/lib/api/config"
 
 // Keep unfinished configuration in memory across routes; never persist keys to storage.
 let retainedConnections: Connections | null = null
+let retainedConnectionsBase: string | null = null
 
 function ResetLayoutButton() {
   const { updateConfig } = useSidebarConfig()
@@ -41,7 +42,17 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const connectionsDirty = JSON.stringify(connections) !== JSON.stringify(currentConnections)
 
-  useEffect(() => { retainedConnections = connectionsDirty ? connections : null }, [connections, connectionsDirty])
+  useEffect(() => {
+    if (retainedConnectionsBase !== null && retainedConnectionsBase !== JSON.stringify(currentConnections)) {
+      retainedConnections = null
+      retainedConnectionsBase = null
+      setConnections(structuredClone(currentConnections))
+    }
+  }, [currentConnections])
+  useEffect(() => {
+    retainedConnections = connectionsDirty ? connections : null
+    retainedConnectionsBase = connectionsDirty ? JSON.stringify(currentConnections) : null
+  }, [connections, connectionsDirty, currentConnections])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (connectionsDirty) event.preventDefault() }
     window.addEventListener("beforeunload", warn)
