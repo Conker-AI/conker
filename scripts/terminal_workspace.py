@@ -54,31 +54,18 @@ def validate_workspace(
         or sidecar_uid < 1
     ):
         raise TerminalWorkspaceError("terminal workspace selection is invalid")
+    if _has_symlink_component(workspace):
+        raise TerminalWorkspaceError(
+            "terminal workspace must not resolve through a symlink"
+        )
     try:
-        current_fd = os.open(workspace.anchor, os.O_RDONLY | os.O_DIRECTORY)
-    except OSError as exc:
+        resolved = workspace.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
         raise TerminalWorkspaceError(
             "terminal workspace must be an existing directory"
         ) from exc
-    for component in workspace.parts[1:]:
-        try:
-            next_fd = os.open(
-                component,
-                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-                dir_fd=current_fd,
-            )
-        except OSError as exc:
-            os.close(current_fd)
-            raise TerminalWorkspaceError(
-                "terminal workspace must be an existing directory"
-            ) from exc
-        os.close(current_fd)
-        current_fd = next_fd
-    try:
-        details = os.fstat(current_fd)
-    finally:
-        os.close(current_fd)
-    resolved = Path(os.path.normpath(str(workspace)))
+    if not resolved.is_dir():
+        raise TerminalWorkspaceError("terminal workspace must be an existing directory")
     if resolved == Path(resolved.anchor):
         raise TerminalWorkspaceError("filesystem root cannot be a terminal workspace")
 
@@ -101,6 +88,7 @@ def validate_workspace(
             "home directory or one of its parents cannot be a terminal workspace"
         )
 
+    details = resolved.stat()
     permissions = stat.S_IMODE(details.st_mode)
     if access_check is None:
         owner_access = details.st_uid == sidecar_uid and permissions & 0o700 == 0o700

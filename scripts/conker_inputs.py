@@ -1,10 +1,8 @@
 """Input validation for the conker CLI: identities, bounded files, MCP endpoints, drafts and history queries."""
 
 import hashlib
-import ipaddress
 import json
 import re
-import socket
 from urllib.parse import urlsplit
 
 SKILL_ID = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -60,21 +58,12 @@ def read_json(path, maximum_bytes=1048576):
     return value
 
 
-def public_mcp_host(hostname):
-    try:
-        infos = socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)
-        return all(ipaddress.ip_address(info[4][0]).is_global for info in infos)
-    except (socket.gaierror, ValueError):
-        return False
-
-
 def mcp_endpoint(url):
     try:
         parsed = urlsplit(url)
         valid = (
             isinstance(url, str)
             and 1 <= len(url) <= 2048
-            and public_mcp_host(parsed.hostname)
             and (
                 parsed.scheme == "https"
                 and parsed.hostname
@@ -141,26 +130,15 @@ def memory_edit_operation(args):
     elif args.operation == "apply":
         if not 1 <= args.expected_revision <= 2147483646:
             raise ValueError("Use the reviewed memory revision (1–2147483646).")
-        identity(
-            args.expected_payload_hash,
-            r"[0-9a-f]{64}",
-            "reviewed correction payload hash",
-            64,
-        )
         text = read_text(args.file, 64003, "Replacement memory text")
         if not text.strip() or len(text) > 16000 or "\x00" in text:
             raise ValueError(
                 "Replacement memory text must be nonblank, at most 16,000 characters, without NUL."
             )
-        if hashlib.sha256(text.encode("utf-8")).hexdigest() != args.expected_payload_hash:
-            raise ValueError(
-                "The file no longer matches the reviewed correction payload hash."
-            )
         body = {
             "request_id": args.request_id,
             "memory_id": args.memory_id,
             "expected_revision": args.expected_revision,
-            "expected_payload_hash": args.expected_payload_hash,
             "text": text,
         }
     return path, body

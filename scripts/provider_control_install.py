@@ -33,19 +33,14 @@ def install(root: Path, source: Path, layout: str):
     state = root / ("state" if layout == "ubuntu" else ".conker")
     if not (source / "scripts/provider_control.py").is_file():
         raise ValueError("Provider-control source is missing.")
-    if os.path.realpath(state) != str(state) or state.is_symlink():
-        raise ValueError("State directory must not be a symlink.")
-    state.mkdir(parents=True, exist_ok=True, mode=0o700)
-    state.chmod(0o700)
     directory = state / "provider-control"
-    if directory.is_symlink():
-        raise ValueError("Provider-control directory must not be a symlink.")
+    inference = state / "chatgpt-inference"
+    # chmod follows links: a linked folder would hand its mode to the link target.
+    if any(path.is_symlink() for path in (state, directory, inference)):
+        raise ValueError("Provider-control folders must not be symbolic links.")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     directory.chmod(0o700)
     socket = directory / "control.sock"
-    inference = state / "chatgpt-inference"
-    if inference.is_symlink():
-        raise ValueError("Inference directory must not be a symlink.")
     inference.mkdir(parents=True, exist_ok=True, mode=0o700)
     inference.chmod(0o700)
     name = (
