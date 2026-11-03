@@ -101,7 +101,7 @@ def sanitize(value: Any) -> Any:
 
 
 SENSITIVE_TEXT_PATTERN = re.compile(
-    r"(?i)(password|token|secret|set-cookie|cookie|authorization|api[_-]?key)([\s=:]+)(\S+)"
+    r"(?i)(password|token|secret|set-cookie|cookie|authorization|api[_-]?key)([\s=:]+)((?:bearer\s+|basic\s+)?\S+)"
 )
 
 
