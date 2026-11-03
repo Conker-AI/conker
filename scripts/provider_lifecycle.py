@@ -43,7 +43,11 @@ def stop(process, config, port, launcher):
             "providers",
         ]
 
-    if not matches(process):
+    try:
+        target_matches = matches(process)
+    except (psutil.AccessDenied, psutil.ZombieProcess, psutil.NoSuchProcess):
+        target_matches = False
+    if not target_matches:
         raise SystemExit("Process identity no longer matches; nothing stopped.")
     # Windows venv Python can retain a launcher parent. Capture both exact service
     # processes, but never select Codex, Claude, supervisors or inference children.
@@ -56,7 +60,7 @@ def stop(process, config, port, launcher):
         try:
             if matches(candidate):
                 owned.append((candidate, candidate.create_time()))
-        except psutil.NoSuchProcess:
+        except (psutil.AccessDenied, psutil.ZombieProcess, psutil.NoSuchProcess):
             continue
     acknowledged = graceful_stop(config, port)
     _gone, alive = psutil.wait_procs(
