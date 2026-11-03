@@ -95,7 +95,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   useEffect(() => { setEdited(false) }, [selected?.id])
   const saved = (profile: AgentProfile) => {
     setEdited(false)
-    setAgents(current => current?.map(item => item.id === profile.id ? profile : item) ?? [profile])
+    setAgents(current => current ? [...current.filter(item => item.id !== profile.id), profile] : [profile])
     setCreating(false)
     navigate(companion ? '/settings/companion' : '/agents')
   }
