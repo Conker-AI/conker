@@ -94,7 +94,7 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle>Recovery snapshot</CardTitle>
             <CardDescription>
-              Today, 03:00 · 4.2 GB · manifest checked
+              {system.recoverySummary}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-4">
