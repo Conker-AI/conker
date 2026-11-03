@@ -26,10 +26,17 @@ export function useVoiceTyping(sessionId: string, input: RefObject<HTMLTextAreaE
   const recording = useRef<Recording | null>(null)
   const finishRef = useRef<() => void>(() => {})
 
+  const currentAnchor = (run: Recording) => {
+    const text = useConkerStore.getState().drafts[sessionId] || ""
+    if (text === run.anchor.text) return run.anchor
+    return { text, start: input.current?.selectionStart ?? text.length, end: input.current?.selectionEnd ?? text.length }
+  }
+
   const commit = (run: Recording) => {
     const store = useConkerStore.getState()
     const words = [run.transcript.final, run.transcript.interim].filter(Boolean).join(" ")
-    const result = insertTranscript(store.drafts[sessionId] || "", words, run.anchor)
+    const anchor = currentAnchor(run)
+    const result = insertTranscript(store.drafts[sessionId] || "", words, anchor)
     if (words) store.setDraft(sessionId, result.text)
     return result
   }
@@ -100,7 +107,8 @@ export function useVoiceTyping(sessionId: string, input: RefObject<HTMLTextAreaE
           run.transcript = value
           setTranscript(value)
           const words = [value.final, value.interim].filter(Boolean).join(" ")
-          if (insertTranscript(run.anchor.text, words, run.anchor).text.length >= MESSAGE_LIMIT) stop()
+          const anchor = currentAnchor(run)
+          if (insertTranscript(anchor.text, words, anchor).text.length >= MESSAGE_LIMIT) stop()
         },
         onLevel: level => { if (recording.current === run && !run.finishing) setLevels(values => [...values.slice(1), level]) },
         onError: message => { if (recording.current === run) setError(message) },
