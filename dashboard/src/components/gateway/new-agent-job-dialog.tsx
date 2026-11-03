@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Sparkles } from 'lucide-react'
-import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -46,7 +46,7 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
   useEffect(() => {
     if (!open || !watching || tools || !loadTools) return
     const controller = new AbortController()
-    loadTools(controller.signal).then(found => { if (!controller.signal.aborted) { setToolsFailed(false); setTools(found.status === 'ok' ? found.results : []) } }).catch(() => { if (!controller.signal.aborted) setToolsFailed(true) })
+    loadTools(controller.signal).then(found => { if (!controller.signal.aborted) { setToolsFailed(false); setTools(found.status === 'ok' ? found.results : []) } }).catch(() => { if (!controller.signal.aborted) { setTools([]); setToolsFailed(true) } })
     return () => controller.abort()
   }, [open, watching, tools, loadTools])
   // Only the owner's active agents; with just the default one there is nothing to choose.
@@ -57,11 +57,11 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
     return () => controller.abort()
   }, [open, agents, loadAgents])
   const chosen = tools?.find(tool => tool.id === value.tool)
-  const typed = value.name.trim() !== '' || value.instructions.trim() !== ''
-  const close = () => {
-    if (typed && !window.confirm('Discard this AI job? Everything you typed will be lost.')) return
-    setValue(blank); setError(null); onOpenChange(false)
-  }
+  const [discarding, setDiscarding] = useState(false)
+  const initial = starter ? fromStarter(starter) : blank
+  const edited = value.name !== initial.name || value.instructions !== initial.instructions
+  const leave = () => { setValue(blank); setError(null); onOpenChange(false) }
+  const close = () => { if (edited) setDiscarding(true); else leave() }
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setPending(true); setError(null)
     try {
@@ -76,7 +76,7 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
       <SelectTrigger id={id}><SelectValue /></SelectTrigger>
       <SelectContent>{items.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
     </Select>
-  return <Dialog open={open} onOpenChange={next => !pending && !next && close()} disablePointerDismissal>
+  return <><Dialog open={open} onOpenChange={next => !pending && !next && close()} disablePointerDismissal>
     <TaskDialogContent title="New AI job" description="Tell Conker what to do and when. It works with its tools on that schedule and asks before changing, sending or creating anything." showCloseButton={!pending}>
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><OverlayBody>
         {starter && <div className="space-y-1 text-sm leading-6"><p className="text-muted-foreground">Filled in from the idea “{starter.name}”. Change anything you like; nothing is made until you create it.</p>{starter.needs && <p>It needs {starter.needs}. If you haven’t connected one yet, add it in Tools first.</p>}</div>}
@@ -93,7 +93,7 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
         </div>
         {watching && <div className="space-y-4 rounded-lg border p-3">
           <div className="space-y-2"><Label htmlFor="agent-job-tool">Tool to watch</Label>
-            {tools === null ? <p role="status" className="text-sm text-muted-foreground">Loading tools…</p> : toolsFailed ? <p role="alert" className="text-sm text-destructive-foreground">Your tools couldn’t be loaded. <button type="button" className="underline" onClick={() => setTools(null)}>Try again</button>.</p> : tools.length ? select('agent-job-tool', value.tool, tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })), tool => setValue({ ...value, tool, inputs: {} }))
+            {tools === null ? <p role="status" className="text-sm text-muted-foreground">Loading tools…</p> : toolsFailed ? <p role="alert" className="text-sm text-destructive-foreground">Your tools couldn’t be loaded. <button type="button" className="underline" onClick={() => { setToolsFailed(false); setTools(null) }}>Try again</button>.</p> : tools.length ? select('agent-job-tool', value.tool, tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })), tool => setValue({ ...value, tool, inputs: {} }))
               : <p className="text-sm text-muted-foreground">No tools are available. Connect one in Tools first, like an MCP server for your messages.</p>}
           </div>
           {chosen?.inputs.map(input => <div key={input.name} className="space-y-2"><Label htmlFor={`agent-job-input-${input.name}`}>{input.name}{input.required ? '' : ' (optional)'}</Label>
@@ -110,5 +110,5 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
         <Button type="submit" disabled={pending || !value.name.trim() || !value.instructions.trim() || (watching ? !chosen : value.repeat !== 'hours' && value.repeat !== 'webhook' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))}><Sparkles />{pending ? 'Creating…' : 'Create AI job'}</Button>
       </FormActions></form>
     </TaskDialogContent>
-  </Dialog>
+  </Dialog><ConfirmationDialog open={discarding} onOpenChange={setDiscarding} title="Discard this AI job?" description="The name and instructions you entered will be discarded." actionLabel="Discard job" pending={false} onConfirm={() => { setDiscarding(false); leave() }} /></>
 }
