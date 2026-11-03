@@ -38,12 +38,13 @@ export default function ToolsPage() {
         .then((items) => {
           if (active) {
             setRecords(items);
+            setError("");
             setLoading(false);
           }
         })
-        .catch((e) => {
+        .catch(() => {
           if (active) {
-            setError(String(e));
+            setError("Could not load tools");
             setLoading(false);
           }
         });
