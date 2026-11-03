@@ -94,7 +94,7 @@ export default function MemoryPage() {
       <div className="memory-workspace-body">
         {treeOpen && section !== "database" && <MemoryTree memories={visible} selectedId={selection?.memoryIds[0]} onOpen={memory => choosePoint(graph.nodes.find(node => node.id === `memory:${memory.id}`)!)} />}
         <div className={`memory-stage${section === "database" ? " memory-stage-table" : ""}`}>
-          {!visible.length ? <CollectionEmpty title="No matching memories" description="Clear filters to return to the full workspace." onClear={clear} clearLabel="Clear filters" />
+          {!visible.length ? (query || category !== "all") ? <CollectionEmpty title="No matching memories" description="Clear filters to return to the full workspace." onClear={clear} clearLabel="Clear filters" /> : <CollectionEmpty title="No memories yet" description="Saved memories will appear here once Conker records them." />
           : section === "database" ? <DataTable columns={columns} data={visible} itemLabel="records" renderItem={memory => <RecordItem title={memoryTitle(memory)} description={memory.text} onOpen={() => inspectMemory(memory)} meta={<><Badge variant="outline">{memory.category}</Badge><span>{memory.confidence} confidence</span></>} />} />
           : <MemoryGraph key={`${section}:${demo}:${visible.map(memory => `${memory.id}:${memory.updatedAt || ""}`).join("|")}:${includeSources}`} graph={filteredGraph} hierarchy={section === "hierarchy"} selectedId={selection?.id || ""} focusRequest={focusRequest} onSelect={setSelection} />}
         </div>
