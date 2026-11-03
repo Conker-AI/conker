@@ -62,6 +62,10 @@ export function TaskEditor({ task, initialSessionId, initialAgentId, agents, ses
       setValidation("Add an outcome, 1–20 distinct criteria (up to 500 characters each), a conversation and an assigned agent.")
       return
     }
+    if (parentTaskId !== "none" && !eligibleParents.some(parent => parent.id === parentTaskId)) {
+      setValidation("Choose a parent task that is active and not a descendant of this task, or set no parent.")
+      return
+    }
     setValidation("")
     if (await onSave({ outcome, criteria: lines, sessionId, agentId, parentTaskId: parentTaskId === "none" ? null : parentTaskId, runIds }, revision)) drafts.delete(draftKey)
   }}>
