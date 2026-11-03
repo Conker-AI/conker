@@ -84,7 +84,7 @@ export default function JobsPage() {
       let id = ""
       if (await mutate(async () => { id = (await conkerClient.duplicateJob(job.id)).id })) {
         clearFilters(); openPanel({ mode: "view", id }); setFeedback("Copy created and paused. Edit it before enabling its schedule.")
-      }
+      } else setFeedback("Duplicate failed. Try again.")
     },
   }
   const save = async (input: JobInput) => {
