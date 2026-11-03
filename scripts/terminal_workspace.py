@@ -93,7 +93,7 @@ def validate_workspace(
     if access_check is None:
         owner_access = details.st_uid == sidecar_uid and permissions & 0o700 == 0o700
         group_access = details.st_gid == workspace_gid and permissions & 0o070 == 0o070
-        allowed = owner_access or group_access
+        allowed = (owner_access or group_access) and permissions & 0o007 == 0
     else:
         allowed = access_check(details, sidecar_uid, workspace_gid)
     if not allowed:
