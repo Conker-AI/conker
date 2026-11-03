@@ -114,12 +114,6 @@ class Requests:
             self._purge()
             entry = self.entries.get(key)
             if entry is None:
-                if len(self.entries) >= self.maximum:
-                    raise AdmissionError("busy", 503)
-                control = RequestControl()
-                control.canceled.set()
-                control.finished.set()
-                self.entries[key] = (control, time.monotonic())
                 return {"request_id": identity, "status": "not_found"}
             control, ended = entry
         if ended is not None:
