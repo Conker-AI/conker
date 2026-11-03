@@ -46,7 +46,8 @@ def validate_workspaces(
     deployment = installation.resolve(strict=False)
     if resolved.is_relative_to(deployment) or deployment.is_relative_to(resolved):
         raise AgentWorkspacesError("the folder overlaps the deployment directory")
-    if home.resolve(strict=False).is_relative_to(resolved):
+    home_resolved = home.resolve(strict=False)
+    if home_resolved.is_relative_to(resolved) or resolved.is_relative_to(home_resolved):
         raise AgentWorkspacesError("the home directory or one of its parents cannot hold agent workspaces")
     details = resolved.stat()
     if (details.st_uid, details.st_gid, stat.S_IMODE(details.st_mode)) != (runner_uid, owner_gid, MODE):
