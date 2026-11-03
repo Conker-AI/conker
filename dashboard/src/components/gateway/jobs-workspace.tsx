@@ -145,7 +145,8 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const load = useCallback(async () => { setLoading(true); setError(null); setListError(null); try { setJobs((await control.jobs.list({ limit: 100 })).results) } catch (cause) { setListError(cause); setError(gatewayError(cause).message) } finally { setLoading(false) } }, [control])
   useEffect(() => { let active = true; control.jobs.list({ limit: 100 }).then(page => active && setJobs(page.results)).catch(cause => { if (active) { setListError(cause); setError(gatewayError(cause).message) } }); return () => { active = false } }, [control])
   const selected = match ? details[match[1]] : undefined
-  useEffect(() => { if (!match || selected) return; let active = true; control.jobs.get(match[1]).then(item => active && setDetails(current => ({ ...current, [item.id]: item }))).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control, match, selected])
+  const id = match?.[1]
+  useEffect(() => { if (!id || selected) return; let active = true; control.jobs.get(id).then(item => active && setDetails(current => ({ ...current, [item.id]: item }))).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control, id, selected])
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
