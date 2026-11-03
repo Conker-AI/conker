@@ -331,6 +331,30 @@ def test_the_inference_socket_serves_plan_usage_and_status_only():
         server.shutdown()
 
 
+def test_a_malformed_responses_body_gets_a_422_not_a_closed_connection():
+    from http.server import ThreadingHTTPServer
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
+    from scripts.provider_control import inference_handler
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), inference_handler(SimpleNamespace()))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    request = Request(
+        f"http://127.0.0.1:{server.server_address[1]}/responses",
+        data=b"{not json",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        try:
+            urlopen(request, timeout=10)
+            raise AssertionError("a malformed body must be refused")
+        except HTTPError as error:
+            assert error.code == 422
+    finally:
+        server.shutdown()
+
+
 def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
     import conker as cli
 

@@ -276,6 +276,13 @@ def create_app(config, *, chatgpt_relay=None):
                                     )
                                     + "\n"
                                 )
+                            else:
+                                while True:
+                                    try:
+                                        item = output.get_nowait()
+                                    except queue.Empty:
+                                        break
+                                    yield json.dumps(item) + "\n"
                             break
                         continue
                     if control.canceled.is_set():

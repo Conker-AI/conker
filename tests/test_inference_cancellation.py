@@ -1,6 +1,7 @@
 """Cancellation is scoped to exact worker-owned operations and releases real capacity."""
 
 import os
+import queue
 import socket
 import subprocess
 import sys
@@ -70,6 +71,39 @@ def test_cancel_tombstones_are_bounded_and_provider_scoped():
     requests.finish(key, control)
     with pytest.raises(AdmissionError, match="invalid_request"):
         requests.cancel("claude", "123")
+
+
+def test_stream_keeps_the_last_event_when_the_worker_finishes_during_a_poll(
+    tmp_path, monkeypatch
+):
+    class LateQueue(queue.Queue):
+        polled = False
+
+        def get(self, block=True, timeout=None):
+            if not LateQueue.polled:
+                # The consumer's poll times out just as the worker finishes.
+                LateQueue.polled = True
+                time.sleep(0.5)
+                raise queue.Empty
+            return super().get(block, timeout)
+
+    def last_event(_control, _value, *, cancellation):
+        yield {"type": "text", "delta": "last"}
+
+    monkeypatch.setattr(
+        workspace_providers,
+        "queue",
+        SimpleNamespace(Queue=LateQueue, Empty=queue.Empty, Full=queue.Full),
+    )
+    monkeypatch.setattr(workspace_providers, "inference_events", last_event)
+    headers = {"Authorization": "Bearer " + "i" * 32}
+    with TestClient(workspace_providers.create_app(config(tmp_path))) as client:
+        answer = client.post(
+            "/inference/responses",
+            headers=headers,
+            json={**PAYLOAD, "request_id": IDENTITY},
+        )
+    assert '"delta": "last"' in answer.text
 
 
 def test_worker_cancel_is_private_exact_and_releases_chatgpt_stream(

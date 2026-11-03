@@ -25,6 +25,9 @@ def test_local_configuration_matches_service_bootstrap_contracts_and_is_not_repl
     assert env["pi"]["PI_TOOLGATE_KEY"] == env["toolgate"]["TOOLGATE_BOOTSTRAP_EXECUTION_KEY"]
     assert env["pi"]["PI_MEMORYGATE_READ_KEY"] == env["memorygate"]["MEMORYGATE_BOOTSTRAP_READ_KEY"]
     assert env["pi"]["PI_DECISION_KEY"] == env["decisions"]["DECISION_API_KEY"]
+    assert Path(config["decision_python"]).parts[-2:] == (
+        ("Scripts", "python.exe") if os.name == "nt" else ("bin", "python")
+    )
     assert env["toolgate"]["TOOLGATE_BOOTSTRAP_SCOPES"] == ""
     assert env["memorygate"]["DATABASE_URL"].startswith("postgresql+psycopg://")
     assert "PI_MEMORY_RERANK_ENABLED" not in env["pi"]  # ranking is opt-in via the model catalogue

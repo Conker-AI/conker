@@ -41,7 +41,7 @@ def initialize():
     key_hash = lambda name: hashlib.sha256(keys[name].encode()).hexdigest()
     config = {
         "python": sys.executable,
-        "decision_python": str(Path.home() / ".cache/conker-decisions/Scripts/python.exe"),
+        "decision_python": str(Path.home() / (".cache/conker-decisions/Scripts/python.exe" if os.name == "nt" else ".cache/conker-decisions/bin/python")),
         "repositories": {name: str(gates / name) for name in ("pi", "toolgate", "memorygate")},
         "environments": {
             "postgres": {"POSTGRES_USER": "conker_local", "POSTGRES_PASSWORD": keys["postgres"],
