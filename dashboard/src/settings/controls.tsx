@@ -30,7 +30,10 @@ function NumberControl({ setting, id, value, disabled, onChange }: ControlProps)
   // A step like 0.1 (processors) takes decimals, kept to the step's places; every other number is whole.
   const places = Number.isInteger(setting.step ?? 1) ? 0 : String(setting.step).split('.')[1]?.length ?? 0
   const commit = () => {
-    if (draft.trim() === '' && setting.default === null) { setProblem(''); if (value !== null) onChange(null); return }
+    if (draft.trim() === '') {
+      if (setting.default === null) { setProblem(''); if (value !== null) onChange(null); return }
+      setProblem(`Use a ${places ? '' : 'whole '}number from ${setting.min ?? 0} to ${setting.max ?? '∞'}.`); return
+    }
     const number = places ? Number(Number(draft).toFixed(places)) : Number(draft)
     if (!Number.isFinite(number) || !places && !Number.isInteger(number) || (setting.min !== undefined && number < setting.min) || (setting.max !== undefined && number > setting.max)) {
       setProblem(`Use a ${places ? '' : 'whole '}number from ${setting.min ?? 0} to ${setting.max ?? '∞'}.`); return

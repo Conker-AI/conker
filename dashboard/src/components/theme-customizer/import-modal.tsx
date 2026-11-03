@@ -36,7 +36,7 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
       const rootMatch = cssText.match(/:root\s*\{([^}]+)\}/)
       if (rootMatch) {
         const rootContent = rootMatch[1]
-        const variableMatches = rootContent.matchAll(/--([^:]+):\s*([^;]+);/g)
+        const variableMatches = rootContent.matchAll(/--([^:]+):\s*([^;]+);?/g)
         for (const match of variableMatches) {
           const [, variable, value] = match
           lightTheme[variable.trim()] = value.trim()
@@ -47,7 +47,7 @@ export function ImportModal({ open, onOpenChange, onImport }: ImportModalProps) 
       const darkMatch = cssText.match(/\.dark\s*\{([^}]+)\}/)
       if (darkMatch) {
         const darkContent = darkMatch[1]
-        const variableMatches = darkContent.matchAll(/--([^:]+):\s*([^;]+);/g)
+        const variableMatches = darkContent.matchAll(/--([^:]+):\s*([^;]+);?/g)
         for (const match of variableMatches) {
           const [, variable, value] = match
           darkTheme[variable.trim()] = value.trim()

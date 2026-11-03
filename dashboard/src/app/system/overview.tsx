@@ -42,7 +42,7 @@ export function SystemOverview() {
               <Server className="size-4 text-muted-foreground" />
               The box
             </h2>
-            <StatusBadge>Stale · 7 min old</StatusBadge>
+            <StatusBadge>{system.sampleAge}</StatusBadge>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {vitals.map((vital, index) => {
@@ -94,7 +94,7 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle>Recovery snapshot</CardTitle>
             <CardDescription>
-              Today, 03:00 · 4.2 GB · manifest checked
+              {system.recoverySummary}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-4">

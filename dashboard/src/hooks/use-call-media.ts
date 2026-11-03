@@ -59,7 +59,12 @@ export function useCallMedia(callId?: string, ended = false, paused = false) {
     const wasOn = !!streams.current[kind]
     release(kind)
     if (kind === "camera") setCamera(null); else setMicrophone(null)
-    await useCallWorkspace.getState().configure({ channels: { [kind]: false } })
+    try {
+      await useCallWorkspace.getState().configure({ channels: { [kind]: false } })
+    } catch {
+      setError(`Couldn't turn off your ${kind}. Check your connection, then try again. You can still type.`)
+      return
+    }
     if (wasOn && device === undefined) return
     if (useCallWorkspace.getState().call?.id !== callId || useCallWorkspace.getState().call?.endedAt) return
     if (!navigator.mediaDevices?.getUserMedia) { setError("Device preview needs a supported browser on HTTPS or localhost. You can still type."); return }

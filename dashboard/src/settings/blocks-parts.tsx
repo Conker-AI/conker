@@ -83,9 +83,13 @@ export function IdeasBlock() {
   const answering = saved.roleSettings.answerMode === 'manual' && saved.roleSettings.roles.answer.enabled ? saved.roleSettings.roles.answer.modelId : null
   const ideas = saved.roleSettings.roles.proposals
   const on = Boolean(ideas?.enabled && ideas.modelId && enabled.some(model => model.id === ideas.modelId))
-  return <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-    <Label htmlFor="ideas-switch" className="font-normal">{on ? 'On: one pass a day with your talking model.' : 'Off'}</Label>
-    <Switch id="ideas-switch" checked={on} disabled={pending || !enabled.length} onCheckedChange={next => void save(withIdeas(saved, next ? answering ?? enabled[0]?.id ?? null : null))} />
+  return <div className="flex flex-col gap-1.5 rounded-lg border px-3 py-2.5">
+    <div className="flex items-center justify-between gap-4">
+      <Label htmlFor="ideas-switch" className="font-normal">{on ? 'On: one pass a day with your talking model.' : 'Off'}</Label>
+      <Switch id="ideas-switch" checked={on} disabled={pending || !enabled.length} onCheckedChange={next => void save(withIdeas(saved, next ? answering ?? enabled[0]?.id ?? null : null))} />
+    </div>
+    {pending && <p role="status" className="text-xs text-muted-foreground">Saving…</p>}
+    {error && <p role="alert" className="text-xs text-destructive-foreground">{error}</p>}
   </div>
 }
 

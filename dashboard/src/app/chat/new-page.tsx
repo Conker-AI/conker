@@ -20,7 +20,11 @@ export default function NewChatPage() {
     void (async () => {
       try {
         const session = await conkerClient.createConversation(agentId)
-        await useConkerStore.getState().load()
+        try {
+          await useConkerStore.getState().load()
+        } catch {
+          // conversation already exists; fall through so retrying doesn't duplicate it
+        }
         if (cancelled) return
         const prompt = (location.state as { prompt?: unknown } | null)?.prompt
         const store = useConkerStore.getState()
@@ -30,7 +34,7 @@ export default function NewChatPage() {
           if (next.length <= 4000) store.setDraft(session.id, next)
         }
         navigate(`/chat/${session.id}`, { replace: true })
-      } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not start a chat.") }
+      } catch { if (!cancelled) setError("Could not start a chat. Check your connection and try again.") }
     })()
     return () => { cancelled = true }
   }, [agentId, location.state, navigate])

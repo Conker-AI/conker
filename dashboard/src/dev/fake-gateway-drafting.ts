@@ -173,7 +173,10 @@ function createFakeEditorDrafts() {
     if (!saved) return fail(404)
     if (!operation) return structuredClone(saved)
     const history = versions.get(id) ?? []
-    if (operation === 'validation') return { id, revision: saved.revision, graph_valid: false, execution_ready: false, issues: validateToolDefinition(saved.document, true).map(issue => ({ message: issue.message, node_id: issue.nodeId ?? null })) }
+    if (operation === 'validation') {
+      const issues = validateToolDefinition(saved.document, true).map(issue => ({ message: issue.message, node_id: issue.nodeId ?? null }))
+      return { id, revision: saved.revision, graph_valid: issues.length === 0, execution_ready: issues.length === 0, issues }
+    }
     if (operation === 'publications') return { items: structuredClone(history).reverse() }
     if (operation === 'publish' && method === 'POST') {
       if (body?.expected_revision !== saved.revision || body?.expected_publication_version !== (history.at(-1)?.version ?? 0)) return fail(409)

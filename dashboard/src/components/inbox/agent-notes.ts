@@ -21,7 +21,10 @@ export function useAgentNotes(client: AgentNotesClient | undefined, active: bool
   // Opening the chat is reading the note: it leaves the Inbox; the chat keeps the full reply.
   const open = useCallback((note: GatewayAgentNote) => {
     setItems(current => current?.filter(item => item.id !== note.id) ?? current)
-    void client?.dismissNote(note.id).catch(() => { void load() })
+    void client?.dismissNote(note.id).catch(async () => {
+      await load()
+      setItems(current => current?.some(item => item.id === note.id) ? current : [note, ...(current ?? [])])
+    })
   }, [client, load])
   // Answered once the first read came back (or failed); no client means nothing to wait for.
   return { items: client ? items ?? [] : [], answered: !client || items !== null || error !== null, error, load, open }

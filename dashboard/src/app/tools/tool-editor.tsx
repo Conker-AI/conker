@@ -291,7 +291,13 @@ export function ToolEditor({
         throw new Error(
           "Apply or discard pending source and argument changes before testing.",
         );
-      const args: unknown = JSON.parse(input);
+      const args: unknown = (() => {
+        try {
+          return JSON.parse(input);
+        } catch {
+          throw new Error("Test inputs must be valid JSON.");
+        }
+      })();
       if (!args || typeof args !== "object" || Array.isArray(args))
         throw new Error("Test inputs must be a JSON object.");
       if (version === "draft")

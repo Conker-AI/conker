@@ -44,13 +44,14 @@ export function ConnectionBanner({ probe }: { probe: () => Promise<unknown> }) {
   const unreachable = online && gateway === 'unreachable'
   useEffect(() => {
     if (!unreachable) return
-    let attempt = 0, timer: ReturnType<typeof setTimeout> | null = null
-    const schedule = () => { timer = setTimeout(() => { void check().finally(schedule) }, backoff[Math.min(attempt++, backoff.length - 1)] * 1000) }
+    let attempt = 0, timer: ReturnType<typeof setTimeout> | null = null, cancelled = false
+    const schedule = () => { if (cancelled) return; timer = setTimeout(() => { void check().finally(schedule) }, backoff[Math.min(attempt++, backoff.length - 1)] * 1000) }
     const now = () => { if (document.visibilityState === 'visible') void check() }
     schedule()
     window.addEventListener('focus', now)
     document.addEventListener('visibilitychange', now)
     return () => {
+      cancelled = true
       if (timer) clearTimeout(timer)
       timer = null
       window.removeEventListener('focus', now)

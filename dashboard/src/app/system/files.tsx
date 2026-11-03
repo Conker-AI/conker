@@ -3,10 +3,16 @@ import { FolderTree } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useConker } from "@/lib/api/store"
+import type { FilesSnapshot } from "@/lib/api/models"
 import { DirectoryTree } from "./directory-tree"
 
 export function SystemFiles() {
   const files = useConker(data => data.files)
+  // A new root starts the tree, selection and copy status afresh.
+  return <FilesCard key={files.root.path} files={files} />
+}
+
+function FilesCard({ files }: { files: FilesSnapshot }) {
   const [expanded, setExpanded] = useState(() => new Set([
     files.root.path,
     `${files.root.path}/dashboard`,
