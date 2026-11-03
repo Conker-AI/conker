@@ -39,7 +39,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   async function invoke(action: Action, kind: MessageAction) {
     if (action.availability !== 'enabled') return
     try { await action.run(); setNotice(kind === 'copy' ? 'Message copied.' : kind === 'link' ? 'Local message link copied. Sign-in is required to open it.' : '') }
-    catch { setNotice('Clipboard unavailable. Select the message text to copy it.') }
+    catch { setNotice(kind === 'copy' || kind === 'link' ? 'Clipboard unavailable. Select the message text to copy it.' : `${labels[kind]} failed. Please try again.`) }
   }
   const body = message.content.kind === 'unavailable'
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
