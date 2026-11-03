@@ -103,7 +103,13 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
           if (!current()) return false
           setCatalogue({ source, value: saved })
           return true
-        } catch (error) { if (current()) setError(error instanceof Error ? error.message : 'Could not save model settings.'); return false }
+        } catch (error) {
+          if (current()) {
+            setError(error instanceof Error ? error.message : 'Could not save model settings.')
+            if (error instanceof Error && /reload before saving/i.test(error.message)) readRuntimeWithDeadline(signal => client.models(signal), controller).then(fresh => { if (current()) setCatalogue({ source, value: fresh }) }).catch(() => {})
+          }
+          return false
+        }
         finally { if (catalogueWrite.current === controller) { catalogueWrite.current = null; saving.current = false; if (catalogueMounted.current) setSaveSource(null) } }
       }} /> : error ? <Button variant="outline" onClick={() => setReload(number => number + 1)}>Retry model settings</Button> : <p role="status" className="text-sm text-muted-foreground">Loading model settings...</p>}
     </details>
