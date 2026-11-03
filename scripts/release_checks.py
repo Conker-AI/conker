@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -97,6 +98,15 @@ def sanitize(value: Any) -> Any:
     if isinstance(value, list):
         return [sanitize(item) for item in value]
     return value
+
+
+SENSITIVE_TEXT_PATTERN = re.compile(
+    r"(?i)(password|token|secret|set-cookie|cookie|authorization|api[_-]?key)([\s=:]+)(\S+)"
+)
+
+
+def redact_text(text: str) -> str:
+    return SENSITIVE_TEXT_PATTERN.sub(r"\1\2[redacted]", text)
 
 
 def build_image_plan(manifest: Mapping[str, Any]) -> dict[str, Any]:
@@ -253,8 +263,8 @@ class CommandRunner:
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else exc.stdout or ""
             stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else exc.stderr or ""
-            (self.evidence.root / f"{stem}.stdout.log").write_text(stdout, encoding="utf-8")
-            (self.evidence.root / f"{stem}.stderr.log").write_text(stderr, encoding="utf-8")
+            (self.evidence.root / f"{stem}.stdout.log").write_text(redact_text(stdout), encoding="utf-8")
+            (self.evidence.root / f"{stem}.stderr.log").write_text(redact_text(stderr), encoding="utf-8")
             self.evidence.event(
                 phase,
                 "failed",
@@ -265,8 +275,8 @@ class CommandRunner:
                 stderr=f"{stem}.stderr.log",
             )
             raise AcceptanceError(f"{phase} exceeded {timeout} seconds") from exc
-        (self.evidence.root / f"{stem}.stdout.log").write_text(result.stdout, encoding="utf-8")
-        (self.evidence.root / f"{stem}.stderr.log").write_text(result.stderr, encoding="utf-8")
+        (self.evidence.root / f"{stem}.stdout.log").write_text(redact_text(result.stdout), encoding="utf-8")
+        (self.evidence.root / f"{stem}.stderr.log").write_text(redact_text(result.stderr), encoding="utf-8")
         self.evidence.event(
             phase,
             "passed" if result.returncode in set(expected) else "failed",
