@@ -54,9 +54,9 @@ async function runChecks(names, jobs) {
         child.stderr?.on("data", data => { stderr += data.toString() })
         child.on("close", code => {
           const seconds = ((Date.now() - started) / 1000).toFixed(1)
+          if (stdout) console.log(stdout)
+          if (stderr) console.log(stderr)
           if (code !== 0) {
-            if (stdout) console.log(stdout)
-            if (stderr) console.log(stderr)
             failed.push(name)
           }
           console.log(`${code === 0 ? "pass" : "FAIL"}  ${name}  (${seconds}s)`)
