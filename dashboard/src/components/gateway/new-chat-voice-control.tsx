@@ -62,7 +62,7 @@ export function NewChatVoiceControl({ value, onChange, input, disabled, onRecord
   useEffect(() => () => { const run = recording.current; recording.current = null; run?.controller.abort(); run?.session?.cancel(); notify.current?.(false) }, [])
 
   return <>
-    {error && <p role="alert" className="px-1 text-xs text-destructive">{error}</p>}
+    {error && <p role="alert" className="max-w-44 text-xs leading-4 text-destructive-foreground">{error}</p>}
     <Tooltip>
       <TooltipTrigger render={<AnimatedIconButton icon={MicIcon} type="button" variant={listening && !disabled ? 'secondary' : 'ghost'} size="icon" className="size-9 shrink-0 rounded-full" aria-label={listening && !disabled ? 'Stop voice typing' : 'Start voice typing'} aria-pressed={listening && !disabled} disabled={disabled} onClick={() => void start()} />} />
       <TooltipContent side="top" className="max-w-72">{error || (listening ? 'Stop voice typing' : 'Voice typing')}</TooltipContent>
