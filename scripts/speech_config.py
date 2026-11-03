@@ -34,8 +34,10 @@ def _regular(path: Path, *, allow_missing: bool = False) -> None:
         raise SpeechConfigError(f"Configuration file is missing: {path}")
 
 
-def _read_env(path: Path) -> tuple[list[str], dict[str, str]]:
-    _regular(path)
+def _read_env(path: Path, *, allow_missing: bool = False) -> tuple[list[str], dict[str, str]]:
+    _regular(path, allow_missing=allow_missing)
+    if not path.exists():
+        return [], {}
     encoded = path.read_bytes()
     if len(encoded) > MAX_ENV_BYTES:
         raise SpeechConfigError("Environment file is too large.")
@@ -119,7 +121,7 @@ def _atomic(path: Path, value: bytes) -> None:
 
 
 def _write_env(path: Path, updates: dict[str, str]) -> None:
-    lines, _ = _read_env(path)
+    lines, _ = _read_env(path, allow_missing=True)
     retained = [line for line in lines if not any(line.startswith(name + "=") for name in NAMES)]
     if retained and retained[-1]:
         retained.append("")
