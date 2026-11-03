@@ -138,7 +138,8 @@ def chatgpt(result):
                 windows.append(window)
     if not windows:
         return unavailable("chatgpt", "limits_unavailable")
-    credits = (result.get("rateLimitResetCredits") or {}).get("availableCount")
+    reset_credits = result.get("rateLimitResetCredits")
+    credits = reset_credits.get("availableCount") if isinstance(reset_credits, dict) else None
     return {
         "provider": "chatgpt",
         "available": True,
