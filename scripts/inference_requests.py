@@ -48,6 +48,9 @@ class RequestControl:
                 return
             self.canceled.set()
             callbacks = list(self.callbacks)
+            canceled = True
+        else:
+            canceled = False
         for callback in callbacks:
             try:
                 callback()
@@ -55,6 +58,7 @@ class RequestControl:
                 # Closing one transport cannot prevent cancellation of another.
                 # The inference worker remains responsible for finalization.
                 self.cleanup_failed = True
+        return canceled
 
 
 class Requests:
@@ -120,8 +124,9 @@ class Requests:
             control, ended = entry
         if ended is not None:
             return {"request_id": identity, "status": "finished"}
-        control.cancel()
-        return {"request_id": identity, "status": "cancel_requested"}
+        if control.cancel():
+            return {"request_id": identity, "status": "cancel_requested"}
+        return {"request_id": identity, "status": "finished"}
 
     def close(self):
         with self.lock:
