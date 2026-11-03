@@ -174,15 +174,16 @@ def wait_health(service, seconds=50):
             time.sleep(1)
     else:
         import ssl
-        context = ssl.create_default_context(cafile=str(STATE / "gateway/tls.crt")) if service == "gateway" else None
+        def context():
+            return ssl.create_default_context(cafile=str(STATE / "gateway/tls.crt")) if service == "gateway" else None
         path = "/readyz" if service == "qdrant" else "/health"
         url = ORIGIN + "/health" if service == "gateway" else f"http://127.0.0.1:{PORTS[service]}{path}"
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 return None
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
-                    urllib.request.HTTPSHandler(context=context), NoRedirect())
         for _ in range(seconds):
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+                        urllib.request.HTTPSHandler(context=context()), NoRedirect())
             try:
                 headers = {"X-Decision-Key": read_config()["environments"]["decisions"]["DECISION_API_KEY"]} if service == "decisions" else {}
                 with opener.open(urllib.request.Request(url, headers=headers), timeout=4) as response:
