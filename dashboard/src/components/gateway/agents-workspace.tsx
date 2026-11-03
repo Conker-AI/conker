@@ -83,7 +83,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   const [agents, setAgents] = useState<AgentProfile[] | null>(null), [error, setError] = useState<string | null>(null)
   const [resetNonce, setResetNonce] = useState(0), [filter, setFilter] = useState<'active' | 'archived'>('active'), [listError, setListError] = useState<unknown>(null)
   const [creating, setCreating] = useState(false), [archive, setArchive] = useState<AgentProfile | null>(null), [archivePending, setArchivePending] = useState(false), [archiveError, setArchiveError] = useState<string | null>(null)
-  const [edited, setEdited] = useState(false)
+  const [editedId, setEditedId] = useState<string | null>(null)
   const load = useCallback(() => { setError(null); setListError(null); return client.agents().then(setAgents).catch(cause => { setListError(cause); setError(gatewayError(cause).message) }) }, [client])
   useEffect(() => {
     let active = true
@@ -92,9 +92,10 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   }, [client])
   const editMatch = location.pathname.match(/^\/agents\/(agent_[0-9a-f]{32})\/edit$/)
   const selected = companion ? agents?.find(item => item.id === 'companion') : editMatch ? agents?.find(item => item.id === editMatch[1]) : undefined
-  useEffect(() => { setEdited(false) }, [selected?.id])
+  // Unsaved edits belong to the agent they were made on; opening another one starts clean.
+  const edited = editedId !== null && editedId === selected?.id
   const saved = (profile: AgentProfile) => {
-    setEdited(false)
+    setEditedId(null)
     setAgents(current => !current ? [profile] : current.some(item => item.id === profile.id) ? current.map(item => item.id === profile.id ? profile : item) : [...current, profile])
     setCreating(false)
     navigate(companion ? '/settings/companion' : '/agents')
@@ -104,7 +105,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
     setArchivePending(true); setArchiveError(null)
     try {
       const updated = await client.setAgentArchived(archive.id, archive.archived_at === null, archive.revision)
-      setEdited(false)
+      setEditedId(null)
       setAgents(current => current?.map(item => item.id === updated.id ? updated : item) ?? [updated]); setArchive(null)
     } catch (cause) { setArchiveError(changedMessage(cause)) } finally { setArchivePending(false) }
   }
@@ -116,7 +117,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
   </div>
   if (editMatch) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
     <div className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-6"><PageHeader title={selected?.configuration.name ?? 'Agent not found'} description="Change this agent. Earlier versions are kept." density="compact" actions={selected && <Button variant="outline" onClick={() => setArchive(selected)}>{selected.archived_at === null ? <Archive /> : <RotateCcw />}{selected.archived_at === null ? 'Archive' : 'Restore'}</Button>} /></div>
-    {selected?.archived_at === null ? <AgentEditor client={client} profile={selected} onEdited={() => setEdited(true)} onSaved={saved} onCancel={() => navigate('/agents')} /> : selected ? <div className="space-y-3 p-6"><p className="text-sm text-muted-foreground">Restore this agent before editing its profile.</p><Button variant="outline" onClick={() => setArchive(selected)}><RotateCcw />Restore agent</Button></div> : <div className="p-6 text-sm text-muted-foreground">This agent does not exist.</div>}
+    {selected?.archived_at === null ? <AgentEditor client={client} profile={selected} onEdited={() => setEditedId(selected.id)} onSaved={saved} onCancel={() => navigate('/agents')} /> : selected ? <div className="space-y-3 p-6"><p className="text-sm text-muted-foreground">Restore this agent before editing its profile.</p><Button variant="outline" onClick={() => setArchive(selected)}><RotateCcw />Restore agent</Button></div> : <div className="p-6 text-sm text-muted-foreground">This agent does not exist.</div>}
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? (edited ? 'Its history is kept, but it leaves your active agents. Unsaved edits to this profile will be lost.' : 'Its history is kept, but it leaves your active agents.') : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
   </div>
   const archivedCount = (agents ?? []).filter(item => item.archived_at !== null).length
