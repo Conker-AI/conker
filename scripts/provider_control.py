@@ -324,8 +324,12 @@ def inference_handler(control):
                 return
             try:
                 self.connection.settimeout(10)
-                value = json.loads(self.rfile.read(int(length)))
-                responses_payload(value)
+                try:
+                    value = json.loads(self.rfile.read(int(length)))
+                    responses_payload(value)
+                except ValueError:
+                    self.send_error(422)
+                    return
                 self.connection.settimeout(180)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/x-ndjson")
