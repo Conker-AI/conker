@@ -41,7 +41,8 @@ export function NewChatVoiceControl({ value, onChange, input, disabled, onRecord
           if (recording.current !== run) return
           run.transcript = transcript
           const words = [transcript.final, transcript.interim].filter(Boolean).join(' ')
-          onChange(insertTranscript(run.anchor.text, words, run.anchor).text.slice(0, 16_000))
+          const clipped = Array.from(words).slice(0, 16_000).join('')
+          onChange(insertTranscript(run.anchor.text, clipped, run.anchor).text)
         },
         onLevel: () => {},
         onError: message => { if (recording.current === run) setError(message) },
@@ -60,8 +61,11 @@ export function NewChatVoiceControl({ value, onChange, input, disabled, onRecord
   }, [disabled])
   useEffect(() => () => { const run = recording.current; recording.current = null; run?.controller.abort(); run?.session?.cancel(); notify.current?.(false) }, [])
 
-  return <Tooltip>
-    <TooltipTrigger render={<AnimatedIconButton icon={MicIcon} type="button" variant={listening && !disabled ? 'secondary' : 'ghost'} size="icon" className="size-9 shrink-0 rounded-full" aria-label={listening && !disabled ? 'Stop voice typing' : 'Start voice typing'} aria-pressed={listening && !disabled} disabled={disabled} onClick={() => void start()} />} />
-    <TooltipContent side="top" className="max-w-72">{error || (listening ? 'Stop voice typing' : 'Voice typing')}</TooltipContent>
-  </Tooltip>
+  return <>
+    {error && <p role="alert" className="max-w-44 text-xs leading-4 text-destructive-foreground">{error}</p>}
+    <Tooltip>
+      <TooltipTrigger render={<AnimatedIconButton icon={MicIcon} type="button" variant={listening && !disabled ? 'secondary' : 'ghost'} size="icon" className="size-9 shrink-0 rounded-full" aria-label={listening && !disabled ? 'Stop voice typing' : 'Start voice typing'} aria-pressed={listening && !disabled} disabled={disabled} onClick={() => void start()} />} />
+      <TooltipContent side="top" className="max-w-72">{error || (listening ? 'Stop voice typing' : 'Voice typing')}</TooltipContent>
+    </Tooltip>
+  </>
 }
