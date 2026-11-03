@@ -41,7 +41,8 @@ export function NewChatVoiceControl({ value, onChange, input, disabled, onRecord
           if (recording.current !== run) return
           run.transcript = transcript
           const words = [transcript.final, transcript.interim].filter(Boolean).join(' ')
-          onChange(insertTranscript(run.anchor.text, words, run.anchor).text.slice(0, 16_000))
+          const clipped = Array.from(words).slice(0, 16_000).join('')
+          onChange(insertTranscript(run.anchor.text, clipped, run.anchor).text)
         },
         onLevel: () => {},
         onError: message => { if (recording.current === run) setError(message) },
