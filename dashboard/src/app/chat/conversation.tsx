@@ -72,6 +72,7 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
   const composer = useRef<HTMLTextAreaElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(!hash)
+  const handledHash = useRef<string | null>(null)
   const [showLatest, setShowLatest] = useState(false)
   const messages = useMemo(() => conversation?.messages || [], [conversation?.messages])
   const rows = useMemo(() => conversationRows(messages, selectedVersions), [messages, selectedVersions])
@@ -112,6 +113,8 @@ export function Conversation({ session, companionWorkspace = false, intro: Intro
     if (!hash) return
     let id: string
     try { id = decodeURIComponent(hash.slice(1)) } catch { return }
+    if (handledHash.current === locationKey) return
+    handledHash.current = locationKey
     const linkedMessage = messages.find(message => message.id === id || `message-${message.id}` === id)
     if (linkedMessage?.role === "assistant") selectVersion(session.id, responseFamilyId(messages, linkedMessage), linkedMessage.id)
     const frame = requestAnimationFrame(() => {
