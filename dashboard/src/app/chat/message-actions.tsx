@@ -39,6 +39,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const [text, setText] = useState(message.text)
   const [copied, setCopied] = useState<"text" | "link" | null>(null)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const pendingFork = useRef<Session | undefined>(undefined)
   const speech = useReadAloud(`${session.id}:${message.id}`, message.redacted ? "" : message.role === "assistant" ? readableAnswer(message.text) : message.text)
   const focusComposer = useRef(false)
   const focusReference = useRef(false)
@@ -62,7 +63,7 @@ export function MessageActions({ session, message }: { session: Session; message
   const update = (patch: Parameters<typeof conkerClient.updateMessage>[2]) => mutate(() => conkerClient.updateMessage(session.id, message.id, patch))
 
   const speak = () => speech.toggle(error => notify(session.id, error))
-  const edit = () => { setText(message.text); setDialog("edit") }
+  const edit = () => { setText(message.text); pendingFork.current = undefined; setDialog("edit") }
   const reply = () => { setReply(session.id, message.id); document.getElementById("message-composer")?.focus() }
 
   return <div ref={actionGroup} data-home="message" role="group" aria-label={assistant ? "Response actions" : "Message actions"} className={cn("mt-2 flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5", !assistant && "justify-end")}>
@@ -118,7 +119,8 @@ export function MessageActions({ session, message }: { session: Session; message
           if (!editNeedsFork) { if (await update({ text })) setDialog(null); return }
           let fork: Session | undefined
           if (await mutate(async () => {
-            fork = await conkerClient.forkConversation(session.id, message.id)
+            if (pendingFork.current) { fork = pendingFork.current }
+            else { fork = await conkerClient.forkConversation(session.id, message.id); pendingFork.current = fork }
             await conkerClient.updateMessage(fork.id, message.id, { text })
           })) {
             setDialog(null)
