@@ -158,7 +158,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
       : <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy || !onRetry} onClick={() => onRetry?.()}>{busy ? 'Working…' : 'Try again'}</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
-        <Button type="button" size="sm" variant="ghost" disabled={busy || !onRetry} onClick={() => { setWords(request.payload.description); setChanging(true) }}>Change</Button>
+        <Button type="button" size="sm" variant="ghost" disabled={busy || !onRetry} onClick={() => { setWords(words.trim() ? words : request.payload.description); setChanging(true) }}>Change</Button>
         {request.sessionId && chatLink(request.sessionId)}
       </div>
     return <InboxCard icon={icon} title={request.title} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
