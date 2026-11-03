@@ -68,8 +68,6 @@ def build_dashboard(root: Path, state: Path, run, require_stopped):
     run(node, dashboard / "scripts/check-production-bundle.cjs", stage / "assets", cwd=dashboard)
     # Another owner command may have started Gateway while compilation ran.
     previous = publish(root, stage, dashboard / "dist", checkpoint, before_swap=require_stopped)
-    # Only the previous assets are kept for rollback; the staged copy is spent.
-    shutil.rmtree(stage, ignore_errors=True)
     print("Dashboard built and verified. Start Gateway to serve the new assets.")
     if previous:
         print(f"Previous assets retained at {previous}")
