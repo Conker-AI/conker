@@ -45,6 +45,17 @@ def install(root: Path, source: Path, layout: str):
         + hashlib.sha256(str(root).encode()).hexdigest()[:12]
         + ".service"
     )
+    marker = directory / "installed-service"
+    previous = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
+    if previous and previous != name:
+        subprocess.run(
+            ["systemctl", "--user", "disable", "--now", previous],
+            env={**os.environ, "XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}"},
+            check=False,
+        )
+        old_unit = (Path.home() / ".config/systemd/user" / previous)
+        if old_unit.is_file() or old_unit.is_symlink():
+            old_unit.unlink()
     unit_directory = Path.home() / ".config/systemd/user"
     unit_directory.mkdir(parents=True, exist_ok=True)
     arguments = [
@@ -71,6 +82,8 @@ def install(root: Path, source: Path, layout: str):
         raise ValueError("Service unit must be a regular file.")
     path.write_text(unit, encoding="utf-8")
     path.chmod(0o600)
+    marker.write_text(name + "\n", encoding="utf-8")
+    marker.chmod(0o600)
     environment = {**os.environ, "XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}"}
     subprocess.run(
         ["systemctl", "--user", "daemon-reload"], env=environment, check=True
