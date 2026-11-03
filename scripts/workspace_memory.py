@@ -1,6 +1,7 @@
 """Prepare a dedicated local owner correction link without widening runtime grants."""
 
 import copy
+import fcntl
 import json
 import os
 import re
@@ -188,7 +189,10 @@ def require_sources(config):
 def write_config(path, config, original):
     """Atomic replacement: never persist one side's new credential alone."""
     temporary = None
+    lock = None
     try:
+        lock = open(path.with_name(path.name + ".lock"), "a+")
+        fcntl.flock(lock, fcntl.LOCK_EX)
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -209,3 +213,5 @@ def write_config(path, config, original):
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+        if lock is not None:
+            lock.close()
