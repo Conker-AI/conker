@@ -124,7 +124,7 @@ class WindowsTerminal:
                 "data": bytes(self.buffer[max(cursor - self.offset, 0) :]),
                 "cursor": end,
                 "droppedBytes": max(self.offset - cursor, 0),
-                "exitCode": None if alive else self.process.exitstatus or 0,
+                "exitCode": None if alive else self.process.exitstatus,
             }
 
     def close(self):
