@@ -13,7 +13,7 @@ recovery.mkdir(mode=0o700, parents=True, exist_ok=True)
 name = "freellmapi-freellmapi-1"
 volume = "freellmapi_freellmapi-data"
 ids = subprocess.check_output(["docker", "ps", "-aq"], text=True).split()
-inventory = json.loads(subprocess.check_output(["docker", "inspect", *ids]))
+inventory = json.loads(subprocess.check_output(["docker", "inspect", *ids])) if ids else []
 target = next((c for c in inventory if c["Name"] == "/" + name), None)
 if target:
     assert target["Config"]["Labels"]["com.docker.compose.project"] == "freellmapi"
