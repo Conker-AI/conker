@@ -136,7 +136,7 @@ export function ToolStepInspector({
                     .filter(
                       (n) => n.id !== node.id && n.type !== "input",
                     )
-                    .map((n) => n.id),
+                    .map((n) => ({ label: n.label, value: n.id })),
                 ]}
                 onChange={(id) => {
                   setConnectFrom(node.id);
