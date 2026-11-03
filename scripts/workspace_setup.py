@@ -152,6 +152,11 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     decision_key = config["environments"].get("decisions", {}).get(
         "DECISION_API_KEY"
     ) or secrets.token_urlsafe(36)
+    original = CONFIG.read_bytes()
+    if json.loads(original) != config:
+        raise SystemExit(
+            "Workspace configuration changed; reload before preparing native authentication."
+        )
     config.update(native_providers=private, ports=PORTS)
     config["repositories"]["pi"] = str(source)
     config["repositories"]["toolgate"] = str(toolgate)
