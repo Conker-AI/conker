@@ -20,7 +20,11 @@ export default function NewChatPage() {
     void (async () => {
       try {
         const session = await conkerClient.createConversation(agentId)
-        await useConkerStore.getState().load()
+        try {
+          await useConkerStore.getState().load()
+        } catch {
+          // conversation already exists; fall through so retrying doesn't duplicate it
+        }
         if (cancelled) return
         const prompt = (location.state as { prompt?: unknown } | null)?.prompt
         const store = useConkerStore.getState()
