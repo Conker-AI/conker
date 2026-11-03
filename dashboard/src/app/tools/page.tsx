@@ -28,7 +28,9 @@ export default function ToolsPage() {
   const [creating, setCreating] = useState(false),
     [name, setName] = useState(""),
     [kind, setKind] = useState<ToolDefinition["kind"]>("workflow"),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [createError, setCreateError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const selectedId = params.get("tool");
   useEffect(() => {
     let active = true;
@@ -55,7 +57,7 @@ export default function ToolsPage() {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [reloadKey]);
   const open = (id: string) => setParams({ tool: id });
   const columns = useMemo<ColumnDef<WorkspaceRecord>[]>(
     () => [
@@ -147,7 +149,7 @@ export default function ToolsPage() {
         <Button
           onClick={() => {
             setName("");
-            setError("");
+            setCreateError("");
             setCreating(true);
           }}
         >
@@ -164,9 +166,12 @@ export default function ToolsPage() {
           </Button>
         </p>
       )}
-      {error && !creating && (
+      {error && !loading && !records.length && (
         <p role="alert" className="text-sm text-destructive-foreground">
-          {error}
+          {error}{" "}
+          <Button variant="link" onClick={() => setReloadKey((k) => k + 1)}>
+            Retry
+          </Button>
         </p>
       )}
       {loading ? (
@@ -235,7 +240,7 @@ export default function ToolsPage() {
             onSubmit={(e) => {
               e.preventDefault();
               setBusy(true);
-              setError("");
+              setCreateError("");
               void conkerClient.toolWorkspace
                 .create(name, kind)
                 .then((r) => {
@@ -243,7 +248,7 @@ export default function ToolsPage() {
                   open(r.id);
                 })
                 .catch((e) =>
-                  setError(
+                  setCreateError(
                     e instanceof Error ? e.message : "Could not create tool",
                   ),
                 )
@@ -269,9 +274,9 @@ export default function ToolsPage() {
                   onChange={(v) => setKind(v as ToolDefinition["kind"])}
                 />
               </Field>
-              {error && (
+              {createError && (
                 <p role="alert" className="text-sm text-destructive-foreground">
-                  {error}
+                  {createError}
                 </p>
               )}
             </OverlayBody>
