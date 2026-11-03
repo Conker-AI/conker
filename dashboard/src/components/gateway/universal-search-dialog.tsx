@@ -10,6 +10,14 @@ import { ALL_SETTINGS, SETTINGS_GROUPS, matches } from '@/settings/registry'
 
 const labels = { metadata: 'Records', text: 'Exact retained text', semantic: 'Semantic matches' }
 
+const sourceLabels: Record<string, string> = { conversations: 'conversations', messages: 'messages', tasks: 'tasks', jobs: 'jobs', activity: 'activity', records: 'records' }
+
+const statusAdvice: Record<string, string> = {
+  partial: 'partially searched — refine your query or check Search settings',
+  degraded: 'running slowly — results may be incomplete; retry shortly',
+  unavailable: 'unreachable — check the gateway connection and retry'
+}
+
 /** The palette itself, loaded on first use; state, shortcuts and navigation stay in the provider. */
 export default function UniversalSearchDialog({ state, error, opener, select, selectRecord }: {
   state: ReturnType<typeof useUniversalSearch>; error: string | null; opener: { current: HTMLElement | null }
@@ -20,7 +28,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
   const trimmed = query.trim()
   const pages = gatewayCommandDestinations.filter(item => !trimmed || item.title.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase()))
   const settings = trimmed.length >= 2 ? ALL_SETTINGS.filter(s => matches(s, trimmed)).slice(0, 8) : []
-  const gaps = [...new Set(Object.values(results).flatMap(page => page.coverage.filter(item => item.status !== 'searched').map(item => `${item.source}: ${item.status}`)))]
+  const gaps = [...new Set(Object.values(results).flatMap(page => page.coverage.filter(item => item.status !== 'searched').map(item => `${sourceLabels[item.source] ?? item.source} ${statusAdvice[item.status] ?? item.status}`)))]
   const exactRecords = new Set(results.text?.results.map(item => `${item.source}:${item.recordId}`))
   return <CommandDialog open={open} onOpenChange={search.setOpen}>
       <CommandDialogPopup className="workspace-search-dialog" aria-label="Search Conker" aria-description="Find pages and authorized records" finalFocus={() => opener.current?.isConnected ? opener.current : true}>
@@ -47,7 +55,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
         if (event.key === 'Enter') event.stopPropagation()
       }}>
         {pending && <p role="status">Searching...</p>}{error && <div className="flex flex-wrap items-center gap-2"><p role="status">{error}</p><Button variant="outline" size="sm" disabled={pending} onClick={() => { search.retry(); input.current?.focus() }}>Try again</Button></div>}
-        {gaps.length > 0 && <p>Incomplete coverage: {gaps.join(', ')}.</p>}
+        {gaps.length > 0 && <p>Some sources couldn't be fully searched: {gaps.join('; ')}.</p>}
         {Object.values(results).some(page => page.ranking.status === 'ranked') && <p>AI ranked bounded candidates; match labels remain unchanged.</p>}
         {Object.values(results).some(page => ['fallback', 'unavailable'].includes(page.ranking.status)) && <p>AI ranking unavailable; literal results retained.</p>}
         <Button variant="ghost" size="sm" onClick={() => select('/settings?tab=search')}><Settings2 />Search settings</Button>
