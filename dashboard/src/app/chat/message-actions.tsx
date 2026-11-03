@@ -71,8 +71,8 @@ export function MessageActions({ session, message }: { session: Session; message
       <ActionButton label={copied === "text" ? "Copied" : "Copy message"} disabled={message.redacted || !message.text} onClick={() => void copy(message.text, "text")}>{copied === "text" ? <Check /> : <Copy />}</ActionButton>
       {assistant ? <>
         <ActionButton label={speech.active ? "Stop reading" : "Read aloud"} aria-pressed={speech.active} disabled={message.redacted || !message.text || !speech.supported} onClick={speak}>{speech.active ? <Square /> : <Volume2 />}</ActionButton>
-        <ActionButton label="Good response" aria-pressed={message.rating === "up"} disabled={busy || message.redacted} onClick={() => void update({ rating: message.rating === "up" ? null : "up" })}><ThumbsUp /></ActionButton>
-        <ActionButton label="Bad response" aria-pressed={message.rating === "down"} disabled={busy || message.redacted} onClick={() => void update({ rating: message.rating === "down" ? null : "down" })}><ThumbsDown /></ActionButton>
+        <ActionButton label="Good response" aria-pressed={message.rating === "up"} disabled={busy || message.redacted} onClick={() => void update({ rating: message.rating === "up" ? null : "up" }).then(ok => { if (!ok) notify(session.id, "Could not save rating. Check the connection and try again.") })}><ThumbsUp /></ActionButton>
+        <ActionButton label="Bad response" aria-pressed={message.rating === "down"} disabled={busy || message.redacted} onClick={() => void update({ rating: message.rating === "down" ? null : "down" }).then(ok => { if (!ok) notify(session.id, "Could not save rating. Check the connection and try again.") })}><ThumbsDown /></ActionButton>
         <ActionButton label="Try again" disabled={busy || message.redacted || !canRetry} onClick={() => { if (retryModelId) void retry(session.id, message.id, retryModelId) }}><RotateCcw /></ActionButton>
       </> : <>
         <ActionButton label="Edit message" disabled={busy || message.redacted} onClick={edit}><Pencil /></ActionButton>
