@@ -47,18 +47,19 @@ export function Choice({
 }: {
   label: string;
   value: string;
-  options: readonly string[];
+  options: readonly (string | { label: string; value: string })[];
   onChange: (v: string) => void;
 }) {
+  const items = options.map((option) => typeof option === "string" ? { value: option, label: option } : option);
   return (
-    <Select value={value} onValueChange={value => { if (value !== null) onChange(value) }} items={[...options.map((option) => ({ value: option, label: option }))]}>
+    <Select value={value} onValueChange={value => { if (value !== null) onChange(value) }} items={items}>
       <SelectTrigger aria-label={label} className="w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
+        {items.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>

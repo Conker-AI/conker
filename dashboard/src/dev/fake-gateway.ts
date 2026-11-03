@@ -107,8 +107,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const composerDrafts = new Map<string, Json>()
   const draftStarts = new Map<string, Json>()
   const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
-  const submissions = new Map<string, Json>()
-  const pendingTurns = new Map<string, Promise<Json>>()
+  const submissions = new Map<string, Json>(), pendingTurns = new Map<string, Promise<Json>>()
   const streams = new Map<string, { text: string; stopped: boolean }>()
   const approvals: Json[] = [{
     id: 'req_email_coach', kind: 'verification', title: 'Send an email to coach', details: 'Conker drafted this email and needs your OK before sending it.',
@@ -375,11 +374,10 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if ((match = path.match(/^\/api\/pi\/sessions\/([^/]+)\/turns$/)) && method === 'POST') {
       const body = options.body ?? {}, key = match[1], requestId = String(body.request_id), prior = submissions.get(requestId)
       if (prior) return { submission: prior }
-      const inflight = pendingTurns.get(requestId)
-      if (inflight) return inflight
+      if (pendingTurns.has(requestId)) return pendingTurns.get(requestId)!
       const saved = composerDrafts.get(key)
       if (body.draft_revision !== undefined && (!saved || saved.revision !== body.draft_revision || saved.text !== body.text)) throw new GatewayError('http', 409, undefined, 'draft_changed')
-      const pending = sendTurn(find(key), body).then(result => { pendingTurns.delete(requestId); return result })
+      const pending = sendTurn(find(key), body).finally(() => pendingTurns.delete(requestId))
       pendingTurns.set(requestId, pending)
       const result = await pending, receipt = result.submission as Json
       Object.assign(receipt, { draft_revision: body.draft_revision ?? null, model_id: body.model_id ?? null, skill_ids: body.skill_ids ?? [], think: body.think ?? false, research_mode: body.research_mode ?? 'off' })

@@ -3,7 +3,7 @@ import { FolderTree } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useConker } from "@/lib/api/store"
-import type { FilesSnapshot } from "@/lib/api/client"
+import type { FilesSnapshot } from "@/lib/api/models"
 import { DirectoryTree } from "./directory-tree"
 
 export function SystemFiles() {
