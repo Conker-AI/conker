@@ -127,6 +127,18 @@ def test_claude_usage_report_becomes_the_same_shape():
     assert value["windows"][0]["resetsAt"] == "2026-10-20T18:19:59Z"
 
 
+def test_claude_scope_of_an_unexpected_shape_keeps_a_plain_label():
+    rows = [
+        {"kind": "weekly_scoped", "percent": 5, "scope": "Opus"},
+        {"kind": "weekly_scoped", "percent": 6, "scope": {"model": "Opus"}},
+    ]
+    stream = json.dumps(
+        {"type": "assistant", "usage_report": {"rate_limits": {"limits": rows}}}
+    )
+    value = plan_limits.claude(stream.encode())
+    assert [w["label"] for w in value["windows"]] == ["weekly scoped", "weekly scoped"]
+
+
 def test_claude_without_plan_usage_is_unavailable_not_zero():
     null_limits = CLAUDE_STREAM.replace('"limits": [', '"limits_off": [')
     assert plan_limits.claude(null_limits)["problem"] == "limits_unavailable"

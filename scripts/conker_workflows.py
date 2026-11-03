@@ -113,8 +113,9 @@ def capabilities(request, config) -> list[dict]:
     """Active tools and published workflows, as ToolGate's editor lists them."""
     found = []
     for kind in ("tool", "workflow"):
-        after = None
-        while len(found) < CAPABILITIES:
+        # Each kind gets its own cap, so a large tool catalogue cannot hide every workflow.
+        start, after = len(found), None
+        while len(found) - start < CAPABILITIES:
             query = {"kind": kind, "limit": 100, **({"after": after} if after else {})}
             page = call(
                 request,
@@ -130,10 +131,11 @@ def capabilities(request, config) -> list[dict]:
                         "authorization": str(item.get("authorization") or "auto"),
                     }
                 )
+            del found[start + CAPABILITIES :]
             after = page.get("next_after")
             if not after:
                 break
-    return found[:CAPABILITIES]
+    return found
 
 
 def steps(document: dict, asks: set[str] = frozenset()) -> list[str]:

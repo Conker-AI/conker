@@ -179,7 +179,9 @@ def claude(output):
         if not isinstance(row, dict):
             continue
         kind = str(row.get("kind") or "")
-        scope = ((row.get("scope") or {}).get("model") or {}).get("display_name")
+        scope = row.get("scope")
+        model = scope.get("model") if isinstance(scope, dict) else None
+        scope = model.get("display_name") if isinstance(model, dict) else None
         if kind == "session":
             label = "5-hour"
         elif kind == "weekly_all":
