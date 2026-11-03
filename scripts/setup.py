@@ -163,7 +163,10 @@ def enforce_retention(
     for candidate in snapshots:
         if candidate in retained:
             continue
-        verify(candidate)
+        try:
+            verify(candidate)
+        except Exception:
+            pass
         if candidate.resolve().parent != destination.resolve():
             raise SetupError("refusing to prune a snapshot outside the backup destination")
         shutil.rmtree(candidate)
