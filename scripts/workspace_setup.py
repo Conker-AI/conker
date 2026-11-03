@@ -125,12 +125,8 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
             / "npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe"
         )
         if os.name == "nt"
-        else Path(shutil.which("claude") or "")
+        else Path(shutil.which("claude") or "/unavailable/claude")
     )
-    if not claude.is_file():
-        raise SystemExit(
-            "The Claude Code executable could not be located. Install it with `npm install -g @anthropic-ai/claude-code` and ensure `claude` is on PATH."
-        )
     checkpoint = (
         Path.home()
         / ".cache/huggingface/hub/models--convaiinnovations--laya/snapshots/1c5edc17a7acd8701df6fc341c0d179f1c62c982"

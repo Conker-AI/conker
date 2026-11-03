@@ -59,8 +59,6 @@ def build_dashboard(root: Path, state: Path, run, require_stopped):
         run(npm, "ci", "--no-audit", "--no-fund", cwd=dashboard)
     builds = state / "builds"
     builds.mkdir(parents=True, exist_ok=True)
-    for old in builds.glob("dashboard-*"):
-        shutil.rmtree(old, ignore_errors=True)
     checkpoint = Path(tempfile.mkdtemp(prefix="dashboard-", dir=builds))
     stage = checkpoint / "staged"
     run(npm, "run", "design:check", cwd=dashboard)
@@ -69,6 +67,7 @@ def build_dashboard(root: Path, state: Path, run, require_stopped):
         "--outDir", stage, "--emptyOutDir", cwd=dashboard)
     run(node, dashboard / "scripts/check-production-bundle.cjs", stage / "assets", cwd=dashboard)
     # Another owner command may have started Gateway while compilation ran.
-    publish(root, stage, dashboard / "dist", checkpoint, before_swap=require_stopped)
-    shutil.rmtree(checkpoint, ignore_errors=True)
+    previous = publish(root, stage, dashboard / "dist", checkpoint, before_swap=require_stopped)
     print("Dashboard built and verified. Start Gateway to serve the new assets.")
+    if previous:
+        print(f"Previous assets retained at {previous}")

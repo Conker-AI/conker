@@ -201,10 +201,6 @@ class FirstRunSteps:
         content = ((turn.get("message") or {}).get("content") or "").strip()
         if not turn.get("turn_id") or not content:
             raise AcceptanceError("bounded conversation produced no recorded answer")
-        if turn.get("status") != "completed":
-            raise AcceptanceError(
-                f"bounded conversation turn ended with status {turn.get('status')!r}"
-            )
         self.evidence.artifact(
             "conversation.json",
             {

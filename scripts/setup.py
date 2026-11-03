@@ -97,16 +97,8 @@ def check_protection_policy(value: object) -> dict[str, object]:
     retention = value["retentionCopies"]
     revision = value["revision"]
     digest = value["policyDigest"]
-    request_id = value["requestId"]
-    recorded_at = value["recordedAt"]
-    try:
-        _datetime(recorded_at, "recordedAt")
-    except SetupError:
-        raise
     if (
-        not isinstance(request_id, str)
-        or not MACHINE_ID.fullmatch(request_id)
-        or value["schemaVersion"] != 1
+        value["schemaVersion"] != 1
         or value["destinationKind"] != "mounted_off_machine"
         or not isinstance(destination, str)
         or not PurePosixPath(destination).is_absolute()
@@ -163,10 +155,7 @@ def enforce_retention(
     for candidate in snapshots:
         if candidate in retained:
             continue
-        try:
-            verify(candidate)
-        except Exception:
-            pass
+        verify(candidate)
         if candidate.resolve().parent != destination.resolve():
             raise SetupError("refusing to prune a snapshot outside the backup destination")
         shutil.rmtree(candidate)

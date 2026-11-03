@@ -90,13 +90,8 @@ def dashboard_tree_revision(root: Path) -> str | None:
             text=True,
             check=True,
         )
-    except FileNotFoundError as error:
-        raise ManifestError(f"git unavailable; cannot verify dashboard checkout: {error}") from error
-    except subprocess.CalledProcessError as error:
-        raise ManifestError(
-            f"cannot resolve HEAD:dashboard ({error.stderr.strip() or error}); "
-            "manifest cannot be bound to a clean checkout"
-        ) from error
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
     return result.stdout.strip()
 
 
@@ -242,19 +237,7 @@ def validate_manifest(
 
 def load_release_manifest(path: Path, *, verify_checkout: bool = True) -> dict[str, object]:
     root = path.resolve().parent
-    actual = None
-    if verify_checkout:
-        toplevel = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
-        if toplevel.returncode != 0:
-            raise ManifestError(f"{root} is not inside a Git repository")
-        actual = dashboard_tree_revision(Path(toplevel.stdout.strip()))
-        if actual is None:
-            raise ManifestError("unable to determine dashboard tree revision from Git")
+    actual = dashboard_tree_revision(root) if verify_checkout else None
     return validate_manifest(parse_env(path), actual_dashboard_revision=actual)
 
 

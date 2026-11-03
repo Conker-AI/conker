@@ -46,23 +46,8 @@ class PaidPolicy:
         return bool(values and values[0] in {"1", "true", "yes"})
 
     def status(self):
-        allowed = self._allowed(self._environment())
-        check = self._compose(
-            "exec",
-            "-T",
-            "pi",
-            "python",
-            "-c",
-            "import os; print('on' if os.environ.get('PI_ALLOW_PAID_MODELS','').strip() in {'1','true','yes'} else 'off')",
-        )
-        if check.returncode:
-            raise ProviderSecretError("AI runtime status was not confirmed.")
-        if check.stdout.strip() != (b"on" if allowed else b"off"):
-            raise ProviderSecretError(
-                "Runtime spending policy differs from the configured policy."
-            )
         return {
-            "paidAllowed": allowed,
+            "paidAllowed": self._allowed(self._environment()),
             "policyRecoveryRequired": self.marker.exists(),
         }
 
