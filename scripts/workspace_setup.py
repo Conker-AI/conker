@@ -181,7 +181,9 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
             GATEWAY_TERMINAL_SOCKET=str(Path(private["codex"])),
             GATEWAY_TERMINAL_WORKSPACE_LABEL="Windows owner workspace · Conker",
         )
-    CONFIG.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    from workspace_memory import write_config
+
+    write_config(CONFIG, config, CONFIG.read_bytes())
     run(config["python"], ROOT / "scripts/workspace_models.py", "initialize")
     print(
         "Prepared native authentication, model roles and dedicated memory corrections. Verify capabilities after startup; thinking runs only when requested. Start with workspace.py up."
