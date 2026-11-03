@@ -29,11 +29,17 @@ manifest = {}
 for volume in volumes:
     archive = recovery / (volume + ".tar.gz")
     if not archive.exists():
-        with archive.open("xb") as output:
-            archive.chmod(0o600)
-            subprocess.run(["docker", "run", "--rm", "--network", "none", "--read-only",
-                "--mount", f"type=volume,src={volume},dst=/source,readonly",
-                "alpine:latest", "tar", "-czf", "-", "-C", "/source", "."], stdout=output, check=True)
+        partial = archive.with_name(archive.name + ".partial")
+        try:
+            with partial.open("xb") as output:
+                partial.chmod(0o600)
+                subprocess.run(["docker", "run", "--rm", "--network", "none", "--read-only",
+                    "--mount", f"type=volume,src={volume},dst=/source,readonly",
+                    "alpine:latest", "tar", "-czf", "-", "-C", "/source", "."], stdout=output, check=True)
+            partial.rename(archive)
+        finally:
+            if partial.exists():
+                partial.unlink()
     with tarfile.open(archive, "r:gz") as check:
         members = sum(1 for _ in check)
     digest = hashlib.file_digest(archive.open("rb"), "sha256").hexdigest()

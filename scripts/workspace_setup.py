@@ -96,8 +96,11 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         )
     )
     if not binaries:
+        npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+        if not npm:
+            raise SystemExit("npm could not be found; install Node.js to set up the pinned Codex runtime.")
         run(
-            shutil.which("npm.cmd" if os.name == "nt" else "npm"),
+            npm,
             "install",
             "--prefix",
             native,

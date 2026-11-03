@@ -45,8 +45,8 @@ class ManifestError(ValueError):
 def _version_at_least(version: str, minimum: str) -> bool:
     """Compare semantic versions (major.minor.patch)."""
     try:
-        v_parts = [int(part) for part in version.split(".")]
-        min_parts = [int(part) for part in minimum.split(".")]
+        v_parts = [int(part) for part in re.split(r"[-+]", version, maxsplit=1)[0].split(".")]
+        min_parts = [int(part) for part in re.split(r"[-+]", minimum, maxsplit=1)[0].split(".")]
         # Pad with zeros for comparison
         while len(v_parts) < 3:
             v_parts.append(0)

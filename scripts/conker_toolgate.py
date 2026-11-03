@@ -29,6 +29,10 @@ def check(args) -> None:
                 )
     if args.command == "tool-card":
         identity(args.id, TOOL_ID, "tool ID")
+        if args.template is not None and args.template not in CARD_TEMPLATES:
+            raise ValueError(
+                "Unknown card template; choose one of: " + ", ".join(CARD_TEMPLATES)
+            )
     if args.command == "tool-access":
         identity(args.id, TOOL_ID, "tool ID")
         if (args.enabled is None) != (args.expected_digest is None):
