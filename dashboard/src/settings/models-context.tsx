@@ -29,12 +29,12 @@ export function ModelsProvider({ client, children }: { client: GatewayControlCli
         if (!before) return
         setPending(true); setError('')
         try { setValue(await client.saveModels(before, result.revision)); notifyDone('Change undone') }
-        catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not undo the change.') }
+        catch (cause) { setError(gatewayError(cause).message) }
         finally { setPending(false) }
       }
       toastManager.add({ type: 'success', title: 'Saved', timeout: 4000, actionProps: { children: 'Undo', onClick: () => void undo() } })
     }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save model settings.') }
+    catch (cause) { setError(gatewayError(cause).message) }
     finally { setPending(false) }
   }, [client, value])
   const saved = value?.configuration
