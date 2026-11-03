@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 from email.message import Message
@@ -277,6 +278,17 @@ def test_incomplete_stream_never_becomes_completed_answer():
                 ),
             )
         )
+
+
+def test_connection_dropped_mid_stream_is_an_incomplete_response():
+    class Dropped(Stream):
+        def readline(self, *_args):
+            raise http.client.IncompleteRead(b"par", 10)
+
+    opener = Opener([])
+    opener.open = lambda *_args, **_kwargs: Dropped()
+    with pytest.raises(ChatGPTError, match="incomplete_response"):
+        list(inference_events(Credentials(), payload(), opener=opener))
 
 
 def test_cancel_closes_upstream():
