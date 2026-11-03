@@ -57,7 +57,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     const found = named[tail]
     if (found) return { title: found[0], path, target: `Chat ${chat[2]}`, details: [found[1]] }
   }
-  if (path.startsWith('/api/owner/mcp/')) {
+  if (path.startsWith('/api/owner/mcp/') && ['discover', 'import', 'access'].includes(String(parts.at(-1)))) {
     let endpoint = 'Saved MCP server'
     try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }
     target = parts[4] === 'tools' ? parts[5] : endpoint
