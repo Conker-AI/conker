@@ -6,6 +6,7 @@ methods are used: no threads, turns, commands, MCP, or Codex agent execution.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import re
@@ -584,6 +585,8 @@ def inference_events(control, value, *, opener=None, cancellation=None):
             if error.code == 429
             else "provider_request_failed"
         ) from None
+    except http.client.HTTPException:
+        raise ChatGPTError("incomplete_response") from None
     except (OSError, ValueError, KeyError, TypeError) as error:
         if isinstance(error, ChatGPTError):
             raise
