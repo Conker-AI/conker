@@ -36,19 +36,13 @@ export default function SettingsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const currentConnections = useConker(data => data.connections)
   const owner = useConker(data => data.auth.ownerName)
-  const [connections, setConnections] = useState(() => retainedConnections || structuredClone(currentConnections))
+  // A draft made against connections that changed since (first-run setup) is dropped, so it cannot revert them.
+  const [connections, setConnections] = useState(() => retainedConnections && retainedConnectionsBase === JSON.stringify(currentConnections) ? retainedConnections : structuredClone(currentConnections))
   const modelsConfiguration = useConker(data => data.modelsConfiguration)
   const { saveConnections, saveModelsConfiguration, pending, error } = useConkerStore()
   const [saved, setSaved] = useState(false)
   const connectionsDirty = JSON.stringify(connections) !== JSON.stringify(currentConnections)
 
-  useEffect(() => {
-    if (retainedConnectionsBase !== null && retainedConnectionsBase !== JSON.stringify(currentConnections)) {
-      retainedConnections = null
-      retainedConnectionsBase = null
-      setConnections(structuredClone(currentConnections))
-    }
-  }, [currentConnections])
   useEffect(() => {
     retainedConnections = connectionsDirty ? connections : null
     retainedConnectionsBase = connectionsDirty ? JSON.stringify(currentConnections) : null

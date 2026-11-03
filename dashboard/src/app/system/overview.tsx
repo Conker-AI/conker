@@ -42,9 +42,7 @@ export function SystemOverview() {
               <Server className="size-4 text-muted-foreground" />
               The box
             </h2>
-            <StatusBadge tone={Date.now() - new Date(system.sampledAt).getTime() > 5 * 60 * 1000 ? "warning" : "live"}>
-              {Math.max(0, Math.floor((Date.now() - new Date(system.sampledAt).getTime()) / 60000))} min old
-            </StatusBadge>
+            <StatusBadge>{system.sampleAge}</StatusBadge>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {vitals.map((vital, index) => {
