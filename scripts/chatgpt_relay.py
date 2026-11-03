@@ -116,7 +116,10 @@ class ChatGPTRelay:
                         return
                     if len(line) >= MAX_LINE or received > MAX_STREAM:
                         raise ChatGPTError("incomplete_response")
-                    event = json.loads(line)
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        raise ChatGPTError("invalid_provider_response") from None
                     if not isinstance(event, dict):
                         raise ChatGPTError("invalid_provider_response")
                     yield event
