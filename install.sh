@@ -880,11 +880,11 @@ wait_for_health() {
     local names=(gateway toolgate memorygate systemgate embeddings)
     local ports=(8050 8010 8020 8040 8030)
     local labels=("Conker" "Tools" "Memory" "System" "Embeddings")
-    local deadline=$(( $(date +%s) + 180 ))
 
     DEGRADED=()
     local i
     for i in "${!names[@]}"; do
+        local deadline=$(( $(date +%s) + 180 ))
         local port="${ports[$i]}"
         [ "${names[$i]}" = "gateway" ] && port="${CONKER_PORT:-8050}"
         local body="" status=""
