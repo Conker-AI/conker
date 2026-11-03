@@ -56,7 +56,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
         {createError && <p role="alert" className="mt-4 text-center text-sm text-destructive-foreground">{createError}</p>}
         <div className="mt-3"><DraftSaveStatus entry={draftEntries.new} controller={draftController} draftKey="new" disabled={createPending || sendPending || !!pendingStart} /></div>
         {pendingStart && <div className="mt-3 space-y-2 rounded-lg border p-3"><p className="text-sm">A saved chat start needs checking.</p><p className="text-xs text-muted-foreground">Recovering it opens the same chat. Your message will wait for you to send it.</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={createPending} onClick={() => void recoverChatStart()}>Check saved chat start</Button>{startMissing && <Button size="sm" variant="outline" disabled={createPending} onClick={() => void recoverChatStart(true)}>Retry same chat start</Button>}</div></div>}
-        {!firstMessage && <ConversationStarters disabled={createPending || sendPending || Boolean(createUnknown)} onPick={text => { setFirstMessage(text); requestAnimationFrame(() => { const field = document.getElementById('new-chat-composer') as HTMLTextAreaElement | null; field?.focus(); field?.setSelectionRange(text.length, text.length) }) }} />
+        {!firstMessage && <ConversationStarters disabled={createPending || sendPending || Boolean(createUnknown)} onPick={text => { setFirstMessage(text); requestAnimationFrame(() => { const field = document.getElementById('new-chat-composer') as HTMLTextAreaElement | null; field?.focus(); field?.setSelectionRange(text.length, text.length) }) }} />}
       </div>
     </div>
   </>
