@@ -90,8 +90,13 @@ def dashboard_tree_revision(root: Path) -> str | None:
             text=True,
             check=True,
         )
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+    except FileNotFoundError as error:
+        raise ManifestError("could not verify dashboard tree: git is not available") from error
+    except subprocess.CalledProcessError as error:
+        raise ManifestError(
+            "could not verify dashboard tree: "
+            f"git {error.cmd[1]} failed: {error.stderr.strip() or error.stdout.strip()}"
+        ) from error
     return result.stdout.strip()
 
 
