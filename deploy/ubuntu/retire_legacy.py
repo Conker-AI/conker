@@ -23,6 +23,9 @@ all_containers = json.loads(subprocess.check_output(["docker", "inspect", *ids])
 others = [item for item in all_containers if item["Name"].lstrip("/") not in allowed]
 other_volumes = {m["Name"] for item in others for m in item["Mounts"] if m["Type"] == "volume"}
 volumes = sorted({m["Name"] for item in inventory for m in item["Mounts"] if m["Type"] == "volume"})
+allowed_volumes = {"agentgate_postgres-data", "agentgate_qdrant-data", "toolgate_searxng-data",
+    "memorygate_postgres-data", "memorygate_qdrant-data"}
+assert set(volumes) == allowed_volumes, "Unexpected volume in inventory Mounts"
 assert not set(volumes) & other_volumes, "Legacy volume is shared; do not remove it"
 assert all(not item["State"]["Running"] for item in all_containers if item["Name"].lstrip("/") in allowed)
 manifest = {}
