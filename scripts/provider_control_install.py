@@ -84,7 +84,7 @@ def install(root: Path, source: Path, layout: str):
     path.chmod(0o600)
     marker.write_text(name + "\n", encoding="utf-8")
     marker.chmod(0o600)
-    environment = {**os.environ, "XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}"}
+    environment = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")}
     subprocess.run(
         ["systemctl", "--user", "daemon-reload"], env=environment, check=True
     )
