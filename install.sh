@@ -447,11 +447,12 @@ write_env() {
     GATEWAY_ORIGIN=${GATEWAY_ORIGIN:-}
     if [ -z "$GATEWAY_ORIGIN" ] && [ -f "$ENV_FILE" ]; then
         GATEWAY_ORIGIN=$(sed -n 's/^GATEWAY_ORIGIN=//p' "$ENV_FILE" | head -1)
+        # A kept localhost origin follows the port; one the owner set is left alone.
+        case "$GATEWAY_ORIGIN" in
+            *:${CONKER_PORT:-8050}) ;;
+            https://localhost:*|http://localhost:*) GATEWAY_ORIGIN=https://localhost:${CONKER_PORT:-8050} ;;
+        esac
     fi
-    case "$GATEWAY_ORIGIN" in
-        *:${CONKER_PORT:-8050}) ;;
-        https://localhost:*|http://localhost:*) GATEWAY_ORIGIN=https://localhost:${CONKER_PORT:-8050} ;;
-    esac
     GATEWAY_ORIGIN=${GATEWAY_ORIGIN:-https://localhost:${CONKER_PORT:-8050}}
     PI_DECISION_URL=$(keep_optional PI_DECISION_URL)
     PI_DECISION_KEY=$(keep_optional PI_DECISION_KEY)
@@ -884,21 +885,23 @@ wait_for_health() {
     local names=(gateway toolgate memorygate systemgate embeddings)
     local ports=(8050 8010 8020 8040 8030)
     local labels=("Conker" "Tools" "Memory" "System" "Embeddings")
+    local deadline=$(( $(date +%s) + 180 ))
 
     DEGRADED=()
     local i
     for i in "${!names[@]}"; do
-        local deadline=$(( $(date +%s) + 180 ))
         local port="${ports[$i]}"
         [ "${names[$i]}" = "gateway" ] && port="${CONKER_PORT:-8050}"
         local body="" status=""
-        while [ "$(date +%s)" -lt "$deadline" ]; do
+        while :; do
             if [ "${names[$i]}" = "gateway" ]; then
                 body=$(compose exec -T gateway python -m gateway health 2>/dev/null || true)
             else
                 body=$(curl -fsS -m 3 "http://127.0.0.1:$port/health" 2>/dev/null || true)
             fi
             [ -n "$body" ] && break
+            # Every service is probed once, even after the shared deadline has passed.
+            [ "$(date +%s)" -ge "$deadline" ] && break
             sleep 2
         done
 
