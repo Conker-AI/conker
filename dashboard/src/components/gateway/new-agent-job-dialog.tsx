@@ -57,7 +57,11 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
     return () => controller.abort()
   }, [open, agents, loadAgents])
   const chosen = tools?.find(tool => tool.id === value.tool)
-  const close = () => { setValue(blank); setError(null); onOpenChange(false) }
+  const typed = value.name.trim() !== '' || value.instructions.trim() !== ''
+  const close = () => {
+    if (typed && !window.confirm('Discard this AI job? Everything you typed will be lost.')) return
+    setValue(blank); setError(null); onOpenChange(false)
+  }
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setPending(true); setError(null)
     try {
