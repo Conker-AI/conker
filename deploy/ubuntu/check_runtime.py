@@ -10,9 +10,10 @@ from pi.models.decision import configured
 
 memory = MemoryClient(os.environ["PI_MEMORYGATE_URL"], os.environ["PI_MEMORYGATE_INGEST_KEY"],
     os.environ["PI_MEMORYGATE_READ_KEY"], os.environ["PI_MEMORYGATE_AGENT_ID"], timeout=30)
-package = memory.retrieve("What tea does Test Finch prefer?")
+probe_query = os.environ["PI_RUNTIME_CHECK_QUERY"]
+package = memory.retrieve(probe_query)
 ranking = ConfiguredMemoryRanker(Store(os.environ["PI_DB_PATH"]), configured(os.environ))
-ranked = ranking.rank_memories("What tea does Test Finch prefer?", package)
+ranked = ranking.rank_memories(probe_query, package)
 with httpx.Client(timeout=10, trust_env=False) as client:
     health = client.get("http://memorygate:8020/health").json()
     access = client.get("http://toolgate:8010/v2/agent/published-workflows",
