@@ -91,7 +91,7 @@ function inspect(file, tree) {
     findings.push({ file, line: position.line + 1, column: position.character + 1, rule, message })
   }
   for (const node of tree.statements) {
-    if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue
+    if (!ts.isImportDeclaration(node) || node.importClause?.isTypeOnly || !ts.isStringLiteral(node.moduleSpecifier)) continue
     const module = node.moduleSpecifier.text
     if (/(?:^|\/)ui\/input$/.test(module)) {
       const bindings = node.importClause?.namedBindings
