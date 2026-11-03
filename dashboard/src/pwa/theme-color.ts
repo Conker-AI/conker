@@ -7,8 +7,9 @@
 export function hexColor(color: string, context: CanvasRenderingContext2D | null) {
   if (!context || !color) return null
   context.clearRect(0, 0, 1, 1)
+  // An invalid color leaves fillStyle unchanged, so start transparent: it then paints nothing.
+  context.fillStyle = "transparent"
   context.fillStyle = color
-  if (context.fillStyle !== color) return null
   context.fillRect(0, 0, 1, 1)
   const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data
   if (alpha === 0) return null
