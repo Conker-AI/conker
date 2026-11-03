@@ -154,7 +154,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
     const reason = request.payload.status === 'failed' && request.payload.error ? request.payload.error : 'Conker couldn’t draft this tool.'
     const answers = changing
       ? <ReplyBox label="What should the tool do?" placeholder="Describe it again in your own words. Nothing is created." value={words} busy={busy} maxLength={4000} sendLabel="Draft again"
-        onChange={setWords} onSend={() => { onRetry?.(words.trim()); setChanging(false) }} onCancel={() => setChanging(false)} />
+        onChange={setWords} onSend={() => onRetry?.(words.trim())} onCancel={() => setChanging(false)} />
       : <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy || !onRetry} onClick={() => onRetry?.()}>{busy ? 'Working…' : 'Try again'}</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
