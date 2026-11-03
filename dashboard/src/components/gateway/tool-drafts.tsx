@@ -14,6 +14,7 @@ import { serviceIn } from '@/components/brand/service'
 import { GatewayPageFrame } from './page-frame'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import type { SavedCheck, ToolDefinition } from '@/lib/tool-workspace'
+import { GatewayError } from '@/lib/gateway/transport'
 import type { EditorDraft, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import { draftOrigin, forgetDraftOrigin } from '@/lib/tool-draft-origin'
@@ -41,6 +42,7 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
       const value = await client.save(document, draft.revision, lifetime.current?.signal)
       if (!lifetime.current?.signal.aborted) setDraft(value)
     } catch (error) {
+      if (!(error instanceof GatewayError && error.status === 409)) throw error
       const current = await client.get(draft.id, lifetime.current?.signal).catch(() => null)
       if (!lifetime.current?.signal.aborted && current && current.revision !== draft.revision) setDraft({ ...current, document })
       throw error
