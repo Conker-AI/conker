@@ -26,13 +26,14 @@ export function SystemRuntime({ section }: { section: RuntimeSection }) {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const region = useRef<HTMLDivElement>(null)
+  const refresh = useCallback(() => { void client.load().then(value => { setSnapshot(value); setError("") }).catch(() => setError("Runtime preview could not be loaded. Try again.")) }, [])
   useEffect(() => {
     let active = true
-    const refresh = () => { void client.load().then(value => { if (active) { setSnapshot(value); setError("") } }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Could not load runtime preview.") }) }
-    refresh()
-    const unsubscribe = client.subscribe(refresh)
+    const guarded = () => { if (active) refresh() }
+    guarded()
+    const unsubscribe = client.subscribe(guarded)
     return () => { active = false; unsubscribe() }
-  }, [])
+  }, [refresh])
   const inspect = useCallback((item: Selection) => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSelection(item); setError("") }, [])
   const restoreFocus = () => {
     requestAnimationFrame(() => {
@@ -74,7 +75,7 @@ export function SystemRuntime({ section }: { section: RuntimeSection }) {
   return <div ref={region} tabIndex={-1} className="space-y-4 focus-visible:outline-2 focus-visible:outline-ring">
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">Preview</Badge><span>Sample runtime · actions are simulated · changes reset on reload.</span></div>
     {error && !editor && !confirmation && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-    {!snapshot ? <p role="status" className="text-sm text-muted-foreground">{error ? "Runtime preview unavailable." : "Loading runtime preview…"}</p> : <DataTable columns={columns} data={rows} itemLabel={section} searchColumn="name" searchPlaceholder={`Search ${section}…`} filters={[{ column: "status", title: "Status", options: (section === "ports" ? ["Listening", "Inactive"] : ["Running", "Stopped"]).map(value => ({ label: value, value })) }]} toolbarAction={section === "ports" ? <Button onClick={() => openEditor("new")} disabled={busy}><Plus />New mapping</Button> : undefined} renderItem={item => <RecordItem title={item.name} description={item.description} onOpen={() => inspect(item)} leading={<Icon className="size-4" />} meta={<><Badge variant="outline">{item.status}</Badge><span>{item.detail}</span></>} />} />}
+    {!snapshot ? <div className="flex flex-wrap items-center gap-2"><p role="status" className="text-sm text-muted-foreground">{error ? "Runtime preview unavailable." : "Loading runtime preview…"}</p>{error && <Button size="sm" variant="outline" onClick={refresh}>Retry</Button>}</div> : <DataTable columns={columns} data={rows} itemLabel={section} searchColumn="name" searchPlaceholder={`Search ${section}…`} filters={[{ column: "status", title: "Status", options: (section === "ports" ? ["Listening", "Inactive"] : ["Running", "Stopped"]).map(value => ({ label: value, value })) }]} toolbarAction={section === "ports" ? <Button onClick={() => openEditor("new")} disabled={busy}><Plus />New mapping</Button> : undefined} renderItem={item => <RecordItem title={item.name} description={item.description} onOpen={() => inspect(item)} leading={<Icon className="size-4" />} meta={<><Badge variant="outline">{item.status}</Badge><span>{item.detail}</span></>} />} />}
     <p role="status" className="text-xs text-muted-foreground">{feedback || "Open an item to inspect its relationships and available preview actions. Resource values are illustrative, not live metrics."}</p>
     {!!snapshot?.receipts.length && <ReferenceSection title="Recent preview actions"><ol className="divide-y">{snapshot.receipts.slice(0, 5).map(receipt => <li key={receipt.id} className="py-2 text-sm"><p>{receipt.action} · {receipt.targetName}</p><time className="text-xs text-muted-foreground" dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time></li>)}</ol></ReferenceSection>}
     <DetailPanel open={!!selection && !editor && !confirmation} onOpenChange={open => { if (!open) setSelection(null) }} title={name} description="Sample runtime record · no live host connection" busy={busy} finalFocus={restoreFocus}>
