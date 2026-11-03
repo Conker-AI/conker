@@ -90,8 +90,13 @@ def dashboard_tree_revision(root: Path) -> str | None:
             text=True,
             check=True,
         )
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+    except FileNotFoundError as error:
+        raise ManifestError(f"git unavailable; cannot verify dashboard checkout: {error}") from error
+    except subprocess.CalledProcessError as error:
+        raise ManifestError(
+            f"cannot resolve HEAD:dashboard ({error.stderr.strip() or error}); "
+            "manifest cannot be bound to a clean checkout"
+        ) from error
     return result.stdout.strip()
 
 
