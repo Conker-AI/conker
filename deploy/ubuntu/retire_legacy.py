@@ -19,7 +19,7 @@ allowed = {"agentgate-stack-agentgate-1", "agentgate-stack-pi-adapter-1",
     "memorygate-postgres", "memorygate-qdrant", "toolgate-api", "memorygate-api", "systemgate-api"}
 assert {item["Name"].lstrip("/") for item in inventory} == allowed
 ids = subprocess.check_output(["docker", "ps", "-aq"], text=True).split()
-all_containers = json.loads(subprocess.check_output(["docker", "inspect", *ids]))
+all_containers = json.loads(subprocess.check_output(["docker", "inspect", *ids])) if ids else []
 others = [item for item in all_containers if item["Name"].lstrip("/") not in allowed]
 other_volumes = {m["Name"] for item in others for m in item["Mounts"] if m["Type"] == "volume"}
 volumes = sorted({m["Name"] for item in inventory for m in item["Mounts"] if m["Type"] == "volume"})
