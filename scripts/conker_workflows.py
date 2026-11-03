@@ -188,6 +188,8 @@ def tool_request(args, config, request, pi, *, emit=print) -> int:
         if args.operation == "from-chat"
         else args.description
     )
+    if args.operation == "draft" and not 1 <= len(description.strip()) <= 4000:
+        raise ValueError("Use a description of 1 to 4,000 characters.")
     drafting = SimpleNamespace(
         **{**vars(args), "operation": "draft", "description": description}
     )
