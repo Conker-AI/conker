@@ -203,6 +203,8 @@ def verify_snapshot(directory: Path) -> dict:
     if profile.name == "repository":
         allowed_stores.update({"memorygate", "memorygate-backups"})
     captured_config = json.loads((directory / "config/compose.json").read_text(encoding="utf-8"))
+    if not isinstance(captured_config, dict) or not isinstance(captured_config.get("services"), dict):
+        raise RecoveryError("Captured compose configuration is invalid; obtain an intact snapshot.")
     if captured_config.get("services", {}).keys() != images.keys():
         raise RecoveryError("Captured services and image inventory disagree; obtain an intact snapshot.")
     if not expected_stores <= stores.keys() or any(
