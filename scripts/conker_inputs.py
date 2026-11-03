@@ -1,8 +1,10 @@
 """Input validation for the conker CLI: identities, bounded files, MCP endpoints, drafts and history queries."""
 
 import hashlib
+import ipaddress
 import json
 import re
+import socket
 from urllib.parse import urlsplit
 
 SKILL_ID = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -58,12 +60,21 @@ def read_json(path, maximum_bytes=1048576):
     return value
 
 
+def public_mcp_host(hostname):
+    try:
+        infos = socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)
+        return all(ipaddress.ip_address(info[4][0]).is_global for info in infos)
+    except (socket.gaierror, ValueError):
+        return False
+
+
 def mcp_endpoint(url):
     try:
         parsed = urlsplit(url)
         valid = (
             isinstance(url, str)
             and 1 <= len(url) <= 2048
+            and public_mcp_host(parsed.hostname)
             and (
                 parsed.scheme == "https"
                 and parsed.hostname
