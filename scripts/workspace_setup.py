@@ -65,6 +65,8 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         require_sources({"repositories": {"pi": str(source), "memorygate": str(memorygate)}})
     except (ValueError, TypeError) as exc:
         raise SystemExit(str(exc)) from None
+    # The installs below take minutes; refuse to overwrite edits made meanwhile.
+    original = CONFIG.read_bytes()
     run(config["python"], "-m", "pip", "install", "-r", source / "requirements.txt")
     decisions = STATE / "runtimes/decisions"
     if not interpreter(decisions).exists():
@@ -152,11 +154,6 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     decision_key = config["environments"].get("decisions", {}).get(
         "DECISION_API_KEY"
     ) or secrets.token_urlsafe(36)
-    original = CONFIG.read_bytes()
-    if json.loads(original) != config:
-        raise SystemExit(
-            "Workspace configuration changed; reload before preparing native authentication."
-        )
     config.update(native_providers=private, ports=PORTS)
     config["repositories"]["pi"] = str(source)
     config["repositories"]["toolgate"] = str(toolgate)
@@ -188,7 +185,10 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         )
     from workspace_memory import write_config
 
-    write_config(CONFIG, config, CONFIG.read_bytes())
+    try:
+        write_config(CONFIG, config, original)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
     run(config["python"], ROOT / "scripts/workspace_models.py", "initialize")
     print(
         "Prepared native authentication, model roles and dedicated memory corrections. Verify capabilities after startup; thinking runs only when requested. Start with workspace.py up."
