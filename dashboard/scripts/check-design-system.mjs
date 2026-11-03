@@ -155,8 +155,14 @@ function inspect(file, tree) {
 
 function inspectTheme(source) {
   const mappings = ["background", "foreground", "card", "card-foreground", "popover", "popover-foreground", "primary", "primary-foreground", "secondary", "secondary-foreground", "muted", "muted-foreground", "accent", "accent-foreground", "border", "input", "ring", "sidebar", "sidebar-foreground"]
-  return mappings.filter(role => !source.includes(`--color-${role}: var(--${role});`))
-    .map(role => ({file:"src/index.css", line:1, column:1, rule:"template-token", message:`Map --color-${role} directly to --${role}, as in the pinned template. Do not remix the owner's theme.`}))
+  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "")
+  const findings = []
+  for (const role of mappings) {
+    const declarations = [...stripped.matchAll(new RegExp(`^\\s*--color-${role}:\\s*([^;]+);`, "gm"))]
+    if (declarations.length !== 1 || declarations[0][1].trim() !== `var(--${role})`)
+      findings.push({file:"src/index.css", line:1, column:1, rule:"template-token", message:`Map --color-${role} directly to --${role}, as in the pinned template. Do not remix the owner's theme.`})
+  }
+  return findings
 }
 
 function selfTest() {
