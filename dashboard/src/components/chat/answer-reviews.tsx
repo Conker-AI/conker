@@ -14,6 +14,7 @@ type Props = { message: ChatMessage; tools: AnswerTools }
 type Family = NonNullable<ChatMessage['family']>
 const popup = 'w-[min(20rem,calc(100vw-2rem))]'
 const markWords = { supported: 'Supported', contradicted: 'Contradicted', 'no-source': 'No source' } as const
+const safeSourceUrl = (url: string) => { try { const { protocol } = new URL(url); return protocol === 'https:' || protocol === 'http:' || protocol === 'mailto:' ? url : null } catch { return null } }
 const markVariant = { supported: 'success', contradicted: 'error', 'no-source': 'secondary' } as const
 
 /** Loads a list when a popover opens; `null` until it has arrived. */
@@ -118,8 +119,9 @@ function FactCheckPopover({ message, tools }: Props) {
                 {claim.sources.map(sourceId => {
                   const source = latest.sources.find(item => item.id === sourceId)
                   if (!source) return null
-                  return source.url
-                    ? <a key={sourceId} href={source.url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-2">{source.title}</a>
+                  const url = source.url ? safeSourceUrl(source.url) : null
+                  return url
+                    ? <a key={sourceId} href={url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-2">{source.title}</a>
                     : <span key={sourceId} className="text-muted-foreground">{source.title}</span>
                 })}
               </p>}
