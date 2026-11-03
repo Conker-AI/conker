@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import type { HostedProviderId } from '@/lib/gateway/provider-control'
 import type { GatewayControlClient, OwnerModelSettings, ProviderStatus } from '@/lib/gateway/control'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
+import { GatewayError } from '@/lib/gateway/transport'
 import type { ChatGPTStatus } from '@/lib/gateway/chatgpt'
 import { ModelsProviders } from '@/app/settings/models-providers'
 import { Button } from '@/components/ui/button'
@@ -106,7 +107,7 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
         } catch (error) {
           if (current()) {
             setError(error instanceof Error ? error.message : 'Could not save model settings.')
-            if (error instanceof Error && /reload before saving/i.test(error.message)) readRuntimeWithDeadline(signal => client.models(signal), controller).then(fresh => { if (current()) setCatalogue({ source, value: fresh }) }).catch(() => {})
+            if (error instanceof GatewayError && error.status === 409) readRuntimeWithDeadline(signal => client.models(signal), controller).then(fresh => { if (current()) setCatalogue({ source, value: fresh }) }).catch(() => {})
           }
           return false
         }
