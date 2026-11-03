@@ -50,6 +50,7 @@ class WindowsTerminal:
         self.closed = False
         self.limit, self.buffer, self.offset = output_limit, bytearray(), 0
         self.decoder = codecs.getincrementaldecoder("utf-8")()
+        self.pending = bytearray()
         self.deadline = time.monotonic() + lifetime
         bootstrap = "Set-PSReadLineOption -HistorySaveStyle SaveNothing; Write-Host 'Conker owner shell. Run codex or claude. Native permissions apply.'"
         self.process = PtyProcess.spawn(
@@ -89,15 +90,35 @@ class WindowsTerminal:
             raise TerminalError("Terminal input must contain 1-8192 bytes.")
         with self.lock:
             self._active()
+            self.pending.extend(data)
             try:
-                value = self.decoder.decode(data)
-                if value:
-                    self.process.write(value)
-                return len(data)
-            except (EOFError, OSError, UnicodeError):
+                value = self.decoder.decode(bytes(self.pending))
+                if not value:
+                    return 0
+                self.process.write(value)
+            except (EOFError, OSError):
                 raise TerminalError(
                     "Terminal input was not confirmed; do not replay it."
                 ) from None
+            except UnicodeError:
+                recovered = ""
+                probe = codecs.getincrementaldecoder("utf-8")()
+                for index in range(len(self.pending)):
+                    try:
+                        recovered += probe.decode(bytes(self.pending[index : index + 1]))
+                    except UnicodeError:
+                        break
+                self.pending.clear()
+                self.decoder.reset()
+                if recovered:
+                    with contextlib.suppress(OSError, EOFError):
+                        self.process.write(recovered)
+                raise TerminalError(
+                    "Terminal input contained invalid UTF-8; do not replay it."
+                ) from None
+            written = len(self.pending)
+            self.pending.clear()
+            return written
 
     def resize(self, rows, columns):
         if (
