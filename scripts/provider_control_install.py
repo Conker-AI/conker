@@ -34,10 +34,13 @@ def install(root: Path, source: Path, layout: str):
     if not (source / "scripts/provider_control.py").is_file():
         raise ValueError("Provider-control source is missing.")
     directory = state / "provider-control"
+    inference = state / "chatgpt-inference"
+    # chmod follows links: a linked folder would hand its mode to the link target.
+    if any(path.is_symlink() for path in (state, directory, inference)):
+        raise ValueError("Provider-control folders must not be symbolic links.")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     directory.chmod(0o700)
     socket = directory / "control.sock"
-    inference = state / "chatgpt-inference"
     inference.mkdir(parents=True, exist_ok=True, mode=0o700)
     inference.chmod(0o700)
     name = (
