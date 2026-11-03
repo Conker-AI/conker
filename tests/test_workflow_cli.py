@@ -329,3 +329,17 @@ def test_refusals_show_the_services_message():
         workflows.workflow_operation(
             Namespace(operation="dismiss", request=REQUEST), {}, refuse
         )
+
+
+def test_a_large_tool_catalogue_does_not_hide_the_workflows():
+    def editor(config, service, path, body=None, **options):
+        query = options["query"]
+        if query["kind"] == "workflow":
+            return {"items": [{"id": "flow", "authorization": "owner_confirmation"}], "next_after": None}
+        start = int(query.get("after") or 0)
+        items = [{"id": f"tool-{n}"} for n in range(start, start + 100)]
+        return {"items": items, "next_after": str(start + 100) if start < 400 else None}
+
+    found = workflows.capabilities(editor, {})
+    assert len(found) == workflows.CAPABILITIES + 1
+    assert found[-1] == {"id": "flow", "authorization": "owner_confirmation"}

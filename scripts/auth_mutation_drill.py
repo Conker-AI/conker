@@ -108,27 +108,40 @@ def main() -> int:
             file.write_text(source.replace(old, new), encoding="utf-8")
         report = target / "results.xml"
         tests = [selected] if selected else [DEPLOYMENT, RESTORE, INDEX]
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                *tests,
-                "-q",
-                "-p",
-                "no:cacheprovider",
-                "--basetemp",
-                str(target / "temp"),
-                "--junitxml",
-                str(report),
-            ],
-            cwd=target,
-            env={**os.environ, "PYTHONPATH": str(target)},
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    *tests,
+                    "-q",
+                    "-p",
+                    "no:cacheprovider",
+                    "--basetemp",
+                    str(target / "temp"),
+                    "--junitxml",
+                    str(report),
+                ],
+                cwd=target,
+                env={**os.environ, "PYTHONPATH": str(target)},
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            # A hung run proves nothing either way; report it instead of crashing the drill.
+            output = b"".join(
+                part.encode() if isinstance(part, str) else part
+                for part in (exc.stdout, exc.stderr)
+                if part
+            ).decode("utf-8", "replace")
+            (target / "output.txt").write_text(
+                f"{output}\nTimed out after {exc.timeout} s.\n", encoding="utf-8"
+            )
+            print(f"FAILED {name}: timed out; inspect {target / 'output.txt'}")
+            return 1
         (target / "output.txt").write_text(
             result.stdout + result.stderr, encoding="utf-8"
         )
