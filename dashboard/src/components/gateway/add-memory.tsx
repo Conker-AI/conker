@@ -20,7 +20,7 @@ export function AddMemory({ client, onAdded }: { client: Client; onAdded: (messa
     setPending(true); setError(null)
     // The same id on a retry: memory stores it at most once.
     try { const saved = await client.rememberMemory(identity, text); close(); onAdded(saved.status === 'already_remembered' ? 'That is already in your memory.' : 'Remembered.') }
-    catch (cause) { setError(gatewayError(cause).message) }
+    catch (cause) { setIdentity(requestId()); setError(gatewayError(cause).message) }
     finally { setPending(false) }
   }
   return <>
