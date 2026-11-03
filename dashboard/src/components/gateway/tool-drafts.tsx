@@ -37,8 +37,14 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
   }, [client, id, refresh])
   async function save(document: ToolDefinition) {
     if (!draft) throw new Error('Reload this draft before saving.')
-    const value = await client.save(document, draft.revision, lifetime.current?.signal)
-    if (!lifetime.current?.signal.aborted) setDraft(value)
+    try {
+      const value = await client.save(document, draft.revision, lifetime.current?.signal)
+      if (!lifetime.current?.signal.aborted) setDraft(value)
+    } catch (error) {
+      const current = await client.get(draft.id, lifetime.current?.signal).catch(() => null)
+      if (!lifetime.current?.signal.aborted && current && current.revision !== draft.revision) setDraft({ ...current, document })
+      throw error
+    }
   }
   async function more() {
     if (!page?.next_after || busy) return
