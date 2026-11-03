@@ -41,12 +41,12 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
   starter?: JobStarter | null; onCreated: (job: GatewayJob) => void
 }) {
   const [value, setValue] = useState(() => starter ? fromStarter(starter) : blank), [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null)
-  const [tools, setTools] = useState<ToolInventory['results'] | null>(null), [agents, setAgents] = useState<AgentProfile[] | null>(null)
+  const [tools, setTools] = useState<ToolInventory['results'] | null>(null), [toolsFailed, setToolsFailed] = useState(false), [agents, setAgents] = useState<AgentProfile[] | null>(null)
   const watching = value.repeat === 'tool'
   useEffect(() => {
     if (!open || !watching || tools || !loadTools) return
     const controller = new AbortController()
-    loadTools(controller.signal).then(found => { if (!controller.signal.aborted) setTools(found.status === 'ok' ? found.results : []) }).catch(() => { if (!controller.signal.aborted) setTools([]) })
+    loadTools(controller.signal).then(found => { if (!controller.signal.aborted) { setToolsFailed(false); setTools(found.status === 'ok' ? found.results : []) } }).catch(() => { if (!controller.signal.aborted) setToolsFailed(true) })
     return () => controller.abort()
   }, [open, watching, tools, loadTools])
   // Only the owner's active agents; with just the default one there is nothing to choose.
@@ -93,7 +93,7 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
         </div>
         {watching && <div className="space-y-4 rounded-lg border p-3">
           <div className="space-y-2"><Label htmlFor="agent-job-tool">Tool to watch</Label>
-            {tools === null ? <p role="status" className="text-sm text-muted-foreground">Loading tools…</p> : tools.length ? select('agent-job-tool', value.tool, tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })), tool => setValue({ ...value, tool, inputs: {} }))
+            {tools === null ? <p role="status" className="text-sm text-muted-foreground">Loading tools…</p> : toolsFailed ? <p role="alert" className="text-sm text-destructive-foreground">Your tools couldn’t be loaded. <button type="button" className="underline" onClick={() => setTools(null)}>Try again</button>.</p> : tools.length ? select('agent-job-tool', value.tool, tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })), tool => setValue({ ...value, tool, inputs: {} }))
               : <p className="text-sm text-muted-foreground">No tools are available. Connect one in Tools first, like an MCP server for your messages.</p>}
           </div>
           {chosen?.inputs.map(input => <div key={input.name} className="space-y-2"><Label htmlFor={`agent-job-input-${input.name}`}>{input.name}{input.required ? '' : ' (optional)'}</Label>
