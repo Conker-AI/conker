@@ -50,8 +50,13 @@ def main():
             headers={"Content-Type": "application/json"},
         )
         response = connection.getresponse()
-        content = response.read(65537)
-        if response.status != 200 or len(content) > 65536:
+        content = (
+            response.read() if args.operation == "status" else response.read(65537)
+        )
+        if (
+            response.status != 200
+            or (args.operation != "status" and len(content) > 65536)
+        ):
             parser.exit(
                 1,
                 "Subscription operation was not confirmed. Refresh status before retrying.\n",
