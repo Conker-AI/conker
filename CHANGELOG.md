@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The bug-hunt fixes ship.** Pi 0.18.1, ToolGate 0.12.0, MemoryGate 0.8.0, SystemGate 0.5.0 and Embeddings 0.1.5 are
+  pinned: an approved AI job and a webhook's payload are saved in one go, vault writes cannot lose a secret, a refused
+  request never echoes a key or secret back, and the smaller fixes each module's changelog lists.
 - **Set a context rule on one message.** In a live chat, the Layers button in a message's action bar keeps that message word for word, leaves it out, lets it be summarised or brings it back when relevant; "Default" clears the rule, and the rule's words show beside the button.
 - **The chat features work live.** Pi 0.18.0 is pinned: the Gateway lets the owner's browser reach the chat
   routes (names, output settings, answer versions, reviews, fact checks, summary and context editing), so
@@ -513,8 +516,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.18.0 |
-| ToolGate | v0.11.0 |
-| MemoryGate | v0.7.0 |
-| SystemGate | v0.4.0 |
-| Embeddings | v0.1.4 |
+| Pi | v0.18.1 |
+| ToolGate | v0.12.0 |
+| MemoryGate | v0.8.0 |
+| SystemGate | v0.5.0 |
+| Embeddings | v0.1.5 |
