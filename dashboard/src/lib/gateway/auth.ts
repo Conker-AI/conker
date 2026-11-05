@@ -199,7 +199,7 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       }
     },
     async request(path: string, options: GatewayRequest = {}): Promise<Record<string, unknown>> {
-      const { onDispatch, ...requestOptions } = options
+      const { onDispatch, password, ...requestOptions } = options
       const write = requestOptions.method === 'POST' || requestOptions.method === 'PUT' ? requestOptions.method : null
       const post = write !== null
       if (post && requestOptions.query !== undefined) throw new GatewayError('validation')
@@ -216,9 +216,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       // Slow turns must not block logout or session verification. Never surface results from an old session.
       const current = () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
       if (!current()) throw new GatewayError(post ? 'verification-cancelled' : 'session-changed')
+      const askFirst = !!operation && !needsNoPassword(path, operation.body) && password !== 'if-asked'
       let verificationToken: string | undefined
-      if (operation && !needsNoPassword(path, operation.body)) {
-        verificationToken = await proof(operation, ticket, current, signal)
+      if (askFirst) {
+        verificationToken = await proof(operation!, ticket, current, signal)
         if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
       }
       if (post) {
@@ -227,19 +228,38 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
         onDispatch?.()
         if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
       }
+      const send = (token: string | undefined) => transport.request(path, { ...requestOptions, ...(operation ? { body: operation.body, verificationToken: token } : {}), csrfToken: ticket.csrfToken })
       try {
         // The proof is supplied once, only on the frozen operation it authorized. No replay on failure.
-        const value = await transport.request(path, { ...requestOptions, ...(operation ? { body: operation.body, verificationToken } : {}), csrfToken: ticket.csrfToken })
+        const value = await send(verificationToken)
         verificationToken = undefined
         if (!current()) throw new GatewayError('session-changed')
         return value
       } catch (error) {
         verificationToken = undefined
-        if (gatewayError(error).kind === 'verification-required') throw error
+        let failure = error
+        // 'if-asked': the server refused this exact frozen write for want of a proof (428), so it
+        // ran nothing. Ask for the password once and send the same operation once more with the
+        // token; whatever that answers is handled like any other failure, never retried again.
+        if (gatewayError(error).kind === 'verification-required' && operation && password === 'if-asked') {
+          if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+          let token: string | undefined = await proof(operation, ticket, current, signal)
+          if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+          try {
+            const retried = await send(token)
+            token = undefined
+            if (!current()) throw new GatewayError('session-changed')
+            return retried
+          } catch (again) {
+            token = undefined
+            failure = again
+          }
+        }
+        if (gatewayError(failure).kind === 'verification-required') throw failure
         if (!current()) throw new GatewayError('session-changed')
         return serial(async () => {
           if (!current()) throw new GatewayError('session-changed')
-          return classifyDenied(error)
+          return classifyDenied(failure)
         })
       }
     },

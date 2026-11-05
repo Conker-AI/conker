@@ -1,10 +1,14 @@
 import type { GatewayAuthClient } from './auth'
 import { isCardTemplate, type CardTemplate } from '../inbox-buttons'
 import { GatewayError, gatewayError } from './transport'
+import { createBrowserSessionsClient } from './browser-sessions'
+import { createPasswordAlertsClient } from './password-alerts'
 
 export type OwnerDecision = 'approved' | 'rejected' | 'dismissed'
 export type OwnerRequestStatus = 'pending' | OwnerDecision | 'cancelled'
 export type OwnerUnavailableReason = 'invalid_origin' | 'invalid_action' | 'arguments_unavailable' | 'unsupported_subject' | 'expired' | 'consumed' | 'already_decided'
+/** How much an owner decision must prove: 1 normal (do/run/save), 2 outward (send/publish/ship), 3 serious (delete/pay). */
+export type OwnerApprovalLevel = 1 | 2 | 3
 export type OwnerRequest = {
   id: string; kind: 'verification'; title: string; details: string; actor: string; severity: string
   status: OwnerRequestStatus; createdAt: string; updatedAt: string
@@ -14,6 +18,8 @@ export type OwnerRequest = {
   reviewable: boolean; unavailableReason: OwnerUnavailableReason | null
   /** The buttons the tool had when it asked; labels only. An older ToolGate sends none: Do it. */
   card: CardTemplate
+  /** The server decides how much proof it asks for; a missing or odd value is the serious level. */
+  level: OwnerApprovalLevel
 }
 export type OwnerRequestPage = { results: OwnerRequest[]; nextCursor: string | null }
 const statuses = new Set(['pending', 'approved', 'rejected', 'dismissed', 'cancelled'])
@@ -71,6 +77,7 @@ export function parseOwnerRequest(value: unknown, expectedId?: string): OwnerReq
     approval: { expiresAt: optionalDate(approval.expires_at), consumedAt: optionalDate(approval.consumed_at), originValid: approval.origin_valid },
     reviewable: row.reviewable, unavailableReason: row.unavailable_reason as OwnerUnavailableReason | null,
     card: isCardTemplate(row.card) ? row.card : 'do',
+    level: (row.approval_level === 1 || row.approval_level === 2 || row.approval_level === 3) ? row.approval_level : 3,
   }
   if (row.decision !== null) {
     const decision = record(row.decision)
@@ -95,8 +102,13 @@ export class OwnerDecisionError extends Error {
   }
 }
 
-export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request'>) {
+export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request' | 'getSession'>, onCurrentSessionRevoked: () => void = () => {}) {
+  const sessions = createBrowserSessionsClient(auth, onCurrentSessionRevoked)
   return {
+    /** Wrong-password alerts for the Inbox card. */
+    alerts: createPasswordAlertsClient(auth),
+    /** "Sign out everywhere": the sessions client's own revoke, so this tab learns it signed out. */
+    revokeAll: (signal?: AbortSignal) => sessions.revoke(null, signal),
     async listRequests(options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}): Promise<OwnerRequestPage> {
       const limit = options.limit ?? 50
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200) throw new GatewayError('validation')
@@ -110,11 +122,14 @@ export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request'
       identity(id, true)
       return parseOwnerRequest(await auth.request(`/api/owner/requests/${id}`, options), id)
     },
-    async decide(id: string, status: OwnerDecision, note: string, options: { signal?: AbortSignal } = {}): Promise<OwnerRequest> {
+    async decide(id: string, status: OwnerDecision, note: string, options: { signal?: AbortSignal; level?: OwnerApprovalLevel } = {}): Promise<OwnerRequest> {
       identity(id, true)
       if (!['approved', 'rejected', 'dismissed'].includes(status) || typeof note !== 'string' || [...note].length > 2000) throw new GatewayError('validation')
+      // The server decides whether the decision needs the password; at level 1 and 2, and for a
+      // no or dismissal, the signed-in session is enough, so the page never pre-asks for a proof.
+      const password = status !== 'approved' || options.level === 1 || options.level === 2 ? 'if-asked' as const : undefined
       try {
-        const result = parseOwnerRequest(await auth.request(`/api/owner/requests/${id}/decision`, { method: 'POST', body: { status, note }, signal: options.signal }), id)
+        const result = parseOwnerRequest(await auth.request(`/api/owner/requests/${id}/decision`, { method: 'POST', body: { status, note }, signal: options.signal, ...(password ? { password } : {}) }), id)
         if (result.status !== status || !result.decision) return fail()
         return result
       } catch (error) { throw new OwnerDecisionError(error, id) }

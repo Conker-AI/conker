@@ -6,7 +6,7 @@ function load(relative) {
   const module = { exports: {} }; cache.set(relative, module)
   const code = ts.transpileModule(fs.readFileSync(path.join(root, relative), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   new Function('require', 'module', 'exports', code)(request => {
-    if (request === 'zustand/vanilla') return require(request)
+    if (request === 'zustand/vanilla' || request === 'zod') return require(request)
     const target = request.startsWith('@/') ? `src/${request.slice(2)}` : path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))
     return load(`${target}.ts`)
   }, module, module.exports)
@@ -70,6 +70,38 @@ async function main() {
   await assert.rejects(wrongRecord.decide('request_one', 'approved', ''), error => error.outcome === 'unknown')
   const duplicate = createGatewayOwnerClient({ request: async () => ({ results: [fixture(), fixture()], next_cursor: null }) })
   await assert.rejects(duplicate.listRequests(), error => error.kind === 'invalid-response')
+  // Approval levels: the server's level decides how much proof the page asks for. A missing or odd
+  // level is serious (3). Levels 1 and 2, and any no, send with the session and ask the password
+  // only if the server answers 428; level 3 approved asks first (no 'if-asked').
+  for (const [sent, shown] of [[undefined, 3], [1, 1], [2, 2], [3, 3], [0, 3], [4, 3], ['1', 3], [null, 3], [1.5, 3]]) {
+    const row = fixture(); if (sent === undefined) delete row.approval_level; else row.approval_level = sent
+    assert.equal(parseOwnerRequest(row).level, shown, `approval_level ${String(sent)} shows as level ${shown}`)
+  }
+  const sent = []
+  const levels = createGatewayOwnerClient({ request: async (route, options) => { sent.push(options); return options.body.status === 'approved' ? approved : { ...approved, status: options.body.status, decision: { ...approved.decision, status: options.body.status } } } })
+  for (const [status, level, ifAsked] of [['approved', 1, true], ['approved', 2, true], ['approved', 3, false], ['approved', undefined, false], ['rejected', 3, true], ['rejected', undefined, true], ['dismissed', 3, true]]) {
+    sent.length = 0
+    await levels.decide('request_one', status, '', { level })
+    assert.equal(sent.length, 1, 'One send per decision')
+    assert.equal(sent[0].password, ifAsked ? 'if-asked' : undefined, `${status} at level ${String(level)}`)
+    if (!ifAsked) assert.ok(!('password' in sent[0]), 'Level 3 yes keeps the default: the password is asked before sending')
+  }
+  const alertRoutes = []
+  let alertAnswer = { unseen: 1, results: [{ at: 1, origin: 'new_device', seen: false }] }
+  const alertsOwner = createGatewayOwnerClient({ request: async (route, options) => { alertRoutes.push([route, options]); return route === '/auth/alerts/seen' ? { seen: true } : alertAnswer } })
+  assert.deepEqual(await alertsOwner.alerts.list(), alertAnswer)
+  await alertsOwner.alerts.seen()
+  assert.deepEqual(alertRoutes.map(([route, options]) => [route, options.method, options.body, options.password]), [['/auth/alerts', undefined, undefined, undefined], ['/auth/alerts/seen', 'POST', {}, undefined]])
+  for (const bad of [{ ...alertAnswer, extra: 1 }, { unseen: -1, results: [] }, { unseen: 1, results: [{ at: 1, origin: 'elsewhere', seen: false }] }, { unseen: 1, results: [{ at: 1, origin: 'new_device', seen: false, ip: 'x' }] }, { unseen: 0, results: Array.from({ length: 51 }, () => ({ at: 1, origin: 'signed_in', seen: true })) }]) {
+    alertAnswer = bad
+    await assert.rejects(alertsOwner.alerts.list(), error => error.kind === 'invalid-response', 'Alerts are strict: no extra fields, no unknown origins, at most 50')
+  }
+  const seenBad = createGatewayOwnerClient({ request: async () => ({ seen: false }) })
+  await assert.rejects(seenBad.alerts.seen(), error => error.kind === 'invalid-response')
+  const revoked = []
+  const revoking = createGatewayOwnerClient({ request: async (route, options) => { revoked.push([route, options.method]); return { revoked: true } }, getSession: () => null }, () => revoked.push('signed out'))
+  await revoking.revokeAll()
+  assert.deepEqual(revoked, [['/auth/revoke-all', 'POST'], 'signed out'], 'Sign out everywhere also ends this tab')
   const state = createGatewayOwnerState()
   state.setState({ notes: { request_one: 'Private draft' }, attempts: { request_one: { status: 'approved', note: 'Private draft', checked: false } }, pendingId: 'request_one' })
   state.getState().reset()
