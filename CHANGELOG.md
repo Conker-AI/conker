@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Approval levels and the password lock-out ship.** Pi 0.19.0, ToolGate 0.13.0, MemoryGate 0.8.1, SystemGate 0.5.1 and
+  Embeddings 0.1.6 are pinned: the server decides how much an approval asks (one tap, a red "Are you sure?" for sends,
+  the password for deletes and payments), a browser that keeps guessing the password is locked out and the Inbox says
+  so, and every image takes Debian's security fixes newer than its base (apt, CVE-2026-109518). The Claude plan
+  runtime's image takes them too.
 - **The bug-hunt fixes ship.** Pi 0.18.1, ToolGate 0.12.0, MemoryGate 0.8.0, SystemGate 0.5.0 and Embeddings 0.1.5 are
   pinned: an approved AI job and a webhook's payload are saved in one go, vault writes cannot lose a secret, a refused
   request never echoes a key or secret back, and the smaller fixes each module's changelog lists.
@@ -516,8 +521,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.18.1 |
-| ToolGate | v0.12.0 |
-| MemoryGate | v0.8.0 |
-| SystemGate | v0.5.0 |
-| Embeddings | v0.1.5 |
+| Pi | v0.19.0 |
+| ToolGate | v0.13.0 |
+| MemoryGate | v0.8.1 |
+| SystemGate | v0.5.1 |
+| Embeddings | v0.1.6 |
