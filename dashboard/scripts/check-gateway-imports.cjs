@@ -14,6 +14,8 @@ function resolve(from, specifier) {
   throw new Error(`Unresolved local dependency ${specifier} from ${slash(path.relative(root, from))}`)
 }
 function imports(file) {
+  // A JSON module is data: it imports nothing.
+  if (file.endsWith('.json')) return []
   // Follow emitted value dependencies, not type-only imports or a text search over comments.
   const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     fileName: file,
