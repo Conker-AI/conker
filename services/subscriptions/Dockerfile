@@ -7,6 +7,10 @@
 FROM python:3.12.16-slim@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07
 ARG TARGETARCH=amd64
 WORKDIR /app
+# Debian security fixes newer than the pinned base image.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 COPY services/subscriptions/requirements.txt services/subscriptions/fetch_claude.py /build/
 RUN pip install --no-cache-dir -r /build/requirements.txt \
     && python /build/fetch_claude.py "$TARGETARCH" /opt/claude/bin/claude \

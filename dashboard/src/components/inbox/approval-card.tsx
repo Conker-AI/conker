@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ShieldCheck, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cardLabels } from '@/lib/inbox-buttons'
@@ -8,22 +9,13 @@ import type { OwnerDecision, OwnerRequest } from '@/lib/gateway/owner'
 import { canReleaseExpiredOwnerDecision, ownerDecisionEligibility, ownerUnavailableText, type RetainedOwnerDecision } from '@/components/gateway/owner-state'
 import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
+import { ApprovalConfirm } from './approval-confirm'
+import { deleteConfirmName, friendlyValue, humanize } from './approval-words'
 
-const humanize = (value: string) => {
-  const words = value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')
-  return words.charAt(0).toUpperCase() + words.slice(1)
-}
 const timestamp = (value: string) => new Date(value).toLocaleString()
 function relativeTime(value: string, now: number) {
   const minutes = Math.max(0, Math.floor((now - Date.parse(value)) / 60000))
   return minutes < 1 ? 'Just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
-function friendlyValue(value: unknown): string {
-  if (value === null) return 'Not set'
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-  if (Array.isArray(value)) return value.length ? value.map(friendlyValue).join('; ') : 'None'
-  if (typeof value === 'object') return Object.entries(value).map(([key, item]) => `${humanize(key)}: ${friendlyValue(item)}`).join('; ') || 'None'
-  return String(value)
 }
 function ArgumentValue({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false)
@@ -42,6 +34,8 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
   onLater?: () => void
 }) {
   const [changing, setChanging] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [confirmName, setConfirmName] = useState('')
   const eligibility = ownerDecisionEligibility(request, now)
   const expired = request.status === 'pending' && (eligibility.expired || request.unavailableReason === 'expired')
   const title = request.title || 'Review this action'
@@ -49,19 +43,33 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
   const labels = cardLabels[request.card]
   const minutesLeft = request.approval.expiresAt ? Math.max(1, Math.ceil((Date.parse(request.approval.expiresAt) - now) / 60000)) : null
   const state = attempt ? 'Outcome not confirmed' : expired ? 'Expired, nothing was done' : request.status !== 'pending' ? humanize(request.status) : minutesLeft !== null ? `Expires in ${minutesLeft} min` : 'Waiting for you'
+  const level = request.level
+  // Level 3 is serious (delete, pay): its yes is destructive, and a delete keeps a typed name
+  // between him and the password sheet. Level 2 first asks where it goes in its own dialog.
+  const serious = level === 3
+  const deleteName = request.card === 'delete' && serious ? deleteConfirmName(request) : null
+  const confirmTyped = deleteName === null || confirmName === deleteName
   const answers = attempt ? <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCheck}>Check</Button></div>
     : open && changing ? <ReplyBox label="What should Conker do instead?" placeholder="Your words go to Conker in that chat. Nothing here runs." value={note} busy={busy}
       onChange={onNote} onSend={() => onDecide('rejected', false, note.trim())} onCancel={() => setChanging(false)} />
-    : open ? <div className="flex flex-wrap gap-2">
-      {eligibility.approve && <Button type="button" size="sm" variant={request.card === 'delete' || request.card === 'pay' ? 'destructive' : 'default'} disabled={busy} onClick={() => onDecide('approved', false, '')}>{labels.yes}</Button>}
-      <Button type="button" size="sm" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected', false, '')}>{labels.no}</Button>
-      <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} onClick={() => setChanging(true)}>Change</Button>
+    : open ? <div className="flex flex-col gap-2">
+      {deleteName !== null && <>
+        <Label htmlFor={`delete-confirm-${request.id}`} className="block [overflow-wrap:anywhere]">Type <strong className="font-semibold">{deleteName}</strong> to confirm</Label>
+        <Input id={`delete-confirm-${request.id}`} value={confirmName} disabled={busy} autoComplete="off" onChange={event => setConfirmName(event.target.value)} />
+      </>}
+      <div className="flex flex-wrap gap-2">
+        {eligibility.approve && <Button type="button" size="sm" variant={serious ? 'destructive' : 'default'} disabled={busy || !confirmTyped} onClick={() => level === 2 ? setConfirming(true) : onDecide('approved', false, '')}>{labels.yes}</Button>}
+        <Button type="button" size="sm" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected', false, '')}>{labels.no}</Button>
+        <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} onClick={() => setChanging(true)}>Change</Button>
+      </div>
     </div> : null
-  // Folded: the tool's own yes, one tap away (it runs exactly what opening the card shows). Deleting
-  // and paying never go from a folded card: Review opens it so the exact action is in view first.
-  const risky = request.card === 'delete' || request.card === 'pay'
+  // Folded: the tool's own yes, one tap away (it runs exactly what opening the card shows). Level 2
+  // first asks where it goes in the "Are you sure?" dialog; level 3 never goes from a folded card:
+  // Review opens it so the exact action is in view first.
+  const risky = serious
   const primary = open && !changing && eligibility.approve && !attempt && !risky
-    ? <Button type="button" size="sm" disabled={busy} onClick={() => onDecide('approved', false, '')}>{labels.yes}</Button> : undefined
+    ? <Button type="button" size="sm" disabled={busy}
+      onClick={() => level === 2 ? setConfirming(true) : onDecide('approved', false, '')}>{labels.yes}</Button> : undefined
   const source = <>{request.actor || 'Conker'} · <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span></>
   const facts: InboxFact[] = [
     ['Asked by', request.actor || 'Conker'], ['Came', `${relativeTime(request.createdAt, now)} · ${timestamp(request.createdAt)}`],
@@ -71,7 +79,9 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
     ['Version', request.action.version ?? 'Unavailable'], ['Updated', timestamp(request.updatedAt)],
     ...(request.approval.consumedAt ? [['Consumed', timestamp(request.approval.consumedAt)] as InboxFact] : []),
   ]
-  return <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} source={source} summary={request.details || undefined}
+  // What the footer promises about the proof, decided by the server's level, never by the page.
+  const proofLine = level === 2 ? 'You confirm where it goes.' : level === 3 ? 'Your password confirms it.' : null
+  const card = <InboxCard icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />} title={title} source={source} summary={request.details || undefined}
     primary={primary} openLabel={open && risky && !attempt ? 'Review' : undefined} actions={answers} facts={facts} onLater={!detail && open && !attempt ? onLater : undefined} defaultExpanded={detail || !!attempt}
     footer={processing && <p role="status" className="text-xs text-muted-foreground">Waiting for verification or the recorded decision…</p>}
     advanced={<>
@@ -100,6 +110,11 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
         {canReleaseExpiredOwnerDecision(request, attempt) ? <Button type="button" variant="outline" disabled={busy} onClick={onRelease}>Review expired request</Button>
           : attempt.checked && request.status === 'pending' && <Button type="button" disabled={busy} onClick={() => onDecide(attempt.status, true)}>Retry identical decision</Button>}
       </div>
-    </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went. {labels.no} and Change run nothing. Your password confirms the decision.</p>}
+    </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went.{proofLine ? ` ${proofLine}` : ''} {labels.no} and Change run nothing.</p>}
   </InboxCard>
+  if (confirming) return <>
+    <ApprovalConfirm request={request} busy={busy} onConfirm={() => { setConfirming(false); onDecide('approved', false, '') }} onCancel={() => { setConfirming(false); setConfirmName('') }} />
+    {card}
+  </>
+  return card
 }

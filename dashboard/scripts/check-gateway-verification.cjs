@@ -185,5 +185,39 @@ async function main() {
   const review = describeGatewayOperation({ method: 'POST', path: '/api/pi/tasks/task_1/update', body: { outcome: 'secret outcome', criteria: ['secret criterion'], expected_revision: 4, run_ids: ['turn_1'] } })
   assert.equal(review.target, 'Task task_1'); assert.match(review.details.join(' '), /revision 4/); assert.doesNotMatch(JSON.stringify(review), /secret/)
   console.log('PASS malformed proof fails closed, missing prompt cannot dispatch, safe operation metadata and proof header boundary')
+
+  // password: 'if-asked' (approval levels 1 and 2, and every no): send with the session first; only a
+  // server 428 for this exact frozen write asks the password, and the same body goes once more.
+  const proofHeader = call => new Headers(call.options.headers).get('X-Conker-Verification')
+  const untilPrompt = async f => { for (let i = 0; i < 50 && !f.verification.getState().challenge; i++) await tick(); assert.ok(f.verification.getState().challenge, 'A 428 asks the password') }
+  const ifAsked = { method: 'POST', body: { decision: 'approved', note: '' }, password: 'if-asked' }
+  f = fixture(); await f.client.bootstrap()
+  assert.deepEqual(await f.client.request(route, ifAsked), { accepted: true })
+  assert.equal(f.targets().length, 1); assert.equal(proofHeader(f.targets()[0]), null)
+  assert.equal(f.calls.filter(call => call.path === '/auth/verify').length, 0); assert.equal(f.verification.getState().challenge, null)
+  let sends = 0
+  f = fixture(call => call.path === route && ++sends === 1 ? json({ detail: 'verification_required' }, 428) : undefined); await f.client.bootstrap()
+  let asked = outcome(f.client.request(route, ifAsked)); await untilPrompt(f)
+  assert.equal(f.targets().length, 1); assert.equal(await f.verification.getState().submit(password), true)
+  assert.deepEqual((await asked).value, { accepted: true })
+  assert.equal(f.targets().length, 2); assert.equal(proofHeader(f.targets()[0]), null); assert.equal(proofHeader(f.targets()[1]), 'v'.repeat(43))
+  assert.deepEqual(f.targets()[1].body, f.targets()[0].body, 'The resend carries the same frozen body')
+  assert.equal(f.calls.filter(call => call.path === '/auth/verify').length, 1)
+  for (const [second, kind] of [[() => json({}, 428), 'verification-required'], [() => { throw new TypeError('private network detail') }, 'network']]) {
+    sends = 0
+    f = fixture(call => call.path === route ? (++sends === 1 ? json({}, 428) : second()) : undefined); await f.client.bootstrap()
+    asked = outcome(f.client.request(route, ifAsked)); await untilPrompt(f); await f.verification.getState().submit(password)
+    const error = (await asked).error
+    assert.equal(error.kind, kind); assert.equal(f.targets().length, 2, 'One resend, never a third send')
+    assert.equal(f.calls.filter(call => call.path === '/auth/verify').length, 1); assert.equal(f.verification.getState().challenge, null)
+  }
+  f = fixture(call => call.path === route ? json({}, 428) : undefined); await f.client.bootstrap()
+  asked = outcome(f.client.request(route, ifAsked)); await untilPrompt(f); f.verification.getState().cancel()
+  assert.equal((await asked).error.kind, 'verification-cancelled'); assert.equal(f.targets().length, 1)
+  f = fixture(); await f.client.bootstrap()
+  asked = outcome(f.client.request(route, { method: 'POST', body: { decision: 'approved' } })); await tick()
+  assert.ok(f.verification.getState().challenge, 'Without if-asked a password write still asks first'); assert.equal(f.targets().length, 0)
+  f.verification.getState().cancel(); await asked
+  console.log('PASS if-asked sends with the session, asks only after a 428, resends the same body once, and never a third time')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })
