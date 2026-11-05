@@ -66,17 +66,22 @@ export type GatewayRequest = {
   signal?: AbortSignal
   /** Auth-only POST observation: dispatch is starting, not acknowledged. Never sent to transport. */
   onDispatch?: () => void
+  /**
+   * Ask the auth layer to send without the password proof first, and prompt only if this exact
+   * request is refused with 428 `verification_required`. Never sent to the transport.
+   */
+  password?: 'if-asked'
 }
 export type GatewayTransport = ReturnType<typeof createGatewayTransport>
 const ids = '[A-Za-z0-9_-]+'
 const routes: Record<GatewayMethod, RegExp[]> = {
   GET: [ /^\/api\/owner\/editor-capabilities$/, /^\/api\/owner\/editor-drafts$/, /^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}(?:\/(?:publications|validation|access|runs))?$/, /^\/api\/control\/pi\/setup\/status$/, /^\/api\/control\/pi\/setup\/boundaries$/, /^\/api\/control\/pi\/setup\/models$/, /^\/api\/control\/pi\/setup\/protection$/, /^\/api\/control\/pi\/setup\/rehearsal$/, /^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/, /^\/api\/control\/pi\/setup\/receipts\/(boundaries|protection|rehearsal)$/, new RegExp(`^/api/control/pi/sessions/${ids}/settings$`), /^\/api\/control\/pi\/models\/configuration$/, /^\/api\/control\/pi\/memory\/objects$/, new RegExp(`^/api/control/pi/memory/forget/${ids}$`), new RegExp(`^/api/control/pi/memory/objects/[a-z]+/${ids}$`),
-    /^\/health$/, /^\/auth\/session$/, /^\/auth\/sessions$/, /^\/api\/owner\/requests$/, new RegExp(`^/api/owner/requests/${ids}$`),
+    /^\/health$/, /^\/auth\/session$/, /^\/auth\/sessions$/, /^\/auth\/alerts$/, /^\/api\/owner\/requests$/, new RegExp(`^/api/owner/requests/${ids}$`),
     /^\/api\/pi\/(health|sessions|turns\/unreplied|approvals|tools|models|memory|tasks|runs|events|proposals)$/,
     new RegExp(`^/api/pi/(sessions|messages|tasks|runs)/${ids}$`),
     new RegExp(`^/api/pi/turn-submissions/${ids}$`), new RegExp(`^/api/pi/sessions/${ids}/submissions$`),
     new RegExp(`^/api/pi/tasks/requests/${ids}$`) ],
-  POST: [ /^\/api\/control\/pi\/memory\/forget$/, /^\/api\/control\/pi\/setup\/models$/, /^\/api\/control\/pi\/setup\/models\/activate$/, /^\/api\/control\/pi\/setup\/protection$/, /^\/api\/control\/pi\/setup\/rehearsal\/(?:memory-review|approval\/(?:start|resume)|finalize)$/, /^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/, /^\/api\/control\/pi\/setup\/receipts\/boundaries$/, /^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}(?:\/(?:publish|access|runs))?$/, new RegExp(`^/api/control/pi/sessions/${ids}/settings$`), /^\/api\/control\/pi\/models\/configuration$/, /^\/auth\/(login|logout|verify|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`),
+  POST: [ /^\/api\/control\/pi\/memory\/forget$/, /^\/api\/control\/pi\/setup\/models$/, /^\/api\/control\/pi\/setup\/models\/activate$/, /^\/api\/control\/pi\/setup\/protection$/, /^\/api\/control\/pi\/setup\/rehearsal\/(?:memory-review|approval\/(?:start|resume)|finalize)$/, /^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/, /^\/api\/control\/pi\/setup\/receipts\/boundaries$/, /^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}(?:\/(?:publish|access|runs))?$/, new RegExp(`^/api/control/pi/sessions/${ids}/settings$`), /^\/api\/control\/pi\/models\/configuration$/, /^\/auth\/(login|logout|verify|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`), /^\/auth\/alerts\/seen$/,
     new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/(sessions|tasks)$/,
     new RegExp(`^/api/pi/tasks/${ids}/(update|transition|archive)$`),
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
@@ -209,8 +214,8 @@ conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{
 // Reading the server's services or backup folder changes nothing.
 conversationWrites.push(/^\/api\/host\/read$/)
 export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
-/** Writes the signed-in session is enough for: conversation writes, and turning lockdown on. */
-export const needsNoPassword = (path: string, body?: Record<string, unknown>) => isConversationWrite(path) || lockdownRoute.test(path) && body?.enabled === true
+/** Writes the signed-in session is enough for: conversation writes, turning lockdown on and marking wrong-password alerts seen. */
+export const needsNoPassword = (path: string, body?: Record<string, unknown>) => isConversationWrite(path) || path === '/auth/alerts/seen' || lockdownRoute.test(path) && body?.enabled === true
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -245,7 +250,7 @@ function correctionOperation(value: unknown): boolean {
 }
 export type GatewayVerifiedOperation = { method: 'POST' | 'PUT'; path: string; body: Record<string, unknown> }
 export function isBrowserSessionRoute(path: string): boolean {
-  return path === '/auth/sessions' || path === '/auth/revoke-all' || /^\/auth\/sessions\/[A-Za-z0-9_-]{16,128}\/revoke$/.test(path)
+  return path === '/auth/sessions' || path === '/auth/revoke-all' || path === '/auth/alerts' || path === '/auth/alerts/seen' || /^\/auth\/sessions\/[A-Za-z0-9_-]{16,128}\/revoke$/.test(path)
 }
 /** Capture the exact validated JSON before a password prompt can yield to other edits. */
 export function snapshotGatewayOperation(path: string, body: unknown, method: 'POST' | 'PUT' = 'POST'): GatewayVerifiedOperation {

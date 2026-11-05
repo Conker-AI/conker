@@ -21,6 +21,7 @@ import { createFakeRuntimes } from './fake-gateway-runtimes'
 import { createFakeStatus } from './fake-gateway-status'
 import { createFakeTeams } from './fake-gateway-teams'
 import { createFakeJobs } from './fake-gateway-jobs'
+import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
@@ -109,12 +110,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
   const submissions = new Map<string, Json>(), pendingTurns = new Map<string, Promise<Json>>()
   const streams = new Map<string, { text: string; stopped: boolean }>()
-  const approvals: Json[] = [{
-    id: 'req_email_coach', kind: 'verification', title: 'Send an email to coach', details: 'Conker drafted this email and needs your OK before sending it.',
-    actor: 'Conker', severity: 'normal', status: 'pending', created_at: iso(now() - 120), updated_at: iso(now() - 120), decision: null,
-    action: { subject_type: 'tool', subject_id: 'email.send', version: 3, args: { to: 'coach@judo-club.example', subject: 'Friday open mat', body: 'Hi coach, is the open mat on Friday still happening? Thanks, Sam' } },
-    approval: { expires_at: null, consumed_at: null, origin_valid: true }, reviewable: true, unavailable_reason: null, card: 'send',
-  }]
+  // The last row (the email to coach) is the template a new chat approval copies.
+  const approvals: Json[] = fakeApprovalLevels()
   const proposals: Json[] = [
     { id: 'prp_homework', title: 'Homework reminders', noticed: 'You asked what homework is due on Friday three times this week.', suggestion: 'Remind you every Thursday evening of what is due Friday.', ifApproved: 'A short reminder appears in your chat each Thursday at 19:00. Nothing else changes.', state: 'open', createdAt: now() - 3600, decidedAt: null, grantsExecutionAuthority: false,
       evidence: [{ messageId: `msg_${(60001).toString(16).padStart(16, '0')}`, available: true, sessionId: previewSessions.week, excerpt: "What's due this Friday? I keep forgetting", createdAt: now() - 7200 }] },
@@ -231,6 +228,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
 
   async function request(path: string, options: Request = {}): Promise<Json> {
     if (path === '/auth/sessions') return { results: [] }
+    if (path === '/auth/alerts' || path === '/auth/alerts/seen') return fakePasswordAlerts(path, options)
     if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, method === 'POST' && /^\/api\/owner\/editor-drafts\/[^/]+\/runs$/.test(path) ? 2500 : 120)) // A tool run by hand takes a moment.

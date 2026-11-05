@@ -9,6 +9,7 @@ function load(relative) {
   const module = { exports: {} }; cache.set(relative, module)
   const code = ts.transpileModule(fs.readFileSync(path.join(root, relative), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   new Function('require', 'module', 'exports', code)(request => {
+    if (request === 'zod') return require('zod')
     const target = request.startsWith('@/') ? `src/${request.slice(2)}` : path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))
     return load(`${target}.ts`)
   }, module, module.exports)

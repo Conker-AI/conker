@@ -32,6 +32,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button'
 import { OwnerDecisionError, type GatewayOwnerClient, type OwnerDecision, type OwnerRequest } from '@/lib/gateway/owner'
 import { gatewayError } from '@/lib/gateway/transport'
+import type { PasswordAlerts } from '@/lib/gateway/password-alerts'
+import { PasswordAlertCard } from '@/components/inbox/password-alert-card'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
@@ -44,6 +46,13 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const [loadError, setLoadError] = useState<unknown>(null), [listed, setListed] = useState(false)
   const [filter, setFilter] = useState<'all' | 'decisions' | 'ideas' | 'checks'>('all')
   const [undo, setUndo] = useState<{ key: string; title: string } | null>(null)
+  const [alerts, setAlerts] = useState<PasswordAlerts | null>(null)
+  const [alertsBusy, setAlertsBusy] = useState(false), [alertsError, setAlertsError] = useState<string | null>(null)
+  const loadAlerts = useCallback(async () => {
+    try { setAlerts(await client.alerts.list()) } catch { setAlerts(null) }
+  }, [client])
+  // A failed alerts load hides the card and changes nothing else: the Inbox keeps its own errors.
+  useEffect(() => { if (active) queueMicrotask(() => { void loadAlerts() }) }, [active, loadAlerts])
   const ideas = useProposals(proposals, active && !requestId)
   const notes = useAgentNotes(checks, active && !requestId)
   const requests = useChangeRequests(changes, drafts, active && !requestId)
@@ -115,7 +124,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     const submittedNote = retry ? previous!.note : note ?? state.getState().notes[id] ?? ''
     state.setState({ pendingId: id }); setError(null); setNotice(null); approvals.clearSettled()
     try {
-      const updated = await request(signal => client.decide(id, status, submittedNote, { signal }))
+      const updated = await request(signal => client.decide(id, status, submittedNote, { signal, level: current.level }))
       if (!mounted.current || state.getState().epoch !== epoch) return
       if (selectedId.current === id) { generation.current++; setLoading(false); setSelected(updated) }
       setRows(values => values.map(row => row.id === id ? updated : row))
@@ -128,6 +137,23 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       if (!selectedId.current || selectedId.current === id) { generation.current++; setLoading(false); setError(failure instanceof OwnerDecisionError ? failure.message : gatewayError(failure).message) }
       if (!(failure instanceof OwnerDecisionError) || failure.outcome !== 'rejected') state.setState(value => ({ attempts: { ...value.attempts, [id]: { status, note: submittedNote, checked: false, conflict: failure instanceof OwnerDecisionError && failure.outcome === 'conflict' } } }))
     } finally { if (state.getState().epoch === epoch) state.setState({ pendingId: null }) }
+  }
+  /** "That was me": mark every wrong-password attempt seen, then read again. */
+  async function markAlertsSeen() {
+    if (alertsBusy) return
+    setAlertsBusy(true); setAlertsError(null)
+    try { await client.alerts.seen(); await loadAlerts() }
+    catch (failure) { setAlertsError(gatewayError(failure).message) }
+    finally { setAlertsBusy(false) }
+  }
+  /** "Sign out everywhere": mark the alerts seen while this tab is still signed in, then revoke
+   *  every session (the auth layer asks the password); this tab then returns to sign-in. */
+  async function revokeAllSessions() {
+    if (alertsBusy) return
+    setAlertsBusy(true); setAlertsError(null)
+    try { await client.alerts.seen(); await client.revokeAll() }
+    catch (failure) { setAlertsError(gatewayError(failure).message) }
+    finally { setAlertsBusy(false) }
   }
   const earlier = (row: OwnerRequest) => row.status !== 'pending' || ownerDecisionEligibility(row, now).expired
   // Keep uncertain attempts visible until the owner checks their saved outcome.
@@ -196,6 +222,8 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
       {(requestId || summary.state !== 'loading') && loadError !== null && <InlineError error={loadError} title={requestId ? undefined : 'Permission requests didn’t load'} onRetry={() => load()} />}
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
+        {alerts && alerts.unseen > 0 && !requestId && <PasswordAlertCard alerts={alerts} now={now} busy={alertsBusy} error={alertsError}
+          onSeen={() => void markAlertsSeen()} onRevokeAll={() => void revokeAllSessions()} />}
         {summary.state === 'loading' ? <ListSkeleton rows={3} label="Loading your Inbox…" /> : <>
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
         {showDecisions && requests.error !== null && <InlineError error={requests.error} title="Conker’s requests didn’t load" onRetry={() => requests.load()} />}
