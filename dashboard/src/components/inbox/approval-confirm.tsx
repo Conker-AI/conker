@@ -21,6 +21,7 @@ export function ApprovalConfirm({ request, busy, onConfirm, onCancel }: {
         <AlertDialogTitle>{request.title || 'Are you sure?'}</AlertDialogTitle>
         <AlertDialogDescription>{request.details || undefined}</AlertDialogDescription>
       </AlertDialogHeader>
+      <div className="flex min-w-0 flex-col gap-4 px-6 pb-6">
       {request.action.args === null ? <p className="text-sm text-muted-foreground">Complete arguments are unavailable.</p>
         : <dl className="flex flex-col gap-3 text-sm leading-6 [overflow-wrap:anywhere]">
           {Object.entries(args).map(([key, value]) => {
@@ -34,6 +35,7 @@ export function ApprovalConfirm({ request, busy, onConfirm, onCancel }: {
           })}
         </dl>}
       <p className="text-sm text-muted-foreground">This leaves Conker. Check where it goes.</p>
+      </div>
       <AlertDialogFooter>
         <AlertDialogClose render={<Button type="button" variant="outline" disabled={busy} />}>Cancel</AlertDialogClose>
         <Button type="button" variant="destructive" disabled={busy} onClick={onConfirm}>{cardLabels[request.card].yes}</Button>

@@ -54,7 +54,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       onChange={onNote} onSend={() => onDecide('rejected', false, note.trim())} onCancel={() => setChanging(false)} />
     : open ? <div className="flex flex-col gap-2">
       {deleteName !== null && <>
-        <Label htmlFor={`delete-confirm-${request.id}`}>{`Type ${deleteName} to confirm`}</Label>
+        <Label htmlFor={`delete-confirm-${request.id}`} className="block [overflow-wrap:anywhere]">Type <strong className="font-semibold">{deleteName}</strong> to confirm</Label>
         <Input id={`delete-confirm-${request.id}`} value={confirmName} disabled={busy} autoComplete="off" onChange={event => setConfirmName(event.target.value)} />
       </>}
       <div className="flex flex-wrap gap-2">
