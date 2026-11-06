@@ -4,7 +4,7 @@
  * wrong-password alert routes. Never imported by the production entry.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; signal?: AbortSignal; onDispatch?: () => void }
 
 const row = (id: string, title: string, details: string, subjectId: string, args: Json, card: string, level: number, minutes: number): Json => ({
   id, kind: 'verification', title, details, actor: 'Conker', severity: level === 3 ? 'critical' : 'normal', status: 'pending',

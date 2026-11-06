@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Archive, Upload } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { FilterChip, ListCard, ListLine } from '@/components/design-system/list-card'
+import { ArrowLeft, Archive, Trash2, Upload } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { FilterChip, ListCard, ListLine, ListLineMenu } from '@/components/design-system/list-card'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { useImportedChatDelete } from './imported-chat-delete'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { Button } from '@/components/ui/button'
@@ -56,6 +58,10 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
     return () => { active = false }
   }, [client])
   const current = page?.filter === filter ? page : null
+  const remove = useImportedChatDelete(client, id => {
+    setPage(value => value && { ...value, rows: value.rows.filter(row => row.id !== id), total: Math.max(0, value.total - 1) })
+    void fetchPage(filter, 0)
+  })
   const offersLine = offers && importOffersLine(offers)
   const view = useListView(current?.rows ?? NO_CHATS, { text: IMPORTED_TEXT, sorts: IMPORTED_SORTS }), searching = !!view.query.trim()
   const chip = (value: typeof filter, label: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{label}</FilterChip>
@@ -75,8 +81,10 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
             <span className="text-xs text-muted-foreground">{error ? importRefusalMessage(error) : `${current.rows.length.toLocaleString()} of ${current.total.toLocaleString()} loaded`}</span>
           </>}>
           {view.rows.map(row => <ListLine key={row.id} to={`/chats?view=imported&chat=${row.id}`} icon={<Archive />} title={row.title || 'Untitled chat'}
-            sub={`${importSourceNames[row.source]} · ${plural(row.messageCount, 'message')}`} meta={date(row.updatedAt ?? row.startedAt ?? row.importedAt)} />)}
+            sub={`${importSourceNames[row.source]} · ${plural(row.messageCount, 'message')}`} meta={date(row.updatedAt ?? row.startedAt ?? row.importedAt)}
+            actions={<ListLineMenu label={`More actions for ${row.title || 'this chat'}`}><DropdownMenuItem variant="destructive" onClick={() => remove.ask(row)}><Trash2 aria-hidden="true" />Delete forever…</DropdownMenuItem></ListLineMenu>} />)}
         </ListCard>}
+    {remove.dialog}
   </div></GatewayPageFrame>
 }
 
@@ -87,6 +95,7 @@ function ImportedChatView({ client, id }: { client: GatewayImportsClient; id: st
     setChat(current => after && current ? { ...result, messages: [...current.messages, ...result.messages] } : result)
   }, cause => setError(cause)), [client, id])
   useEffect(() => { void load() }, [load])
+  const navigate = useNavigate(), remove = useImportedChatDelete(client, () => navigate('/chats?view=imported', { replace: true }))
   const back = <Button variant="ghost" size="sm" render={<Link to="/chats?view=imported" />}><ArrowLeft />Imported chats</Button>
   if (!chat) return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4"><div>{back}</div>
     {error ? <InlineError error={error} title="This imported chat didn’t load" description={importRefusalMessage(error)} onRetry={() => load()} /> : <ListSkeleton rows={4} label="Loading imported chat…" />}
@@ -94,7 +103,8 @@ function ImportedChatView({ client, id }: { client: GatewayImportsClient; id: st
   const from = importSourceNames[chat.source], started = date(chat.startedAt)
   return <GatewayPageFrame><div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
     <div>{back}</div>
-    <header className="space-y-1"><h2 dir="auto" className="text-lg font-semibold [overflow-wrap:anywhere]">{chat.title || 'Untitled chat'}</h2><p className="text-sm text-muted-foreground">Imported from {from}{started ? ` · started ${started}` : ''} · {plural(chat.messageCount, 'message')}</p></header>
+    <header className="space-y-1"><h2 dir="auto" className="text-lg font-semibold [overflow-wrap:anywhere]">{chat.title || 'Untitled chat'}</h2><p className="text-sm text-muted-foreground">Imported from {from}{started ? ` · started ${started}` : ''} · {plural(chat.messageCount, 'message')}</p>
+      <div className="pt-2"><Button variant="destructive-outline" size="sm" onClick={() => remove.ask(chat)}><Trash2 aria-hidden="true" />Delete forever…</Button></div></header>
     <p role="note" className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-muted-foreground"><Archive className="size-4 shrink-0" />Read-only copy. It can’t be continued here.</p>
     <ol aria-label="Messages" className="flex min-w-0 flex-col gap-6">
       {chat.messages.map(message => {
@@ -108,5 +118,6 @@ function ImportedChatView({ client, id }: { client: GatewayImportsClient; id: st
     </ol>
     {chat.nextAfter !== null && <div><Button variant="outline" size="sm" disabled={loadingMore} onClick={async () => { setLoadingMore(true); await load(chat.nextAfter!); setLoadingMore(false) }}>{loadingMore ? 'Loading…' : 'Load more messages'}</Button></div>}
     {!!error && <p role="alert" className="text-sm text-destructive-foreground">{importRefusalMessage(error)}</p>}
+    {remove.dialog}
   </div></GatewayPageFrame>
 }

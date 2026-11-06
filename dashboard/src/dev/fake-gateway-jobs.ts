@@ -3,7 +3,7 @@
  * manual runs replayed by request id, and run recovery actions.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 export function createFakeJobs(now: () => number, fail: (status: number) => never, next: () => number) {
   const jobId = `job_${'4'.repeat(32)}`

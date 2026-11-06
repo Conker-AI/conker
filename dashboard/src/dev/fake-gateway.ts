@@ -26,7 +26,7 @@ import { createFakeJobs } from './fake-gateway-jobs'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; signal?: AbortSignal; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; signal?: AbortSignal; onDispatch?: () => void }
 
 const now = () => Date.now() / 1000
 const iso = (seconds: number) => new Date(seconds * 1000).toISOString()

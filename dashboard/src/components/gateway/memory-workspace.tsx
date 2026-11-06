@@ -3,6 +3,7 @@ import { useMemoryCorrection } from './use-memory-correction'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { ForgetMemory } from './forget-memory'
+import { MemoryList } from './memory-list'
 import { AddMemory } from './add-memory'
 import { ForgetMemoryRecovery } from './forget-memory-recovery'
 import { GatewayHeader } from './header'
@@ -12,9 +13,8 @@ import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ReferenceSection } from '@/components/reference-section'
-import { CollectionEmpty, RecordItem } from '@/components/design-system/primitives'
+import { CollectionEmpty } from '@/components/design-system/primitives'
 import { WorkspaceInspector } from '@/components/design-system/overlays'
 import { InlineError } from '@/components/resilience/inline-error'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -131,7 +131,10 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
   const positions = useMemo(() => layoutMemoryAtlas(graph.nodes, graph.edges, view === 'hierarchy'), [graph, view])
   const connectionStatus = !snapshot ? 'Loading relationships…' : snapshot.partial ? `Partial graph${snapshot.failures ? ' · Some relationships unavailable' : ''}` : undefined
   const recordTitle = (item: MemoryObjectCard) => item.title === item.type ? item.preview.slice(0, 100) || item.title : item.title
-  const connectionCount = (item: MemoryLibrary['objects'][number]) => Object.values(item.connections).reduce((sum, count) => sum + count, 0)
+  function recordLink(item: MemoryObjectCard) {
+    const next = new URLSearchParams(params); next.set('view', 'database'); next.set('record', item.id); next.set('kind', item.type)
+    return `?${next}`
+  }
   function setView(value: string) {
     const next = new URLSearchParams(params)
     next.set('view', value === 'network' ? 'graph' : value)
@@ -195,9 +198,8 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}
     {added && <p role="status" className="border-b p-3 text-sm text-muted-foreground">{added}</p>}</>}
     <div className="memory-workspace-body">
-      {!page ? busy || !failed ? <p role="status" className="p-4 text-sm">Loading your memory…</p> : <div className="p-4"><InlineError error={null} title="Memory didn’t load" description={error ?? undefined} onRetry={refresh} /></div> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto">
-        <ul className="divide-y md:hidden">{page.objects.map(item => <li key={key(item)}><RecordItem title={recordTitle(item)} description={`${kindLabel[item.type]} · ${connectionCount(item)} ${connectionCount(item) === 1 ? 'connection' : 'connections'}`} selected={Boolean(selected && key(selected) === key(item))} onOpen={() => selectRecord(item)} /></li>)}</ul>
-        <Table render={<div className="hidden h-full overflow-auto md:block" />}><TableHeader className="sticky top-0 bg-background"><TableRow className="hover:bg-transparent"><TableHead className="px-4">Memory</TableHead><TableHead className="px-4">Type</TableHead><TableHead className="px-4 text-right">Connections</TableHead></TableRow></TableHeader><TableBody>{page.objects.map(item => <TableRow key={key(item)} data-state={selected && key(selected) === key(item) ? 'selected' : undefined} className="h-(--collection-row-height)"><TableCell className="px-4 py-2.5 whitespace-normal"><button aria-current={selected && key(selected) === key(item) ? true : undefined} className="w-full min-w-40 break-words rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={() => selectRecord(item)}>{recordTitle(item)}</button></TableCell><TableCell className="px-4 text-muted-foreground">{kindLabel[item.type]}</TableCell><TableCell className="px-4 text-right text-muted-foreground tabular-nums">{connectionCount(item)}</TableCell></TableRow>)}</TableBody></Table>
+      {!page ? busy || !failed ? <p role="status" className="p-4 text-sm">Loading your memory…</p> : <div className="p-4"><InlineError error={null} title="Memory didn’t load" description={error ?? undefined} onRetry={refresh} /></div> : !page.objects.length ? <CollectionEmpty title={query ? 'No matching memories' : 'Your memory list is empty'} description={query ? 'Try a different search or memory type.' : 'Saved memories will appear here with their source relationships.'} /> : isGraph ? <MemoryGraph key={view} graph={graph} positions={positions} connectionStatus={connectionStatus} hierarchy={view === 'hierarchy'} selectedId={selected ? key(selected) : ''} focusRequest="" onSelect={node => selectRecord(records.find(item => key(item) === node?.id) ?? null)} /> : <div className="min-w-0 flex-1 overflow-auto p-3 md:p-4">
+        <MemoryList client={client} page={page} title={recordTitle} kind={item => kindLabel[item.type]} link={recordLink} selectedKey={selected ? key(selected) : null} onOpen={selectRecord} onForgotten={forgetResolved} />
       </div>}
       {selected && <WorkspaceInspector title={selected.title} description={kindLabel[selected.type]} onClose={() => selectRecord(null)}>
         <div className="space-y-4 overflow-y-auto p-4 text-sm">
