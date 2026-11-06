@@ -1,9 +1,14 @@
-/** Development-only preview fixture for the chat list: search, sort, archive. Answers in Pi's exact shapes. */
+/**
+ * Development-only preview fixture for the chat list: search, sort, archive and delete forever.
+ * Answers in Pi's exact shapes. Deleting forever answers "restarting" and the next status read
+ * finishes it, the way Pi forgets queued chats after its restart. `conker-fake-fail` =
+ * 'forget-unsupervised' refuses like a Pi that cannot restart itself.
+ */
 import { GatewayError } from '@/lib/gateway/transport'
 import type { FakeChatStore } from './fake-gateway'
 
 type Json = Record<string, unknown>
-type Request = { body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 type Session = FakeChatStore['sessions'][number]
 
 const SESSION = /^ses_[0-9a-f]{16}$/
@@ -12,7 +17,43 @@ export function createFakeHistory(now: () => number, fail: (status: number) => n
   const archived = new Map<string, number>()
   const order = { newest: (a: Session, b: Session) => b.created_at - a.created_at || b.id.localeCompare(a.id), oldest: (a: Session, b: Session) => a.created_at - b.created_at || a.id.localeCompare(b.id), name: (a: Session, b: Session) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()) || a.id.localeCompare(b.id) }
 
+  const pending: string[] = [], results: Json[] = []
+  const hash = async (text: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(value => value.toString(16).padStart(2, '0')).join('')
+  const plan = async (session: Session) => ({ sessionId: session.id, sessionIds: [session.id], messages: session.messages.length, turns: session.turns.length, approvalRequests: 0, confirmation: await hash(`${session.id}|${session.messages.length}|${session.turns.length}`), alreadyForgotten: false })
+
+  async function forgetting(method: string, options: Request): Promise<Json> {
+    if (method === 'POST') {
+      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'forget-unsupervised') throw new GatewayError('http', 409, undefined, 'not_supervised')
+      const chats = options.body?.chats
+      if (!Array.isArray(chats) || !chats.length || chats.length > 50) fail(422)
+      const asked = chats as { session: string; confirmation: string }[]
+      if (new Set(asked.map(item => item.session)).size !== asked.length) fail(422)
+      for (const item of asked) {
+        const session = store.sessions.find(row => row.id === item.session)
+        if (!session) throw new GatewayError('http', 404, undefined, 'not_found')
+        if ((await plan(session)).confirmation !== item.confirmation) throw new GatewayError('http', 409, undefined, 'scope_changed')
+      }
+      pending.push(...asked.map(item => item.session))
+      return { state: 'restarting', sessions: asked.map(item => item.session) }
+    }
+    for (const id of pending.splice(0)) {
+      const index = store.sessions.findIndex(row => row.id === id)
+      if (index >= 0) store.sessions.splice(index, 1)
+      archived.delete(id)
+      results.unshift({ sessionId: id, state: 'done', receiptId: `fgt_${id.slice(4)}`, finishedAt: now(), detail: null })
+    }
+    const raw = options.query?.session, ids = raw === undefined ? [] : Array.isArray(raw) ? raw : [String(raw)]
+    const chats = []
+    for (const id of ids) {
+      const session = store.sessions.find(row => row.id === id)
+      if (!session) throw new GatewayError('http', 404, undefined, 'not_found')
+      chats.push(await plan(session))
+    }
+    return { supervised: true, pending: [], results: results.slice(0, 50), chats }
+  }
+
   return async function handle(path: string, method: string, options: Request): Promise<Json | undefined> {
+    if (path === '/api/control/pi/forgetting/chats') return forgetting(method, options)
     if (method === 'POST' && path === '/api/control/pi/sessions/archive') {
       const ids = options.body?.sessions, on = options.body?.archived
       if (!Array.isArray(ids) || !ids.length || ids.length > 100 || typeof on !== 'boolean' || ids.some(id => typeof id !== 'string' || !SESSION.test(id))) fail(422)

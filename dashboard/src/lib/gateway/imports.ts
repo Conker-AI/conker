@@ -34,6 +34,10 @@ const message = z.object({
   id: z.string().regex(/^impmsg_[0-9a-f]{32}$/), seq: count, author: z.enum(['user', 'assistant']), text: z.string().max(60_000),
   createdAt: moment, shortened: z.boolean(), memory: z.enum(['offering', 'offered', 'refused', 'not_offered']).nullable(),
 })
+const deleted = z.object({
+  schemaVersion: z.literal(1), chatId: z.string().regex(/^imp_[0-9a-f]{32}$/), source, label: z.string().max(200), deletedAt: z.number().finite(),
+  messagesDeleted: count, offeredToMemory: count, memoryNote: z.string().max(500).nullable(), fileScrubbed: z.boolean().nullable(),
+})
 const chat = chatView.extend({ schemaVersion: z.literal(1), messages: z.array(message).max(200), nextAfter: count.nullable() })
 
 export type ImportPreview = z.infer<typeof preview>
@@ -43,6 +47,7 @@ export type ImportOffers = z.infer<typeof offers>
 export type ImportedChat = z.infer<typeof chatView>
 export type ImportedChatPage = z.infer<typeof chats>
 export type ImportedChatDetail = z.infer<typeof chat>
+export type ImportedChatDeletion = z.infer<typeof deleted>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const parsed = schema.safeParse(value)
@@ -66,6 +71,7 @@ export function importRefusalMessage(error: unknown, chosen?: ImportSource): str
     const other = error.looksLike && error.looksLike !== chosen ? error.looksLike : undefined
     return `No chat in this file matches a ${importSourceNames[chosen ?? 'chatgpt']} export.${other ? ` It looks like a ${importSourceNames[other]} export: choose ${importSourceNames[other]} instead.` : ''}`
   }
+  if (!(error instanceof GatewayRefusal) && gatewayError(error).status === 404) return refusals.not_found as string
   return error instanceof GatewayRefusal && refusals[error.refusal] || gatewayError(error).message
 }
 
@@ -103,6 +109,16 @@ export function createGatewayImportsClient(auth: Pick<GatewayAuthClient, 'reques
       // 50 messages a page keeps the largest page (50,000 characters each) under the response limit.
       const value = parse(chat, await auth.request(`/api/control/pi/imports/chats/${selected}`, { query: { after: parse(count, after, true), limit: 50 }, signal }))
       if (value.id !== selected || value.messages.some(item => item.seq <= after)) throw new GatewayError('invalid-response')
+      return value
+    },
+    /**
+     * Delete an imported chat for good: its messages, and its text in the kept export file. Asks for
+     * the password. Memories already made from it stay until they are forgotten in Memory.
+     */
+    async deleteChat(id: string, signal?: AbortSignal): Promise<ImportedChatDeletion> {
+      const selected = parse(z.string().regex(/^imp_[0-9a-f]{32}$/), id, true)
+      const value = parse(deleted, await auth.request(`/api/control/pi/imports/chats/${selected}/delete`, { method: 'POST', body: {}, signal }))
+      if (value.chatId !== selected) throw new GatewayError('invalid-response')
       return value
     },
   }

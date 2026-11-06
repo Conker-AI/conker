@@ -10,6 +10,7 @@ import { createAsksClient } from './asks'
 import { createChatAnswersClient } from './chat-answers'
 import { createChatReviewsClient } from './chat-reviews'
 import { createChatNamesClient } from './chat-names'
+import { createChatForgetClient } from './chat-forget'
 import { createChatContextClient } from './chat-context'
 import { createChatSummaryClient } from './chat-summary'
 import { createOwnerSettingsClient } from './owner-settings'
@@ -283,6 +284,11 @@ const forgetPreview = z.object({ memoryId: identity, revision: forgetRevision, t
 const forgetRequest = z.object({ requestId: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/), memoryId: identity, revision: forgetRevision }).strict()
 const forgetPending = z.object({ schemaVersion: z.literal(1), pending: forgetRequest.nullable() }).strict()
 const forgetReceipt = z.object({ requestId: forgetRequest.shape.requestId, memoryId: identity, status: z.literal('forgotten'), indexRemoval: z.string().nullable(), cachedPackagesCleared: count, sourceConversationKept: z.literal(true) })
+const forgetManyResult = z.object({
+  requestId: forgetRequest.shape.requestId, results: z.array(forgetReceipt).max(50),
+  stopped: z.object({ index: z.number().int().min(0).max(49), memoryId: identity, code: z.string().max(80), message: z.string().max(500) }).nullable(),
+})
+export type MemoryForgetManyResult = z.infer<typeof forgetManyResult>
 export type MemoryForgetPreview = z.infer<typeof forgetPreview>
 export type MemoryForgetReceipt = z.infer<typeof forgetReceipt>
 export type MemoryForgetRequest = z.infer<typeof forgetRequest>
@@ -325,6 +331,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     chatNames: createChatNamesClient(auth),
     chatContext: createChatContextClient(auth),
     chatSummary: createChatSummaryClient(auth),
+    /** Deleting Conker chats forever (queued for Pi's restart). */
+    chatForget: createChatForgetClient(auth),
     settings: createOwnerSettingsClient(auth),
     access: createAccessClient(auth),
     plans: createGatewayPlansClient(auth),
@@ -518,6 +526,17 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       const body = { request_id: frozen.requestId, memory_id: frozen.memoryId, expected_revision: frozen.revision }
       const result = parse(forgetReceipt, await auth.request('/api/control/pi/memory/forget', { method: 'POST', body, signal }))
       if (result.memoryId !== frozen.memoryId || result.requestId !== frozen.requestId) throw new GatewayError('invalid-response')
+      return result
+    },
+    /**
+     * Forgets up to 50 reviewed memories in order and stops at the first refusal (`stopped`).
+     * Repeating the same request id replays the ones already forgotten and goes on.
+     */
+    async forgetMany(items: readonly Pick<MemoryForgetPreview, 'memoryId' | 'revision'>[], requestId: string = globalThis.crypto.randomUUID(), signal?: AbortSignal): Promise<MemoryForgetManyResult> {
+      if (!items.length || items.length > 50 || new Set(items.map(item => item.memoryId)).size !== items.length) throw new GatewayError('validation')
+      const body = { request_id: parse(forgetRequest.shape.requestId, requestId, true), items: items.map(item => ({ memory_id: parse(identity, item.memoryId, true), expected_revision: parse(forgetRevision, item.revision, true) })) }
+      const result = parse(forgetManyResult, await auth.request('/api/control/pi/memory/forget-many', { method: 'POST', body, signal }))
+      if (result.requestId !== requestId || result.results.some((item, index) => item.memoryId !== items[index]?.memoryId)) throw new GatewayError('invalid-response')
       return result
     },
     async library(options: { search?: string; type?: MemoryObjectKind; after?: string; limit?: number; signal?: AbortSignal } = {}): Promise<MemoryLibrary> {

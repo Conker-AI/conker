@@ -3,7 +3,7 @@
  * stand-in for the Auto routing model. Failure scenarios come from sessionStorage like the old file.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 export function createFakeStatus(now: () => number, iso: (seconds: number) => string, fail: (status: number) => never) {
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | Promise<Json> | undefined {

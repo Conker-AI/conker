@@ -4,7 +4,7 @@
  * digest like Pi and the gateway do.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 const hex = (seed: number) => seed.toString(16).padStart(2, '0').repeat(32)
 

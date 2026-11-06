@@ -16,7 +16,10 @@ type HostOpsErrorCode = typeof hostOpsErrorCodes[number]
 /** Pi's coded refusals on the chat feature routes (answers, reviews, names, context); the UI words each one. */
 export const chatFeatureErrorCodes = ['revision_conflict', 'request_conflict', 'session_busy', 'session_closed', 'helpers_off', 'not_configured', 'unavailable', 'empty', 'invalid_title', 'too_few', 'too_many', 'no_sources', 'unknown_model', 'foreign_version', 'version_unavailable', 'version_context_conflict', 'retry_unavailable', 'source_unavailable', 'source_closed', 'retry_privacy_changed', 'fork_scope', 'fork_boundary', 'pin_after_boundary', 'summary_review', 'fork_limit', 'foreign_message', 'inactive_version', 'outside_boundary', 'turn_pending', 'boundary_changed', 'retrieval_pending', 'unavailable_pin', 'budget_overflow', 'missing_revision', 'no_settings', 'pinned', 'retrieve_rule', 'duplicate', 'not_replaceable', 'invalid_text', 'invalid_replace', 'owner_item', 'superseded', 'invalid_state', 'not_a_version', 'not_found'] as const
 export type ChatFeatureErrorCode = typeof chatFeatureErrorCodes[number]
-type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode
+/** Pi's refusals when deleting chats forever (/forgetting/chats). */
+export const chatForgetErrorCodes = ['not_supervised', 'not_found', 'scope_changed', 'forgetting_unavailable'] as const
+export type ChatForgetErrorCode = typeof chatForgetErrorCodes[number]
+type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode | ChatForgetErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -62,7 +65,8 @@ export type GatewayMethod = 'GET' | 'POST' | 'PUT'
 export type GatewayRequest = {
   method?: GatewayMethod
   body?: Record<string, unknown>
-  query?: Record<string, string | number | boolean>
+  /** A string array sends the key once per value (e.g. ?session=a&session=b). */
+  query?: Record<string, string | number | boolean | readonly string[]>
   signal?: AbortSignal
   /** Auth-only POST observation: dispatch is starting, not acknowledged. Never sent to transport. */
   onDispatch?: () => void
@@ -136,6 +140,9 @@ routes.GET.unshift(/^\/api\/control\/pi\/artifacts(?:\/artifact_[0-9a-f]{32}(?:\
 routes.POST.unshift(/^\/api\/control\/pi\/artifacts(?:\/from-message)?$/, /^\/api\/control\/pi\/artifacts\/artifact_[0-9a-f]{32}\/(?:versions|restore|archive)$/)
 // Imported ChatGPT and Claude chats are read-only archive reads; previewing and importing a file go through file-transfer.ts.
 routes.GET.unshift(/^\/api\/control\/pi\/imports(?:\/chats(?:\/imp_[0-9a-f]{32})?)?$/)
+// Deleting for good: an imported chat, a batch of memories, Conker chats (queued for Pi's restart). Each asks for the password.
+routes.POST.unshift(/^\/api\/control\/pi\/imports\/chats\/imp_[0-9a-f]{32}\/delete$/, /^\/api\/control\/pi\/memory\/forget-many$/, /^\/api\/control\/pi\/forgetting\/chats$/)
+routes.GET.unshift(/^\/api\/control\/pi\/forgetting\/chats$/)
 // Job views redact target inputs, allowance identities and receipts; browser writes use exact recovery actions only.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|adopt|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
@@ -337,8 +344,12 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
         const entries = Object.entries(options.query)
         if (method !== 'GET' || entries.length > 32) throw new GatewayError('validation')
         for (const [key, value] of entries) {
-          if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key) || !['string', 'number', 'boolean'].includes(typeof value) || String(value).length > (path === codexSessionsPath && key === 'cursor' ? 8192 : 4096) || (typeof value === 'number' && !Number.isFinite(value))) throw new GatewayError('validation')
-          query.set(key, String(value))
+          const values = Array.isArray(value) ? value as readonly unknown[] : [value]
+          if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(key) || !values.length || values.length > 50) throw new GatewayError('validation')
+          for (const item of values) {
+            if (!['string', 'number', 'boolean'].includes(typeof item) || (Array.isArray(value) && typeof item !== 'string') || String(item).length > (path === codexSessionsPath && key === 'cursor' ? 8192 : 4096) || (typeof item === 'number' && !Number.isFinite(item))) throw new GatewayError('validation')
+            query.append(key, String(item))
+          }
         }
       }
       const suffix = query.size ? `?${query}` : ''
@@ -371,11 +382,16 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && memoryCorrectionErrorCodes.includes(value.detail.code as MemoryCorrectionErrorCode)) code = value.detail.code as MemoryCorrectionErrorCode
             } catch { /* Fixed correction codes only; never display upstream text. */ }
-          } else if (method === 'POST' && path === '/api/control/pi/memory/forget' && [404, 409, 422, 502, 503].includes(response.status)) {
+          } else if (method === 'POST' && (path === '/api/control/pi/memory/forget' || path === '/api/control/pi/memory/forget-many') && [404, 409, 422, 502, 503].includes(response.status)) {
             try {
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && memoryForgetErrorCodes.includes(value.detail.code as MemoryForgetErrorCode)) code = value.detail.code as MemoryForgetErrorCode
             } catch { /* Retain only a known operation code, never upstream text. */ }
+          } else if (path === '/api/control/pi/forgetting/chats' && [404, 409, 503].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && chatForgetErrorCodes.includes(value.detail.code as ChatForgetErrorCode)) code = value.detail.code as ChatForgetErrorCode
+            } catch { /* Fixed forgetting codes only; Pi's text is never displayed. */ }
           } else if (method === 'GET' && path === '/api/pi/sessions/history' && response.status === 422) {
             try {
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
