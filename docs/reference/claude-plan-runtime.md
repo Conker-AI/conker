@@ -40,6 +40,8 @@ How it is boxed in:
 
 - It shares Pi's network namespace, because Pi talks to a subscription runtime only at
   127.0.0.1, and listens only there. No port is published.
+  If Pi's container restarts, the runtime is left with loopback only; it exits and Docker
+  starts it again in Pi's new namespace.
 - Read-only root, every capability dropped, no new privileges, your own user (like Pi), 1 GB of
   memory. Claude Code runs with its self-updater and nonessential traffic off.
 - The sign-in lives in `.conker/subscriptions` (0700, yours). It is a host folder rather than a

@@ -4,9 +4,11 @@ from __future__ import annotations
 import hmac
 import math
 import os
+import sys
 import threading
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Protocol
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -16,6 +18,34 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 ShortText = Annotated[str, StringConstraints(min_length=1, max_length=240)]
 OptionId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.:/-]{1,100}$")]
+
+
+def watch_namespace(net=Path("/sys/class/net"), every=2.0, stop=os._exit):
+    """Exit when the shared network namespace is left with loopback only.
+
+    This service joins Pi's network namespace (network_mode: service:pi). When Pi's container
+    restarts (Pi restarts itself to finish "Delete forever", or crashes), Docker gives Pi a new
+    namespace and this service keeps the old one: only loopback, so Pi's requests never arrive.
+    Exiting lets Docker's restart policy start it again inside Pi's new namespace.
+    Copy of scripts/subscription_runtime.py's; this image is built from this folder alone.
+    """
+
+    def links():
+        return {path.name for path in net.iterdir()} - {"lo"}
+
+    if not net.is_dir() or not links():
+        return None  # not in a container with a network (tests, the Windows workspace)
+
+    def run():
+        while links():
+            time.sleep(every)
+        print("Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
+              file=sys.stderr, flush=True)
+        stop(1)
+
+    thread = threading.Thread(target=run, name="namespace-watch", daemon=True)
+    thread.start()
+    return thread
 
 
 class ChoiceRequest(BaseModel):
@@ -87,6 +117,7 @@ def create_app(backend: Backend | None = None, *, key: str | None = None):
     @asynccontextmanager
     async def lifespan(app):
         if backend is None:
+            watch_namespace()
             app.state.backend = LayaBackend(
                 os.environ.get("DECISION_MODEL_PATH", ""),
                 os.environ.get("DECISION_MODEL_ID", "laya-english"),

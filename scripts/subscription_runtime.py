@@ -16,10 +16,40 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
+import time
 from pathlib import Path
 
 PORT = 8070
 SOCKET = "/run/conker-chatgpt/inference.sock"
+
+
+def watch_namespace(net=Path("/sys/class/net"), every=2.0, stop=os._exit):
+    """Exit when the shared network namespace is left with loopback only.
+
+    This service joins Pi's network namespace (network_mode: service:pi). When Pi's container
+    restarts (Pi restarts itself to finish "Delete forever", or crashes), Docker gives Pi a new
+    namespace and this service keeps the old one: only loopback, so Pi's requests never arrive.
+    Exiting lets Docker's restart policy start it again inside Pi's new namespace.
+    services/decisions/server.py keeps the same function (its image has only that folder).
+    """
+
+    def links():
+        return {path.name for path in net.iterdir()} - {"lo"}
+
+    if not net.is_dir() or not links():
+        return None  # not in a container with a network (tests, the Windows workspace)
+
+    def run():
+        while links():
+            time.sleep(every)
+        print("Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
+              file=sys.stderr, flush=True)
+        stop(1)
+
+    thread = threading.Thread(target=run, name="namespace-watch", daemon=True)
+    thread.start()
+    return thread
 
 
 def paths(environ=os.environ) -> tuple[Path, Path]:
@@ -59,6 +89,7 @@ def serve():
     from workspace_providers import create_app
 
     prepare()
+    watch_namespace()
     app = create_app(
         configuration(),
         chatgpt_relay=ChatGPTRelay(
