@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
+import { Archive, ArrowLeft, ArrowUpRight, FileCode2, Files, Plus, RefreshCw, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArtifactPreview } from '@/components/artifacts/native-preview'
-import { ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, ListLineMenu, OverlayBody, PageHeader, WorkspaceAction, RecordItem, TaskDialogContent } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
@@ -22,6 +22,10 @@ import { artifactFormats, exportLabels, exportNames } from '@/lib/gateway/export
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { emptyGatewayArtifactContent, GatewayArtifactMutationError, normalizeGatewayArtifactContent, type GatewayArtifact, type GatewayArtifactContent, type GatewayArtifactSummary } from '@/lib/gateway/artifacts'
 import { gatewayError } from '@/lib/gateway/transport'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { runBulk } from '@/components/design-system/list-bulk'
 
 const artifactKinds: Record<GatewayArtifactContent['kind'], string> = {
   markdown: 'Document', code: 'Code', table: 'Table', chart: 'Chart', diagram: 'Diagram', media: 'Media reference', html: 'HTML app',
@@ -33,6 +37,14 @@ const availabilityLabels: Record<GatewayArtifactSummary['availability'], string>
 const taskId = /^tsk_[0-9a-f]{32}$/
 // A version as it is saved: its text, CSV or JSON (inert, never run).
 const savedSourceLabels: Record<GatewayArtifactContent['kind'], string> = { markdown: 'Markdown (.md)', code: 'Code file', html: 'HTML source (.txt)', table: 'CSV (.csv)', chart: 'JSON (.json)', diagram: 'JSON (.json)', media: 'JSON (.json)' }
+
+const ARTIFACT_TEXT = (item: GatewayArtifactSummary) => [item.title]
+const ARTIFACT_SORTS = {
+  updated: { label: 'Recently changed', compare: byNewest((item: GatewayArtifactSummary) => item.updatedAt) },
+  name: { label: 'Name', compare: byName((item: GatewayArtifactSummary) => item.title) },
+  created: { label: 'Newest', compare: byNewest((item: GatewayArtifactSummary) => item.createdAt) },
+}
+const artifactCount = (count: number) => count === 1 ? 'artifact' : `${count} artifacts`
 
 function mutationMessage(error: unknown) { return error instanceof GatewayArtifactMutationError ? error.message : gatewayError(error).message }
 function artifactSummary(artifact: GatewayArtifact): GatewayArtifactSummary {
@@ -143,24 +155,55 @@ export function GatewayArtifactsWorkspace({ control, activity }: { control: Gate
     setDetails(current => ({ ...current, [artifact.id]: artifact }))
     setArtifacts(current => current?.map(item => item.id === artifact.id ? artifactSummary(artifact) : item) ?? current)
   }
+  const [writing, setWriting] = useState(false)
+  // Search, sort and select run on the rows the chip shows.
+  const archivedCount = (artifacts ?? []).filter(item => item.archivedAt !== null).length
+  // Filter chips appear only once something is archived.
+  const showing = archivedCount ? filter : 'active'
+  const view = useListView((artifacts ?? []).filter(item => (showing === 'all' || (item.archivedAt !== null) === (showing === 'archived'))), { text: ARTIFACT_TEXT, sorts: ARTIFACT_SORTS })
+  const shown = view.rows
+  const selection = useListSelection(shown.map(item => item.id))
+  const setArchived = async (items: GatewayArtifactSummary[], archived: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true)
+    try {
+      const done = await runBulk(items, item => control.artifacts.archive(item.id, archived, item.revision), {
+        done: count => `${artifactCount(count)} ${archived ? 'archived' : 'restored'}`,
+        failed: archived ? 'Some artifacts were not archived' : 'Some artifacts were not restored',
+      }, undo ? results => void setArchived(results.map(artifactSummary), !archived, false) : undefined)
+      // Archive returns the full artifact; refresh each saved row the way a single archive does.
+      for (const saved of done) update(saved)
+      selection.stop()
+    } finally { setWriting(false) }
+  }
   if (match) {
     if (selected) return <ArtifactEditor key={selected.id} initial={selected} control={control} onChanged={update} />
     return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Artifact didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/artifacts')}><ArrowLeft />Artifacts</Button></> : <ListSkeleton rows={3} label="Loading artifact…" />}</div>
   }
-  const archivedCount = (artifacts ?? []).filter(item => item.archivedAt !== null).length
-  // Filter chips appear only once something is archived.
-  const showing = archivedCount ? filter : 'active'
-  const visible = (artifacts ?? []).filter(item => (showing === 'all' || (item.archivedAt !== null) === (showing === 'archived')))
-  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = shown.filter(item => selection.has(item.id))
+  const searching = !!view.query.trim()
+  const rowMenu = (item: GatewayArtifactSummary) => <ListLineMenu label={`More actions for ${item.title}`}>
+    <DropdownMenuItem render={<Link to={`/artifacts/${item.id}`} />}><ArrowUpRight aria-hidden="true" />Open</DropdownMenuItem>
+    {item.archivedAt === null
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], false)}><RotateCcw aria-hidden="true" />Restore</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Artifacts" description="Keep documents, code and structured outputs with a clear version history." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh artifacts" title="Refresh artifacts" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New artifact</WorkspaceAction></>} />
     {error && (artifacts ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Artifacts didn’t load" onRetry={() => load()} />)}
-    {!artifacts && !error ? <ListSkeleton rows={4} label="Loading artifacts…" /> : artifacts && <ListCard count={visible.length} unit={visible.length === 1 ? 'artifact' : 'artifacts'}
+    {!artifacts && !error ? <ListSkeleton rows={4} label="Loading artifacts…" /> : artifacts && <ListCard count={shown.length} unit={shown.length === 1 ? 'artifact' : 'artifacts'}
+      query={view.query} onQueryChange={view.setQuery} label="Search artifacts" placeholder="Search artifacts" sort={view.sort} selection={selection}
+      bulkActions={<>
+        {showing !== 'archived' && <Button type="button" size="sm" variant="outline" disabled={writing || !picked.filter(item => item.archivedAt === null).length} onClick={() => void setArchived(picked.filter(item => item.archivedAt === null), true)}><Archive />Archive</Button>}
+        {showing !== 'active' && <Button type="button" size="sm" variant="outline" disabled={writing || !picked.filter(item => item.archivedAt !== null).length} onClick={() => void setArchived(picked.filter(item => item.archivedAt !== null), false)}><RotateCcw />Restore</Button>}
+      </>}
       filters={archivedCount ? <>{chip('active', 'Active', artifacts.length - archivedCount)}{chip('archived', 'Archived', archivedCount)}{chip('all', 'All', artifacts.length)}</> : undefined}
-      emptyTitle={showing === 'archived' ? 'No archived artifacts' : 'Keep an output you can return to'} emptyDescription={showing === 'archived' ? 'Archived artifacts keep every version.' : 'Create a document or structured output, then build its version history.'}
-      emptyAction={showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />Create artifact</Button>} icon={<Files />}>
-      {visible.map(item => <ListLine key={item.id} to={`/artifacts/${item.id}`} icon={item.archivedAt ? <Archive /> : <FileCode2 />} title={item.title}
+      emptyTitle={searching ? 'No matching artifacts' : showing === 'archived' ? 'No archived artifacts' : 'Keep an output you can return to'} emptyDescription={searching ? 'Try other words, or look in Archived or All.' : showing === 'archived' ? 'Archived artifacts keep every version.' : 'Create a document or structured output, then build its version history.'}
+      emptyAction={searching || showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />Create artifact</Button>} icon={<Files />}>
+      {shown.map(item => <ListLine key={item.id} id={item.id} selection={selection} actions={rowMenu(item)} to={`/artifacts/${item.id}`} icon={item.archivedAt ? <Archive /> : <FileCode2 />} title={item.title}
         sub={`${availabilityLabels[item.availability]} · ${item.origin === 'owner-authored' ? 'Owner authored' : 'Copied response'}${item.privateOrigin ? ' · Private origin' : ''}`}
+        badge={item.archivedAt && showing === 'all' ? 'Archived' : undefined}
         meta={item.archivedAt ? 'Archived' : `${item.versionCount} ${item.versionCount === 1 ? 'version' : 'versions'}`} />)}
     </ListCard>}
     <p className="text-xs text-muted-foreground">The list holds titles and details only. Open an artifact to read its versions.</p>
