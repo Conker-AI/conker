@@ -3,20 +3,23 @@ import { Link } from 'react-router-dom'
 import { Copy, RefreshCw, TerminalSquare } from 'lucide-react'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import { codexResumeCommand, type CodexThread, type CodexSessionsClient } from '@/lib/gateway/codex-sessions'
-import { CollectionLoading, CollectionPanel, CollectionSection, InlineDetails, OverlayBody, PageHeader, RecordItem, WorkspaceAction, WorkspaceChoice } from '@/components/design-system'
+import { CollectionLoading, InlineDetails, ListCard, OverlayBody, PageHeader, RecordItem, WorkspaceAction, WorkspaceChoice } from '@/components/design-system'
 import { Button } from '@/components/ui/button'
 import { ReferenceSection } from '@/components/reference-section'
+import { useListView, byName, byNewest } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
 import { useCodexSessions } from './use-codex-sessions'
 
 const sources = { cli: 'Codex CLI', vscode: 'Editor extension', exec: 'Codex exec', appServer: 'App server', subAgent: 'Subagent', custom: 'Custom', unknown: 'Not reported' }
 function codexThreadTitle(row: CodexThread) { if (row.name) return row.name; const preview = [...row.preview]; return preview.length ? `${preview.slice(0, 120).join('')}${preview.length > 120 || row.previewTruncated ? '…' : ''}` : 'Unnamed Codex thread' }
+const CODEX_TEXT = (row: CodexThread) => [row.name, row.preview, row.cwd, row.modelProvider, sources[row.source]]
+const CODEX_SORTS = { updated: { label: 'Recently changed', compare: byNewest<CodexThread>(row => row.updatedAt) }, created: { label: 'Newest', compare: byNewest<CodexThread>(row => row.createdAt) }, name: { label: 'Name', compare: byName<CodexThread>(codexThreadTitle) } }
 function when(seconds: number) { const date = new Date(seconds * 1000); return Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Timestamp outside display range' }
 export function GatewayCodexSessionsWorkspace({ client, authStore, archived, onArchived, providerControl }: { client: CodexSessionsClient; authStore: GatewayAuthStore; archived: boolean; onArchived: (value: boolean) => void; providerControl: ReactNode }) {
   const state = useCodexSessions(client, authStore, archived), { controller, selected } = state
   const [copied, setCopied] = useState<CodexThread | null>(null), current = useRef({ controller, selected })
   useLayoutEffect(() => { current.current = { controller, selected } })
-  const visible = state.rows
+  const view = useListView(state.rows, { text: CODEX_TEXT, sorts: CODEX_SORTS }), visible = view.rows, searching = !!view.query.trim()
   const error = state.error === 'cursor' ? 'This page link is no longer usable. Refresh history to start again.' : state.error === 'more' ? 'More saved threads could not be loaded. Your loaded rows are still here.' : state.error ? state.loaded ? 'History could not be refreshed. Showing the last loaded metadata.' : 'Saved Codex history could not be read. Refresh history to try again.' : null
   async function copy(row: CodexThread) {
     const latest = controller.store.getState()
@@ -38,9 +41,9 @@ export function GatewayCodexSessionsWorkspace({ client, authStore, archived, onA
     {!state.active && <p role="status" className="text-sm text-muted-foreground">Sign in to inspect saved native history.</p>}
     {state.loaded && <p className="text-xs leading-5 text-muted-foreground">Last loaded metadata. Refresh history to include changes and restart paging. Opening a record reads metadata only; it does not resume work.</p>}
     {error && state.loaded && <p role="status" className="text-sm text-muted-foreground">{error}</p>}
-    <CollectionPanel count={visible.length} unit="threads loaded" emptyTitle={`No ${archived ? 'archived' : 'unarchived'} Codex threads found`} emptyDescription="This is saved history in Conker’s isolated Codex profile, not all Codex history on this computer." emptyContent={!state.loaded ? state.pending === 'list' ? <CollectionLoading label="Reading saved Codex history…" /> : <p role="status" className="py-8 text-sm text-muted-foreground">{state.active ? error ?? 'No history snapshot is available. Refresh history to check.' : 'Saved native history is hidden while signed out.'}</p> : undefined} icon={<TerminalSquare />}>
-      <CollectionSection title={archived ? 'Archived Codex threads' : 'Saved Codex threads'}><ul>{visible.map(row => <li key={row.id}><RecordItem title={codexThreadTitle(row)} description={<span className="wrap-anywhere font-mono">{row.cwd}</span>} onOpen={() => { if (selected?.id === row.id) controller.close(selected); else controller.select(row) }} details={selected?.id === row.id ? details : undefined} selected={selected?.id === row.id} leading={<TerminalSquare className="size-4" />} meta={<><span>{sources[row.source]}</span><span className="wrap-anywhere">{row.modelProvider}</span><span>Updated {when(row.updatedAt)}</span></>} /></li>)}</ul></CollectionSection>
-    </CollectionPanel>
+    <ListCard query={view.query} onQueryChange={view.setQuery} label="Search Codex threads" placeholder="Search threads" sort={view.sort} count={visible.length} unit="threads loaded" emptyTitle={searching ? 'No matching Codex threads' : `No ${archived ? 'archived' : 'unarchived'} Codex threads found`} emptyDescription={searching ? 'Only loaded threads are searched. Load more threads to search further.' : 'This is saved history in Conker’s isolated Codex profile, not all Codex history on this computer.'} emptyContent={searching ? undefined : !state.loaded ? state.pending === 'list' ? <CollectionLoading label="Reading saved Codex history…" /> : <p role="status" className="py-8 text-sm text-muted-foreground">{state.active ? error ?? 'No history snapshot is available. Refresh history to check.' : 'Saved native history is hidden while signed out.'}</p> : undefined} icon={<TerminalSquare />}>
+      {visible.map(row => <li key={row.id}><RecordItem title={codexThreadTitle(row)} description={<span className="wrap-anywhere font-mono">{row.cwd}</span>} onOpen={() => { if (selected?.id === row.id) controller.close(selected); else controller.select(row) }} details={selected?.id === row.id ? details : undefined} selected={selected?.id === row.id} leading={<TerminalSquare className="size-4" />} meta={<><span>{sources[row.source]}</span><span className="wrap-anywhere">{row.modelProvider}</span><span>Updated {when(row.updatedAt)}</span></>} /></li>)}
+    </ListCard>
     {!shown && details}
     {state.loaded && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" size="sm" aria-disabled={!!state.pending || !state.nextCursor && state.error !== 'cursor'} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending) { if (state.error === 'cursor') void controller.refresh(); else if (state.nextCursor) void controller.more() } }}>{state.pending === 'more' ? 'Loading…' : state.error === 'cursor' ? 'Refresh history' : state.nextCursor ? 'Load more threads' : 'No more threads to load'}</Button>{!state.nextCursor && !state.error && <p className="text-xs text-muted-foreground">End of this saved-history result.</p>}</div>}
   </div></GatewayPageFrame>

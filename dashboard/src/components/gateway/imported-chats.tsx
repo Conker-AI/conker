@@ -7,11 +7,17 @@ import { ListSkeleton } from '@/components/resilience/skeletons'
 import { Button } from '@/components/ui/button'
 import { importRefusalMessage, importSourceNames, type GatewayImportsClient, type ImportedChat, type ImportedChatDetail, type ImportOffers, type ImportSource } from '@/lib/gateway/imports'
 import { cn } from '@/lib/utils'
+import { useListView, byName, byNewest } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 const date = (seconds: number | null) => seconds === null ? null : new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(seconds * 1000))
 const memoryLabels = { offering: 'Waiting to be offered to memory', offered: 'Offered to memory', refused: 'Memory turned this down', not_offered: null } as const
+
+const NO_CHATS: ImportedChat[] = []
+const IMPORTED_TEXT = (row: ImportedChat) => [row.title, importSourceNames[row.source]]
+const chatTime = (row: ImportedChat) => row.updatedAt ?? row.startedAt ?? row.importedAt ?? 0
+const IMPORTED_SORTS = { updated: { label: 'Recently changed', compare: byNewest<ImportedChat>(chatTime) }, oldest: { label: 'Oldest', compare: (a: ImportedChat, b: ImportedChat) => chatTime(a) - chatTime(b) }, name: { label: 'Name', compare: byName<ImportedChat>(row => row.title || 'Untitled chat') }, longest: { label: 'Most messages', compare: (a: ImportedChat, b: ImportedChat) => b.messageCount - a.messageCount } }
 
 /** How many of his imported words wait for memory, and why, in plain words (Pi's reasons are matched, not shown). */
 function importOffersLine(offers: ImportOffers): string | null {
@@ -51,6 +57,7 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
   }, [client])
   const current = page?.filter === filter ? page : null
   const offersLine = offers && importOffersLine(offers)
+  const view = useListView(current?.rows ?? NO_CHATS, { text: IMPORTED_TEXT, sorts: IMPORTED_SORTS }), searching = !!view.query.trim()
   const chip = (value: typeof filter, label: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{label}</FilterChip>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><Button variant="ghost" size="sm" render={<Link to="/chats" />}><ArrowLeft />Chats</Button>{!!current?.total && <Button variant="outline" size="sm" render={<Link to="/chats?view=import" />}><Upload />Import more</Button>}</div>
@@ -58,16 +65,16 @@ function ImportedChatList({ client }: { client: GatewayImportsClient }) {
     {offersLine && <p role="status" className="text-sm leading-6">{offersLine}</p>}
     {error && !current ? <InlineError error={error} title="Imported chats didn’t load" onRetry={() => fetchPage(filter, 0)} />
       : !current ? <ListSkeleton rows={4} label="Loading imported chats…" />
-        : <ListCard count={current.rows.length} unit={current.rows.length === 1 ? 'chat loaded' : 'chats loaded'}
+        : <ListCard query={view.query} onQueryChange={view.setQuery} label="Search imported chats" placeholder="Search loaded chats" sort={view.sort} count={view.rows.length} unit={view.rows.length === 1 ? 'chat loaded' : 'chats loaded'}
           filters={totals && totals.chatgpt > 0 && totals.claude > 0 ? <>{chip('all', 'All', totals.chatgpt + totals.claude)}{chip('chatgpt', 'ChatGPT', totals.chatgpt)}{chip('claude', 'Claude', totals.claude)}</> : undefined}
-          emptyTitle={filter === 'all' ? 'No imported chats yet' : `No chats imported from ${importSourceNames[filter]}`}
-          emptyDescription={'Import your ChatGPT or Claude export to read your old chats here.'}
-          emptyAction={<Button render={<Link to="/chats?view=import" />}><Upload />Import from ChatGPT or Claude</Button>} icon={<Archive />}
+          emptyTitle={searching ? 'No matching imported chats' : filter === 'all' ? 'No imported chats yet' : `No chats imported from ${importSourceNames[filter]}`}
+          emptyDescription={searching ? 'Only loaded chats are searched. Load more to search further.' : 'Import your ChatGPT or Claude export to read your old chats here.'}
+          emptyAction={searching ? undefined : <Button render={<Link to="/chats?view=import" />}><Upload />Import from ChatGPT or Claude</Button>} icon={<Archive />}
           footer={current.rows.length > 0 && <>
             <Button variant="outline" size="sm" disabled={loadingMore || current.next === null} onClick={async () => { if (current.next === null) return; setLoadingMore(true); await fetchPage(filter, current.next); setLoadingMore(false) }}>{loadingMore ? 'Loading…' : current.next === null ? 'No more chats to load' : 'Load more'}</Button>
             <span className="text-xs text-muted-foreground">{error ? importRefusalMessage(error) : `${current.rows.length.toLocaleString()} of ${current.total.toLocaleString()} loaded`}</span>
           </>}>
-          {current.rows.map(row => <ListLine key={row.id} to={`/chats?view=imported&chat=${row.id}`} icon={<Archive />} title={row.title || 'Untitled chat'}
+          {view.rows.map(row => <ListLine key={row.id} to={`/chats?view=imported&chat=${row.id}`} icon={<Archive />} title={row.title || 'Untitled chat'}
             sub={`${importSourceNames[row.source]} · ${plural(row.messageCount, 'message')}`} meta={date(row.updatedAt ?? row.startedAt ?? row.importedAt)} />)}
         </ListCard>}
   </div></GatewayPageFrame>
