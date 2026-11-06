@@ -97,6 +97,12 @@ export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayCo
     return () => controller.abort()
   }, [control, selectedId])
   const save = async (definition: GatewayTeamDefinition) => { const saved = editing === 'new' ? await control.teams.create(definition) : await control.teams.update(editing!.id, definition, editing!.revision); setTeams(current => current ? [...current.filter(item => item.id !== saved.id), summaryOf(saved)].sort((a, b) => a.name.localeCompare(b.name)) : current); setSelected(saved); setEditing(null); setEditorDirty(false); const next = new URLSearchParams(params); next.set('team', saved.id); setParams(next) }
+  const archivedCount = (teams ?? []).filter(item => item.archived_at !== null).length
+  // Archived teams get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const view = useListView((teams ?? []).filter(item => (item.archived_at !== null) === (showing === 'archived')), { text: TEAM_TEXT, sorts: TEAM_SORTS })
+  const visible = view.rows
+  const selection = useListSelection(visible.map(item => item.id))
   const setArchived = async (items: GatewayTeamSummary[], archived: boolean, undo = true): Promise<void> => {
     if (!items.length) return
     setWriting(true); setError(null)
@@ -116,12 +122,6 @@ export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayCo
     } catch (cause) { setError(mutationMessage(cause)) } finally { setPending(false) }
   }
   const inspectRevision = async (number: number) => { if (!selected) return; setPending(true); setError(null); try { setHistory(await control.teams.revision(selected.id, number)) } catch (cause) { setError(gatewayError(cause).message) } finally { setPending(false) } }
-  const archivedCount = (teams ?? []).filter(item => item.archived_at !== null).length
-  // Archived teams get their own chip only once there are some.
-  const showing = archivedCount ? filter : 'active'
-  const view = useListView((teams ?? []).filter(item => (item.archived_at !== null) === (showing === 'archived')), { text: TEAM_TEXT, sorts: TEAM_SORTS })
-  const visible = view.rows
-  const selection = useListSelection(visible.map(item => item.id))
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
   const picked = visible.filter(item => selection.has(item.id))
   const rowMenu = (item: GatewayTeamSummary) => <ListLineMenu label={`More actions for ${item.name}`}>
