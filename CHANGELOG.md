@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Manage every list.** Chats, agents, projects, artifacts, cron jobs, teams, skills and MCP tools can be searched,
+  sorted and filtered, many rows picked at once and archived, paused or turned off together, with one Undo; tools, tool
+  drafts and imported sessions are searched and sorted. Pi 0.21.0 is pinned; it adds archiving many chats at once and
+  history's `archived` and `sort`.
 - **Fewer password prompts.** The password you sign in with is enough while you use Conker: setup, models, chats,
   jobs, tool settings and server actions save with the session. The browser signs out after the time set in
   Settings > Account > Sign out when idle (default 15 minutes) without a click or key press; reads and polling never
@@ -527,7 +531,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.20.0 |
+| Pi | v0.21.0 |
 | ToolGate | v0.13.0 |
 | MemoryGate | v0.8.1 |
 | SystemGate | v0.5.1 |

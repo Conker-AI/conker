@@ -2043,6 +2043,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Chats */
+        post: operations["archive_chats_sessions_archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{session_id}/title": {
         parameters: {
             query?: never;
@@ -8419,6 +8436,13 @@ export interface components {
              */
             reranking: boolean;
         };
+        /** Archive */
+        pi__conversation__archive__Archive: {
+            /** Sessions */
+            sessions: string[];
+            /** Archived */
+            archived: boolean;
+        };
         /** Start */
         pi__conversation__drafts__Start: {
             /** Request Id */
@@ -13184,6 +13208,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["pi__context__decisions__State"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_chats_sessions_archive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["pi__conversation__archive__Archive"];
             };
         };
         responses: {
