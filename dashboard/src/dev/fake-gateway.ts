@@ -21,6 +21,7 @@ import { createFakeTerminal } from './fake-gateway-terminal'
 import { createFakeRuntimes } from './fake-gateway-runtimes'
 import { createFakeStatus } from './fake-gateway-status'
 import { createFakeTeams } from './fake-gateway-teams'
+import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 
@@ -166,6 +167,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
   const { handle: jobsHandle, jobs } = createFakeJobs(now, fail, () => ++counter)
   const teamsHandle = createFakeTeams(now, fail, () => ++counter)
+  const libraryHandle = createFakeLibrary(now, fail)
   const statusHandle = createFakeStatus(now, iso, fail)
   const sessionSettings = new Map<string, Json>()
   const memory = { configured: true, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] }
@@ -547,6 +549,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     for (const handle of chatHandles) { const handled = handle(path, method, options); if (handled !== undefined) return handled }
     const teamsHandled = teamsHandle(path, method, options)
     if (teamsHandled !== undefined) return teamsHandled
+    const libraryHandled = libraryHandle(path, method, options)
+    if (libraryHandled !== undefined) return libraryHandled
     const setupHandledModels = setupHandle(path, method, options)
     if (setupHandledModels !== undefined) return setupHandledModels
     const runtimesHandled = runtimesHandle(path, method, options)

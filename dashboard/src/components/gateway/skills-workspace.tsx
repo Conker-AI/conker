@@ -25,11 +25,11 @@ function errorMessage(error: unknown) {
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
 // load this file without building a real sorter; `useListView` reads them only while sorting.
 const SKILL_SORTS = {
-  name: { label: 'Name', get compare() { return byName((row: SkillMetadata) => row.name) } },
-  updated: { label: 'Recently changed', get compare() { return byNewest((row: SkillMetadata) => row.updatedAt) } },
+  name: { label: 'Name', compare: byName((row: SkillMetadata) => row.name) },
+  updated: { label: 'Recently changed', compare: byNewest((row: SkillMetadata) => row.updatedAt) },
 }
 const SKILL_TEXT = (row: SkillMetadata) => [row.name, row.description]
-const skillCount = (count: number) => count === 1 ? 'skill' : `${count} skills`
+const skillCount = (count: number) => count === 1 ? 'Skill' : `${count} skills`
 
 function SkillImport({ client, replacing, onSaved, onCancel, onPending }: { client: GatewaySkillsClient; replacing: SkillRecord | null; onSaved: (record: SkillRecord) => void; onCancel: () => void; onPending: (pending: boolean) => void }) {
   const [markdown, setMarkdown] = useState(replacing?.markdown ?? template)
@@ -126,7 +126,7 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
       <OverlayBody>{!selected && !detailError && <p role="status">Loading source…</p>}{selected && <><ReferenceSection title="Availability"><p>{selected.enabled ? 'Available in the chat skill picker.' : 'Disabled for new messages.'}</p><p className="text-xs text-muted-foreground">Revision {selected.revision}. Earlier turns retain the revision used for that turn.</p></ReferenceSection><ReferenceSection title="SKILL.md"><pre className="whitespace-pre-wrap break-words rounded-md border bg-muted p-3 font-mono text-xs">{selected.markdown}</pre></ReferenceSection><ReferenceSection title="Integrity"><p className="break-all font-mono text-xs">SHA-256 {selected.sha256}</p></ReferenceSection></>}{detailError && <div className="space-y-2"><p role="alert" className="text-sm text-destructive-foreground">{detailError}</p><Button variant="outline" disabled={pending} onClick={() => setReload(value => value + 1)}>Reload saved source</Button></div>}</OverlayBody>
       {selected && <FormActions inset><Button variant="outline" disabled={pending} onClick={() => void toggle(selected)}>{pending ? 'Saving…' : selected.enabled ? 'Disable skill' : 'Enable skill'}</Button><Button disabled={pending} onClick={() => setEditor({ replacing: selected })}>Replace source</Button></FormActions>}
   </InlineDetails>
-  const shown = !!selectedId && visible.some(row => row.id === selectedId)
+  const shown = !!selectedId && view.rows.some(row => row.id === selectedId)
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
   const picked = view.rows.filter(row => selection.has(row.id))
   const rowMenu = (row: SkillMetadata) => <ListLineMenu label={`More actions for ${row.name}`}>
@@ -138,9 +138,12 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
     <div className="space-y-6">
       <PageHeader actionsOnly title="Skills" description="Reusable instructions you explicitly choose for a message." density="compact" actions={<WorkspaceAction keepVisible onClick={() => { setNotice(null); setEditor({ replacing: null }) }}><FileUp />Import skill</WorkspaceAction>} />
       {!rows && !error ? <CollectionLoading label="Loading skills…" /> : error ? <div className="space-y-3"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button variant="outline" onClick={() => setReload(value => value + 1)}><RefreshCw />Reload skills</Button></div> : <>
-        <ListCard count={view.rows.length} unit={skillCount(view.rows.length)}
+        <ListCard count={view.rows.length} unit={view.rows.length === 1 ? 'skill' : 'skills'}
           query={view.query} onQueryChange={view.setQuery} label="Search skills" placeholder="Search skills" sort={view.sort} selection={selection}
-          bulkActions={<Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setEnabled(picked, false)}><PowerOff />Disable</Button>}
+          bulkActions={<>
+            {filter !== 'disabled' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(row => row.enabled) || writing} onClick={() => void setEnabled(picked.filter(row => row.enabled), false)}><PowerOff />Disable</Button>}
+            {filter !== 'enabled' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(row => !row.enabled) || writing} onClick={() => void setEnabled(picked.filter(row => !row.enabled), true)}><Power />Enable</Button>}
+          </>}
           filters={<>{chip('all', 'All', visible.length)}{chip('enabled', 'Enabled', enabledCount)}{chip('disabled', 'Disabled', disabledCount)}</>}
           emptyTitle={view.query.trim() ? 'No matching skills' : filter === 'disabled' && visible.length ? 'No disabled skills' : 'No skills yet'}
           emptyDescription={view.query.trim() || filter === 'disabled' && visible.length ? 'Try other words, or import a SKILL.md file.' : 'Import a SKILL.md file, then choose it beside the model in your chat.'}

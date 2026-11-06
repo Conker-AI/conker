@@ -19,9 +19,9 @@ import { GatewayPageFrame } from './page-frame'
 
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
 // load this file without building a real sorter; `useListView` reads them only while sorting.
-const MCP_SORTS = { name: { label: 'Name', get compare() { return byName((tool: McpTool) => tool.name) } } }
+const MCP_SORTS = { name: { label: 'Name', compare: byName((tool: McpTool) => tool.name) } }
 const MCP_TEXT = (tool: McpTool) => [tool.name, tool.url]
-const toolCount = (count: number) => count === 1 ? 'tool' : `${count} tools`
+const toolCount = (count: number) => count === 1 ? 'MCP tool' : `${count} MCP tools`
 
 function message(cause: unknown) {
   const error = gatewayError(cause)
@@ -125,7 +125,7 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
   }
   // Details open in place under the chosen tool; choosing it again closes them.
   const details = selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
-  const shown = !!selected && rows.some(tool => tool.id === selected.id)
+  const shown = !!selected && view.rows.some(tool => tool.id === selected.id)
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
   const picked = view.rows.filter(tool => selection.has(tool.id))
   const rowMenu = (tool: McpTool) => <ListLineMenu label={`More actions for ${tool.name}`}>
@@ -138,9 +138,12 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!tools && !error && <CollectionLoading label="Loading MCP tools…" />}
     {tools && <>
-      <ListCard count={view.rows.length} unit={toolCount(view.rows.length)}
+      <ListCard count={view.rows.length} unit={view.rows.length === 1 ? 'tool' : 'tools'}
         query={view.query} onQueryChange={view.setQuery} label="Search MCP tools" placeholder="Search MCP tools" sort={view.sort} selection={selection}
-        bulkActions={<Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setEnabled(picked, false)}><PowerOff />Turn off</Button>}
+        bulkActions={<>
+          {filter !== 'off' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(tool => tool.status === 'active') || writing} onClick={() => void setEnabled(picked.filter(tool => tool.status === 'active'), false)}><PowerOff />Turn off</Button>}
+          {filter !== 'active' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(tool => tool.status !== 'active') || writing} onClick={() => void setEnabled(picked.filter(tool => tool.status !== 'active'), true)}><Power />Turn on</Button>}
+        </>}
         filters={<>{chip('all', 'All', rows.length)}{chip('active', 'Active', activeCount)}{chip('off', 'Off', offCount)}</>}
         emptyTitle={view.query.trim() || filter !== 'all' ? 'No matching MCP tools' : 'Connect your first MCP server'}
         emptyDescription={view.query.trim() || filter !== 'all' ? 'Try other words, or connect a public HTTPS server.' : 'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'}

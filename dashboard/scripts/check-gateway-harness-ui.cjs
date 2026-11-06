@@ -21,6 +21,7 @@ function harness(file, name, initialProps) {
     if (dependency === 'react') return hooks
     if (dependency === 'react/jsx-runtime') return require(dependency)
     if (dependency === '@/lib/gateway/transport') return { gatewayError: error => error }
+    if (dependency === '@/components/design-system/list-view') return { byName: () => () => 0, byNewest: () => () => 0 }
     if (dependency === '@/lib/gateway/skills') return { SKILL_MAX_CHARACTERS: 32000, SKILL_BROWSER_MAX_BYTES: 61440, skillImportBytes: value => Buffer.byteLength(JSON.stringify({ markdown: value })) }
     return new Proxy({}, { get: (_, key) => key === 'Button' ? 'button' : key === 'Textarea' ? 'textarea' : key === 'Input' ? 'input' : key === 'Link' ? 'a' : 'section' })
   }, module, module.exports)

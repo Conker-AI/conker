@@ -28,8 +28,8 @@ type DraftSummary = Awaited<ReturnType<GatewayEditorDrafts['list']>>['items'][nu
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
 // load this file without building a real sorter; `useListView` reads them only while sorting.
 const DRAFT_SORTS = {
-  name: { label: 'Name', get compare() { return byName((item: DraftSummary) => item.name) } },
-  updated: { label: 'Recently changed', get compare() { return byNewest((item: DraftSummary) => item.updated_at) } },
+  name: { label: 'Name', compare: byName((item: DraftSummary) => item.name) },
+  updated: { label: 'Recently changed', compare: byNewest((item: DraftSummary) => item.updated_at) },
 }
 const DRAFT_TEXT = (item: DraftSummary) => [item.name, item.kind]
 const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))

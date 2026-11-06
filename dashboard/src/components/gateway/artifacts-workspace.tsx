@@ -44,7 +44,7 @@ const ARTIFACT_SORTS = {
   name: { label: 'Name', compare: byName((item: GatewayArtifactSummary) => item.title) },
   created: { label: 'Newest', compare: byNewest((item: GatewayArtifactSummary) => item.createdAt) },
 }
-const artifactCount = (count: number) => count === 1 ? 'artifact' : `${count} artifacts`
+const artifactCount = (count: number) => count === 1 ? 'Artifact' : `${count} artifacts`
 
 function mutationMessage(error: unknown) { return error instanceof GatewayArtifactMutationError ? error.message : gatewayError(error).message }
 function artifactSummary(artifact: GatewayArtifact): GatewayArtifactSummary {

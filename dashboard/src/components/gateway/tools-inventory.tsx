@@ -18,7 +18,7 @@ import { useChangeRequests } from '@/components/inbox/change-requests'
 
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
 // load this file without building a real sorter; `useListView` reads them only while sorting.
-const TOOL_SORTS = { name: { label: 'Name', get compare() { return byName((tool: ToolInventory['results'][number]) => tool.name || 'Untitled tool') } } }
+const TOOL_SORTS = { name: { label: 'Name', compare: byName((tool: ToolInventory['results'][number]) => tool.name || 'Untitled tool') } }
 const TOOL_TEXT = (tool: ToolInventory['results'][number]) => [tool.name, tool.description]
 
 export function GatewayToolsInventory({ client }: { client: GatewayControlClient }) {
@@ -49,8 +49,8 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
       <details className="text-sm text-muted-foreground"><summary className="cursor-pointer font-medium">More details</summary><code className="mt-2 block break-all text-xs">{selected.id}</code></details>
     </div></OverlayBody>
   </InlineDetails>
-  const shown = selected && rows.some(tool => tool.id === selected.id)
   const view = useListView(rows, { text: TOOL_TEXT, sorts: TOOL_SORTS })
+  const shown = selected && view.rows.some(tool => tool.id === selected.id)
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=mcp" />}>MCP servers</WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=drafts" />}>Tool drafts</WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</WorkspaceAction></>} />
     <DescribeTool requests={requests} />

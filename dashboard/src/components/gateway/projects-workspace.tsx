@@ -35,7 +35,7 @@ const PROJECT_SORTS = {
   updated: { label: 'Recently changed', compare: byNewest((item: GatewayProject) => item.updatedAt) },
   created: { label: 'Newest', compare: byNewest((item: GatewayProject) => item.createdAt) },
 }
-const projectCount = (count: number) => count === 1 ? 'project' : `${count} projects`
+const projectCount = (count: number) => count === 1 ? 'Project' : `${count} projects`
 
 function mutationMessage(error: unknown) {
   return error instanceof GatewayProjectMutationError ? error.message : gatewayError(error).message

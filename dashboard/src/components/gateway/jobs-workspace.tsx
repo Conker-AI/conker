@@ -65,7 +65,6 @@ const nextRun = (job: GatewayJob) => {
   if (!job.definition.enabled || (job.definition.target.kind === 'agent' && job.definition.target.clock === false && !job.definition.watch)) return Number.POSITIVE_INFINITY
   return job.nextAt
 }
-const jobCount = (count: number) => count === 1 ? 'schedule' : `${count} schedules`
 const jobsToast = (count: number) => count === 1 ? '1 job' : `${count} jobs`
 
 function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; control: GatewayControlClient; onChanged: (job: GatewayJob) => void }) {
@@ -197,7 +196,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
     <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => startNew()}><Plus />New AI job</WorkspaceAction></>} />
     {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}
     {error && (jobs ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Cron jobs didn’t load" onRetry={() => load()} />)}
-    {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard count={visible.length} unit={jobCount(visible.length)}
+    {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
       query={view.query} onQueryChange={view.setQuery} label="Search cron jobs" placeholder="Search cron jobs" sort={view.sort} selection={selection}
       bulkActions={<>
         {filter !== 'paused' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(job => job.definition.enabled) || writing} onClick={() => void setEnabled(picked.filter(job => job.definition.enabled), false)}><CirclePause />Pause</Button>}
