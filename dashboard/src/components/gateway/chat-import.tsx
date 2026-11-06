@@ -109,7 +109,7 @@ export function GatewayChatImport({ client }: { client: GatewayImportsClient }) 
           {preview.chats.new + preview.chats.updated > 0
             ? <Button type="button" className="min-h-11" disabled={busy || !file} onClick={() => void save(preview)}>{step.kind === 'importing' ? <><LoaderCircle className="animate-spin motion-reduce:animate-none" />Importing…</> : step.kind === 'unknown' ? 'Import again' : `Import ${plural(preview.chats.new + preview.chats.updated, 'chat')}`}</Button>
             : <Button variant="outline" className="min-h-11" render={<Link to="/chats?view=imported" />}>Open imported chats</Button>}
-          {step.kind === 'importing' ? <p role="status" className="text-sm text-muted-foreground">Keep this page open until it finishes.</p> : preview.chats.new + preview.chats.updated > 0 && <p className="text-xs text-muted-foreground">Asks for your password.</p>}
+          {step.kind === 'importing' ? <p role="status" className="text-sm text-muted-foreground">Keep this page open until it finishes.</p> : null}
         </div>
       </Card>}
     </>}

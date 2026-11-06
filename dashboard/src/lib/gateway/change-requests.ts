@@ -81,11 +81,11 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     async list(signal?: AbortSignal): Promise<ChangeRequest[]> {
       return parse(collection, await auth.request('/api/control/pi/change-requests', { signal })).results
     },
-    /** Asks for the password: it creates the cron job or the memory exactly as filed. */
+    /** Creates the cron job or the memory exactly as filed; the session is enough (both can be undone). */
     async approve(id: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/approve`, { method: 'POST', body: {} }))
     },
-    /** A tool request the owner already saved in Tools (that save asked for the password); this records which draft. */
+    /** A tool request the owner already saved in Tools ; this records which draft. */
     async saved(id: string, savedDraftId: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/saved`, { method: 'POST', body: { draftId: parse(draftId, savedDraftId, true) } }))
     },

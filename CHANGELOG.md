@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Fewer password prompts.** The password you sign in with is enough while you use Conker: setup, models, chats,
+  jobs, tool settings and server actions save with the session. The browser signs out after the time set in
+  Settings > Account > Sign out when idle (default 15 minutes) without a click or key press; reads and polling never
+  keep it signed in. The password is asked again only for forgetting, deleting and paying, security settings and the
+  terminal, and the server alone decides which those are (the page asks only when the server answers 428). Needs a
+  Pi release with the gateway's `/auth/activity` route.
 - **Approval levels and the password lock-out ship.** Pi 0.19.0, ToolGate 0.13.0, MemoryGate 0.8.1, SystemGate 0.5.1 and
   Embeddings 0.1.6 are pinned: the server decides how much an approval asks (one tap, a red "Are you sure?" for sends,
   the password for deletes and payments), a browser that keeps guessing the password is locked out and the Inbox says

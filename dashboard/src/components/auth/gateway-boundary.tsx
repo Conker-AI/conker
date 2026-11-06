@@ -64,6 +64,27 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
     document.addEventListener('visibilitychange', lockIfExpired)
     return () => { window.clearTimeout(timer); window.removeEventListener('focus', lockIfExpired); window.removeEventListener('pageshow', lockIfExpired); document.removeEventListener('visibilitychange', lockIfExpired) }
   }, [store, state.phase, state.session])
+  const signedIn = state.phase === "authenticated"
+  useEffect(() => {
+    if (!signedIn) return
+    // The owner's own clicks and keys keep the sign-in unlocked; polling and reads never do (L-03).
+    // At most one mark every 30 s, so the window is never more than 30 s short of the last input.
+    let last = 0
+    const mark = () => {
+      const now = Date.now()
+      if (now - last < 30_000) return
+      const current = store.getState()
+      if (current.phase !== "authenticated" || !gatewaySessionUnlocked(current.session)) return
+      last = now
+      current.markActivity()
+    }
+    const options = { capture: true, passive: true }
+    window.addEventListener("pointerdown", mark, options)
+    window.addEventListener("keydown", mark, options)
+    window.addEventListener("wheel", mark, options)
+    window.addEventListener("touchstart", mark, options)
+    return () => { for (const name of ["pointerdown", "keydown", "wheel", "touchstart"] as const) window.removeEventListener(name, mark, options) }
+  }, [store, signedIn])
 
   if (state.phase === "authenticated" && gatewaySessionUnlocked(state.session) && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
   if (state.phase === "checking") return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>

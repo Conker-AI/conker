@@ -147,7 +147,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     finally { setAlertsBusy(false) }
   }
   /** "Sign out everywhere": mark the alerts seen while this tab is still signed in, then revoke
-   *  every session (the auth layer asks the password); this tab then returns to sign-in. */
+   *  every session; this tab then returns to sign-in. */
   async function revokeAllSessions() {
     if (alertsBusy) return
     setAlertsBusy(true); setAlertsError(null)

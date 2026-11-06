@@ -38,3 +38,25 @@ ask for the password).
 
 - Chat feels like chat: no prompt between messages.
 - Adding a route to the session-only list is a security decision and needs this ADR updated.
+
+## Update, 6 November 2026: the session is enough; the password is the exception
+
+The owner: having signed in a few minutes ago, being asked for the password again for something
+that can be undone is friction with no protection. The rule is turned around.
+
+- **Signing in gives access.** Every ordinary write needs only the session, CSRF and Origin: chats,
+  tasks, proposals, job controls, tool runs, imports, tool settings, server actions, setup steps
+  and settings that are not about security.
+- **The password is asked only** for what cannot be undone or changes protection: forgetting,
+  owner preferences (they hold the sign-in time), job hooks and adoption, budgets, setup
+  protection, approval decisions that delete or pay (level 3), the owner terminal, turning
+  lockdown off, giving a tool or identity access, and secrets sent to an MCP server.
+- **Idle sign-out.** The sign-in stays unlocked while the owner uses the page: it sends
+  `POST /auth/activity` on clicks and keys (about once a minute), and the window
+  (Settings > Security, `idleTimeoutMinutes`) restarts. Polling, reads and writes never extend it,
+  an expired sign-in stays expired, and nothing outlives the 24-hour absolute limit.
+- The list now names the exceptions: `PASSWORD_WRITES` in Pi's `browser_contract.py`, plus the
+  gateway routes marked "password" in Pi's docs/browser-auth.md. The dashboard keeps no mirror:
+  it asks for the password only when the gateway answers 428.
+- Adding a route to the password list, or taking one off, is a security decision and updates this
+  ADR and Pi's `tests/test_password_scope.py`.

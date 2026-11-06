@@ -1,4 +1,4 @@
-import { GatewayError, gatewayError, needsNoPassword, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport, type GatewayVerifiedOperation } from './transport'
+import { GatewayError, gatewayError, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport, type GatewayVerifiedOperation } from './transport'
 import { describeGatewayOperation, type GatewayVerificationPrompt } from './verification'
 import { isImportSave, type GatewayDownload, type GatewayFileFormat, type GatewayFileTransfer } from './file-transfer'
 
@@ -175,28 +175,60 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       }
     },
     /**
-     * A chat export's conversations.json as the raw body. Previewing saves nothing; importing asks
-     * for the password, bound to the import's path with an empty body: the digest in that path
-     * names the exact file, and Pi refuses any other bytes.
+     * A chat export's conversations.json as the raw body. Previewing and importing need the
+     * session only (ADR-0010). Should the server still ask (428, nothing saved), the password is
+     * asked once, bound to the import's path with an empty body: the digest in that path names
+     * the exact file, and Pi refuses any other bytes.
      */
     async upload(path: string, body: Blob, signal?: AbortSignal): Promise<Record<string, unknown>> {
       if (!files) throw new GatewayError('configuration')
       if (signal?.aborted) throw new GatewayError('verification-cancelled')
       const ticket = await ticketFor(), current = currentFor(ticket)
       if (!current()) throw new GatewayError('verification-cancelled')
-      let verificationToken = isImportSave(path) ? await proof({ method: 'POST', path, body: {} }, ticket, current, signal) : undefined
-      if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+      const send = (token: string | undefined) => files.upload(path, body, ticket.csrfToken, token, signal)
       try {
-        const value = await files.upload(path, body, ticket.csrfToken, verificationToken, signal)
-        verificationToken = undefined
+        let value: Record<string, unknown>
+        try {
+          value = await send(undefined)
+        } catch (error) {
+          if (gatewayError(error).kind !== 'verification-required' || !isImportSave(path)) throw error
+          if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+          const token = await proof({ method: 'POST', path, body: {} }, ticket, current, signal)
+          if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+          value = await send(token)
+        }
         if (!current()) throw new GatewayError('session-changed')
         return value
       } catch (error) {
-        verificationToken = undefined
-        if (gatewayError(error).kind === 'verification-required') throw error
+        const kind = gatewayError(error).kind
+        if (kind === 'verification-required' || kind === 'verification-cancelled') throw error
         if (!current()) throw new GatewayError('session-changed')
         return serial(async () => { if (!current()) throw new GatewayError('session-changed'); return classifyDenied(error) })
       }
+    },
+    /**
+     * The owner clicked or typed: restart the unlock window (idle sign-out). Only the page's own
+     * input listener calls this; polling and writes never do, so being away still signs out.
+     */
+    markActivity(): Promise<void> {
+      return serial(async () => {
+        if (!unlocked()) return
+        const ticket = { generation, sessionId: session!.sessionId }
+        let value: Record<string, unknown>
+        try {
+          value = await transport.request('/auth/activity', { method: 'POST', body: {}, csrfToken: session!.csrfToken })
+        } catch (error) {
+          if (ticket.generation !== generation) return
+          const failure = gatewayError(error)
+          if (failure.status === 401 || failure.status === 403) { clear(); await readSession().catch(() => undefined) }
+          return
+        }
+        if (ticket.generation !== generation || ticket.sessionId !== session?.sessionId) return
+        const deadline = value.unlock_expires_at
+        if (typeof deadline !== 'number' || !Number.isFinite(deadline) || deadline <= now() || deadline > session.expiresAt) return
+        session = { ...session, unlockExpiresAt: deadline }
+        publish()
+      })
     },
     async request(path: string, options: GatewayRequest = {}): Promise<Record<string, unknown>> {
       const { onDispatch, password, ...requestOptions } = options
@@ -216,7 +248,8 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       // Slow turns must not block logout or session verification. Never surface results from an old session.
       const current = () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
       if (!current()) throw new GatewayError(post ? 'verification-cancelled' : 'session-changed')
-      const askFirst = !!operation && !needsNoPassword(path, operation.body) && password !== 'if-asked'
+      // Writes go out with the session alone; only an action that deletes or pays asks first.
+      const askFirst = !!operation && password === 'first'
       let verificationToken: string | undefined
       if (askFirst) {
         verificationToken = await proof(operation!, ticket, current, signal)
@@ -238,10 +271,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       } catch (error) {
         verificationToken = undefined
         let failure = error
-        // 'if-asked': the server refused this exact frozen write for want of a proof (428), so it
-        // ran nothing. Ask for the password once and send the same operation once more with the
-        // token; whatever that answers is handled like any other failure, never retried again.
-        if (gatewayError(error).kind === 'verification-required' && operation && password === 'if-asked') {
+        // The server refused this exact frozen write for want of a proof (428), so it ran nothing.
+        // Ask for the password once and send the same operation once more with the token;
+        // whatever that answers is handled like any other failure, never retried again.
+        if (gatewayError(error).kind === 'verification-required' && operation && !askFirst) {
           if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
           let token: string | undefined = await proof(operation, ticket, current, signal)
           if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')

@@ -13,7 +13,7 @@ function load(relative) {
 }
 
 const { createGatewayTerminalClient } = load('src/lib/gateway/terminal.ts')
-const { createGatewayTransport, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
 const id = 'browser_1234567890abcdef1234567890abcdef'
 
 async function main() {
@@ -33,8 +33,6 @@ async function main() {
   assert.equal((await client.input(id, new TextEncoder().encode('ls'))).automaticReplay, false)
   await client.resize(id, 24, 80); await client.close(id)
   assert.equal(calls.length, 6)
-  assert.equal(isConversationWrite('/api/terminal'), false)
-  assert.equal(isConversationWrite(`/api/terminal/${id}/input`), true)
 
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async url => {

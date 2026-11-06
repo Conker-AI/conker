@@ -19,7 +19,7 @@ const { createGatewayDraftClient, parseDraft, emptyDraft, draftBody, parseDraftS
 const { createDraftController, draftNeedsUnload, draftCanSend } = load('src/components/gateway/draft-controller.ts')
 const { createGatewayRuntimeClient } = load('src/lib/gateway/runtime.ts')
 const { createRequestOptions, retainedRequestOptions } = load('src/components/gateway/runtime-state.ts')
-const { createGatewayTransport, GatewayError, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
 const { rememberDraftStart, readDraftStart, clearDraftStart } = load('src/components/gateway/draft-start-recovery.ts')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
@@ -73,8 +73,6 @@ async function main() {
   } })
   const api = createGatewayDraftClient({ request: (route, options) => transport.request(route, { ...options, csrfToken: 'c'.repeat(32) }) })
   assert.equal((await api.load('ses_one')).text.length, 200_000, 'Actual transport allows legitimate legacy reads above the default response helper limit')
-  for (const route of ['/api/control/pi/drafts/new', '/api/control/pi/drafts/ses_one', '/api/control/pi/drafts/ses_one/tasks/task_one', '/api/control/pi/drafts/new/start']) assert.equal(isConversationWrite(route), true, `Session-only routine write: ${route}`)
-  assert.equal(isConversationWrite('/api/control/pi/drafts/new/start/request_12345678'), false, 'Receipt lookup is read-only')
   await assert.rejects(api.load('../owner'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/drafts/new/start/request_12345678', { method: 'POST', body: {}, csrfToken: 'c'.repeat(32) }), error => error.kind === 'validation')
   const starts = [], requestId = 'draft_start_request_123'

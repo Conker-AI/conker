@@ -72,19 +72,18 @@ async function main() {
   await assert.rejects(duplicate.listRequests(), error => error.kind === 'invalid-response')
   // Approval levels: the server's level decides how much proof the page asks for. A missing or odd
   // level is serious (3). Levels 1 and 2, and any no, send with the session and ask the password
-  // only if the server answers 428; level 3 approved asks first (no 'if-asked').
+  // only if the server answers 428; approving at level 3 (delete or pay) asks first ('first').
   for (const [sent, shown] of [[undefined, 3], [1, 1], [2, 2], [3, 3], [0, 3], [4, 3], ['1', 3], [null, 3], [1.5, 3]]) {
     const row = fixture(); if (sent === undefined) delete row.approval_level; else row.approval_level = sent
     assert.equal(parseOwnerRequest(row).level, shown, `approval_level ${String(sent)} shows as level ${shown}`)
   }
   const sent = []
   const levels = createGatewayOwnerClient({ request: async (route, options) => { sent.push(options); return options.body.status === 'approved' ? approved : { ...approved, status: options.body.status, decision: { ...approved.decision, status: options.body.status } } } })
-  for (const [status, level, ifAsked] of [['approved', 1, true], ['approved', 2, true], ['approved', 3, false], ['approved', undefined, false], ['rejected', 3, true], ['rejected', undefined, true], ['dismissed', 3, true]]) {
+  for (const [status, level, first] of [['approved', 1, false], ['approved', 2, false], ['approved', 3, true], ['approved', undefined, false], ['rejected', 3, false], ['rejected', undefined, false], ['dismissed', 3, false]]) {
     sent.length = 0
     await levels.decide('request_one', status, '', { level })
     assert.equal(sent.length, 1, 'One send per decision')
-    assert.equal(sent[0].password, ifAsked ? 'if-asked' : undefined, `${status} at level ${String(level)}`)
-    if (!ifAsked) assert.ok(!('password' in sent[0]), 'Level 3 yes keeps the default: the password is asked before sending')
+    assert.equal(sent[0].password, first ? 'first' : undefined, `${status} at level ${String(level)}`)
   }
   const alertRoutes = []
   let alertAnswer = { unseen: 1, results: [{ at: 1, origin: 'new_device', seen: false }] }

@@ -55,7 +55,8 @@ async function main() {
   // Deliberately retain a promise without awaiting its final mutation result.
   const verificationResponse = deferred(), f = await ready(call => call.path === '/auth/verify' ? verificationResponse.promise : undefined)
   let callbacks = 0, replacements = 0
-  const options = { method: 'POST', body: { operation: 'login' }, onDispatch() {
+  // password: 'first' (a delete or a payment) asks before anything is sent.
+  const options = { method: 'POST', body: { operation: 'login' }, password: 'first', onDispatch() {
     callbacks++; f.order.push('callback')
     assert.equal(f.wire.filter(call => call.path === '/auth/verify').length, 1)
     assert.equal(f.dispatches.length, 0)
@@ -82,13 +83,13 @@ async function main() {
     const f = await ready(), client = factory(f.auth), abort = new AbortController()
     let called = 0
     const result = outcome(client.apply(body, abort.signal, () => called++))
-    await tick(); assert.equal(called, 0); assert.equal(f.dispatches.length, 0)
-    await f.verification.getState().submit('synthetic-owner-password')
+    // Sent with the session; the gateway answers 428 when it wants the password (covered below).
     assert.deepEqual((await result).value, statuses[name]); assert.equal(called, 1)
+    assert.equal(f.verification.getState().challenge, null)
     assert.deepEqual(f.dispatches[0].options.body, body)
     assert.equal(f.dispatches[0].options.signal, abort.signal)
     assert.equal(f.dispatches[0].path, '/api/host/' + name)
-    console.log(`PASS ${name} apply forwards third callback only through authenticated exact-operation dispatch`)
+    console.log(`PASS ${name} apply forwards the third callback and the signal through one exact dispatch`)
   }
 
   const revision = 'credential_' + 'a'.repeat(32)
@@ -99,23 +100,34 @@ async function main() {
     { operation: 'paid-policy', enabled: true, expectedAllowed: false },
     { operation: 'recover-paid-policy' },
   ]) {
-    const f = await ready(), client = createProviderControlClient(f.auth), before = structuredClone(body)
+    // The gateway asks the password for entering a key and the paid-model policy, by answering 428.
+    const asks = ['stage', 'paid-policy', 'recover-paid-policy'].includes(body.operation)
+    const f = await ready(call => call.path === '/api/host/providers' && asks && !call.options.headers['X-Conker-Verification'] ? json({ detail: 'verification_required' }, 428) : undefined)
+    const client = createProviderControlClient(f.auth), before = structuredClone(body)
     let called = 0
     const result = outcome(client.apply(body, undefined, () => called++))
-    await tick()
-    assert.equal(called, 0); assert.equal(f.dispatches.length, 0)
+    for (let i = 0; i < 50 && asks && !f.verification.getState().challenge; i++) await tick()
+    if (!asks) await tick()
+    assert.equal(called, 1); assert.equal(f.dispatches.length, 1)
+    const first = f.wire.find(call => call.path === '/api/host/providers')
+    assert.deepEqual(first.body, before); assert.equal(first.options.headers['X-Conker-Verification'], undefined)
+    if (!asks) {
+      assert.deepEqual((await result).value, statuses.providers)
+      assert.equal(f.wire.filter(call => call.path === '/auth/verify').length, 0); assert.equal(f.verification.getState().challenge, null)
+      continue
+    }
     assert.doesNotMatch(JSON.stringify(f.verification.getState().challenge), /SYNTHETIC_PRIVATE_KEY|onDispatch/)
     // The owner authorizes the original exact operation even if caller data later changes.
     Object.assign(body, { revision: 'credential_' + 'b'.repeat(32), secret: 'CHANGED_SYNTHETIC_KEY', enabled: false })
     await f.verification.getState().submit('synthetic-owner-password')
     assert.deepEqual((await result).value, statuses.providers)
-    assert.equal(called, 1); assert.equal(f.dispatches.length, 1)
-    const verify = f.wire.find(call => call.path === '/auth/verify'), sent = f.wire.find(call => call.path === '/api/host/providers')
+    assert.equal(called, 1, 'The operation clock starts once'); assert.equal(f.dispatches.length, 2)
+    const verify = f.wire.find(call => call.path === '/auth/verify'), sent = f.wire.filter(call => call.path === '/api/host/providers')[1]
     assert.deepEqual(verify.body.operation, { method: 'POST', path: '/api/host/providers', body: before })
     assert.deepEqual(sent.body, before)
     assert.equal(sent.options.headers['X-Conker-Verification'], proof.verification_token)
   }
-  console.log('PASS credential revisions, secret and paid-policy expectations stay exact across verified dispatch for all eight operations')
+  console.log('PASS credential operations send with the session; entering a key and the paid policy ask on the 428 and resend the exact first body')
 
   const credentials = await ready(), credentialClient = createProviderControlClient(credentials.auth), readController = new AbortController()
   assert.deepEqual(await credentialClient.status(readController.signal), statuses.providers)
@@ -133,17 +145,16 @@ async function main() {
   const failedCredentials = await ready(call => call.path === '/api/host/providers' ? json({}, 503) : undefined)
   let credentialCalls = 0
   const failedOperation = outcome(createProviderControlClient(failedCredentials.auth).apply({ operation: 'paid-policy', enabled: true, expectedAllowed: false }, undefined, () => credentialCalls++))
-  await tick(); await failedCredentials.verification.getState().submit('synthetic-owner-password')
   assert.equal((await failedOperation).error.kind, 'dependency')
   await tick()
   assert.equal(credentialCalls, 1); assert.equal(failedCredentials.dispatches.length, 1)
-  assert.equal(failedCredentials.wire.filter(call => call.path === '/auth/verify').length, 1)
+  assert.equal(failedCredentials.wire.filter(call => call.path === '/auth/verify').length, 0, 'A 503 is not a 428: no password, no resend')
   console.log('PASS unconfirmed credential mutation reports failure without callback or POST replay')
 
   for (const kind of ['already-aborted', 'waiting-abort', 'dismissed', 'owner-lock']) {
     const f = await ready(), abort = new AbortController(); let called = 0
     if (kind === 'already-aborted') abort.abort()
-    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, signal: abort.signal, onDispatch: () => called++ }))
+    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, password: 'first', signal: abort.signal, onDispatch: () => called++ }))
     await tick()
     if (kind === 'waiting-abort') abort.abort()
     if (kind === 'dismissed') f.verification.getState().cancel()
@@ -155,7 +166,7 @@ async function main() {
 
   for (const kind of ['abort', 'lock', 'throw']) {
     const f = await ready(), abort = new AbortController(), original = new Error('local-observer-failed'); let called = 0
-    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, signal: abort.signal, onDispatch() {
+    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, password: 'first', signal: abort.signal, onDispatch() {
       called++
       if (kind === 'abort') abort.abort()
       if (kind === 'lock') f.auth.lock()
@@ -172,7 +183,7 @@ async function main() {
   let attempts = 0
   const retryPassword = await ready(call => call.path === '/auth/verify' && ++attempts === 1 ? json({}, 401) : undefined)
   let called = 0
-  const retryResult = outcome(retryPassword.auth.request(route, { method: 'POST', body: { operation: 'login' }, onDispatch: () => called++ }))
+  const retryResult = outcome(retryPassword.auth.request(route, { method: 'POST', body: { operation: 'login' }, password: 'first', onDispatch: () => called++ }))
   await tick(); assert.equal(await retryPassword.verification.getState().submit('incorrect-synthetic-password'), false)
   assert.equal(called, 0); assert.equal(retryPassword.dispatches.length, 0)
   assert.equal(await retryPassword.verification.getState().submit('correct-synthetic-password'), true)
@@ -189,7 +200,7 @@ async function main() {
       return json({}, kind === 'denied' ? 403 : 428)
     })
     let called = 0
-    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, signal: abort.signal, onDispatch: () => called++ }))
+    const result = outcome(f.auth.request(route, { method: 'POST', body: { operation: 'login' }, password: 'first', signal: abort.signal, onDispatch: () => called++ }))
     await tick(); await f.verification.getState().submit('synthetic-owner-password')
     assert.ok((await result).error)
     await tick()

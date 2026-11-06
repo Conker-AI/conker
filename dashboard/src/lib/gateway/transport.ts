@@ -67,10 +67,12 @@ export type GatewayRequest = {
   /** Auth-only POST observation: dispatch is starting, not acknowledged. Never sent to transport. */
   onDispatch?: () => void
   /**
-   * Ask the auth layer to send without the password proof first, and prompt only if this exact
-   * request is refused with 428 `verification_required`. Never sent to the transport.
+   * Every write goes out with the signed-in session alone, and the auth layer asks for the
+   * password only if the server refuses this exact request with 428 `verification_required`
+   * (ADR-0010: the server owns the list). 'first' asks before sending, for an action that
+   * deletes or pays, where the server is known to ask. Never sent to the transport.
    */
-  password?: 'if-asked'
+  password?: 'first'
 }
 export type GatewayTransport = ReturnType<typeof createGatewayTransport>
 const ids = '[A-Za-z0-9_-]+'
@@ -81,7 +83,7 @@ const routes: Record<GatewayMethod, RegExp[]> = {
     new RegExp(`^/api/pi/(sessions|messages|tasks|runs)/${ids}$`),
     new RegExp(`^/api/pi/turn-submissions/${ids}$`), new RegExp(`^/api/pi/sessions/${ids}/submissions$`),
     new RegExp(`^/api/pi/tasks/requests/${ids}$`) ],
-  POST: [ /^\/api\/control\/pi\/memory\/forget$/, /^\/api\/control\/pi\/setup\/models$/, /^\/api\/control\/pi\/setup\/models\/activate$/, /^\/api\/control\/pi\/setup\/protection$/, /^\/api\/control\/pi\/setup\/rehearsal\/(?:memory-review|approval\/(?:start|resume)|finalize)$/, /^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/, /^\/api\/control\/pi\/setup\/receipts\/boundaries$/, /^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}(?:\/(?:publish|access|runs))?$/, new RegExp(`^/api/control/pi/sessions/${ids}/settings$`), /^\/api\/control\/pi\/models\/configuration$/, /^\/auth\/(login|logout|verify|revoke-all)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`), /^\/auth\/alerts\/seen$/,
+  POST: [ /^\/api\/control\/pi\/memory\/forget$/, /^\/api\/control\/pi\/setup\/models$/, /^\/api\/control\/pi\/setup\/models\/activate$/, /^\/api\/control\/pi\/setup\/protection$/, /^\/api\/control\/pi\/setup\/rehearsal\/(?:memory-review|approval\/(?:start|resume)|finalize)$/, /^\/api\/control\/pi\/setup\/choices\/(companion|memory|capabilities)$/, /^\/api\/control\/pi\/setup\/receipts\/boundaries$/, /^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}(?:\/(?:publish|access|runs))?$/, new RegExp(`^/api/control/pi/sessions/${ids}/settings$`), /^\/api\/control\/pi\/models\/configuration$/, /^\/auth\/(login|logout|verify|revoke-all|activity)$/, new RegExp(`^/auth/sessions/${ids}/revoke$`), /^\/auth\/alerts\/seen$/,
     new RegExp(`^/api/owner/requests/${ids}/decision$`), /^\/api\/pi\/(sessions|tasks)$/,
     new RegExp(`^/api/pi/tasks/${ids}/(update|transition|archive)$`),
     new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turns/${ids}/resume$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`) ],
@@ -139,8 +141,8 @@ routes.GET.unshift(/^\/api\/control\/pi\/jobs(?:\/job_[0-9a-f]{32}(?:\/runs)?)?$
 routes.POST.unshift(/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:state|run|adopt|hook|hook\/revoke)$/, /^\/api\/control\/pi\/jobs\/runs\/scheduled_[0-9a-f]{32}\/(?:provision-budget|cancel|resume|reconcile)$/)
 // Plan usage is percentages per plan window only; dismissing an alert stays host-admin only.
 routes.GET.unshift(/^\/api\/control\/pi\/plans\/usage$/)
-// Conker's requests: list, approve (asks for the password), decline (creates nothing) and record the
-// Tools draft a tool request was saved as (the save itself asked for the password).
+// Conker's requests: list, approve, decline (creates nothing) and record the
+// Tools draft a tool request was saved as.
 routes.GET.unshift(/^\/api\/control\/pi\/change-requests(?:\/creq_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:approve|decline|saved)$/)
 // Tool requests: draft one from his words, draft a failed one again, record that one was published.
@@ -151,7 +153,7 @@ routes.POST.unshift(...toolRequestRoutes)
 // (quiet hours, proactivity, budgets: saving asks for the password).
 routes.GET.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
 routes.POST.unshift(/^\/api\/control\/pi\/owner\/(?:settings|preferences)$/)
-// ToolGate's settings for how tools run (saving asks for the password) and its lockdown switch:
+// ToolGate's settings for how tools run and its lockdown switch:
 // turning it on only takes power away, so the session is enough; turning it off asks.
 const lockdownRoute = /^\/api\/owner\/lockdown$/
 routes.GET.unshift(/^\/api\/owner\/tool-settings$/, lockdownRoute)
@@ -160,7 +162,7 @@ routes.POST.unshift(lockdownRoute)
 // Conker's questions: list, answer (his next message in that chat) and dismiss (sends nothing).
 routes.GET.unshift(/^\/api\/control\/pi\/asks(?:\/ask_[0-9a-f]{32})?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
-// Adding a memory by hand asks for the password, like approving one Conker asked for.
+// Adding a memory by hand, like approving one Conker asked for (it can be forgotten).
 routes.POST.unshift(/^\/api\/control\/pi\/memory\/remember$/)
 // AI jobs: the browser creates AI jobs only (never raw tool jobs), reads their notes and dismisses one.
 routes.GET.unshift(/^\/api\/control\/pi\/jobs\/agent\/notes$/)
@@ -200,22 +202,6 @@ routes.GET.unshift(new RegExp(`^${chatSession}/(?:output|title|branch-history|re
 routes.POST.unshift(new RegExp(`^${chatSession}/(?:output|title|title/auto|messages/${chatMessage}/(?:retry|fact-check|fork)|response-families/${chatMessage}/(?:select|judge|vote))$`),
   new RegExp(`^${chatContext}(?:/(?:fork|summary|summary/restore|summary/draft|compact|items|items/(?:dec|thr)_[0-9a-f]{16}/state))?$`))
 const chatFeatureRoute = new RegExp(`^(?:${chatSession}|${chatContext})(?:/|$)`)
-/** Routine session writes need the signed-in session only (ADR-0010); every other write asks for the password. */
-const conversationWrites = [/^\/api\/pi\/sessions$/, new RegExp(`^/api/pi/sessions/${ids}/(turns|fork)$`), new RegExp(`^/api/pi/turn-submissions/${ids}/cancel$`), new RegExp(`^/api/pi/proposals/${ids}/decision$`), /^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/]
-conversationWrites.push(new RegExp(`^/api/pi/sessions/${ids}/thinking/${ids}/cancel$`))
-conversationWrites.push(draftRoute, draftStartRoute)
-conversationWrites.push(/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/(?:decline|saved)$/, ...toolRequestRoutes)
-// The settings document holds look and defaults, never authority.
-conversationWrites.push(/^\/api\/control\/pi\/owner\/settings$/)
-// Answering Conker's question is like typing in that chat; dismissing sends nothing.
-conversationWrites.push(/^\/api\/control\/pi\/asks\/ask_[0-9a-f]{32}\/(?:answer|dismiss)$/)
-// Dismissing an AI job's note hides one line; it grants and runs nothing.
-conversationWrites.push(/^\/api\/control\/pi\/jobs\/agent\/notes\/note_[0-9a-f]{32}\/dismiss$/)
-// Reading the server's services or backup folder changes nothing.
-conversationWrites.push(/^\/api\/host\/read$/)
-export const isConversationWrite = (path: string) => conversationWrites.some(route => route.test(path))
-/** Writes the signed-in session is enough for: conversation writes, turning lockdown on and marking wrong-password alerts seen. */
-export const needsNoPassword = (path: string, body?: Record<string, unknown>) => isConversationWrite(path) || path === '/auth/alerts/seen' || lockdownRoute.test(path) && body?.enabled === true
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

@@ -18,7 +18,7 @@ const pausing = 'Conker is paused while it copies: chats, tools and memory wait 
 
 /**
  * Server > Backups: where the backups are and what that place does not protect against, free
- * space, the snapshots, Check per snapshot and Back up now. Both actions ask for the password and
+ * space, the snapshots, Check per snapshot and Back up now. Both actions need the signed-in session and
  * show the helper's receipt; an unknown outcome is checked by reading the folder, never retried.
  */
 export function GatewayServerBackups({ client }: { client: GatewayHostOpsClient }) {

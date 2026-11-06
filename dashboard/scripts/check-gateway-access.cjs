@@ -16,7 +16,7 @@ function load(relative) {
 }
 
 const { createAccessClient } = load('src/lib/gateway/access.ts')
-const { createGatewayTransport, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
 
 async function main() {
   const calls = []
@@ -32,7 +32,6 @@ async function main() {
   assert.equal(await client.setCard('mail.send', 'send'), 'send')
   assert.deepEqual(calls.at(-1), ['/api/owner/tools/mail.send/card', { method: 'POST', body: { template: 'send' } }])
   await assert.rejects(client.setCard('mail.send', 'Cancel'), error => error.kind === 'validation')
-  assert.equal(isConversationWrite('/api/owner/tools/mail.send/card'), false, 'Picking a tool’s buttons asks for the password')
   reply = { delegate: false, sensitive: ['bank.pay'], floorExecutions: ['port_control'] }
   reply = { delegate: false, sensitive: [], floorExecutions: [], key: 'x' }
   await assert.rejects(client.state(), error => error.kind === 'invalid-response', 'The access view is exact')
@@ -68,9 +67,6 @@ async function main() {
   await transport.request('/api/control/pi/access/handled')
   await assert.rejects(transport.request('/api/owner/access/keys'), error => error.kind === 'validation')
   assert.equal(requests, 2)
-  assert.equal(isConversationWrite('/api/owner/access/delegate'), false, 'Letting Conker decide asks for the password')
-  assert.equal(isConversationWrite('/api/owner/tools/mail.send/sensitive'), false, 'Changing the floor asks for the password')
-  assert.equal(isConversationWrite('/api/owner/tools/sandbox.run/access'), false, 'Letting Conker use a tool asks for the password')
   await transport.request('/api/owner/tools/sandbox.run/access')
   assert.equal(requests, 3)
 

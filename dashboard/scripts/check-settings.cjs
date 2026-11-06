@@ -41,9 +41,7 @@ async function main() {
   assert.ok(!/<Button(?![^>]*(?:type="button"|render=))[^>]*onClick/.test(row + read('src/settings/controls.tsx') + read('src/settings/blocks-parts.tsx') + read('src/settings/settings-screen.tsx')), 'every clickable settings button is type="button"')
 
   // The owner's settings document saves with the session; his preferences ask for the password.
-  const { isConversationWrite, createGatewayTransport } = load('src/lib/gateway/transport.ts')
-  assert.equal(isConversationWrite('/api/control/pi/owner/settings'), true)
-  assert.equal(isConversationWrite('/api/control/pi/owner/preferences'), false)
+  const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
   let requests = 0
   const transport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => { requests++; return new Response('{}', { headers: { 'content-type': 'application/json' } }) } })
   for (const route of ['/api/control/pi/owner/settings', '/api/control/pi/owner/preferences']) {
@@ -52,11 +50,7 @@ async function main() {
   }
   assert.equal(requests, 4)
 
-  // ToolGate's settings save with PUT and the password; lockdown on needs only the session, off asks.
-  const { needsNoPassword } = load('src/lib/gateway/transport.ts')
-  assert.equal(needsNoPassword('/api/owner/tool-settings', {}), false)
-  assert.equal(needsNoPassword('/api/owner/lockdown', { enabled: true }), true)
-  assert.equal(needsNoPassword('/api/owner/lockdown', { enabled: false }), false)
+  // ToolGate's settings save with PUT and the session; lockdown on needs only the session, off asks.
   const sent = []
   const toolTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async (url, init) => { sent.push([new URL(url).pathname, init.method, init.headers['X-CSRF-Token']]); return new Response('{}', { headers: { 'content-type': 'application/json' } }) } })
   await toolTransport.request('/api/owner/tool-settings')

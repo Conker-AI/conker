@@ -36,10 +36,10 @@
         {
           "id": "session.idle_timeout_minutes",
           "title": "Sign out when idle",
-          "description": "Signs this browser out this long after you last entered your password.",
+          "description": "Signs this browser out after this long without a click or a key press.",
           "type": "select",
           "default": 15,
-          "tier": "advanced",
+          "tier": "basic",
           "scope": "global",
           "effect": "live",
           "options": [

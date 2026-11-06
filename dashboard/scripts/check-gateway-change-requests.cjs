@@ -16,7 +16,7 @@ function load(relative) {
 }
 
 const { createChangeRequestsClient } = load('src/lib/gateway/change-requests.ts')
-const { createGatewayTransport, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
 const id = `creq_${'a'.repeat(32)}`, base = `/api/control/pi/change-requests/${id}`
 const job = {
   id, kind: 'ai_job', title: 'Cron job: Morning check', summary: 'Every day at 08:00.', sessionId: `ses_${'b'.repeat(16)}`, state: 'open', result: null, createdAt: 1, decidedAt: null,
@@ -152,15 +152,7 @@ async function main() {
   await transport.request('/api/control/pi/tool-drafts', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} })
   await assert.rejects(transport.request(`${base}/edit`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation', 'A request is never edited from the browser')
   assert.equal(requests, 7)
-  for (const route of [`${base}/retry`, `${base}/published`, '/api/control/pi/tool-drafts']) assert.equal(isConversationWrite(route), true, `${route} creates nothing real: no password`)
-  assert.equal(isConversationWrite(`${base}/approve`), false, 'Approving asks for the password')
-  assert.equal(isConversationWrite(`${base}/decline`), true, 'Declining creates nothing')
-  assert.equal(isConversationWrite(`${base}/saved`), true, 'Recording a draft id follows the password-verified save in Tools')
-  assert.equal(isConversationWrite('/api/owner/editor-drafts/digest'), false, 'Saving the draft in Tools asks for the password')
-  assert.equal(isConversationWrite(`/api/control/pi/asks/ask_${'d'.repeat(32)}/answer`), true, 'Answering Conker is like typing in that chat')
-  assert.equal(isConversationWrite(`/api/control/pi/asks/ask_${'d'.repeat(32)}/dismiss`), true, 'Dismissing a question sends nothing')
 
-  assert.equal(isConversationWrite('/api/control/pi/memory/remember'), false, 'Adding a memory by hand asks for the password too')
   const { createGatewayControlClient } = load('src/lib/gateway/control.ts')
   const remembered = []
   const control = createGatewayControlClient({ request: async (...args) => { remembered.push(args); return { memoryId: 'm1', status: 'remembered' } }, audio: async () => ({}), getSession: () => null }, () => {})

@@ -12,7 +12,7 @@ function load(file) {
   return mod.exports
 }
 const { createProviderControlClient } = load('provider-control.ts')
-const { snapshotGatewayOperation, isConversationWrite } = load('transport.ts')
+const { snapshotGatewayOperation } = load('transport.ts')
 const { describeGatewayOperation } = load('verification.ts')
 const { createBrowserSessionsClient } = load('browser-sessions.ts')
 const { createChatGPTClient } = load('chatgpt.ts')
@@ -35,7 +35,6 @@ async function main() {
   assert.equal(calls[0][0], route)
   const body = { operation: 'stage', provider: 'openai', secret: 'SYNTHETIC_PRIVATE_KEY', activeRevision: null, stagedRevision: null }
   const snapshot = snapshotGatewayOperation(route, body)
-  assert.equal(isConversationWrite(route), false, 'credentials always require exact password verification')
   const review = describeGatewayOperation(snapshot)
   assert.equal(review.title, 'Save provider key')
   assert.equal(JSON.stringify(review).includes(body.secret), false, 'review never reveals key')
@@ -72,7 +71,6 @@ async function main() {
   assert.equal((await chatgpt.status()).connected, false)
   const authPath = '/api/host/chatgpt'
   assert.equal(chatgptCalls[0][0], authPath)
-  assert.equal(isConversationWrite(authPath), false)
   assert.equal(describeGatewayOperation(snapshotGatewayOperation(authPath, { operation: 'login' })).title, 'Sign in with ChatGPT')
   chatgptResponse = { ...subscription, loginId: 'test-login', loginState: 'pending', deviceCode: { verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'TEST-1234' } }
   assert.equal((await chatgpt.apply({ operation: 'login' })).deviceCode.userCode, 'TEST-1234')
@@ -86,7 +84,6 @@ async function main() {
   const native = createNativeClaudeClient({ request: async (...args) => { nativeCalls.push(args); return nativeResponse } })
   assert.equal((await native.status()).loginId, null)
   assert.equal(nativeCalls[0][0], nativePath)
-  assert.equal(isConversationWrite(nativePath), false, 'Native cancellation remains an exact owner-verified action')
   nativeResponse = { ...nativeIdle, loginState: 'pending', loginId }
   assert.equal((await native.apply({ operation: 'login', billing: 'subscription' })).loginId, loginId)
   const cancellation = { operation: 'cancel', loginId }
