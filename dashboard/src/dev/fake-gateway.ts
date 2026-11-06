@@ -21,6 +21,7 @@ import { createFakeTerminal } from './fake-gateway-terminal'
 import { createFakeRuntimes } from './fake-gateway-runtimes'
 import { createFakeStatus } from './fake-gateway-status'
 import { createFakeTeams } from './fake-gateway-teams'
+import { createFakeTasks } from './fake-gateway-tasks'
 import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
@@ -167,6 +168,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
   const { handle: jobsHandle, jobs } = createFakeJobs(now, fail, () => ++counter)
   const teamsHandle = createFakeTeams(now, fail, () => ++counter)
+  const tasksHandle = createFakeTasks(now, fail)
   const libraryHandle = createFakeLibrary(now, fail)
   const statusHandle = createFakeStatus(now, iso, fail)
   const sessionSettings = new Map<string, Json>()
@@ -422,7 +424,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       const turn = session.turns.find(turn => turn.id === match![1])!
       return { ...turn, acted: turn.acted === 1, task_ids: [], outputs: [], source: { kind: 'conversation', session_id: session.id }, provenance: 'recorded', content_status: 'available' }
     }
-    if (path === '/api/pi/tasks' || path === '/api/pi/runs') return { results: [], next_cursor: null }
+    if (path === '/api/pi/runs') return { results: [], next_cursor: null }
     if (path === '/api/pi/events') return { results: [], next_cursor: null }
     if (path === '/api/owner/requests') return { results: approvals, next_cursor: null }
     if ((match = path.match(/^\/api\/owner\/requests\/([^/]+)$/))) return approvals.find(item => item.id === match![1]) ?? fail(404)
@@ -547,6 +549,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const callsHandled = callsHandle(path, method, options)
     if (callsHandled !== undefined) return callsHandled
     for (const handle of chatHandles) { const handled = handle(path, method, options); if (handled !== undefined) return handled }
+    const tasksHandled = tasksHandle(path, method, options); if (tasksHandled !== undefined) return tasksHandled
     const teamsHandled = teamsHandle(path, method, options)
     if (teamsHandled !== undefined) return teamsHandled
     const libraryHandled = libraryHandle(path, method, options)
