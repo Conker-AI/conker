@@ -3,7 +3,7 @@
  * archived, and archive/restore guarded by the expected revision like Pi.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 const SEED: [string, string, string, number, boolean][] = [
   ['Plan the week around the judo tournament', 'in_progress', `ses_${'1'.repeat(16)}`, 3600, false],
