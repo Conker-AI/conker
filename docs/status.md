@@ -14,7 +14,7 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.19.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| Pi and the Gateway | 0.20.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
 | ToolGate | 0.13.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.8.1 | Memory with sources; its AI through Pi |
 | SystemGate | 0.5.1 | Read-only view of the machine |
@@ -35,7 +35,7 @@ tests, but not yet exercised end to end on an installed stack.
 | **Chat** | Chats and drafts, stop, steer and queue, regenerate and branch, search, Think in the background, recovery after a lost connection | Installed stack, 27 to 28 October |
 | **Models** | Local models through Ollama; OpenRouter, OpenAI and Anthropic keys; ChatGPT and Claude plan sign-in (Claude plan on a server: the Ubuntu layout's Claude plan runtime, `conker providers claude login`; not yet in the repository install); a model per role (answer, thinking, reviewer, helpers); Auto; plan usage alerts | Installed stack with local models, 28 October. Hosted providers: built. Claude plan runtime: image built and started signed out in CI, not yet signed in on a server |
 | **Access** | Per chat, agent and tool: run, let the AI reviewer decide, or ask. A floor of actions always asks. The owner's switch for each tool Conker may use | Installed stack, 28 October: reviewer 5 of 5 (a harmless command ran, a deletion asked, a "no" closed it) |
-| **Sign-in** | The password at sign-in is enough while you use Conker; it signs the browser out after the time set in Settings > Account (default 15 minutes) with no click or key press. The password is asked again only for forgetting, deleting and paying, security settings (password, sign-in time, access grants, keys) and the terminal | Built; not yet on a server (needs a Pi release) |
+| **Sign-in** | The password at sign-in is enough while you use Conker; it signs the browser out after the time set in Settings > Account (default 15 minutes) with no click or key press. The password is asked again only for forgetting, deleting and paying, security settings (password, sign-in time, access grants, keys) and the terminal | Pi 0.20.0: gateway tests and the sign-in mutation drill (37 of 37 caught), 6 November |
 | **Inbox** | One card per approval, request and idea; Do it, Don't, Change; Conker's own questions; requests wait until answered, then run once within 15 minutes | Installed stack, 28 October: 13 of 13 decision paths, and a request still approvable after 21 minutes |
 | **Agent sandbox** | Terminal and Install packages in a fresh locked-down container per command, no network, packages through a read-only proxy | Owner's server and installed stack, 27 October: a command ran, a package installed through the proxy, network lookups failed as they should. Owner's server on Pi 0.13.0 and ToolGate 0.10.0, 28 October: a command ran from chat |
 | **Memory** | Memories with their sources, the memory map, correct and forget from the screen and the CLI, delivery receipts | Built; source checks on Windows, 10 October |

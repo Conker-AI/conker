@@ -87,6 +87,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activity
+         * @description The page saw the owner's click or key: keep the sign-in unlocked for another window.
+         *
+         *     The page sends it at most about once a minute and only on the owner's own input, so
+         *     polling and an open but untouched tab never keep a session alive (L-03). An expired
+         *     sign-in stays expired.
+         */
+        post: operations["activity_auth_activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -357,8 +381,8 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
-         *     with the password proof bound to the exact body. Answers are the helper's own.
+         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
+         *     none of them deletes or replaces anything. Answers are the helper's own.
          */
         post: operations["host_operations_api_host_read_post"];
         delete?: never;
@@ -377,16 +401,16 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
-         *     with the password proof bound to the exact body. Answers are the helper's own.
+         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
+         *     none of them deletes or replaces anything. Answers are the helper's own.
          */
         get: operations["host_operations_api_host_ops_get"];
         put?: never;
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
-         *     with the password proof bound to the exact body. Answers are the helper's own.
+         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
+         *     none of them deletes or replaces anything. Answers are the helper's own.
          */
         post: operations["host_operations_api_host_ops_post"];
         delete?: never;
@@ -405,8 +429,8 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     with his session, and the three actions (backup.verify, services.restart, backup.run)
-         *     with the password proof bound to the exact body. Answers are the helper's own.
+         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
+         *     none of them deletes or replaces anything. Answers are the helper's own.
          */
         get: operations["host_operations_api_host_ops__identity__get"];
         put?: never;
@@ -539,10 +563,10 @@ export interface paths {
          * Import File
          * @description A ChatGPT or Claude export's `conversations.json` as the raw body, up to 128 MB.
          *
-         *     `preview` saves nothing, so the signed-in session is enough. An import (named by the
-         *     previewed file's SHA-256) saves chats and offers his words to memory, so it asks for the
-         *     password: the proof covers this path with an empty body, the path's digest names the file,
-         *     and a body with another digest is refused before Pi receives all of it.
+         *     `preview` saves nothing. An import (named by the previewed file's SHA-256) saves read-only
+         *     chats and offers the owner's words to memory as outside content; both can be undone, so
+         *     the signed-in session is enough for either. The path's digest names the file, and a body
+         *     with another digest is refused before Pi receives all of it.
          */
         post: operations["import_file_api_control_pi_imports__source___step__post"];
         delete?: never;
@@ -833,7 +857,7 @@ export interface paths {
         /**
          * Tool Runs
          * @description Run any tool by hand, and read its recent runs. A run uses the chat's own key, as when
-         *     Conker runs it, and asks for the password; a tool that asks still makes an approval
+         *     Conker runs it, and needs the signed-in session; a tool that asks still makes an approval
          *     request (CONFIRMATION_REQUIRED), resumed with the same action_id.
          */
         get: operations["tool_runs_api_owner_tools__identity__runs_get"];
@@ -841,7 +865,7 @@ export interface paths {
         /**
          * Tool Runs
          * @description Run any tool by hand, and read its recent runs. A run uses the chat's own key, as when
-         *     Conker runs it, and asks for the password; a tool that asks still makes an approval
+         *     Conker runs it, and needs the signed-in session; a tool that asks still makes an approval
          *     request (CONFIRMATION_REQUIRED), resumed with the same action_id.
          */
         post: operations["tool_runs_api_owner_tools__identity__runs_post"];
@@ -1001,14 +1025,14 @@ export interface paths {
          * Tool Settings
          * @description How tools run: ToolGate's owner settings document (time limits, the Terminal's
          *     resources, web search, the run window). A save replaces the document at the revision
-         *     he saw, so it asks for the password; ToolGate refuses a stale revision (409).
+         *     he saw and needs the signed-in session; ToolGate refuses a stale revision (409).
          */
         get: operations["tool_settings_api_owner_tool_settings_get"];
         /**
          * Tool Settings
          * @description How tools run: ToolGate's owner settings document (time limits, the Terminal's
          *     resources, web search, the run window). A save replaces the document at the revision
-         *     he saw, so it asks for the password; ToolGate refuses a stale revision (409).
+         *     he saw and needs the signed-in session; ToolGate refuses a stale revision (409).
          */
         put: operations["tool_settings_api_owner_tool_settings_put"];
         post?: never;
@@ -1226,6 +1250,26 @@ export interface operations {
         };
     };
     verify_auth_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    activity_auth_activity_post: {
         parameters: {
             query?: never;
             header?: never;
