@@ -77,13 +77,15 @@ export function ListLineMenu({ label, children }: { label: string; children: Rea
  * `selection` in select mode the whole line toggles (Shift picks a range); otherwise it opens `to`.
  * On a mouse, the icon turns into a checkbox on hover, so selecting needs no mode switch.
  */
-export function ListLine({ id, to, icon, title, sub, meta, badge, actions, selection, onClick }: {
+export function ListLine({ id, to, icon, title, sub, meta, badge, actions, selection, onClick, expanded, details }: {
   to: string; icon?: ReactNode; title: string; sub?: ReactNode; meta?: ReactNode; onClick?: () => void
   /** A short state word beside the title, e.g. "Archived". */
   badge?: ReactNode
   /** The row's own menu, usually a ListLineMenu. Hidden in select mode. */
   actions?: ReactNode
   id?: string; selection?: ListSelection
+  /** Set when the line opens its details in place (Skills, MCP); `details` renders under it. */
+  expanded?: boolean; details?: ReactNode
 }) {
   const body = <>
     <span className="min-w-0 flex-1">
@@ -100,15 +102,16 @@ export function ListLine({ id, to, icon, title, sub, meta, badge, actions, selec
       <Tick checked={checked} />{body}
     </button></li>
   }
-  return <li className="group/line relative flex min-w-0 items-center">
+  const line = <div className="group/line relative flex min-w-0 items-center">
     {selection && id !== undefined && <button type="button" role="checkbox" aria-checked={false} aria-label={`Select ${title}`} onClick={event => selection.toggle(id, event.shiftKey)}
       className="absolute top-1/2 left-3 z-10 hidden size-6 -translate-y-1/2 items-center justify-center rounded-sm opacity-0 outline-none group-hover/line:opacity-100 focus-visible:opacity-100 pointer-fine:flex"><Tick checked={false} /></button>}
-    <Link to={to} onClick={onClick} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 outline-none hover:bg-accent focus-visible:bg-accent">
+    <Link to={to} onClick={onClick} aria-expanded={expanded} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 outline-none hover:bg-accent focus-visible:bg-accent">
       {icon && <span aria-hidden="true" className={cn("shrink-0 text-muted-foreground [&_svg]:size-4", selection && id !== undefined && "pointer-fine:group-hover/line:invisible")}>{icon}</span>}
       {body}
     </Link>
     {actions && <span className="shrink-0 pr-2">{actions}</span>}
-  </li>
+  </div>
+  return <li>{line}{details}</li>
 }
 
 function Tick({ checked }: { checked: boolean }) {
