@@ -16,7 +16,7 @@ function load(relative) {
 }
 
 const { createGatewayHostOpsClient, createHostOpId, hostProblem, HOST_OP_ID } = load('src/lib/gateway/host-ops.ts')
-const { createGatewayTransport, GatewayError, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
 const { describeGatewayOperation } = load('src/lib/gateway/verification.ts')
 const words = load('src/lib/server-actions.ts')
 
@@ -82,8 +82,6 @@ async function main() {
   await assert.rejects(ok.request('/api/host/ops/short'), error => error.kind === 'validation')
   await assert.rejects(ok.request(`/api/host/ops/${id}`, { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation')
   await assert.rejects(ok.request('/api/host/run', { method: 'POST', csrfToken: 'x'.repeat(43), body: {} }), error => error.kind === 'validation')
-  assert.equal(isConversationWrite('/api/host/read'), true, 'Reading services or backups needs the session, not the password')
-  assert.equal(isConversationWrite('/api/host/ops'), false, 'Every server action asks for the password')
 
   // Refusals: the helper's code and its short reason, as is or wrapped; anything else is dropped.
   const refusal = async (status, body, path = '/api/host/ops', method = 'POST') => {

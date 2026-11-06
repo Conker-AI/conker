@@ -16,7 +16,7 @@ function load(relative) {
 }
 
 const { createGatewayJobsClient, GatewayJobMutationError } = load('src/lib/gateway/jobs.ts')
-const { createGatewayTransport, GatewayError, needsNoPassword } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
 const jobId = `job_${'a'.repeat(32)}`, runId = `scheduled_${'b'.repeat(32)}`
 const job = {
   schemaVersion: 1, id: jobId, revision: 3, createdAt: 1, nextAt: 2,
@@ -127,7 +127,6 @@ async function main() {
   const adoptTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => new Response(JSON.stringify(aiJob), { headers: { 'content-type': 'application/json' } }) })
   await adoptTransport.request(`/api/control/pi/jobs/${jobId}/adopt`, { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 3 } })
   assert.match(fs.readFileSync(path.join(root, 'src/lib/gateway/verification.ts'), 'utf8'), /title: 'Make this job yours'/, 'The password prompt says what it is for')
-  assert.equal(needsNoPassword(`/api/control/pi/jobs/${jobId}/adopt`, { expected_revision: 3 }), false, 'Adopting asks for the password')
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')

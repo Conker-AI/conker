@@ -49,7 +49,7 @@ export function createOwnerSettingsClient(auth: Pick<GatewayAuthClient, 'request
     async tools(signal?: AbortSignal): Promise<ToolSettingsDocument> {
       return parse(toolSettingsDocument, await auth.request('/api/owner/tool-settings', { signal }))
     },
-    /** Replaces ToolGate's settings (a field left out goes back to today's limit); asks for the password. */
+    /** Replaces ToolGate's settings (a field left out goes back to today's limit); the session is enough. */
     async saveTools(settings: Record<string, unknown>, revision: number): Promise<ToolSettingsDocument> {
       const saved = parse(toolSettingsDocument, await auth.request('/api/owner/tool-settings', { method: 'PUT', body: { expected_revision: revision, settings } }))
       if (saved.revision !== revision + 1) throw new GatewayError('invalid-response')

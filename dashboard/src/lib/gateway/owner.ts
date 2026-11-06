@@ -125,9 +125,9 @@ export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request'
     async decide(id: string, status: OwnerDecision, note: string, options: { signal?: AbortSignal; level?: OwnerApprovalLevel } = {}): Promise<OwnerRequest> {
       identity(id, true)
       if (!['approved', 'rejected', 'dismissed'].includes(status) || typeof note !== 'string' || [...note].length > 2000) throw new GatewayError('validation')
-      // The server decides whether the decision needs the password; at level 1 and 2, and for a
-      // no or dismissal, the signed-in session is enough, so the page never pre-asks for a proof.
-      const password = status !== 'approved' || options.level === 1 || options.level === 2 ? 'if-asked' as const : undefined
+      // The server decides whether the decision needs the password. Only approving a delete or a
+      // payment (level 3) is known to, so only that asks first; anything else asks only on 428.
+      const password = status === 'approved' && options.level === 3 ? 'first' as const : undefined
       try {
         const result = parseOwnerRequest(await auth.request(`/api/owner/requests/${id}/decision`, { method: 'POST', body: { status, note }, signal: options.signal, ...(password ? { password } : {}) }), id)
         if (result.status !== status || !result.decision) return fail()

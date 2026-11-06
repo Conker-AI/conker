@@ -21,7 +21,7 @@ export const gatewayFileTypes: Record<GatewayFileFormat, string> = {
 const artifactDownload = /^\/api\/control\/pi\/artifacts\/artifact_[0-9a-f]{32}\/download$/
 const answerDownload = /^\/api\/control\/pi\/sessions\/ses_[0-9a-f]{16}\/messages\/msg_[0-9a-f]{16}\/download$/
 const importUpload = /^\/api\/control\/pi\/imports\/(?:chatgpt|claude)\/(?:preview|[0-9a-f]{64})$/
-/** Importing (not previewing) a file asks for the password. */
+/** Importing (not previewing) a file; the server may still ask for the password (428). */
 export const isImportSave = (path: string) => importUpload.test(path) && !path.endsWith('/preview')
 
 /** Pi's refusal codes for exports and imports; anything else reads as a plain gateway error. */
@@ -118,7 +118,7 @@ export function createGatewayFileTransfer(origin: string, fetcher: typeof fetch)
         throw new GatewayError(signal?.aborted ? 'aborted' : 'network')
       }
     },
-    /** POST a chat export's conversations.json as the raw body (preview, or import with a password proof). */
+    /** POST a chat export's conversations.json as the raw body (preview, or import; a password proof only if the server asks). */
     async upload(path: string, body: Blob, csrfToken: string, verificationToken?: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
       if (!importUpload.test(path) || !(body instanceof Blob) || !body.size || body.size > GATEWAY_IMPORT_LIMIT || !/^[A-Za-z0-9_-]{32,128}$/.test(csrfToken) ||
         (verificationToken === undefined) === isImportSave(path) || verificationToken !== undefined && !/^[A-Za-z0-9_-]{43}$/.test(verificationToken)) throw new GatewayError('validation')

@@ -87,7 +87,7 @@ async function freshReview(){
  const late=x.control.reviewNew(x.state().recovery),held=x.calls.at(-1);x.control.select('mem_two');x.control.select('mem_one');held.resolve(null);await late;assert.equal(x.state().editor,null);assert.equal(x.calls.filter(c=>c.method==='snapshot').length,0);x.stop()
 }
 async function clients(){
- const load=loader(),{createMemoryCorrectionsClient,correctionTextValid}=load('src/lib/gateway/memory-corrections.ts'),{createGatewayTransport,snapshotGatewayOperation,isConversationWrite}=load('src/lib/gateway/transport.ts'),{describeGatewayOperation}=load('src/lib/gateway/verification.ts')
+ const load=loader(),{createMemoryCorrectionsClient,correctionTextValid}=load('src/lib/gateway/memory-corrections.ts'),{createGatewayTransport,snapshotGatewayOperation}=load('src/lib/gateway/transport.ts'),{describeGatewayOperation}=load('src/lib/gateway/verification.ts')
  const calls=[];let response=snapshot();const client=createMemoryCorrectionsClient({request:async(path,options)=>{calls.push({path,options});return response}})
  assert.equal((await client.snapshot('mem_one')).text,snapshot().text)
  for(const id of ['../x','mem\n','mem/x',''])await assert.rejects(()=>client.snapshot(id))
@@ -105,7 +105,6 @@ async function clients(){
   assert.equal(describeGatewayOperation(operation).details.join(' ').includes(text),false,'Verification copy omits memory text')
  }
  for(const text of ['','  ','\0','\uD800','x'.repeat(16001)])assert.equal(correctionTextValid(text),false)
- assert.equal(isConversationWrite('/api/control/pi/memory/corrections'),false)
  await assert.rejects(()=>transport.request('/api/control/pi/memory/corrections/pending',{query:{x:1}}))
  await assert.rejects(()=>transport.request('/api/control/pi/memory/corrections/memories/mem_one',{method:'POST',csrfToken:'a'.repeat(32),body:{}}))
  await transport.request('/api/control/pi/memory/corrections/memories/mem:companion.record-01');assert.match(requests.at(-1).url,/mem:companion.record-01$/)
@@ -119,7 +118,8 @@ async function clients(){
  const realClient=createMemoryCorrectionsClient(authenticated);await authenticated.bootstrap()
  for(const fullText of ['😀'.repeat(16000),'\u0001'.repeat(16000)]){
   let dispatched=0;await realClient.apply({request_id:identity().requestId,memory_id:'mem_one',expected_revision:1,text:fullText},undefined,()=>dispatched++)
-  const proof=wire.at(-2),sent=wire.at(-1);assert.equal(dispatched,1);assert.equal(proof.path,'/auth/verify');assert.deepEqual(proof.body.operation.body,sent.body);assert.equal(sent.options.headers['X-Conker-Verification'],'v'.repeat(43));assert.equal(sent.body.text,fullText);assert.equal(Object.hasOwn(sent.options,'onDispatch'),false)
+  // A correction is fixable, so it goes with the session alone (ADR-0010); no password proof.
+  const sent=wire.at(-1);assert.equal(dispatched,1);assert.equal(sent.path,'/api/control/pi/memory/corrections');assert.equal(wire.some(call=>call.path==='/auth/verify'),false);assert.equal(sent.options.headers['X-Conker-Verification'],undefined);assert.equal(sent.body.text,fullText);assert.equal(Object.hasOwn(sent.options,'onDispatch'),false)
  }
  response=receipt('applied',{previousRevision:2147483646,revision:2147483647});await client.status(identity({expectedRevision:2147483646}))
 }

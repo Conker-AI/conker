@@ -42,13 +42,13 @@ export function createAccessClient(auth: Pick<GatewayAuthClient, 'request'>) {
     async state(signal?: AbortSignal): Promise<AccessState> {
       return parse(state, await auth.request('/api/owner/access', { signal }))
     },
-    /** Asks for the password: lets Conker's own decisions skip asking him (never on the floor). */
+    /** Lets Conker's own decisions skip asking him (never on the floor); turning it on asks for the password. */
     async setDelegate(enabled: boolean): Promise<boolean> {
       const result = parse(z.object({ delegate: z.boolean() }).strict(), await auth.request('/api/owner/access/delegate', { method: 'POST', body: { enabled } }))
       if (result.delegate !== enabled) throw new GatewayError('invalid-response')
       return result.delegate
     },
-    /** Asks for the password: a sensitive tool always asks him, whatever the chat, agent or AI decides. */
+    /** A sensitive tool always asks him, whatever the chat, agent or AI decides; taking that away asks for the password. */
     async setSensitive(id: string, sensitive: boolean): Promise<boolean> {
       const result = parse(z.object({ id: toolId, sensitive: z.boolean() }).strict(), await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/sensitive`, { method: 'POST', body: { sensitive } }))
       if (result.id !== id || result.sensitive !== sensitive) throw new GatewayError('invalid-response')
@@ -66,7 +66,7 @@ export function createAccessClient(auth: Pick<GatewayAuthClient, 'request'>) {
       if (result.toolId !== id) throw new GatewayError('invalid-response')
       return result
     },
-    /** Asks for the password: lets Conker use this tool, or takes it away. A stale digest is refused. */
+    /** Lets Conker use this tool (asks for the password), or takes it away. A stale digest is refused. */
     async setToolAccess(id: string, enabled: boolean, digest: string): Promise<ToolAccessState> {
       const body = { enabled, expected_digest: parse(z.string().regex(/^[a-f0-9]{64}$/), digest, true) }
       const result = parse(toolAccess, await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/access`, { method: 'POST', body }))

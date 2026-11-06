@@ -105,7 +105,7 @@ export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadA
         {agents && agents.length > 1 && <div className="space-y-2"><Label htmlFor="agent-job-agent">Agent</Label>{select('agent-job-agent', value.agent, agents.map(agent => ({ value: agent.id, label: agent.configuration.name })), agent => setValue({ ...value, agent }))}</div>}
         {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
       </OverlayBody>
-      <FormActions inset description="Creating it asks for your password.">
+      <FormActions inset>
         <Button type="button" variant="outline" disabled={pending} onClick={close}>Cancel</Button>
         <Button type="submit" disabled={pending || !value.name.trim() || !value.instructions.trim() || (watching ? !chosen : value.repeat !== 'hours' && value.repeat !== 'webhook' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))}><Sparkles />{pending ? 'Creating…' : 'Create AI job'}</Button>
       </FormActions></form>

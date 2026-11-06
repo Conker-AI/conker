@@ -83,7 +83,7 @@ export function createGatewayImportsClient(auth: Pick<GatewayAuthClient, 'reques
       if (value.source !== selected || value.bytes !== file.size) throw new GatewayError('invalid-response')
       return value
     },
-    /** Import exactly the previewed file, named by its digest. Asks for the password. */
+    /** Import exactly the previewed file, named by its digest. The session is enough. */
     async save(selected: ImportSource, fileDigest: string, file: Blob, signal?: AbortSignal): Promise<ImportResult> {
       const value = parse(result, await upload(selected, parse(digest, fileDigest, true), file, signal))
       if (value.source !== selected || value.digest !== fileDigest) throw new GatewayError('invalid-response')

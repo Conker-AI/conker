@@ -14,6 +14,8 @@ export type GatewayAuthState = {
   logout: () => Promise<boolean>
   lock: () => void
   confirmSessionRevoked: () => void
+  /** The owner clicked or typed: restarts the idle window on the server. Never shows a pending state. */
+  markActivity: () => void
 }
 export type GatewayAuthStore = ReturnType<typeof createGatewayAuthStore>
 export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }) {
@@ -34,6 +36,7 @@ export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }
     login: password => run(() => client.login(password), false, true),
     logout: () => run(async () => { await client.logout(); return null }, true),
     lock: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: new GatewayError('browser-expired') }) },
+    markActivity: () => { if (!operations) void client.markActivity() },
     confirmSessionRevoked: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: null, logoutUnconfirmed: false }) },
   }))
   async function run(action: () => Promise<GatewaySession | null>, logout = false, interactiveLogin = false): Promise<boolean> {

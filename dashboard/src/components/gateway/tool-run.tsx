@@ -29,7 +29,7 @@ const fromHistory = (row: EditorRun): Run => ({ actionId: row.action_id, args: r
 /**
  * Run a tool by hand: its inputs as a form, Run now, what happened, and the runs started here.
  * Only tools made in Tools can run by hand (the editor run route); it runs the published version
- * Conker sees, as Conker's key, under the same approval rules; the password step comes first.
+ * Conker sees, as Conker's key, under the same approval rules.
  */
 export function ToolRunPanel({ tool, drafts }: { tool: { id: string; inputs: readonly ToolInput[] }; drafts: GatewayEditorDrafts }) {
   const id = useId()

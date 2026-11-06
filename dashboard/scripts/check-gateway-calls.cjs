@@ -13,7 +13,7 @@ function load(relative) {
 }
 
 const { createGatewayCallsClient } = load('src/lib/gateway/calls.ts')
-const { createGatewayTransport, isConversationWrite } = load('src/lib/gateway/transport.ts')
+const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
 const id = `call_${'a'.repeat(32)}`, conversation = 'ses_source_123456', request = 'browser_call_turn_123456'
 const call = {
   schemaVersion: 1, id, conversationId: conversation, sessionId: 'ses_child_123456', agentId: 'companion', name: 'Call', startedAt: 1, endedAt: null,
@@ -53,9 +53,6 @@ async function main() {
   await assert.rejects(transport.audio(`/api/control/pi/calls/browser/${id}/audio`, 'short', new Uint8Array([1]), 'x'.repeat(43)), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/calls/capabilities'), error => error.kind === 'validation')
   assert.equal(count, 6)
-  assert(isConversationWrite('/api/control/pi/calls/browser'))
-  assert(isConversationWrite(`/api/control/pi/calls/browser/${id}/turns`))
-  assert(isConversationWrite(`/api/control/pi/calls/browser/${id}/audio`))
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/call-workspace.tsx'), 'utf8')
   assert.match(ui, /recordings and generated audio are not retained/)

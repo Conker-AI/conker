@@ -15,7 +15,7 @@ function load(relative) {
   return module.exports
 }
 
-const { snapshotGatewayOperation, needsNoPassword, createGatewayTransport, chatFeatureErrorCodes } = load('src/lib/gateway/transport.ts')
+const { snapshotGatewayOperation, createGatewayTransport, chatFeatureErrorCodes } = load('src/lib/gateway/transport.ts')
 const session = `ses_${'a1'.repeat(8)}`, message = `msg_${'b2'.repeat(8)}`
 const chat = `/api/control/pi/sessions/${session}`, context = `/api/control/pi/context/${session}`
 const allowed = (target) => { try { snapshotGatewayOperation(target, {}); return true } catch { return false } }
@@ -36,7 +36,6 @@ for (const target of writes) {
   const review = describeGatewayOperation({ path: target, body: {} })
   assert.notEqual(review.title, 'Confirm gateway operation', `${target} has a plain name in the password sheet`)
   titles.add(review.title)
-  assert.equal(needsNoPassword(target, {}), false, `${target} asks for the password`)
 }
 // Ids outside Pi's exact shapes, extra segments and query strings are refused before any request.
 for (const target of [

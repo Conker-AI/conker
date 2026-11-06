@@ -738,7 +738,7 @@ Your sign-in, devices and how Conker protects them.
 |---|---|---|---|
 | **Signed-in browsers**<br>`account.devices` | Every browser signed in to Conker; sign one out. (applies right away) | its own screen | Settings screen |
 | **Sign out**<br>`account.sign_out` | Ends this browser's session; your chats and settings stay on your server. (applies right away) | its own screen | Settings screen |
-| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out this long after you last entered your password. Choices: Server's limit, 5 minutes, 15 minutes, 30 minutes, 1 hour, if the server allows. (applies right away) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
+| **Sign out when idle**<br>`session.idle_timeout_minutes` | Signs this browser out after this long without a click or a key press. Choices: Server's limit, 5 minutes, 15 minutes, 30 minutes, 1 hour, if the server allows. (applies right away) | 15 minutes | pi `/owner/preferences` `idleTimeoutMinutes` |
 
 ### Security
 

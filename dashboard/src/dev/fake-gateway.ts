@@ -590,9 +590,11 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } })
   }
 
-  const subscriptionVerificationEnabled = (path: string) => ['/api/host/chatgpt', '/api/host/claude'].includes(path) && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
-  const credentialVerificationEnabled = (path: string) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
-  const nativeSessionVerificationEnabled = (path: string) => /^\/api\/host\/claude\/sessions\/[^/]+\/stop$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-native-sessions')
-  const correctionVerificationEnabled = (path: string) => /^\/api\/control\/pi\/memory\/corrections(?:\/[A-Za-z0-9_-]+\/retry)?$/.test(path) && !!globalThis.sessionStorage?.getItem('conker-fake-correction')
-  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled, nativeSessionVerificationEnabled, correctionVerificationEnabled, hostVerificationEnabled: (path: string) => path === '/api/host/ops' }
+  // Preview switches for the password prompt, only where the real gateway asks: entering a key or the
+  // paid-model policy, and signing Claude in with API billing (it spends per call).
+  const credentialVerificationEnabled = (path: string, body?: unknown) => path === '/api/host/providers' && !!globalThis.sessionStorage?.getItem('conker-fake-credentials')
+    && ['stage', 'paid-policy', 'recover-paid-policy'].includes(String((body as { operation?: unknown } | undefined)?.operation))
+  const subscriptionVerificationEnabled = (path: string, body?: unknown) => path === '/api/host/claude' && !!globalThis.sessionStorage?.getItem('conker-fake-subscription')
+    && (body as { billing?: unknown } | undefined)?.billing === 'api'
+  return { request, streamResponse, subscriptionVerificationEnabled, credentialVerificationEnabled }
 }

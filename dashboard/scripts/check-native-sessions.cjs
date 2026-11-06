@@ -84,10 +84,9 @@ async function replacementCases(){
  const fresh=h.controller.stop(replacement);assert.equal(h.calls[4].record.identity,replacement.identity);h.calls[4].reject({kind:'verification-cancelled'});await fresh;h.stop()
 }
 async function transportCases(){
- const {createGatewayTransport,isConversationWrite,snapshotGatewayOperation}=loader()('src/lib/gateway/transport.ts'),calls=[];let response=list(record())
+ const {createGatewayTransport,snapshotGatewayOperation}=loader()('src/lib/gateway/transport.ts'),calls=[];let response=list(record())
  const transport=createGatewayTransport({origin:'https://conker.test',fetch:async(url,options)=>{calls.push({url,options});return new Response(JSON.stringify(response),{headers:{'content-type':'application/json'}})}})
  await transport.request('/api/host/claude/sessions');await transport.request('/api/host/claude/sessions/native_A/output')
- assert.equal(isConversationWrite('/api/host/claude/sessions/native_A/stop'),false,'Stop requires fresh owner verification')
  assert.deepEqual(snapshotGatewayOperation('/api/host/claude/sessions/native_A/stop',{expectedIdentity:'a'.repeat(64)}).body,{expectedIdentity:'a'.repeat(64)})
  for(const path of ['/api/host/claude/sessions/native_A/launch','/api/host/claude/sessions/native_A/attach','/api/host/claude/sessions/native_A/approve'])await assert.rejects(()=>transport.request(path,{method:'POST',body:{},csrfToken:'a'.repeat(32)}))
  await assert.rejects(()=>transport.request('/api/host/claude/sessions',{query:{limit:1}}))

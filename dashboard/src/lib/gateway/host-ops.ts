@@ -5,7 +5,7 @@ import { GatewayError, gatewayError } from './transport'
 /**
  * Server actions through the host helper (ADR-0014), as the gateway passes them on: two reads
  * (services.status, backup.list) with the signed-in session, three actions (backup.verify,
- * services.restart, backup.run) with the password bound to the exact request, and the receipts.
+ * services.restart, backup.run) with the session too (none deletes anything), and the receipts.
  * Shapes are exactly the helper's; the browser makes each action's id, so a retry with the same id
  * returns the same receipt and never runs it twice.
  */
@@ -85,7 +85,7 @@ export function createGatewayHostOpsClient(auth: Pick<GatewayAuthClient, 'reques
       if (value.id !== selected) throw new GatewayError('invalid-response')
       return value
     },
-    /** Asks for the password (bound to this exact id, operation and arguments), then starts it. */
+    /** Starts it under the signed-in session; the id makes a retry return the same receipt. */
     async start(id: string, value: HostAction, options: { signal?: AbortSignal; onDispatch?: () => void } = {}): Promise<HostReceipt> {
       const selected = parse(z.string().regex(HOST_OP_ID), id, true), requested = parse(action, value, true)
       const answer = parse(receipt, await auth.request('/api/host/ops', { method: 'POST', body: { id: selected, operation: requested.operation, arguments: requested.arguments }, ...options }))

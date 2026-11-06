@@ -73,7 +73,7 @@ async function main() {
   assert.doesNotMatch(workspace, /createAgentJob\(/, 'The Cron jobs screen never creates a job from an idea itself')
   assert.equal(dialog.match(/createAgentJob\(/g).length, 1, 'The form creates in one place: its submit')
   assert.match(dialog, /const submit = async \(event: FormEvent\) => \{\s*event\.preventDefault\(\)/)
-  assert.match(dialog, /Creating it asks for your password\./)
+  assert.doesNotMatch(dialog, /asks for your password/, 'Creating a job needs only the session (ADR-0010)')
   assert.match(dialog, /nothing is made until you create it/)
   console.log(`Job starters passed: ${jobStarters.length} starters with valid words and timings, accepted as AI job bodies, and never created without the form.`)
 }

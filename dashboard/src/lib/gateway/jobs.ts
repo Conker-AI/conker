@@ -135,7 +135,7 @@ export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>
       const selected = parse(jobId, id, true)
       return write(runAction, `${jobPath(selected)}/run`, { request_id: parse(requestId, stableRequestId, true) })
     },
-    /** A new AI job (never a raw tool job); the gateway asks for the password first. */
+    /** A new AI job (never a raw tool job); the session is enough, and it can be turned off. */
     async createAgentJob(body: GatewayAgentJobCreate) {
       return write(job, '/api/control/pi/jobs/agent', parse(agentJobCreate, body, true))
     },

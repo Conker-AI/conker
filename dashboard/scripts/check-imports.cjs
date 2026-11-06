@@ -63,14 +63,20 @@ async function main() {
   assert.match(importRefusalMessage(await files.upload('/api/control/pi/imports/chatgpt/preview', body(), csrf).catch(error => error)), /larger than 128 MB/)
   console.log('PASS import refusals read in plain words, with the other export named when Pi says so')
 
-  // Auth: previewing asks nothing; importing asks once, for the exact import path with an empty body.
+  // Auth: previewing and importing send with the session; only a 428 on the import asks, once, for
+  // the exact import path with an empty body, and the same file goes once more with the proof.
   const verified = [], reviews = [], uploads = []
   const transport = createGatewayTransport({ origin, fetch: async (url, init) => {
     if (url.endsWith('/auth/session')) return json(session)
     if (url.endsWith('/auth/verify')) { verified.push(JSON.parse(init.body).operation); return json({ verification_token: token, verification_expires_at: now + 120, unlock_expires_at: now + 1800 }) }
     throw new Error(`unexpected ${url}`)
   } })
-  const stub = { download: async () => { throw new Error('unused') }, upload: async (...args) => { uploads.push(args); return args[0].endsWith('/preview') ? preview : result } }
+  let askSave = false
+  const stub = { download: async () => { throw new Error('unused') }, upload: async (...args) => {
+    uploads.push(args)
+    if (askSave && !args[0].endsWith('/preview') && !args[3]) throw new GatewayError('verification-required')
+    return args[0].endsWith('/preview') ? preview : result
+  } }
   const verification = { request: (review, verify, signal) => { reviews.push(review); return verify('owner password', signal ?? new AbortController().signal) }, cancelAll: () => {} }
   const auth = createGatewayAuthClient({ transport, files: stub, verification, now: () => now })
   const client = createGatewayImportsClient(auth)
@@ -78,14 +84,18 @@ async function main() {
   assert.equal((await client.preview('chatgpt', chosen)).chats.new, 2)
   assert.equal(reviews.length, 0); assert.equal(uploads.at(-1)[3], undefined)
   assert.equal((await client.save('chatgpt', digest, chosen)).messages.added, 9)
+  assert.deepEqual(verified, []); assert.equal(reviews.length, 0); assert.equal(uploads.at(-1)[3], undefined)
+  askSave = true; uploads.length = 0
+  assert.equal((await client.save('chatgpt', digest, chosen)).messages.added, 9)
   assert.deepEqual(verified, [{ method: 'POST', path: `/api/control/pi/imports/chatgpt/${digest}`, body: {} }])
-  assert.equal(reviews[0].title, 'Import chats from ChatGPT'); assert.equal(uploads.at(-1)[3], token); assert.equal(uploads.at(-1)[1], chosen)
+  assert.equal(reviews[0].title, 'Import chats from ChatGPT'); assert.equal(uploads.length, 2)
+  assert.equal(uploads[0][3], undefined); assert.equal(uploads[1][3], token); assert.equal(uploads[1][1], chosen)
   const refused = { request: (_review, _verify, _signal) => Promise.reject(new GatewayError('verification-cancelled')), cancelAll: () => {} }
   const cancelled = createGatewayImportsClient(createGatewayAuthClient({ transport, files: stub, verification: refused, now: () => now }))
   uploads.length = 0
   await assert.rejects(cancelled.save('chatgpt', digest, chosen), error => error.kind === 'verification-cancelled')
-  assert.equal(uploads.length, 0)
-  console.log('PASS previewing asks for no password; importing asks once and sends nothing if cancelled')
+  assert.equal(uploads.length, 1, 'Cancelled after the 428: the file is not sent again')
+  console.log('PASS previewing and importing send with the session; a 428 asks once and resends once, nothing more if cancelled')
 
   // Client parsing: answers must match what was asked.
   const answers = []

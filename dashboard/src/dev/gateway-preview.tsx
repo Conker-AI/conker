@@ -53,12 +53,12 @@ function services() {
   const fake = createFakeGateway({ setupStep }), files = createFakeFiles()
   const verification = createGatewayVerificationStore()
   const delay = Math.min(Number(new URLSearchParams(window.location.search).get('preview-delay')) || 0, 30_000)
-  // `?preview-password` shows the password prompt for imports (any password is accepted here).
+  // `?preview-password` shows the password prompt the gateway may still ask for on an import (any password is accepted here).
   const askPassword = new URLSearchParams(window.location.search).has('preview-password')
   const auth = { request: async (path, options = {}) => {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     failIfAsked(path)
-    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path) || fake.credentialVerificationEnabled(path) || fake.nativeSessionVerificationEnabled(path) || fake.correctionVerificationEnabled(path) || fake.hostVerificationEnabled(path))) {
+    if (options.method === 'POST' && (fake.subscriptionVerificationEnabled(path, options.body) || fake.credentialVerificationEnabled(path, options.body))) {
       await verification.request(describeGatewayOperation(snapshotGatewayOperation(path, options.body)), async () => 'preview-only', options.signal)
     }
     return files.handles(path) ? files.request(path, options) : fake.request(path, options)
@@ -69,14 +69,14 @@ function services() {
   }, upload: async (path, body, signal) => {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     failIfAsked(path)
-    // Importing (not previewing) asks for the password, as the real gateway does.
+    // The real gateway can still ask on an import (428); this shows that prompt.
     if (askPassword && isImportSave(path)) await verification.request(describeGatewayOperation({ method: 'POST', path, body: {} }), async () => 'preview-only', signal)
     return files.upload(path, body)
   }, getSession: () => null, lock: () => undefined, audio: async () => { throw new Error('Speech is not configured in preview.') } } as Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'lock' | 'download' | 'upload'>
   const authStore = Object.assign(createStore<GatewayAuthState>(() => ({
     phase: 'authenticated', pending: false, error: null, logoutUnconfirmed: false,
-    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: (askPassword || fake.subscriptionVerificationEnabled('/api/host/chatgpt') || fake.credentialVerificationEnabled('/api/host/providers') || fake.nativeSessionVerificationEnabled('/api/host/claude/sessions/preview/stop') || fake.correctionVerificationEnabled('/api/control/pi/memory/corrections') || fake.hostVerificationEnabled('/api/host/ops')) ? Date.now() / 1000 + 86400 : null, setupRequired: false },
-    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined,
+    session: { authenticated: true, sessionId: 'preview', expiresAt: Date.now() / 1000 + 86400, unlockExpiresAt: Date.now() / 1000 + 86400, setupRequired: false },
+    bootstrap: async () => true, revalidate: async () => true, login: async () => true, logout: async () => false, lock: () => undefined, confirmSessionRevoked: () => undefined, markActivity: () => undefined,
   })), { dispose: () => undefined })
   return { fake, verification, workspace: {
     authStore, runtime: createGatewayRuntimeClient(auth), activity: createGatewayActivityClient(auth), owner: createGatewayOwnerClient(auth),

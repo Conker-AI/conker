@@ -11,7 +11,7 @@ function load(relative) {
   return module.exports
 }
 const { createGatewaySearchClient } = load('src/lib/gateway/search.ts')
-const { isConversationWrite, snapshotGatewayOperation } = load('src/lib/gateway/transport.ts')
+const { snapshotGatewayOperation } = load('src/lib/gateway/transport.ts')
 async function main() {
   const calls = [], controller = new AbortController()
   let response = { revision: 0, configuration: { sources: ['conversations'], exactText: true, semantic: false, reranking: false }, credential: 'never project' }
@@ -22,7 +22,6 @@ async function main() {
   response = { revision: 1, configuration }
   await client.save(configuration, 0)
   assert.deepEqual(calls.pop(), ['/api/control/pi/search/settings', { method: 'POST', body: { configuration, expected_revision: 0 } }])
-  assert.equal(isConversationWrite('/api/control/pi/search/settings'), false)
   assert.equal(snapshotGatewayOperation('/api/control/pi/search/settings', { configuration, expected_revision: 0 }).path, '/api/control/pi/search/settings')
   response.revision = 8
   await assert.rejects(client.save(configuration, 0), error => error.kind === 'invalid-response')

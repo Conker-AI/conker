@@ -16,7 +16,7 @@ const commands = ['conker status', 'conker restart SERVICE']
 
 /**
  * Server > Services: each Compose service with its state, health, start time and restarts, read
- * through the host helper. Restart is in the service's details, asks for the password in a sheet
+ * through the host helper. Restart is in the service's details, confirmed in a sheet
  * that names what it pauses, runs one at a time and shows the helper's receipt.
  */
 export function GatewayServerServices({ client }: { client: GatewayHostOpsClient }) {
@@ -66,7 +66,7 @@ export function GatewayServerServices({ client }: { client: GatewayHostOpsClient
     {error && !status ? <HostReadError error={error} onRetry={read} commands={commands} />
       : !status ? <CollectionLoading label="Reading your services…" />
         : <>
-          <WorkspaceSection divided={false} title={servicesSummary(status, lasting.filter(item => restartingNow(actions, item.service)).map(item => item.service))} description={`Read ${when(now)}. Open a service to restart it; it asks for your password first.`} />
+          <WorkspaceSection divided={false} title={servicesSummary(status, lasting.filter(item => restartingNow(actions, item.service)).map(item => item.service))} description={`Read ${when(now)}. Open a service to restart it.`} />
           {error ? <HostReadError error={error} onRetry={read} commands={commands} /> : null}
           {hold && <Alert variant="warning"><TriangleAlert /><AlertTitle>Restarts are waiting</AlertTitle><AlertDescription>{hold}</AlertDescription></Alert>}
           {actions.busy && 'operation' in actions.busy && actions.busy.operation !== 'services.restart' && <p role="status" className="flex items-center gap-2 text-sm"><RunStateMark state="working" />{receiptTitle(actions.busy)} Restarts wait until it ends.</p>}
