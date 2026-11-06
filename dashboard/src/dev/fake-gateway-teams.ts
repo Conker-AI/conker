@@ -3,7 +3,7 @@
  * each change guarded by the expected revision like Pi.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 export function createFakeTeams(now: () => number, fail: (status: number) => never, next: () => number) {
   const teamId = `team_${'9'.repeat(32)}`

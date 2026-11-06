@@ -5,7 +5,7 @@
 import { createCharacterStudio } from '@/lib/api/character-defaults'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 export function createFakeCharacters(now: () => number, fail: (status: number) => never) {
   let characterRevision = 1

@@ -66,7 +66,14 @@ export function createFakeFiles() {
   if (params.get('preview-imports') === 'seeded') save('chatgpt', plan('chatgpt', sample))
   return {
     handles: (path: string) => path === '/api/control/pi/imports' || path.startsWith('/api/control/pi/imports/'),
-    request(path: string, options: { query?: Record<string, string | number | boolean> } = {}): Json {
+    request(path: string, options: { method?: string; query?: Record<string, string | number | boolean | readonly string[]> } = {}): Json {
+      const doomed = options.method === 'POST' ? path.match(/^\/api\/control\/pi\/imports\/chats\/(imp_[0-9a-f]{32})\/delete$/)?.[1] : undefined
+      if (doomed) {
+        const index = chats.findIndex(row => row.id === doomed)
+        if (index < 0) throw new GatewayError('http', 404)
+        const [chat] = chats.splice(index, 1), offered = chat.messages.filter(row => row.author === 'user').length
+        return { schemaVersion: 1, chatId: chat.id, source: chat.source, label: view(chat).label, deletedAt: Date.now() / 1000, messagesDeleted: chat.messages.length, offeredToMemory: offered, memoryNote: offered ? 'Memories made from your words in this chat stay until you forget them in Memory.' : null, fileScrubbed: null }
+      }
       if (path === '/api/control/pi/imports') return { schemaVersion: 1, imports: batches, memory: { configured: true, waiting: offered(), offered: 0, refused: 0, problem: null } }
       const query = options.query ?? {}, limit = Number(query.limit ?? 50)
       if (path === '/api/control/pi/imports/chats') {

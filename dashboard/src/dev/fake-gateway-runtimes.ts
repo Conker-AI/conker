@@ -5,7 +5,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; onDispatch?: () => void }
 
 export function createFakeRuntimes(fail: (status: number) => never) {
   const nativeRows = ['review_changes', 'waiting_input'].map((id, index) => ({ id, identity: (index ? 'b' : 'a').repeat(64), sessionId: `native_conversation_${index}`, name: index ? 'Review needs native input' : 'Review workspace changes', cwd: index ? 'C:/work/conker/examples/long-working-directory-for-native-review' : 'C:/work/conker', startedAt: Date.now() - (index + 1) * 60000, state: index ? 'blocked' : 'working', processStatus: index ? 'waiting' : 'busy', waitingFor: index ? 'permission_prompt' : null, canStop: true }))

@@ -6,7 +6,7 @@
 import { GatewayError } from '@/lib/gateway/transport'
 
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean>; onDispatch?: () => void }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; onDispatch?: () => void }
 type Message = { id: string; memory_delivery?: Json }
 
 export function createFakeMemory(fail: (status: number) => never) {
@@ -49,7 +49,7 @@ export function createFakeMemory(fail: (status: number) => never) {
     }
     return message.memory_delivery ?? receipt
   }
-  return {
+  const api = {
     memories,
     deliveryFor,
     handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
@@ -85,6 +85,18 @@ export function createFakeMemory(fail: (status: number) => never) {
         const item = memories.find(row => row.type === 'memory' && row.id === match![1])
         if (!item) throw new GatewayError('http', 404, undefined, 'not_found')
         return { memoryId: item.id, revision: 1, text: item.preview }
+      }
+      if (path === '/api/control/pi/memory/forget-many' && method === 'POST') {
+        const body = options.body ?? {}, requestId = String(body.request_id ?? ''), items = body.items
+        if (!/^[A-Za-z0-9_-]{16,120}$/.test(requestId) || !Array.isArray(items) || !items.length || items.length > 50) fail(422)
+        const results: Json[] = []
+        for (const [index, item] of (items as Json[]).entries()) {
+          try { results.push(api.handle('/api/control/pi/memory/forget', 'POST', { body: { ...item, request_id: `${requestId}-${index}` } })!) } catch (error) {
+            if (!results.length || !(error instanceof GatewayError)) throw error
+            return { requestId, results, stopped: { index, memoryId: String(item.memory_id), code: error.code ?? 'refused', message: error.message } }
+          }
+        }
+        return { requestId, results, stopped: null }
       }
       if (path === '/api/control/pi/memory/forget' && method === 'POST') {
         const body = options.body ?? {}, requestId = String(body.request_id ?? ''), memoryId = String(body.memory_id ?? ''), revision = Number(body.expected_revision)
@@ -128,4 +140,5 @@ export function createFakeMemory(fail: (status: number) => never) {
       return undefined
     },
   }
+  return api
 }

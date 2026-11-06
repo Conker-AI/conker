@@ -86,10 +86,11 @@ async function checkPreviewRecovery() {
   assert.equal((await preview.request('/api/pi/sessions')).results.length, 3, 'Synthetic forgetting keeps source chats')
   delete global.sessionStorage
 }
+const openRecord = (view, id) => { const list = view.find('MemoryList')[0].props; list.onOpen(list.page.objects.find(row => row.id === id)) }
 async function main() {
   let view = harness(); view.render(); await flush(); view.render()
   const deep = view.calls[0]
-  view.find('RecordItem').find(row => row.props.title === 'Memory B').props.onOpen()
+  openRecord(view, 'B')
   assert.equal(deep.signal.aborted, true, 'Manual selection synchronously retires the pending deep-link read')
   view.render()
   const detail = view.calls[1]
@@ -112,9 +113,9 @@ async function main() {
   assert.equal(view.params.has('record'), false)
 
   view = harness(); view.render(); await flush(); view.render()
-  view.find('RecordItem').find(row => row.props.title === 'Memory B').props.onOpen(); view.render()
+  openRecord(view, 'B'); view.render()
   const oldDetail = view.calls[1]
-  view.find('RecordItem').find(row => row.props.title === 'Memory C').props.onOpen()
+  openRecord(view, 'C')
   oldDetail.reject(new Error('STALE_DETAIL_ERROR'))
   await flush(); view.render()
   assert.ok(!view.text().includes('STALE_DETAIL_ERROR'), 'A late failure cannot replace the newly selected memory status')

@@ -3,7 +3,7 @@
  * answers `pwd`, and base64 output read by cursor like the real terminal sidecar. Nothing runs.
  */
 type Json = Record<string, unknown>
-type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean> }
+type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 export function createFakeTerminal(fail: (status: number) => never) {
   let terminalLease: string | null = null
