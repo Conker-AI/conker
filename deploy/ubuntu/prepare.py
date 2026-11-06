@@ -180,6 +180,8 @@ env = {
         # Both workers idle until the owner acts: ideas need a Proposals model chosen in
         # Settings, and the scheduler runs only jobs the owner created.
         "PI_PROPOSALS_ENABLED": "true", "PI_SCHEDULER_ENABLED": "true",
+        # Compose restarts Pi when it exits, so "Delete forever" can finish on the next start.
+        "PI_SUPERVISED": "true",
         "PI_OLLAMA_CONTEXT_LENGTH": context_length,
         **import_listener_environment(keys["memorygate_import"])},
     "toolgate": {"TOOLGATE_DATA_DIR": "/data", "TOOLGATE_ADMIN_KEY": keys["toolgate"],

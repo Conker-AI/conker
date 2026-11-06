@@ -4033,6 +4033,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forgetting/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description What deleting each named chat reaches, and the chats queued or finished.
+         */
+        get: operations["overview_forgetting_chats_get"];
+        put?: never;
+        /**
+         * Delete
+         * @description Delete chats forever: queue them and restart Pi, which forgets them before it opens.
+         */
+        post: operations["delete_forgetting_chats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memory/forget-pending": {
         parameters: {
             query?: never;
@@ -4081,6 +4105,26 @@ export interface paths {
          * @description Remove one memory everywhere it is stored. The source chat is kept.
          */
         post: operations["forget_memory_memory_forget_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memory/forget-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forget Memories
+         * @description Forget up to 50 memories one at a time; stops at the first refusal.
+         */
+        post: operations["forget_memories_memory_forget_many_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4206,6 +4250,26 @@ export interface paths {
         get: operations["chat_imports_chats__chat_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/chats/{chat_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete
+         * @description Delete one imported chat for good; memories made from it stay until forgotten.
+         */
+        post: operations["delete_imports_chats__chat_id__delete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6356,6 +6420,35 @@ export interface components {
             memory_id: string;
             /** Expected Revision */
             expected_revision: number;
+        };
+        /** ForgetChat */
+        ForgetChat: {
+            /** Session */
+            session: string;
+            /** Confirmation */
+            confirmation: string;
+        };
+        /** ForgetChats */
+        ForgetChats: {
+            /** Chats */
+            chats: components["schemas"]["ForgetChat"][];
+        };
+        /** ForgetItem */
+        ForgetItem: {
+            /** Memory Id */
+            memory_id: string;
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * ForgetMany
+         * @description Several memories, forgotten one at a time; item i uses request id `{request_id}-{i}`.
+         */
+        ForgetMany: {
+            /** Request Id */
+            request_id: string;
+            /** Items */
+            items: components["schemas"]["ForgetItem"][];
         };
         /** Fork */
         Fork: {
@@ -17866,6 +17959,76 @@ export interface operations {
             };
         };
     };
+    overview_forgetting_chats_get: {
+        parameters: {
+            query?: {
+                session?: string[] | null;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_forgetting_chats_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgetChats"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     pending_memory_forget_memory_forget_pending_get: {
         parameters: {
             query?: never;
@@ -17945,6 +18108,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Forget"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forget_memories_memory_forget_many_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgetMany"];
             };
         };
         responses: {
@@ -18179,6 +18378,40 @@ export interface operations {
                 after?: number;
                 limit?: number;
             };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_imports_chats__chat_id__delete_post: {
+        parameters: {
+            query?: never;
             header?: {
                 "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;

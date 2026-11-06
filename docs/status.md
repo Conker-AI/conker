@@ -14,7 +14,7 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.21.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| Pi and the Gateway | 0.22.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
 | ToolGate | 0.13.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.8.1 | Memory with sources; its AI through Pi |
 | SystemGate | 0.5.1 | Read-only view of the machine |
@@ -38,7 +38,7 @@ tests, but not yet exercised end to end on an installed stack.
 | **Sign-in** | The password at sign-in is enough while you use Conker; it signs the browser out after the time set in Settings > Account (default 15 minutes) with no click or key press. The password is asked again only for forgetting, deleting and paying, security settings (password, sign-in time, access grants, keys) and the terminal | Pi 0.20.0: gateway tests and the sign-in mutation drill (37 of 37 caught), 6 November |
 | **Inbox** | One card per approval, request and idea; Do it, Don't, Change; Conker's own questions; requests wait until answered, then run once within 15 minutes | Installed stack, 28 October: 13 of 13 decision paths, and a request still approvable after 21 minutes |
 | **Agent sandbox** | Terminal and Install packages in a fresh locked-down container per command, no network, packages through a read-only proxy | Owner's server and installed stack, 27 October: a command ran, a package installed through the proxy, network lookups failed as they should. Owner's server on Pi 0.13.0 and ToolGate 0.10.0, 28 October: a command ran from chat |
-| **Memory** | Memories with their sources, the memory map, correct and forget from the screen and the CLI, delivery receipts | Built; source checks on Windows, 10 October |
+| **Memory** | Memories with their sources, the memory map, correct and forget from the screen and the CLI (many at once), delivery receipts; chats and imported chats deleted forever | Built; source checks on Windows, 10 October. Deleting forever and bulk forget: Pi 0.22.0 suite (3890 passed) and the forgetting audit drill (29 of 29 caught), 7 November |
 | **Cron jobs** | The owner's instructions run by the AI with tools, on a schedule, an event or a webhook; workflows drafted from words | Local stack, 23 October: offers appear in the Inbox. Drafting needs a larger model than a 3B CPU model |
 | **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
 | **Projects, agents, teams** | Projects with sources, agent profiles with their own toolkits, teams | Built |

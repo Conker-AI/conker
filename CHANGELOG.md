@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Delete for good.** Chats can be deleted forever (one or many, password asked), several memories forgotten at
+  once, and an imported chat deleted for good. Pi 0.22.0 is pinned; Compose sets `PI_SUPERVISED` so Pi can restart
+  to finish a deletion.
 - **Manage every list.** Chats, agents, projects, artifacts, cron jobs, teams, skills and MCP tools can be searched,
   sorted and filtered, many rows picked at once and archived, paused or turned off together, with one Undo; tools, tool
   drafts and imported sessions are searched and sorted. Pi 0.21.0 is pinned; it adds archiving many chats at once and
@@ -531,7 +534,7 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.21.0 |
+| Pi | v0.22.0 |
 | ToolGate | v0.13.0 |
 | MemoryGate | v0.8.1 |
 | SystemGate | v0.5.1 |
