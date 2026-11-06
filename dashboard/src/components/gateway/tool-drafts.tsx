@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Wrench } from 'lucide-react'
 import { ToolEditor } from '@/app/tools/tool-editor'
 import '@/app/tools/tools-workspace.css'
 import { Button } from '@/components/ui/button'
@@ -8,9 +8,11 @@ import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { CollectionPanel, CollectionRow, CollectionSection, PageHeader } from '@/components/design-system/primitives'
+import { PageHeader } from '@/components/design-system/primitives'
+import { ListCard, ListLine } from '@/components/design-system/list-card'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
 import { FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import type { SavedCheck, ToolDefinition } from '@/lib/tool-workspace'
@@ -21,6 +23,16 @@ import { draftOrigin, forgetDraftOrigin } from '@/lib/tool-draft-origin'
 import { GatewayCapabilityPicker } from './capability-picker'
 import { GatewayWorkflowRuns } from './workflow-runs'
 import { NewToolDialog } from './new-tool-dialog'
+
+type DraftSummary = Awaited<ReturnType<GatewayEditorDrafts['list']>>['items'][number]
+// Getters keep the compare helpers out of module load, so a harness that stubs imports can still
+// load this file without building a real sorter; `useListView` reads them only while sorting.
+const DRAFT_SORTS = {
+  name: { label: 'Name', compare: byName((item: DraftSummary) => item.name) },
+  updated: { label: 'Recently changed', compare: byNewest((item: DraftSummary) => item.updated_at) },
+}
+const DRAFT_TEXT = (item: DraftSummary) => [item.name, item.kind]
+const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
 
 export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDrafts; changes?: ChangeRequestsClient }) {
   const [params, setParams] = useSearchParams(), id = params.get('draft')
@@ -55,15 +67,23 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
     catch (error) { if (!lifetime.current?.signal.aborted) setError(error instanceof Error ? error.message : 'Could not load more drafts.') }
     finally { setBusy(false) }
   }
+  // The list view stays alive across the single-draft editor view, so its hooks stay before any return.
+  const listItems = page?.items ?? []
+  const view = useListView(listItems, { text: DRAFT_TEXT, sorts: DRAFT_SORTS })
   if (id && draft) return <LiveDraftEditor key={id} draft={draft} client={client} changes={changes} request={draftOrigin(id, params.get('request'))} save={save} onBack={() => setParams({ view: 'drafts' })} />
-  const items = page?.items ?? []
   return <GatewayPageFrame className="space-y-4">
     <PageHeader title="Tool drafts" actionsOnly />
     <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" render={<Link to="/tools" />}>Available tools</Button><Button size="sm" onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</Button></div>
     {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button size="sm" variant="outline" onClick={() => { setError(''); setDraft(null); setPage(null); setRefresh(value => value + 1) }}>Reload drafts</Button></div>}
     {!page && !error && <p role="status">Loading draft…</p>}
-    {page && <CollectionPanel count={items.length} unit="drafts" emptyTitle="No drafts" emptyDescription="Create a draft to get started."><CollectionSection title="Saved drafts" contained><ul>{items.map(item => <CollectionRow key={item.id} to={`/tools?draft=${item.id}`} leading={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} description={item.kind} />)}</ul></CollectionSection></CollectionPanel>}
-    {page?.next_after && <Button variant="outline" disabled={busy} onClick={() => void more()}>Load more drafts</Button>}
+    {page && <ListCard count={view.rows.length} unit={view.rows.length === 1 ? 'draft' : 'drafts'}
+      query={view.query} onQueryChange={view.setQuery} label="Search drafts" placeholder="Search drafts" sort={view.sort}
+      emptyTitle={view.query.trim() ? 'No matching drafts' : 'No drafts'}
+      emptyDescription={view.query.trim() ? 'Try other words, or start a new draft.' : 'Create a draft to get started.'}
+      emptyAction={view.query.trim() ? undefined : <Button onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</Button>} icon={<Wrench />}
+      footer={page.next_after && <Button variant="outline" size="sm" disabled={busy} onClick={() => void more()}>{busy ? 'Loading…' : 'Load more drafts'}</Button>}>
+      {view.rows.map(item => <ListLine key={item.id} to={`/tools?draft=${item.id}`} icon={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} sub={item.kind} meta={when(item.updated_at)} />)}
+    </ListCard>}
     <NewToolDialog drafts={client} open={creating} onOpenChange={setCreating} />
   </GatewayPageFrame>
 }

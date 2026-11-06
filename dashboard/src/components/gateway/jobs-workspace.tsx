@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, MessagesSquare, Play, Plus, RefreshCw, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Ban, CalendarClock, CirclePause, CirclePlay, MessagesSquare, Play, Plus, RefreshCw, RotateCcw, SquareArrowOutUpRight } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ConfirmationDialog, FilterChip, ListCard, ListLine, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { ConfirmationDialog, FilterChip, ListCard, ListLine, ListLineMenu, PageHeader, WorkspaceAction, RecordItem } from '@/components/design-system'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
+import { runBulk } from '@/components/design-system/list-bulk'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
@@ -49,6 +53,19 @@ function when(seconds: number, timeZone?: string) {
 function soon(seconds: number, timeZone?: string) {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', ...(timeZone ? { timeZone } : {}) }).format(new Date(seconds * 1000))
 }
+
+const JOB_TEXT = (job: GatewayJob) => [job.definition.name, job.definition.instructions, job.definition.watch?.toolId]
+const JOB_SORTS = {
+  name: { label: 'Name', compare: byName((job: GatewayJob) => job.definition.name) },
+  next: { label: 'Next run', compare: (a: GatewayJob, b: GatewayJob) => nextRun(a) - nextRun(b) },
+  updated: { label: 'Recently changed', compare: byNewest((job: GatewayJob) => job.revision) },
+}
+/** A paused job has no next run (the detail page says so), and neither has a webhook-only job. */
+const nextRun = (job: GatewayJob) => {
+  if (!job.definition.enabled || (job.definition.target.kind === 'agent' && job.definition.target.clock === false && !job.definition.watch)) return Number.POSITIVE_INFINITY
+  return job.nextAt
+}
+const jobsToast = (count: number) => count === 1 ? '1 job' : `${count} jobs`
 
 function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; control: GatewayControlClient; onChanged: (job: GatewayJob) => void }) {
   const [job, setJob] = useState(initial), [runs, setRuns] = useState<GatewayScheduledRun[] | null>(null)
@@ -139,6 +156,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const [jobs, setJobs] = useState<GatewayJob[] | null>(null), [details, setDetails] = useState<Record<string, GatewayJob>>({})
   const [filter, setFilter] = useState<'all' | 'enabled' | 'paused'>('all'), [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null)
   const [listError, setListError] = useState<unknown>(null)
+  const [writing, setWriting] = useState(false)
   // Each opening of the form gets a new key, so it starts blank or from the chosen idea.
   const [creating, setCreating] = useState(false), [form, setForm] = useState<{ key: number; starter: JobStarter | null }>({ key: 0, starter: null })
   const startNew = (starter: JobStarter | null = null) => { setForm(current => ({ key: current.key + 1, starter })); setCreating(true) }
@@ -148,21 +166,45 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
   const id = match?.[1]
   useEffect(() => { if (!id || selected) return; let active = true; control.jobs.get(id).then(item => active && setDetails(current => ({ ...current, [item.id]: item }))).catch(cause => active && setError(gatewayError(cause).message)); return () => { active = false } }, [control, id, selected])
   const update = (job: GatewayJob) => { setDetails(current => ({ ...current, [job.id]: job })); setJobs(current => current?.map(item => item.id === job.id ? job : item) ?? current) }
+  const view = useListView((jobs ?? []).filter(job => filter === 'all' || job.definition.state === filter), { text: JOB_TEXT, sorts: JOB_SORTS })
+  const visible = view.rows
+  const selection = useListSelection(visible.map(job => job.id))
+  const setEnabled = async (items: GatewayJob[], enabled: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true)
+    try {
+      const done = await runBulk(items, job => control.jobs.setEnabled(job.id, enabled, job.revision), { done: count => `${jobsToast(count)} ${enabled ? 'resumed' : 'paused'}`, failed: enabled ? 'Some schedules were not resumed' : 'Some schedules were not paused' },
+        undo ? results => void setEnabled(results, !enabled, false) : undefined)
+      setJobs(current => current?.map(job => done.find(item => item.id === job.id) ?? job) ?? current)
+      selection.stop()
+    } finally { setWriting(false) }
+  }
   if (match) {
     if (selected) return <JobDetail key={selected.id} initial={selected} control={control} onChanged={update} />
     return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Cron job didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/jobs')}><ArrowLeft />Cron jobs</Button></> : <ListSkeleton rows={3} label="Loading schedule…" />}</div>
   }
-  const visible = (jobs ?? []).filter(job => filter === 'all' || job.definition.state === filter)
   const enabled = (jobs ?? []).filter(job => job.definition.enabled).length
-  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = visible.filter(job => selection.has(job.id))
+  const rowMenu = (job: GatewayJob) => <ListLineMenu label={`More actions for ${job.definition.name}`}>
+    <DropdownMenuItem render={<Link to={`/jobs/${job.id}`} />}><SquareArrowOutUpRight aria-hidden="true" />Open</DropdownMenuItem>
+    {job.definition.enabled
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([job], false)}><CirclePause aria-hidden="true" />Pause</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([job], true)}><CirclePlay aria-hidden="true" />Resume</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Cron jobs" description="Review schedules, pause or resume them, and recover interrupted runs." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh cron jobs" title="Refresh cron jobs" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => startNew()}><Plus />New AI job</WorkspaceAction></>} />
     {jobs && <p className="text-sm text-muted-foreground">{enabled} active · {jobs.length - enabled} paused</p>}
     {error && (jobs ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Cron jobs didn’t load" onRetry={() => load()} />)}
     {!jobs && !error ? <ListSkeleton rows={4} label="Loading cron jobs…" /> : jobs && <ListCard count={visible.length} unit={visible.length === 1 ? 'schedule' : 'schedules'}
+      query={view.query} onQueryChange={view.setQuery} label="Search cron jobs" placeholder="Search cron jobs" sort={view.sort} selection={selection}
+      bulkActions={<>
+        {filter !== 'paused' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(job => job.definition.enabled) || writing} onClick={() => void setEnabled(picked.filter(job => job.definition.enabled), false)}><CirclePause />Pause</Button>}
+        {filter !== 'enabled' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(job => !job.definition.enabled) || writing} onClick={() => void setEnabled(picked.filter(job => !job.definition.enabled), true)}><CirclePlay />Resume</Button>}
+      </>}
       filters={<>{chip('all', 'All', jobs.length)}{chip('enabled', 'Enabled', enabled)}{chip('paused', 'Paused', jobs.length - enabled)}</>}
-      emptyTitle={filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={'Make an AI job: tell Conker what to do and when, and it works with its tools on that schedule. Or start from an idea below.'} emptyAction={<Button onClick={() => startNew()}><Plus />New AI job</Button>} icon={<CalendarClock />}>
-      {visible.map(job => <ListLine key={job.id} to={`/jobs/${job.id}`} icon={<IdentityMark brand={serviceIn(job.definition.name, job.definition.watch?.toolId)} kind="job" name={job.definition.name} size="sm" />} title={job.definition.name}
+      emptyTitle={view.query.trim() ? 'No matching schedules' : filter !== 'all' ? `No ${filter} schedules` : 'No connected schedules'} emptyDescription={'Make an AI job: tell Conker what to do and when, and it works with its tools on that schedule. Or start from an idea below.'} emptyAction={view.query.trim() ? undefined : <Button onClick={() => startNew()}><Plus />New AI job</Button>} icon={<CalendarClock />}>
+      {visible.map(job => <ListLine key={job.id} id={job.id} selection={selection} actions={rowMenu(job)} to={`/jobs/${job.id}`} icon={<IdentityMark brand={serviceIn(job.definition.name, job.definition.watch?.toolId)} kind="job" name={job.definition.name} size="sm" />} title={job.definition.name}
         sub={`${isAiJob(job) ? 'AI job · ' : ''}${describeTiming(job)} · ${job.definition.timeZone}`} meta={!job.definition.enabled ? 'Paused' : job.definition.watch ? job.definition.watch.problem ? 'Needs a look' : 'Watching' : job.definition.target.kind === 'agent' && job.definition.target.clock === false ? 'On webhook' : `Next ${soon(job.nextAt, job.definition.timeZone)}`} />)}
     </ListCard>}
     <p className="text-xs text-muted-foreground">AI jobs use tools that need no confirmation on their own and ask before changing anything. Other cron jobs run tools published on your server.</p>

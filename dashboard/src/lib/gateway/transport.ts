@@ -199,6 +199,8 @@ const chatContext = '/api/control/pi/context/ses_[0-9a-f]{16}'
 const chatMessage = 'msg_[0-9a-f]{16}'
 routes.GET.unshift(new RegExp(`^${chatSession}/(?:output|title|branch-history|response-families/${chatMessage}(?:/(?:judgements|votes))?|response-retries/[A-Za-z0-9_-]{16,128}|messages/${chatMessage}/fact-checks)$`),
   new RegExp(`^${chatContext}(?:/(?:summary|items|compaction))?$`))
+// Archive and restore: a list state only, many chats at once, no password (Pi CHAT_WRITES /sessions/archive).
+routes.POST.unshift(/^\/api\/control\/pi\/sessions\/archive$/)
 routes.POST.unshift(new RegExp(`^${chatSession}/(?:output|title|title/auto|messages/${chatMessage}/(?:retry|fact-check|fork)|response-families/${chatMessage}/(?:select|judge|vote))$`),
   new RegExp(`^${chatContext}(?:/(?:fork|summary|summary/restore|summary/draft|compact|items|items/(?:dec|thr)_[0-9a-f]{16}/state))?$`))
 const chatFeatureRoute = new RegExp(`^(?:${chatSession}|${chatContext})(?:/|$)`)
@@ -327,7 +329,7 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
       if (method === 'GET' && options.body !== undefined) throw new GatewayError('validation')
       if ((turnUsageRoute.test(path) || memoryDeliveryRoute.test(path) || observationRoute.test(path)) && options.query !== undefined) throw new GatewayError('validation')
       if (path === '/api/control/pi/memory/forget-pending' && options.query !== undefined) throw new GatewayError('validation')
-      if (path === '/api/pi/sessions/history' && options.query !== undefined && Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'q' ? typeof value !== 'string' || [...value].length > 200 || value.includes('\0') || /[\uD800-\uDFFF]/u.test(value) : key === 'cursor' ? typeof value !== 'string' || !/^h1\.[a-f0-9]{64}\.[A-Za-z0-9_-]{1,128}$/.test(value) : true)) throw new GatewayError('validation')
+      if (path === '/api/pi/sessions/history' && options.query !== undefined && Object.entries(options.query).some(([key, value]) => key === 'limit' ? typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 50 : key === 'q' ? typeof value !== 'string' || [...value].length > 200 || value.includes('\0') || /[\uD800-\uDFFF]/u.test(value) : key === 'cursor' ? typeof value !== 'string' || !/^h1\.[a-f0-9]{64}\.[A-Za-z0-9_-]{1,128}$/.test(value) : key === 'archived' ? !['only', 'include'].includes(String(value)) : key === 'sort' ? !['oldest', 'name'].includes(String(value)) : true)) throw new GatewayError('validation')
       if (method !== 'GET' && (!options.csrfToken || !/^[A-Za-z0-9_-]{32,128}$/.test(options.csrfToken))) throw new GatewayError('validation')
       if (options.verificationToken !== undefined && (method === 'GET' ||!path.startsWith('/api/') && !isBrowserSessionRoute(path) || !/^[A-Za-z0-9_-]{43}$/.test(options.verificationToken))) throw new GatewayError('validation')
       const query = new URLSearchParams()

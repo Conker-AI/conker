@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
+import { Archive, ArchiveRestore, MessageSquare, RefreshCw, SquarePen } from 'lucide-react'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { PageHeader, WorkspaceAction } from '@/components/design-system/primitives'
-import { ListCard, ListLine } from '@/components/design-system/list-card'
+import { FilterChip, ListCard, ListLine, ListLineMenu } from '@/components/design-system/list-card'
+import { useListSelection } from '@/components/design-system/list-selection'
+import type { GatewayControlClient } from '@/lib/gateway/control'
+import type { HistoryArchived, HistoryChat, HistorySort } from '@/lib/gateway/session-history'
+import { archiveChats } from './chat-archive'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
@@ -15,10 +21,14 @@ import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { useChatDirectory } from './use-chat-directory'
 
+const sorts = [{ value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'name', label: 'Name' }] as const satisfies readonly { value: HistorySort; label: string }[]
+const shows = [{ value: 'exclude', label: 'Active' }, { value: 'only', label: 'Archived' }, { value: 'include', label: 'All' }] as const satisfies readonly { value: HistoryArchived; label: string }[]
 const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
 
-export function GatewayChatsWorkspace({ runtime, authStore, conversationState, sourcePrivacy, imports }: {
+export function GatewayChatsWorkspace({ runtime, authStore, conversationState, sourcePrivacy, imports, chatNames }: {
   runtime: GatewayRuntimeClient; authStore: GatewayAuthStore
+  /** Archive and restore; without it the list is read-only. */
+  chatNames?: GatewayControlClient['chatNames']
   conversationState: GatewayRuntimeWorkspaceState; sourcePrivacy: GatewaySourcePrivacyState
   /** ChatGPT and Claude imports live under Chats, kept apart from Conker's own chats. */
   imports?: GatewayImportsClient
@@ -27,6 +37,22 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
   const forgotten = useStore(sourcePrivacy, value => value.sessionIds)
   const rows = directory.rows.filter(row => !row.forgotten && !forgotten.includes(row.id))
   const busy = !!directory.pending
+  const selection = useListSelection(rows.map(row => row.id))
+  const [writing, setWriting] = useState(false)
+  const picked = rows.filter(row => selection.has(row.id))
+  const toArchive = picked.filter(row => !row.archivedAt).map(row => row.id), toRestore = picked.filter(row => row.archivedAt).map(row => row.id)
+  async function setArchived(ids: string[], archived: boolean) {
+    if (!chatNames || writing) return
+    setWriting(true)
+    try { if (await archiveChats(chatNames, ids, archived, () => void directory.refresh())) selection.stop() }
+    finally { setWriting(false) }
+  }
+  const searching = !!directory.query.trim(), archivedView = directory.archived === 'only'
+  const rowMenu = (session: HistoryChat) => chatNames && <ListLineMenu label={`More actions for ${session.title || 'this chat'}`}>
+    {session.archivedAt
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], false)}><ArchiveRestore aria-hidden="true" />Restore</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>}
+  </ListLineMenu>
   const error = directory.error === 'query' ? 'Use up to 200 characters in your search.'
     : directory.error === 'cursor' ? 'This page link is no longer available. Refresh chats to continue.'
     : directory.error === 'older' ? 'Older chats could not be loaded. Your loaded results are still here.'
@@ -46,13 +72,23 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
       {directory.changed && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-muted-foreground">{directory.changed === 'unverified' ? 'Refresh to check for newer chats.' : 'New chats are available.'}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => void directory.refresh()}>{directory.changed === 'unverified' ? 'Refresh chats' : 'Show new chats'}</Button></div>}
       {directory.loaded && error && directory.error !== 'older' && directory.error !== 'cursor' && <p role="status" className="text-sm text-muted-foreground">{error}</p>}
       <ListCard count={rows.length} unit={rows.length === 1 ? 'chat loaded' : 'chats loaded'}
-        emptyTitle={directory.nextCursor ? 'No visible chats on this page' : 'No chats yet'} emptyDescription={directory.nextCursor ? 'Load older chats to keep browsing.' : 'Start a conversation and it will appear here.'}
-        emptyContent={emptyContent} icon={<MessageSquare />} emptyAction={<Button onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}>Start a chat</Button>}
+        query={directory.query} onQueryChange={directory.setQuery} label="Search chats" placeholder="Search chats"
+        sort={{ value: directory.sort, options: sorts, onChange: (sort: HistorySort) => directory.setView({ sort }) }}
+        filters={shows.map(show => <FilterChip key={show.value} active={directory.archived === show.value} onClick={() => directory.setView({ archived: show.value })}>{show.label}</FilterChip>)}
+        selection={chatNames ? selection : undefined}
+        bulkActions={<>
+          {!archivedView && <Button type="button" size="sm" variant="outline" disabled={writing || !toArchive.length} onClick={() => void setArchived(toArchive, true)}><Archive aria-hidden="true" />Archive</Button>}
+          {directory.archived !== 'exclude' && <Button type="button" size="sm" variant="outline" disabled={writing || !toRestore.length} onClick={() => void setArchived(toRestore, false)}><ArchiveRestore aria-hidden="true" />Restore</Button>}
+        </>}
+        emptyTitle={directory.nextCursor ? 'No visible chats on this page' : searching ? 'No chats match' : archivedView ? 'No archived chats' : 'No chats yet'}
+        emptyDescription={directory.nextCursor ? 'Load older chats to keep browsing.' : searching ? 'Try other words, or look in Archived or All.' : archivedView ? 'Chats you archive show here. Archiving deletes nothing.' : 'Start a conversation and it will appear here.'}
+        emptyContent={emptyContent} icon={archivedView ? <Archive /> : <MessageSquare />} emptyAction={!searching && !archivedView ? <Button onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}>Start a chat</Button> : undefined}
         footer={directory.loaded && <>
           <Button variant="outline" size="sm" className="aria-disabled:opacity-50" aria-disabled={busy || !directory.nextCursor && directory.error !== 'cursor'} aria-busy={directory.pending === 'older'} onClick={() => { if (!busy) { if (directory.error === 'cursor') void directory.refresh(); else if (directory.nextCursor) void directory.older() } }}>{directory.pending === 'older' ? 'Loading…' : directory.error === 'cursor' ? 'Refresh chats' : directory.nextCursor ? 'Load older' : 'No more chats to load'}</Button>
           {olderNote && <p role="status" className="text-xs text-muted-foreground">{olderNote}</p>}
         </>}>
-        {rows.map(session => <ListLine key={session.id} to={`/chat?session=${encodeURIComponent(session.id)}`} icon={<MessageSquare />}
+        {rows.map(session => <ListLine key={session.id} id={session.id} selection={chatNames ? selection : undefined} actions={rowMenu(session)}
+          badge={session.archivedAt && directory.archived === 'include' ? 'Archived' : undefined} to={`/chat?session=${encodeURIComponent(session.id)}`} icon={<MessageSquare />}
           title={session.title ? `${session.title}${session.titleTruncated ? '…' : ''}` : 'Untitled chat'}
           sub={session.summaryPreview ? `${session.summaryPreview}${session.summaryTruncated ? '…' : ''}` : 'Continue this conversation'} meta={when(session.createdAt)} />)}
       </ListCard>

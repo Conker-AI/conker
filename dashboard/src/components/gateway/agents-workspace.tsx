@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Archive, Bot, Plus, RotateCcw, Save } from 'lucide-react'
+import { Archive, Bot, Pencil, Plus, RotateCcw, Save } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionLoading, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
+import { CollectionLoading, FilterChip, FormActions, ListCard, ListLine, ListLineMenu, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent, ConfirmationDialog } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
+import { runBulk } from '@/components/design-system/list-bulk'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -74,6 +78,14 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel, 
   </form>
 }
 
+const AGENT_TEXT = (item: AgentProfile) => [item.configuration.name, item.configuration.role]
+const AGENT_SORTS = {
+  name: { label: 'Name', compare: byName((item: AgentProfile) => item.configuration.name) },
+  updated: { label: 'Recently changed', compare: byNewest((item: AgentProfile) => item.updated_at) },
+  created: { label: 'Newest', compare: byNewest((item: AgentProfile) => item.created_at) },
+}
+const agentCount = (count: number) => count === 1 ? 'Agent' : `${count} agents`
+
 function LoadingPage({ list }: { list: boolean }) {
   return <GatewayPageFrame>{list ? <div className="w-full"><ListSkeleton rows={4} label="Loading agents…" /></div> : <CollectionLoading label="Loading agents…" />}</GatewayPageFrame>
 }
@@ -109,6 +121,24 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
       setAgents(current => current?.map(item => item.id === updated.id ? updated : item) ?? [updated]); setArchive(null)
     } catch (cause) { setArchiveError(changedMessage(cause)) } finally { setArchivePending(false) }
   }
+  const archivedCount = (agents ?? []).filter(item => item.archived_at !== null).length
+  // Archived agents get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const view = useListView((agents ?? []).filter(item => (item.archived_at !== null) === (showing === 'archived')), { text: AGENT_TEXT, sorts: AGENT_SORTS })
+  const shown = view.rows
+  // The Companion is never archived, so it cannot be picked.
+  const selection = useListSelection(shown.filter(item => item.kind !== 'companion').map(item => item.id))
+  const [writing, setWriting] = useState(false)
+  const setArchived = async (items: AgentProfile[], archived: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true)
+    try {
+      const done = await runBulk(items, item => client.setAgentArchived(item.id, archived, item.revision), { done: count => `${agentCount(count)} ${archived ? 'archived' : 'restored'}`, failed: archived ? 'Some agents were not archived' : 'Some agents were not restored' },
+        undo ? results => void setArchived(results, !archived, false) : undefined)
+      setAgents(current => current?.map(item => done.find(updated => updated.id === item.id) ?? item) ?? current)
+      selection.stop()
+    } finally { setWriting(false) }
+  }
   if (!agents && !error) return <LoadingPage list={!companion && !editMatch} />
   if (error) return <GatewayPageFrame><div className="w-full"><InlineError error={listError} title="Agents didn’t load" onRetry={() => load()} /></div></GatewayPageFrame>
   if (companion) return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -120,19 +150,26 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
     {selected?.archived_at === null ? <AgentEditor client={client} profile={selected} onEdited={() => setEditedId(selected.id)} onSaved={saved} onCancel={() => navigate('/agents')} /> : selected ? <div className="space-y-3 p-6"><p className="text-sm text-muted-foreground">Restore this agent before editing its profile.</p><Button variant="outline" onClick={() => setArchive(selected)}><RotateCcw />Restore agent</Button></div> : <div className="p-6 text-sm text-muted-foreground">This agent does not exist.</div>}
     <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at === null ? `Archive ${archive?.configuration.name}?` : `Restore ${archive?.configuration.name}?`} description={archive?.archived_at === null ? (edited ? 'Its history is kept, but it leaves your active agents. Unsaved edits to this profile will be lost.' : 'Its history is kept, but it leaves your active agents.') : 'The profile returns to the active agent list.'} actionLabel={archive?.archived_at === null ? 'Archive agent' : 'Restore agent'} actionVariant={archive?.archived_at === null ? 'destructive' : 'default'} pending={archivePending} error={archiveError} onConfirm={confirmArchive} />
   </div>
-  const archivedCount = (agents ?? []).filter(item => item.archived_at !== null).length
-  // Archived agents get their own chip only once there are some.
-  const showing = archivedCount ? filter : 'active'
-  const shown = (agents ?? []).filter(item => (item.archived_at !== null) === (showing === 'archived'))
-  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = shown.filter(item => selection.has(item.id))
+  const rowMenu = (item: AgentProfile) => item.kind !== 'companion' && <ListLineMenu label={`More actions for ${item.configuration.name}`}>
+    <DropdownMenuItem onClick={() => navigate(`/agents/${item.id}/edit`)}><Pencil aria-hidden="true" />Edit</DropdownMenuItem>
+    {item.archived_at === null
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], false)}><RotateCcw aria-hidden="true" />Restore</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame>
     <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader actionsOnly title="Agents" description="Agents are focused helpers for recurring work. Each picks its model, tools and memory; your approval rules still apply." density="compact" actions={<WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New agent</WorkspaceAction>} />
       <ListCard count={shown.length} unit={shown.length === 1 ? 'agent' : 'agents'}
+        query={view.query} onQueryChange={view.setQuery} label="Search agents" placeholder="Search agents" sort={view.sort} selection={selection}
+        bulkActions={showing === 'archived'
+          ? <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, false)}><RotateCcw />Restore</Button>
+          : <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, true)}><Archive />Archive</Button>}
         filters={archivedCount ? <>{chip('active', 'Active', (agents?.length ?? 0) - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
-        emptyTitle={showing === 'archived' ? 'No archived agents' : 'No agents yet'} emptyDescription={showing === 'archived' ? 'Archived agents keep their history.' : 'Create an agent for a focused kind of work.'}
-        emptyAction={showing === 'archived' ? undefined : <Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
-        {shown.map(item => <ListLine key={item.id} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={<IdentityMark brand={serviceIn(item.configuration.name, item.configuration.role)} kind="agent" name={item.configuration.name} size="sm" />} title={item.configuration.name} sub={item.configuration.role}
+        emptyTitle={view.query.trim() ? 'No matching agents' : showing === 'archived' ? 'No archived agents' : 'No agents yet'} emptyDescription={showing === 'archived' ? 'Archived agents keep their history.' : 'Create an agent for a focused kind of work.'}
+        emptyAction={showing === 'archived' || view.query.trim() ? undefined : <Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
+        {shown.map(item => <ListLine key={item.id} id={item.id} selection={item.kind === 'companion' ? undefined : selection} actions={rowMenu(item) || undefined} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={<IdentityMark brand={serviceIn(item.configuration.name, item.configuration.role)} kind="agent" name={item.configuration.name} size="sm" />} title={item.configuration.name} sub={item.configuration.role}
           meta={item.kind === 'companion' ? 'Primary' : `Revision ${item.revision}`} />)}
       </ListCard>
     </div>

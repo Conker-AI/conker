@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Cable, RefreshCw } from 'lucide-react'
-import { CollectionLoading, CollectionPanel, CollectionRow, CollectionSection, FormActions, InlineDetails, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
+import { Cable, Power, PowerOff, RefreshCw } from 'lucide-react'
+import { CollectionLoading, FilterChip, FormActions, InlineDetails, ListCard, ListLine, ListLineMenu, OverlayBody, PageHeader, TaskDialogContent, WorkspaceAction } from '@/components/design-system'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ReferenceSection } from '@/components/reference-section'
-import { StatusBadge } from '@/components/status-badge'
 import { gatewayError } from '@/lib/gateway/transport'
 import type { GatewayMcpClient, McpAccess, McpDiscovery, McpTool } from '@/lib/gateway/mcp'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { byName, useListView } from '@/components/design-system/list-view'
+import { runBulk } from '@/components/design-system/list-bulk'
 import { GatewayPageFrame } from './page-frame'
+
+// Getters keep the compare helpers out of module load, so a harness that stubs imports can still
+// load this file without building a real sorter; `useListView` reads them only while sorting.
+const MCP_SORTS = { name: { label: 'Name', compare: byName((tool: McpTool) => tool.name) } }
+const MCP_TEXT = (tool: McpTool) => [tool.name, tool.url]
+const toolCount = (count: number) => count === 1 ? 'MCP tool' : `${count} MCP tools`
 
 function message(cause: unknown) {
   const error = gatewayError(cause)
@@ -92,23 +101,60 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
   const [tools, setTools] = useState<McpTool[] | null>(null), [error, setError] = useState(''), [reload, setReload] = useState(0)
   const [connecting, setConnecting] = useState(false), [connectingBusy, setConnectingBusy] = useState(false), [notice, setNotice] = useState('')
   const [params, setParams] = useSearchParams()
+  const [filter, setFilter] = useState<'all' | 'active' | 'off'>('all'), [writing, setWriting] = useState(false)
   const listGeneration = useRef(0)
   const selected = tools?.find(tool => tool.id === params.get('tool'))
   useEffect(() => { const controller = new AbortController(), generation = ++listGeneration.current; client.list(controller.signal).then(value => { if (!controller.signal.aborted && generation === listGeneration.current) { setTools(value); setError('') } }).catch(cause => { if (!controller.signal.aborted && generation === listGeneration.current) setError(message(cause)) }); return () => controller.abort() }, [client, reload])
   function saved(value: McpTool) { listGeneration.current++; setTools(current => [...(current ?? []).filter(item => item.id !== value.id), value].sort((a, b) => a.name.localeCompare(b.name))); setConnecting(false); setParams({ view: 'mcp', tool: value.id }); setNotice(`Saved ${value.name}.`) }
   const rows = tools ?? []
+  const activeCount = rows.filter(tool => tool.status === 'active').length, offCount = rows.length - activeCount
+  // The chip a filter hides still counts its rows: All shows the whole list, chips pick a part of it.
+  const showing = rows.filter(tool => filter === 'all' || (filter === 'active') === (tool.status === 'active'))
+  const view = useListView(showing, { text: MCP_TEXT, sorts: MCP_SORTS })
+  const selection = useListSelection(view.rows.map(tool => tool.id))
+  // One async write for the row menu and the bulk bar; Undo replays it with the opposite state.
+  const setEnabled = async (items: McpTool[], enabled: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true)
+    try {
+      const done = await runBulk(items, item => client.setEnabled(item, enabled), { done: count => `${toolCount(count)} turned ${enabled ? 'on' : 'off'}`, failed: enabled ? 'Some tools were not turned on' : 'Some tools were not turned off' },
+        undo ? results => void setEnabled(results, !enabled, false) : undefined)
+      setTools(current => (current ?? []).map(tool => done.find(savedTool => savedTool.id === tool.id) ?? tool))
+      selection.stop()
+    } finally { setWriting(false) }
+  }
   // Details open in place under the chosen tool; choosing it again closes them.
   const details = selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
-  const shown = !!selected && rows.some(tool => tool.id === selected.id)
+  const shown = !!selected && view.rows.some(tool => tool.id === selected.id)
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = view.rows.filter(tool => selection.has(tool.id))
+  const rowMenu = (tool: McpTool) => <ListLineMenu label={`More actions for ${tool.name}`}>
+    {tool.status === 'active'
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([tool], false)}><PowerOff aria-hidden="true" />Turn off</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([tool], true)}><Power aria-hidden="true" />Turn on</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="MCP tools" density="compact" actions={<><WorkspaceAction render={<Link to="/tools" />}>All tools</WorkspaceAction><WorkspaceAction iconOnly aria-label="Refresh MCP tools" onClick={() => setReload(value => value + 1)}><RefreshCw /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setConnecting(true)}><Cable />Connect server</WorkspaceAction></>} />
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     {!tools && !error && <CollectionLoading label="Loading MCP tools…" />}
-    {tools && <CollectionPanel count={rows.length} unit={rows.length === 1 ? 'tool' : 'tools'} emptyTitle="Connect your first MCP server" emptyDescription={'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'} emptyAction={<Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
-      <CollectionSection title="Imported tools">{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.url)} kind="mcp" name={tool.name} />} title={tool.name} description={tool.url} trailing={<StatusBadge tone={tool.status === 'active' ? 'live' : 'neutral'}>{tool.status === 'active' ? 'Enabled' : 'Disabled'}</StatusBadge>} />)}</CollectionSection>
-    </CollectionPanel>}
+    {tools && <>
+      <ListCard count={view.rows.length} unit={view.rows.length === 1 ? 'tool' : 'tools'}
+        query={view.query} onQueryChange={view.setQuery} label="Search MCP tools" placeholder="Search MCP tools" sort={view.sort} selection={selection}
+        bulkActions={<>
+          {filter !== 'off' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(tool => tool.status === 'active') || writing} onClick={() => void setEnabled(picked.filter(tool => tool.status === 'active'), false)}><PowerOff />Turn off</Button>}
+          {filter !== 'active' && <Button type="button" size="sm" variant="outline" disabled={!picked.some(tool => tool.status !== 'active') || writing} onClick={() => void setEnabled(picked.filter(tool => tool.status !== 'active'), true)}><Power />Turn on</Button>}
+        </>}
+        filters={<>{chip('all', 'All', rows.length)}{chip('active', 'Active', activeCount)}{chip('off', 'Off', offCount)}</>}
+        emptyTitle={view.query.trim() || filter !== 'all' ? 'No matching MCP tools' : 'Connect your first MCP server'}
+        emptyDescription={view.query.trim() || filter !== 'all' ? 'Try other words, or connect a public HTTPS server.' : 'Discover tools from a public HTTPS server, review their inputs, then choose which ones your chats can use.'}
+        emptyAction={view.query.trim() || filter !== 'all' ? undefined : <Button onClick={() => setConnecting(true)}>Connect server</Button>} icon={<Cable />}>
+        {view.rows.map(tool => <ListLine key={tool.id} id={tool.id} selection={selection} actions={rowMenu(tool)}
+          to={selected?.id === tool.id ? '/tools?view=mcp' : `/tools?view=mcp&tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details}
+          icon={<IdentityMark brand={serviceIn(tool.name, tool.url)} kind="mcp" name={tool.name} />} title={tool.name} sub={tool.url} badge={tool.status === 'active' ? 'Enabled' : 'Disabled'} />)}
+      </ListCard>
+      <p className="text-xs text-muted-foreground">MCP calls use your existing tool approvals and execution history. Public HTTPS servers are supported; local stdio servers and MCP OAuth are not yet available.</p>
+    </>}
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    <p className="text-xs text-muted-foreground">MCP calls use your existing tool approvals and execution history. Public HTTPS servers are supported; local stdio servers and MCP OAuth are not yet available.</p>
     {!shown && details}
     <Dialog open={connecting} onOpenChange={open => { if (!connectingBusy) setConnecting(open) }} disablePointerDismissal={connectingBusy}>{connecting && <TaskDialogContent title="Connect MCP server" description="Discover and review tools before adding them to Conker." size="wide"><McpConnect client={client} onSaved={saved} onBusy={setConnectingBusy} onCancel={() => setConnecting(false)} /></TaskDialogContent>}</Dialog>
   </GatewayPageFrame>

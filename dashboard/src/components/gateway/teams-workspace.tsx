@@ -1,15 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Archive, History, Plus, RotateCcw, Save, Trash2, Users } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Archive, History, Plus, RotateCcw, Save, SquareArrowOutUpRight, Trash2, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { CollectionPanel, CollectionRow, CollectionSection, ConfirmationDialog, FormActions, OverlayBody, PageHeader, TaskDialogContent } from '@/components/design-system'
+import { ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, ListLineMenu, OverlayBody, PageHeader, TaskDialogContent } from '@/components/design-system'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
+import { runBulk } from '@/components/design-system/list-bulk'
 import { GatewayPageFrame } from './page-frame'
 import type { AgentProfile, GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
@@ -21,6 +25,15 @@ const blank: GatewayTeamDefinition = { name: '', objective: '', roles: [], hando
 const role = (): Role => ({ id: `role_${crypto.randomUUID().slice(0, 8)}`, name: '', agentId: '', instructions: '', toolIds: [], memory: { scope: 'none', memoryIds: [] }, context: { mode: 'task_only', sourceIds: [] }, budget: { maxTurns: 2, maxTokens: 2000, maxCostCents: 0 } })
 const handoff = (roles: Role[]): GatewayTeamDefinition['handoffs'][number] => ({ id: `handoff_${crypto.randomUUID().slice(0, 8)}`, fromRoleId: roles[0].id, toRoleId: roles[1].id, condition: '', payload: 'result_and_citations', maxTransfers: 1 })
 const mutationMessage = (error: unknown) => error instanceof GatewayTeamMutationError ? error.message : gatewayError(error).message
+const summaryOf = (saved: GatewayTeam): GatewayTeamSummary => ({ schemaVersion: 1, id: saved.id, revision: saved.revision, name: saved.name, archived_at: saved.archived_at, created_at: saved.created_at, updated_at: saved.updated_at, authority: 'none', execution: 'configuration-only', contentIncluded: false, reference_validation: 'external-references-unverified' })
+
+const TEAM_TEXT = (item: GatewayTeamSummary) => [item.name]
+const TEAM_SORTS = {
+  name: { label: 'Name', compare: byName((item: GatewayTeamSummary) => item.name) },
+  updated: { label: 'Recently changed', compare: byNewest((item: GatewayTeamSummary) => item.updated_at) },
+  created: { label: 'Newest', compare: byNewest((item: GatewayTeamSummary) => item.created_at) },
+}
+const teamCount = (count: number) => count === 1 ? 'Team' : `${count} teams`
 
 type AnyBudget = GatewayTeamDefinition['budget'] | Role['budget']
 function BudgetFields({ value, onChange, handoffs = false }: { value: AnyBudget; onChange: (value: AnyBudget) => void; handoffs?: boolean }) {
@@ -69,6 +82,7 @@ export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayCo
   const [teams, setTeams] = useState<Awaited<ReturnType<typeof control.teams.list>>['results'] | null>(null), [agents, setAgents] = useState<AgentProfile[]>([]), [sessions, setSessions] = useState<RuntimeSession[]>([])
   const [error, setError] = useState<string | null>(null), [selected, setSelected] = useState<GatewayTeam | null>(null), [history, setHistory] = useState<GatewayTeamRevision | null>(null), [reload, setReload] = useState(0)
   const [editing, setEditing] = useState<GatewayTeam | 'new' | null>(null), [archive, setArchive] = useState<GatewayTeam | null>(null), [pending, setPending] = useState(false), [discard, setDiscard] = useState(false), [editorDirty, setEditorDirty] = useState(false)
+  const [filter, setFilter] = useState<'active' | 'archived'>('active'), [writing, setWriting] = useState(false)
   useEffect(() => {
     let active = true
     Promise.all([control.teams.list(), control.agents(), runtime.listSessions()]).then(([page, profiles, chats]) => {
@@ -82,20 +96,59 @@ export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayCo
     control.teams.get(selectedId, controller.signal).then(value => { if (!controller.signal.aborted) setSelected(value) }).catch(cause => { if (!controller.signal.aborted) setError(gatewayError(cause).message) })
     return () => controller.abort()
   }, [control, selectedId])
-  const summaryOf = (saved: GatewayTeam): GatewayTeamSummary => ({ schemaVersion: 1, id: saved.id, revision: saved.revision, name: saved.name, archived_at: saved.archived_at, created_at: saved.created_at, updated_at: saved.updated_at, authority: 'none', execution: 'configuration-only', contentIncluded: false, reference_validation: 'external-references-unverified' })
   const save = async (definition: GatewayTeamDefinition) => { const saved = editing === 'new' ? await control.teams.create(definition) : await control.teams.update(editing!.id, definition, editing!.revision); setTeams(current => current ? [...current.filter(item => item.id !== saved.id), summaryOf(saved)].sort((a, b) => a.name.localeCompare(b.name)) : current); setSelected(saved); setEditing(null); setEditorDirty(false); const next = new URLSearchParams(params); next.set('team', saved.id); setParams(next) }
-  const setArchived = async () => { if (!archive) return; setPending(true); setError(null); try { const saved = await control.teams.setArchived(archive.id, archive.archived_at === null, archive.revision); setSelected(saved); setTeams(current => current?.map(item => item.id === saved.id ? summaryOf(saved) : item) ?? current); setArchive(null) } catch (cause) { setError(mutationMessage(cause)) } finally { setPending(false) } }
+  const archivedCount = (teams ?? []).filter(item => item.archived_at !== null).length
+  // Archived teams get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const view = useListView((teams ?? []).filter(item => (item.archived_at !== null) === (showing === 'archived')), { text: TEAM_TEXT, sorts: TEAM_SORTS })
+  const visible = view.rows
+  const selection = useListSelection(visible.map(item => item.id))
+  const setArchived = async (items: GatewayTeamSummary[], archived: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true); setError(null)
+    try {
+      const done = await runBulk(items, item => control.teams.setArchived(item.id, archived, item.revision).then(summaryOf), { done: count => `${teamCount(count)} ${archived ? 'archived' : 'restored'}`, failed: archived ? 'Some teams were not archived' : 'Some teams were not restored' },
+        undo ? results => void setArchived(results, !archived, false) : undefined)
+      setTeams(current => current?.map(item => done.find(saved => saved.id === item.id) ?? item) ?? current)
+      selection.stop()
+    } finally { setWriting(false) }
+  }
+  const confirmArchive = async () => {
+    if (!archive) return
+    setPending(true); setError(null)
+    try {
+      const saved = await control.teams.setArchived(archive.id, archive.archived_at === null, archive.revision)
+      setSelected(saved); setTeams(current => current?.map(item => item.id === saved.id ? summaryOf(saved) : item) ?? current); setArchive(null)
+    } catch (cause) { setError(mutationMessage(cause)) } finally { setPending(false) }
+  }
   const inspectRevision = async (number: number) => { if (!selected) return; setPending(true); setError(null); try { setHistory(await control.teams.revision(selected.id, number)) } catch (cause) { setError(gatewayError(cause).message) } finally { setPending(false) } }
-  const visible = teams ?? []
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = visible.filter(item => selection.has(item.id))
+  const rowMenu = (item: GatewayTeamSummary) => <ListLineMenu label={`More actions for ${item.name}`}>
+    <DropdownMenuItem render={<Link to={`/agents?tab=teams&team=${item.id}`} />}><SquareArrowOutUpRight aria-hidden="true" />Open</DropdownMenuItem>
+    {item.archived_at === null
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], false)}><RotateCcw aria-hidden="true" />Restore</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame><div className="space-y-6"><PageHeader actionsOnly title="Teams" description="Put saved agents together, each with its own role and handoff. Saving a team grants no permissions and starts no work." density="compact" actions={<Button onClick={() => setEditing('new')}><Plus />New team</Button>} />
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-    {!teams && error ? <div className="space-y-3"><Button variant="outline" onClick={() => { setError(null); setReload(value => value + 1) }}><RotateCcw />Retry loading teams</Button></div> : !teams ? <p role="status" className="text-sm text-muted-foreground">Loading teams…</p> : <CollectionPanel count={visible.length} unit={visible.length === 1 ? 'team' : 'teams'} emptyTitle="No teams yet" emptyDescription="Create a team from saved agents. You can review the configuration before any separate execution flow exists." emptyAction={<Button onClick={() => setEditing('new')}><Plus />New team</Button>} icon={<Users />}><div className="space-y-5"><CollectionSection title="Active teams">{visible.filter(item => item.archived_at === null).map(item => <CollectionRow key={item.id} to={`/agents?tab=teams&team=${item.id}`} title={item.name} description="Configuration only" leading={<span className="flex size-8 items-center justify-center rounded-lg border"><Users className="size-4" /></span>} trailing={<span>Revision {item.revision}</span>} />)}</CollectionSection>{visible.some(item => item.archived_at !== null) && <CollectionSection title="Archived">{visible.filter(item => item.archived_at !== null).map(item => <CollectionRow key={item.id} to={`/agents?tab=teams&team=${item.id}`} title={item.name} description="Archived configuration" leading={<span className="flex size-8 items-center justify-center rounded-lg border"><Archive className="size-4" /></span>} trailing={<span>Revision {item.revision}</span>} />)}</CollectionSection>}</div></CollectionPanel>}
+    {!teams && error ? <div className="space-y-3"><Button variant="outline" onClick={() => { setError(null); setReload(value => value + 1) }}><RotateCcw />Retry loading teams</Button></div> : !teams ? <p role="status" className="text-sm text-muted-foreground">Loading teams…</p> : <ListCard count={visible.length} unit={visible.length === 1 ? 'team' : 'teams'}
+      query={view.query} onQueryChange={view.setQuery} label="Search teams" placeholder="Search teams" sort={view.sort} selection={selection}
+      bulkActions={showing === 'archived'
+        ? <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, false)}><RotateCcw />Restore</Button>
+        : <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, true)}><Archive />Archive</Button>}
+      filters={archivedCount ? <>{chip('active', 'Active', (teams?.length ?? 0) - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
+      emptyTitle={view.query.trim() ? 'No matching teams' : showing === 'archived' ? 'No archived teams' : 'No teams yet'} emptyDescription={showing === 'archived' ? 'Archived teams keep their versions.' : 'Create a team from saved agents. You can review the configuration before any separate execution flow exists.'}
+      emptyAction={showing === 'archived' || view.query.trim() ? undefined : <Button onClick={() => setEditing('new')}><Plus />New team</Button>} icon={<Users />}>
+      {visible.map(item => <ListLine key={item.id} id={item.id} selection={selection} actions={rowMenu(item)} to={`/agents?tab=teams&team=${item.id}`} icon={<Users />} title={item.name}
+        sub={item.archived_at === null ? 'Configuration only' : 'Archived configuration'} meta={`Revision ${item.revision}`} />)}
+    </ListCard>}
   </div>
   <Dialog open={Boolean(selectedId) && editing === null} onOpenChange={open => { if (!open) { const next = new URLSearchParams(params); next.delete('team'); setParams(next); setSelected(null) } }}><TaskDialogContent title={selected?.definition.name ?? 'Team'} description="Its setup and every earlier version" size="wide">{selected ? <div className="flex min-h-0 flex-1 flex-col"><OverlayBody><div className="space-y-6"><div className="flex flex-wrap items-center gap-2"><Badge variant={selected.archived_at ? 'secondary' : 'outline'}>{selected.archived_at ? 'Archived' : 'Configuration only'}</Badge><Badge variant="outline">{selected.agentReferenceState.replaceAll('-', ' ')}</Badge><span className="text-xs text-muted-foreground">Revision {selected.revision}</span></div><TeamDefinition value={selected.definition} agents={agents} /><section className="space-y-3 border-t pt-5"><h3 className="text-sm font-semibold">Revision history</h3><HistoryList control={control} team={selected} pending={pending} onInspect={inspectRevision} /></section>{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</div></OverlayBody><FormActions inset description="No preparation or execution endpoint is exposed here."><Button variant="outline" disabled={pending} onClick={() => setArchive(selected)}>{selected.archived_at ? <RotateCcw /> : <Archive />}{selected.archived_at ? 'Restore' : 'Archive'}</Button>{!selected.archived_at && <Button disabled={pending} onClick={() => setEditing(selected)}>Edit team</Button>}</FormActions></div> : <p role="status" className="p-6 text-sm text-muted-foreground">Loading team…</p>}</TaskDialogContent></Dialog>
   <Dialog open={editing !== null} onOpenChange={open => !open && (editorDirty ? setDiscard(true) : setEditing(null))}><TaskDialogContent title={editing === 'new' ? 'New team' : 'Edit team'} description="Define roles, limits, context, and explicit handoffs." size="wide"><TeamEditor initial={editing === 'new' ? undefined : editing ?? undefined} agents={agents} sessions={sessions} onDirtyChange={setEditorDirty} onSave={save} onCancel={() => (editorDirty ? setDiscard(true) : setEditing(null))} /></TaskDialogContent></Dialog>
   <ConfirmationDialog open={discard} onOpenChange={open => !open && setDiscard(false)} title="Discard team changes?" description="Your unsaved roles, handoffs, and budgets will be lost." actionLabel="Discard changes" pending={false} onConfirm={() => { setDiscard(false); setEditorDirty(false); setEditing(null) }} />
   <Dialog open={history !== null} onOpenChange={open => !open && setHistory(null)}><TaskDialogContent title={history ? `${history.name} · revision ${history.revision}` : 'Historical team'} description="An earlier version, as it was saved; it doesn’t show whether those agents still exist." size="wide">{history && <OverlayBody><TeamDefinition value={history.definition} agents={agents} /></OverlayBody>}</TaskDialogContent></Dialog>
-  <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at ? `Restore ${archive?.definition.name}?` : `Archive ${archive?.definition.name}?`} description={archive?.archived_at ? 'Current agent references and narrowed selections will be revalidated before the team returns to active configuration.' : 'The team and its versions are kept, but it leaves your active teams.'} actionLabel={archive?.archived_at ? 'Restore team' : 'Archive team'} actionVariant={archive?.archived_at ? 'default' : 'destructive'} pending={pending} error={error} onConfirm={() => void setArchived()} />
+  <ConfirmationDialog open={archive !== null} onOpenChange={open => !open && setArchive(null)} title={archive?.archived_at ? `Restore ${archive?.definition.name}?` : `Archive ${archive?.definition.name}?`} description={archive?.archived_at ? 'Current agent references and narrowed selections will be revalidated before the team returns to active configuration.' : 'The team and its versions are kept, but it leaves your active teams.'} actionLabel={archive?.archived_at ? 'Restore team' : 'Archive team'} actionVariant={archive?.archived_at ? 'default' : 'destructive'} pending={pending} error={error} onConfirm={() => void confirmArchive()} />
   </GatewayPageFrame>
 }
 

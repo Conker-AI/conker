@@ -1,25 +1,26 @@
 import { createStore } from 'zustand/vanilla'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
-import type { HistoryChat, HistoryPage } from '@/lib/gateway/session-history'
+import type { HistoryArchived, HistoryChat, HistoryPage, HistorySort } from '@/lib/gateway/session-history'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { readRuntimeWithDeadline, type ReadTimer, type ReadTiming } from './runtime-read-deadline'
 
 type Pending = 'initial' | 'refresh' | 'older'
-export type DirectoryState = {
+export type DirectoryView = { archived: HistoryArchived; sort: HistorySort }
+export type DirectoryState = DirectoryView & {
   query: string; rows: HistoryChat[]; nextCursor: string | null; loaded: boolean
   pending: Pending | null; error: 'query' | 'read' | 'refresh' | 'older' | 'cursor' | 'offline' | null; changed: 'new' | 'unverified' | null
 }
-const empty = (): DirectoryState => ({ query: '', rows: [], nextCursor: null, loaded: false, pending: null, error: null, changed: null })
+const empty = (view: DirectoryView = { archived: 'exclude', sort: 'newest' }): DirectoryState => ({ ...view, query: '', rows: [], nextCursor: null, loaded: false, pending: null, error: null, changed: null })
 export const validDirectoryQuery = (query: string) => [...query].length <= 200 && !query.includes('\0') && !/[\uD800-\uDFFF]/u.test(query)
 
 /** An explicit, query-bound directory snapshot. Recent discovery cannot rewrite its pages. */
 export function createChatDirectory(options: ReadTiming & {
-  read: (q: string, cursor: string | undefined, signal: AbortSignal) => Promise<HistoryPage>
+  read: (q: string, cursor: string | undefined, signal: AbortSignal, view: DirectoryView) => Promise<HistoryPage>
   auth: GatewayAuthStore; workspace: GatewayRuntimeWorkspaceState; privacy: GatewaySourcePrivacyState
   available: () => boolean
 }) {
-  const store = createStore<DirectoryState>(empty)
+  const store = createStore<DirectoryState>(() => empty())
   const schedule = options.schedule ?? ((run, delay) => setTimeout(run, delay))
   const unschedule = options.unschedule ?? (timer => clearTimeout(timer))
   let started = false, generation = 0, identity: string | null = null, publishing = false
@@ -32,7 +33,8 @@ export function createChatDirectory(options: ReadTiming & {
   const available = () => started && identity !== null && identity === scope() && options.available()
   function changed(): DirectoryState['changed'] {
     const state = store.getState()
-    const unseen = state.loaded && recent && [...recent].some(id => !options.privacy.getState().sessionIds.includes(id) && !baseline?.has(id) && !state.rows.some(row => row.id === id))
+    // Archived-only lists never hold new chats, so a new chat elsewhere is not news here.
+    const unseen = state.loaded && state.archived !== 'only' && recent && [...recent].some(id => !options.privacy.getState().sessionIds.includes(id) && !baseline?.has(id) && !state.rows.some(row => row.id === id))
     return unseen ? baseline ? 'new' : 'unverified' : null
   }
   function mask(rows: HistoryChat[]) {
@@ -47,12 +49,12 @@ export function createChatDirectory(options: ReadTiming & {
     if (!available()) { if (started && identity) store.setState({ error: 'offline' }); return false }
     if (controller || !validDirectoryQuery(state.query) || mode === 'older' && !state.nextCursor) return false
     if (timer !== undefined) unschedule(timer); timer = undefined
-    const request = new AbortController(), ticket = generation, owner = identity, query = state.query
+    const request = new AbortController(), ticket = generation, owner = identity, query = state.query, view = { archived: state.archived, sort: state.sort }
     const cursor = mode === 'older' ? state.nextCursor! : undefined, evidence = recent ? new Set(recent) : null
     controller = request; store.setState({ pending: mode, error: null })
-    const current = () => available() && generation === ticket && identity === owner && store.getState().query === query
+    const current = () => available() && generation === ticket && identity === owner && store.getState().query === query && store.getState().archived === view.archived && store.getState().sort === view.sort
     try {
-      const page = await readRuntimeWithDeadline(signal => options.read(query.trim(), cursor, signal), request, options)
+      const page = await readRuntimeWithDeadline(signal => options.read(query.trim(), cursor, signal, view), request, options)
       if (!current() || request.signal.aborted) return false
       if (cursor && page.nextCursor === cursor) throw new Error('Repeated directory cursor')
       publishing = true
@@ -77,7 +79,7 @@ export function createChatDirectory(options: ReadTiming & {
   }
   function recheck() {
     const next = scope()
-    if (identity !== next) { cancel(); identity = next; recent = null; baseline = null; store.setState(empty()) }
+    if (identity !== next) { cancel(); identity = next; recent = null; baseline = null; store.setState(empty(viewOf())) }
     if (!available()) {
       const interrupted = !store.getState().loaded || controller !== null || timer !== undefined
       cancel()
@@ -87,13 +89,23 @@ export function createChatDirectory(options: ReadTiming & {
     const state = store.getState()
     if (!state.loaded && !controller && timer === undefined && (!state.error || state.error === 'offline')) timer = schedule(() => { timer = undefined; void load('initial') }, 0)
   }
+  const viewOf = (): DirectoryView => ({ archived: store.getState().archived, sort: store.getState().sort })
   return {
     store,
     query(value: string) {
       cancel(); baseline = null
-      store.setState({ ...empty(), query: value, error: validDirectoryQuery(value) ? null : 'query' })
+      store.setState({ ...empty(viewOf()), query: value, error: validDirectoryQuery(value) ? null : 'query' })
       if (validDirectoryQuery(value) && available()) timer = schedule(() => { timer = undefined; void load('initial') }, 250)
       else if (validDirectoryQuery(value) && identity) store.setState({ error: 'offline' })
+    },
+    /** Which chats (active, archived, all) and in what order; the search stays. */
+    view(next: Partial<DirectoryView>) {
+      const state = store.getState(), view = { ...viewOf(), ...next }
+      if (view.archived === state.archived && view.sort === state.sort) return
+      cancel(); baseline = null
+      store.setState({ ...empty(view), query: state.query, error: validDirectoryQuery(state.query) ? null : 'query' })
+      if (validDirectoryQuery(state.query) && available()) timer = schedule(() => { timer = undefined; void load('initial') }, 0)
+      else if (validDirectoryQuery(state.query) && identity) store.setState({ error: 'offline' })
     },
     refresh: () => load(store.getState().loaded ? 'refresh' : 'initial'),
     older: () => load('older'),

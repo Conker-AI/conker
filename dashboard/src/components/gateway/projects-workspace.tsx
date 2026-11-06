@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, FolderKanban, Link2, Plus, RefreshCw, RotateCcw, Save, Unlink } from 'lucide-react'
+import { Archive, ArrowLeft, ArrowUpRight, FolderKanban, Link2, Plus, RefreshCw, RotateCcw, Save, Unlink } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CollectionSearch, ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent } from '@/components/design-system'
+import { CollectionSearch, ConfirmationDialog, FilterChip, FormActions, ListCard, ListLine, ListLineMenu, OverlayBody, PageHeader, WorkspaceAction, TaskDialogContent } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ListSkeleton } from '@/components/resilience/skeletons'
 import { GatewayPageFrame } from './page-frame'
@@ -20,10 +20,22 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import { GatewayProjectMutationError, projectReferenceKey, type GatewayProject, type GatewayProjectLink, type ProjectFields, type ProjectReference } from '@/lib/gateway/projects'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import { gatewayError } from '@/lib/gateway/transport'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { byName, byNewest, useListView } from '@/components/design-system/list-view'
+import { useListSelection } from '@/components/design-system/list-selection'
+import { runBulk } from '@/components/design-system/list-bulk'
 
 const blank: ProjectFields = { name: '', description: '', instructions: '' }
 const canonicalSession = /^ses_[0-9a-f]{16}$/
 const canonicalTask = /^tsk_[0-9a-f]{32}$/
+
+const PROJECT_TEXT = (item: GatewayProject) => [item.name, item.description]
+const PROJECT_SORTS = {
+  name: { label: 'Name', compare: byName((item: GatewayProject) => item.name) },
+  updated: { label: 'Recently changed', compare: byNewest((item: GatewayProject) => item.updatedAt) },
+  created: { label: 'Newest', compare: byNewest((item: GatewayProject) => item.createdAt) },
+}
+const projectCount = (count: number) => count === 1 ? 'Project' : `${count} projects`
 
 function mutationMessage(error: unknown) {
   return error instanceof GatewayProjectMutationError ? error.message : gatewayError(error).message
@@ -166,24 +178,52 @@ export function GatewayProjectsWorkspace({ control, runtime, activity }: { contr
     setCreating(open)
     if (!open && createRequested) navigate('/projects', { replace: true })
   }
+  const [writing, setWriting] = useState(false)
+  // Search, sort and select run on the rows the chip shows.
+  const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length
+  // Archived projects get their own chip only once there are some.
+  const showing = archivedCount ? filter : 'active'
+  const view = useListView((projects ?? []).filter(item => (item.archivedAt !== null) === (showing === 'archived')), { text: PROJECT_TEXT, sorts: PROJECT_SORTS })
+  const shown = view.rows
+  const selection = useListSelection(shown.map(item => item.id))
+  const setArchived = async (items: GatewayProject[], archived: boolean, undo = true): Promise<void> => {
+    if (!items.length) return
+    setWriting(true)
+    try {
+      const done = await runBulk(items, item => control.projects.archive(item.id, archived, item.revision), {
+        done: count => `${projectCount(count)} ${archived ? 'archived' : 'restored'}`,
+        failed: archived ? 'Some projects were not archived' : 'Some projects were not restored',
+      }, undo ? results => void setArchived(results, !archived, false) : undefined)
+      setProjects(current => current?.map(item => done.find(updated => updated.id === item.id) ?? item) ?? current)
+      selection.stop()
+    } finally { setWriting(false) }
+  }
   if (match) {
     if (selected) return <ProjectEditor key={selected.id} project={selected} control={control} runtime={runtime} activity={activity} onChanged={update} />
     return <div className="w-full space-y-4 p-4 sm:p-6">{error ? <><InlineError error={listError} title="Project didn’t load" description={listError ? undefined : error} onRetry={() => { setError(null); return load() }} /><Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft />Projects</Button></> : <ListSkeleton rows={3} label="Loading project…" />}</div>
   }
-  const archivedCount = (projects ?? []).filter(item => item.archivedAt !== null).length
-  // Archived projects get their own chip only once there are some.
-  const showing = archivedCount ? filter : 'active'
-  const visible = (projects ?? []).filter(item => (item.archivedAt !== null) === (showing === 'archived'))
-  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
+  const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={showing === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
+  const picked = shown.filter(item => selection.has(item.id))
+  const searching = !!view.query.trim()
+  const rowMenu = (item: GatewayProject) => <ListLineMenu label={`More actions for ${item.name}`}>
+    <DropdownMenuItem render={<Link to={`/projects/${item.id}`} />}><ArrowUpRight aria-hidden="true" />Open</DropdownMenuItem>
+    {item.archivedAt === null
+      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>
+      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([item], false)}><RotateCcw aria-hidden="true" />Restore</DropdownMenuItem>}
+  </ListLineMenu>
   return <GatewayPageFrame><div className="flex w-full min-w-0 flex-col gap-4">
     <PageHeader actionsOnly title="Projects" description="Keep related chats, tasks and guidance together without changing their permissions." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh projects" title="Refresh projects" disabled={loading} onClick={() => void load()}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus />New project</WorkspaceAction></>} />
     {error && (projects ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : <InlineError error={listError} title="Projects didn’t load" onRetry={() => load()} />)}
-    {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard count={visible.length} unit={visible.length === 1 ? 'project' : 'projects'}
+    {!projects && !error ? <ListSkeleton rows={4} label="Loading projects…" /> : projects && <ListCard count={shown.length} unit={shown.length === 1 ? 'project' : 'projects'}
+      query={view.query} onQueryChange={view.setQuery} label="Search projects" placeholder="Search projects" sort={view.sort} selection={selection}
+      bulkActions={showing === 'archived'
+        ? <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, false)}><RotateCcw />Restore</Button>
+        : <Button type="button" size="sm" variant="outline" disabled={!picked.length || writing} onClick={() => void setArchived(picked, true)}><Archive />Archive</Button>}
       filters={archivedCount ? <>{chip('active', 'Active', projects.length - archivedCount)}{chip('archived', 'Archived', archivedCount)}</> : undefined}
-      emptyTitle={!projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
-      emptyDescription={!projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
-      emptyAction={<Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
-      {visible.map(item => <ListLine key={item.id} to={`/projects/${item.id}`} icon={<IdentityMark brand={serviceIn(item.name, item.description)} kind="project" name={item.name} size="sm" />} title={item.name} sub={item.description || 'No description'}
+      emptyTitle={searching ? 'No matching projects' : !projects.length ? 'No projects yet' : showing === 'archived' ? 'No archived projects' : 'Every project is archived'}
+      emptyDescription={searching ? 'Try other words, or look in Archived.' : !projects.length ? 'Create a project to keep guidance and related work together.' : showing === 'archived' ? 'Archived projects stay read-only until restored.' : 'Restore one from Archived, or start a new project.'}
+      emptyAction={searching ? undefined : <Button onClick={() => setCreating(true)}><Plus />New project</Button>} icon={<FolderKanban />}>
+      {shown.map(item => <ListLine key={item.id} id={item.id} selection={selection} actions={rowMenu(item)} to={`/projects/${item.id}`} icon={<IdentityMark brand={serviceIn(item.name, item.description)} kind="project" name={item.name} size="sm" />} title={item.name} sub={item.description || 'No description'}
         meta={item.archivedAt === null ? `${item.links.length} ${item.links.length === 1 ? 'reference' : 'references'}` : 'Read-only'} />)}
     </ListCard>}
     <CreateProjectDialog client={control.projects} open={creating || createRequested} onOpenChange={setCreateOpen} onCreated={project => { update(project); setCreating(false); navigate(`/projects/${project.id}`) }} />

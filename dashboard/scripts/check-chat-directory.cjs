@@ -10,6 +10,7 @@ function load(file) {
 const { createChatDirectory } = load('src/components/gateway/chat-directory.ts')
 const { parseHistoryPage, createGatewayHistoryClient } = load('src/lib/gateway/session-history.ts')
 const { createGatewayTransport } = load('src/lib/gateway/transport.ts')
+const { createChatNamesClient } = load('src/lib/gateway/chat-names.ts')
 const { createGatewayRuntimeWorkspaceState } = load('src/components/gateway/runtime-state.ts')
 const { createGatewaySourcePrivacyState } = load('src/components/gateway/source-privacy.ts')
 const { createStore } = require('zustand/vanilla')
@@ -28,7 +29,7 @@ function clock() {
 function harness() {
   const timers = clock(), calls = [], auth = createStore(() => ({ phase: 'authenticated', session: { sessionId: 'owner', authenticated: true }, pending: false, logoutUnconfirmed: false }))
   const workspace = createGatewayRuntimeWorkspaceState(), privacy = createGatewaySourcePrivacyState(); let eligible = true
-  const directory = createChatDirectory({ ...timers, auth, workspace, privacy, available: () => eligible, read: (q, cursor, signal) => { const result = deferred(); calls.push({ q, cursor, signal, ...result }); return result.promise } })
+  const directory = createChatDirectory({ ...timers, auth, workspace, privacy, available: () => eligible, read: (q, cursor, signal, view) => { const result = deferred(); calls.push({ q, cursor, signal, view, ...result }); return result.promise } })
   directory.start(); return { ...directory, timers, calls, auth, workspace, privacy, eligible: value => { eligible = value } }
 }
 async function clientCases() {
@@ -46,6 +47,20 @@ async function clientCases() {
   for (const query of [{ extra: 'x' }, { q: '\ud800' }, { cursor: '' }, { cursor: 'a' }, { limit: '50' }]) await assert.rejects(transport.request('/api/pi/sessions/history', { query }), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/pi/sessions/history', { method: 'POST', body: {} }), error => error.kind === 'validation')
   assert.equal(requests.length, 2)
+  assert.doesNotMatch(requests[0].url, /archived=|sort=/, 'Defaults stay off the wire')
+  await client.list({ archived: 'only', sort: 'name' }); assert.match(requests[2].url, /archived=only/); assert.match(requests[2].url, /sort=name/)
+  for (const query of [{ archived: 'yes' }, { sort: 'random' }]) await assert.rejects(client.list(query), error => error.kind === 'validation')
+  for (const query of [{ archived: 'exclude' }, { sort: 'newest' }, { archived: 'all' }]) await assert.rejects(transport.request('/api/pi/sessions/history', { query }), error => error.kind === 'validation')
+  assert.equal(requests.length, 3)
+  assert.equal(parseHistoryPage(envelope([wire()])).rows[0].archivedAt, null)
+  assert.equal(parseHistoryPage(envelope([{ ...wire(), archived_at: 200 }])).rows[0].archivedAt, parseHistoryPage(envelope([{ ...wire(), created_at: 200 }])).rows[0].createdAt)
+  assert.throws(() => parseHistoryPage(envelope([{ ...wire(), archived_at: 'soon' }])), error => error.kind === 'invalid-response')
+  const posts = [], names = createChatNamesClient({ request: async (url, options) => { posts.push({ url, options }); return { sessions: options.body.sessions, archived: options.body.archived } } })
+  const ids = ['ses_' + '0'.repeat(16), 'ses_' + '1'.repeat(16)]
+  assert.deepEqual(await names.archive([...ids, ids[0]], true), { sessions: ids, archived: true }, 'Duplicates are sent once')
+  assert.equal(posts[0].url, '/api/control/pi/sessions/archive'); assert.equal(posts[0].options.method, 'POST')
+  for (const bad of [[], ['chat_a'], Array.from({ length: 101 }, (_, n) => 'ses_' + n.toString(16).padStart(16, '0'))]) await assert.rejects(names.archive(bad, true), error => error.kind === 'validation')
+  await assert.rejects(names.archive(ids, 'yes'), error => error.kind === 'validation'); assert.equal(posts.length, 1)
   const oversized = createGatewayTransport({ origin: 'https://conker.test', fetch: async () => new Response(JSON.stringify({ ...envelope(), padding: 'a'.repeat(256 * 1024) }), { headers: { 'Content-Type': 'application/json' } }) })
   await assert.rejects(oversized.request('/api/pi/sessions/history'), error => error.kind === 'response-too-large')
   for (const code of ['invalid_history_cursor', 'invalid_history_request', 'raw_private_error']) {
@@ -70,6 +85,17 @@ async function controllerCases() {
   h = harness(); await h.timers.advance(0); h.noteRecent(['created_during_read']); h.calls[0].resolve(page(['old'])); await flush()
   assert.equal(h.store.getState().changed, 'unverified', 'A post-read recent snapshot is never silently acknowledged as pre-read evidence')
   const acknowledge = h.refresh(); h.calls[1].resolve(page(['created_during_read', 'old'])); await acknowledge; assert.equal(h.store.getState().changed, null); h.stop()
+
+  h = harness(); await h.timers.advance(0); assert.deepEqual(h.calls[0].view, { archived: 'exclude', sort: 'newest' })
+  h.calls[0].resolve(page(['active'])); await flush(); h.query('kept'); h.view({ archived: 'only' }); assert.equal(h.store.getState().query, 'kept')
+  await h.timers.advance(0); assert.equal(h.calls.length, 2, 'A new view cancels the pending search debounce and reads once')
+  assert.deepEqual([h.calls[1].q, h.calls[1].view], ['kept', { archived: 'only', sort: 'newest' }]); assert.equal(h.store.getState().rows.length, 0)
+  h.view({ sort: 'name' }); assert.equal(h.calls[1].signal.aborted, true); await h.timers.advance(0)
+  h.calls[1].resolve(page(['stale_view'])); await flush(); assert.equal(h.store.getState().rows.length, 0, 'A stale view never lands')
+  assert.deepEqual(h.calls[2].view, { archived: 'only', sort: 'name' }); h.calls[2].resolve(page(['archived_one'])); await flush()
+  assert.equal(h.store.getState().rows[0].id, 'archived_one'); h.view({ archived: 'only' }); await h.timers.advance(0); assert.equal(h.calls.length, 3, 'An unchanged view reads nothing')
+  h.noteRecent(['brand_new']); assert.equal(h.store.getState().changed, null, 'The Archived view never offers new chats')
+  h.stop(); assert.deepEqual([h.store.getState().archived, h.store.getState().sort], ['exclude', 'newest'])
 
   h = harness(); await h.timers.advance(0); h.query('A'); assert.equal(h.calls[0].signal.aborted, true)
   await h.timers.advance(250); h.query('B'); await h.timers.advance(250); h.query('A'); await h.timers.advance(250)
@@ -124,9 +150,10 @@ async function controllerCases() {
 function componentCases() {
   const source = fs.readFileSync(path.join(root, 'src/components/gateway/chats-workspace.tsx'), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  let state = { query: 'kept search', rows: [], pending: 'initial', error: null, loaded: false, nextCursor: null, changed: null, setQuery: () => {}, refresh: () => {}, older: () => {} }, tree
+  let state = { query: 'kept search', rows: [], pending: 'initial', error: null, loaded: false, nextCursor: null, changed: null, archived: 'exclude', sort: 'newest', setQuery: () => {}, setView: () => {}, refresh: () => {}, older: () => {} }, tree, chosen = []
+  const selection = { active: false, count: 0, total: 0, all: false, some: false, has: id => chosen.includes(id), toggle: () => {}, setAll: () => {}, start: () => {}, stop: () => {} }
   const jsx = (type, props) => ({ type, props }), module = { exports: {} }
-  new Function('require', 'module', 'exports', code)(name => name === 'react/jsx-runtime' ? { jsx, jsxs: jsx } : name === 'zustand' ? { useStore: (_, select) => select({ sessionIds: [] }) } : name === './use-chat-directory' ? { useChatDirectory: () => state } : new Proxy({}, { get: (_, property) => property }), module, module.exports)
+  new Function('require', 'module', 'exports', code)(name => name === 'react/jsx-runtime' ? { jsx, jsxs: jsx } : name === 'zustand' ? { useStore: (_, select) => select({ sessionIds: [] }) } : name === './use-chat-directory' ? { useChatDirectory: () => state } : name === 'react' ? { useState: value => [value, () => {}] } : name.endsWith('/list-selection') ? { useListSelection: () => selection } : new Proxy({}, { get: (_, property) => property }), module, module.exports)
   const find = type => { const matches = []; function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === type) matches.push(node); [node.props?.children].flat(Infinity).forEach(visit) }; visit(tree); return matches }
   const render = () => { tree = module.exports.GatewayChatsWorkspace({ conversationState: {}, sourcePrivacy: {} }) }
   for (const patch of [{}, { pending: null, error: 'read' }, { loaded: true, error: null, rows: [row('a')], nextCursor: cursor('a') }, { pending: 'refresh' }, { pending: null, error: 'refresh' }]) {
@@ -137,6 +164,20 @@ function componentCases() {
   const footer = find('ListCard')[0].props.footer, footerButtons = []
   ;(function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === 'Button') footerButtons.push(node); [node.props?.children].flat(Infinity).forEach(visit) })(footer)
   assert.ok(footerButtons.some(button => button.props.children === 'Load older' && !button.props['aria-disabled']))
+  const card = () => find('ListCard')[0].props, mount = chatNames => { tree = module.exports.GatewayChatsWorkspace({ conversationState: {}, sourcePrivacy: {}, chatNames }) }
+  const bulk = () => { const found = []; (function visit(node) { if (!node || typeof node !== 'object') return; if (node.type === 'Button') found.push(node); [node.props?.children].flat(Infinity).forEach(visit) })(card().bulkActions); return found }
+  state = { ...state, rows: [row('a')], nextCursor: null }; mount(undefined)
+  assert.equal(card().selection, undefined, 'Without the chat writes client the list cannot select'); assert.ok(!find('ListLine')[0].props.actions)
+  mount({}); assert.equal(card().selection, selection); assert.equal(card().label, 'Search chats'); assert.deepEqual(card().sort.options.map(option => option.value), ['newest', 'oldest', 'name'])
+  assert.deepEqual([card().filters].flat().map(chip => [chip.props.children, chip.props.active]), [['Active', true], ['Archived', false], ['All', false]])
+  assert.equal(find('ListLine')[0].props.actions.type, 'ListLineMenu'); assert.equal(find('ListLine')[0].props.badge, undefined)
+  assert.equal(bulk().length, 1); assert.equal(bulk()[0].props.disabled, true, 'Nothing picked, nothing to archive')
+  chosen = ['a']; mount({}); assert.equal(bulk()[0].props.disabled, false)
+  state = { ...state, archived: 'include', rows: [{ ...row('a'), archivedAt: row('a').createdAt }, row('b')] }; mount({})
+  assert.deepEqual(bulk().map(button => button.props.disabled), [true, false], 'In All, Archive acts on active picks and Restore on archived ones')
+  assert.equal(find('ListLine')[0].props.badge, 'Archived'); assert.equal(find('ListLine')[1].props.badge, undefined)
+  state = { ...state, archived: 'only', rows: [], query: '' }; mount({})
+  assert.equal(card().emptyTitle, 'No archived chats'); assert.equal(card().emptyAction, undefined)
 }
-async function main() { await clientCases(); await controllerCases(); componentCases(); console.log('Paged chat directory parser/transport, query/cursor generations, page retention, evidence ordering, privacy/lifetime/deadline and mounted collection tests passed.') }
+async function main() { await clientCases(); await controllerCases(); componentCases(); console.log('Paged chat directory parser/transport, query/cursor generations, page retention, evidence ordering, privacy/lifetime/deadline and mounted collection, archive, sort and selection tests passed.') }
 main().catch(error => { console.error(error); process.exitCode = 1 })

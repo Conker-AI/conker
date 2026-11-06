@@ -11,6 +11,7 @@ import { createFakeCalls } from './fake-gateway-calls'
 import { createFakeChatAnswers } from './fake-gateway-chat-answers'
 import { createFakeChatReviews } from './fake-gateway-chat-reviews'
 import { createFakeChatNames } from './fake-gateway-chat-names'
+import { createFakeHistory } from './fake-gateway-history'
 import { createFakeChatContext } from './fake-gateway-chat-context'
 import { createFakeChatSummary } from './fake-gateway-chat-summary'
 import { createFakeSetup } from './fake-gateway-setup'
@@ -20,6 +21,7 @@ import { createFakeTerminal } from './fake-gateway-terminal'
 import { createFakeRuntimes } from './fake-gateway-runtimes'
 import { createFakeStatus } from './fake-gateway-status'
 import { createFakeTeams } from './fake-gateway-teams'
+import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 
@@ -124,6 +126,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   const chatStore: FakeChatStore = { sessions, nextId, contexts: new Map() }
   const chatHandles = [createFakeChatAnswers(now, fail, chatStore), createFakeChatReviews(now, fail, chatStore), createFakeChatNames(now, fail, chatStore), createFakeChatContext(now, fail, chatStore), createFakeChatSummary(now, fail, chatStore)]
   const sessionRow = (item: Session) => ({ id: item.id, parent_id: null, title: item.title, status: 'open', created_at: item.created_at, closed_at: null, summary: null })
+  const history = createFakeHistory(now, fail, chatStore, sessionRow)
   const tools = [
     { id: 'calendar.read', name: 'Read calendar', description: 'Reads events from your calendar for a date range.', inputs: [{ name: 'from', type: 'date', required: true }, { name: 'to', type: 'date', required: true }] },
     { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
@@ -164,6 +167,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
   const { handle: jobsHandle, jobs } = createFakeJobs(now, fail, () => ++counter)
   const teamsHandle = createFakeTeams(now, fail, () => ++counter)
+  const libraryHandle = createFakeLibrary(now, fail)
   const statusHandle = createFakeStatus(now, iso, fail)
   const sessionSettings = new Map<string, Json>()
   const memory = { configured: true, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] }
@@ -312,18 +316,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (method === 'GET' && path === '/api/pi/sessions' && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'sessions') fail(503)
     const terminalHandled = terminalHandle(path, method, options)
     if (terminalHandled !== undefined) return terminalHandled
-    if (method === 'GET' && path === '/api/pi/sessions/history') {
-      if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'history') fail(503)
-      const q = String(options.query?.q ?? '').trim().toLowerCase(), limit = Number(options.query?.limit ?? 50)
-      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(q)))].map(value => value.toString(16).padStart(2, '0')).join('')
-      const sorted = [...sessions].sort((a, b) => b.created_at - a.created_at || b.id.localeCompare(a.id))
-      const cursor = options.query?.cursor
-      const anchor = cursor === undefined ? null : sorted.find(row => `h1.${digest}.${row.id}` === cursor)
-      if (cursor !== undefined && !anchor) throw new GatewayError('http', 422, undefined, 'invalid_history_cursor')
-      const matches = sorted.filter(row => (!q || row.title.toLowerCase().includes(q) || row.summary?.toLowerCase().includes(q)) && (!anchor || row.created_at < anchor.created_at || row.created_at === anchor.created_at && row.id < anchor.id))
-      const page = matches.slice(0, limit)
-      return { schemaVersion: 1, results: page.map(row => ({ ...sessionRow(row), title: [...row.title].slice(0, 300).join(''), summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null, content_status: 'available', title_truncated: [...row.title].length > 300, summary_truncated: [...row.summary ?? ''].length > 400 })), next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null }
-    }
+    const historyHandled = await history(path, method, options)
+    if (historyHandled !== undefined) return historyHandled
     if (method === 'GET' && path === '/api/pi/sessions') return { results: [...sessions].sort((a, b) => b.created_at - a.created_at).slice(0, 200).map(session => {
       const row = sessionRow(session)
       // Search deliberately keeps its earlier data so the real UI's stale-result mask is exercised.
@@ -555,6 +549,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     for (const handle of chatHandles) { const handled = handle(path, method, options); if (handled !== undefined) return handled }
     const teamsHandled = teamsHandle(path, method, options)
     if (teamsHandled !== undefined) return teamsHandled
+    const libraryHandled = libraryHandle(path, method, options)
+    if (libraryHandled !== undefined) return libraryHandled
     const setupHandledModels = setupHandle(path, method, options)
     if (setupHandledModels !== undefined) return setupHandledModels
     const runtimesHandled = runtimesHandle(path, method, options)

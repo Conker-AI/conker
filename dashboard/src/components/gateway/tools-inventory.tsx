@@ -1,10 +1,12 @@
 import { InlineDetails, OverlayBody } from '@/components/design-system/overlays'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Plus, RefreshCw } from 'lucide-react'
-import { PageHeader, WorkspaceAction, CollectionLoading, CollectionPanel, CollectionRow, CollectionSection } from '@/components/design-system/primitives'
+import { Plus, RefreshCw, Wrench } from 'lucide-react'
+import { PageHeader, WorkspaceAction, CollectionLoading } from '@/components/design-system/primitives'
+import { ListCard, ListLine } from '@/components/design-system/list-card'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
+import { byName, useListView } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
 import type { GatewayControlClient, ToolInventory } from '@/lib/gateway/control'
 import { plainStatus } from './plain-status'
@@ -13,6 +15,11 @@ import { NewToolDialog } from './new-tool-dialog'
 import { NotRunnableByHand, ToolRunPanel } from './tool-run'
 import { workflowTool } from '@/lib/tool-run'
 import { useChangeRequests } from '@/components/inbox/change-requests'
+
+// Getters keep the compare helpers out of module load, so a harness that stubs imports can still
+// load this file without building a real sorter; `useListView` reads them only while sorting.
+const TOOL_SORTS = { name: { label: 'Name', compare: byName((tool: ToolInventory['results'][number]) => tool.name || 'Untitled tool') } }
+const TOOL_TEXT = (tool: ToolInventory['results'][number]) => [tool.name, tool.description]
 
 export function GatewayToolsInventory({ client }: { client: GatewayControlClient }) {
   const [value, setValue] = useState<ToolInventory | null>(null)
@@ -42,7 +49,8 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
       <details className="text-sm text-muted-foreground"><summary className="cursor-pointer font-medium">More details</summary><code className="mt-2 block break-all text-xs">{selected.id}</code></details>
     </div></OverlayBody>
   </InlineDetails>
-  const shown = selected && rows.some(tool => tool.id === selected.id)
+  const view = useListView(rows, { text: TOOL_TEXT, sorts: TOOL_SORTS })
+  const shown = selected && view.rows.some(tool => tool.id === selected.id)
   return <GatewayPageFrame className="space-y-4">
     <PageHeader actionsOnly title="Tools" description="Actions and workflows this workspace can offer right now." density="compact" actions={<><WorkspaceAction iconOnly aria-label="Refresh tools" title="Refresh tools" disabled={!value && !error} onClick={() => { setValue(null); setError(''); setRevision(v => v + 1) }}><RefreshCw aria-hidden="true" /></WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=mcp" />}>MCP servers</WorkspaceAction><WorkspaceAction render={<Link to="/tools?view=drafts" />}>Tool drafts</WorkspaceAction><WorkspaceAction keepVisible onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</WorkspaceAction></>} />
     <DescribeTool requests={requests} />
@@ -50,9 +58,14 @@ export function GatewayToolsInventory({ client }: { client: GatewayControlClient
     {!value && !error && <CollectionLoading label="Checking available tools…" />}
     {value && value.status !== 'ok' && <p role="status" className="text-sm text-muted-foreground">{value.status === 'not_configured' ? 'Tools are not set up yet.' : `Tools are ${plainStatus(value.status).toLocaleLowerCase()}. This does not mean your tool list is empty.`}</p>}
     {value?.status === 'ok' && <>
-      <CollectionPanel count={rows.length} unit="tools" emptyTitle="No tools available here" emptyDescription={'The tool service is reachable, but this workspace does not currently have tools available.'}>
-        <CollectionSection title="Available"><ul>{rows.map(tool => <CollectionRow key={tool.id} to={selected?.id === tool.id ? '/tools' : `/tools?tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details} leading={<IdentityMark brand={serviceIn(tool.name, tool.description)} kind="tool" name={tool.name} />} title={tool.name || 'Untitled tool'} description={<span className="truncate">{tool.description || 'No description supplied.'}</span>} trailing={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}</ul></CollectionSection>
-      </CollectionPanel>
+      <ListCard count={view.rows.length} unit={view.rows.length === 1 ? 'tool' : 'tools'}
+        query={view.query} onQueryChange={view.setQuery} label="Search tools" placeholder="Search tools" sort={view.sort}
+        emptyTitle={view.query.trim() ? 'No matching tools' : 'No tools available here'}
+        emptyDescription={view.query.trim() ? 'Try other words.' : 'The tool service is reachable, but this workspace does not currently have tools available.'} icon={<Wrench />}>
+        {view.rows.map(tool => <ListLine key={tool.id} to={selected?.id === tool.id ? '/tools' : `/tools?tool=${encodeURIComponent(tool.id)}`} expanded={selected?.id === tool.id} details={selected?.id === tool.id && details}
+          icon={<IdentityMark brand={serviceIn(tool.name, tool.description)} kind="tool" name={tool.name} />} title={tool.name || 'Untitled tool'}
+          sub={<span className="truncate">{tool.description || 'No description supplied.'}</span>} meta={tool.inputs.length === 1 ? '1 input' : `${tool.inputs.length} inputs`} />)}
+      </ListCard>
       {params.get('tool') && !selected && <p role="status" className="text-sm text-muted-foreground">This tool is no longer available here.</p>}
       {/* A linked tool hidden by the search still opens, below the list. */}
       {selected && !shown && details}

@@ -4,10 +4,14 @@ import { GatewayError } from './transport'
 export type HistoryChat = {
   id: string; parentId: string | null; title: string; status: 'open' | 'forked' | 'closed' | 'forgotten'
   createdAt: string; closedAt: string | null; summaryPreview: string | null
-  forgotten: boolean; titleTruncated: boolean; summaryTruncated: boolean
+  forgotten: boolean; titleTruncated: boolean; summaryTruncated: boolean; archivedAt: string | null
 }
 export type HistoryPage = { rows: HistoryChat[]; nextCursor: string | null }
-export type HistoryQuery = { q?: string; cursor?: string; limit?: number; signal?: AbortSignal }
+export const historyArchived = ['exclude', 'only', 'include'] as const
+export const historySorts = ['newest', 'oldest', 'name'] as const
+export type HistoryArchived = typeof historyArchived[number]
+export type HistorySort = typeof historySorts[number]
+export type HistoryQuery = { q?: string; cursor?: string; limit?: number; archived?: HistoryArchived; sort?: HistorySort; signal?: AbortSignal }
 const identifier = /^[A-Za-z0-9_-]{1,128}$/
 const cursorPattern = /^h1\.[a-f0-9]{64}\.[A-Za-z0-9_-]{1,128}$/
 const bad = (): never => { throw new GatewayError('invalid-response') }
@@ -25,7 +29,7 @@ function chat(value: unknown): HistoryChat {
   const title = text(row.title, 300), summaryPreview = row.summary_preview === null ? null : text(row.summary_preview, 400)
   const forgotten = row.content_status === 'forgotten'
   if (forgotten !== (row.status === 'forgotten') || forgotten && (title !== '' || summaryPreview !== null || row.title_truncated || row.summary_truncated) || summaryPreview === null && row.summary_truncated) return bad()
-  return { id: id(row.id), parentId: row.parent_id === null ? null : id(row.parent_id), title, status: row.status as HistoryChat['status'], createdAt: date(row.created_at), closedAt: row.closed_at === null ? null : date(row.closed_at), summaryPreview, forgotten, titleTruncated: row.title_truncated, summaryTruncated: row.summary_truncated }
+  return { id: id(row.id), parentId: row.parent_id === null ? null : id(row.parent_id), title, status: row.status as HistoryChat['status'], createdAt: date(row.created_at), closedAt: row.closed_at === null ? null : date(row.closed_at), summaryPreview, forgotten, titleTruncated: row.title_truncated, summaryTruncated: row.summary_truncated, archivedAt: row.archived_at === undefined || row.archived_at === null ? null : date(row.archived_at) }
 }
 export function parseHistoryPage(value: unknown, limit = 50): HistoryPage {
   const page = object(value)
@@ -35,9 +39,9 @@ export function parseHistoryPage(value: unknown, limit = 50): HistoryPage {
   return { rows, nextCursor: page.next_cursor as string | null }
 }
 export function createGatewayHistoryClient(auth: Pick<GatewayAuthClient, 'request'>) {
-  return { async list({ q = '', cursor, limit = 50, signal }: HistoryQuery = {}): Promise<HistoryPage> {
-    if (typeof q !== 'string' || [...q].length > 200 || q.includes('\0') || /[\uD800-\uDFFF]/u.test(q) || !Number.isInteger(limit) || limit < 1 || limit > 50 || cursor !== undefined && !cursorPattern.test(cursor)) throw new GatewayError('validation')
-    const page = parseHistoryPage(await auth.request('/api/pi/sessions/history', { signal, query: { limit, ...(q.trim() ? { q: q.trim() } : {}), ...(cursor ? { cursor } : {}) } }), limit)
+  return { async list({ q = '', cursor, limit = 50, archived = 'exclude', sort = 'newest', signal }: HistoryQuery = {}): Promise<HistoryPage> {
+    if (!historyArchived.includes(archived) || !historySorts.includes(sort) || typeof q !== 'string' || [...q].length > 200 || q.includes('\0') || /[\uD800-\uDFFF]/u.test(q) || !Number.isInteger(limit) || limit < 1 || limit > 50 || cursor !== undefined && !cursorPattern.test(cursor)) throw new GatewayError('validation')
+    const page = parseHistoryPage(await auth.request('/api/pi/sessions/history', { signal, query: { limit, ...(q.trim() ? { q: q.trim() } : {}), ...(cursor ? { cursor } : {}), ...(archived !== 'exclude' ? { archived } : {}), ...(sort !== 'newest' ? { sort } : {}) } }), limit)
     if (cursor && page.nextCursor === cursor) return bad()
     return page
   } }
