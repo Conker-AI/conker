@@ -14,7 +14,7 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.20.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| Pi and the Gateway | 0.21.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
 | ToolGate | 0.13.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.8.1 | Memory with sources; its AI through Pi |
 | SystemGate | 0.5.1 | Read-only view of the machine |
@@ -42,7 +42,7 @@ tests, but not yet exercised end to end on an installed stack.
 | **Cron jobs** | The owner's instructions run by the AI with tools, on a schedule, an event or a webhook; workflows drafted from words | Local stack, 23 October: offers appear in the Inbox. Drafting needs a larger model than a 3B CPU model |
 | **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
 | **Projects, agents, teams** | Projects with sources, agent profiles with their own toolkits, teams | Built |
-| **Lists** | Every list (chats, agents, projects, artifacts, cron jobs, teams, skills, MCP tools, tools, tool drafts, imported sessions) can be searched and sorted; lists with a write action also filter, select many and archive, pause or turn off in bulk, with one Undo | Built; checked in the preview at phone and desktop, light and dark, 6 November. Archiving chats needs the next Pi release (Pi #179) |
+| **Lists** | Every list (chats, agents, projects, artifacts, cron jobs, teams, skills, MCP tools, tools, tool drafts, imported sessions) can be searched and sorted; lists with a write action also filter, select many and archive, pause or turn off in bulk, with one Undo | Built; checked in the preview at phone and desktop, light and dark, 6 November. Archiving chats needs Pi 0.21.0 |
 | **Calls and voice** | Voice turns in a call | Built; needs a configured speech service |
 | **Phone app** | Add Conker to the home screen (its icon, a fast start, a plain offline page); on a phone a chat fills the screen, the composer stays above the keyboard, and the back arrow or a swipe right returns to Chats | Built; checked in a phone-sized browser with the keyboard simulated. Installing needs Pi's gateway to allow the web manifest (`manifest-src 'self'`); not yet tried on a real phone |
 
