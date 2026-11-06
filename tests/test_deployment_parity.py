@@ -74,6 +74,8 @@ def test_both_layouts_enable_workers_but_decision_packaging_is_explicit(tmp_path
     assert 'PI_SCHEDULER_ENABLED: "true"' in root
     assert ubuntu["pi"]["PI_PROPOSALS_ENABLED"] == "true"
     assert ubuntu["pi"]["PI_SCHEDULER_ENABLED"] == "true"
+    assert 'PI_SUPERVISED: "true"' in root
+    assert ubuntu["pi"]["PI_SUPERVISED"] == "true"
     assert "decisions" in manifest["services"]
     assert "PI_DECISION_URL: ${PI_DECISION_URL:-}" in root
     assert "PI_DECISION_KEY: ${PI_DECISION_KEY:-}" in root
