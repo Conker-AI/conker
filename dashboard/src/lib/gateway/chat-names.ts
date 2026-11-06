@@ -25,6 +25,8 @@ const chatOutput = z.object({
   }).strict(),
 }).strict()
 
+const archiveResult = z.object({ sessions: z.array(sessionId).min(1).max(100), archived: z.boolean() }).strict()
+
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const result = schema.safeParse(value)
   if (!result.success) throw new GatewayError(input ? 'validation' : 'invalid-response')
@@ -56,6 +58,15 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
       return parse(chatName, await auth.request(`${path(sessionId)}/title/auto`, {
         method: 'POST',
         body: { expected_revision: parse(revision, expectedRevision, true) },
+      }))
+    },
+
+    /** Archive or restore up to 100 chats at once; one missing chat changes nothing (404). */
+    async archive(sessionIds: string[], archived: boolean) {
+      const ids = parse(z.array(sessionId).min(1).max(100), [...new Set(sessionIds)], true)
+      return parse(archiveResult, await auth.request('/api/control/pi/sessions/archive', {
+        method: 'POST',
+        body: { sessions: ids, archived: parse(z.boolean(), archived, true) },
       }))
     },
 
