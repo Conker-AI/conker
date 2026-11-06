@@ -7,14 +7,14 @@ import { GatewayPageFrame } from './page-frame'
 import { InlineDetails, OverlayBody, TaskDialogContent } from '@/components/design-system/overlays'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { runBulk } from '@/components/design-system/list-bulk'
 import { GatewayActivityMutationError, createTaskRequestId, type GatewayActivityClient, type GatewayActivityEvent, type GatewayActivityRun, type GatewayTask, type GatewayTaskStatus } from '@/lib/gateway/activity'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import { gatewayError } from '@/lib/gateway/transport'
 import { GatewayTaskEditor, GatewayTaskReview } from './activity-forms'
 import { GatewayEventDetails, GatewayRunDetails, GatewayTaskDetails } from './activity-details'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
-import { GatewayEventsTable, GatewayRunsTable, GatewayTasksTable } from './activity-tables'
+import { GatewayEventsTable, GatewayRunsTable, GatewayTasksTable, type TaskFilter } from './activity-tables'
 import { activityListReadStatus, draftFromTask, forgetActivityDrafts, isTerminalTask, maskForgottenTask, reviewDraftKey, taskDraftKey, taskStatusLabels, taskTitle, visibleReferenceRuns, type ActivityListRead, type ActivityMutation, type GatewayActivityWorkspaceState, type ReferenceRunsState } from './activity-state'
 import { maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 
@@ -36,7 +36,7 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
   const [loading, setLoading] = useState(false), [error, setError] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<GatewayTask | null>(null), [selectedRun, setSelectedRun] = useState<GatewayActivityRun | null>(null)
   const [selectionPending, setSelectionPending] = useState(false), [selectionError, setSelectionError] = useState<string | null>(null)
-  const [filter, setFilter] = useState('active')
+  const [filter, setFilter] = useState<TaskFilter>('active')
   const [referenceRuns, setReferenceRuns] = useState<ReferenceRunsState>({ sessionId: null, runs: [], cursor: null, pending: false, error: null })
   const mounted = useRef(false), controllers = useRef(new Set<AbortController>()), generations = useRef<Record<string, number>>({})
   const busy = retained.mutation?.phase === 'pending'
@@ -169,7 +169,6 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
   const select = useCallback((kind: 'task' | 'run' | 'event', id: string) => {
     setParams(previous => { const next = new URLSearchParams(previous); for (const key of ['task', 'run', 'event']) next.delete(key); next.set('tab', kind === 'task' ? 'tasks' : kind === 'run' ? 'runs' : 'events'); next.set(kind, id); return next })
   }, [setParams])
-  const openTask = useCallback((task: GatewayTask) => select('task', task.id), [select])
   const openRun = useCallback((run: GatewayActivityRun) => select('run', run.id), [select])
   const openEvent = useCallback((event: GatewayActivityEvent) => select('event', event.id), [select])
   function closeDetails() { setParams(previous => { const next = new URLSearchParams(previous); for (const key of ['task', 'run', 'event']) next.delete(key); return next }) }
@@ -248,7 +247,15 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
     void mutate({ ...mutation, notFound: false, checked: false, phase: 'pending' }, signal => client.createTask(input, { signal }))
   }
   const recovery = retained.mutation && retained.mutation.phase !== 'pending' ? <div className="space-y-3 rounded-lg border p-4"><p className="text-sm font-medium">{retained.mutation.phase === 'conflict' ? 'This change was not accepted' : 'Task change result unknown'}</p><p className="text-xs leading-5 text-muted-foreground">Further task changes are blocked until the current task is checked. Nothing will be repeated automatically. Available drafts are retained.</p>{retained.mutation.requestId && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer font-medium">Technical details</summary><p className="mt-1 break-all">Request {retained.mutation.requestId}</p></details>}<div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={selectionPending} onClick={() => void reconcile()}>Check current task</Button>{retained.mutation.kind === 'create' && retained.mutation.phase === 'unknown' && retained.mutation.notFound && retained.mutation.input && !forgottenIds.includes(retained.mutation.input.sessionId) && <Button variant="outline" size="sm" disabled={selectionPending} onClick={retryCreation}>Retry same creation request</Button>}{retained.mutation.checked && <><Button variant="outline" size="sm" onClick={() => state.setState({ dialog: null })}>View current task</Button><Button variant="outline" size="sm" className="h-auto min-h-(--control-height-sm) whitespace-normal" onClick={acceptCurrentRecord}>Keep current task and discard change</Button></>}</div></div> : null
-  const filteredTasks = safeTasks.filter(task => filter === 'all' || (filter === 'archived' ? !!task.archivedAt : !task.archivedAt && (filter === 'history' ? isTerminalTask(task) : !isTerminalTask(task))))
+  // Bulk Archive/Restore: one write per task with its own revision; the list's toast offers Undo.
+  async function archiveMany(items: GatewayTask[], archived: boolean, undo = true) {
+    if (!items.length || state.getState().mutation) return
+    const done = await runBulk(items, item => request(signal => client.archiveTask(item.id, { expectedRevision: item.revision, archived }, { signal })),
+      { done: count => `${count} ${count === 1 ? 'task' : 'tasks'} ${archived ? 'archived' : 'restored'}`, failed: archived ? 'Some tasks were not archived' : 'Some tasks were not restored' },
+      undo ? saved => void archiveMany(saved, !archived, false) : undefined)
+    if (mounted.current) for (const task of done) mergeTask(task)
+  }
+  const taskLink = (task: GatewayTask) => { const next = new URLSearchParams(params); for (const key of ['task', 'run', 'event']) next.delete(key); next.set('tab', 'tasks'); next.set('task', task.id); return `?${next}` }
   const cursor = tab === 'tasks' ? taskCursor : tab === 'runs' ? runCursor : eventCursor
   const availableDialog = dialog?.kind === 'create' || dialogTask?.contentStatus === 'available'
 
@@ -264,7 +271,7 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
       {selectionPending ? <OverlayBody><p role="status">Loading details…</p></OverlayBody> : selectionError ? <OverlayBody><p role="alert" className="text-sm text-destructive-foreground">{selectionError}</p><Button variant="outline" onClick={() => { if (taskId) void loadSelection(taskId, 'task'); else if (runId) void loadSelection(runId, 'run') }}>Retry read</Button></OverlayBody> : taskId && safeSelectedTask?.id === taskId ? <GatewayTaskDetails task={safeSelectedTask} workDisabled={dispatchBlocked || !!retainedTaskId && retainedTaskId !== safeSelectedTask.id} workNotice={retainedTaskId && retainedTaskId !== safeSelectedTask.id ? 'Another task request is saved. Open Conversations to review or discard it first.' : undefined} onWork={() => onWork(safeSelectedTask)} feedback={<>{retained.error && <p role="alert" className="text-sm text-destructive-foreground">{retained.error}</p>}{recovery}</>} disabled={!!retained.mutation} onEdit={() => openEdit(safeSelectedTask)} onReview={status => openReview(safeSelectedTask, status)} onArchive={() => void mutate({ key: `archive:${safeSelectedTask.id}`, taskId: safeSelectedTask.id, revision: safeSelectedTask.revision, kind: 'archive', phase: 'pending' }, signal => client.archiveTask(safeSelectedTask.id, { expectedRevision: safeSelectedTask.revision, archived: !safeSelectedTask.archivedAt }, { signal }))} /> : runId && selectedRun?.id === runId ? <GatewayRunDetails run={selectedRun} usage={<TurnUsageDisclosure key={selectedRun.id} client={runtime} turnId={selectedRun.id} sessionId={selectedRun.sessionId} sourcePrivacy={sourcePrivacy} active={active} refreshKey={`${selectedRun.status}:${selectedRun.endedAt}`} />} /> : selectedEvent ? <GatewayEventDetails event={selectedEvent} /> : <OverlayBody><p className="text-sm text-muted-foreground">These details are not available in the loaded page. Load more or clear the selection.</p></OverlayBody>}
     </InlineDetails>
     {listStatus === 'ready' && <>
-      {tab === 'tasks' && <GatewayTasksTable tasks={filteredTasks} onOpen={openTask} filters={<Select value={filter} onValueChange={value => { if (value !== null) setFilter(value) }} items={[{ value: "active", label: "Active tasks" }, { value: "history", label: "Completed / cancelled" }, { value: "archived", label: "Archived tasks" }, { value: "all", label: "All loaded tasks" }]}><SelectTrigger aria-label="Task lifecycle filter" className="w-52"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active tasks</SelectItem><SelectItem value="history">Completed / cancelled</SelectItem><SelectItem value="archived">Archived tasks</SelectItem><SelectItem value="all">All loaded tasks</SelectItem></SelectContent></Select>} emptyAction={!tasks.length && !loading ? <Button disabled={!!retained.mutation} onClick={openCreate}>Create a task</Button> : undefined} />}
+      {tab === 'tasks' && <GatewayTasksTable tasks={safeTasks} filter={filter} onFilter={setFilter} linkFor={taskLink} onArchive={archiveMany} disabled={!!retained.mutation} emptyAction={!loading ? <Button disabled={!!retained.mutation} onClick={openCreate}>Create a task</Button> : undefined} />}
       {tab === 'runs' && (runs.length ? <GatewayRunsTable runs={runs} onOpen={openRun} /> : !loading && <CollectionEmpty title="No saved attempts" description="Attempts appear here when the connected service supplies a saved activity record. Creating a task does not create an attempt." action={<Button variant="outline" render={<Link to="/chats" />}>Open conversations</Button>} />)}
       {tab === 'events' && (events.length ? <GatewayEventsTable events={events} onOpen={openEvent} /> : !loading && <CollectionEmpty title="No saved activity" description="Task changes and supplied activity appear here without authored content." />)}
       {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(true, cursor)}>Load more {tab === 'runs' ? 'attempts' : tab}</Button>}
