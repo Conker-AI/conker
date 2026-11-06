@@ -66,6 +66,7 @@ const nextRun = (job: GatewayJob) => {
   return job.nextAt
 }
 const jobCount = (count: number) => count === 1 ? 'schedule' : `${count} schedules`
+const jobsToast = (count: number) => count === 1 ? '1 job' : `${count} jobs`
 
 function JobDetail({ initial, control, onChanged }: { initial: GatewayJob; control: GatewayControlClient; onChanged: (job: GatewayJob) => void }) {
   const [job, setJob] = useState(initial), [runs, setRuns] = useState<GatewayScheduledRun[] | null>(null)
@@ -173,7 +174,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
     if (!items.length) return
     setWriting(true)
     try {
-      const done = await runBulk(items, job => control.jobs.setEnabled(job.id, enabled, job.revision), { done: count => `${jobCount(count)} ${enabled ? 'resumed' : 'paused'}`, failed: enabled ? 'Some schedules were not resumed' : 'Some schedules were not paused' },
+      const done = await runBulk(items, job => control.jobs.setEnabled(job.id, enabled, job.revision), { done: count => `${jobsToast(count)} ${enabled ? 'resumed' : 'paused'}`, failed: enabled ? 'Some schedules were not resumed' : 'Some schedules were not paused' },
         undo ? results => void setEnabled(results, !enabled, false) : undefined)
       setJobs(current => current?.map(job => done.find(item => item.id === job.id) ?? job) ?? current)
       selection.stop()
