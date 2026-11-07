@@ -7,7 +7,8 @@ import { ReferenceSection } from "@/components/reference-section"
 import { RunStepDetail } from "@/components/conversation-run"
 import { ConversationContext } from "@/components/conversation-context"
 import { safeAnswerUrl } from "@/lib/rich-answer"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Dialog } from "@/components/ui/dialog"
+import { TaskDialogContent } from "@/components/design-system"
 import { useConker } from "@/lib/api/store"
 import { useConversationWorkspace, type RailView } from "@/lib/conversation-workspace"
 import type { Session } from "@/lib/api/models"
@@ -215,5 +216,6 @@ export function ConversationRail({ session, children }: { session: Session; chil
     </div>
     {body}
   </aside> : null
-  return <Sheet open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><SheetContent id="conversation-reference" data-home="reference" data-view={rail?.view} finalFocus={() => { restoreFocus(); return false }} className="w-full gap-0 overflow-hidden bg-background text-foreground sm:max-w-sm"><SheetHeader className="shrink-0 border-b bg-card pr-12"><SheetTitle className="flex items-center gap-2 text-sm"><Icon className="size-4 text-muted-foreground" />{title}</SheetTitle><SheetDescription className="truncate text-xs" title={context}>{context}</SheetDescription>{selected && <p className={`line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}</SheetHeader>{body}</SheetContent></Sheet>
+  // Below 1280px the same view opens in the shared centered dialog (owner: no side windows).
+  return <Dialog open={!!rail?.open} onOpenChange={open => { if (!open) close(session.id) }}><TaskDialogContent id="conversation-reference" data-home="reference" data-view={rail?.view} finalFocus={() => { restoreFocus(); return false }} title={<span className="flex items-center gap-2 text-base"><Icon className="size-4 text-muted-foreground" aria-hidden="true" />{title}</span>} description={<span className="block truncate" title={context}>{context}</span>}>{selected && <p className={`shrink-0 border-b px-5 py-3 line-clamp-2 ${note}`}>{selected.redacted ? "Redacted message" : selected.text}</p>}{body}</TaskDialogContent></Dialog>
 }
