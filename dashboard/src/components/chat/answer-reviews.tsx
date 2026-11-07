@@ -50,8 +50,8 @@ function VoteButtons({ message, family, tools }: Props & { family: Family }) {
     try { setVotes(await reviews.vote(sessionId, rootId, message.id, pressed[vote] ? 'clear' : vote)) } catch (failure) { setError(chatFeatureMessage(failure)) } finally { setBusy(false) }
   }
   return <>
-    <Button type="button" variant={pressed.up ? 'secondary' : 'ghost'} size="icon-sm" aria-label="Good answer" title="Good answer" aria-pressed={pressed.up} disabled={busy || tools.disabled} onClick={() => void send('up')}><ThumbsUp /></Button>
-    <Button type="button" variant={pressed.down ? 'secondary' : 'ghost'} size="icon-sm" aria-label="Bad answer" title="Bad answer" aria-pressed={pressed.down} disabled={busy || tools.disabled} onClick={() => void send('down')}><ThumbsDown /></Button>
+    <Button type="button" variant={pressed.up ? 'secondary' : 'ghost'} size="icon" className="size-(--control-height-sm)" aria-label="Good answer" title="Good answer" aria-pressed={pressed.up} disabled={busy || tools.disabled} onClick={() => void send('up')}><ThumbsUp /></Button>
+    <Button type="button" variant={pressed.down ? 'secondary' : 'ghost'} size="icon" className="size-(--control-height-sm)" aria-label="Bad answer" title="Bad answer" aria-pressed={pressed.down} disabled={busy || tools.disabled} onClick={() => void send('down')}><ThumbsDown /></Button>
     {error && <p role="alert" className="w-full text-xs text-destructive">{error}</p>}
   </>
 }
@@ -68,7 +68,7 @@ function JudgePopover({ message, family, tools }: Props & { family: Family }) {
   }
   const latest = items?.[0]
   return <Popover onOpenChange={setOpen}>
-    <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Judge versions" title="Judge versions" />}><Scale /></PopoverTrigger>
+    <PopoverTrigger render={<Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm)" aria-label="Judge versions" title="Judge versions" />}><Scale /></PopoverTrigger>
     <PopoverContent align="start" className={popup}>
       <div className="space-y-3">
         {items === null && !error && <p className="text-xs text-muted-foreground">Loading…</p>}
@@ -99,7 +99,7 @@ function FactCheckPopover({ message, tools }: Props) {
   }
   const latest = items?.[0]
   return <Popover onOpenChange={setOpen}>
-    <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Check facts" title="Check facts" />}><ShieldCheck /></PopoverTrigger>
+    <PopoverTrigger render={<Button type="button" variant="ghost" size="icon" className="size-(--control-height-sm)" aria-label="Check facts" title="Check facts" />}><ShieldCheck /></PopoverTrigger>
     <PopoverContent align="start" className={popup}>
       <div className="space-y-3">
         {items === null && !error && <p className="text-xs text-muted-foreground">Loading…</p>}
@@ -140,7 +140,7 @@ function FactCheckPopover({ message, tools }: Props) {
 export function AnswerReviews({ message, tools }: Props) {
   const { family } = message
   // Keyed by version, so switching versions never shows another version's votes or checks.
-  return <div key={message.id} className="flex max-w-full flex-wrap items-center gap-1">
+  return <div key={message.id} className="contents">
     {family && <VoteButtons message={message} family={family} tools={tools} />}
     {family && family.versions.length >= 2 && <JudgePopover message={message} family={family} tools={tools} />}
     <FactCheckPopover message={message} tools={tools} />

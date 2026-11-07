@@ -96,18 +96,18 @@ export function AnswerVersions({ message, tools }: { message: ChatMessage; tools
 
   return <>
     {family && position >= 0 && versions.length >= 2 && <span className="flex items-center gap-0.5">
-      <Button variant="ghost" size="icon-xs" aria-label="Previous version" title="Previous version" disabled={locked || position <= 0} onClick={() => step(-1)}>
+      <Button variant="ghost" size="icon" className="size-(--control-height-sm)" aria-label="Previous version" title="Previous version" disabled={locked || position <= 0} onClick={() => step(-1)}>
         <ChevronLeft aria-hidden />
       </Button>
       <span className="min-w-8 text-center tabular-nums" aria-live="polite">{position + 1}/{versions.length}</span>
-      <Button variant="ghost" size="icon-xs" aria-label="Next version" title="Next version" disabled={locked || position >= versions.length - 1} onClick={() => step(1)}>
+      <Button variant="ghost" size="icon" className="size-(--control-height-sm)" aria-label="Next version" title="Next version" disabled={locked || position >= versions.length - 1} onClick={() => step(1)}>
         <ChevronRight aria-hidden />
       </Button>
     </span>}
 
     <span ref={anchor} className="inline-flex">
       <Menu onOpenChange={open => { if (open) void loadModels() }}>
-        <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label="Answer again" title="Answer again" disabled={locked} />}>
+        <MenuTrigger render={<Button variant="ghost" size="icon" className="size-(--control-height-sm)" aria-label="Answer again" title="Answer again" disabled={locked} />}>
           <RefreshCw aria-hidden />
         </MenuTrigger>
         <MenuPopup align="start">
@@ -151,6 +151,6 @@ export function AnswerVersions({ message, tools }: { message: ChatMessage; tools
       </PopoverContent>
     </Popover>
 
-    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    {error && <p role="alert" className="basis-full text-xs text-destructive">{error}</p>}
   </>
 }
