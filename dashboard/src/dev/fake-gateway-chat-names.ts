@@ -5,10 +5,11 @@ import type { FakeChatStore } from './fake-gateway'
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
 type TitleRecord = { revision: number; source: 'owner' | 'auto' | null; modelId: string | null }
-type OutputRecord = { revision: number; format: string; length: string; language: string }
+type OutputRecord = { revision: number; format: string; length: string; language: string; level: string }
 
 const FORMATS = ['auto', 'text', 'list', 'table', 'document', 'code', 'json']
 const LENGTHS = ['auto', 'short', 'medium', 'long']
+const LEVELS = ['auto', 'strict', 'plain', 'normal', 'deep']
 const LANGUAGE = /^(auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3})$/
 
 const refuse = (status: number, code?: ConstructorParameters<typeof GatewayError>[3]) => new GatewayError('http', status, undefined, code)
@@ -23,9 +24,9 @@ export function createFakeChatNames(_now: () => number, fail: (status: number) =
   const titles = new Map<string, TitleRecord>()
   const outputs = new Map<string, OutputRecord>()
   const titleOf = (id: string) => titles.get(id) ?? titles.set(id, { revision: 0, source: null, modelId: null }).get(id)!
-  const outputOf = (id: string) => outputs.get(id) ?? outputs.set(id, { revision: 0, format: 'auto', length: 'auto', language: 'auto' }).get(id)!
+  const outputOf = (id: string) => outputs.get(id) ?? outputs.set(id, { revision: 0, format: 'auto', length: 'auto', language: 'auto', level: 'auto' }).get(id)!
   const titleBody = (title: string, record: TitleRecord) => ({ revision: record.revision, title, source: record.source, modelId: record.modelId })
-  const outputBody = (record: OutputRecord) => ({ revision: record.revision, output: { format: record.format, length: record.length, language: record.language } })
+  const outputBody = (record: OutputRecord) => ({ revision: record.revision, output: { format: record.format, length: record.length, language: record.language, level: record.level } })
 
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     const match = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/(title\/auto|title|output)$/)
@@ -65,14 +66,15 @@ export function createFakeChatNames(_now: () => number, fail: (status: number) =
 
     if (resource === 'output' && method === 'POST') {
       const record = outputOf(id)
-      const output = body.output as { format?: unknown; length?: unknown; language?: unknown } | undefined
-      const format = output?.format ?? 'auto', length = output?.length ?? 'auto', language = output?.language ?? 'auto'
+      const output = body.output as { format?: unknown; length?: unknown; language?: unknown; level?: unknown } | undefined
+      const format = output?.format ?? 'auto', length = output?.length ?? 'auto', language = output?.language ?? 'auto', level = output?.level ?? 'auto'
       // Pi's request model is strict: a bad value is its generic 422, which carries no code.
       if (!output || typeof output !== 'object' || typeof body.expected_revision !== 'number'
         || typeof format !== 'string' || !FORMATS.includes(format) || typeof length !== 'string' || !LENGTHS.includes(length)
+        || typeof level !== 'string' || !LEVELS.includes(level)
         || typeof language !== 'string' || language.length > 35 || !LANGUAGE.test(language)) throw refuse(422)
       if (body.expected_revision !== record.revision) throw refuse(409, 'revision_conflict')
-      const next: OutputRecord = { revision: record.revision + 1, format, length, language }
+      const next: OutputRecord = { revision: record.revision + 1, format, length, language, level }
       outputs.set(id, next)
       return outputBody(next)
     }

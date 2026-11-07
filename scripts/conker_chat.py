@@ -26,6 +26,9 @@ def register(commands):
     )
     output_set.add_argument("--length", choices=["auto", "short", "medium", "long"])
     output_set.add_argument(
+        "--level", choices=["auto", "strict", "plain", "normal", "deep"]
+    )
+    output_set.add_argument(
         "--language", help="auto or a language tag such as ru or en-GB"
     )
 
@@ -62,13 +65,13 @@ def operation(args, config, request):
     if args.operation == "show":
         return pi_call(request, config, path)
     if args.command == "output":
-        if not (args.format or args.length or args.language):
-            raise ValueError("Give --format, --length or --language.")
+        if not (args.format or args.length or args.language or args.level):
+            raise ValueError("Give --format, --length, --language or --level.")
         if args.language and not re.fullmatch(LANGUAGE, args.language):
             raise ValueError("Use auto or a language tag such as ru or en-GB.")
         current = pi_call(request, config, path)
         output = dict(current["output"])
-        for key in ("format", "length", "language"):
+        for key in ("format", "length", "language", "level"):
             if getattr(args, key):
                 output[key] = getattr(args, key)
         return pi_call(

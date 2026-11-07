@@ -366,6 +366,35 @@
           "keywords": ["openui", "buttons", "charts", "forms", "generative ui"]
         },
         {
+          "id": "chats.language_level",
+          "title": "Language level",
+          "description": "How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it.",
+          "type": "select",
+          "default": "normal",
+          "tier": "basic",
+          "scope": "global",
+          "effect": "next-turn",
+          "options": [
+            {
+              "value": "strict",
+              "label": "Strict"
+            },
+            {
+              "value": "plain",
+              "label": "Plain"
+            },
+            {
+              "value": "normal",
+              "label": "Normal"
+            },
+            {
+              "value": "deep",
+              "label": "Deep"
+            }
+          ],
+          "keywords": ["language", "simple", "plain english", "simplified", "detail", "reading level", "style", "ste"]
+        },
+        {
           "id": "chats.tool_calls",
           "title": "Tool calls",
           "description": "How tool calls show in a chat.",

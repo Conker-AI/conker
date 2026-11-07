@@ -14,6 +14,7 @@ const chatName = z.object({
 
 const outputFormat = z.enum(['auto', 'text', 'list', 'table', 'document', 'code', 'json'])
 const outputLength = z.enum(['auto', 'short', 'medium', 'long'])
+const outputLevel = z.enum(['auto', 'strict', 'plain', 'normal', 'deep'])
 const language = z.string().max(35).regex(/^(auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3})$/)
 
 const chatOutput = z.object({
@@ -22,6 +23,8 @@ const chatOutput = z.object({
     format: outputFormat,
     length: outputLength,
     language: language,
+    // An older Pi does not send it; missing reads as auto.
+    level: outputLevel.optional(),
   }).strict(),
 }).strict()
 
@@ -84,8 +87,15 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
       return parse(chatOutput, await auth.request(`${path(sessionId)}/output`, { signal }))
     },
 
-    async saveOutput(sessionId: string, output: { format: OutputFormat; length: OutputLength; language: string }, expectedRevision: number) {
-      const checked = parse(chatOutput.shape.output, { format: output.format, length: output.length, language: output.language }, true)
+    async saveOutput(sessionId: string, output: { format: OutputFormat; length: OutputLength; language: string; level?: ChatOutputLevel }, expectedRevision: number) {
+      // `auto` is Pi's own default and an older Pi refuses unknown keys, so it is not sent.
+      const sent = output.level && output.level !== 'auto' ? { ...output, level: output.level } : output
+      const checked = parse(chatOutput.shape.output, {
+        format: sent.format,
+        length: sent.length,
+        language: sent.language,
+        ...(sent.level && sent.level !== 'auto' ? { level: sent.level } : {}),
+      }, true)
       return parse(chatOutput, await auth.request(`${path(sessionId)}/output`, {
         method: 'POST',
         body: { expected_revision: parse(revision, expectedRevision, true), output: checked },
@@ -97,5 +107,6 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
 export type ChatNamesClient = ReturnType<typeof createChatNamesClient>
 export type OutputFormat = z.infer<typeof outputFormat>
 export type OutputLength = z.infer<typeof outputLength>
+export type ChatOutputLevel = z.infer<typeof outputLevel>
 export type ChatName = z.infer<typeof chatName>
 export type ChatOutput = z.infer<typeof chatOutput>

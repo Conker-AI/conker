@@ -93,13 +93,43 @@ test('auto-name with a stale revision gives revision_conflict', async () => {
   await refused(client.autoName(A, 0), error => assert.equal(error.code, 'revision_conflict'))
 })
 test('output of a new chat is all auto at revision 0', async () => {
-  assert.deepEqual(await client.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto' } })
+  assert.deepEqual(await client.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto' } })
 })
-test('saveOutput stores all three fields and bumps the revision', async () => {
+test('saveOutput stores all fields and bumps the revision', async () => {
   const result = await client.saveOutput(A, { format: 'list', length: 'short', language: 'ru' }, 0)
-  assert.deepEqual(result, { revision: 1, output: { format: 'list', length: 'short', language: 'ru' } })
+  assert.deepEqual(result, { revision: 1, output: { format: 'list', length: 'short', language: 'ru', level: 'auto' } })
   assert.deepEqual(await client.output(A), result)
-  assert.deepEqual((await client.saveOutput(A, { format: 'json', length: 'long', language: 'en-GB' }, 1)).output, { format: 'json', length: 'long', language: 'en-GB' })
+  assert.deepEqual((await client.saveOutput(A, { format: 'json', length: 'long', language: 'en-GB' }, 1)).output, { format: 'json', length: 'long', language: 'en-GB', level: 'auto' })
+})
+test('level round-trips through the fake', async () => {
+  const saved = await client.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'plain' }, 2)
+  assert.equal(saved.output.level, 'plain')
+  assert.deepEqual(await client.output(A), saved)
+  assert.equal((await client.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'deep' }, saved.revision)).output.level, 'deep')
+})
+test('saveOutput sends exactly the fields it is given; auto level is not sent', async () => {
+  const seen = []
+  const reply = level => ({ revision: 3, output: level === 'auto' ? { format: 'text', length: 'short', language: 'en', level: 'auto' } : { format: 'text', length: 'short', language: 'en', level } })
+  const spy = createChatNamesClient({ request: async (_path, options = {}) => { seen.push(options.body); return reply('auto') } })
+  await spy.saveOutput(A, { format: 'text', length: 'short', language: 'en', extra: 'x' }, 2)
+  assert.deepEqual(seen, [{ expected_revision: 2, output: { format: 'text', length: 'short', language: 'en' } }])
+  seen.length = 0
+  await spy.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'auto' }, 2)
+  assert.deepEqual(seen, [{ expected_revision: 2, output: { format: 'text', length: 'short', language: 'en' } }], 'auto is Pi\'s default and an older Pi refuses unknown keys')
+  seen.length = 0
+  const strictSpy = createChatNamesClient({ request: async (_path, options = {}) => { seen.push(options.body); return reply('strict') } })
+  await strictSpy.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'strict' }, 2)
+  assert.deepEqual(seen, [{ expected_revision: 2, output: { format: 'text', length: 'short', language: 'en', level: 'strict' } }])
+})
+test('the fake stores the default level auto when none is sent', async () => {
+  const result = await client.saveOutput(A, { format: 'list', length: 'long', language: 'fr' }, 4)
+  assert.equal(result.output.level, 'auto')
+})
+test('the fake refuses an invalid level with the generic 422', () => {
+  assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 5, output: { format: 'auto', length: 'auto', language: 'auto', level: 'simple' } } }),
+    error => error instanceof GatewayError && error.status === 422 && error.code === undefined)
+  assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 5, output: { format: 'auto', length: 'auto', language: 'auto', level: 2 } } }),
+    error => error instanceof GatewayError && error.status === 422 && error.code === undefined)
 })
 test('output settings are per chat', async () => {
   assert.equal((await client.output(B)).revision, 0)
@@ -108,19 +138,14 @@ test('a stale saveOutput gives revision_conflict', async () => {
   await refused(client.saveOutput(A, { format: 'text', length: 'medium', language: 'fr' }, 0), error => { assert.equal(error.code, 'revision_conflict'); assert.equal(error.status, 409) })
 })
 test('saveOutput refuses language "English", unknown enums and a long code without a request', async () => {
-  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'English' }, 2), 'validation')
-  await noRequest(client.saveOutput(A, { format: 'poem', length: 'short', language: 'en' }, 2), 'validation')
-  await noRequest(client.saveOutput(A, { format: 'text', length: 'huge', language: 'en' }, 2), 'validation')
-  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'en-' + 'x'.repeat(40) }, 2), 'validation')
-})
-test('saveOutput sends exactly the three fields', async () => {
-  const seen = []
-  const spy = createChatNamesClient({ request: async (_path, options = {}) => { seen.push(options.body); return { revision: 3, output: { format: 'text', length: 'short', language: 'en' } } } })
-  await spy.saveOutput(A, { format: 'text', length: 'short', language: 'en', extra: 'x' }, 2)
-  assert.deepEqual(seen, [{ expected_revision: 2, output: { format: 'text', length: 'short', language: 'en' } }])
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'English' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'poem', length: 'short', language: 'en' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'huge', language: 'en' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'en-' + 'x'.repeat(40) }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'simple' }, 5), 'validation')
 })
 test('the fixture answers a bad output value with the generic 422 (no code)', () => {
-  assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 2, output: { language: 'English' } } }),
+  assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 5, output: { language: 'English' } } }),
     error => error instanceof GatewayError && error.status === 422 && error.code === undefined)
 })
 test('a malformed id is refused before any request', async () => {
@@ -149,7 +174,7 @@ test('an unknown chat is a plain HTTP 404 and other paths are not answered', () 
 })
 test('each fixture instance keeps its own state (no globals)', async () => {
   const other = createChatNamesClient(authFor(createFakeChatNames(() => 1, fail, makeStore())))
-  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto' } })
+  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto' } })
   assert.equal((await other.title(A)).revision, 0)
 })
 
