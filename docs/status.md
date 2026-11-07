@@ -14,8 +14,8 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.22.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
-| ToolGate | 0.14.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
+| Pi and the Gateway | 0.23.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| ToolGate | 0.15.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.8.1 | Memory with sources; its AI through Pi |
 | SystemGate | 0.5.1 | Read-only view of the machine |
 | Embeddings | 0.1.6 | Text to vectors |

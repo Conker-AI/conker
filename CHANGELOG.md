@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Outside content cannot pose as the owner.** Pi 0.23.0 and ToolGate 0.15.0 are pinned. Invisible and bidi
+  characters are removed from everything the AI reads (memory, files, webhooks, tool and MCP results, team
+  handoffs), and MCP results are fenced as outside content. After a turn reads outside content, "remember" always
+  becomes an Inbox request for the owner, and a team role no longer passes what it read on as the owner's request.
+  Research refuses lookalike web addresses and hosts on public malware and phishing lists.
+
 - **Web search through SearXNG works.** Conker's SearXNG now answers ToolGate's JSON searches (the image's defaults
   refused them with 403, so the fallback search never worked). Its settings come with the release
   (`deploy/searxng/settings.yml`) and its secret is made fresh at each start, so there is no key to store.
@@ -542,8 +548,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.22.0 |
-| ToolGate | v0.14.0 |
+| Pi | v0.23.0 |
+| ToolGate | v0.15.0 |
 | MemoryGate | v0.8.1 |
 | SystemGate | v0.5.1 |
 | Embeddings | v0.1.6 |
