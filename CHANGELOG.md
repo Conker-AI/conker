@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Chat Trash and the language level ship.** Pi 0.24.0 is pinned: Delete moves a chat to Trash with Undo
+  and Restore, and "Delete forever" finishes in the background; a chat's output settings carry a language level
+  (Strict, Plain, Normal, Deep or Auto). ToolGate 0.15.1, MemoryGate 0.8.2, SystemGate 0.5.2 and Embeddings 0.1.7 are
+  rebuilds that take Debian's zlib fix (CVE-2026-76844, CVE-2026-85091).
+
 - **Outside content cannot pose as the owner.** Pi 0.23.0 and ToolGate 0.15.0 are pinned. Invisible and bidi
   characters are removed from everything the AI reads (memory, files, webhooks, tool and MCP results, team
   handoffs), and MCP results are fenced as outside content. After a turn reads outside content, "remember" always
@@ -548,8 +553,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.23.0 |
-| ToolGate | v0.15.0 |
-| MemoryGate | v0.8.1 |
-| SystemGate | v0.5.1 |
-| Embeddings | v0.1.6 |
+| Pi | v0.24.0 |
+| ToolGate | v0.15.1 |
+| MemoryGate | v0.8.2 |
+| SystemGate | v0.5.2 |
+| Embeddings | v0.1.7 |

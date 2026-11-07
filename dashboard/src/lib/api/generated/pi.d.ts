@@ -2060,6 +2060,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trash Chats */
+        post: operations["trash_chats_sessions_trash_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{session_id}/title": {
         parameters: {
             query?: never;
@@ -6986,6 +7003,12 @@ export interface components {
              * @default auto
              */
             language: string;
+            /**
+             * Level
+             * @default auto
+             * @enum {string}
+             */
+            level: "auto" | "strict" | "plain" | "normal" | "deep";
         };
         /** OwnerPreferences */
         OwnerPreferences: {
@@ -8181,6 +8204,13 @@ export interface components {
             note: string;
             /** Completed Criterion Ids */
             completed_criterion_ids?: string[];
+        };
+        /** Trash */
+        Trash: {
+            /** Sessions */
+            sessions: string[];
+            /** Trashed */
+            trashed: boolean;
         };
         /** TurnRequest */
         TurnRequest: {
@@ -13337,6 +13367,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["pi__conversation__archive__Archive"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trash_chats_sessions_trash_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Trash"];
             };
         };
         responses: {
