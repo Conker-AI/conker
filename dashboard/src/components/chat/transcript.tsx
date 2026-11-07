@@ -55,6 +55,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
       {(['copy', 'link'] as const).filter(kind => message.actions[kind].availability !== 'unsupported').map(kind => <MessageActionButton key={kind} label={message.actions[kind].availability === 'disabled' ? `${labels[kind]}: ${message.actions[kind].reason}` : labels[kind]} disabled={message.actions[kind].availability !== 'enabled'} onClick={() => void invoke(message.actions[kind], kind)}>{kind === 'copy' ? <Copy /> : <Link />}</MessageActionButton>)}
       {message.export && message.content.kind === 'text' && <AnswerExportMenu text={message.content.text} run={message.export.run} onStatus={setExported} />}
       <MessageContextRule message={message} />
+      {message.role === 'assistant' && <AnswerTools message={message} />}
       {moreActions.length > 0 && <DropdownMenu>
         <DropdownMenuTrigger render={<Button size="icon" variant="ghost" aria-label="More message actions" />}><MoreHorizontal /></DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuGroup>{moreActions.map(kind => {
@@ -70,7 +71,6 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
       {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>}
     </div>
     <MessageContextRuleError message={message} />
-    {message.role === 'assistant' && <AnswerTools message={message} />}
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
     {exported && <p role={exported.tone === 'failed' ? 'alert' : 'status'} className={cn('mt-1 text-xs', exported.tone === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>{exported.text}</p>}
   </article>

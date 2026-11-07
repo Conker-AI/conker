@@ -8,7 +8,7 @@ import { AnswerReviews } from './answer-reviews'
 export function AnswerTools({ message }: { message: ChatMessage }) {
   const tools = useContext(AnswerToolsContext)
   if (!tools || message.content.kind !== 'text') return null
-  return <div className="mt-1 flex max-w-full flex-wrap items-center gap-1 text-xs text-muted-foreground">
+  return <div className="contents">
     <AnswerVersions message={message} tools={tools} />
     <AnswerReviews message={message} tools={tools} />
   </div>
