@@ -1,4 +1,4 @@
-import { isValidElement, useCallback, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { MoreHorizontal, Square } from 'lucide-react'
 import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
 import { SendIcon } from '@/components/icons/animated/icons'
@@ -34,20 +34,13 @@ function ComposerOverflow({ values, children }: { values: string[]; children: Re
   </Popover>
 }
 
-/** Reads the item id a registered control carries, or null for an unregistered child. */
-function itemIdOf(item: ReactNode): ComposerItemId | null {
-  if (!isValidElement<{ 'data-item'?: ComposerItemId }>(item)) return null
-  return item.props['data-item'] ?? null
-}
-
 export function ChatComposerFrame({ id, label, placeholder, value, onChange, onSend, disabled, inputRef, controls, settings, actions, feedback, input }: ComposerFrameProps) {
   const localInput = useRef<HTMLTextAreaElement>(null)
   const enterSends = useEnterSends()
   const inputEl = inputRef ?? localInput
   const [moreValues, setMoreValues] = useState<ComposerItemValues>({})
   const report = useCallback((control: ComposerItemId, next: string | null) => setMoreValues(current => withItemValue(current, control, next)), [])
-  const { settings: items, actions: bar } = splitComposerItems(settings, actions)
-  const named = itemSummary(moreValues)
+  const { items, actions: bar } = splitComposerItems(settings, actions)
   const toolbar = useRef<HTMLDivElement>(null)
   const [toolbarWidth, setToolbarWidth] = useState<number | null>(null)
   useLayoutEffect(() => {
@@ -76,12 +69,10 @@ export function ChatComposerFrame({ id, label, placeholder, value, onChange, onS
   }, [inputEl, value])
   // One ResizeObserver measures the toolbar row; an item whose FOLD_BELOW is above the measured
   // width folds into the overflow menu. Before the first measurement nothing is folded.
-  const onBar: ReactNode[] = [], folded: ReactNode[] = []
-  for (const item of items) {
-    const foldId = itemIdOf(item)
-    if (toolbarWidth !== null && foldId && foldId !== 'model' && toolbarWidth < FOLD_BELOW[foldId]) folded.push(item)
-    else onBar.push(item)
-  }
+  const isFolded = (id: ComposerItemId) => toolbarWidth !== null && id !== 'model' && toolbarWidth < FOLD_BELOW[id]
+  const onBar = items.filter(item => !isFolded(item.id)).map(item => item.node)
+  const folded = items.filter(item => isFolded(item.id)).map(item => item.node)
+  const named = itemSummary(Object.fromEntries(Object.entries(moreValues).filter(([id]) => isFolded(id as ComposerItemId))))
   return <ComposerItemContext.Provider value={report}><form aria-label="Message composer" className="@container relative min-w-0 rounded-3xl border bg-card text-card-foreground shadow-composer transition-colors focus-within:border-foreground/16" onSubmit={event => { event.preventDefault(); onSend() }}>
     {input ?? <><Label htmlFor={id} className="sr-only">{label}</Label>
     <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} enterKeyHint={enterSends ? 'send' : 'enter'} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (enterSends && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} unstyled className="block [&>textarea]:max-h-[min(16.5rem,calc(var(--app-height)*0.3+1.5rem))] [&>textarea]:min-h-16 [&>textarea]:resize-none [&>textarea]:overflow-y-auto [&>textarea]:bg-transparent [&>textarea]:px-4 [&>textarea]:pb-2 [&>textarea]:pt-4 [&>textarea]:text-base" />

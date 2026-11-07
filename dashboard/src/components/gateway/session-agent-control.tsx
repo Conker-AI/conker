@@ -37,7 +37,7 @@ export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, a
     finally { setPending(false); setSaving(false) }
   }
   return <>
-    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? cn('h-8 min-w-0 max-w-40 gap-2 px-2 font-normal text-muted-foreground', composerOutlined) : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><span className="truncate">{activeAgentName}</span><ChevronDown className="size-4 shrink-0" /></> : <Bot />}</Button>
+    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? cn('h-8 min-w-0 max-w-40 shrink gap-2 px-2 font-normal text-muted-foreground max-sm:w-9 max-sm:shrink-0 max-sm:px-0', composerOutlined) : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><Bot className="sm:hidden" /><span className="truncate max-sm:sr-only">{activeAgentName}</span><ChevronDown className="size-4 shrink-0 max-sm:hidden" /></> : <Bot />}</Button>
     <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value) }}><TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
       <OverlayBody><div className="space-y-4">
         <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">

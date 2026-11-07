@@ -26,25 +26,25 @@ export const FOLD_BELOW: Record<Exclude<ComposerItemId, 'model'>, number> = {
 const items = new WeakMap<object, ComposerItemId>()
 
 /** Registers a component as a composer item, so the frame can sort and fold it. */
-export function composerItem(component: ComponentType<unknown>, id: ComposerItemId) {
+export function composerItem<P>(component: ComponentType<P>, id: ComposerItemId) {
   items.set(component, id)
 }
 
 /** Splits the composer's settings and actions children: registered items sorted by id, the rest keeps order and keys. */
 export function splitComposerItems(settings: ReactNode, actions: ReactNode) {
-  const found: { id: ComposerItemId; node: ReactNode }[] = [], actions: ReactNode[] = []
+  const found: { id: ComposerItemId; node: ReactNode }[] = [], rest: ReactNode[] = []
   const walk = (node: ReactNode, prefix: string) => Children.toArray(node).forEach(child => {
-    if (!isValidElement<{ children?: ReactNode }>(child)) { actions.push(child); return }
+    if (!isValidElement<{ children?: ReactNode }>(child)) { rest.push(child); return }
     if (child.type === Fragment) { walk(child.props.children, `${prefix}${child.key}/`); return }
     const keyed = cloneElement(child, { key: `${prefix}${child.key}` })
     const id = items.get(child.type as object)
     if (id) found.push({ id, node: keyed })
-    else actions.push(keyed)
+    else rest.push(keyed)
   })
-  walk(settings, '')
-  walk(actions, '')
+  walk(settings, 's/')
+  walk(actions, 'a/')
   const byId = (a: { id: ComposerItemId }, b: { id: ComposerItemId }) => composerItemIds.indexOf(a.id) - composerItemIds.indexOf(b.id)
-  return { settings: found.sort(byId).map(item => item.node), actions }
+  return { items: found.sort(byId), actions: rest }
 }
 
 type Report = (id: ComposerItemId, value: string | null) => void

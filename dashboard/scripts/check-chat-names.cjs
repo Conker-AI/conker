@@ -131,6 +131,23 @@ test('the fake refuses an invalid level with the generic 422', () => {
   assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 5, output: { format: 'auto', length: 'auto', language: 'auto', level: 2 } } }),
     error => error instanceof GatewayError && error.status === 422 && error.code === undefined)
 })
+test('output settings are per chat', async () => {
+  assert.equal((await client.output(B)).revision, 0)
+})
+test('a stale saveOutput gives revision_conflict', async () => {
+  await refused(client.saveOutput(A, { format: 'text', length: 'medium', language: 'fr' }, 0), error => { assert.equal(error.code, 'revision_conflict'); assert.equal(error.status, 409) })
+})
+test('saveOutput refuses language "English", unknown enums and a long code without a request', async () => {
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'English' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'poem', length: 'short', language: 'en' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'huge', language: 'en' }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'en-' + 'x'.repeat(40) }, 5), 'validation')
+  await noRequest(client.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'simple' }, 5), 'validation')
+})
+test('the fixture answers a bad output value with the generic 422 (no code)', () => {
+  assert.throws(() => handle(`/api/control/pi/sessions/${A}/output`, 'POST', { body: { expected_revision: 5, output: { language: 'English' } } }),
+    error => error instanceof GatewayError && error.status === 422 && error.code === undefined)
+})
 test('a malformed id is refused before any request', async () => {
   for (const id of ['invalid_id', 'ses_ABCDEF0123456789', '', `${A}/x`]) {
     await noRequest(client.title(id), 'validation')
@@ -157,7 +174,7 @@ test('an unknown chat is a plain HTTP 404 and other paths are not answered', () 
 })
 test('each fixture instance keeps its own state (no globals)', async () => {
   const other = createChatNamesClient(authFor(createFakeChatNames(() => 1, fail, makeStore())))
-  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto' } })
+  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto' } })
   assert.equal((await other.title(A)).revision, 0)
 })
 

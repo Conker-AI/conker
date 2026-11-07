@@ -10,7 +10,7 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { ChatOutput, ChatOutputLevel, OutputFormat, OutputLength } from '@/lib/gateway/chat-names'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import { GatewayError } from '@/lib/gateway/transport'
-import { composerItem } from '@/components/chat/composer-items'
+import { composerItem, useComposerValue } from '@/components/chat/composer-items'
 
 const formats = [['auto', 'Auto'], ['text', 'Text'], ['list', 'List'], ['table', 'Table'], ['document', 'Document'], ['code', 'Code'], ['json', 'JSON']] as const
 const lengths = [['auto', 'Auto'], ['short', 'Short'], ['medium', 'Medium'], ['long', 'Long']] as const
@@ -93,13 +93,16 @@ export function ChatOutputControl({ control, sessionId, disabled, onChanged }: {
   const language = output && languages.some(([code]) => code === output.language) ? languages : output ? [...languages, [output.language, output.language] as const] : languages
   // Missing level (an older Pi) is auto: the owner default shows as the checked stop.
   const level = output?.level ?? 'auto'
-  const own = level !== 'auto' && level
+  const own = level === 'auto' ? null : level
   const shown = own ?? ownerLevel
   const note = levelNotes[shown]
+  const named = summary(output)
+  const changed = named !== 'Output'
+  useComposerValue('output', changed ? named : null)
 
   return <Popover onOpenChange={open => { if (open) void load() }}>
-    <PopoverTrigger render={<Button variant="ghost" size="sm" disabled={disabled} aria-label={`Output: ${summary(output)}`} title={summary(output)} className={summary(output) === 'Output' ? 'shrink-0 rounded-full text-muted-foreground' : 'shrink-0 rounded-full'} aria-pressed={summary(output) !== 'Output'} />}>
-      <AlignLeft className="size-4" /><span data-label className="sr-only">Output{summary(output) === 'Output' ? '' : `: ${summary(output)}`}</span>
+    <PopoverTrigger render={<Button variant={changed ? 'secondary' : 'ghost'} size="sm" disabled={disabled} aria-label={changed ? `Output: ${named}` : 'Output'} title={changed ? `Output: ${named}` : 'Output'} className={changed ? 'shrink-0 rounded-full' : 'shrink-0 rounded-full text-muted-foreground'} aria-pressed={changed} />}>
+      <AlignLeft className="size-4" /><span data-label className="sr-only">Output{changed ? `: ${named}` : ''}</span>
     </PopoverTrigger>
     <PopoverContent align="start" side="top" className="w-72 max-w-[calc(100vw-1rem)]">
       <div className="space-y-3">
