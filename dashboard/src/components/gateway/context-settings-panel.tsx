@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import type { ChatContextClient, ChatContextSettings, ContextItem, ContextItems, ContextPolicy } from '@/lib/gateway/chat-context'
 import { gatewayError } from '@/lib/gateway/transport'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 const defaults = { window: '128000', reserve: '4096', other: '0' }
 type Section = 'settings' | 'rules' | 'decisions' | 'questions' | 'add'
@@ -25,7 +26,7 @@ function Group({ title, description, error, children }: { title: string; descrip
       <p className="text-xs text-muted-foreground">{description}</p>
     </div>
     {children}
-    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    {error && <ChatFeatureError text={error} />}
   </section>
 }
 
@@ -103,7 +104,7 @@ export function ContextSettingsPanel({ client, sessionId, disabled, onChanged }:
   if (!settings || !items) {
     return loadError
       ? <div className="space-y-2">
-        <p role="alert" className="text-xs text-destructive">{loadError}</p>
+        <ChatFeatureError text={loadError} />
         <Button variant="outline" size="sm" onClick={() => { setLoadError(null); void reload() }}>Try again</Button>
       </div>
       : <p className="text-sm text-muted-foreground">Loading context settings…</p>

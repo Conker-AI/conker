@@ -124,6 +124,8 @@ export function createFakeChatReviews(now: () => number, fail: (status: number) 
     const request = body(options, { request_id: () => true, model_id: isModel })
     const answer = chatOf(sessionId).messages.find(item => item.id === messageId)
     if (!answer || answer.role !== 'assistant') return fail(404)
+    // `conker-fake-fail` = fact-check shows the refusal a model choice fixes.
+    if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'fact-check') throw refusal(503, 'not_configured')
     if (answer.content.length < 40) throw refusal(409, 'no_sources')
     const key = `${sessionId}:${messageId}`, list = factChecksByMessage.get(key) ?? []
     factChecksByMessage.set(key, list)

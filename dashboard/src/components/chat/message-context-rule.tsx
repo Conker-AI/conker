@@ -5,6 +5,7 @@ import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from '@/c
 import { AnswerToolsContext, MessageRulesContext, useMessageRules } from '@/lib/chat/answer-tools-context'
 import type { ChatMessage } from '@/lib/chat/contract'
 import { canRuleMessage, messageRuleOf, messageRules, ruleLabel, type MessageRule } from '@/lib/chat/message-context-rules'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 /** Loads the open chat's message rules once for every message below it. Renders only its children when the chat has no gateway tools. */
 export function MessageRulesProvider({ sessionId, reloadKey, children }: { sessionId: string; reloadKey: string; children: ReactNode }) {
@@ -40,5 +41,5 @@ export function MessageContextRule({ message }: { message: ChatMessage }) {
 export function MessageContextRuleError({ message }: { message: ChatMessage }) {
   const rules = useContext(MessageRulesContext)
   if (!rules?.error || rules.error.messageId !== message.id) return null
-  return <p role="alert" className="mt-1 text-xs text-destructive">{rules.error.text}</p>
+  return <ChatFeatureError text={rules.error.text} className="mt-1" />
 }
