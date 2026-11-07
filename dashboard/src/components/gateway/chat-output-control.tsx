@@ -11,6 +11,7 @@ import type { ChatOutput, ChatOutputLevel, OutputFormat, OutputLength } from '@/
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import { GatewayError } from '@/lib/gateway/transport'
 import { composerItem, useComposerValue } from '@/components/chat/composer-items'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 const formats = [['auto', 'Auto'], ['text', 'Text'], ['list', 'List'], ['table', 'Table'], ['document', 'Document'], ['code', 'Code'], ['json', 'JSON']] as const
 const lengths = [['auto', 'Auto'], ['short', 'Short'], ['medium', 'Medium'], ['long', 'Long']] as const
@@ -121,7 +122,7 @@ export function ChatOutputControl({ control, sessionId, disabled, onChanged }: {
               {own && <Button variant="link" size="sm" className="h-auto p-0 text-xs" disabled={saving || loading} onClick={() => void change({ level: 'auto' })}>Use my default</Button>}
             </div>
           </> : null}
-        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+        {error && <ChatFeatureError text={error} />}
       </div>
     </PopoverContent>
   </Popover>

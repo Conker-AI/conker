@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogDescripti
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import { GatewayError } from '@/lib/gateway/transport'
 import type { ChatSummary, ChatSummaryClient, Compaction, SummaryDraft } from '@/lib/gateway/chat-summary'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 type Slot = 'edit' | 'fold' | 'restore' | 'fork'
 
@@ -112,7 +113,7 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
         <Button size="sm" disabled={locked || !summary || text === (summary.summary ?? '')} onClick={save}>Save</Button>
         <Button size="sm" variant="outline" disabled={locked || !summary} onClick={makeDraft}><Sparkles aria-hidden="true" />Draft with AI</Button>
       </div>
-      {errors.edit && <p role="alert" className="text-xs text-destructive">{errors.edit}</p>}
+      {errors.edit && <ChatFeatureError text={errors.edit} />}
     </div>
 
     {draft && <div className="space-y-2">
@@ -120,7 +121,7 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
       <Button size="sm" variant="outline" disabled={locked || !hasSettings || text.trim() === ''} onClick={fold}>Fold these messages</Button>
       {!hasSettings && <p className="text-xs text-muted-foreground">{needsSettings}</p>}
     </div>}
-    {errors.fold && <p role="alert" className="text-xs text-destructive">{errors.fold}</p>}
+    {errors.fold && <ChatFeatureError text={errors.fold} />}
 
     {folded > 0 && <p className="text-xs text-muted-foreground">{folded === 1 ? '1 message folded' : `${folded} messages folded`} into the summary.</p>}
 
@@ -136,7 +137,7 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
             {version.summary && <p className="line-clamp-2 whitespace-pre-line break-words">{version.summary}</p>}
           </li>)}
         </ul>
-        {errors.restore && <p role="alert" className="mt-2 text-xs text-destructive">{errors.restore}</p>}
+        {errors.restore && <ChatFeatureError text={errors.restore} className="mt-2" />}
       </CollapsibleContent>
     </Collapsible>}
 
@@ -150,7 +151,7 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
         <AlertDialogHeader>
           <AlertDialogTitle>Continue in a new chat?</AlertDialogTitle>
           <AlertDialogDescription>This chat closes and a new one starts from the summary and the pinned messages.</AlertDialogDescription>
-          {errors.fork && <p role="alert" className="text-xs text-destructive">{errors.fork}</p>}
+          {errors.fork && <ChatFeatureError text={errors.fork} />}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="outline" disabled={busy} />}>Cancel</AlertDialogClose>

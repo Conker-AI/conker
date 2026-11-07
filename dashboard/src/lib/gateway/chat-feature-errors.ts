@@ -9,7 +9,7 @@ const words: Record<ChatFeatureErrorCode, string> = {
   turn_pending: 'Conker is still answering in this chat. Try again when it finishes.',
   session_closed: 'This chat is closed.',
   helpers_off: 'Helper models are off for this chat.',
-  not_configured: 'No model is set up for this. Choose one in Settings > Models.',
+  not_configured: 'No model is set up for this.',
   unavailable: 'The model for this is not available right now.',
   empty: 'There is nothing to work with yet.',
   invalid_title: 'Use 1 to 60 characters for the name.',
@@ -58,7 +58,7 @@ export function chatFeatureMessage(error: unknown): string {
 }
 
 const models = '/settings?tab=models'
-/** Where each fixable refusal is fixed; the toast shows it as a button. */
+/** Where each fixable refusal is fixed: a button on toasts, a link on inline error lines. */
 const fixes: Partial<Record<ChatFeatureErrorCode, FailureFix>> = {
   not_configured: { label: 'Choose a model', to: models },
   unknown_model: { label: 'Open Models', to: models },
@@ -69,4 +69,10 @@ const fixes: Partial<Record<ChatFeatureErrorCode, FailureFix>> = {
 export function chatFeatureFix(error: unknown): FailureFix | undefined {
   const code = gatewayError(error).code
   return code ? (fixes as Partial<Record<string, FailureFix>>)[code] : undefined
+}
+
+/** The fix for a line chatFeatureMessage wrote, for places that keep only the text. */
+export function chatFeatureTextFix(text: string): FailureFix | undefined {
+  const code = (Object.keys(fixes) as ChatFeatureErrorCode[]).find(code => words[code] === text)
+  return code && fixes[code]
 }

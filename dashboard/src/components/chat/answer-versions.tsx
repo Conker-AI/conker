@@ -10,6 +10,7 @@ import type { AnswerTools } from '@/lib/chat/answer-tools-context'
 import type { ChatMessage } from '@/lib/chat/contract'
 import type { AnswerModel } from '@/lib/gateway/chat-answers'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 const MOST_COMPARED = 3
 
@@ -151,6 +152,6 @@ export function AnswerVersions({ message, tools }: { message: ChatMessage; tools
       </PopoverContent>
     </Popover>
 
-    {error && <p role="alert" className="basis-full text-xs text-destructive">{error}</p>}
+    {error && <ChatFeatureError text={error} className="basis-full" />}
   </>
 }

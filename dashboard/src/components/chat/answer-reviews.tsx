@@ -9,6 +9,7 @@ import type { AnswerTools } from '@/lib/chat/answer-tools-context'
 import type { ChatMessage } from '@/lib/chat/contract'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import type { FactCheck, Judgement, Votes } from '@/lib/gateway/chat-reviews'
+import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 type Props = { message: ChatMessage; tools: AnswerTools }
 type Family = NonNullable<ChatMessage['family']>
@@ -52,7 +53,7 @@ function VoteButtons({ message, family, tools }: Props & { family: Family }) {
   return <>
     <Button type="button" variant={pressed.up ? 'secondary' : 'ghost'} size="icon" className="size-(--control-height-sm)" aria-label="Good answer" title="Good answer" aria-pressed={pressed.up} disabled={busy || tools.disabled} onClick={() => void send('up')}><ThumbsUp /></Button>
     <Button type="button" variant={pressed.down ? 'secondary' : 'ghost'} size="icon" className="size-(--control-height-sm)" aria-label="Bad answer" title="Bad answer" aria-pressed={pressed.down} disabled={busy || tools.disabled} onClick={() => void send('down')}><ThumbsDown /></Button>
-    {error && <p role="alert" className="w-full text-xs text-destructive">{error}</p>}
+    {error && <ChatFeatureError text={error} className="w-full" />}
   </>
 }
 
@@ -80,7 +81,7 @@ function JudgePopover({ message, family, tools }: Props & { family: Family }) {
           </li>)}
           {latest.excluded.length > 0 && <li className="text-xs text-muted-foreground">{latest.excluded.length} not scored: written by the judge's own model.</li>}
         </ul>}
-        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+        {error && <ChatFeatureError text={error} />}
         <Button type="button" size="sm" className="w-full" disabled={busy || tools.disabled || items === null} onClick={() => void run()}>{busy ? 'Judging…' : latest ? 'Judge again' : 'Judge'}</Button>
       </div>
     </PopoverContent>
@@ -129,7 +130,7 @@ function FactCheckPopover({ message, tools }: Props) {
           </ul>
           {latest.sourcesTruncated && <p className="text-xs text-muted-foreground">Some sources were too long to read in full.</p>}
         </>}
-        {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+        {error && <ChatFeatureError text={error} />}
         <Button type="button" size="sm" className="w-full" disabled={busy || tools.disabled || items === null} onClick={() => void run()}>{busy ? 'Checking…' : latest ? 'Check again' : 'Check'}</Button>
       </div>
     </PopoverContent>
