@@ -30,7 +30,7 @@ Writes check the revision and never retry automatically. Run `conker context bud
 
 `output show SESSION` - Show current output settings.
 
-`output set SESSION [--format F] [--length L] [--language TAG]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB).
+`output set SESSION [--format F] [--length L] [--language TAG] [--level L]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB). `--level` sets the answer's style: strict (short controlled sentences), plain (everyday words), normal, or deep (full detail and technical terms); `auto` follows your `chats.language_level` owner setting.
 
 ## Names
 

@@ -103,12 +103,68 @@ def test_output_set_validation_exits_without_request(invoke, capsys):
     run, calls, _, _state, _ = invoke
     assert run("output", "set", "ses_a") == 1
     assert len(calls) == 0
-    assert "Give --format, --length or --language." in capsys.readouterr().err
+    assert "Give --format, --length, --language or --level." in capsys.readouterr().err
 
     calls.clear()
     assert run("output", "set", "ses_a", "--language", "English") == 1
     assert len(calls) == 0
     assert "Use auto or a language tag" in capsys.readouterr().err
+
+
+def test_output_set_level_sends_level_and_keeps_other_keys(invoke):
+    run, calls, _, state, check_headers = invoke
+    state["responses"] = [
+        {
+            "revision": 1,
+            "output": {"format": "auto", "length": "auto", "language": "auto"},
+        },
+        {
+            "revision": 2,
+            "output": {
+                "format": "auto",
+                "length": "auto",
+                "language": "auto",
+                "level": "strict",
+            },
+        },
+    ]
+    assert run("output", "set", "ses_a", "--level", "strict") == 0
+    assert len(calls) == 2
+    check_headers(0)
+    check_headers(1)
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/output"
+    assert calls[1][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/output"
+    body = json.loads(calls[1][0].data)
+    assert body["expected_revision"] == 1
+    assert body["output"]["level"] == "strict"
+    assert body["output"]["format"] == "auto"
+    assert body["output"]["length"] == "auto"
+    assert body["output"]["language"] == "auto"
+
+
+def test_output_set_without_level_leaves_level_out_of_request(invoke):
+    run, calls, _, state, _ = invoke
+    state["responses"] = [
+        {
+            "revision": 1,
+            "output": {"format": "auto", "length": "auto", "language": "auto"},
+        },
+        {
+            "revision": 2,
+            "output": {"format": "text", "length": "auto", "language": "auto"},
+        },
+    ]
+    assert run("output", "set", "ses_a", "--format", "text") == 0
+    assert len(calls) == 2
+    body = json.loads(calls[1][0].data)
+    assert "level" not in body["output"]
+
+
+def test_output_set_refuses_invalid_level(invoke):
+    run, calls, _, _state, _ = invoke
+    with pytest.raises(SystemExit):
+        run("output", "set", "ses_a", "--level", "chatty")
+    assert calls == []
 
 
 def test_title_show_gets_title(invoke):
