@@ -368,7 +368,7 @@
         {
           "id": "chats.language_level",
           "title": "Language level",
-          "description": "How short and simple answers are: Strict uses short controlled sentences, Plain uses everyday words, Normal is the usual style, Deep gives full detail and technical terms. Each chat can change it.",
+          "description": "How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it.",
           "type": "select",
           "default": "normal",
           "tier": "basic",

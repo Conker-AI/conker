@@ -278,7 +278,7 @@ How new chats start and how chats look and behave.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Interactive answers**<br>`chats.interactive_answers` | Answers can hold tables, charts, choices to tap and short forms; Auto uses them only with hosted models. Choices: Auto, On, Off. (applies from the next message) | Auto | owner settings |
-| **Language level**<br>`chats.language_level` | How short and simple answers are: Strict uses short controlled sentences, Plain uses everyday words, Normal is the usual style, Deep gives full detail and technical terms. Each chat can change it. Choices: Strict, Plain, Normal, Deep. (applies from the next message) | Normal | owner settings |
+| **Language level**<br>`chats.language_level` | How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it. Choices: Strict, Plain, Normal, Deep. (applies from the next message) | Normal | owner settings |
 | **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
 | **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
 | **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (saved, not used yet) | Numbers in the text | owner settings |
