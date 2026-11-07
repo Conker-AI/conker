@@ -33,8 +33,8 @@ export function createChatDirectory(options: ReadTiming & {
   const available = () => started && identity !== null && identity === scope() && options.available()
   function changed(): DirectoryState['changed'] {
     const state = store.getState()
-    // Archived-only lists never hold new chats, so a new chat elsewhere is not news here.
-    const unseen = state.loaded && state.archived !== 'only' && recent && [...recent].some(id => !options.privacy.getState().sessionIds.includes(id) && !baseline?.has(id) && !state.rows.some(row => row.id === id))
+    // Archived-only and Trash lists never hold new chats, so a new chat elsewhere is not news here.
+    const unseen = state.loaded && state.archived !== 'only' && state.archived !== 'trash' && recent && [...recent].some(id => !options.privacy.getState().sessionIds.includes(id) && !baseline?.has(id) && !state.rows.some(row => row.id === id))
     return unseen ? baseline ? 'new' : 'unverified' : null
   }
   function mask(rows: HistoryChat[]) {
@@ -98,7 +98,7 @@ export function createChatDirectory(options: ReadTiming & {
       if (validDirectoryQuery(value) && available()) timer = schedule(() => { timer = undefined; void load('initial') }, 250)
       else if (validDirectoryQuery(value) && identity) store.setState({ error: 'offline' })
     },
-    /** Which chats (active, archived, all) and in what order; the search stays. */
+    /** Which chats (active, archived, all, trash) and in what order; the search stays. */
     view(next: Partial<DirectoryView>) {
       const state = store.getState(), view = { ...viewOf(), ...next }
       if (view.archived === state.archived && view.sort === state.sort) return
