@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Web search through SearXNG works.** Conker's SearXNG now answers ToolGate's JSON searches (the image's defaults
+  refused them with 403, so the fallback search never worked). Its settings come with the release
+  (`deploy/searxng/settings.yml`) and its secret is made fresh at each start, so there is no key to store.
 - **Safer agent installs and web reading.** ToolGate 0.14.0 is pinned, with its new sandbox image: before an agent
   installs a package, ToolGate refuses lookalike names (with a "did you mean"), known malware, unknown names and brand-new
   or barely used releases (the owner can trust a package by name); the package proxy hides releases younger than 7 days,

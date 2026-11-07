@@ -96,6 +96,28 @@ def test_both_layouts_mount_speech_credentials_without_exposing_them(tmp_path):
     assert "/run/secrets/speech" in recovery_layout.UBUNTU_PROFILE.excluded_mounts["pi"]
 
 
+def test_both_layouts_give_searxng_json_answers_and_a_fresh_secret(tmp_path):
+    import yaml
+
+    manifest, _ = ubuntu_deployment(tmp_path)
+    root = yaml.safe_load(root_contract())["services"]["searxng"]
+    ubuntu = manifest["services"]["searxng"]
+    settings = yaml.safe_load((ROOT / "deploy/searxng/settings.yml").read_text())
+
+    # ToolGate asks for format=json; the image's defaults answer that with 403.
+    assert "json" in settings["search"]["formats"]
+    assert "secret_key" not in settings.get("server", {})
+    assert root["entrypoint"] == ubuntu["entrypoint"]
+    assert "export SEARXNG_SECRET=$$(head -c 24 /dev/urandom" in root["entrypoint"][-1]
+    assert "./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro" in root["volumes"]
+    assert (
+        "./sources/companion/deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro"
+        in ubuntu["volumes"]
+    )
+    for profile in (recovery_layout.REPOSITORY_PROFILE, recovery_layout.UBUNTU_PROFILE):
+        assert "/etc/searxng/settings.yml" in profile.excluded_mounts["searxng"]
+
+
 def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
     manifest, environment = ubuntu_deployment(tmp_path)
     services = manifest["services"]
