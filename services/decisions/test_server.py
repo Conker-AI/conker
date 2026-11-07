@@ -84,3 +84,17 @@ def test_busy_inference_rejects_queue_then_recovers():
             worker.join(5)
         assert responses[0].status_code == 200
         assert not client.get("/health", headers=HEADERS).json()["busy"]
+
+
+def test_it_exits_when_pis_network_namespace_is_gone(tmp_path):
+    from server import watch_namespace
+    for name in ("eth0", "lo"):
+        (tmp_path / name).touch()
+    stopped = []
+    thread = watch_namespace(tmp_path, every=0.01, stop=stopped.append)
+    assert thread is not None and stopped == []
+    (tmp_path / "eth0").unlink()
+    thread.join(5)
+    assert stopped == [1]
+    (tmp_path / "lo").unlink()
+    assert watch_namespace(tmp_path, stop=stopped.append) is None

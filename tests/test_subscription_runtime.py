@@ -281,3 +281,22 @@ def test_every_platform_is_pinned_to_one_version():
     assert copied == {
         line[1:] for line in ignored.splitlines() if line.startswith("!scripts/")
     }
+
+
+def test_it_exits_when_pis_network_namespace_is_gone(tmp_path):
+    """After Pi's container restarts, this runtime is left with loopback only; it must exit so
+    Docker starts it again inside Pi's new namespace."""
+    for name in ("eth0", "lo"):
+        (tmp_path / name).touch()
+    stopped = []
+    thread = subscription_runtime.watch_namespace(tmp_path, every=0.01, stop=stopped.append)
+    assert thread is not None and thread.is_alive() and stopped == []
+    (tmp_path / "eth0").unlink()
+    thread.join(5)
+    assert stopped == [1]
+
+
+def test_without_a_container_network_nothing_is_watched(tmp_path):
+    assert subscription_runtime.watch_namespace(tmp_path / "missing", stop=pytest.fail) is None
+    (tmp_path / "lo").touch()
+    assert subscription_runtime.watch_namespace(tmp_path, stop=pytest.fail) is None

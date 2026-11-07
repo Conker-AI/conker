@@ -417,7 +417,9 @@ retried by itself. Run the check the receipt names, then decide. `conker ops` re
 directly, so it works when the helper is down, and the plain commands (`conker restart SERVICE`,
 `conker backup`) keep working without it. Restarting Pi (`conker restart pi`, the
 `services.restart` action, or `conker restart`) also restarts the services that share its network
-namespace, the Claude plan runtime and Laya, after it, so they are not left without a network.
+namespace, the Claude plan runtime and Laya, after it, so they are not left without a network. When
+Pi restarts on its own (it does to finish **Delete forever**, or after a crash), both notice they
+are left with loopback only within 2 s, exit, and Docker starts them again in Pi's new namespace.
 
 ## C · Local Windows stack
 
