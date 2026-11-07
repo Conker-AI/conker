@@ -7,8 +7,8 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count.toLoca
 
 /**
  * Delete Conker chats forever. Reads what each deletion reaches first (branches, messages), so the
- * owner confirms the exact scope Pi checks again; Pi then restarts and forgets them before it opens
- * its database again. The server asks for the password; there is no Undo.
+ * owner confirms the exact scope Pi checks again; Pi answers at once and deletes in the background
+ * once no reply is in progress. The server asks for the password; there is no Undo.
  */
 export function useChatDeleteForever(client: ChatForgetClient | undefined, onDeleted: (ids: string[]) => void) {
   const [plans, setPlans] = useState<ChatForgetPlan[] | null>(null)
@@ -31,7 +31,7 @@ export function useChatDeleteForever(client: ChatForgetClient | undefined, onDel
       setPlans(null)
       if (outcome.done.length) notifyDone(`Deleted ${plural(outcome.done.length, 'chat')} forever`)
       if (outcome.refused.length) notifyFailure(`${plural(outcome.refused.length, 'chat')} not deleted`, outcome.refused.map(item => item.detail).filter(Boolean).join(' ') || 'Conker kept them.')
-      if (outcome.waiting.length) notifyDone(`Still deleting ${plural(outcome.waiting.length, 'chat')}`, 'Conker finishes after it restarts. Refresh chats in a minute.')
+      if (outcome.waiting.length) notifyDone(`Deleting ${plural(outcome.waiting.length, 'chat')} forever`, 'Conker finishes in the background, after any reply in progress.')
       onDeleted([...outcome.done, ...outcome.waiting])
     } catch (failure) { setError(chatForgetMessage(failure)) }
     finally { running.current = false; setPending(false) }
@@ -42,7 +42,7 @@ export function useChatDeleteForever(client: ChatForgetClient | undefined, onDel
   const dialog = <ConfirmationDialog open={!!plans} onOpenChange={open => { if (!open && !pending) { setPlans(null); setError(null) } }}
     title={`Delete ${plural(plans?.length ?? 0, 'chat')} forever?`} actionLabel="Delete forever" pending={pending} error={error} onConfirm={confirm}
     description={`${plural(messages, 'message')}${branches ? ` and ${plural(branches, 'branch', 'branches')}` : ''} are removed from Conker, with the memories Conker kept from them on its own. This can’t be undone.`}>
-    <p className="text-sm text-muted-foreground">{pending ? 'Conker restarts to finish. This can take a minute.' : 'Memories you asked Conker to keep stay until you forget them in Memory. To keep a chat but hide it, archive it instead.'}</p>
+    <p className="text-sm text-muted-foreground">Memories you asked Conker to keep stay until you forget them in Memory.</p>
   </ConfirmationDialog>
   return { ask, dialog, reading }
 }

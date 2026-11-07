@@ -26,6 +26,7 @@ const chatOutput = z.object({
 }).strict()
 
 const archiveResult = z.object({ sessions: z.array(sessionId).min(1).max(100), archived: z.boolean() }).strict()
+const trashResult = z.object({ sessions: z.array(sessionId).min(1).max(100), trashed: z.boolean() }).strict()
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const result = schema.safeParse(value)
@@ -67,6 +68,15 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
       return parse(archiveResult, await auth.request('/api/control/pi/sessions/archive', {
         method: 'POST',
         body: { sessions: ids, archived: parse(z.boolean(), archived, true) },
+      }))
+    },
+
+    /** Move up to 100 chats to or out of the Trash; one missing chat changes nothing (404). */
+    async trash(sessionIds: string[], trashed: boolean) {
+      const ids = parse(z.array(sessionId).min(1).max(100), [...new Set(sessionIds)], true)
+      return parse(trashResult, await auth.request('/api/control/pi/sessions/trash', {
+        method: 'POST',
+        body: { sessions: ids, trashed: parse(z.boolean(), trashed, true) },
       }))
     },
 

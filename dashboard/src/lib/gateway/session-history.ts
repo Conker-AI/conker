@@ -4,10 +4,10 @@ import { GatewayError } from './transport'
 export type HistoryChat = {
   id: string; parentId: string | null; title: string; status: 'open' | 'forked' | 'closed' | 'forgotten'
   createdAt: string; closedAt: string | null; summaryPreview: string | null
-  forgotten: boolean; titleTruncated: boolean; summaryTruncated: boolean; archivedAt: string | null
+  forgotten: boolean; titleTruncated: boolean; summaryTruncated: boolean; archivedAt: string | null; trashedAt: string | null
 }
 export type HistoryPage = { rows: HistoryChat[]; nextCursor: string | null }
-export const historyArchived = ['exclude', 'only', 'include'] as const
+export const historyArchived = ['exclude', 'only', 'include', 'trash'] as const
 export const historySorts = ['newest', 'oldest', 'name'] as const
 export type HistoryArchived = typeof historyArchived[number]
 export type HistorySort = typeof historySorts[number]
@@ -29,7 +29,7 @@ function chat(value: unknown): HistoryChat {
   const title = text(row.title, 300), summaryPreview = row.summary_preview === null ? null : text(row.summary_preview, 400)
   const forgotten = row.content_status === 'forgotten'
   if (forgotten !== (row.status === 'forgotten') || forgotten && (title !== '' || summaryPreview !== null || row.title_truncated || row.summary_truncated) || summaryPreview === null && row.summary_truncated) return bad()
-  return { id: id(row.id), parentId: row.parent_id === null ? null : id(row.parent_id), title, status: row.status as HistoryChat['status'], createdAt: date(row.created_at), closedAt: row.closed_at === null ? null : date(row.closed_at), summaryPreview, forgotten, titleTruncated: row.title_truncated, summaryTruncated: row.summary_truncated, archivedAt: row.archived_at === undefined || row.archived_at === null ? null : date(row.archived_at) }
+  return { id: id(row.id), parentId: row.parent_id === null ? null : id(row.parent_id), title, status: row.status as HistoryChat['status'], createdAt: date(row.created_at), closedAt: row.closed_at === null ? null : date(row.closed_at), summaryPreview, forgotten, titleTruncated: row.title_truncated, summaryTruncated: row.summary_truncated, archivedAt: row.archived_at === undefined || row.archived_at === null ? null : date(row.archived_at), trashedAt: row.trashed_at === undefined || row.trashed_at === null ? null : date(row.trashed_at) }
 }
 export function parseHistoryPage(value: unknown, limit = 50): HistoryPage {
   const page = object(value)
@@ -41,7 +41,8 @@ export function parseHistoryPage(value: unknown, limit = 50): HistoryPage {
 export function createGatewayHistoryClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return { async list({ q = '', cursor, limit = 50, archived = 'exclude', sort = 'newest', signal }: HistoryQuery = {}): Promise<HistoryPage> {
     if (!historyArchived.includes(archived) || !historySorts.includes(sort) || typeof q !== 'string' || [...q].length > 200 || q.includes('\0') || /[\uD800-\uDFFF]/u.test(q) || !Number.isInteger(limit) || limit < 1 || limit > 50 || cursor !== undefined && !cursorPattern.test(cursor)) throw new GatewayError('validation')
-    const page = parseHistoryPage(await auth.request('/api/pi/sessions/history', { signal, query: { limit, ...(q.trim() ? { q: q.trim() } : {}), ...(cursor ? { cursor } : {}), ...(archived !== 'exclude' ? { archived } : {}), ...(sort !== 'newest' ? { sort } : {}) } }), limit)
+    // The Trash view lists only trashed chats whatever their archive state; Pi takes `trashed=only` instead.
+    const page = parseHistoryPage(await auth.request('/api/pi/sessions/history', { signal, query: { limit, ...(q.trim() ? { q: q.trim() } : {}), ...(cursor ? { cursor } : {}), ...(archived === 'trash' ? { trashed: 'only' } : archived !== 'exclude' ? { archived } : {}), ...(sort !== 'newest' ? { sort } : {}) } }), limit)
     if (cursor && page.nextCursor === cursor) return bad()
     return page
   } }

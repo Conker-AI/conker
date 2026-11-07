@@ -9,7 +9,7 @@ import { FilterChip, ListCard, ListLine, ListLineMenu } from '@/components/desig
 import { useListSelection } from '@/components/design-system/list-selection'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { HistoryArchived, HistoryChat, HistorySort } from '@/lib/gateway/session-history'
-import { archiveChats } from './chat-archive'
+import { archiveChats, trashChats } from './chat-archive'
 import { useChatDeleteForever } from './chat-delete-forever'
 import type { ChatForgetClient } from '@/lib/gateway/chat-forget'
 import { InlineError } from '@/components/resilience/inline-error'
@@ -24,12 +24,12 @@ import type { GatewaySourcePrivacyState } from './source-privacy'
 import { useChatDirectory } from './use-chat-directory'
 
 const sorts = [{ value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'name', label: 'Name' }] as const satisfies readonly { value: HistorySort; label: string }[]
-const shows = [{ value: 'exclude', label: 'Active' }, { value: 'only', label: 'Archived' }, { value: 'include', label: 'All' }] as const satisfies readonly { value: HistoryArchived; label: string }[]
+const shows = [{ value: 'exclude', label: 'Active' }, { value: 'only', label: 'Archived' }, { value: 'include', label: 'All' }, { value: 'trash', label: 'Trash' }] as const satisfies readonly { value: HistoryArchived; label: string }[]
 const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
 
 export function GatewayChatsWorkspace({ runtime, authStore, conversationState, sourcePrivacy, imports, chatNames, chatForget }: {
   runtime: GatewayRuntimeClient; authStore: GatewayAuthStore
-  /** Archive and restore; without it the list is read-only. */
+  /** Archive, trash and restore; without it the list is read-only. */
   chatNames?: GatewayControlClient['chatNames']
   /** Delete forever (the server asks for the password); without it the action is hidden. */
   chatForget?: ChatForgetClient
@@ -53,12 +53,23 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
     try { if (await archiveChats(chatNames, ids, archived, () => void directory.refresh())) selection.stop() }
     finally { setWriting(false) }
   }
-  const searching = !!directory.query.trim(), archivedView = directory.archived === 'only'
+  async function setTrashed(ids: string[], trashed: boolean) {
+    if (!chatNames || writing) return
+    setWriting(true)
+    try { if (await trashChats(chatNames, ids, trashed, () => void directory.refresh())) selection.stop() }
+    finally { setWriting(false) }
+  }
+  const searching = !!directory.query.trim(), archivedView = directory.archived === 'only', trashView = directory.archived === 'trash'
   const rowMenu = (session: HistoryChat) => selectable && <ListLineMenu label={`More actions for ${session.title || 'this chat'}`}>
-    {!chatNames ? null : session.archivedAt
-      ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], false)}><ArchiveRestore aria-hidden="true" />Restore</DropdownMenuItem>
-      : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>}
-    {chatForget && <DropdownMenuItem variant="destructive" disabled={deleteForever.reading} onClick={() => void deleteForever.ask([session.id])}><Trash2 aria-hidden="true" />Delete forever…</DropdownMenuItem>}
+    {trashView ? <>
+      {chatNames && <DropdownMenuItem disabled={writing} onClick={() => void setTrashed([session.id], false)}><ArchiveRestore aria-hidden="true" />Restore</DropdownMenuItem>}
+      {chatForget && <DropdownMenuItem variant="destructive" disabled={deleteForever.reading} onClick={() => void deleteForever.ask([session.id])}><Trash2 aria-hidden="true" />Delete forever…</DropdownMenuItem>}
+    </> : <>
+      {!chatNames ? null : session.archivedAt
+        ? <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], false)}><ArchiveRestore aria-hidden="true" />Restore</DropdownMenuItem>
+        : <DropdownMenuItem disabled={writing} onClick={() => void setArchived([session.id], true)}><Archive aria-hidden="true" />Archive</DropdownMenuItem>}
+      {chatNames && <DropdownMenuItem variant="destructive" disabled={writing} onClick={() => void setTrashed([session.id], true)}><Trash2 aria-hidden="true" />Move to Trash</DropdownMenuItem>}
+    </>}
   </ListLineMenu>
   const error = directory.error === 'query' ? 'Use up to 200 characters in your search.'
     : directory.error === 'cursor' ? 'This page link is no longer available. Refresh chats to continue.'
@@ -84,14 +95,18 @@ export function GatewayChatsWorkspace({ runtime, authStore, conversationState, s
         filters={shows.map(show => <FilterChip key={show.value} active={directory.archived === show.value} onClick={() => directory.setView({ archived: show.value })}>{show.label}</FilterChip>)}
         selection={selectable ? selection : undefined}
         bulkActions={<>
-          {chatNames && !archivedView && <Button type="button" size="sm" variant="outline" disabled={writing || !toArchive.length} onClick={() => void setArchived(toArchive, true)}><Archive aria-hidden="true" />Archive</Button>}
-          {chatNames && directory.archived !== 'exclude' && <Button type="button" size="sm" variant="outline" disabled={writing || !toRestore.length} onClick={() => void setArchived(toRestore, false)}><ArchiveRestore aria-hidden="true" />Restore</Button>}
-          {chatForget && <Button type="button" size="sm" variant="destructive-outline" disabled={writing || deleteForever.reading || !picked.length} onClick={() => void deleteForever.ask(picked.map(row => row.id))}><Trash2 aria-hidden="true" />{deleteForever.reading ? 'Checking…' : 'Delete forever…'}</Button>}
+          {chatNames && !trashView && !archivedView && <Button type="button" size="sm" variant="outline" disabled={writing || !toArchive.length} onClick={() => void setArchived(toArchive, true)}><Archive aria-hidden="true" />Archive</Button>}
+          {chatNames && !trashView && directory.archived !== 'exclude' && <Button type="button" size="sm" variant="outline" disabled={writing || !toRestore.length} onClick={() => void setArchived(toRestore, false)}><ArchiveRestore aria-hidden="true" />Restore</Button>}
+          {chatNames && !trashView && <Button type="button" size="sm" variant="destructive-outline" disabled={writing || !picked.length} onClick={() => void setTrashed(picked.map(row => row.id), true)}><Trash2 aria-hidden="true" />Move to Trash</Button>}
+          {trashView && chatNames && <Button type="button" size="sm" variant="outline" disabled={writing || !picked.length} onClick={() => void setTrashed(picked.map(row => row.id), false)}><ArchiveRestore aria-hidden="true" />Restore</Button>}
+          {trashView && chatForget && <Button type="button" size="sm" variant="destructive-outline" disabled={writing || deleteForever.reading || !picked.length} onClick={() => void deleteForever.ask(picked.map(row => row.id))}><Trash2 aria-hidden="true" />{deleteForever.reading ? 'Checking…' : 'Delete forever…'}</Button>}
         </>}
-        emptyTitle={directory.nextCursor ? 'No visible chats on this page' : searching ? 'No chats match' : archivedView ? 'No archived chats' : 'No chats yet'}
-        emptyDescription={directory.nextCursor ? 'Load older chats to keep browsing.' : searching ? 'Try other words, or look in Archived or All.' : archivedView ? 'Chats you archive show here. Archiving deletes nothing.' : 'Start a conversation and it will appear here.'}
-        emptyContent={emptyContent} icon={archivedView ? <Archive /> : <MessageSquare />} emptyAction={!searching && !archivedView ? <Button onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}>Start a chat</Button> : undefined}
+        emptyTitle={directory.nextCursor ? 'No visible chats on this page' : searching ? 'No chats match' : trashView ? 'Trash is empty' : archivedView ? 'No archived chats' : 'No chats yet'}
+        emptyDescription={directory.nextCursor ? 'Load older chats to keep browsing.' : searching ? 'Try other words, or look in Archived or All.' : trashView ? 'Chats you move to Trash show here until you restore them or delete them forever.' : archivedView ? 'Chats you archive show here. Archiving deletes nothing.' : 'Start a conversation and it will appear here.'}
+        emptyContent={emptyContent} icon={trashView ? <Trash2 /> : archivedView ? <Archive /> : <MessageSquare />} emptyAction={!searching && !archivedView && !trashView ? <Button onClick={() => conversationState.setState({ selected: null })} render={<Link to="/chat" />}>Start a chat</Button> : undefined}
         footer={directory.loaded && <>
+          {/* shortcut: empties the loaded chats, 50 at most per confirmation; page through for more. */}
+          {trashView && chatForget && rows.length ? <Button type="button" size="sm" variant="destructive-outline" disabled={writing || deleteForever.reading} onClick={() => void deleteForever.ask(rows.map(row => row.id))}><Trash2 aria-hidden="true" />Empty trash</Button> : null}
           <Button variant="outline" size="sm" className="aria-disabled:opacity-50" aria-disabled={busy || !directory.nextCursor && directory.error !== 'cursor'} aria-busy={directory.pending === 'older'} onClick={() => { if (!busy) { if (directory.error === 'cursor') void directory.refresh(); else if (directory.nextCursor) void directory.older() } }}>{directory.pending === 'older' ? 'Loading…' : directory.error === 'cursor' ? 'Refresh chats' : directory.nextCursor ? 'Load older' : 'No more chats to load'}</Button>
           {olderNote && <p role="status" className="text-xs text-muted-foreground">{olderNote}</p>}
         </>}>
