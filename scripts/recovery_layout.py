@@ -165,6 +165,8 @@ REPOSITORY_PROFILE = LayoutProfile(
         "toolgate": frozenset({"/run/conker-sandbox"}),
         "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
         "package-proxy": frozenset({"/run/conker-proxy"}),
+        # Conker's SearXNG settings come from the release, not from the host's data.
+        "searxng": frozenset({"/etc/searxng/settings.yml"}),
     },
     optional_services=frozenset(
         {"owner-terminal", "sandbox-runner", "package-proxy", "subscriptions", "data-owner"}
@@ -196,6 +198,8 @@ UBUNTU_PROFILE = LayoutProfile(
         "toolgate": frozenset({"/run/conker-sandbox"}),
         "sandbox-runner": frozenset({"/var/run/docker.sock", "/run/conker-sandbox", "/workspaces"}),
         "package-proxy": frozenset({"/run/conker-proxy"}),
+        # Conker's SearXNG settings come from the release, not from the host's data.
+        "searxng": frozenset({"/etc/searxng/settings.yml"}),
     },
     optional_services=frozenset(
         {"owner-terminal", "sandbox-runner", "package-proxy", "subscriptions"}

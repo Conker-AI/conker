@@ -219,6 +219,12 @@ services:
     image: ${SEARXNG_IMAGE}
     container_name: toolgate-searxng
     mem_limit: 512m
+    # A random secret at each start: this instance is internal and keeps no signed state, so there
+    # is no key to store or back up. The image refuses to start on its default one.
+    entrypoint: ["/bin/sh", "-c", "export SEARXNG_SECRET=$$(head -c 24 /dev/urandom | base64 | tr -dc a-zA-Z0-9); exec /usr/local/searxng/entrypoint.sh"]
+    volumes:
+      # Conker's settings: JSON answers on for ToolGate (the defaults refuse them with 403).
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
     networks:
       conker_net:
         aliases: [toolgate-searxng]

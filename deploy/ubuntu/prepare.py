@@ -275,6 +275,8 @@ services["qdrant"] = {"image": images["qdrant"], "restart": "unless-stopped", "m
 # ToolGate's web search goes through SearXNG under this name, as in the repository layout.
 services["searxng"] = {"image": images["searxng"], "restart": "unless-stopped", "mem_limit": "512m",
     "pids_limit": 256, "networks": {"runtime": {"aliases": ["toolgate-searxng"]}},
+    "entrypoint": ["/bin/sh", "-c", "export SEARXNG_SECRET=$$(head -c 24 /dev/urandom | base64 | tr -dc a-zA-Z0-9); exec /usr/local/searxng/entrypoint.sh"],
+    "volumes": ["./sources/companion/deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro"],
     "security_opt": ["no-new-privileges:true"],
     "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
 for name, memory, networks, context, dockerfile in [
