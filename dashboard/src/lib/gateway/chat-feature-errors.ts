@@ -1,4 +1,5 @@
 import { gatewayError, type ChatFeatureErrorCode } from './transport'
+import type { FailureFix } from '@/components/resilience/notify'
 
 /** Plain words for Pi's chat feature refusals. Every code has words; other failures use the gateway’s own message. */
 const words: Record<ChatFeatureErrorCode, string> = {
@@ -7,7 +8,7 @@ const words: Record<ChatFeatureErrorCode, string> = {
   session_busy: 'Conker is still answering in this chat. Try again when it finishes.',
   turn_pending: 'Conker is still answering in this chat. Try again when it finishes.',
   session_closed: 'This chat is closed.',
-  helpers_off: 'Helper models are switched off in Settings.',
+  helpers_off: 'Helper models are off for this chat.',
   not_configured: 'No model is set up for this. Choose one in Settings > Models.',
   unavailable: 'The model for this is not available right now.',
   empty: 'There is nothing to work with yet.',
@@ -54,4 +55,18 @@ const words: Record<ChatFeatureErrorCode, string> = {
 export function chatFeatureMessage(error: unknown): string {
   const failure = gatewayError(error)
   return (failure.code && (words as Partial<Record<string, string>>)[failure.code]) || failure.message
+}
+
+const models = '/settings?tab=models'
+/** Where each fixable refusal is fixed; the toast shows it as a button. */
+const fixes: Partial<Record<ChatFeatureErrorCode, FailureFix>> = {
+  not_configured: { label: 'Choose a model', to: models },
+  unknown_model: { label: 'Open Models', to: models },
+  unavailable: { label: 'Open Models', to: models },
+}
+
+/** The place to fix a failed chat feature action, if there is one. */
+export function chatFeatureFix(error: unknown): FailureFix | undefined {
+  const code = gatewayError(error).code
+  return code ? (fixes as Partial<Record<string, FailureFix>>)[code] : undefined
 }
