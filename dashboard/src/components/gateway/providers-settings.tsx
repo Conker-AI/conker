@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { WorkspaceSection } from '@/components/design-system'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import type { BrandId } from '@/components/brand/brand-icons'
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetPanel } from '@/components/ui/sheet'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogPanel } from '@/components/ui/dialog'
 import { GatewayPageFrame } from './page-frame'
 import { ChatGPTConnection } from './chatgpt-connection'
 import { NativeClaudeConnection } from './native-claude-connection'
@@ -66,14 +66,14 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
   const Frame = embedded ? 'div' : GatewayPageFrame
   const chip = (value?: ProviderStatus) => health.phase === 'checking' ? 'Checking…' : health.phase !== 'current' ? 'Unavailable' : !value ? 'Not connected' : value.busy ? 'Busy' : value.status === 'ok' ? 'Ready' : value.status === 'unverified' ? 'Connected, not tested' : value.status === 'not_configured' ? 'Not connected' : 'Unavailable'
   const badgeVariant = (value?: ProviderStatus) => health.phase === 'checking' ? 'outline' : health.phase !== 'current' ? 'error' : !value ? 'outline' : value.busy ? 'info' : value.status === 'ok' ? 'success' : value.status === 'unverified' ? 'warning' : value.status === 'not_configured' ? 'outline' : 'error'
-  const sheet = (title: string, label: 'Connect' | 'Manage', body: React.ReactNode) => <Sheet><SheetTrigger render={<Button variant="outline" size="sm" aria-label={label + ' ' + title} />}>{label}</SheetTrigger><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{title}</SheetTitle></SheetHeader><SheetPanel className="pt-12!">{body}</SheetPanel></SheetContent></Sheet>
-  const providerRow = (key: string, name: string, value?: ProviderStatus, sheet?: React.ReactNode) => <div key={key} className="flex min-h-16 items-center justify-between gap-3 py-3"><div className="flex min-w-0 items-center gap-3"><IdentityMark brand={brands[key]} kind={key === 'decisions' ? 'server' : 'provider'} name={name} /><div className="min-w-0"><p className="text-sm font-medium break-words">{name}</p>{value?.model && <p className="text-xs text-muted-foreground break-words">{health.phase !== 'current' ? 'Last checked model: ' : ''}{value.model}</p>}</div></div><div className="flex shrink-0 items-center gap-2">{value && <Badge variant={badgeVariant(value)}>{chip(value)}</Badge>}{sheet}</div></div>
+  const dialog = (title: string, label: 'Connect' | 'Manage', body: React.ReactNode) => <Dialog><DialogTrigger render={<Button variant="outline" size="sm" aria-label={label + ' ' + title} />}>{label}</DialogTrigger><DialogContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><DialogHeader className="sr-only"><DialogTitle>{title}</DialogTitle></DialogHeader><DialogPanel className="pt-12!">{body}</DialogPanel></DialogContent></Dialog>
+  const providerRow = (key: string, name: string, value?: ProviderStatus, dialog?: React.ReactNode) => <div key={key} className="flex min-h-16 items-center justify-between gap-3 py-3"><div className="flex min-w-0 items-center gap-3"><IdentityMark brand={brands[key]} kind={key === 'decisions' ? 'server' : 'provider'} name={name} /><div className="min-w-0"><p className="text-sm font-medium break-words">{name}</p>{value?.model && <p className="text-xs text-muted-foreground break-words">{health.phase !== 'current' ? 'Last checked model: ' : ''}{value.model}</p>}</div></div><div className="flex shrink-0 items-center gap-2">{value && <Badge variant={badgeVariant(value)}>{chip(value)}</Badge>}{dialog}</div></div>
   const byId = (id: string) => health.rows.find(row => row.id === id)
   const chatgptValue = byId('chatgpt')
   const claudeValue = byId('claude-code')
   const label = (value?: ProviderStatus) => value && (value.busy || value.status === 'ok' || value.status === 'unverified') ? 'Manage' : 'Connect'
-  const chatgptSheet = sheet('ChatGPT subscription', label(chatgptValue), <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />)
-  const claudeSheet = sheet('Claude subscription', label(claudeValue), <NativeClaudeConnection client={client} authStore={authStore} />)
+  const chatgptDialog = dialog('ChatGPT subscription', label(chatgptValue), <ChatGPTConnection client={client} authStore={authStore} onModels={setModels} />)
+  const claudeDialog = dialog('Claude subscription', label(claudeValue), <NativeClaudeConnection client={client} authStore={authStore} />)
   const keyButton = (id: HostedProviderId) => <Button variant="outline" size="sm" aria-label={label(byId(id)) + ' ' + names[id]} onClick={() => { setKeyProvider(id); setKeysOpen(true) }}>{label(byId(id))}</Button>
   const otherRows = health.rows.filter(row => row.id !== 'chatgpt' && row.id !== 'claude-code' && !keyed.includes(row.id as HostedProviderId))
   const group = (title: string, rows: React.ReactNode, note?: string) => <div role="group" aria-label={title}><h3 className="text-xs font-medium text-muted-foreground">{title}</h3><div className="divide-y">{rows}</div>{note && <p className="text-xs text-muted-foreground">{note}</p>}</div>
@@ -83,11 +83,11 @@ export function GatewayProvidersSettings({ client, authStore, embedded = false }
       {health.phase === 'unavailable' && <p role="status" className="text-sm text-muted-foreground">Provider readiness could not be checked. Try again to read the current status.</p>}
       {health.phase !== 'current' && health.rows.length > 0 && <p className="text-xs text-muted-foreground">Provider and model names below are from the last successful check.</p>}
       <div className="space-y-5">
-        {group('Subscription sign-in', <>{providerRow('chatgpt', 'ChatGPT subscription', chatgptValue, chatgptSheet)}{providerRow('claude-code', 'Claude subscription', claudeValue, claudeSheet)}</>)}
+        {group('Subscription sign-in', <>{providerRow('chatgpt', 'ChatGPT subscription', chatgptValue, chatgptDialog)}{providerRow('claude-code', 'Claude subscription', claudeValue, claudeDialog)}</>)}
         {group('API key', keyed.map(id => providerRow(id, names[id], byId(id), keyButton(id))), 'Other models: connect OpenRouter. Keys stay on your server.')}
         {otherRows.length > 0 && group('On this server', otherRows.map(row => providerRow(row.id, names[row.id] ?? row.id, row)))}
       </div>
-      <Sheet open={keysOpen} onOpenChange={setKeysOpen}><SheetContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><SheetHeader className="sr-only"><SheetTitle>{names[keyProvider]}</SheetTitle></SheetHeader><SheetPanel className="pt-12!"><ProviderCredentials only={keyProvider} client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></SheetPanel></SheetContent></Sheet>
+      <Dialog open={keysOpen} onOpenChange={setKeysOpen}><DialogContent portalProps={{ keepMounted: true }} className="sm:max-w-lg"><DialogHeader className="sr-only"><DialogTitle>{names[keyProvider]}</DialogTitle></DialogHeader><DialogPanel className="pt-12!"><ProviderCredentials only={keyProvider} client={client} authStore={authStore} onChanged={() => setReload(number => number + 1)} /></DialogPanel></DialogContent></Dialog>
     </WorkspaceSection>
     <details><summary className="w-fit cursor-pointer rounded-md py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Advanced: model list</summary>
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}

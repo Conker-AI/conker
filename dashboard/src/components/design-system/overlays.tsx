@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
@@ -88,20 +87,17 @@ function InlineDetailsBody({ title, description, onClose, busy = false, children
   </div>
 }
 
-/** Reference/details preserve the page's place; multi-field forms use TaskDialogContent. */
+/** Reference/details in the shared centered dialog (owner, 24 October: no side windows). New
+ * screens open details in place with `InlineDetails`, which keeps this same contract. */
 export function DetailPanel({ open, onOpenChange, title, description, children, finalFocus, busy = false }: {
   open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; description: ReactNode;
-  children: ReactNode; finalFocus?: ComponentProps<typeof SheetContent>["finalFocus"]; busy?: boolean
+  children: ReactNode; finalFocus?: ComponentProps<typeof DialogContent>["finalFocus"]; busy?: boolean
 }) {
-  return <Sheet open={open} onOpenChange={next => { if (!busy) onOpenChange(next) }}>
-    <SheetContent closeProps={{ disabled: busy }} finalFocus={finalFocus} data-pattern="detail-panel" className="w-full gap-0 overflow-hidden sm:max-w-xl">
-      <SheetHeader className="shrink-0 border-b p-5 pr-14">
-        <SheetTitle className="break-words leading-6">{title}</SheetTitle>
-        <SheetDescription className="leading-5">{description}</SheetDescription>
-      </SheetHeader>
+  return <Dialog open={open} onOpenChange={next => { if (!busy) onOpenChange(next) }}>
+    <TaskDialogContent title={title} description={description} size="wide" closeProps={{ disabled: busy }} finalFocus={finalFocus}>
       {children}
-    </SheetContent>
-  </Sheet>
+    </TaskDialogContent>
+  </Dialog>
 }
 
 export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, finalFocus, actionVariant = "destructive" }: {

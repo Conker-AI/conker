@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { ExternalLink, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { conkerClient } from "@/lib/api"
 import { useConker } from "@/lib/api/store"
 import { useArtifactWorkspace } from "@/lib/artifact-workspace"
@@ -35,5 +35,6 @@ export function ConversationCanvas({ sessionId }: { sessionId: string }) {
   const controls = <>{fullPage}{wide && <Button variant="ghost" size="icon" aria-label="Close canvas" onClick={() => { close(sessionId); document.getElementById("message-composer")?.focus() }}><X /></Button>}</>
   const body = artifact ? <Suspense fallback={<p role="status" className="p-4 text-sm text-muted-foreground">Opening canvas…</p>}><ArtifactCanvas artifact={artifact} client={conkerClient.artifacts} initialVersion={selection.version} onVersionChange={version => open(sessionId, artifact.id, version)} headingRef={heading} headerActions={controls} className={wide ? undefined : "[&>header]:pr-12"} /></Suspense> : <div className="p-4"><div className="flex items-center justify-between"><h2 ref={heading} tabIndex={-1} className="text-sm font-semibold">{title}</h2>{controls}</div><p className="mt-3 text-sm text-muted-foreground">This artifact is no longer available. Its original conversation has not been changed.</p></div>
   if (wide) return <aside aria-label="Artifact workspace" className="flex min-h-0 min-w-0 w-1/2 flex-col overflow-hidden border-l bg-background">{body}</aside>
-  return <Sheet open onOpenChange={open => { if (!open) close(sessionId) }}><SheetContent className="w-full gap-0 overflow-hidden sm:max-w-2xl" finalFocus={() => { document.getElementById("message-composer")?.focus(); return false }}><SheetTitle className="sr-only">{title}</SheetTitle><SheetDescription className="sr-only">Artifact canvas · changes stay in this preview.</SheetDescription>{body}</SheetContent></Sheet>
+  // Below 1280px the canvas opens in the shared centered dialog (owner: no side windows); it owns its header.
+  return <Dialog open onOpenChange={open => { if (!open) close(sessionId) }}><DialogContent className="h-[calc(100dvh-2rem)] gap-0 overflow-hidden sm:max-w-2xl" finalFocus={() => { document.getElementById("message-composer")?.focus(); return false }}><DialogTitle className="sr-only">{title}</DialogTitle><DialogDescription className="sr-only">Artifact canvas · changes stay in this preview.</DialogDescription>{body}</DialogContent></Dialog>
 }
