@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Safer agent installs and web reading.** ToolGate 0.14.0 is pinned, with its new sandbox image: before an agent
+  installs a package, ToolGate refuses lookalike names (with a "did you mean"), known malware, unknown names and brand-new
+  or barely used releases (the owner can trust a package by name); the package proxy hides releases younger than 7 days,
+  pip takes wheels only and npm runs no install scripts. Web pages lose hidden and invisible text before the AI reads them,
+  and a page that talks to the AI is flagged.
 - **Delete for good.** Chats can be deleted forever (one or many, password asked), several memories forgotten at
   once, and an imported chat deleted for good. Pi 0.22.0 is pinned; Compose sets `PI_SUPERVISED` so Pi can restart
   to finish a deletion.
@@ -535,7 +540,7 @@ stops matching when a path moves.
 | Module | Version |
 |---|---|
 | Pi | v0.22.0 |
-| ToolGate | v0.13.0 |
+| ToolGate | v0.14.0 |
 | MemoryGate | v0.8.1 |
 | SystemGate | v0.5.1 |
 | Embeddings | v0.1.6 |
