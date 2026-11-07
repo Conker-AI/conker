@@ -3,9 +3,9 @@ import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
 
 /**
- * Deleting Conker chats forever (Pi `pi/api/routes/forgetting.py`). Pi cannot forget a chat while
- * it runs, so a deletion is queued: Pi checks the confirmation, restarts and forgets the chats
- * before it opens its database again. The preview shows counts, never text.
+ * Deleting Conker chats forever (Pi `pi/api/routes/forgetting.py`). The server asks for the password;
+ * Pi answers at once and deletes in the background once no reply is in progress. The preview shows
+ * counts, never text.
  */
 const session = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
 const count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
@@ -33,10 +33,6 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
 }
 
 const path = '/api/control/pi/forgetting/chats'
-const sleep = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
-  const timer = setTimeout(resolve, ms)
-  signal?.addEventListener('abort', () => { clearTimeout(timer); reject(new GatewayError('aborted')) }, { once: true })
-})
 
 /** Plain words for Pi's refusals; anything else falls back to the gateway's own message. */
 export function chatForgetMessage(error: unknown): string {
@@ -63,35 +59,17 @@ export function createChatForgetClient(auth: Pick<GatewayAuthClient, 'request'>)
     preview: (sessions: readonly string[], signal?: AbortSignal) => status(sessions, signal).then(value => value.chats),
     status,
     /**
-     * Delete the previewed chats forever. Asks for the password. When Pi restarts to forget them,
-     * waits (up to `waitMs`) until it is back and says what happened to each chat.
+     * Delete the previewed chats forever. Asks for the password. Pi answers at once and deletes in
+     * the background once no reply is in progress, so the caller never waits for the deletion.
      */
-    async remove(plans: readonly ChatForgetPlan[], options: { signal?: AbortSignal; waitMs?: number } = {}): Promise<ChatForgetOutcome> {
+    async remove(plans: readonly ChatForgetPlan[], options: { signal?: AbortSignal } = {}): Promise<ChatForgetOutcome> {
       if (!plans.length || plans.length > 50) throw new GatewayError('validation')
       const body = { chats: plans.map(item => ({ session: parse(session, item.sessionId, true), confirmation: parse(confirmation, item.confirmation, true) })) }
-      const started = Date.now() / 1000
       const answer = parse(queued, await auth.request(path, { method: 'POST', body, signal: options.signal }))
       const asked = plans.map(item => item.sessionId)
       if (answer.sessions.some(id => !asked.includes(id))) throw new GatewayError('invalid-response')
-      const done = asked.filter(id => !answer.sessions.includes(id) || answer.state === 'done')
-      if (answer.state === 'done') return { done, refused: [], waiting: [] }
-      const deadline = Date.now() + (options.waitMs ?? 120_000)
-      let waiting = answer.sessions
-      while (Date.now() < deadline) {
-        await sleep(2000, options.signal)
-        let view: ChatForgetOverview
-        try { view = await status([], options.signal) } catch (error) {
-          if (gatewayError(error).kind === 'aborted') throw error
-          continue // Pi is restarting; the gateway answers again once it is back.
-        }
-        const finished = view.results.filter(item => waiting.includes(item.sessionId) && item.finishedAt >= started - 5 && item.state !== 'retrying')
-        const refused = finished.filter(item => item.state === 'refused')
-        done.push(...finished.filter(item => item.state === 'done').map(item => item.sessionId))
-        waiting = waiting.filter(id => !finished.some(item => item.sessionId === id))
-        if (!waiting.length) return { done, refused, waiting }
-        if (!view.pending.some(id => waiting.includes(id))) return { done, refused, waiting }
-      }
-      return { done, refused: [], waiting }
+      if (answer.state === 'done') return { done: asked, refused: [], waiting: [] }
+      return { done: asked.filter(id => !answer.sessions.includes(id)), refused: [], waiting: answer.sessions }
     },
   }
 }
