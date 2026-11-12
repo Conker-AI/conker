@@ -82,7 +82,9 @@ jobs:
         # nothing is started.
         env:
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/.test-gates/toolgate
-        run: python -m pytest tests/ -q --cov --cov-report=term
+        # The coverage floor is CI's Linux coverage when it arrived (76.33%), rounded down, so it
+        # only stops coverage from falling (.coveragerc names what is measured).
+        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=76
 
       - name: Browser deployment and recovery mutation drill
         run: python scripts/auth_mutation_drill.py
