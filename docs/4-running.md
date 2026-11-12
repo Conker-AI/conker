@@ -393,6 +393,13 @@ conker restore SNAPSHOT --into DIR  # restores into fresh, isolated volumes, hel
 A restore starts held and does not go straight back into service. Keep a copy on another
 machine. See [recovery](reference/recovery.md).
 
+On a Linux server, `conker backup schedule on` backs up to the folder saved in setup every night
+(about 03:30 local time) and keeps the number you chose (7 unless you changed it); add
+`--drill weekly` to also try a restore every Sunday. Nothing is scheduled until you turn it on.
+`conker backup drill` restores the newest backup into a throwaway copy, checks it and removes the
+copy; `conker backup drill --last` shows how the last one went, and `conker backup schedule
+status` shows both timers and the last runs.
+
 ### Server actions and the host helper
 
 The host helper is the private provider-control service (`conker providers install-ui-control`)

@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
+  night through the saved backup policy (the host helper's `backup.run`, refused rather than queued when something
+  else holds the lock) and `--drill weekly` adds a Sunday restore drill; nothing is turned on by itself.
+  `conker backup drill` restores a backup into a throwaway, network-less copy, checks it, removes every trace and
+  leaves a receipt (`conker backup drill --last`).
+
 - **Chat Trash and the language level ship.** Pi 0.24.0 is pinned: Delete moves a chat to Trash with Undo
   and Restore, and "Delete forever" finishes in the background; a chat's output settings carry a language level
   (Strict, Plain, Normal, Deep or Auto). ToolGate 0.15.1, MemoryGate 0.8.2, SystemGate 0.5.2 and Embeddings 0.1.7 are
