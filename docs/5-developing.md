@@ -58,6 +58,7 @@ npm run build
 npm run design:check:test
 npm run check:conversation
 npm run check:gateway      # if you touched live/gateway code
+npm run e2e                # chat, approval and forget in Chromium (Playwright)
 ```
 
 - UI rules: [dashboard/DESIGN.md](../dashboard/DESIGN.md). Colours and fonts come from the design
