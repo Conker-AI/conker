@@ -238,7 +238,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, method === 'POST' && /^\/api\/owner\/editor-drafts\/[^/]+\/runs$/.test(path) ? 2500 : 120)) // A tool run by hand takes a moment.
-    let match: RegExpMatchArray | null; if (path === '/api/host/read' || path.startsWith('/api/host/ops')) return hostOps(path, options)
+    let match: RegExpMatchArray | null; if (path === '/api/host/read' || path.startsWith('/api/host/ops') || path.startsWith('/api/control/pi/updates')) return hostOps(path, options)
     if ((match = path.match(/^\/api\/control\/pi\/drafts\/new\/start\/([A-Za-z0-9_-]+)$/)) && method === 'GET') return structuredClone(draftStarts.get(match[1]) ?? fail(404))
     if (path === '/api/control/pi/drafts/new/start' && method === 'POST') {
       const body = options.body ?? {}, requestId = String(body.request_id)

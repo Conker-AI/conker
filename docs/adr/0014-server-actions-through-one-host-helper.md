@@ -35,6 +35,11 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   | `backup.verify` | action | `snapshot`: a snapshot folder name | `conker verify-backup FOLDER/NAME` |
   | `services.restart` | action | `service`: a running Compose service of this install | `conker restart SERVICE` |
   | `backup.run` | action | none | `conker setup run protection` (back up, verify, keep the saved number) |
+  | `update.run` | action | `version`: a release `X.Y.Z` | `conker update --to X.Y.Z` (Ubuntu layout: staged, snapshot first, health-checked, rolled back on failure); the gateway asks for the password; no time limit |
+
+  The helper also runs `conker update --check --report` ten minutes after it starts and then once
+  a day, skipping while an action holds the lock. It is a read, not an action: no receipt. It tells
+  Pi about a newer release (an Inbox offer) and about finished updates (their receipts, each once).
 
   The next ones follow the server-actions design (start and stop, model download, drills,
   recovery, updates, certificates). An operation never takes a secret; secrets keep their

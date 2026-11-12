@@ -105,6 +105,10 @@ function receiptWords(receipt: Pick<HostReceipt, 'operation' | 'arguments'>): Wo
     const name = snapshotLabel(receipt.arguments.snapshot ?? '')
     return { working: `Checking ${name}…`, done: `${capital(name)} passed its check`, failed: `${capital(name)} didn’t pass its check`, unknown: `Can’t tell if the check of ${name} finished` }
   }
+  if (receipt.operation === 'update.run') {
+    const version = receipt.arguments.version ?? ''
+    return { working: `Updating to ${version}…`, done: `Updated to ${version}`, failed: `The update to ${version} didn’t finish`, unknown: `Can’t tell if the update to ${version} finished` }
+  }
   return { working: `${receipt.operation} is running…`, done: `${receipt.operation} finished`, failed: `${receipt.operation} failed`, unknown: `Can’t tell if ${receipt.operation} finished` }
 }
 const capital = (value: string) => value.replace(/^./, letter => letter.toUpperCase())
@@ -118,13 +122,14 @@ export function sortReceipts(rows: readonly HostReceipt[]) {
   return [...rows].sort((a, b) => rank[a.outcome] - rank[b.outcome] || Date.parse(receiptTime(b)) - Date.parse(receiptTime(a)))
 }
 export const receiptTarget = (receipt: Pick<HostReceipt, 'operation' | 'arguments'>) =>
-  receipt.operation === 'services.restart' ? `service:${receipt.arguments.service}` : receipt.operation === 'backup.verify' ? `snapshot:${receipt.arguments.snapshot}` : receipt.operation === 'backup.run' ? 'backup' : receipt.operation
+  receipt.operation === 'services.restart' ? `service:${receipt.arguments.service}` : receipt.operation === 'backup.verify' ? `snapshot:${receipt.arguments.snapshot}` : receipt.operation === 'backup.run' ? 'backup' : receipt.operation === 'update.run' ? 'update' : receipt.operation
 
 /** The command that does the same thing on the server (parity: the CLI works with the helper down). */
 export function actionCommand(receipt: Pick<HostReceipt, 'operation' | 'arguments'>) {
   if (receipt.operation === 'services.restart') return `conker ops run services.restart service=${receipt.arguments.service}`
   if (receipt.operation === 'backup.verify') return `conker ops run backup.verify snapshot=${receipt.arguments.snapshot}`
   if (receipt.operation === 'backup.run') return 'conker ops run backup.run'
+  if (receipt.operation === 'update.run') return `conker update --to ${receipt.arguments.version}`
   return 'conker ops list'
 }
 
@@ -142,5 +147,10 @@ export function describeHostAction(body: Record<string, unknown>) {
   if (body.operation === 'backup.verify' && typeof args.snapshot === 'string' && /^snapshot-\d{8}T\d{6}Z-[0-9a-f]{8}$/.test(args.snapshot)) {
     return { title: 'Check this backup', target: capital(snapshotLabel(args.snapshot)), details: ['Checks every file in this backup against its saved fingerprints. Conker keeps running; nothing is changed or restored.', once], action: 'Check backup' }
   }
+  if (body.operation === 'update.run' && typeof args.version === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(args.version)) {
+    return { title: `Update Conker to ${args.version}`, target: 'Conker on your server', details: [UPDATE_EFFECT, 'If the new version does not start properly, Conker goes back to the one it has now by itself. The Inbox tells you how it ended.', once], action: `Update to ${args.version}` }
+  }
   return null
 }
+/** What an update does while it runs, in the owner's words (the Inbox card and the password sheet). */
+export const UPDATE_EFFECT = 'Conker takes a checked backup first, then switches to the new version. Chats, tools and this page stop for a few minutes and come back by themselves.'

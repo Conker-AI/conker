@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Conker updates itself.** A server checks the latest Conker release once a day; a newer one is an Inbox
+  card with its notes, and Update (with the password) stages it, takes a verified snapshot, switches, checks
+  health and goes back to the old version if the check fails. The result comes back to the Inbox.
+  `conker update --check` and `conker update --to X.Y.Z` do the same from the terminal. Each tag vX.Y.Z now
+  publishes a release page with its CHANGELOG section; `CONKER_VERSION` in versions.env names the release.
+
 - **Chat Trash and the language level ship.** Pi 0.24.0 is pinned: Delete moves a chat to Trash with Undo
   and Restore, and "Delete forever" finishes in the background; a chat's output settings carry a language level
   (Strict, Plain, Normal, Deep or Auto). ToolGate 0.15.1, MemoryGate 0.8.2, SystemGate 0.5.2 and Embeddings 0.1.7 are

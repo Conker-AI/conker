@@ -1,4 +1,5 @@
 import { GatewayError } from '@/lib/gateway/transport'
+import { createFakeUpdates } from './fake-gateway-updates'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }
@@ -27,8 +28,10 @@ export function createFakeHostOps(scenario: string | null) {
     'services.restart': 'The service did not restart. Check its status and logs, then try again.',
     'backup.verify': 'This backup did not pass its check. Do not rely on it; take a new backup.',
     'backup.run': 'The backup did not finish. Check that the backup disk is mounted and has space, then try again.',
+    'update.run': 'The update did not finish. The Inbox says whether Conker went back to the version it had.',
   }
-  const checks: Record<string, string> = { 'services.restart': 'services.status', 'backup.run': 'backup.list', 'backup.verify': 'backup.verify' }
+  const checks: Record<string, string> = { 'services.restart': 'services.status', 'backup.run': 'backup.list', 'backup.verify': 'backup.verify', 'update.run': 'services.status' }
+  const updates = createFakeUpdates(new URLSearchParams(globalThis.location?.search).get('preview-updates'))
   const receipt = (id: string, operation: string, args: Record<string, string>, source: 'ui' | 'cli', started: number, outcome: Receipt['outcome'], ended: number | null): Receipt => ({
     id, operation, arguments: args, argumentsDigest: digest(id), source, startedAt: iso(started), endedAt: ended === null ? null : iso(ended), outcome,
     reason: outcome === 'failed' ? failure[operation] : outcome === 'unknown' ? CUT_OFF : null,
@@ -66,6 +69,7 @@ export function createFakeHostOps(scenario: string | null) {
       Object.assign(row, { outcome: job.outcome, endedAt: iso(Date.now()), reason: job.outcome === 'failed' ? failure[row.operation] : null })
       if (job.outcome !== 'done') continue
       if (row.operation === 'services.restart') Object.assign(services.find(item => item.service === row.arguments.service) ?? {}, { state: 'running', startedAt: iso(Date.now()), health: 'healthy' })
+      if (row.operation === 'update.run') updates.finished(row.arguments.version, true)
       if (row.operation === 'backup.run') { snapshots.unshift(snapshot(Date.parse(row.startedAt), Math.random().toString(16).slice(2, 10).padEnd(8, '0'))); snapshots.splice(policy?.retentionCopies ?? 7) }
     }
   }
@@ -85,6 +89,7 @@ export function createFakeHostOps(scenario: string | null) {
 
   return function handle(path: string, options: Request): Json {
     const method = options.method ?? 'GET'
+    if (path.startsWith('/api/control/pi/updates')) { settle(); return updates.handle(path, options) }
     if (scenario === 'unavailable') fail(503)
     if (path === '/api/host/read' && method === 'POST') {
       const operation = options.body?.operation
@@ -113,11 +118,11 @@ export function createFakeHostOps(scenario: string | null) {
       if (scenario === 'busy' || journal.some(row => row.outcome === 'working')) fail(409, 'host_busy', 'Another server action is running. Wait for it to finish.')
       if (scenario === 'refused') fail(409, 'host_operation_refused', operation === 'services.restart' ? 'This installation has no service with that name.' : 'The backup folder is not there. Check that the disk is mounted.')
       if (scenario === 'held') fail(409, 'host_busy', 'A backup is running or was cut off. Check the backup folder before trying again.')
-      if (operation !== 'services.restart' && !policy) fail(409, 'host_operation_refused', 'No backup folder is saved yet. Choose one in setup first.')
+      if (operation.startsWith('backup.') && !policy) fail(409, 'host_operation_refused', 'No backup folder is saved yet. Choose one in setup first.')
       const created = receipt(id, operation, args, 'ui', Date.now(), 'working', null)
       journal.unshift(created)
-      const seconds = operation === 'backup.run' ? 14 : operation === 'backup.verify' ? 6 : 5
-      running.set(id, { finishAt: Date.now() + seconds * 1000, outcome: scenario === 'failed' ? 'failed' : 'done', pausedUntil: operation === 'backup.run' ? Date.now() + 8000 : undefined })
+      const seconds = operation === 'backup.run' || operation === 'update.run' ? 14 : operation === 'backup.verify' ? 6 : 5
+      running.set(id, { finishAt: Date.now() + seconds * 1000, outcome: scenario === 'failed' ? 'failed' : 'done', pausedUntil: operation === 'backup.run' || operation === 'update.run' ? Date.now() + 8000 : undefined })
       // The answer is lost on the way back, though the server recorded it.
       if (scenario === 'lost') throw new GatewayError('network')
       return structuredClone(created)

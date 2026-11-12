@@ -34,10 +34,13 @@ import { OwnerDecisionError, type GatewayOwnerClient, type OwnerDecision, type O
 import { gatewayError } from '@/lib/gateway/transport'
 import type { PasswordAlerts } from '@/lib/gateway/password-alerts'
 import { PasswordAlertCard } from '@/components/inbox/password-alert-card'
+import { UpdateCards } from '@/components/inbox/update-cards'
+import type { UpdatesClient } from '@/lib/gateway/updates'
+import type { GatewayHostOpsClient } from '@/lib/gateway/host-ops'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, drafts, access, state, active }: { client: GatewayOwnerClient; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, drafts, access, updates, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -224,6 +227,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
         {alerts && alerts.unseen > 0 && !requestId && <PasswordAlertCard alerts={alerts} now={now} busy={alertsBusy} error={alertsError}
           onSeen={() => void markAlertsSeen()} onRevokeAll={() => void revokeAllSessions()} />}
+        {updates && !requestId && <UpdateCards updates={updates.client} hostOps={updates.hostOps} active={active} />}
         {summary.state === 'loading' ? <ListSkeleton rows={3} label="Loading your Inbox…" /> : <>
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
         {showDecisions && requests.error !== null && <InlineError error={requests.error} title="Conker’s requests didn’t load" onRetry={() => requests.load()} />}

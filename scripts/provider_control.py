@@ -424,6 +424,9 @@ def main():
     )
     inference_socket.chmod(0o600)
     threading.Thread(target=inference_server.serve_forever, daemon=True).start()
+    if host is not None:
+        # Once a day: is a newer Conker release out? The Inbox offers it (scripts/update_check.py).
+        threading.Thread(target=host_ops.watch_for_updates, args=(host,), daemon=True).start()
     with socketserver.UnixStreamServer(
         str(args.socket), handler(control, chatgpt, host)
     ) as server:

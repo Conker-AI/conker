@@ -5,7 +5,8 @@ import { GatewayError, gatewayError } from './transport'
 /**
  * Server actions through the host helper (ADR-0014), as the gateway passes them on: two reads
  * (services.status, backup.list) with the signed-in session, three actions (backup.verify,
- * services.restart, backup.run) with the session too (none deletes anything), and the receipts.
+ * services.restart, backup.run) with the session too (none deletes anything), `update.run` with the
+ * password (the gateway answers 428 and the transport asks once), and the receipts.
  * Shapes are exactly the helper's; the browser makes each action's id, so a retry with the same id
  * returns the same receipt and never runs it twice.
  */
@@ -13,6 +14,8 @@ export const HOST_OP_ID = /^[A-Za-z0-9_.:-]{16,128}$/
 const SERVICE = /^[a-z][a-z0-9-]{0,62}$/
 const SNAPSHOT = /^snapshot-\d{8}T\d{6}Z-[0-9a-f]{8}$/
 const VALUE = /^[A-Za-z0-9_.:-]{1,128}$/
+/** A Conker release, as the update action names it (no `v`). */
+export const RELEASE = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/
 const time = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/)
 
 const service = z.object({
@@ -49,6 +52,7 @@ export type HostAction =
   | { operation: 'services.restart'; arguments: { service: string } }
   | { operation: 'backup.verify'; arguments: { snapshot: string } }
   | { operation: 'backup.run'; arguments: Record<string, never> }
+  | { operation: 'update.run'; arguments: { version: string } }
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
   const result = schema.safeParse(value)
@@ -60,6 +64,7 @@ const action = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('services.restart'), arguments: z.object({ service: z.string().regex(SERVICE) }).strict() }).strict(),
   z.object({ operation: z.literal('backup.verify'), arguments: z.object({ snapshot: z.string().regex(SNAPSHOT) }).strict() }).strict(),
   z.object({ operation: z.literal('backup.run'), arguments: z.object({}).strict() }).strict(),
+  z.object({ operation: z.literal('update.run'), arguments: z.object({ version: z.string().regex(RELEASE) }).strict() }).strict(),
 ])
 
 export function createHostOpId() {

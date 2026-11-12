@@ -58,7 +58,7 @@ def test_authoritative_help_names_the_complete_contract_and_layout_limits():
     assert '"$SOURCE_ROOT/scripts/recovery.py" --root "$ROOT"' in command
     assert "Verified recovery currently supports only" not in command
     assert "separate scoped credentials" in command
-    assert "reviewed source export" in command
+    assert "Name a release: conker update --check" in command
     assert '. "$ENV_FILE"' not in command
     assert "The Compose environment is data, never shell code" in command
     dispatch = command.rsplit('command="${1:-status}"', maxsplit=1)[1]
@@ -96,6 +96,46 @@ def test_ubuntu_unsupported_commands_fail_explicitly(ubuntu_cli, command):
     assert result.returncode == 3
     assert f"conker {command} is unavailable" in result.stderr
     assert not ubuntu_cli.docker_log.exists()
+
+
+def recorder(ubuntu_cli, name):
+    script = ubuntu_cli.deployment / "sources/companion/scripts" / name
+    script.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n", encoding="utf-8")
+
+
+def test_ubuntu_update_check_forwards_to_the_release_check(ubuntu_cli):
+    recorder(ubuntu_cli, "update_check.py")
+    result = ubuntu_cli("update", "--check", "--json")
+
+    assert result.returncode == 0, result.stderr
+    forwarded = json.loads(result.stdout)
+    assert forwarded[0::2] == ["--root", "--source", "--layout", "--json"]
+    assert Path(forwarded[1]) == ubuntu_cli.deployment
+    assert Path(forwarded[3]) == ubuntu_cli.deployment / "sources/companion"
+    assert forwarded[5] == "ubuntu"
+    assert not ubuntu_cli.docker_log.exists()
+
+
+def test_ubuntu_update_to_a_release_runs_the_staged_update(ubuntu_cli):
+    recorder(ubuntu_cli, "update_ubuntu.py")
+    result = ubuntu_cli("update", "--to", "0.2.0")
+
+    assert result.returncode == 0, result.stderr
+    forwarded = json.loads(result.stdout.strip().splitlines()[-1])
+    assert forwarded == ["--root", str(ubuntu_cli.deployment), "--to", "0.2.0"]
+
+
+@pytest.mark.parametrize("arguments", [("update", "--to"), ("update", "--sideways")])
+def test_ubuntu_update_refuses_unknown_forms(ubuntu_cli, arguments):
+    result = ubuntu_cli(*arguments)
+
+    assert result.returncode == 2
+    assert "conker update --to X.Y.Z" in result.stderr
+
+
+def test_status_strict_fails_when_a_service_is_not_answering(ubuntu_cli):
+    assert ubuntu_cli("status", "--strict").returncode == 0
+    assert ubuntu_cli("status", "--loud").returncode == 2
 
 
 @pytest.mark.parametrize(

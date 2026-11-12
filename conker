@@ -152,7 +152,10 @@ health_body() {
     fi
 }
 
+# conker status --strict also exits 1 when a service is not answering or answers wrongly; a
+# degraded service still counts as answering. The update's health check uses it.
 cmd_status() {
+    local strict=${1:-} failed=0
     local names=(Conker Tools Memory System Embeddings)
     local services=(gateway toolgate memorygate systemgate embeddings)
     local ports=(8050 8010 8020 8040 8030)
@@ -167,6 +170,7 @@ cmd_status() {
         if [ -z "$body" ]; then
             bad "$(printf '%-12s' "${names[$i]}") not answering"
             worst=down
+            failed=1
             continue
         fi
         status=$(printf '%s' "$body" | top_level_status || true)
@@ -180,6 +184,7 @@ cmd_status() {
             *)
                 warn "$(printf '%-12s' "${names[$i]}") invalid health response"
                 [ "$worst" = ok ] && worst=degraded
+                failed=1
                 ;;
         esac
     done
@@ -197,6 +202,7 @@ cmd_status() {
         say "  ${DIM}Layout: source-built Ubuntu installation${OFF}"
     fi
     say ""
+    if [ "$strict" = --strict ] && [ "$failed" -ne 0 ]; then return 1; fi
 }
 
 cmd_tailscale() {
@@ -344,17 +350,42 @@ cmd_key() {
     say ""
 }
 
+# conker update                follow this checkout's branch (repository layout)
+# conker update --check [--json] [--report]   is a newer release out (--report: tell the Inbox)
+# conker update --to X.Y.Z      go to that release (Ubuntu layout): staged, snapshotted, verified,
+#                               rolled back on failure (scripts/update_ubuntu.py)
 cmd_update() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for updates. Install python3, then retry.\n' >&2
+        exit 1
+    }
+    case "${1:-}" in
+        --check)
+            shift
+            python3 "$SOURCE_ROOT/scripts/update_check.py" --root "$ROOT" --source "$SOURCE_ROOT" \
+                --layout "$LAYOUT" "$@"
+            return
+            ;;
+        --to)
+            [ "$#" -eq 2 ] || { printf 'Use conker update --to X.Y.Z.\n' >&2; exit 2; }
+            [ "$LAYOUT" = ubuntu ] || unavailable 'update --to' \
+                'A repository install follows its branch: run conker update.'
+            say ""
+            say "${BOLD}Updating to Conker $2${OFF}"
+            info "Staged and checked first, then a verified snapshot, then the switch."
+            say ""
+            python3 "$SOURCE_ROOT/scripts/update_ubuntu.py" --root "$ROOT" --to "$2"
+            return
+            ;;
+        "") ;;
+        *) printf 'Use conker update, conker update --check or conker update --to X.Y.Z.\n' >&2; exit 2 ;;
+    esac
     [ "$LAYOUT" = repository ] || unavailable update \
-        'Source-built deployments require a reviewed source export, image rebuild, and rollback record.'
+        'Name a release: conker update --check, then conker update --to X.Y.Z.'
     say ""
     say "${BOLD}Updating${OFF}"
     info "The candidate is staged and verified before running services change."
     say ""
-    command -v python3 >/dev/null 2>&1 || {
-        printf 'Python 3.11+ is required for verified updates. Install python3, then retry.\n' >&2
-        exit 1
-    }
     python3 "$ROOT/scripts/update.py" --root "$ROOT"
 }
 
@@ -993,6 +1024,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Stage, verify, activate and reconcile hosted provider credentials
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF} [SERVICE]
   ${BOLD}update${OFF}      Stage, verify and roll back a pinned release${limited}
+  ${BOLD}update${OFF} --check  Is a newer Conker release out, and what changed
+  ${BOLD}update${OFF} --to X.Y.Z  Go to that release: snapshot first, rolled back if unhealthy
   ${BOLD}setup${OFF}       Guided first run, one plain question at a time
   ${BOLD}setup${OFF} status
               Show the same verified first-run state used by the UI
@@ -1035,7 +1068,8 @@ case "$command" in
 esac
 
 case "$command" in
-    start|restart|update|model|auth) recovery_guard ;;
+    start|restart|model|auth) recovery_guard ;;
+    update) [ "${2:-}" = --check ] || recovery_guard ;;
 esac
 
 load_layout
@@ -1054,7 +1088,8 @@ case "$command" in
                 ;;
         esac
         ;;
-    status)    [ "$#" -le 1 ] || { usage >&2; exit 2; }; cmd_status ;;
+    status)    [ "$#" -eq 1 ] || { [ "$#" -eq 2 ] && [ "$2" = --strict ]; } || { usage >&2; exit 2; }
+               shift; cmd_status "$@" ;;
     doctor)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_doctor ;;
     inspect)   [ "$#" -ge 2 ] && [ "$#" -le 5 ] || { usage >&2; exit 2; }; shift; cmd_inspect "$@" ;;
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;
@@ -1069,7 +1104,7 @@ case "$command" in
     start)     [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_start ;;
     stop)      [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_stop ;;
     restart)   [ "$#" -le 2 ] || { usage >&2; exit 2; }; shift; cmd_restart "$@" ;;
-    update)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_update ;;
+    update)    shift; cmd_update "$@" ;;
     setup)     shift; cmd_setup "$@" ;;
     key)       [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_key ;;
     *) printf '\n  No command called %s.\n' "$command" >&2; usage >&2; exit 2 ;;
