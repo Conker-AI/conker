@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { useServerSetting } from '@/settings/server-setting'
 import { buildHome, earnedLine, HOME_CHART_DAYS, HOME_NEEDS_LIMIT, type HomeNeed, type PlanRow } from './home-model'
 import { usePlanUsage } from './home-plan'
+import { HomeJumpBackIn } from './home-resume'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
@@ -96,8 +97,9 @@ function PlanLine({ row }: { row: PlanRow }) {
   </li>
 }
 
-export function GatewayTodayWorkspace({ activity, owner, proposals, control }: Props) {
+export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, control }: Props) {
   const [data, setData] = useState<Data>(empty)
+  const [refreshed, setRefreshed] = useState(0)
   const [loaded, setLoaded] = useState<Set<Source>>(new Set())
   const [failed, setFailed] = useState<{ sources: Set<Source>; error: unknown } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -143,7 +145,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
   const home = buildHome(data, undefined, needsLimit)
   const missing = (source: Source) => !!failed?.sources.has(source) && !loaded.has(source)
   const waiting = (source: Source) => loading && !loaded.has(source)
-  const retry = () => { void load(); void reloadPlan() }
+  const retry = () => { void load(); void reloadPlan(); setRefreshed(value => value + 1) }
   const allFailed = !!failed && failed.sources.size === sources.length && loaded.size === 0
   const peak = Math.max(0, ...home.runDays.map(item => item.count))
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
@@ -165,6 +167,7 @@ export function GatewayTodayWorkspace({ activity, owner, proposals, control }: P
           <span className="block truncate text-muted-foreground">{setupError ? 'Status unavailable' : setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Checking setup…'}</span></span>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>}
+      <HomeJumpBackIn runtime={runtime} editor={control.editorDrafts} tasks={data.tasks} refresh={refreshed} />
       {allFailed && <InlineError error={failed.error} onRetry={() => Promise.all([load(), reloadPlan()])} />}
 
       <div className="home-bento" data-layout={layout}>

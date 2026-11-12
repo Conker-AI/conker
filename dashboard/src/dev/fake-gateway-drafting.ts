@@ -143,6 +143,12 @@ function createFakeEditorDrafts() {
     { name: 'filters', type: 'object', required: false, description: 'Advanced: extra filters for the reader.' },
   ], 'auto', 86_400_000)
   seed('email-weekly-summary', 'Email the weekly summary', 'Emails your weekly summary to one address.', [{ name: 'to', type: 'string', required: true, description: 'The email address to send it to.' }], 'owner_confirmation', 172_800_000)
+  // Unfinished edits for Home's "Jump back in": a tool never published, and a published workflow changed since.
+  seed('weather-before-practice', 'Weather before practice', 'Checks the forecast for the judo hall before Thursday practice.', [{ name: 'chat', type: 'string', required: true, description: 'Where to post the forecast.' }], 'auto', 25 * 60_000)
+  const unpublished = drafts.get('weather-before-practice')!
+  drafts.set(unpublished.id, { ...unpublished, document: { ...unpublished.document, kind: 'connector' } }); versions.delete(unpublished.id)
+  const edited = drafts.get('study-group-digest')!
+  drafts.set(edited.id, { ...edited, revision: 2, updated_at: new Date(Date.now() - 70 * 60_000).toISOString() })
   const past = `editor_${'5'.repeat(32)}`
   runs.set('study-group-digest', [{ action_id: past, version: 1, digest: versions.get('study-group-digest')![0].digest, created_at: new Date(Date.now() - 20 * 3600_000).toISOString(), args: { chat: 'Physics 101', only_new: false }, response: { code: 'OK', action_id: past, message: 'Automation completed', result: { code: 'OK', result: deadlines }, steps: [] } }])
   const answer = (id: string, version: Version, body: Json): Json => {

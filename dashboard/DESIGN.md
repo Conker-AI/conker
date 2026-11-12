@@ -27,6 +27,14 @@ holes). Every tile has its own loading, failure ("Not loaded" + Try again) and r
 failed source never shows as empty. The Inbox count everywhere is decisions plus open ideas, the
 same things Home counts. Model: `home-model.ts`, checked by `check:gateway` (check-gateway-today).
 
+**Jump back in** (12 November) sits above the bento: one card per unfinished or recent thing (an
+unpublished tool or workflow draft, an unsent message, the last chats opened, a task in progress or
+blocked), newest first, at most six, each with its `IdentityMark`, title, kind and age, opening it
+where the owner left it. Two across (three when Home is wider than 1000 px), a swipe row on phones; "All chats" and "All
+drafts" lead to the full lists. Hidden when empty; a source that did not load says so with Try
+again. Pi keeps no "last opened" time, so this browser remembers opened chat ids (never titles) and
+shows a chat only while Pi still lists it. Model: `home-resume-model.ts` (check-gateway-resume).
+
 ## Inbox (25 October)
 
 Willow-style, as the owner asked: one card per item (never rows inside one box), decisions first,
