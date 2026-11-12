@@ -45,3 +45,26 @@ path to actually work, and this is what "actually" means here.
 
 **This is the line most likely to be tested** as the system grows. It is written down precisely so
 that moving it later is a visible decision rather than a drift.
+
+## Amendment 2026-11-12: the owner's own statements are admitted at once (issue #45)
+
+The owner asked for automatic memory on 2026-11-01: no "Want me to remember?", facts about him
+saved on their own with a quiet "Remembered" and Undo, still listed and forgettable in Memory.
+The code already does this, and it departs from the decision above in two places, so this
+amendment records it instead of leaving it as drift.
+
+- **What crosses, word for word.** One kind of record leaves Pi with its words intact: a single
+  message the owner typed, sent as `owner_statement` evidence with its message and session ids.
+  Assistant answers, tool output and whole turns stay in Pi as before.
+- **Promotion inline, for those statements only.** MemoryGate scores each statement when it
+  arrives. One the owner asked it to keep, or one that scores high enough, becomes a memory in the
+  same transaction: evidence, then analysis, then memory, linked. The memory is a quote: attributed
+  to the owner, `do_not_generalize`, medium confidence, with no inference. Lower-scoring statements
+  stay evidence only, and a "don't remember" is honoured. Anything that infers, generalises or
+  combines statements still waits for the scheduled analysis pass.
+- **Unchanged.** Deletion propagates down the lineage. Forgetting a chat removes its evidence and
+  memories. Forgetting a memory marks the evidence it came from, so the next pass does not recreate
+  it (this is enforced in MemoryGate's forget path).
+
+Fable's 2026-11-10 review item R-A1 (that MemoryGate stores the owner's messages word for word) is
+answered by this amendment: that is now the decision, limited to the owner's own statements.
