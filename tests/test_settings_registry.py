@@ -438,6 +438,35 @@ def test_list_reads_each_home_once_and_shows_what_changed(capsys):
     assert found and any("quiet_hours" in row["id"] for row in found)
 
 
+def test_planned_settings_are_listed_only_on_request_and_still_scriptable(capsys):
+    planned = {
+        setting["id"] for setting in config.load_registry() if setting["effect"] == "stored"
+    }
+    assert "appearance.contrast" in planned
+    rows = run(pi(), capsys, "list")["settings"]
+    assert rows and not any(row["id"] in planned for row in rows)
+    assert {row["effect"] for row in rows} <= {"live", "next-turn", "restart"}
+    every = run(pi(), capsys, "list", planned=True)["settings"]
+    assert {row["id"] for row in every} > {row["id"] for row in rows}
+    assert any(row["id"] == "appearance.contrast" for row in every)
+    fake = pi()
+    saved = config.config_operation(
+        SimpleNamespace(operation="set", id="appearance.contrast", value="on", chat=None),
+        {},
+        fake,
+    )
+    out, err = capsys.readouterr()
+    assert saved == 0 and json.loads(out)["value"] is True
+    assert err.strip() == "Saved, but nothing reads appearance.contrast yet: it is planned."
+    assert fake.calls[-1][2]["values"] == {"appearance.contrast": True}
+    assert run(fake, capsys, "get", id="appearance.contrast")["value"] is True
+    for identity, value in (("appearance.accent", "Blue"), ("appearance.contrast", "off")):
+        args = SimpleNamespace(operation="set", id=identity, value=value, chat=None)
+        assert config.config_operation(args, {}, fake) == 0
+        said = capsys.readouterr().err
+        assert ("nothing reads" in said) == (identity == "appearance.contrast")
+
+
 def test_reset_get_and_the_errors_the_owner_sees(capsys):
     fake = pi()
     run(fake, capsys, "set", id="companion.proactivity", value="off")
