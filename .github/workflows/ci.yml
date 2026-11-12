@@ -58,7 +58,8 @@ jobs:
         run: python scripts/check_file_sizes.py
 
       - name: Python lint
-        run: python -m ruff check scripts tests
+        # Pi's policy (ruff.toml); findings that predate it are listed per file there.
+        run: python -m ruff check .
 
       - name: ShellCheck
         run: |
@@ -81,7 +82,7 @@ jobs:
         # nothing is started.
         env:
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/.test-gates/toolgate
-        run: python -m pytest tests/ -q
+        run: python -m pytest tests/ -q --cov --cov-report=term
 
       - name: Browser deployment and recovery mutation drill
         run: python scripts/auth_mutation_drill.py
