@@ -240,12 +240,12 @@ def relay(root: Path, layout: str, body: dict) -> dict:
         raise CheckError(str(error)) from None
 
 
-def report(root: Path, layout: str, result: dict, send=relay) -> int:
+def report(root: Path, layout: str, result: dict, send=None) -> int:
     """Hand Pi what the check found and the unreported receipts; returns how many receipts."""
     directory = update_directory(root, layout)
     results = pending_results(directory)
     body = {"running": result["running"], "latest": result["latest"], "results": results}
-    send(root, layout, body)
+    (send or relay)(root, layout, body)
     mark_reported(directory, [item["id"] for item in results])
     return len(results)
 
@@ -258,11 +258,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", action="store_true", help="also tell Pi (the Inbox)")
     parser.add_argument("--json", action="store_true", help="print the result as JSON")
     args = parser.parse_args(argv)
+    failures = (CheckError, OSError, subprocess.SubprocessError)
     try:
         result = check(args.source)
-        reported = report(args.root, args.layout, result) if args.report else None
-    except (CheckError, OSError, subprocess.SubprocessError) as error:
+    except failures as error:
+        # GitHub can't be read: a finished update still reaches the Inbox.
+        if args.report and pending_results(update_directory(args.root, args.layout)):
+            unknown = {"running": installed_version(args.source), "latest": None}
+            try:
+                report(args.root, args.layout, unknown)
+            except failures:
+                pass  # sent again at the next check
         print(f"Conker could not check for updates: {error}", file=sys.stderr)
+        return 1
+    try:
+        reported = report(args.root, args.layout, result) if args.report else None
+    except failures as error:
+        print(f"Conker could not tell the Inbox: {error}", file=sys.stderr)
         return 1
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -118,3 +118,42 @@ def test_the_watch_checks_after_a_pause_then_once_a_day(tmp_path):
         host_ops.watch_for_updates(host(tmp_path), sleep=sleep, check=checks.append)
     assert pauses == [host_ops.FIRST_CHECK, host_ops.CHECK_EVERY, host_ops.CHECK_EVERY]
     assert len(checks) == 2
+
+
+def test_the_daily_check_runs_only_on_the_ubuntu_layout(tmp_path):
+    ops = HostOps(
+        tmp_path / "deploy",
+        tmp_path / "source",
+        "repository",
+        runner=lambda *_a, **_k: pytest.fail("no host command may run"),
+        reader=lambda *_a, **_k: pytest.fail("no host read"),
+        policy=lambda: None,
+    )
+    assert not host_ops.check_for_updates(ops, runner=lambda *_a, **_k: pytest.fail("ran"))
+
+
+def test_the_daily_check_survives_a_lock_it_cannot_open(tmp_path, monkeypatch):
+    def refuse(self):
+        raise PermissionError("lock")
+
+    monkeypatch.setattr(OperationLock, "acquire", refuse)
+    assert not host_ops.check_for_updates(host(tmp_path), runner=lambda *_a, **_k: pytest.fail())
+
+
+def test_the_watch_keeps_going_after_a_check_raises(tmp_path):
+    pauses = []
+
+    class Stop(Exception):
+        pass
+
+    def sleep(seconds):
+        pauses.append(seconds)
+        if len(pauses) == 3:
+            raise Stop
+
+    def broken(_host):
+        raise RuntimeError("check")
+
+    with pytest.raises(Stop):
+        host_ops.watch_for_updates(host(tmp_path), sleep=sleep, check=broken)
+    assert len(pauses) == 3

@@ -205,7 +205,9 @@ class UpdateCoordinator:
                 state, "failed_before_apply", f"preflight failed: {_why(error)}"
             )
             self.store.clear_active()
-            raise UpdateError(f"Update stopped before apply. Receipt: {receipt}") from error
+            # Say why (an UpdateError's own words, e.g. a dirty checkout or a version not newer).
+            reason = _why(error).rstrip(".")
+            raise UpdateError(f"Update stopped before apply: {reason}. Receipt: {receipt}") from error
 
         receipt = self.store.receipt(state, "applied")
         self.store.clear_active()

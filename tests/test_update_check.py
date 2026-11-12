@@ -176,6 +176,27 @@ def test_a_report_pi_did_not_take_is_sent_again_next_time(tmp_path):
     assert [item["outcome"] for item in sent[0]["results"]] == ["applied"]
 
 
+def test_a_finished_update_reaches_the_inbox_while_github_cannot_be_read(tmp_path, monkeypatch):
+    root = tmp_path / "deploy"
+    receipt(root / "state" / "update", "a" * 32, "rolled_back")
+    sent = []
+
+    def offline():
+        raise CheckError("GitHub could not be reached.")
+
+    monkeypatch.setattr(update_check, "latest_release", offline)
+    monkeypatch.setattr(update_check, "relay", lambda *args: sent.append(args[2]))
+    arguments = ["--root", str(root), "--source", str(source(tmp_path, "0.1.0"))]
+    code = update_check.main([*arguments, "--layout", "ubuntu", "--report"])
+
+    assert code == 1
+    [body] = sent
+    assert body["running"] == "0.1.0" and body["latest"] is None
+    assert [item["outcome"] for item in body["results"]] == ["rolled_back"]
+    assert update_check.main([*arguments, "--layout", "ubuntu", "--report"]) == 1
+    assert len(sent) == 1  # nothing left to tell, so no second report
+
+
 def test_the_command_says_why_it_could_not_check(tmp_path, monkeypatch, capsys):
     def offline():
         raise CheckError("GitHub could not be reached.")

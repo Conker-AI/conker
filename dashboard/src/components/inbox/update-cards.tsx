@@ -21,6 +21,7 @@ const READ_AGAIN_MS = 60_000
 export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClient; hostOps: GatewayHostOpsClient; active: boolean }) {
   const [overview, setOverview] = useState<UpdatesOverview | null>(null)
   const [pending, setPending] = useState<string | null>(null), [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
+  const [starting, setStarting] = useState(false) // one click, one start: busy turns on only once the request is sent
   const load = useCallback(async () => { try { setOverview(await updates.list()) } catch { setOverview(null) } }, [updates])
   const actions = useServerActions(hostOps, () => void load())
   useEffect(() => {
@@ -38,11 +39,19 @@ export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClie
   const offer = overview?.offer ?? null
   const running = receipt?.outcome === 'working' && receipt.arguments.version === offer?.version ? receipt : null
   const tried = attempt?.action.operation === 'update.run' && attempt.action.arguments.version === offer?.version ? attempt : null
+  // A start that was refused (busy, unavailable, never arrived) ran nothing: Update and Skip stay.
+  const refused = !running && tried?.state === 'problem'
+  async function update(version: string) {
+    if (starting) return
+    setStarting(true)
+    try { await actions.start({ operation: 'update.run', arguments: { version } }) } finally { setStarting(false) }
+  }
   return <>
-    {offer && <OfferCard offer={offer} busy={pending !== null || actions.busy !== null} error={failure?.key === offer.version ? failure.message : null}
+    {offer && <OfferCard offer={offer} busy={starting || pending !== null || actions.busy !== null} error={failure?.key === offer.version ? failure.message : null}
       progress={running ? <ReceiptLine receipt={running} live working="Conker is switching to the new version. This page may lose the connection for a few minutes and reconnects by itself; the result shows here." />
         : tried ? <AttemptLine attempt={tried} onCheck={() => void actions.checkAttempt('update')} /> : null}
-      onUpdate={() => void actions.start({ operation: 'update.run', arguments: { version: offer.version } })}
+      settled={refused}
+      onUpdate={() => void update(offer.version)}
       onSkip={() => void settle(offer.version, () => updates.skip(offer.version))} />}
     {(overview?.results ?? []).map(result => <ResultCard key={result.id} result={result} error={failure?.key === result.id ? failure.message : null}
       onDismiss={() => void settle(result.id, () => updates.dismiss(result.id))} />)}
@@ -53,14 +62,16 @@ function published(offer: UpdateOffer) {
   return offer.publishedAt && !Number.isNaN(Date.parse(offer.publishedAt)) ? `published ${when(offer.publishedAt)}` : `found ${when(offer.foundAt * 1000)}`
 }
 
-function OfferCard({ offer, busy, error, progress, onUpdate, onSkip }: {
-  offer: UpdateOffer; busy: boolean; error: string | null; progress: ReactNode; onUpdate: () => void; onSkip: () => void
+function OfferCard({ offer, busy, error, progress, settled, onUpdate, onSkip }: {
+  offer: UpdateOffer; busy: boolean; error: string | null; progress: ReactNode; settled: boolean; onUpdate: () => void; onSkip: () => void
 }) {
+  const locked = progress !== null && !settled
   return <InboxCard icon={<CircleArrowUp className="text-primary" />} title={offer.title} source={`New Conker release · ${published(offer)}`}
-    primary={progress ? undefined : <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update</Button>}
-    onLater={progress ? undefined : onSkip} laterLabel="Skip this version"
+    primary={locked ? undefined : <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update</Button>}
+    onLater={locked ? undefined : onSkip} laterLabel="Skip this version"
     actions={<>
-      {progress ?? <>
+      {progress}
+      {!locked && <>
         <p className="text-muted-foreground">{UPDATE_EFFECT} If the new version doesn’t start properly, Conker goes back to the one it has now by itself.</p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update to {offer.version}</Button>

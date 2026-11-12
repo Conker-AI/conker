@@ -456,12 +456,15 @@ CHECK_TIMEOUT = 10 * 60
 def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
     """One `conker update --check --report`: the newest release and any finished update go to
     the Inbox. Skipped while a server action runs (an update moves the sources it runs from).
-    Keeps no output; a failure is tried again at the next check."""
-    lock = OperationLock(host.lock_path)
-    if not lock.acquire():
+    Keeps no output; a failure is tried again at the next check. Only the Ubuntu layout: the
+    repository layout cannot update to a release (`conker update --to` is refused there)."""
+    if host.layout != "ubuntu":
         return False
-    lock.release()
     try:
+        lock = OperationLock(host.lock_path)
+        if not lock.acquire():
+            return False
+        lock.release()
         runner(
             host._conker("update", "--check", "--report"),
             cwd=host.root,
@@ -482,7 +485,10 @@ def watch_for_updates(host: HostOps, *, sleep=None, check=check_for_updates) -> 
     pause = sleep or time.sleep
     pause(FIRST_CHECK)
     while True:
-        check(host)
+        try:
+            check(host)
+        except Exception:  # noqa: BLE001, S110 - the watch outlives any one check; next try tomorrow
+            pass
         pause(CHECK_EVERY)
 
 

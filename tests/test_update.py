@@ -104,15 +104,32 @@ def test_success_records_resolved_apply_and_receipt(tmp_path):
     assert not updater.store.active_path.exists()
 
 
-def test_preflight_failure_never_records_or_applies(tmp_path):
+def test_preflight_failure_never_applies_and_keeps_a_receipt(tmp_path):
     transport = FakeTransport(fail="preflight")
     updater = UpdateCoordinator(transport, store(tmp_path))
 
-    with pytest.raises(RuntimeError, match="preflight"):
+    with pytest.raises(UpdateError, match=r"^Update stopped before apply: RuntimeError\. Receipt: "):
         updater.run()
 
     assert transport.calls == ["preflight"]
     assert not updater.store.active_path.exists()
+    [receipt] = (updater.store.directory / "receipts").glob("*.json")
+    assert json.loads(receipt.read_text(encoding="utf-8"))["status"] == "failed_before_apply"
+
+
+def test_a_preflight_refusal_says_why(tmp_path):
+    transport = FakeTransport()
+
+    def refuse():
+        transport.calls.append("preflight")
+        raise UpdateError("refusing update because the repository is dirty")
+
+    transport.preflight = refuse
+    updater = UpdateCoordinator(transport, store(tmp_path))
+
+    with pytest.raises(UpdateError, match="before apply: refusing update because the repository is dirty. Receipt"):
+        updater.run()
+    assert transport.calls == ["preflight"]
 
 
 @pytest.mark.parametrize("failure", ["apply_code", "apply_services", "verify_candidate"])

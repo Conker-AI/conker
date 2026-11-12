@@ -1098,8 +1098,8 @@ case "$command" in
                 ;;
         esac
         ;;
-    status)    [ "$#" -eq 1 ] || { [ "$#" -eq 2 ] && [ "$2" = --strict ]; } || { usage >&2; exit 2; }
-               shift; cmd_status "$@" ;;
+    status)    [ "$#" -le 1 ] || { [ "$#" -eq 2 ] && [ "$2" = --strict ]; } || { usage >&2; exit 2; }
+               [ "$#" -eq 0 ] || shift; cmd_status "$@" ;;
     doctor)    [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_doctor ;;
     inspect)   [ "$#" -ge 2 ] && [ "$#" -le 5 ] || { usage >&2; exit 2; }; shift; cmd_inspect "$@" ;;
     apply)     [ "$#" -eq 3 ] || { usage >&2; exit 2; }; shift; cmd_apply "$1" "$2" ;;

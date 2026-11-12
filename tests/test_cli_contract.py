@@ -138,6 +138,13 @@ def test_status_strict_fails_when_a_service_is_not_answering(ubuntu_cli):
     assert ubuntu_cli("status", "--loud").returncode == 2
 
 
+def test_bare_conker_still_shows_status(ubuntu_cli):
+    bare, named = ubuntu_cli(), ubuntu_cli("status")
+
+    assert bare.returncode == 0, bare.stderr
+    assert bare.stdout == named.stdout
+
+
 @pytest.mark.parametrize(
     "arguments",
     [
