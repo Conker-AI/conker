@@ -324,6 +324,7 @@ def test_the_image_is_published_only_for_its_own_tags_after_its_checks():
             "Build",
             "Claude Code runs read-only, without a network",
             "Scan the image",
+            "List what the image contains (SPDX SBOM)",
             "Nothing secret is baked in",
             "Push",
         )
