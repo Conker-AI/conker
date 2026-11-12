@@ -37,7 +37,7 @@ CUT_OFF = (
     "Check before trying again."
 )
 NO_START = "The command could not start on the server."
-RELEASE = re.compile(r"\d{1,4}\.\d{1,4}\.\d{1,4}")
+RELEASE = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}")
 
 
 @dataclass(frozen=True)

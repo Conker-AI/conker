@@ -22,7 +22,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 RELEASES = "https://api.github.com/repos/Conker-AI/conker/releases/latest"
 RELEASE_PAGE = "https://github.com/Conker-AI/conker/releases/tag/"
-VERSION = re.compile(r"\d{1,4}\.\d{1,4}\.\d{1,4}")
+VERSION = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}")
 MAX_ANSWER = 512 * 1024
 MAX_NOTES = 20000
 MAX_REASON = 300

@@ -158,7 +158,8 @@ Conker release page and says whether it is newer; `conker update --to X.Y.Z` (or
 Inbox card) stages that release's sources and the module tags it pins, builds the dashboard, takes a
 verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swaps the sources
 (the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
---strict`. A failed check puts the old sources back and proves them healthy; if that cannot be
+--strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
+already changed stays changed, and the snapshot is the way back); if that cannot be
 proven the update holds and the snapshot is the way back. Receipts are in `state/update/`. Plain
 `conker update` (follow a branch) and the repository-wide `key` command remain unavailable. The launcher does not depend on Hermes. Direct
 Compose equivalents:

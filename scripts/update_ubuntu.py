@@ -39,7 +39,13 @@ from typing import Any
 from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
-    from scripts.update_check import VERSION, installed_version, report, version_key
+    from scripts.update_check import (
+        VERSION,
+        _Stay,
+        installed_version,
+        report,
+        version_key,
+    )
     from scripts.update_core import (
         UpdateCoordinator,
         UpdateError,
@@ -47,7 +53,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         _acquire_lock,
     )
 except ModuleNotFoundError:
-    from update_check import VERSION, installed_version, report, version_key
+    from update_check import VERSION, _Stay, installed_version, report, version_key
     from update_core import UpdateCoordinator, UpdateError, UpdateStore, _acquire_lock
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
@@ -60,6 +66,9 @@ MODULES = {
     "embeddings": ("embeddings", "EMBEDDINGS_VERSION"),
 }
 MAX_ARCHIVE = 300 * 1024 * 1024
+# What one unpacked release may hold: a hostile archive cannot fill the disk before the update starts.
+MAX_UNPACKED = 3 * 1024 * 1024 * 1024
+MAX_MEMBERS = 200_000
 MIN_FREE = 20 * 1024**3  # a snapshot (about 10 GB today) plus the build
 BUILD_SECONDS = 3600
 START_SECONDS = 900
@@ -89,7 +98,7 @@ def download(url: str, target: Path) -> None:
     """One GitHub tag archive into `target`, without its top folder. Links stay inside it."""
     with tempfile.TemporaryFile() as buffer:
         request = Request(url, headers={"User-Agent": "conker-update"})
-        with build_opener().open(request, timeout=120) as response:
+        with build_opener(_Stay()).open(request, timeout=120) as response:
             size = 0
             while chunk := response.read(1 << 20):
                 size += len(chunk)
@@ -98,8 +107,11 @@ def download(url: str, target: Path) -> None:
                 buffer.write(chunk)
         buffer.seek(0)
         with tarfile.open(fileobj=buffer, mode="r:gz") as bundle:
-            members = []
-            for member in bundle.getmembers():
+            members, unpacked = [], 0
+            for count, member in enumerate(bundle, start=1):
+                unpacked += max(member.size, 0)
+                if count > MAX_MEMBERS or unpacked > MAX_UNPACKED:
+                    raise UpdateError("a release archive unpacks to more than expected")
                 _, _, inner = member.name.partition("/")
                 if not inner:
                     continue

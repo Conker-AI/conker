@@ -199,3 +199,46 @@ def test_a_held_recovery_or_backup_refuses_the_update(deployment):
 def test_an_update_names_an_exact_release():
     with pytest.raises(UpdateError):
         UbuntuTransport(Path("."), "main")
+
+
+def archive(*members: tuple[str, bytes]) -> bytes:
+    import io
+    import tarfile
+
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w:gz") as bundle:
+        for name, data in members:
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            bundle.addfile(info, io.BytesIO(data))
+    return raw.getvalue()
+
+
+def serve(monkeypatch, body: bytes) -> None:
+    import io
+
+    class Opener:
+        def open(self, _request, timeout):
+            return io.BytesIO(body)
+
+    monkeypatch.setattr(update_ubuntu, "build_opener", lambda *_handlers: Opener())
+
+
+def test_a_release_archive_unpacks_without_its_top_folder(tmp_path, monkeypatch):
+    serve(monkeypatch, archive(("conker-0.2.0/versions.env", b"CONKER_VERSION=0.2.0\n")))
+    update_ubuntu.download("https://codeload.github.com/x", tmp_path / "out")
+    assert (tmp_path / "out" / "versions.env").read_text() == "CONKER_VERSION=0.2.0\n"
+
+
+def test_an_archive_that_unpacks_too_large_is_refused_before_writing(tmp_path, monkeypatch):
+    serve(monkeypatch, archive(("conker-0.2.0/a", b"x" * 64), ("conker-0.2.0/b", b"y" * 64)))
+    monkeypatch.setattr(update_ubuntu, "MAX_UNPACKED", 100)
+    with pytest.raises(UpdateError, match="unpacks to more"):
+        update_ubuntu.download("https://codeload.github.com/x", tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("version", ["١.٢.٣", "0.2.0\n"])
+def test_only_ascii_release_numbers_are_accepted(version):
+    with pytest.raises(UpdateError):
+        UbuntuTransport(Path("."), version)

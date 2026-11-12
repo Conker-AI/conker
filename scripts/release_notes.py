@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = re.compile(r"v(\d{1,4}\.\d{1,4}\.\d{1,4})")
+TAG = re.compile(r"v([0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4})")
 HEADING = re.compile(r"^## (\S+)\s*$")
 
 
