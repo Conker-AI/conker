@@ -30,8 +30,30 @@ async function main() {
   let reply = { schemaVersion: 1, results: [job, draft, memory] }
   const client = createChangeRequestsClient({ request: async (...args) => { calls.push(args); return structuredClone(reply) } })
   assert.deepEqual((await client.list()).map(item => item.kind), ['ai_job', 'tool_draft', 'memory'])
-  reply = { schemaVersion: 1, results: [{ ...job, kind: 'grant_access' }] }
-  await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'Only the three kinds Conker may ask for are shown')
+  // A kind this dashboard does not know yet (a newer Pi) is one plain card, never a failed Inbox.
+  reply = { schemaVersion: 1, results: [{ ...job, kind: 'grant_access', payload: { scope: 'everything' } }, memory] }
+  const degraded = await client.list()
+  assert.deepEqual(degraded.map(item => item.kind), ['other', 'memory'], 'An unknown kind degrades instead of failing the list')
+  assert.equal(degraded[0].filedKind, 'grant_access', 'The plain card still says which kind Pi filed')
+  for (const bad of [{ ...job, kind: '' }, { ...job, kind: 'grant_access', payload: 'x' }, { ...job, kind: 'grant_access', extra: 1 }]) {
+    reply = { schemaVersion: 1, results: [bad] }
+    await assert.rejects(client.list(), error => error.kind === 'invalid-response', `A malformed request is still refused: ${JSON.stringify(bad).slice(0, 80)}`)
+  }
+  // A new agent or team exactly as Pi files it (conker.create_agent, conker.create_team).
+  const agentPayload = { name: 'Exam coach', role: 'Quizzes me', instructions: 'Ask one question at a time.', modelId: null, toolIds: ['research.search'], toolAccess: {}, memory: { scope: 'conversation', memoryIds: [] } }
+  const role = (n, agentId) => ({ id: `role${n}`, name: `Role ${n}`, agentId, instructions: 'Do it.', toolIds: [], memory: { scope: 'none', memoryIds: [] }, context: { mode: 'task_only', sourceIds: [] }, budget: { maxTurns: 1, maxTokens: 50000, maxCostCents: 25 } })
+  const teamPayload = { name: 'Essay review', objective: 'Check then edit.', roles: [role(1, `agent_${'1'.repeat(32)}`), role(2, 'companion')], handoffs: [{ id: 'handoff1', fromRoleId: 'role1', toRoleId: 'role2', condition: 'Reviewed.', payload: 'result_only', maxTransfers: 1 }], budget: { maxTurns: 4, maxTokens: 100000, maxCostCents: 50, maxHandoffs: 1 } }
+  const agentRequest = { ...job, kind: 'agent', title: 'Create the agent “Exam coach”', payload: agentPayload }
+  const teamRequest = { ...job, kind: 'team', title: 'Create the team “Essay review”: Role 1 → Role 2', payload: teamPayload }
+  reply = { schemaVersion: 1, results: [agentRequest, teamRequest] }
+  const made = await client.list()
+  assert.deepEqual(made.map(item => item.kind), ['agent', 'team'])
+  assert.deepEqual(made[1].payload.roles.map(item => item.agentId), [`agent_${'1'.repeat(32)}`, 'companion'], 'Roles keep their order')
+  for (const bad of [{ ...agentRequest, payload: { ...agentPayload, memory: { scope: 'everywhere', memoryIds: [] } } }, { ...agentRequest, payload: { ...agentPayload, toolIds: 'all' } },
+    { ...teamRequest, payload: { ...teamPayload, roles: [] } }, { ...teamRequest, payload: { ...teamPayload, roles: [{ ...role(1, 'companion'), instructions: '' }] } }]) {
+    reply = { schemaVersion: 1, results: [bad] }
+    await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'A known kind with the wrong shape is refused, never shown as something else')
+  }
   reply = { schemaVersion: 1, results: [{ ...memory, payload: { text: 'x', memoryId: 'm1' } }] }
   await assert.rejects(client.list(), error => error.kind === 'invalid-response', 'A memory request is exactly its text')
 
@@ -183,6 +205,8 @@ async function main() {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     assert.ok(!/<Button(?![^>]*type="button")[^>]*onClick/.test(source), `${file}: every clickable button is type="button" (a card can sit inside a form)`)
   }
-  console.log('Gateway change requests passed: three kinds only, exact payloads, verified approval, save-then-record tool drafts, background drafting states, retry and publish records, and no browser edits.')
+  for (const label of ['Create agent', 'Create team', 'Update Conker to review it', 'Roles, in order', 'What it remembers']) assert.ok((card + fs.readFileSync(path.join(root, 'src/components/inbox/agent-request-details.tsx'), 'utf8')).includes(label), `The card shows: ${label}`)
+  assert.match(hook, /request\.kind === 'other'\) throw/, 'A kind this dashboard cannot show is never approved from it')
+  console.log('Gateway change requests passed: five kinds plus a plain card for unknown ones, exact payloads, verified approval, save-then-record tool drafts, background drafting states, retry and publish records, and no browser edits.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

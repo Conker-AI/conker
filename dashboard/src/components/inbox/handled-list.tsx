@@ -10,7 +10,14 @@ const WHO: Record<HandledAction['decidedBy'], string> = {
   owner_request: 'Your own request',
 }
 
-const OWN: Record<string, string> = { 'conker.remember': 'Remembered something', 'conker.schedule': 'Made a cron job', 'conker.draft_tool': 'Drafted a tool' }
+const OWN: Record<string, string> = {
+  'conker.remember': 'Remembered something', 'conker.schedule': 'Made a cron job', 'conker.draft_tool': 'Drafted a tool',
+  'conker.create_agent': 'Made an agent', 'conker.create_team': 'Made a team', 'conker.run_agent': 'Ran another agent', 'conker.recall': 'Searched memory',
+}
+// What Conker made at once is undone by archiving it where it lives (Handled items do not name it).
+const UNDO: Record<string, { to: string; label: string }> = {
+  'conker.create_agent': { to: '/agents', label: 'Archive it in Agents' }, 'conker.create_team': { to: '/agents?tab=teams', label: 'Archive it in Teams' },
+}
 
 function when(seconds: number, now: number) {
   const minutes = Math.max(1, Math.floor((now - seconds * 1000) / 60_000))
@@ -31,6 +38,9 @@ export function HandledList({ client, now }: { client: AccessClient; now: number
   return <ul className="divide-y rounded-lg border">{items.map(item => <li key={item.id} className="space-y-0.5 p-3">
     <p className="text-sm"><span className="font-medium">{OWN[item.toolId] ?? item.toolId}</span> <span className="text-muted-foreground">· {when(item.createdAt, now)}</span></p>
     <p className="text-xs leading-5 text-muted-foreground">{WHO[item.decidedBy]}{item.reason && item.decidedBy !== 'tool_default' ? `: ${item.reason}` : ''}</p>
-    {item.sessionId && <Link className="text-xs underline underline-offset-4" to={`/chat?session=${encodeURIComponent(item.sessionId)}`}>Open the chat</Link>}
+    <p className="flex flex-wrap gap-x-3 text-xs">
+      {item.sessionId && <Link className="underline underline-offset-4" to={`/chat?session=${encodeURIComponent(item.sessionId)}`}>Open the chat</Link>}
+      {UNDO[item.toolId] && <Link className="underline underline-offset-4" to={UNDO[item.toolId].to}>{UNDO[item.toolId].label}</Link>}
+    </p>
   </li>)}</ul>
 }

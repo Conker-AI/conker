@@ -7,6 +7,15 @@ from zoneinfo import ZoneInfo
 
 from conker_context import pi_call
 
+# What each kind of Conker's change request would make; a newer kind shows as "request".
+REQUEST_KINDS = {
+    "ai_job": "cron job",
+    "tool_draft": "tool",
+    "memory": "memory",
+    "agent": "new agent",
+    "team": "new team",
+}
+
 
 def register(commands):
     inbox = commands.add_parser(
@@ -56,6 +65,9 @@ def render(value):
                 line = f"  {marker} {title}"
             elif item["kind"] == "attention":
                 line = f"  {marker} {title}: {item.get('status', '')}"
+            elif item["kind"] == "change-request":
+                filed = (item.get("source") or {}).get("requestKind")
+                line = f"  {marker} {title} · {REQUEST_KINDS.get(filed, 'request')}"
             elif item["kind"] == "plan" and item.get("resetsAt"):
                 line = (
                     f"  {marker} {title}, resets {_format_reset(item['resetsAt'], tz)}"
@@ -120,7 +132,7 @@ def _needs_you_marker(item):
     """Get the marker for needs-you items."""
     if item["kind"] == "approval":
         return "!"
-    elif item["kind"] == "suggestion" or item["kind"] == "memory":
+    elif item["kind"] in ("suggestion", "memory", "change-request"):
         return "?"
     elif item["kind"] == "attention":
         if item.get("urgency", {}).get("urgent", False):

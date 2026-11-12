@@ -1,6 +1,6 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { BookmarkPlus, CalendarClock, Wrench } from 'lucide-react'
+import { BookmarkPlus, Bot, CalendarClock, CircleHelp, Users, Wrench } from 'lucide-react'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,18 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { toolDraftStatus, type ChangeRequest, type ToolDraftRequest } from '@/lib/gateway/change-requests'
+import { AgentDetails, TeamDetails } from './agent-request-details'
 import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
 
+// What approving does, and what kind of thing it is, per request kind.
+const LABELS: Record<ChangeRequest['kind'], { action: string; kind: string }> = {
+  ai_job: { action: 'Create job', kind: 'AI job' }, tool_draft: { action: 'Review', kind: 'Tool' }, memory: { action: 'Remember', kind: 'Memory' },
+  agent: { action: 'Create agent', kind: 'Agent' }, team: { action: 'Create team', kind: 'Team' }, other: { action: '', kind: 'Request' },
+}
+const ICONS: Record<ChangeRequest['kind'], ReactNode> = {
+  ai_job: <CalendarClock />, tool_draft: <Wrench />, memory: <BookmarkPlus />, agent: <Bot />, team: <Users />, other: <CircleHelp />,
+}
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const effects = { read: 'Only reads', prepare: 'Prepares things, sends nothing', write: 'Changes or sends things' } as const
 
@@ -39,6 +48,9 @@ function Details({ request }: { request: ChangeRequest }) {
     <p className="text-xs text-muted-foreground">It reads with tools that need no confirmation; anything that would change something still asks you.</p>
   </dl>
   if (request.kind === 'memory') return <p className="text-xs text-muted-foreground">Saved word for word. You can change or forget it any time in Memory.</p>
+  if (request.kind === 'agent') return <AgentDetails request={request} />
+  if (request.kind === 'team') return <TeamDetails request={request} />
+  if (request.kind === 'other') return null
   if (request.payload.status === 'drafting' || request.payload.status === 'failed' || request.payload.status === 'needs_detail') return null
   const document = request.payload.document as { nodes?: Node[]; effect?: keyof typeof effects; credentialRefs?: string[]; inputs?: { name?: string }[] }
   const calls = (document.nodes ?? []).filter(node => node.type === 'tool_call' || node.type === 'workflow_call')
@@ -122,19 +134,30 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
 }) {
   const [changing, setChanging] = useState(false), [words, setWords] = useState('')
   const status = request.kind === 'tool_draft' ? toolDraftStatus(request) : null
-  const action = request.kind === 'ai_job' ? 'Create job' : request.kind === 'tool_draft' ? 'Review' : 'Remember'
-  const kind = request.kind === 'ai_job' ? 'AI job' : request.kind === 'tool_draft' ? 'Tool' : 'Memory'
+  const { action, kind } = LABELS[request.kind]
   // Who asked, when and in which chat: the record, one "Advanced" tap away.
   const facts: InboxFact[] = [['From', request.kind === 'tool_draft' && !request.sessionId ? 'Your tool request' : 'Conker’s request'],
     ['Came', `${age(request.createdAt, now)} · ${new Date(request.createdAt * 1000).toLocaleString()}`], ...(request.sessionId ? [['Chat', chatLink(request.sessionId)] as InboxFact] : [])]
   const footer = error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined
-  const text = request.kind === 'memory' ? request.payload.text : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
+  // An agent says what it does (its role); a team its objective; the details show the rest exactly as filed.
+  const text = request.kind === 'memory' ? request.payload.text : request.kind === 'agent' ? request.payload.role : request.kind === 'team' ? request.payload.objective
+    : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
   // A tool or job request that names a service shows its logo (a Telegram tool reads as Telegram at a glance).
-  const brand = request.kind === 'memory' ? null : serviceIn(request.title, text)
-  const icon = brand ? <IdentityMark brand={brand} className="size-full border-0 bg-transparent" /> : request.kind === 'ai_job' ? <CalendarClock /> : request.kind === 'tool_draft' ? <Wrench /> : <BookmarkPlus />
+  const brand = request.kind === 'ai_job' || request.kind === 'tool_draft' ? serviceIn(request.title, text) : null
+  const icon = brand ? <IdentityMark brand={brand} className="size-full border-0 bg-transparent" /> : ICONS[request.kind]
   // A title that already says it all is not repeated underneath.
   const summary = text && !request.title.includes(text.trim()) ? text : undefined
   const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined
+  if (request.kind === 'other') {
+    // A kind this dashboard does not know yet: shown plainly, never approved from here.
+    return <InboxCard icon={icon} title={request.title} source={`${kind} · Conker’s request`} summary={summary} facts={[...facts, ['Kind', request.filedKind]]} onLater={onLater} footer={footer} actions={<>
+      <p className="text-xs text-muted-foreground">This version of the dashboard can’t show what approving would make. Update Conker to review it, or decline it.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>{busy ? 'Working…' : 'Don’t'}</Button>
+        {request.sessionId && chatLink(request.sessionId)}
+      </div>
+    </>} />
+  }
   if (request.kind === 'tool_draft' && status === 'drafting') {
     // Working: nothing to decide yet, so no answers and no Later; only the chat it came from.
     return <InboxCard icon={icon} title={request.title} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
