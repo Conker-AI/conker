@@ -38,6 +38,66 @@ separately.
 Restore does not need an installed `.env`. Its destination must not exist. The existing
 installation and its volumes are not overwritten or stopped by restore.
 
+## Backups on a schedule
+
+```sh
+./conker backup schedule on                  # nightly backup through the saved policy
+./conker backup schedule on --drill weekly   # and a restore drill every Sunday
+./conker backup schedule on --drill off      # keep the nightly backup, stop the drill
+./conker backup schedule off                 # remove both timers
+./conker backup schedule status
+```
+
+Linux with a systemd user session only; elsewhere the command refuses and changes nothing. `on`
+writes a oneshot service and a timer per installation under `~/.config/systemd/user/`
+(`conker-backup-<id>` nightly at 03:30 local time, `conker-drill-<id>` Sundays at 05:00, each up
+to 30 minutes later at random, `Persistent=true` so a run missed while the server was off happens
+at the next boot) and enables them; repeating it is harmless. Nothing turns the schedule on by
+itself: not the installer, not `prepare.py`, not an update. User timers run while nobody is signed
+in only with lingering on, so `on` refuses until it is (`sudo loginctl enable-linger $USER`).
+Stopping a unit (shutdown, `systemctl --user stop`) sends SIGINT to every process in it, which
+lets the backup restart the services it stopped and remove its lock, and the drill remove its
+copy, within 15 minutes before systemd kills what is left (at shutdown the user manager's own
+stop limit can be shorter; a drill cut off there is swept by the next one).
+
+The nightly run is the host helper's `backup.run` ([ADR-0014](../adr/0014-server-actions-through-one-host-helper.md)):
+the same `conker setup run protection` (back up, verify, keep the saved number of verified
+snapshots), the same one-at-a-time lock and the same receipt in the helper's journal, under an id
+starting `schedule-`. It never waits: while another server action runs, a backup holds
+`.conker-backup.lock`, a recovery is held or `conker update` runs or is held (its lock, active
+state or `HOLD.json` in `git rev-parse --git-path conker-update`), it is refused. With no backup
+destination saved it does nothing. Every run, refused and skipped ones included, leaves a line in
+`state/backup-schedule/journal.jsonl` (`.conker/backup-schedule/` in the repository layout) with
+its time, outcome and a plain reason; `status` shows the last one.
+
+## Restore drill
+
+```sh
+./conker backup drill                        # the newest snapshot in the saved folder
+./conker backup drill /mnt/backup-device/conker/snapshot-...
+./conker backup drill --last                 # the last drill's receipt
+```
+
+The drill is `restore` into a fresh folder under the installation's state
+(`state/backup-schedule/drill-*`), never the live install and never a volume of the live stack.
+Restore's own checks run (snapshot hashes, store archives, PostgreSQL restore, vault values and
+the MemoryGate key decrypt, approvals cancelled and jobs held); the drill then checks that the
+copy stayed isolated (`--network none`, no ports, stopped), removes every container and volume
+labelled with that copy's `conker.recovery` project and the folder, in a `finally` path that
+runs when the restore fails and when the drill is interrupted (Ctrl-C, SIGTERM, SIGHUP or the
+unit being stopped), and checks that the live stack's containers and volumes are the same as
+before. No application starts and nothing gets a network. Only SIGKILL or power loss skips that
+path: the receipt then stays `running`, and the next drill first removes the `drill-*` folder
+and the copy its hold file names, and counts them in `swept`.
+
+It holds the host helper's lock while it runs and refuses at once when another server action, a
+backup, a held recovery or an update is in the way, or when free space in the drill folder or
+Docker's data folder is under twice the snapshot's size. Each attempt leaves a receipt in the same
+journal: id, start and end, duration, snapshot name, outcome (`running` while it runs, then
+`passed`, `failed`, `refused` or `skipped`), the checks that passed, anything left behind, stale
+copies swept and a plain reason. Never a credential, a restored value or command output. A passed drill proves this snapshot restores on this machine today; it is not
+the operator review a return to service needs.
+
 ## What is saved
 
 - A custom-format PostgreSQL dump of the managed MemoryGate database (`memorygate` in the
@@ -243,8 +303,9 @@ checks out ToolGate 0.2.2 explicitly for that compatibility test.
 
 The separate Docker drill pulls pinned fixture images before recovery, runs real PostgreSQL
 dump/restore and gate-image helpers, verifies records and credentials, takes the restored candidate
-through review and service-ready proof, tests an actual approval consumer, and inspects the network
-mode after an injected interruption. Fixtures have unique
+through review and service-ready proof, tests an actual approval consumer, inspects the network
+mode after an injected interruption, and runs `conker backup drill`'s code end to end against
+the fixture stack (passed, nothing left, the stack's containers unchanged). Fixtures have unique
 names; cleanup uses their recorded IDs, never a global Docker prune. It runs in a dedicated CI
 job and must pass on Linux before this recovery path is released. Skipping it locally is not
 evidence that Docker recovery works.

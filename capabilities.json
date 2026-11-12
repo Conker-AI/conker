@@ -121,8 +121,8 @@
     },
     {
       "id": "verified-backup", "name": "Verified coordinated backup", "authority": "conker-host", "state": "active",
-      "gatewayRoutes": ["/api/host/read", "/api/host/ops", "/api/host/ops/{id}"], "uiRoutes": ["/system?tab=backups"], "cliCommands": ["conker backup", "conker verify-backup", "conker ops run backup.list", "conker ops run backup.verify snapshot=NAME", "conker ops run backup.run"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
-      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/host_ops.py", "contains": "self._conker(\"setup\", \"run\", \"protection\")"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}, {"path": "dashboard/src/components/gateway/server-backups.tsx", "contains": "operation: 'backup.run'"}]
+      "gatewayRoutes": ["/api/host/read", "/api/host/ops", "/api/host/ops/{id}"], "uiRoutes": ["/system?tab=backups"], "cliCommands": ["conker backup", "conker verify-backup", "conker ops run backup.list", "conker ops run backup.verify snapshot=NAME", "conker ops run backup.run", "conker backup schedule on", "conker backup drill"], "deploymentRequirements": ["repository or generated Ubuntu layout", "off-machine destination"],
+      "evidence": [{"path": "conker", "contains": "backup|restore|verify-backup|recovery-status"}, {"path": "scripts/host_ops.py", "contains": "self._conker(\"setup\", \"run\", \"protection\")"}, {"path": "scripts/recovery.py", "contains": "verify-backup"}, {"path": "docs/reference/recovery.md", "contains": "verify-backup"}, {"path": "dashboard/src/components/gateway/server-backups.tsx", "contains": "operation: 'backup.run'"}, {"path": "conker", "contains": "scripts.backup_cli"}, {"path": "scripts/backup_drill.py", "contains": "_inspect_isolated_resources(state, docker)"}]
     },
     {
       "id": "held-recovery", "name": "Isolated held restore and readiness review", "authority": "conker-host", "state": "active",

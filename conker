@@ -976,6 +976,10 @@ ${BOLD}conker${OFF} - your companion, on this machine
   ${BOLD}tailscale${OFF}   Reach Conker from your phone or laptop
   ${BOLD}backup${OFF} [--destination DIR]
               Create a verified snapshot (stops writers during capture)
+  ${BOLD}backup schedule${OFF} on [--drill weekly|off] | off | status
+              Back up every night, and drill weekly if asked (Linux systemd user timers)
+  ${BOLD}backup drill${OFF} [SNAPSHOT] | --last
+              Restore a backup into a throwaway copy, check it, then remove the copy
   ${BOLD}verify-backup${OFF} SNAPSHOT
               Check snapshot files and hashes
   ${BOLD}restore${OFF} SNAPSHOT --into DIR
@@ -1030,6 +1034,12 @@ case "$command" in
             printf 'Python 3.11+ is required for recovery. Install python3, then retry.\n' >&2
             exit 1
         }
+        # Nightly backups, the weekly drill and the drill itself: scripts/backup_cli.py.
+        if [ "$command" = backup ] && { [ "${2:-}" = schedule ] || [ "${2:-}" = drill ]; }; then
+            shift
+            PYTHONPATH="$SOURCE_ROOT${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m scripts.backup_cli \
+                --root "$ROOT" --source "$SOURCE_ROOT" --layout "$LAYOUT" "$@"
+        fi
         exec python3 "$SOURCE_ROOT/scripts/recovery.py" --root "$ROOT" "$@"
         ;;
 esac

@@ -69,7 +69,8 @@ Open work is tracked in [GitHub issues](https://github.com/Conker-AI/conker/issu
 1. Run assembled acceptance for the exact current manifest on Linux and keep its evidence bundle.
 2. Exercise the CLI inspection and mutation families against the assembled Linux services, with
    redacted evidence.
-3. Run the source-built Ubuntu backup and isolated held-restore drill on the Linux host.
+3. Run the source-built Ubuntu backup and isolated held-restore drill on the Linux host
+   (`conker backup drill` scripts it; not yet run there).
 4. Package and accept the owner terminal, or keep it deferred from the release; exercise the
    voice path with a configured speech service.
 5. Pin the dashboard revision and module releases only after those pass.
