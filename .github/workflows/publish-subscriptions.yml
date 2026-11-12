@@ -120,7 +120,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP:/out" "$TRIVY"             image --quiet --format spdx-json --output /out/sbom.spdx.json "$IMAGE:$VERSION"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP:/out" "$TRIVY" \
+            image --quiet --format spdx-json --output /out/sbom.spdx.json "$IMAGE:$VERSION"
           jq -e '.spdxVersion and (.packages | length > 0)' "$RUNNER_TEMP/sbom.spdx.json" >/dev/null
 
       - name: Nothing secret is baked in
