@@ -25,6 +25,7 @@ import { createFakeTasks } from './fake-gateway-tasks'
 import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
+import { previewComposerDrafts } from './fake-gateway-resume'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; signal?: AbortSignal; onDispatch?: () => void }
@@ -108,7 +109,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
     if (value && Number.isInteger(value.revision) && value.revision >= 0 && Array.isArray(value.configuration?.sources) && value.configuration.sources.every(source => searchSources.includes(source)) && typeof value.configuration.exactText === 'boolean') searchSettings = { revision: value.revision, configuration: { ...value.configuration, semantic: false, reranking: false } }
   } catch { /* Preview preferences are optional; malformed storage uses safe defaults. */ }
-  const composerDrafts = new Map<string, Json>()
+  const composerDrafts = new Map<string, Json>(previewComposerDrafts(now, previewSessions))
   const draftStarts = new Map<string, Json>()
   const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
   const submissions = new Map<string, Json>(), pendingTurns = new Map<string, Promise<Json>>()
