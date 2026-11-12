@@ -7,6 +7,7 @@ import { searchStages as stages } from './universal-search-state'
 import type { useUniversalSearch } from './use-universal-search'
 import { gatewayCommandDestinations } from './navigation'
 import { ALL_SETTINGS, SETTINGS_GROUPS, matches } from '@/settings/registry'
+import { isPlanned, plannedShown } from '@/settings/planned'
 
 const labels = { metadata: 'Records', text: 'Exact retained text', semantic: 'Semantic matches' }
 
@@ -25,7 +26,7 @@ export default function UniversalSearchDialog({ state, error, opener, select, se
   const input = useRef<HTMLInputElement | null>(null)
   const trimmed = query.trim()
   const pages = gatewayCommandDestinations.filter(item => !trimmed || item.title.toLocaleLowerCase().includes(trimmed.toLocaleLowerCase()))
-  const settings = trimmed.length >= 2 ? ALL_SETTINGS.filter(s => matches(s, trimmed)).slice(0, 8) : []
+  const settings = trimmed.length >= 2 ? ALL_SETTINGS.filter(s => (plannedShown() || !isPlanned(s)) && matches(s, trimmed)).slice(0, 8) : []
   const gaps = [...new Set(Object.values(results).flatMap(page => page.coverage.filter(item => item.status !== 'searched').map(item => `${item.source} ${statusAdvice[item.status] ?? item.status}`)))]
   const exactRecords = new Set(results.text?.results.map(item => `${item.source}:${item.recordId}`))
   return <CommandDialog open={open} onOpenChange={search.setOpen}>

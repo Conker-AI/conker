@@ -114,4 +114,15 @@ assert.equal(readToolRecord('{"tool":"sandbox.run","result":{"durationMs":0}}').
 assert.equal(readToolRecord('{"tool":"sandbox.run","result":{"durationMs":"5"}}').durationMs, null)
 
 assert.doesNotMatch(source, /^\s*import\s/m, 'Tool record parsing has no imports')
+// Conker's own tools: the outcome only; the found items and the other agent's reply are never in the record.
+const recalled = readToolRecord(JSON.stringify({ tool: 'conker.recall', result: { status: 'found', recallId: 'rcl_1', count: 3, outside: false, message: 'Found 3.' } }))
+assert.deepEqual([recalled.label, recalled.status, recalled.summary, recalled.output], ['Searched memory', 'ok', '3 found', null])
+assert.equal(readToolRecord(JSON.stringify({ tool: 'conker.recall', result: { status: 'none', count: 0 } })).summary, '0 found')
+assert.deepEqual(['status', 'summary'].map(key => readToolRecord(JSON.stringify({ tool: 'conker.recall', result: { status: 'off', message: 'Memory is off.' } }))[key]), ['failed', 'Couldn’t search memory'])
+const ran = readToolRecord(JSON.stringify({ tool: 'conker.run_agent', result: { status: 'done', callId: 'c1', agentId: 'agent_1', agentName: 'Research partner', sessionId: 'ses_1', outside: true, message: 'This is its reply.' } }))
+assert.deepEqual([ran.label, ran.status, ran.chat, ran.output], ['Ran Research partner', 'ok', 'ses_1', null], 'Ran <agent>, its chat, and no reply text')
+const unfinished = readToolRecord(JSON.stringify({ tool: 'conker.run_agent', result: { status: 'failed', agentName: 'Editor', sessionId: 'ses_2', message: 'Editor could not finish.' } }))
+assert.deepEqual([unfinished.status, unfinished.chat], ['failed', 'ses_2'])
+const refused = readToolRecord(JSON.stringify({ tool: 'conker.run_agent', result: { status: 'refused', message: 'No.', outside: false } }))
+assert.deepEqual([refused.label, refused.status, refused.summary, 'chat' in refused], ['Ran an agent', 'failed', 'Not run', false])
 console.log('Tool record: every status, double encoding, non-object and unparseable text, summary cut, labels and duration.')

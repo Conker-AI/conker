@@ -4,12 +4,14 @@ import argparse
 from pathlib import Path
 
 from assistant_imports import register as register_import
+from conker_agents import register as register_agents
 from conker_chat import register as register_chat
 from conker_config import register as register_config
 from conker_context import register as register_context
 from conker_files import register as register_files
 from conker_inbox import register as register_inbox
 from conker_messages import register as register_message
+from conker_spending import add_parser as register_spending
 from conker_workflows import register as register_workflows
 from tool_drafts import register as register_tool
 
@@ -94,6 +96,7 @@ def build_parser(description):
     register_message(commands)
     register_chat(commands)
     register_inbox(commands)
+    register_agents(commands)
     register_config(commands)
     register_workflows(commands)
     register_tool(commands)
@@ -247,6 +250,7 @@ def build_parser(description):
     definitions.add_argument(
         "--archived", action="store_true", help="Include archived ones"
     )
+    register_spending(commands)
     limits = commands.add_parser(
         "limits",
         help="How much of each subscription window is left, in percent, and when it resets",

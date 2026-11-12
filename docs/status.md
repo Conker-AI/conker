@@ -40,8 +40,9 @@ tests, but not yet exercised end to end on an installed stack.
 | **Agent sandbox** | Terminal and Install packages in a fresh locked-down container per command, no network, packages through a read-only proxy | Owner's server and installed stack, 27 October: a command ran, a package installed through the proxy, network lookups failed as they should. Owner's server on Pi 0.13.0 and ToolGate 0.10.0, 28 October: a command ran from chat |
 | **Memory** | Memories with their sources, the memory map, correct and forget from the screen and the CLI (many at once), delivery receipts; chats and imported chats deleted forever | Built; source checks on Windows, 10 October. Deleting forever and bulk forget: Pi 0.22.0 suite (3890 passed) and the forgetting audit drill (29 of 29 caught), 7 November |
 | **Cron jobs** | The owner's instructions run by the AI with tools, on a schedule, an event or a webhook; workflows drafted from words | Local stack, 23 October: offers appear in the Inbox. Drafting needs a larger model than a 3B CPU model |
-| **Settings** | 401 settings in 31 topics, one pattern, search, changed-only view; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
+| **Settings** | 102 settings that take effect (221 more planned), one pattern, search, changed-only view, planned ones hidden until asked for; `conker config` from the terminal | Installed stack and the owner's server on Pi 0.11.0, 28 October: 9 of 9 save and refusal checks, `conker config` set and reset; screens checked at phone and desktop, light and dark |
 | **Projects, agents, teams** | Projects with sources, agent profiles with their own toolkits, teams | Built |
+| **Home** | Today at a glance (what needs you, plan allowance, coming up, Conker's work), and **Jump back in**: unpublished tool and workflow drafts, unsent messages, the last chats opened in this browser and tasks in progress, one click from where you left them | Built; checked in the preview at phone and desktop, light and dark, 12 November |
 | **Lists** | Every list (chats, agents, projects, artifacts, cron jobs, teams, skills, MCP tools, tools, tool drafts, imported sessions) can be searched and sorted; lists with a write action also filter, select many and archive, pause or turn off in bulk, with one Undo | Built; checked in the preview at phone and desktop, light and dark, 6 November. Archiving chats needs Pi 0.21.0 |
 | **Calls and voice** | Voice turns in a call | Built; needs a configured speech service |
 | **Phone app** | Add Conker to the home screen (its icon, a fast start, a plain offline page); on a phone a chat fills the screen, the composer stays above the keyboard, and the back arrow or a swipe right returns to Chats | Built; checked in a phone-sized browser with the keyboard simulated. Installing needs Pi's gateway to allow the web manifest (`manifest-src 'self'`); not yet tried on a real phone |
@@ -68,7 +69,8 @@ Open work is tracked in [GitHub issues](https://github.com/Conker-AI/conker/issu
 1. Run assembled acceptance for the exact current manifest on Linux and keep its evidence bundle.
 2. Exercise the CLI inspection and mutation families against the assembled Linux services, with
    redacted evidence.
-3. Run the source-built Ubuntu backup and isolated held-restore drill on the Linux host.
+3. Run the source-built Ubuntu backup and isolated held-restore drill on the Linux host
+   (`conker backup drill` scripts it; not yet run there).
 4. Package and accept the owner terminal, or keep it deferred from the release; exercise the
    voice path with a configured speech service.
 5. Pin the dashboard revision and module releases only after those pass.

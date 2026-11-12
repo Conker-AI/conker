@@ -7,6 +7,7 @@ export type ToolRecordView = {
   error: string | null         // stderr when non-empty
   durationMs: number | null
   raw: string                  // pretty JSON (2 spaces) of the parsed object, or the text as given
+  chat?: string                // conker.run_agent only: the chat the other agent answered in
 }
 
 type Fields = Record<string, unknown>
@@ -34,6 +35,24 @@ function statusOf(record: Fields, result: Fields | null): ToolRecordView['status
   return 'unknown'
 }
 
+/**
+ * Conker's own tools record a status word, not ok/exitCode. Their records never hold the text they
+ * found or the other agent's reply (Pi reads those back from their own store), so only the outcome
+ * shows here.
+ */
+function ownTool(tool: string, result: Fields | null): Pick<ToolRecordView, 'label' | 'status' | 'summary'> & { chat?: string } | null {
+  if (tool === 'conker.recall') {
+    const count = typeof result?.count === 'number' ? result.count : 0
+    if (result?.status === 'found' || result?.status === 'none') return { label: 'Searched memory', status: 'ok', summary: `${count} found` }
+    return { label: 'Searched memory', status: 'failed', summary: 'Couldn’t search memory' }
+  }
+  if (tool !== 'conker.run_agent') return null
+  const name = text(result?.agentName), chat = text(result?.sessionId)
+  const outcome = result?.status === 'done' ? { status: 'ok' as const, summary: 'Answered in its own chat' }
+    : result?.status === 'failed' ? { status: 'failed' as const, summary: 'Didn’t finish; see its chat' } : { status: 'failed' as const, summary: 'Not run' }
+  return { label: name ? cut(`Ran ${name}`) : 'Ran an agent', ...outcome, ...(chat ? { chat } : {}) }
+}
+
 export function readToolRecord(value: string): ToolRecordView {
   const record = parse(value)
   if (!isFields(record)) {
@@ -47,5 +66,7 @@ export function readToolRecord(value: string): ToolRecordView {
   const error = text(result?.stderr)
   const durationMs = typeof result?.durationMs === 'number' && Number.isFinite(result.durationMs) ? result.durationMs : null
   const summary = cut(firstLine(output ?? error ?? '') || status)
+  const own = tool ? ownTool(tool, result) : null
+  if (own) return { tool, ...own, output: null, error: null, durationMs: null, raw: JSON.stringify(record, null, 2) }
   return { tool, label, status, summary, output, error, durationMs, raw: JSON.stringify(record, null, 2) }
 }

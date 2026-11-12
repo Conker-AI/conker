@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
+  night through the saved backup policy (the host helper's `backup.run`, refused rather than queued when something
+  else holds the lock) and `--drill weekly` adds a Sunday restore drill; nothing is turned on by itself.
+  `conker backup drill` restores a backup into a throwaway, network-less copy, checks it, removes every trace and
+  leaves a receipt (`conker backup drill --last`).
+
 - **Conker updates itself.** A server checks the latest Conker release once a day; a newer one is an Inbox
   card with its notes, and Update (with the password) stages it, takes a verified snapshot, switches, checks
   health and goes back to the old version if the check fails. The result comes back to the Inbox.

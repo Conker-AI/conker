@@ -97,6 +97,10 @@ part of backups.
    previous images until the user journey succeeds. Rollback after a database
    migration requires held recovery, not merely an older application image.
 
+Nightly backups and a weekly restore drill are systemd user timers the owner turns on with
+`conker backup schedule on [--drill weekly]`; preparation and updates never turn them on. See
+[recovery](../../docs/reference/recovery.md#backups-on-a-schedule).
+
 Coordinated backups capture SQLite through a private writable copy with its
 committed WAL, leaving read-only source mounts unchanged. Regular model-cache
 links are flattened only when they resolve inside their own store. External,

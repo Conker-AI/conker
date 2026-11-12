@@ -24,7 +24,9 @@ import { createFakeTeams } from './fake-gateway-teams'
 import { createFakeTasks } from './fake-gateway-tasks'
 import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
+import { withAgentTools } from './fake-gateway-agent-steps'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
+import { previewComposerDrafts } from './fake-gateway-resume'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; signal?: AbortSignal; onDispatch?: () => void }
@@ -72,8 +74,7 @@ function seed(): Session[] {
   week.turns.push({ ...week.turns[0], id: 'trn_60000_1', started_at: start + 60303, ended_at: start + 60306 })
   week.messages.push(step(3, 'user', 'How much space is my projects folder using?'), step(4, 'assistant', '{"tool":"sandbox.run","args":{"command":"du -sh projects"}}'),
     step(5, 'tool', JSON.stringify({ tool: 'sandbox.run', ok: true, result: { exitCode: 0, stdout: '4.2G\tprojects\n', stderr: '', durationMs: 840, timedOut: false } })), step(6, 'assistant', 'Your projects folder uses 4.2 GB.'))
-  return [
-    week,
+  return [withAgentTools(week, start),
     session(previewSessions.sky, 'Why is the sky blue?', [['Why is the sky blue? Two sentences.', replies[1]]], 30000),
     session(previewSessions.coach, 'Email to coach', [['Ask coach if Friday open mat is still on.', replies[2]]], 1000),
   ]
@@ -108,7 +109,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
     if (value && Number.isInteger(value.revision) && value.revision >= 0 && Array.isArray(value.configuration?.sources) && value.configuration.sources.every(source => searchSources.includes(source)) && typeof value.configuration.exactText === 'boolean') searchSettings = { revision: value.revision, configuration: { ...value.configuration, semantic: false, reranking: false } }
   } catch { /* Preview preferences are optional; malformed storage uses safe defaults. */ }
-  const composerDrafts = new Map<string, Json>()
+  const composerDrafts = new Map<string, Json>(previewComposerDrafts(now, previewSessions))
   const draftStarts = new Map<string, Json>()
   const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
   const submissions = new Map<string, Json>(), pendingTurns = new Map<string, Promise<Json>>()

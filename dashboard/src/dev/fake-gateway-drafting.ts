@@ -26,6 +26,7 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     base('b', 'tool_draft', 'Tool: Study group digest', 'Reads the last day of the study group chat and lists deadlines and open questions.', ready('A tool that sums up my study group chat', 'Study group digest'), 3600),
     base('f', 'tool_draft', 'Tool: Search the web for me', 'Search the web and bring me the best three links.', { description: 'Search the web and bring me the best three links.', status: 'needs_detail', question: 'Which search engine should it use, and should it read the pages or only list the links?', askedIn: session }, 1200),
     base('e', 'tool_draft', 'Tool: Post my notes to Telegram', 'Send my lecture notes to the study group on Telegram.', { description: 'Send my lecture notes to the study group on Telegram.', status: 'failed', error: 'None of your tools can send Telegram messages. Connect Telegram in Tools, then try again.' }, 5400, null),
+    ...agentRequests(base),
     base('c', 'memory', 'Remember: physics exam', 'The physics exam is on Thursday 30 October, room 204.', { text: 'The physics exam is on Thursday 30 October, room 204.' }, 7200),
   ]
   const closed: Json[] = []
@@ -95,11 +96,41 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     }
     const [request] = open.splice(index, 1), payload = request.payload as Json
     const result = act[2] === 'decline' ? null : act[2] === 'saved' ? { draftId: body?.draftId }
-      : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id } : { memoryId: 'mem_preview' }
+      : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id }
+        : request.kind === 'agent' ? { agentId: `agent_${'1'.repeat(32)}` } : request.kind === 'team' ? { teamId: `team_${'7'.repeat(32)}` } : { memoryId: 'mem_preview' }
     const decided = { ...request, state: act[2] === 'decline' ? 'declined' : 'approved', result, decidedAt: now() }
     closed.push(decided)
     return structuredClone(decided)
   }
+}
+
+/**
+ * Conker asking for a new agent and a new team (`conker.create_agent`, `conker.create_team`), shaped
+ * as Pi files them: the agent at tool defaults reading only its chat, the team linear on existing
+ * agents with a small budget. Approving one in preview links to the existing research agent or team.
+ */
+function agentRequests(base: (id: string, kind: string, title: string, summary: string, payload: Json, age: number) => Json): Json[] {
+  const research = `agent_${'1'.repeat(32)}`, budget = { maxTurns: 1, maxTokens: 50000, maxCostCents: 25 }
+  const role = (index: number, name: string, agentId: string, instructions: string, toolIds: string[]) => ({
+    id: `role${index}`, name, agentId, instructions, toolIds, memory: { scope: 'none', memoryIds: [] }, context: { mode: 'task_only', sourceIds: [] }, budget,
+  })
+  const agent = { name: 'Exam coach', role: 'Quizzes me before exams', instructions: 'Ask me one question at a time from my study notes. Wait for my answer, say whether it is right, and explain briefly when it is not. Stop after ten questions and list what to revise.', modelId: null, toolIds: ['research.search'], toolAccess: {}, memory: { scope: 'conversation', memoryIds: [] } }
+  const team = {
+    name: 'Essay review', objective: 'Check my history essay for facts, then tighten the writing.',
+    roles: [role(1, 'Fact checker', research, 'Check every date and name in the essay against reliable sources. List what is wrong with a source for each.', ['research.search', 'research.fetch']),
+      role(2, 'Editor', 'companion', 'Using the fact check, rewrite unclear sentences and cut repetition. Keep my voice.', [])],
+    handoffs: [{ id: 'handoff1', fromRoleId: 'role1', toRoleId: 'role2', condition: 'The owner reviewed the result of Fact checker.', payload: 'result_only', maxTransfers: 1 }],
+    budget: { maxTurns: 4, maxTokens: 100000, maxCostCents: 50, maxHandoffs: 1 },
+  }
+  return [
+    base('7', 'agent', 'Create the agent “Exam coach”', `${agent.role}
+Tools: research.search
+
+${agent.instructions}`, agent, 300),
+    base('8', 'team', 'Create the team “Essay review”: Fact checker → Editor', `${team.objective}
+1. Fact checker (Research partner): ${team.roles[0].instructions.slice(0, 120)}
+2. Editor (Conker): ${team.roles[1].instructions.slice(0, 120)}`, team, 900),
+  ]
 }
 
 /** A short name from his words, the way a drafter would title it: the first few words. */
@@ -143,6 +174,12 @@ function createFakeEditorDrafts() {
     { name: 'filters', type: 'object', required: false, description: 'Advanced: extra filters for the reader.' },
   ], 'auto', 86_400_000)
   seed('email-weekly-summary', 'Email the weekly summary', 'Emails your weekly summary to one address.', [{ name: 'to', type: 'string', required: true, description: 'The email address to send it to.' }], 'owner_confirmation', 172_800_000)
+  // Unfinished edits for Home's "Jump back in": a tool never published, and a published workflow changed since.
+  seed('weather-before-practice', 'Weather before practice', 'Checks the forecast for the judo hall before Thursday practice.', [{ name: 'chat', type: 'string', required: true, description: 'Where to post the forecast.' }], 'auto', 25 * 60_000)
+  const unpublished = drafts.get('weather-before-practice')!
+  drafts.set(unpublished.id, { ...unpublished, document: { ...unpublished.document, kind: 'connector' } }); versions.delete(unpublished.id)
+  const edited = drafts.get('study-group-digest')!
+  drafts.set(edited.id, { ...edited, revision: 2, updated_at: new Date(Date.now() - 70 * 60_000).toISOString() })
   const past = `editor_${'5'.repeat(32)}`
   runs.set('study-group-digest', [{ action_id: past, version: 1, digest: versions.get('study-group-digest')![0].digest, created_at: new Date(Date.now() - 20 * 3600_000).toISOString(), args: { chat: 'Physics 101', only_new: false }, response: { code: 'OK', action_id: past, message: 'Automation completed', result: { code: 'OK', result: deadlines }, steps: [] } }])
   const answer = (id: string, version: Version, body: Json): Json => {

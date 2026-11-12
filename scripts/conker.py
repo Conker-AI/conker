@@ -15,6 +15,7 @@ import assistant_imports
 import conker_models
 import conker_toolgate
 import tool_drafts
+from conker_agents import operation as agents_operation
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
 from conker_context import operation as context_operation
@@ -33,6 +34,7 @@ from conker_inputs import (
 )
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
+from conker_spending import spending_operation
 from conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from plan_limits import limits_operation
 from workspace import read_config
@@ -91,6 +93,8 @@ def request(
                     if key in query
                 }
             )
+        elif service == "pi" and path == "/memory/objects" and body is None:
+            encoded = urlencode({key: query[key] for key in ("search", "limit") if key in query})
         elif service == "toolgate-owner" and path == "/v2/owner/editor-capabilities":
             encoded = urlencode(
                 {key: query[key] for key in ("kind", "limit", "after") if key in query}
@@ -482,9 +486,13 @@ def main():
         )
     elif args.command == "models" and args.role:
         if bool(args.model) == args.off or args.save or (args.off and args.backup):
-            raise ValueError("Use --role ROLE with --model ID [--backup ID]... or with --off.")
+            raise ValueError(
+                "Use --role ROLE with --model ID [--backup ID]... or with --off."
+            )
         model = None if args.off else args.model
-        value = conker_models.set_role(request, config, args.role, model, args.backup or [])
+        value = conker_models.set_role(
+            request, config, args.role, model, args.backup or []
+        )
     elif args.command == "models":
         value = request(
             config,
@@ -503,6 +511,8 @@ def main():
         value = pi_call(request, config, "/definitions", query=query)
     elif args.command == "limits":
         value = limits_operation(args, config, request, pi_call)
+    elif args.command == "spending":
+        value = spending_operation(args, config, request, pi_call)
     elif args.command == "workflow" and args.operation in TOOL_REQUESTS:
         return tool_request(args, config, request, pi_caller, emit=tool_drafts.emit)
     elif args.command == "workflow":
@@ -517,6 +527,8 @@ def main():
         )
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
+    elif args.command in {"memory", "agent", "team"}:
+        value = agents_operation(args, config, request)
     elif args.command == "config":
         return config_operation(args, config, request)
     elif args.command == "context":
