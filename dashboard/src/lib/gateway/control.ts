@@ -19,6 +19,7 @@ import { createGatewayPlansClient } from './plans'
 import { createGatewayCharactersClient } from './characters'
 import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayHostOpsClient } from './host-ops'
+import { createUpdatesClient } from './updates'
 import { createGatewayTeamsClient } from './teams'
 import { createNativeSessionsClient } from './native-sessions'
 import { createMemoryCorrectionsClient } from './memory-corrections'
@@ -344,6 +345,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       async configured(...args: Parameters<GatewayHostInventoryClient['configured']>) { return (await import('./host-inventory')).createGatewayHostInventoryClient(auth).configured(...args) },
     },
     hostOps: createGatewayHostOpsClient(auth),
+    updates: createUpdatesClient(auth),
     teams: createGatewayTeamsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),

@@ -157,8 +157,15 @@ Status checks each service's health response; it does not treat a running contai
 as proof that the service works. Password reset prompts privately and uses the same
 persistent auth database as the gateway. Lifecycle, logs, model downloads and auth
 are supported. Verified backup, snapshot verification, held restore and recovery status use
-the generated layout's strict service and storage profile. Self-update and the repository-wide
-`key` command remain explicitly unavailable. The launcher does not depend on Hermes. Direct
+the generated layout's strict service and storage profile. `conker update --check` reads the latest
+Conker release page and says whether it is newer; `conker update --to X.Y.Z` (or Update on the
+Inbox card) stages that release's sources and the module tags it pins, builds the dashboard, takes a
+verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swaps the sources
+(the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
+--strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
+already changed stays changed, and the snapshot is the way back); if that cannot be
+proven the update holds and the snapshot is the way back. Receipts are in `state/update/`. Plain
+`conker update` (follow a branch) and the repository-wide `key` command remain unavailable. The launcher does not depend on Hermes. Direct
 Compose equivalents:
 
 ```sh

@@ -180,7 +180,8 @@ Gateway mounts `provider-control`. The main shell and tool permissions are uncha
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
 the source-built Ubuntu layout supports verified backup and held recovery, but
-cannot provide the repository install's self-update or single admin-key commands.
+cannot provide the repository install's branch-following update or single admin-key commands;
+it updates to a named release instead (`conker update --to X.Y.Z`).
 
 `conker inspect RESOURCE` reads one fixed, bounded control-plane resource through
 the gateway container and prints the service's JSON unchanged. Supported resources
@@ -370,9 +371,13 @@ durable hold under Git's private `conker-update` directory and refuses another u
 Each attempt leaves a redacted JSON receipt in `.git/conker-update/receipts/` (or the
 equivalent private Git directory for a worktree). Receipts contain revisions and
 status, never `.env` values or command output. An interrupted mutating attempt is
-rolled back and verified before a rerun starts. Ubuntu self-update remains explicitly
-unavailable until its source-build layout can provide the same image identity,
-acceptance and rollback guarantees.
+rolled back and verified before a rerun starts. On the source-built Ubuntu layout
+an update names a release: `conker update --check` compares the installed `CONKER_VERSION` with
+the latest release page, and `conker update --to X.Y.Z` stages that tag and the module tags it
+pins, takes a verified snapshot first, swaps the sources, rebuilds and accepts only `conker status
+--strict`; a failure restores the old sources, and an unprovable restore holds. The host helper
+checks once a day and the Inbox offers the release with its notes; Update there asks for the
+password and reports the result back to the Inbox (deploy/ubuntu/README.md).
 
 ### Reset the password
 

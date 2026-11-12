@@ -39,7 +39,8 @@ NO_LINGER = (
     "Timers would run only while you are signed in, and stop when you sign out. "
     "Turn lingering on first: sudo loginctl enable-linger $USER"
 )
-# scripts/update.py keeps these in `git rev-parse --git-path conker-update` (a test pins the names).
+# scripts/update.py keeps these in `git rev-parse --git-path conker-update`, the Ubuntu layout's
+# scripts/update_ubuntu.py in <deployment>/state/update (a test pins the names).
 UPDATE_MARKERS = ("update.lock", "active.json", "HOLD.json")
 
 
@@ -283,11 +284,11 @@ def update_directory(checkout: Path) -> Path | None:
 
 
 def update_busy(*checkouts: Path) -> bool:
-    """An update runs, was cut off or is held in one of these checkouts."""
+    """An update runs, was cut off or is held in one of these checkouts or deployments."""
     for checkout in dict.fromkeys(checkouts):
-        directory = update_directory(checkout)
-        if directory and any((directory / name).exists() for name in UPDATE_MARKERS):
-            return True
+        for directory in (update_directory(checkout), checkout / "state" / "update"):
+            if directory and any((directory / name).exists() for name in UPDATE_MARKERS):
+                return True
     return False
 
 

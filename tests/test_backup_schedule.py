@@ -243,6 +243,21 @@ def test_nightly_run_refuses_while_an_update_runs_or_is_held(tmp_path, marker, w
     assert ops.receipts()["operations"] == []
 
 
+@pytest.mark.parametrize("marker", UPDATE_MARKERS)
+def test_nightly_run_refuses_while_an_ubuntu_update_runs_or_is_held(tmp_path, marker):
+    (tmp_path / "backups").mkdir()
+    ops = host(tmp_path)
+    store = ops.root / "state" / "update"  # where scripts/update_ubuntu.py keeps its state
+    store.mkdir(parents=True)
+    (store / marker).write_text("{}", encoding="utf-8")
+    log = journal(ops.root, "ubuntu")
+
+    assert scheduled_backup(ops, log) == 1
+
+    assert last_record(log, "backup")["reason"] == UPDATE_BUSY
+    assert ops.receipts()["operations"] == []
+
+
 def test_a_nightly_run_stopped_midway_is_recorded_and_the_stop_goes_on(tmp_path):
     (tmp_path / "backups").mkdir()
 

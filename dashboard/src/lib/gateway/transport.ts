@@ -208,6 +208,9 @@ routes.GET.unshift(new RegExp(`^${chatSession}/(?:output|title|branch-history|re
   new RegExp(`^${chatContext}(?:/(?:summary|items|compaction))?$`))
 // Archive, trash and restore: list states only, many chats at once, no password (Pi CHAT_WRITES).
 routes.POST.unshift(/^\/api\/control\/pi\/sessions\/archive$/, /^\/api\/control\/pi\/sessions\/trash$/)
+// Conker updates (pi/owner/updates.py): the offer and results; skipping or dismissing needs no password.
+routes.GET.unshift(/^\/api\/control\/pi\/updates$/)
+routes.POST.unshift(/^\/api\/control\/pi\/updates\/(?:offers\/\d{1,4}\.\d{1,4}\.\d{1,4}|results\/[0-9a-f]{32})\/dismiss$/)
 routes.POST.unshift(new RegExp(`^${chatSession}/(?:output|title|title/auto|messages/${chatMessage}/(?:retry|fact-check|fork)|response-families/${chatMessage}/(?:select|judge|vote))$`),
   new RegExp(`^${chatContext}(?:/(?:fork|summary|summary/restore|summary/draft|compact|items|items/(?:dec|thr)_[0-9a-f]{16}/state))?$`))
 const chatFeatureRoute = new RegExp(`^(?:${chatSession}|${chatContext})(?:/|$)`)

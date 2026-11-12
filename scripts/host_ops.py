@@ -9,6 +9,7 @@ retries it. `conker ops` uses this same module in-process, so the CLI works with
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -16,6 +17,7 @@ import re
 import signal
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +38,7 @@ CUT_OFF = (
     "Check before trying again."
 )
 NO_START = "The command could not start on the server."
+RELEASE = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}")
 
 
 @dataclass(frozen=True)
@@ -79,6 +82,18 @@ OPERATIONS = {
             failure=(
                 "The backup did not finish. Check that the backup disk is mounted "
                 "and has space, then try again."
+            ),
+        ),
+        # Replaces the running release (scripts/update_ubuntu.py): staged, snapshotted, verified,
+        # rolled back on failure. Stopping it midway is worse than waiting, so it has no limit.
+        Operation(
+            "update.run",
+            False,
+            {"version": RELEASE},
+            check="services.status",
+            failure=(
+                "The update did not finish. The Inbox says whether Conker went back to the "
+                "version it had."
             ),
         ),
     )
@@ -290,6 +305,9 @@ class HostOps:
                 raise refused("This installation has no service with that name.")
             # `conker restart pi` also restarts the services sharing Pi's network namespace.
             return self._conker("restart", arguments["service"])
+        if operation.name == "update.run":
+            # Refused by the updater itself when that release is not newer than the running one.
+            return self._conker("update", "--to", arguments["version"])
         destination = self._destination()
         if operation.name == "backup.run":
             return self._conker("setup", "run", "protection")
@@ -429,6 +447,48 @@ class HostOps:
         return self.reader(
             argv, cwd=self.root, env=self._environment(), timeout=timeout, limit=limit
         )
+
+
+FIRST_CHECK = 10 * 60  # after the helper starts, so a fresh boot settles first
+CHECK_EVERY = 24 * 3600
+CHECK_TIMEOUT = 10 * 60
+
+
+def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
+    """One `conker update --check --report`: the newest release and any finished update go to
+    the Inbox. Skipped while a server action runs (an update moves the sources it runs from).
+    Keeps no output; a failure is tried again at the next check. Only the Ubuntu layout: the
+    repository layout cannot update to a release (`conker update --to` is refused there)."""
+    if host.layout != "ubuntu":
+        return False
+    try:
+        lock = OperationLock(host.lock_path)
+        if not lock.acquire():
+            return False
+        lock.release()
+        runner(
+            host._conker("update", "--check", "--report"),
+            cwd=host.root,
+            env=host._environment(),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=CHECK_TIMEOUT,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return True
+
+
+def watch_for_updates(host: HostOps, *, sleep=None, check=check_for_updates) -> None:
+    """The daily update check, for the helper's lifetime (scripts/provider_control.py)."""
+    pause = sleep or time.sleep
+    pause(FIRST_CHECK)
+    while True:
+        with contextlib.suppress(Exception):  # the watch outlives any one check; next try tomorrow
+            check(host)
+        pause(CHECK_EVERY)
 
 
 def route(host: HostOps | None, method: str, path: str, body: object) -> tuple:
