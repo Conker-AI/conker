@@ -6,8 +6,8 @@ inventory of what the source can do, [`versions.env`](../versions.env) pins the 
 [release-acceptance](reference/release-acceptance.md) evidence bundle is the only proof that an
 assembled deployment works. One never stands in for another.
 
-Last updated **12 November 2026**. The source has **44 tracked
-capability families: 43 active and 1 deferred**. Active means a real product surface exists; it
+Last updated **12 November 2026**. The source has **41 tracked
+capability families: 40 active and 1 deferred**. Active means a real product surface exists; it
 does not by itself mean the screen, the CLI and the gateway all reach it, or that a server runs it.
 
 ## The current release
