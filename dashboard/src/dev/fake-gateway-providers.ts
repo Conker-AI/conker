@@ -164,6 +164,7 @@ function createFakeAccess(session: string, now: () => number) {
   const state = { delegate: false, sensitive: ['bank.payments'] as string[], floorExecutions: ['container_control', 'port_control', 'process_control'], cards: { 'sandbox.run': 'run', 'mail.send': 'send' } as Record<string, string> }
   const handled = [
     { id: `hnd_${'1'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'conker.remember', decidedBy: 'tool_default', reason: 'Allowed by the tool’s own setting.', createdAt: now() - 900 },
+    { id: `hnd_${'3'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'conker.create_agent', decidedBy: 'chat', reason: 'This chat is on Full access.', createdAt: now() - 2400 },
     { id: `hnd_${'2'.repeat(32)}`, sessionId: session, turnId: null, toolId: 'mail.send', decidedBy: 'owner_request', reason: 'You asked to send Dani the notes.', createdAt: now() - 5400 },
   ]
   const digest = 'f'.repeat(64), version = 1

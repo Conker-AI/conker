@@ -21,6 +21,9 @@ from test_recovery import (
 )
 from test_recovery_review import operator_review
 
+from scripts import backup_drill
+from scripts.host_ops_journal import OperationLock
+
 pytestmark = pytest.mark.skipif(
     os.environ.get("CONKER_RECOVERY_DOCKER") != "1",
     reason="set CONKER_RECOVERY_DOCKER=1 on Linux with Docker to run the real recovery drill",
@@ -235,3 +238,27 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
         info = docker.json("inspect", container)[0]
         assert info["HostConfig"]["NetworkMode"] == "none"
         assert not info["HostConfig"].get("PortBindings")
+
+
+def test_real_restore_drill_checks_the_copy_and_leaves_nothing(live_stack):
+    root, docker, _, _ = live_stack
+    snapshot = recovery.backup(root, None, docker)
+    project = json.loads((root / "docker-compose.yml").read_text())["name"]
+    workspace = root / ".conker/backup-schedule"
+    workspace.mkdir(parents=True)
+    running = docker.run("ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project).stdout
+
+    receipt = backup_drill.drill(
+        root,
+        snapshot,
+        workspace,
+        OperationLock(root / ".conker/operation.lock"),
+        docker,
+        live_project=project,
+    )
+
+    assert receipt["outcome"] == "passed", receipt
+    assert receipt["checks"] == list(backup_drill.CHECKS)
+    assert receipt["leftovers"] is None and list(workspace.iterdir()) == []
+    # The fixture's live services kept running, untouched, through the drill.
+    assert docker.run("ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project).stdout == running

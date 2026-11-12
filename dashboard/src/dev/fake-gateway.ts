@@ -24,6 +24,7 @@ import { createFakeTeams } from './fake-gateway-teams'
 import { createFakeTasks } from './fake-gateway-tasks'
 import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
+import { withAgentTools } from './fake-gateway-agent-steps'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 import { previewComposerDrafts } from './fake-gateway-resume'
 
@@ -73,8 +74,7 @@ function seed(): Session[] {
   week.turns.push({ ...week.turns[0], id: 'trn_60000_1', started_at: start + 60303, ended_at: start + 60306 })
   week.messages.push(step(3, 'user', 'How much space is my projects folder using?'), step(4, 'assistant', '{"tool":"sandbox.run","args":{"command":"du -sh projects"}}'),
     step(5, 'tool', JSON.stringify({ tool: 'sandbox.run', ok: true, result: { exitCode: 0, stdout: '4.2G\tprojects\n', stderr: '', durationMs: 840, timedOut: false } })), step(6, 'assistant', 'Your projects folder uses 4.2 GB.'))
-  return [
-    week,
+  return [withAgentTools(week, start),
     session(previewSessions.sky, 'Why is the sky blue?', [['Why is the sky blue? Two sentences.', replies[1]]], 30000),
     session(previewSessions.coach, 'Email to coach', [['Ask coach if Friday open mat is still on.', replies[2]]], 1000),
   ]
