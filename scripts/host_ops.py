@@ -9,6 +9,7 @@ retries it. `conker ops` uses this same module in-process, so the CLI works with
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -485,10 +486,8 @@ def watch_for_updates(host: HostOps, *, sleep=None, check=check_for_updates) -> 
     pause = sleep or time.sleep
     pause(FIRST_CHECK)
     while True:
-        try:
+        with contextlib.suppress(Exception):  # the watch outlives any one check; next try tomorrow
             check(host)
-        except Exception:  # noqa: BLE001, S110 - the watch outlives any one check; next try tomorrow
-            pass
         pause(CHECK_EVERY)
 
 

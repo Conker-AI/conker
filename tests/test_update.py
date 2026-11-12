@@ -127,7 +127,7 @@ def test_a_preflight_refusal_says_why(tmp_path):
     transport.preflight = refuse
     updater = UpdateCoordinator(transport, store(tmp_path))
 
-    with pytest.raises(UpdateError, match="before apply: refusing update because the repository is dirty. Receipt"):
+    with pytest.raises(UpdateError, match=r"before apply: refusing update because the repository is dirty\. Receipt"):
         updater.run()
     assert transport.calls == ["preflight"]
 

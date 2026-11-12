@@ -238,7 +238,10 @@ def test_an_archive_that_unpacks_too_large_is_refused_before_writing(tmp_path, m
     assert not (tmp_path / "out").exists()
 
 
-@pytest.mark.parametrize("version", ["١.٢.٣", "0.2.0\n"])
+ARABIC_INDIC_1_2_3 = ".".join(chr(0x0660 + digit) for digit in (1, 2, 3))  # a \d pattern would take these
+
+
+@pytest.mark.parametrize("version", [ARABIC_INDIC_1_2_3, "0.2.0" + chr(10)])
 def test_only_ascii_release_numbers_are_accepted(version):
     with pytest.raises(UpdateError):
         UbuntuTransport(Path("."), version)

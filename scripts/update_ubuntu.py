@@ -378,7 +378,7 @@ def tell_inbox(root: Path, send=None) -> None:
     found = {"running": installed_version(source), "latest": None}
     try:
         report(root, "ubuntu", found, **({"send": send} if send else {}))
-    except Exception as error:  # noqa: BLE001 - the update already finished; its receipt stays
+    except Exception as error:  # the update already finished; its receipt stays
         print(
             f"The Inbox will hear about this update with the next check ({error}).",
             file=sys.stderr,
