@@ -39,8 +39,11 @@ export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClie
   const offer = overview?.offer ?? null
   const running = receipt?.outcome === 'working' && receipt.arguments.version === offer?.version ? receipt : null
   const tried = attempt?.action.operation === 'update.run' && attempt.action.arguments.version === offer?.version ? attempt : null
+  // An update for this version that was cut off (unknown) or stopped (failed) stays in view. Update
+  // stays too: a new run first undoes a cut-off one (scripts/update_core.py recover_interrupted).
+  const ended = !running && !tried && receipt && (receipt.outcome === 'unknown' || receipt.outcome === 'failed') && receipt.arguments.version === offer?.version ? receipt : null
   // A start that was refused (busy, unavailable, never arrived) ran nothing: Update and Skip stay.
-  const refused = !running && tried?.state === 'problem'
+  const refused = !running && (tried?.state === 'problem' || ended !== null)
   async function update(version: string) {
     if (starting) return
     setStarting(true)
@@ -49,7 +52,8 @@ export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClie
   return <>
     {offer && <OfferCard offer={offer} busy={starting || pending !== null || actions.busy !== null} error={failure?.key === offer.version ? failure.message : null}
       progress={running ? <ReceiptLine receipt={running} live working="Conker is switching to the new version. This page may lose the connection for a few minutes and reconnects by itself; the result shows here." />
-        : tried ? <AttemptLine attempt={tried} onCheck={() => void actions.checkAttempt('update')} /> : null}
+        : tried ? <AttemptLine attempt={tried} onCheck={() => void actions.checkAttempt('update')} />
+        : ended ? <div className="flex flex-col gap-1.5"><ReceiptLine receipt={ended} />{ended.outcome === 'unknown' && <p className="text-sm text-muted-foreground">Update again first puts back the version Conker had, if the cut-off update changed anything, then updates.</p>}</div> : null}
       settled={refused}
       onUpdate={() => void update(offer.version)}
       onSkip={() => void settle(offer.version, () => updates.skip(offer.version))} />}

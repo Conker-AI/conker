@@ -263,10 +263,11 @@ def main(argv: list[str] | None = None) -> int:
         result = check(args.source)
     except failures as error:
         # GitHub can't be read: a finished update still reaches the Inbox.
-        if args.report and pending_results(update_directory(args.root, args.layout)):
+        if args.report:
             unknown = {"running": installed_version(args.source), "latest": None}
             try:
-                report(args.root, args.layout, unknown)
+                if pending_results(update_directory(args.root, args.layout)):
+                    report(args.root, args.layout, unknown)
             except failures:
                 pass  # sent again at the next check
         print(f"Conker could not check for updates: {error}", file=sys.stderr)

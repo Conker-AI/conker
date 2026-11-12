@@ -197,6 +197,18 @@ def test_a_finished_update_reaches_the_inbox_while_github_cannot_be_read(tmp_pat
     assert len(sent) == 1  # nothing left to tell, so no second report
 
 
+def test_an_offline_check_outside_a_checkout_still_says_why(tmp_path, monkeypatch, capsys):
+    def offline():
+        raise CheckError("GitHub could not be reached.")
+
+    monkeypatch.setattr(update_check, "latest_release", offline)
+    root = tmp_path / "not-a-checkout"
+    root.mkdir()
+    arguments = ["--root", str(root), "--source", str(source(tmp_path / "src", "0.1.0"))]
+    assert update_check.main([*arguments, "--layout", "repository", "--report"]) == 1
+    assert "could not check for updates: GitHub could not be reached." in capsys.readouterr().err
+
+
 def test_the_command_says_why_it_could_not_check(tmp_path, monkeypatch, capsys):
     def offline():
         raise CheckError("GitHub could not be reached.")

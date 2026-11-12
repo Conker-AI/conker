@@ -45,6 +45,9 @@ export function createFakeHostOps(scenario: string | null) {
     receipt('ui_preview_backup_cut_off', 'backup.run', {}, 'ui', start - 3 * hour, 'unknown', start - 3 * hour + 4 * minute),
     receipt('ui_preview_restart_cut_off', 'services.restart', { service: 'memorygate' }, 'ui', start - 20 * minute, 'unknown', start - 19 * minute),
   )
+  // ?preview-updates=cut-off: an update to the offered 0.2.0 that a reboot cut off part way.
+  if (new URLSearchParams(globalThis.location?.search).get('preview-updates') === 'cut-off')
+    journal.unshift(receipt('ui_preview_update_cut_off', 'update.run', { version: '0.2.0' }, 'ui', start - 40 * minute, 'unknown', start - 31 * minute))
   if (scenario === 'failed') {
     Object.assign(services[8], { state: 'exited', startedAt: null, health: 'none' })
     journal.unshift(receipt('ui_preview_verify_failed', 'backup.verify', { snapshot: snapshots[1].name }, 'ui', start - 2 * hour, 'failed', start - 2 * hour + 3 * minute),
