@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom'
 import { Wrench } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { readToolRecord, type ToolRecordView } from '@/lib/chat/tool-record'
 
 const variants = { ok: 'success', failed: 'error', 'timed out': 'error', declined: 'warning', unknown: 'outline' } as const satisfies Record<ToolRecordView['status'], string>
@@ -21,6 +23,7 @@ export function ToolRecord({ text, sequence }: { text: string; sequence: number 
       {record.durationMs !== null && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{duration(record.durationMs)}</span>}
     </summary>
     <div className="space-y-3 border-t px-3 py-3">
+      {record.chat && <Link className="block text-sm underline underline-offset-4" to={gatewayConversationLink(record.chat)}>Open its chat</Link>}
       {record.output && <pre className={block}>{record.output}</pre>}
       {record.error && <pre className={`${block} text-destructive-foreground`}>{record.error}</pre>}
       <details>

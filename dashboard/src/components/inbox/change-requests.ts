@@ -50,6 +50,7 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
     setPending(request.id); setFailure(null); setNotice(null)
     try {
       let decided: ChangeRequest
+      if (request.kind === 'other') throw new Error('Update Conker to review this request.')
       if (request.kind === 'tool_draft') {
         if (!drafts) throw new Error('Tools are not available here.')
         if (request.payload.status === 'drafting' || request.payload.status === 'failed' || request.payload.status === 'needs_detail') throw new Error('This draft isn’t ready yet.')
@@ -69,7 +70,7 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
         decided = await client.saved(request.id, saved)
       } else decided = await client.approve(request.id)
       settle(decided)
-      const made = typeof decided.result?.jobId === 'string' ? decided.result.jobId : typeof decided.result?.draftId === 'string' ? decided.result.draftId : null
+      const made = ['jobId', 'draftId', 'agentId', 'teamId'].map(key => decided.result?.[key]).find(value => typeof value === 'string') as string | undefined ?? null
       if (decided.state !== 'failed' && request.kind === 'tool_draft' && made) {
         // Review: the saved draft opens in Tools; publishing it there tells this request (and its chat).
         rememberDraftOrigin(made, request.id)
@@ -79,7 +80,9 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
       setNotice(decided.state === 'failed' ? { text: `“${request.title}” wasn’t made: ${String(decided.result?.reason ?? 'unknown reason')}` }
         : request.kind === 'ai_job' ? { text: 'Cron job created. It runs on its schedule.', link: made ? { to: `/jobs/${made}`, label: 'Open the job' } : undefined }
           : request.kind === 'tool_draft' ? { text: 'Saved as a draft. Check it, then publish it.', link: { to: '/tools?view=drafts', label: 'Open your drafts' } }
-            : { text: 'Remembered.', link: { to: '/memory', label: 'Open memory' } })
+            : request.kind === 'agent' ? { text: 'Agent created. Archive it in Agents to undo.', link: made ? { to: `/agents/${encodeURIComponent(made)}/edit`, label: 'Open the agent' } : { to: '/agents', label: 'Open Agents' } }
+              : request.kind === 'team' ? { text: 'Team created. Running it stays yours.', link: { to: made ? `/agents?tab=teams&team=${encodeURIComponent(made)}` : '/agents?tab=teams', label: 'Open the team' } }
+                : { text: 'Remembered.', link: { to: '/memory', label: 'Open memory' } })
     } catch (cause) { setFailure({ id: request.id, message: message(cause) }) }
     finally { setPending(null) }
   }, [client, drafts, navigate])

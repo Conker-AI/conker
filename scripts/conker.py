@@ -15,6 +15,7 @@ import assistant_imports
 import conker_models
 import conker_toolgate
 import tool_drafts
+from conker_agents import operation as agents_operation
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
 from conker_context import operation as context_operation
@@ -92,6 +93,8 @@ def request(
                     if key in query
                 }
             )
+        elif service == "pi" and path == "/memory/objects" and body is None:
+            encoded = urlencode({key: query[key] for key in ("search", "limit") if key in query})
         elif service == "toolgate-owner" and path == "/v2/owner/editor-capabilities":
             encoded = urlencode(
                 {key: query[key] for key in ("kind", "limit", "after") if key in query}
@@ -524,6 +527,8 @@ def main():
         )
     elif args.command == "inbox":
         return inbox_operation(args, config, request)
+    elif args.command in {"memory", "agent", "team"}:
+        value = agents_operation(args, config, request)
     elif args.command == "config":
         return config_operation(args, config, request)
     elif args.command == "context":

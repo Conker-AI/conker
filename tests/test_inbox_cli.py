@@ -432,3 +432,30 @@ def test_a_plan_alert_shows_when_its_window_resets():
     text = render(value)
     assert "- ChatGPT weekly limit 84% used, resets Fri 12:00" in text
     assert "✓ Claude 5-hour limit reset" in text
+
+
+def test_conkers_agent_and_team_requests_show_what_they_would_make():
+    zero = {"answers": 0, "actions": 0, "tasksCompleted": 0, "jobsCompleted": 0, "costUsd": 0.0}
+
+    def request(kind, title):
+        return {
+            "kind": "change-request", "id": "creq_" + "a" * 32, "title": title, "since": 1792240000.0,
+            "source": {"kind": "change-request", "requestId": "creq_" + "a" * 32, "requestKind": kind},
+        }
+
+    value = {
+        "generatedAt": 1792240794.5,
+        "day": {"date": "2026-10-21", "timeZone": "Asia/Jerusalem", "startsAt": 1792188000.0},
+        "needsYou": [
+            request("agent", "Create the agent “Exam coach”"),
+            request("team", "Create the team “Essay”: A → B"),
+            request("grant_access", "Something newer"),
+        ],
+        "handled": [], "upcoming": [],
+        "impact": {"today": zero, "week": zero},
+        "counts": {"needsYou": 3, "handled": 0, "upcoming": 0},
+    }
+    text = render(value)
+    assert "? Create the agent “Exam coach” · new agent" in text
+    assert "? Create the team “Essay”: A → B · new team" in text
+    assert "? Something newer · request" in text

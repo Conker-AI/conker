@@ -112,4 +112,14 @@ model while chat stays on yours.
 
 ## Inbox
 
-`inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data.
+`inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
+
+## Memory, Agents and Teams
+
+These are your own counterparts of Conker's tools `conker.recall`, `conker.create_agent` and `conker.create_team`: you make things at once, with no request to approve.
+
+`memory search QUERY [--limit N]` - Find memories by their words (1-200 characters), as the Memory screen's search does; at most 50, default 10.
+
+`agent create --name NAME --role TEXT --instructions TEXT [--tool ID ...] [--model ID] [--memory none|conversation|owner]` - Make an agent. Without `--tool` it has no tools; each tool keeps its own access setting. Memory defaults to only the chat it is in.
+
+`team create --name NAME --objective TEXT --role NAME AGENT INSTRUCTIONS [--role ...] [--role-tokens N] [--role-cents N]` - Make a linear team: each role hands its result to the next after you review it. AGENT is an agent id or its exact name; each role gets that agent's tools and no memory of its own. Each role has one turn and, by default, 50000 tokens and 25 cents; the team's budget is their sum plus two turns. Run it from Teams.

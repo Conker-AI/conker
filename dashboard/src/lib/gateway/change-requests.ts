@@ -26,17 +26,43 @@ const toolDraft = z.union([
   z.object({ ...described, status: z.literal('ready').optional(), document: z.record(z.string(), z.unknown()), issues: z.array(issue).max(20), steps: z.array(z.string().max(500)).max(60).default([]) }).passthrough(),
 ])
 const memory = z.object({ text: z.string().min(1).max(2000) }).strict()
+const toolIds = z.array(z.string().min(1).max(200)).max(1000)
+/** A new agent exactly as Conker filed it (Pi's AgentInput): it exists only once he approves. */
+const agent = z.object({
+  name: z.string().min(1).max(80), role: z.string().min(1).max(160), instructions: z.string().min(1).max(8000), modelId: z.string().max(200).nullable(),
+  toolIds, toolAccess: z.record(z.string(), z.enum(['allow', 'ai', 'ask'])).default({}),
+  memory: z.object({ scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(z.string().max(200)).max(1000) }).passthrough(),
+}).passthrough()
+const role = z.object({
+  id: z.string().min(1).max(64), name: z.string().min(1).max(80), agentId: z.string().min(1).max(200), instructions: z.string().min(1).max(8000), toolIds,
+}).passthrough()
+/** A new linear team of existing agents (Pi's Team definition): role 1 hands its result to role 2, and so on. */
+const team = z.object({
+  name: z.string().min(1).max(80), objective: z.string().min(1).max(2000), roles: z.array(role).min(1).max(12),
+  handoffs: z.array(z.record(z.string(), z.unknown())).max(30), budget: z.record(z.string(), z.unknown()),
+}).passthrough()
 const base = {
   id: requestId, title: z.string().min(1).max(160), summary: z.string().max(600), sessionId: z.string().nullable(),
   state: z.enum(['open', 'approved', 'declined', 'failed']), result: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.number().nonnegative(), decidedAt: z.number().nonnegative().nullable(),
 }
+const KINDS = ['ai_job', 'tool_draft', 'memory', 'agent', 'team']
 /** What Conker asked to create, exactly as filed; only the owner's approval makes it real. */
-const request = z.discriminatedUnion('kind', [
+const known = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('ai_job'), payload: aiJob }).strict(),
   z.object({ ...base, kind: z.literal('tool_draft'), payload: toolDraft }).strict(),
   z.object({ ...base, kind: z.literal('memory'), payload: memory }).strict(),
+  z.object({ ...base, kind: z.literal('agent'), payload: agent }).strict(),
+  z.object({ ...base, kind: z.literal('team'), payload: team }).strict(),
 ])
+/**
+ * A kind this dashboard does not know yet (a newer Pi): one plain card instead of a failed list. It
+ * can be declined but never approved here, since nothing shows what approving would make. A known
+ * kind with the wrong shape is still refused: what he approves is exactly what is shown.
+ */
+const other = z.object({ ...base, kind: z.string().min(1).max(40).refine(kind => !KINDS.includes(kind)), payload: z.record(z.string(), z.unknown()) }).strict()
+  .transform(({ kind, ...rest }) => ({ ...rest, kind: 'other' as const, filedKind: kind }))
+const request = z.union([known, other])
 const collection = z.object({ schemaVersion: z.literal(1), results: z.array(request).max(50) }).strict()
 const draftId = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/)
 const submission = z.string().regex(/^[A-Za-z0-9_.:-]{16,128}$/)
@@ -44,6 +70,8 @@ const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/), toolName
 
 export type ChangeRequest = z.infer<typeof request>
 export type ToolDraftRequest = Extract<ChangeRequest, { kind: 'tool_draft' }>
+export type AgentRequest = Extract<ChangeRequest, { kind: 'agent' }>
+export type TeamRequest = Extract<ChangeRequest, { kind: 'team' }>
 export type ToolDraftStatus = 'drafting' | 'ready' | 'failed' | 'needs_detail'
 
 /** Where a tool request is: Conker drafting it, asking him something, a draft ready to review, or a failed attempt. */
@@ -81,7 +109,7 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     async list(signal?: AbortSignal): Promise<ChangeRequest[]> {
       return parse(collection, await auth.request('/api/control/pi/change-requests', { signal })).results
     },
-    /** Creates the cron job or the memory exactly as filed; the session is enough (both can be undone). */
+    /** Creates the cron job, memory, agent or team exactly as filed; the session is enough (each can be undone). */
     async approve(id: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/approve`, { method: 'POST', body: {} }))
     },
