@@ -15,6 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import sys
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -54,6 +55,11 @@ def register(commands):
         "--modified", action="store_true", help="Only changed from default"
     )
     listing.add_argument("--chat", help="Include this chat's settings")
+    listing.add_argument(
+        "--planned",
+        action="store_true",
+        help="Include planned settings: saved, but nothing reads them yet",
+    )
     get = operations.add_parser(
         "get", help="One setting with its description and value"
     )
@@ -95,6 +101,11 @@ def load_registry(path: Path = REGISTRY) -> list[dict]:
 
 def values_of(setting: dict) -> list:
     return [option["value"] for option in setting.get("options", [])]
+
+
+def planned(setting: dict) -> bool:
+    """Saved for a feature still being built: nothing reads the value yet."""
+    return setting["effect"] == "stored"
 
 
 def on_server(setting: dict) -> bool:
@@ -320,6 +331,7 @@ def config_operation(args, config, request) -> int:
             and (not getattr(args, "group", None) or setting["group"] == args.group)
             and (chat or setting["scope"] == "global")
             and on_server(setting)
+            and (getattr(args, "planned", False) or not planned(setting))
         ]
         documents = {}
         rows = []
@@ -406,5 +418,11 @@ def config_operation(args, config, request) -> int:
             "revision": saved.get("revision"),
             "effect": setting["effect"],
         }
+        if args.operation == "set" and planned(setting):
+            # On stderr, so a script reading the JSON answer on stdout sees no change.
+            print(
+                f"Saved, but nothing reads {setting['id']} yet: it is planned.",
+                file=sys.stderr,
+            )
     print(json.dumps(value, indent=2, ensure_ascii=False))
     return 0

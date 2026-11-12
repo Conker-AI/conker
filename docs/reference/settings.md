@@ -2,7 +2,8 @@
 
 Generated from `dashboard/src/settings/registry/` by `scripts/settings_docs.py`; do not edit
 by hand. Read and change server settings with `conker config get|set|reset ID` (add
-`--chat CHAT_ID` for chat settings); `conker config list --search TEXT` finds them. Each
+`--chat CHAT_ID` for chat settings); `conker config list --search TEXT` finds them, and
+`--planned` adds the planned ones, which Settings also hides until you turn on Planned. Each
 setting lives in one home: its own service document, the owner settings document, or this
 browser. "Saved, not used yet" settings keep your choice until the feature that reads them
 is built.

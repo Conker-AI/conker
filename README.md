@@ -37,8 +37,8 @@ It remembers you, shows its work, and never acts without your say.</p>
   schedule, an event or a webhook, within the budgets you set.
 - **A terminal for agents, not for your server.** Each command runs in a fresh locked-down
   container with no network; packages arrive only through a read-only proxy.
-- **Everything is a setting.** 401 settings in 31 topics, one pattern, searchable. The same
-  settings work from the terminal with `conker config`.
+- **Everything is a setting.** 102 settings that take effect (221 more planned), one pattern,
+  searchable. The same settings work from the terminal with `conker config`.
 
 ## A look around
 

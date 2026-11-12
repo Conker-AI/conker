@@ -133,7 +133,8 @@ async function componentCases() {
     if (name === '@/settings/registry') return {
       ALL_SETTINGS: [
         { id: 'appearance.accent', title: 'Accent colour', group: 'appearance', keywords: [], options: [] },
-        { id: 'notifications.timezone', title: 'Time zone', group: 'notifications', keywords: [], options: [] }
+        { id: 'notifications.timezone', title: 'Time zone', group: 'notifications', keywords: [], options: [] },
+        { id: 'appearance.accent_planned', title: 'Accent planned', group: 'appearance', keywords: [], options: [], effect: 'stored' }
       ],
       SETTINGS_GROUPS: [
         { id: 'appearance', title: 'Appearance' },
@@ -141,6 +142,7 @@ async function componentCases() {
       ],
       matches: (setting, query) => setting.title.toLowerCase().includes(query.toLowerCase())
     }
+    if (name === '@/settings/planned') return { isPlanned: setting => setting.effect === 'stored', plannedShown: () => false }
     if (name === '@/lib/workspace-chrome') return { UniversalSearchContext: { Provider: 'Provider' } }
     return new Proxy({}, { get: (_, key) => key })
   }, target, target.exports)
@@ -173,6 +175,7 @@ async function componentCases() {
   assert(settingItems.length > 0, 'Setting items appear for query "accent"')
   const settingItem = settingItems.find(item => item.props.value === 'setting:appearance.accent')
   assert(settingItem, 'Specific setting item appears for query "accent"')
+  assert.equal(settingItems.some(item => item.props.value === 'setting:appearance.accent_planned'), false, 'Planned settings (nothing reads them yet) stay out of search')
   navigations.length = 0; settingItem.props.onClick(); assert.deepEqual(navigations, ['/settings?group=appearance&focus=appearance.accent'], 'Setting item navigates to correct URL')
   navigations.length = 0; h.store.setState({ query: 'a' }); render()
   assert.equal(find('CommandItem').some(item => item.props.value?.startsWith('setting:')), false, 'No settings shown for single character query')
