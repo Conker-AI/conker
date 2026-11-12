@@ -11,6 +11,7 @@ from conker_context import register as register_context
 from conker_files import register as register_files
 from conker_inbox import register as register_inbox
 from conker_messages import register as register_message
+from conker_spending import add_parser as register_spending
 from conker_workflows import register as register_workflows
 from tool_drafts import register as register_tool
 
@@ -249,6 +250,7 @@ def build_parser(description):
     definitions.add_argument(
         "--archived", action="store_true", help="Include archived ones"
     )
+    register_spending(commands)
     limits = commands.add_parser(
         "limits",
         help="How much of each subscription window is left, in percent, and when it resets",

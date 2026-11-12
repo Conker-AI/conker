@@ -1,12 +1,12 @@
-import { Bot, Clock3, Folder, GitBranch, KeyRound, MessagesSquare, Plug, Server, Wrench, type LucideIcon } from 'lucide-react'
+import { Bot, Clock3, Folder, GitBranch, KeyRound, ListChecks, MessagesSquare, Plug, Server, Wrench, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { brandIcons, type BrandId } from './brand-icons'
 
 /** What kind of thing a mark stands for when no service logo fits. */
-export type IdentityKind = 'tool' | 'workflow' | 'job' | 'agent' | 'mcp' | 'project' | 'chat' | 'provider' | 'server'
+export type IdentityKind = 'tool' | 'workflow' | 'job' | 'agent' | 'mcp' | 'project' | 'chat' | 'provider' | 'server' | 'task'
 
 const kindIcons: Record<IdentityKind, LucideIcon> = {
-  tool: Wrench, workflow: GitBranch, job: Clock3, agent: Bot, mcp: Plug, project: Folder, chat: MessagesSquare, provider: KeyRound, server: Server,
+  tool: Wrench, workflow: GitBranch, job: Clock3, agent: Bot, mcp: Plug, project: Folder, chat: MessagesSquare, provider: KeyRound, server: Server, task: ListChecks,
 }
 
 const sizes = { sm: 'size-6 rounded-md [&_svg]:size-3.5', md: 'size-8 rounded-lg [&_svg]:size-4', lg: 'size-10 rounded-xl [&_svg]:size-5' }

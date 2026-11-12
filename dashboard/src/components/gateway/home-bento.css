@@ -57,3 +57,26 @@
   .home-bento[data-layout="no-done"] { grid-template-areas: "needs" "coming" "work" "decided" "quick" "plan"; }
   .home-bento[data-layout="no-plan-done"] { grid-template-areas: "needs" "coming" "work" "decided" "quick"; }
 }
+
+/* Jump back in: one card per unfinished or recent item, two across (three when Home is wider than
+   1000px); on phones a row the owner swipes, so six cards never push the bento off the first screen. */
+.home-resume {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@container (max-width: 1000px) {
+  .home-resume { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 560px) {
+  .home-resume {
+    grid-auto-columns: 88%;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 0.25rem;
+    scroll-snap-type: x mandatory;
+  }
+  .home-resume > * { scroll-snap-align: start; }
+}

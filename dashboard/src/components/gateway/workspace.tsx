@@ -31,6 +31,7 @@ import { gatewayAgentSection, gatewaySystemSection, resolveGatewayRoute } from '
 import { ConnectedWorkspaceShell } from './workspace-shell'
 import { SessionDiscoveryProvider } from './session-discovery-provider'
 import { useAppearanceSync } from '@/settings/appearance'
+import { rememberOpenedChat } from '@/lib/recent-chats'
 
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
@@ -90,6 +91,8 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   useLayoutEffect(() => {
     // The chat URL owns selection. Other routes retain the mounted conversation and its work.
     if (chatActive && conversationState.getState().selected !== session) conversationState.setState({ selected: session })
+    // Home's "Jump back in" offers the chats opened last in this browser (ids only).
+    if (chatActive && session) rememberOpenedChat(session)
   }, [chatActive, conversationState, session])
   const selectSession = useCallback((id: string | null) => navigate(id ? `/chat?session=${encodeURIComponent(id)}` : '/chat'), [navigate])
   const signOut = async () => { if (await authStore.getState().logout()) window.location.reload() }
