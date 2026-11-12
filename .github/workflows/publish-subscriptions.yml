@@ -99,7 +99,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=subscriptions
           cache-to: type=gha,mode=max,scope=subscriptions
-          sbom: true
 
       - name: Claude Code runs read-only, without a network
         env:
@@ -114,6 +113,15 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY" \
             image --quiet --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
             --exit-code 1 "$IMAGE:$VERSION"
+
+      - name: List what the image contains (SPDX SBOM)
+        # Made from the loaded image by the same pinned Trivy; BuildKit's own SBOM needs a
+        # registry push, and this image is pushed by `docker push` after the checks.
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP:/out" "$TRIVY"             image --quiet --format spdx-json --output /out/sbom.spdx.json "$IMAGE:$VERSION"
+          jq -e '.spdxVersion and (.packages | length > 0)' "$RUNNER_TEMP/sbom.spdx.json" >/dev/null
 
       - name: Nothing secret is baked in
         env:
@@ -153,4 +161,13 @@ jobs:
         with:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - uses: actions/attest@v4
+        # The SBOM above, signed and stored beside the image like the provenance.
+        if: github.event_name == 'push' && !github.event.repository.private
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: ${{ runner.temp }}/sbom.spdx.json
           push-to-registry: true

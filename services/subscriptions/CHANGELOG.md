@@ -10,5 +10,6 @@ workflow refuses a tag without its `## X.Y.Z` section here. Release steps:
 - First published image: the private bridge (`scripts/subscription_runtime.py`, with the ChatGPT
   relay) and Claude Code 2.1.310, the npm registry's native binary checked against its pinned
   SHA-512. Python 3.12.16 slim, by digest; runs as any user, read-only, with its state in `/state`.
-- The image carries an SPDX SBOM (BuildKit attestation) inside its index, covered by the signed
-  build provenance. Check one with `gh attestation verify oci://IMAGE@DIGEST --owner Conker-AI`.
+- Each published image has a signed SPDX SBOM attestation (made by the pinned Trivy from the
+  scanned image) beside its build provenance. Check one with
+  `gh attestation verify oci://IMAGE@DIGEST --owner Conker-AI --predicate-type https://spdx.dev/Document/v2.3`.
