@@ -99,6 +99,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=subscriptions
           cache-to: type=gha,mode=max,scope=subscriptions
+          sbom: true
 
       - name: Claude Code runs read-only, without a network
         env:
