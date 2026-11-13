@@ -1150,11 +1150,11 @@ case "$command" in
     post-update-check)
         [ "$#" -eq 1 ] || { usage >&2; exit 2; }
         command -v python3 >/dev/null 2>&1 || {
-            printf 'Python 3.11+ is required for conker post-update-check. Install python3, then retry.
-' >&2
+            printf 'Python 3.11+ is required for conker post-update-check. Install python3, then retry.\n' >&2
             exit 1
         }
-        python3 "$SOURCE_ROOT/scripts/post_update_check.py" --root "$ROOT" --source "$SOURCE_ROOT"             --layout "$LAYOUT" --launcher "$SOURCE_ROOT/conker"
+        python3 "$SOURCE_ROOT/scripts/post_update_check.py" --root "$ROOT" --source "$SOURCE_ROOT" \
+            --layout "$LAYOUT" --launcher "$SOURCE_ROOT/conker"
         exit $? ;;
     setup)     shift; cmd_setup "$@" ;;
     key)       [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_key ;;
