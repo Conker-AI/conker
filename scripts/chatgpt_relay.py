@@ -11,7 +11,7 @@ from __future__ import annotations
 import http.client
 import json
 import socket
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 from pathlib import Path
 
 from chatgpt_provider import ChatGPTError, responses_payload
@@ -78,10 +78,8 @@ class ChatGPTRelay:
             # shutdown wakes a read blocked in another thread; the worker then stops too.
             sock = connection.sock
             if sock is not None:
-                try:
+                with suppress(OSError):
                     sock.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
 
         try:
             if cancellation:

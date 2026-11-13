@@ -20,7 +20,7 @@ def policy(tmp_path, *, fail_first=False, fail_always=False):
         seen.append(command)
         if "--force-recreate" in command and command[-1] == "pi":
             restarts[0] += 1
-            if fail_always or fail_first and restarts[0] == 1:
+            if fail_always or (fail_first and restarts[0] == 1):
                 return subprocess.CompletedProcess(
                     command, 1, stdout=b"private failure"
                 )

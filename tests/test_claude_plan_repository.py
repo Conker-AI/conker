@@ -20,9 +20,9 @@ from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import recovery
-import recovery_layout
-import recovery_snapshot
+import recovery  # noqa: E402
+import recovery_layout  # noqa: E402
+import recovery_snapshot  # noqa: E402
 
 MANIFEST = ROOT / "versions.env"
 OVERLAY = ROOT / "docker-compose.subscriptions.yml"

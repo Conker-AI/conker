@@ -550,8 +550,7 @@ def main():
         body = (
             None
             if args.action == "status"
-            or args.provider == "claude"
-            and args.action == "models"
+            or (args.provider == "claude" and args.action == "models")
             else {"operation": args.action}
         )
         if args.action == "cancel" or (

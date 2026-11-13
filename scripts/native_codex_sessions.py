@@ -14,7 +14,7 @@ import threading
 import time
 import unicodedata
 from collections.abc import Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -295,10 +295,8 @@ class Sessions:
         self.closed.set()
         with self.command_lock:
             if self.process is not None and self.process.poll() is None:
-                try:
+                with suppress(OSError):
                     self.process.kill()
-                except OSError:
-                    pass
 
     @contextmanager
     def _command(self, arguments, deadline):

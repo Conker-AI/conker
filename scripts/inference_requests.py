@@ -51,7 +51,7 @@ class RequestControl:
         for callback in callbacks:
             try:
                 callback()
-            except Exception:  # noqa: BLE001 - Native cleanup errors may contain private data.
+            except Exception:  # Native cleanup errors may contain private data.
                 # Closing one transport cannot prevent cancellation of another.
                 # The inference worker remains responsible for finalization.
                 self.cleanup_failed = True

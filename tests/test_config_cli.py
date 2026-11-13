@@ -13,7 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import config_cli
+import config_cli  # noqa: E402
 
 
 def test_an_installed_stack_is_reached_inside_the_pi_container(monkeypatch):

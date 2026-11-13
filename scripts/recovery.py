@@ -97,7 +97,7 @@ def main() -> int:
             print(json.dumps(state, indent=2))
             return 0 if state.get("status") == "service_ready" else 3
         return 0
-    except Exception as exc:  # noqa: BLE001 - sanitize every failure at the CLI boundary
+    except Exception as exc:  # sanitize every failure at the CLI boundary
         message = str(exc) if isinstance(exc, RecoveryError) else type(exc).__name__
         print(
             f"Recovery failed: {message}\nNo recovery was promoted. Retain partial files and inspect the hold report before retrying.",

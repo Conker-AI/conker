@@ -93,13 +93,13 @@ class AcceptanceGate(FirstRunSteps):
             self.complete_rehearsal()
             self.backup_and_restore()
             self.verify_setup_status()
-        except (Exception, KeyboardInterrupt) as exc:  # noqa: BLE001 - finalize any gate failure
+        except (Exception, KeyboardInterrupt) as exc:  # finalize any gate failure
             failure = exc
             self.evidence.event("gate", "failed", error=f"{type(exc).__name__}: {exc}")
         finally:
             try:
                 self.teardown()
-            except (Exception, KeyboardInterrupt) as exc:  # noqa: BLE001 - teardown must not mask evidence
+            except (Exception, KeyboardInterrupt) as exc:  # teardown must not mask evidence
                 self.evidence.event("teardown", "failed", error=f"{type(exc).__name__}: {exc}")
                 if failure is None:
                     failure = exc
@@ -399,7 +399,7 @@ class AcceptanceGate(FirstRunSteps):
                     timeout=600,
                     phase="abort-recovery",
                 )
-            except Exception as exc:  # noqa: BLE001 - continue with independent cleanup
+            except Exception as exc:  # continue with independent cleanup
                 errors.append(str(exc))
         if self.mutated and self.env_file.exists():
             try:
@@ -408,7 +408,7 @@ class AcceptanceGate(FirstRunSteps):
                     timeout=300,
                     phase="compose-teardown",
                 )
-            except Exception as exc:  # noqa: BLE001 - report every independent cleanup failure
+            except Exception as exc:  # report every independent cleanup failure
                 errors.append(str(exc))
         if errors:
             raise AcceptanceError(
@@ -466,7 +466,7 @@ def main() -> int:
             protection_root=args.protection_root,
             terminal_workspace=args.terminal_workspace,
         ).run()
-    except (Exception, KeyboardInterrupt) as exc:  # noqa: BLE001 - CLI boundary
+    except (Exception, KeyboardInterrupt) as exc:  # CLI boundary
         print(f"release acceptance failed: {exc}", file=sys.stderr)
         return 1
     print(f"release acceptance passed; evidence: {evidence.root}")

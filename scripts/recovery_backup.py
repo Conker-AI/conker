@@ -8,7 +8,7 @@ import re
 import sys
 import tarfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -299,7 +299,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
     name = (
         "snapshot-"
-        + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-")
+        + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-")
         + uuid.uuid4().hex[:8]
     )
     staging = destination / ("." + name + ".partial")
@@ -460,7 +460,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             "format": FORMAT,
             "status": "complete",
             "layout": profile.name,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "database": {
                 "service": "postgres",
                 "user": profile.database_user,

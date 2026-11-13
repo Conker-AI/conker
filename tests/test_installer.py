@@ -11,6 +11,7 @@ fake would assert nothing.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -143,10 +144,8 @@ def path_without(command: str, sandbox: Path) -> str:
         for entry in source.iterdir():
             if entry.name == command or (sandbox / entry.name).exists():
                 continue
-            try:
+            with contextlib.suppress(OSError):
                 (sandbox / entry.name).symlink_to(entry)
-            except OSError:
-                pass
     return str(sandbox)
 
 
@@ -379,7 +378,7 @@ def test_a_damaged_env_is_repaired_without_losing_what_survived(install):
     # Someone deletes a line. Re-running should replace only that one.
     body = install.env_file.read_text()
     install.env_file.write_text(
-        "\n".join(l for l in body.splitlines() if not l.startswith("EMBEDDINGS_KEY="))
+        "\n".join(line for line in body.splitlines() if not line.startswith("EMBEDDINGS_KEY="))
     )
 
     install("--yes", "--dry-run")

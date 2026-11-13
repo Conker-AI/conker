@@ -17,9 +17,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import import_listener
+import import_listener  # noqa: E402
 
-from tests.ubuntu_generator import prepare
+from tests.ubuntu_generator import prepare  # noqa: E402
 
 ADMIN = "admin-" + "a" * 40
 KEY = "listener-" + "k" * 40

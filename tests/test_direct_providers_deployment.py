@@ -17,7 +17,7 @@ from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from recovery_layout import (
+from recovery_layout import (  # noqa: E402
     PROVIDER_IDS,
     REPOSITORY_PROFILE,
     UBUNTU_PROFILE,
@@ -102,6 +102,6 @@ def test_the_ubuntu_build_refuses_them_with_a_pi_that_cannot_read_them(tmp_path)
 
 @pytest.mark.parametrize("profile", [REPOSITORY_PROFILE, UBUNTU_PROFILE])
 def test_backups_never_hold_any_provider_key(profile):
-    assert PROVIDER_IDS == set(PROVIDERS)
+    assert set(PROVIDERS) == PROVIDER_IDS
     for name in PROVIDERS:
         assert f"/run/secrets/provider-{name}" in profile.excluded_mounts["pi"]

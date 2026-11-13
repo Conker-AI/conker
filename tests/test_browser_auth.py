@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 from test_recovery import (
-    installed as installed,  # noqa: PLC0414 - register the shared pytest fixture
+    installed as installed,  # register the shared pytest fixture
 )
 from test_recovery import (
     recovery,

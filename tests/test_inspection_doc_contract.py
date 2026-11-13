@@ -33,7 +33,7 @@ def pi_inspections(source: Path) -> dict:
     else:
         raise AssertionError("gateway/inspection.py has no module-level INSPECTIONS dict")
     inspections = {}
-    for key, call in zip(node.value.keys, node.value.values):
+    for key, call in zip(node.value.keys, node.value.values, strict=False):
         authority, path, *query = (ast.literal_eval(arg) for arg in call.args)
         route = path
         if query:

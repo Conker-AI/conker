@@ -6,6 +6,7 @@ methods are used: no threads, turns, commands, MCP, or Codex agent execution.
 
 from __future__ import annotations
 
+import contextlib
 import http.client
 import json
 import os
@@ -209,10 +210,8 @@ class CodexAccounts:
                     self.process.wait(timeout=3)
                 self.process = None
                 return
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 os.killpg(self.process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
             try:
                 self.process.wait(timeout=3)
             except subprocess.TimeoutExpired:
@@ -468,10 +467,8 @@ def _abort_response(response):
     raw = getattr(getattr(response, "fp", None), "raw", None)
     connection = getattr(raw, "_sock", None)
     if connection is not None:
-        try:
+        with contextlib.suppress(OSError):
             connection.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
         if os.name == "nt":
             # Windows shutdown does not reliably interrupt another thread's
             # recv. makefile also defers socket.close while its reader lives.
@@ -557,11 +554,10 @@ def inference_events(control, value, *, opener=None, cancellation=None):
                     if result.get("status") != "completed" or not emitted:
                         raise ChatGPTError("incomplete_response")
                     usage = result.get("usage") or {}
-                    count = lambda value: (
-                        value
-                        if type(value) is int and 0 <= value <= 1_000_000_000
-                        else None
-                    )
+
+                    def count(value):
+                        return value if type(value) is int and 0 <= value <= 1_000_000_000 else None
+
                     yield {
                         "type": "done",
                         "model": payload["model"],
