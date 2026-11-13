@@ -162,7 +162,7 @@ export function ContextSettingsPanel({ client, sessionId, disabled, onChanged }:
           <Input id={`${ids}-${key}`} type="number" inputMode="numeric" value={value} onChange={event => set(event.target.value)} disabled={locked} aria-invalid={key === 'reserve' && reserveTooBig ? true : undefined} />
         </div>)}
       </div>
-      {reserveTooBig && <p role="alert" className="text-xs text-destructive">The room kept for the answer must be smaller than the context window.</p>}
+      {reserveTooBig && <p role="alert" className="text-xs text-destructive-foreground">The room kept for the answer must be smaller than the context window.</p>}
       <Button size="sm" onClick={save} disabled={locked || !changed || !valid}>Save</Button>
     </Group>
 
