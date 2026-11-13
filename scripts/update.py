@@ -380,7 +380,7 @@ class HostTransport:
                     timeout=300,
                 )
 
-    def verify_rollback(self, prior: dict[str, Any]) -> None:
+    def verify_rollback(self, prior: dict[str, Any], protection: dict | None = None) -> None:
         if self._git("rev-parse", "HEAD") != prior["revision"]:
             raise UpdateError("prior Git revision is not active")
         actual = self._service_state(sorted(prior["services"]))

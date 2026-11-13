@@ -30,7 +30,7 @@ class Transport:
     def rollback(self, prior, candidate):
         self.calls.append(("rollback", prior["revision"], candidate["recovery"]))
 
-    def verify_rollback(self, prior):
+    def verify_rollback(self, prior, protection):
         self.calls.append(("verify_rollback", prior["revision"]))
         if self.fail:
             raise UpdateError("Conker 0.1.0 did not answer its health checks")

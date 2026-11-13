@@ -167,7 +167,10 @@ changes nothing (the module sources it pins are still fetched by their version t
 verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swaps the sources
 (the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
 --strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
-already changed stays changed, and the snapshot is the way back); if that cannot be
+already changed stays changed, and the snapshot is the way back). One exception: when the old Pi
+does not answer because the new one added a migration to `state/pi/pi.db` (an id in its ledger
+the snapshot's copy lacks), Pi is stopped, the snapshot's `pi.db` is put back, the migrated one is
+kept beside it as `pi.db.from-update-STAMP`, and the check runs again. If that cannot be
 proven the update holds and the snapshot is the way back. An update cut off part way (a reboot)
 gets the same rollback from `conker update --recover`, which the host helper runs when it starts
 and before each daily check (never while an update still runs, a backup runs or a recovery or the
