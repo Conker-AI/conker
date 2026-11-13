@@ -57,6 +57,8 @@ def test_human_status_tracks_matrix_counts_and_deferred_families():
     ("mutate", "message"),
     [
         (lambda data: data["capabilities"].pop(), "inventory changed"),
+        (lambda data: row(data, "artifacts").update(frozen="yes"), "must say why"),
+        (lambda data: row(data, "agents").update(frozen=True), "must say why"),
         (
             lambda data: row(data, "agents").pop("authority"),
             "missing or unexpected fields",
