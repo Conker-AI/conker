@@ -125,6 +125,18 @@ def test_ubuntu_update_to_a_release_runs_the_staged_update(ubuntu_cli):
     assert forwarded == ["--root", str(ubuntu_cli.deployment), "--to", "0.2.0"]
 
 
+def test_ubuntu_update_to_the_offered_commit_forwards_it(ubuntu_cli):
+    recorder(ubuntu_cli, "update_ubuntu.py")
+    sha = "0123456789abcdef0123456789abcdef01234567"
+    result = ubuntu_cli("update", "--to", "0.2.0", "--commit", sha)
+
+    assert result.returncode == 0, result.stderr
+    forwarded = json.loads(result.stdout.strip().splitlines()[-1])
+    assert forwarded == ["--root", str(ubuntu_cli.deployment), "--to", "0.2.0", "--commit", sha]
+    assert ubuntu_cli("update", "--to", "0.2.0", "--sideways", sha).returncode == 2
+    assert ubuntu_cli("update", "--to", "0.2.0", "--commit").returncode == 2
+
+
 def test_ubuntu_update_recover_finishes_a_cut_off_update(ubuntu_cli):
     recorder(ubuntu_cli, "update_ubuntu.py")
     result = ubuntu_cli("update", "--recover")

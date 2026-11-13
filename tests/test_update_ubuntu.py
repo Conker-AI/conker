@@ -242,10 +242,56 @@ def test_an_archive_that_unpacks_too_large_is_refused_before_writing(tmp_path, m
     assert not (tmp_path / "out").exists()
 
 
-ARABIC_INDIC_1_2_3 = ".".join(chr(0x0660 + digit) for digit in (1, 2, 3))  # a \d pattern would take these
+ARABIC_INDIC_1_2_3 = ".".join(
+    chr(0x0660 + digit) for digit in (1, 2, 3)
+)  # a \d pattern would take these
 
 
 @pytest.mark.parametrize("version", [ARABIC_INDIC_1_2_3, "0.2.0" + chr(10)])
 def test_only_ascii_release_numbers_are_accepted(version):
     with pytest.raises(UpdateError):
         UbuntuTransport(Path("."), version)
+
+
+COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
+def test_the_offered_release_is_fetched_by_the_commit_its_tag_named(deployment):
+    host = Host(deployment, {"0.2.0": True}, release="0.2.0")
+    transport = UbuntuTransport(
+        deployment, "0.2.0", commit=COMMIT, run=host.run, fetch=host.fetch, home=deployment.parent
+    )
+    store = UpdateStore(deployment / "state" / "update")
+
+    assert UpdateCoordinator(transport, store).run()["status"] == "applied"
+
+    assert host.fetched[0] == f"https://codeload.github.com/Conker-AI/conker/tar.gz/{COMMIT}"
+    assert any(url.endswith("/pi/tar.gz/refs/tags/v0.25.0") for url in host.fetched)
+
+
+@pytest.mark.parametrize("commit", ["main", COMMIT[:39], COMMIT.upper(), COMMIT + "0"])
+def test_a_commit_is_forty_hex_digits(commit):
+    with pytest.raises(UpdateError, match="40 hex"):
+        UbuntuTransport(Path("."), "0.2.0", commit=commit)
+
+
+def test_the_command_hands_the_commit_to_the_update(tmp_path, monkeypatch):
+    made = []
+
+    class Stop(BaseException):  # main() turns any Exception into a refusal
+        pass
+
+    def transport(root, version, *, commit=None):
+        made.append((version, commit))
+        raise Stop
+
+    monkeypatch.setattr(update_ubuntu, "UbuntuTransport", transport)
+    monkeypatch.setattr(update_ubuntu, "tell_inbox", lambda _root: None)
+    with pytest.raises(Stop):
+        update_ubuntu.main(["--root", str(tmp_path), "--to", "0.2.0", "--commit", COMMIT])
+    assert made == [("0.2.0", COMMIT)]
+
+
+def test_a_commit_goes_only_with_to(tmp_path):
+    with pytest.raises(SystemExit):
+        update_ubuntu.main(["--root", str(tmp_path), "--recover", "--commit", COMMIT])

@@ -3,6 +3,7 @@ time limit, and the daily check stays out of the way of a running action."""
 
 from __future__ import annotations
 
+import json
 import subprocess
 
 import pytest
@@ -36,18 +37,55 @@ def update(version, identity="ui-update-0123456789abcdef"):
     return {"id": identity, "operation": "update.run", "arguments": {"version": version}}
 
 
+COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
+def offer(ops: HostOps, offers=None) -> None:
+    """What the daily check saved (scripts/update_check.py save_offers)."""
+    folder = ops.root / "state" / "update"
+    folder.mkdir(parents=True, exist_ok=True)
+    value = json.dumps({"offers": {"0.25.0": COMMIT} if offers is None else offers})
+    (folder / "offer.json").write_text(value, encoding="utf-8")
+
+
 def test_an_update_runs_the_fixed_argv_with_no_time_limit(tmp_path):
     runner = Runner()
     ops = host(tmp_path, runner)
+    offer(ops)
     receipt = ops.start(update("0.25.0"), wait=True)
     argv, kwargs = runner.calls[0]
-    assert argv == ["bash", str(ops.source / "conker"), "update", "--to", "0.25.0"]
+    assert argv == [
+        "bash", str(ops.source / "conker"), "update", "--to", "0.25.0", "--commit", COMMIT,
+    ]  # fmt: skip
     assert kwargs["timeout"] is None  # stopping an update midway is worse than waiting
     assert receipt["outcome"] == "done" and receipt["arguments"] == {"version": "0.25.0"}
 
 
+@pytest.mark.parametrize(
+    "saved",
+    [None, {"0.24.0": COMMIT}, {"0.26.0": COMMIT}, {"0.25.0": "main"}, {"0.25.0": COMMIT[:39]}],
+)
+def test_only_an_offered_release_is_installed(tmp_path, saved):
+    ops = host(tmp_path)  # its runner fails the test if anything runs
+    if saved is not None:
+        offer(ops, saved)
+    with pytest.raises(HostOpsError) as error:
+        ops.start(update("0.25.0"))
+    assert "only a release its daily check offered" in str(error.value)
+    assert not ops.journal.path.exists()  # refused before it was recorded as started
+
+
+def test_each_offered_release_installs_by_its_own_commit(tmp_path):
+    runner = Runner()
+    ops = host(tmp_path, runner)
+    offer(ops, {"0.25.0": COMMIT, "0.26.0": "f" * 40})
+    ops.start(update("0.25.0", "ui-update-older-card-000001"), wait=True)
+    assert runner.calls[0][0][-4:] == ["--to", "0.25.0", "--commit", COMMIT]
+
+
 def test_a_failed_update_says_where_to_look(tmp_path):
     ops = host(tmp_path, Runner(result=1))
+    offer(ops)
     receipt = ops.start(update("0.25.0"), wait=True)
     assert receipt["outcome"] == "failed"
     assert "The Inbox says whether Conker went back" in receipt["reason"]

@@ -2,7 +2,9 @@
 
 The host reads the latest release anonymously from the GitHub API (Pi reads nothing outside,
 ADR-0005) and compares it with CONKER_VERSION in the installed versions.env; a tree without
-CONKER_VERSION is an unreleased build, so any release is newer. With --report, what it found and
+CONKER_VERSION is an unreleased build, so any release is newer. On the Ubuntu layout a newer release
+is kept as an offer (state/update/offer.json: each version with the commit its tag named when first
+offered): the only releases the Inbox's Update (`update.run`) installs, by those commits. With --report, what it found and
 every update receipt not reported yet go to Pi's /updates/report through the relay in Pi's own
 container (scripts/config_cli.py), with the recovery key that never leaves that container. The
 host helper runs `conker update --check --report` once a day (scripts/provider_control.py).
@@ -21,6 +23,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 RELEASES = "https://api.github.com/repos/Conker-AI/conker/releases/latest"
+# The commit a release tag names, as 40 hex digits (Accept: application/vnd.github.sha).
+TAG_COMMIT = "https://api.github.com/repos/Conker-AI/conker/commits/v{version}"
+COMMIT = re.compile(r"[0-9a-f]{40}")
+OFFER = "offer.json"
 RELEASE_PAGE = "https://github.com/Conker-AI/conker/releases/tag/"
 VERSION = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}")
 MAX_ANSWER = 512 * 1024
@@ -122,6 +128,83 @@ def latest_release(opener=None) -> dict | None:
         return parse_release(json.loads(raw))
     except (ValueError, UnicodeDecodeError):
         raise CheckError("The release answer was not JSON.") from None
+
+
+def tag_commit(version: str, opener=None) -> str:
+    """The commit the release's tag names now, read without a key. The update downloads that
+    commit, so a tag moved after the offer cannot change what is installed."""
+    request = Request(
+        TAG_COMMIT.format(version=version),
+        headers={
+            "Accept": "application/vnd.github.sha",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "conker-update-check",
+        },
+    )
+    try:
+        with (opener or build_opener(_Stay())).open(request, timeout=30) as response:
+            raw = response.read(128)
+    except HTTPError as error:
+        raise CheckError(f"GitHub answered HTTP {error.code} for the release's commit.") from None
+    except (URLError, OSError, TimeoutError):
+        raise CheckError("GitHub could not be reached.") from None
+    commit = raw.decode("ascii", "replace").strip()
+    if not COMMIT.fullmatch(commit):
+        raise CheckError("GitHub named no commit for the release.")
+    return commit
+
+
+def offers(directory: Path) -> dict[str, str]:
+    """Every release a check offered that is still installable, each with the commit its tag named
+    when it was first offered; {} when there is none or the file is not one."""
+    try:
+        value = json.loads((directory / OFFER).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    found = value.get("offers") if isinstance(value, dict) else None
+    if not isinstance(found, dict) or not all(
+        isinstance(version, str)
+        and VERSION.fullmatch(version)
+        and isinstance(commit, str)
+        and COMMIT.fullmatch(commit)
+        for version, commit in found.items()
+    ):
+        return {}
+    return dict(found)
+
+
+def offered(directory: Path, version: str) -> str | None:
+    """The commit `update.run` installs for `version`, or None: never offered, or gone."""
+    return offers(directory).get(version)
+
+
+def save_offers(directory: Path, result: dict, commit_of=None) -> dict[str, str]:
+    """Keep what `update.run` may install (the Ubuntu layout, before Pi hears of the release).
+
+    The latest release is added with the commit its tag names now; one offered before keeps the
+    commit it was offered with, so moving a tag later changes nothing. A release at or below the
+    running one is dropped (installed or passed), and so is one above the latest (pulled). Every
+    other offer stays, so any card Pi still shows can be installed. A check that failed changes
+    nothing (this is not called)."""
+    latest = (result["latest"] or {}).get("version")
+    running = result["running"]
+
+    def keep(version: str) -> bool:
+        above = running is None or version_key(version) > version_key(running)
+        return above and latest is not None and version_key(version) <= version_key(latest)
+
+    kept = {version: commit for version, commit in offers(directory).items() if keep(version)}
+    if result["newer"] and latest is not None and latest not in kept:
+        kept[latest] = (commit_of or tag_commit)(latest)
+    path = directory / OFFER
+    if not kept:
+        path.unlink(missing_ok=True)
+        return kept
+    directory.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps({"offers": kept}, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+    return kept
 
 
 def check(source: Path, fetch=None) -> dict:
@@ -261,6 +344,8 @@ def main(argv: list[str] | None = None) -> int:
     failures = (CheckError, OSError, subprocess.SubprocessError)
     try:
         result = check(args.source)
+        if args.layout == "ubuntu":  # before Pi offers it, so the Inbox's Update finds it
+            save_offers(update_directory(args.root, args.layout), result)
     except failures as error:
         # GitHub can't be read: a finished update still reaches the Inbox.
         if args.report:

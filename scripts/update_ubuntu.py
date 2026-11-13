@@ -41,6 +41,7 @@ from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
     from scripts.update_check import (
+        COMMIT,
         VERSION,
         _Stay,
         installed_version,
@@ -57,7 +58,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         _token,
     )
 except ModuleNotFoundError:
-    from update_check import VERSION, _Stay, installed_version, report, version_key
+    from update_check import COMMIT, VERSION, _Stay, installed_version, report, version_key
     from update_core import (
         LOCK_TOKEN,
         UpdateCoordinator,
@@ -69,6 +70,7 @@ except ModuleNotFoundError:
     )
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
+COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/conker/tar.gz/{commit}"
 # Source folder -> (its repository, the versions.env line that pins its tag).
 MODULES = {
     "pi": ("pi", "PI_VERSION"),
@@ -140,9 +142,14 @@ def download(url: str, target: Path) -> None:
 class UbuntuTransport:
     """Source exports, Compose and health for the Ubuntu layout (deploy/ubuntu)."""
 
-    def __init__(self, root: Path, version: str, *, run=None, fetch=download, home=None):
+    def __init__(
+        self, root: Path, version: str, *, commit=None, run=None, fetch=download, home=None
+    ):
         if not VERSION.fullmatch(version):
             raise UpdateError("name a release as X.Y.Z")
+        if commit is not None and not COMMIT.fullmatch(commit):
+            raise UpdateError("name the release's commit as 40 hex digits")
+        self.commit = commit  # the commit the offer's tag named; None: the tag as it is now
         self.root, self.target = root.resolve(), version
         self.sources, self.compose_file = self.root / "sources", self.root / "compose.json"
         self.fetch, self.home = fetch, Path(home or Path.home())
@@ -254,9 +261,11 @@ class UbuntuTransport:
     def prepare_candidate(self, prior: dict[str, Any]) -> dict[str, Any]:
         staging = self.staging
         try:
-            self.fetch(
-                ARCHIVE.format(repository="conker", version=self.target), staging / "companion"
-            )
+            if self.commit:
+                url = COMMIT_ARCHIVE.format(commit=self.commit)
+            else:
+                url = ARCHIVE.format(repository="conker", version=self.target)
+            self.fetch(url, staging / "companion")
             pinned = versions(staging / "companion" / "versions.env")
             if pinned.get("CONKER_VERSION") != self.target:
                 raise UpdateError(f"the v{self.target} release does not say it is {self.target}")
@@ -275,6 +284,7 @@ class UbuntuTransport:
             raise
         return {
             "revision": self.target,
+            "commit": self.commit,
             "modules": modules,
             "staging": str(staging),
             "recovery": str(self.recovery),
@@ -450,7 +460,10 @@ def main(argv: list[str] | None = None) -> int:
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--to", dest="version")
     action.add_argument("--recover", action="store_true", help="finish an update that was cut off")
+    parser.add_argument("--commit", help="the commit the offered release's tag named (--to only)")
     args = parser.parse_args(argv)
+    if args.commit and not args.version:
+        parser.error("--commit goes with --to")
     os.umask(0o022)  # public sources stay readable to the containers' user (README)
     status = 1
     try:
@@ -458,7 +471,7 @@ def main(argv: list[str] | None = None) -> int:
             print(recover(args.root))
             status = 0
         else:
-            transport = UbuntuTransport(args.root, args.version)
+            transport = UbuntuTransport(args.root, args.version, commit=args.commit)
             store = UpdateStore(transport.root / "state" / "update")
             lock = _acquire_lock(store)
             try:
