@@ -290,7 +290,7 @@ def test_an_offer_naming_another_module_version_than_the_release_pins_is_refused
     modules = OFFERED.replace("pi=0.25.0@", "pi=0.24.0@")
     store = UpdateStore(deployment / "state" / "update")
 
-    with pytest.raises(UpdateError, match="the offer named pi 0.24.0, the release pins 0.25.0"):
+    with pytest.raises(UpdateError, match=r"the offer named pi 0\.24\.0, the release pins 0\.25\.0"):
         UpdateCoordinator(offered_transport(deployment, host, modules), store).run()
 
     assert [receipt["status"] for receipt in receipts(deployment)] == ["failed_before_apply"]
