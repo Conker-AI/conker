@@ -13,8 +13,6 @@ import { ChatSkeleton, PageSkeleton } from '@/components/resilience/skeletons'
 import { ConnectionBanner } from '@/components/resilience/connection-banner'
 import { GatewaySidebar } from './gateway-sidebar'
 import { InboxAttentionProvider } from './inbox-attention'
-import { GatewayPrivacyControl } from './privacy-control'
-import { GatewaySessionAccessControl } from './session-access-control'
 import { GatewayHeader } from './header'
 import { WorkspaceChromeProvider } from '@/components/design-system/workspace-chrome'
 import { UniversalSearchProvider } from './universal-search'
@@ -33,6 +31,9 @@ import { SessionDiscoveryProvider } from './session-discovery-provider'
 import { useAppearanceSync } from '@/settings/appearance'
 import { rememberOpenedChat } from '@/lib/recent-chats'
 
+// Chat-only header controls: they render inside the chat's Suspense, so the entry need not carry them.
+const GatewayPrivacyControl = lazy(() => import('./privacy-control').then(module => ({ default: module.GatewayPrivacyControl })))
+const GatewaySessionAccessControl = lazy(() => import('./session-access-control').then(module => ({ default: module.GatewaySessionAccessControl })))
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
 const GatewayMcpWorkspace = lazy(() => import('./mcp-workspace').then(module => ({ default: module.GatewayMcpWorkspace })))

@@ -92,7 +92,7 @@ async function transportCases(){
  await assert.rejects(()=>transport.request('/api/host/claude/sessions',{query:{limit:1}}))
  response={text:'x'.repeat(1024*1024)};await assert.rejects(()=>transport.request('/api/host/claude/sessions'),e=>e.kind==='response-too-large')
  response={text:'x'.repeat(512*1024)};await assert.rejects(()=>transport.request('/api/host/claude/sessions/native_A/output'),e=>e.kind==='response-too-large')
- const {describeGatewayOperation}=loader()('src/lib/gateway/verification.ts');const review=describeGatewayOperation(snapshotGatewayOperation('/api/host/claude/sessions/native_A/stop',{expectedIdentity:'a'.repeat(64)}));assert.match(review.target,/native_A/);assert.match(review.details.join(' '),/not prove the process has stopped/)
+ const {describeGatewayOperation}=loader()('src/lib/gateway/operation-review.ts');const review=describeGatewayOperation(snapshotGatewayOperation('/api/host/claude/sessions/native_A/stop',{expectedIdentity:'a'.repeat(64)}));assert.match(review.target,/native_A/);assert.match(review.details.join(' '),/not prove the process has stopped/)
 }
 const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children), ...walk(node.props?.action), ...walk(node.props?.actions), ...walk(node.props?.details)]
 const text = node => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join('') : node?.props ? text(node.props.children) + text(node.props.details) : ''

@@ -4,7 +4,6 @@ import { ChevronDown, Search, SearchX } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { createPortal } from "react-dom"
 import { useWorkspaceChrome } from '@/lib/workspace-chrome'
@@ -62,19 +61,6 @@ export function OverviewSection({ title, description, action, children, priority
     </div>
     {children}
   </section>
-}
-
-export function PageTabs({ className, ...props }: ComponentProps<typeof Tabs>) {
-  return <Tabs className={cn("min-w-0 gap-(--page-section-gap)", className)} {...props} />
-}
-export function PageTabsList({ className, mobileColumns, ...props }: ComponentProps<typeof TabsList> & { mobileColumns?: 2 }) {
-  return <TabsList className={cn("h-auto min-h-(--collection-search-height) max-w-full flex-wrap justify-start border bg-muted p-[3px]", mobileColumns === 2 && "grid grid-cols-2 sm:inline-flex", className)} {...props} />
-}
-export function PageTabsTrigger({ className, ...props }: ComponentProps<typeof TabsTrigger>) {
-  return <TabsTrigger className={cn("h-(--control-height) px-4", className)} {...props} />
-}
-export function PageTabsContent({ className, ...props }: ComponentProps<typeof TabsContent>) {
-  return <TabsContent className={cn("min-w-0", className)} {...props} />
 }
 
 type CollectionSearchProps = Omit<ComponentProps<typeof Input>, "className" | "type" | "aria-label"> & { label: string }

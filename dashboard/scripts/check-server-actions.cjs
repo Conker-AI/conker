@@ -17,7 +17,7 @@ function load(relative) {
 
 const { createGatewayHostOpsClient, createHostOpId, hostProblem, HOST_OP_ID } = load('src/lib/gateway/host-ops.ts')
 const { createGatewayTransport, GatewayError } = load('src/lib/gateway/transport.ts')
-const { describeGatewayOperation } = load('src/lib/gateway/verification.ts')
+const { describeGatewayOperation } = load('src/lib/gateway/operation-review.ts')
 const words = load('src/lib/server-actions.ts')
 
 const snapshot = 'snapshot-20261029T040000Z-3f2a91c0'

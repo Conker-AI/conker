@@ -503,7 +503,7 @@ Exceptions have a concrete UI role and narrow ownership. They do not permit an u
 - `src/components/design-system/primitives.tsx`: owns raw shared heading/search markup (including the hidden `h1` that `PageHeader actionsOnly` adds for each page) and primitive tab composition. Other route code consumes it.
 - `src/components/ui/*`: foundational primitives retain their raw implementation APIs. Product routes must use the shared application pattern where one exists.
 - `src/config/theme-data.ts`, `src/config/theme-customizer-constants.ts`, `src/utils/tweakcn-theme-presets.ts`, `src/utils/shadcn-ui-theme-presets.ts`: theme definition/swatch files may contain actual color values. They must not become a place to hide route styling.
-- Page-level navigation uses the shared appbar's `?tab=` section links. `PageTabs` remains available for local, non-routing tab interactions.
+- Page-level navigation uses the shared appbar's `?tab=` section links.
 - Memory owns its URL-backed Map/Tree/List view in its toolbar and the shared `WorkspaceInspector` for immediate nonmodal inspection. Its graph uses chart-derived category colors (`--memory-category-*` in `src/app/memory/memory-graph.css`) with local lightness bounds for light and dark themes; this data-visualization role does not establish a separate application palette or replace shared collection search and form controls.
 - The terminal's neutral surface variables in `src/index.css` (`.terminal-surface`) keep a black command area and readable text in both themes; its info control opens the terminal's access details. These variables do not establish a separate general application palette.
 

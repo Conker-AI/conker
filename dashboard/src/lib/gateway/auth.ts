@@ -1,5 +1,5 @@
 import { GatewayError, gatewayError, isBrowserSessionRoute, snapshotGatewayOperation, type GatewayRequest, type GatewayTransport, type GatewayVerifiedOperation } from './transport'
-import { describeGatewayOperation, type GatewayVerificationPrompt } from './verification'
+import type { GatewayVerificationPrompt } from './verification'
 import { isImportSave, type GatewayDownload, type GatewayFileFormat, type GatewayFileTransfer } from './file-transfer'
 
 export type GatewaySession = { authenticated: boolean; sessionId: string; expiresAt: number; unlockExpiresAt: number | null; setupRequired: boolean }
@@ -58,8 +58,9 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
   })
   const currentFor = (ticket: Ticket) => () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
   /** Ask for the password and trade it for a one-use proof bound to this exact operation. */
-  function proof(operation: GatewayVerifiedOperation, ticket: Ticket, current: () => boolean, signal?: AbortSignal): Promise<string> {
+  async function proof(operation: GatewayVerifiedOperation, ticket: Ticket, current: () => boolean, signal?: AbortSignal): Promise<string> {
     if (!verification) throw new GatewayError('verification-required')
+    const { describeGatewayOperation } = await import('./operation-review')
     return verification.request(describeGatewayOperation(operation), async (password, verificationSignal) => {
       if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
       let response: Record<string, unknown>

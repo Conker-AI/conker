@@ -11,7 +11,7 @@ function load(file) {
 }
 const { createGatewayMcpClient } = load('mcp.ts')
 const { createGatewayTransport, snapshotGatewayOperation } = load('transport.ts')
-const { describeGatewayOperation } = load('verification.ts')
+const { describeGatewayOperation } = load('operation-review.ts')
 const hash = 'a'.repeat(64), url = 'https://mcp.example.com/mcp'
 const remote = { name: 'search', description: 'Find a document', inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }, schemaHash: hash }
 const tool = { id: 'mcp.search', name: 'search', description: remote.description, status: 'active', authorization: 'owner_confirmation', url, tool_name: 'search', schema_hash: hash, secret_ref: null, version: 1, digest: hash }
