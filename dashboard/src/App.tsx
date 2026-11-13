@@ -14,8 +14,6 @@ const basename = import.meta.env.VITE_BASENAME || ''
 const GatewayEntry = lazy(() => import('@/components/auth/gateway-entry'))
 // Development only: the live workspace on an in-memory gateway (see src/dev/gateway-preview.tsx).
 const GatewayPreview = import.meta.env.DEV ? lazy(() => import('@/dev/gateway-preview')) : null
-const FixtureWorkspace = import.meta.env.DEV ? lazy(() => import('@/components/fixture-workspace')) : null
-const legacyFixtureShell = import.meta.env.DEV && import.meta.env.VITE_CONKER_FIXTURE_SHELL === 'legacy'
 
 function App() {
   return (
@@ -29,7 +27,7 @@ function App() {
           <Router basename={basename}>
             <Suspense fallback={<AppLoading />}>
               {runtimeMode === 'fixture' && GatewayPreview
-                ? legacyFixtureShell && FixtureWorkspace ? <FixtureWorkspace /> : <GatewayPreview />
+                ? <GatewayPreview />
                 : runtimeMode === 'gateway'
                   ? <GatewayEntry />
                   : <main className="p-6" role="alert">Invalid dashboard mode. Set VITE_CONKER_MODE to gateway or fixture and rebuild.</main>}

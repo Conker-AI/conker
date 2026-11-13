@@ -6,6 +6,11 @@ import type { GatewayHostInventory } from '../gateway/host-inventory'
 import type { GatewayJob } from '../gateway/jobs'
 import type { GatewayProject, GatewayProjectPage } from '../gateway/projects'
 import type { GatewayTeam } from '../gateway/teams'
+import type { GatewayDirectory } from '../gateway/filesystem'
+import type { GatewayCall, GatewayCallAudioTurn, GatewayCallAvailability } from '../gateway/calls'
+import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolicy, SetupReceipt, SetupRehearsal, SetupStatus } from '../gateway/control'
+import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
+import type { GatewayAgentNote } from '../gateway/jobs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
@@ -27,4 +32,17 @@ export const piWire = {
   job: true satisfies Same<GatewayJob, PiResponse<'/jobs/{identity}', 'get'>>,
   inv: true satisfies Same<GatewayHostInventory, PiResponse<'/system/inventory', 'post'>>,
   art: true satisfies Same<GatewayArtifactWire, PiResponse<'/artifacts/{identity}', 'get'>>,
+  listing: true satisfies Same<GatewayDirectory, PiResponse<'/system/files/listings', 'post'>>,
+  call: true satisfies Same<GatewayCall, PiResponse<'/calls/browser', 'post'>>,
+  callAudio: true satisfies Same<GatewayCallAudioTurn, PiResponse<'/calls/browser/{identity}/audio', 'post'>>,
+  callAvailable: true satisfies Same<GatewayCallAvailability, PiResponse<'/calls/browser/capabilities', 'get'>>,
+  setup: true satisfies Same<SetupStatus, PiResponse<'/setup/status', 'get'>>,
+  setupReceipt: true satisfies Same<SetupReceipt, PiResponse<'/setup/receipts/{step}', 'get'>>,
+  setupChoice: true satisfies Same<SetupChoice, PiResponse<'/setup/choices/{step}', 'get'>>,
+  setupProtection: true satisfies Same<SetupProtectionPolicy, PiResponse<'/setup/protection', 'get'>>,
+  setupModels: true satisfies Same<SetupModelOptions, PiResponse<'/setup/models', 'get'>>,
+  rehearsal: true satisfies Same<SetupRehearsal, PiResponse<'/setup/rehearsal', 'get'>>,
+  agent: true satisfies Same<AgentProfile, PiResponse<'/agents/{identity}', 'get'>>,
+  targets: true satisfies Same<GatewayConfiguredTargets, PiResponse<'/system/inventory/configured/services', 'get'>>,
+  notes: true satisfies Same<GatewayAgentNote, PiResponse<'/jobs/agent/notes', 'get'>['results'][number]>,
 }

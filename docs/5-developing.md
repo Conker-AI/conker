@@ -56,8 +56,7 @@ Before handing off:
 ```sh
 npm run build
 npm run design:check:test
-npm run check:conversation
-npm run check:gateway      # if you touched live/gateway code
+npm run check:gateway
 npm run e2e                # chat, approval and forget in Chromium (Playwright)
 ```
 

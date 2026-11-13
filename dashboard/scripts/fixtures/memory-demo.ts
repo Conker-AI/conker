@@ -1,4 +1,4 @@
-import type { Memory } from "./api/models"
+import type { Memory } from "../../src/lib/api/models"
 
 type DemoEntry = [title: string, text: string, tags: string[]]
 
