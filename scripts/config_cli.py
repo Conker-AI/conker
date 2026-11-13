@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlencode
 
 from conker_config import REGISTRY, config_operation, register
 
@@ -113,9 +114,12 @@ def reason(content: bytes) -> str:
     return f": {detail.rstrip('.')}" if isinstance(detail, str) and detail else ""
 
 
-def request(command: list[str], service: str, path: str, body=None, method=None):
+def request(
+    command: list[str], service: str, path: str, body=None, method=None, query=None
+):
     """conker_config's request: one call through the relay in the service's container. A save
-    is a POST unless it names PUT (ToolGate replaces its whole settings document)."""
+    is a POST unless it names PUT (ToolGate replaces its whole settings document). A query is
+    encoded here, after the path is checked, so it can never change the path."""
     if service not in RELAYS:
         raise NotConfirmed(
             f"Settings kept by {service} cannot be reached from this host yet."
@@ -125,6 +129,8 @@ def request(command: list[str], service: str, path: str, body=None, method=None)
         raise ValueError(f"{path!r} is not a settings home in {name}.")
     if method not in (None, "PUT") or (method and body is None):
         raise ValueError("Only a save may name its method, and only PUT.")
+    if query:
+        path += "?" + urlencode(query)
     try:
         result = subprocess.run(
             [
