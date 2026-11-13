@@ -5,7 +5,7 @@ import { useConker } from "@/lib/api/store"
 import { cn } from "@/lib/utils"
 
 export { PageHeader, WorkspaceAction, WorkspaceSection, OverviewSection, PageTabs, PageTabsList, PageTabsTrigger, PageTabsContent, CollectionSearch, WorkspaceSearch, CollectionToolbar, CollectionLoading, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
-export { TaskDialogContent, OverlayBody, FormActions, DetailPanel, InlineDetails, WorkspaceInspector, ConfirmationDialog } from "./overlays"
+export { TaskDialogContent, OverlayBody, FormActions, InlineDetails, WorkspaceInspector, ConfirmationDialog } from "./overlays"
 export { FilterChip, ListCard, ListLine, ListLineMenu, type ListSort } from "./list-card"
 export { WorkspaceChoice } from "./workspace-chrome"
 
