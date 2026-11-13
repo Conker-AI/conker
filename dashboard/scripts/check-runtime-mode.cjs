@@ -18,7 +18,7 @@ for (const development of [true, false]) {
 }
 const app = fs.readFileSync(path.join(__dirname, '../src/App.tsx'), 'utf8')
 const preview = fs.readFileSync(path.join(__dirname, '../src/dev/gateway-preview.tsx'), 'utf8')
-assert.match(app, /VITE_CONKER_FIXTURE_SHELL === 'legacy'/)
+assert.doesNotMatch(app, /VITE_CONKER_FIXTURE_SHELL|fixture-workspace/)
 assert.doesNotMatch(app + preview, /[?&]gateway-preview=|conker-gateway-preview|sessionStorage/)
 assert.doesNotMatch(preview, /href=.*fixture|href=.*preview/)
 console.log('Runtime mode checks passed: development preview, production gateway, explicit override, invalid values fail closed.')

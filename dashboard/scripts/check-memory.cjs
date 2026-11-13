@@ -24,9 +24,8 @@ function load(relative) {
 
 async function main() {
   const { memoryGraph, memoryNeighborhood, filterMemories } = load('src/lib/memory-explorer.ts')
-  const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
-  const client = createFixtureClient()
-  const initial = await client.load()
+  // Sample memories (test data only) moved here when the legacy fixture shell was deleted.
+  const initial = { memories: load('scripts/fixtures/memories.ts').memories }
   const graph = memoryGraph(initial.memories)
   assert.equal(new Set(graph.nodes.map(node => node.id)).size, graph.nodes.length, 'Graph node IDs are unique')
   assert.equal(new Set(graph.edges.map(edge => edge.id)).size, graph.edges.length, 'Graph edge IDs are unique')
@@ -70,62 +69,7 @@ async function main() {
   assert.equal(russian[0].language, 'ru')
   assert.deepEqual(filterMemories(initial.memories, '   ', 'all'), initial.memories)
 
-  const input = { title: '  Training note  ', text: '  Я люблю дзюдо.  ', category: '  Training  ', tags: [' Judo ', '', 'Judo', 'Practice'] }
-  const invalidInputs = [
-    { title: ' ' }, { title: 'x'.repeat(101) }, { text: '' }, { text: 'x'.repeat(16001) },
-    { category: ' ' }, { category: 'x'.repeat(51) }, { tags: ['x'.repeat(41)] },
-    { tags: Array.from({ length: 9 }, (_, index) => `Topic ${index}`) },
-  ]
-  for (const invalid of invalidInputs) {
-    await assert.rejects(client.createMemory({ ...input, ...invalid }))
-    await assert.rejects(client.saveMemory('judo', { ...input, ...invalid }))
-  }
-  await assert.rejects(client.saveMemory('missing', input), /Memory not found/)
-  await assert.rejects(client.deleteMemory('missing'), /Memory not found/)
-  assert.deepEqual(await client.load(), initial, 'Rejected writes leave the snapshot unchanged')
-
-  const created = await client.createMemory(input)
-  assert.equal(created.title, 'Training note')
-  assert.equal(created.text, 'Я люблю дзюдо.')
-  assert.equal(created.category, 'Training')
-  assert.deepEqual(created.tags, ['Judo', 'Practice'])
-  assert.equal(created.origin, 'manual')
-  assert.equal(created.confidence, 'Unreviewed')
-  assert.equal(created.source, `/memory#${created.id}`)
-  const manualGraph = memoryGraph([created])
-  assert.ok(manualGraph.nodes.every(node => node.kind !== 'source'), 'Manual notes do not pretend to have external sources')
-  assert.ok(manualGraph.edges.every(edge => edge.kind !== 'source'))
-  input.tags.push('Outside input mutation')
-  created.text = 'Outside result mutation'
-  created.tags.push('Outside result mutation')
-  const snapshot = await client.load()
-  const stored = snapshot.memories.find(memory => memory.id === created.id)
-  assert.equal(stored.text, 'Я люблю дзюдо.')
-  assert.deepEqual(stored.tags, ['Judo', 'Practice'], 'Input and result arrays are isolated')
-  stored.tags.push('Outside snapshot mutation')
-  snapshot.memories.length = 0
-  assert.equal((await client.load()).memories.length, initial.memories.length + 1, 'Loading returns an isolated snapshot')
-
-  const sourceMemory = initial.memories.find(memory => memory.id === 'judo')
-  const editInput = { title: 'Changed schedule', text: 'Judo starts at 19:00.', category: 'Training', tags: ['Judo'] }
-  const edited = await client.saveMemory('judo', editInput)
-  assert.equal(edited.originalText, sourceMemory.text)
-  assert.equal(edited.source, sourceMemory.source)
-  assert.equal(edited.provenance, sourceMemory.provenance)
-  editInput.tags.push('Outside edit input')
-  edited.tags.push('Outside edit result')
-  assert.deepEqual((await client.load()).memories.find(memory => memory.id === 'judo').tags, ['Judo'])
-  const editedAgain = await client.saveMemory('judo', { ...editInput, text: 'Judo starts at 19:30.', tags: ['Judo'] })
-  assert.equal(editedAgain.originalText, sourceMemory.text, 'Repeated edits retain the original source text')
-  assert.equal(editedAgain.source, sourceMemory.source)
-  assert.equal(editedAgain.provenance, sourceMemory.provenance)
-  await client.deleteMemory(created.id)
-  await assert.rejects(client.deleteMemory(created.id), /Memory not found/)
-  const after = await client.load()
-  assert.ok(!after.memories.some(memory => memory.id === created.id))
-  assert.deepEqual({ ...after, memories: initial.memories }, initial, 'Memory actions leave other screens unchanged')
-  assert.deepEqual((await createFixtureClient().load()).memories, initial.memories, 'A new adapter resets preview edits')
-  console.log('Memory checks passed: metadata graphs, shared sources, neighborhoods, multilingual AND search, validation, CRUD isolation, provenance preservation, and preview reset.')
+  console.log('Memory checks passed: metadata graphs, shared sources, neighborhoods, multilingual AND search.')
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1 })
