@@ -20,4 +20,15 @@ for (const file of scripts) {
   assert.equal(text.includes('openui-devtools'), false, `${file} contains the OpenUI development inspector`)
 }
 
-console.log(`Production bundle passed: no fixture chunk; no CDN code; gateway entry ${bytes} bytes.`)
+// Size budget, a little above the 2026-11-13 build (total JS 4,220,447; largest lazy chunk 499,741).
+// Raise it on purpose in the PR that needs more, never to make CI pass.
+const TOTAL_JS_BUDGET = 4_500_000
+const CHUNK_BUDGET = 520_000
+const js = files.filter(file => file.endsWith('.js')).map(file => ({ file, size: fs.statSync(path.join(assets, file)).size }))
+const total = js.reduce((sum, { size }) => sum + size, 0)
+assert.ok(total <= TOTAL_JS_BUDGET, `JavaScript totals ${total} bytes; budget ${TOTAL_JS_BUDGET}`)
+// An isolated stage (the installer's test) may hold the entry alone.
+const largest = js.filter(({ file }) => file !== gateway[0]).sort((a, b) => b.size - a.size)[0] ?? { file: 'none', size: 0 }
+assert.ok(largest.size <= CHUNK_BUDGET, `${largest.file} is ${largest.size} bytes; chunk budget ${CHUNK_BUDGET}`)
+
+console.log(`Production bundle passed: no fixture chunk; no CDN code; gateway entry ${bytes} bytes; JS total ${total} bytes in ${js.length} files; largest other chunk ${largest.file} ${largest.size} bytes.`)
