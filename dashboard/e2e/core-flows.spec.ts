@@ -1,20 +1,7 @@
 // The owner's core flows, clicked through in a browser against the preview gateway: send a chat
 // message and read the answer, approve requests at levels 1 and 2, and forget a memory.
-import { expect, test, type Page } from '@playwright/test'
-
-/** Opens an address and waits for the app's own main (the boot screen is a main marked as a status). */
-async function open(page: Page, address: string) {
-  const errors: string[] = []
-  page.on('pageerror', error => errors.push(error.message))
-  await page.goto(address)
-  await page.locator('main:not([role="status"])').first().waitFor()
-  return errors
-}
-
-/** An Inbox card's answer buttons sit next to its "Later" button. */
-function card(page: Page, title: string) {
-  return page.getByRole('button', { name: `Later: ${title}` }).locator('xpath=..')
-}
+import { expect, test } from '@playwright/test'
+import { card, open } from './pages'
 
 test('chat: a sent message shows in the chat, then the answer', async ({ page }) => {
   const errors = await open(page, '/chat')

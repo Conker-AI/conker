@@ -1,0 +1,54 @@
+// axe (WCAG 2.1 A and AA rules) over every sidebar place in both themes and the main dialogs, on the preview
+// gateway. A violation fails the test and names the rule and the elements it found.
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test, type Page } from '@playwright/test'
+import { card, open } from './pages'
+
+const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup']
+
+async function violations(page: Page, include?: string) {
+  // Skeletons mark themselves busy; check the loaded screen, not the placeholder.
+  await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
+  const builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+  const { violations } = await (include ? builder.include(include) : builder).analyze()
+  return violations.map(rule => `${rule.id} (${rule.impact}): ${rule.nodes.slice(0, 4).map(node => node.target.join(' ')).join(' | ')}`)
+}
+
+for (const theme of ['light', 'dark'] as const) test.describe(theme, () => {
+  test.use({ colorScheme: theme })
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(value => { try { localStorage.setItem('vite-ui-theme', value) } catch { /* Storage may be blocked. */ } }, theme)
+  })
+  for (const place of PLACES) {
+    test(`axe: ${place}`, async ({ page }) => {
+      const errors = await open(page, place)
+      expect(await violations(page)).toEqual([])
+      expect(errors).toEqual([])
+    })
+  }
+
+  test('axe: Ctrl+K search', async ({ page }) => {
+    await open(page, '/overview')
+    await page.keyboard.press('Control+k')
+    await expect(page.getByRole('dialog')).toBeVisible()
+    expect(await violations(page, '[role="dialog"]')).toEqual([])
+  })
+
+  test('axe: "are you sure" before a send', async ({ page }) => {
+    await open(page, '/inbox')
+    await card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    expect(await violations(page, '[role="alertdialog"]')).toEqual([])
+  })
+
+  test('axe: forget confirmation', async ({ page }) => {
+    await open(page, '/memory')
+    await page.getByRole('combobox', { name: 'Memory view' }).click()
+    await page.getByRole('option', { name: 'List' }).click()
+    await page.getByRole('button', { name: 'Select items' }).click()
+    await page.getByRole('checkbox', { name: 'Physics worksheet due Fridays', exact: true }).click()
+    await page.getByRole('button', { name: 'Forget…' }).click()
+    await expect(page.getByRole('dialog', { name: 'Forget 1 memory permanently?' })).toBeVisible()
+    expect(await violations(page, '[role="dialog"]')).toEqual([])
+  })
+})

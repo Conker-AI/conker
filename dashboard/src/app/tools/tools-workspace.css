@@ -71,6 +71,9 @@
   font-size: 9px;
   color: var(--muted-foreground);
 }
+.tool-canvas .react-flow__attribution a {
+  color: inherit;
+}
 .tool-canvas .react-flow__edge.selected path {
   stroke: var(--primary);
 }
