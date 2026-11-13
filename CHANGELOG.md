@@ -616,8 +616,8 @@ stops matching when a path moves.
 
 | Module | Version |
 |---|---|
-| Pi | v0.24.0 |
-| ToolGate | v0.15.1 |
-| MemoryGate | v0.8.2 |
-| SystemGate | v0.5.2 |
-| Embeddings | v0.1.7 |
+| Pi | v0.25.0 |
+| ToolGate | v0.16.0 |
+| MemoryGate | v0.9.0 |
+| SystemGate | v0.5.3 |
+| Embeddings | v0.1.8 |
