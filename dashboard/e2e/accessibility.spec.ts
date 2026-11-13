@@ -9,6 +9,15 @@ const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agent
 async function violations(page: Page, include?: string) {
   // Skeletons mark themselves busy; check the loaded screen, not the placeholder.
   await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
+  // Then until the page stops changing for half a second (at most 10 s): a control can be
+  // disabled while its data loads, and axe should see the screen the owner uses.
+  await page.evaluate(() => new Promise<void>(resolve => {
+    const finish = () => { observer.disconnect(); clearTimeout(cap); resolve() }
+    let quiet = setTimeout(finish, 500)
+    const observer = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(finish, 500) })
+    const cap = setTimeout(finish, 10_000)
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true })
+  }))
   const builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
   const { violations } = await (include ? builder.include(include) : builder).analyze()
   const found: string[] = []
