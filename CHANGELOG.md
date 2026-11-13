@@ -17,6 +17,57 @@ which module versions a release pins.
   health and goes back to the old version if the check fails. The result comes back to the Inbox.
   `conker update --check` and `conker update --to X.Y.Z` do the same from the terminal. Each tag vX.Y.Z now
   publishes a release page with its CHANGELOG section; `CONKER_VERSION` in versions.env names the release.
+  Later fixes to the same path: a reboot in the middle of an update is finished or rolled back when
+  the host helper starts (`conker update --recover`); Update installs only an offered release, and
+  every module by the commit its tag named when it was offered, never a moved tag; the source swap
+  is one atomic exchange, so a power cut never leaves the server without sources; a rollback across
+  a Pi database migration puts Pi's database from the update's snapshot back, and the Inbox card
+  says so; older update snapshots are pruned to the newest 3 (`CONKER_UPDATE_SNAPSHOTS_KEEP`), never
+  the newest one that verifies or one you or the nightly timer made. (#281, #289, #291, #292, #293,
+  #294, #302, #304)
+
+- **A daily spending cap from the terminal.** `conker spending` shows and sets Pi's one daily cap
+  for paid model calls (money and tokens), the password asked to change it. (#278)
+
+- **Conker's agent tools reach the Inbox and the terminal.** Requests to create an agent or a team
+  are Inbox cards; a chat shows "Searched memory · N found" and "Ran <agent> · Open its chat";
+  `conker memory search`, `conker agent create`, `conker team create` and `conker inbox` work from
+  the dashboard's CLI and, with `conker spending`, from the installed `./conker`. (#282, #307)
+
+- **Home: Jump back in.** Unpublished tool drafts, unsent messages, the chats last opened and tasks
+  in progress sit above Home's tiles, one click from where they were left. (#279)
+
+- **Settings that do nothing yet are hidden** behind a "Planned" chip (also in Ctrl+K and Changed);
+  the README and status page counts say how many take effect. (#277)
+
+- **The reply toolbar holds everything.** Answer again, Check facts, votes and the version switcher
+  are items of the message toolbar. (#274)
+
+- **Smaller fixes.** The Claude plan and decisions services rejoin Pi's network after Pi restarts
+  itself, so Claude answers keep working; on the server the Claude card says sign-in is managed
+  there (`conker providers claude login`); side sheets became the centered dialog; the composer's
+  controls are toolbar items that fold into "…" on narrow screens; an error toast or inline error
+  line a model choice fixes has a button to Settings > Models. (#265, #266, #267, #272, #275, #276)
+
+- **Docs for the owner.** One guide to looking after the server (docs/reference/server-care.md),
+  a five-minute quickstart that CI runs as written, one product map, the status page's counts,
+  release, deferred and frozen tables generated from capabilities.json and versions.env, DESIGN.md
+  describing the dashboard that exists, ADR-0002 amended (the owner's own statements are admitted
+  at once), stale proofs corrected and two one-off records moved out of docs/. Three duplicate
+  capability families merged (44 -> 41); teams, artifacts, projects and the owner terminal are
+  marked frozen. (#280, #287, #288, #296, #297, #298, #299, #303, #306, #312)
+
+- **Dashboard internals.** The legacy fixture shell and the unused DetailPanel are deleted (one
+  Ctrl+K palette, one settings implementation); 19 dashboard clients and the preview gateway's
+  replies are bound to Pi's generated types, so a drift fails the build; recharts is one chunk, the
+  gateway entry is under 600 kB and the build fails over a size budget; Playwright tests cover chat,
+  approval and forgetting. (#286, #290, #295, #300, #301, #305, #308, #313)
+
+- **Repository tooling.** The shared .editorconfig, pre-commit hooks, CODEOWNERS and Renovate
+  config; ruff over the whole repository with no per-file exemptions left; a pyright type check
+  with a baseline that may only shrink; a coverage floor (now 78%) with refusal tests for the
+  updater and the installed commands; the subscriptions image carries a signed SPDX SBOM. (#284,
+  #285, #309, #310, #311)
 
 - **Chat Trash and the language level ship.** Pi 0.24.0 is pinned: Delete moves a chat to Trash with Undo
   and Restore, and "Delete forever" finishes in the background; a chat's output settings carry a language level
