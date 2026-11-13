@@ -1,12 +1,13 @@
 # Conker dashboard design system
 
-## Shell and places (24 October; supersedes the 9 October shell below)
+## Shell and places (24 October)
 
 The owner-approved structure (prototype v7, conker-ui brief): a floating sidebar with **Ask Conker**
-(new chat) and **Search** (Ctrl/Cmd+K) on top, then places only, in three groups: Overview (Home,
-Inbox, Chats), Workspace (Projects, Memory, Agents, Tools, Cron jobs) and System (Server, which
-folds open to its sections, and Settings). No chat history, profile badge, help or status links in
-the sidebar; Sign out and Appearance live in Settings, unfinished setup shows at the top of Home.
+(new chat) and the light/dark switch on top, then places only, in three groups: Overview (Home,
+Inbox, Chats), Workspace (Projects, Memory, Agents, Tools, Cron jobs) and Server (Server, which
+folds open to its sections, and Settings). **Search** (Ctrl/Cmd+K) sits in the top bar. No chat
+history, profile badge, help or status links in the sidebar; Sign out and the Appearance settings
+live in Settings, unfinished setup shows at the top of Home.
 `/` opens Home, the glance-and-go screen. Tasks, Runs, the activity log, Artifacts, Skills, Native
 sessions and Setup stay reachable from search and from the pages that own them. One main view: the
 open-views tab strip is gone. On a phone the top bar has the menu button (carrying the Inbox count),
@@ -37,36 +38,39 @@ shows a chat only while Pi still lists it. Model: `home-resume-model.ts` (check-
 
 ## Inbox (25 October)
 
-Willow-style, as the owner asked: one card per item (never rows inside one box), decisions first,
-then ideas. Each card has a full-sentence title, the one-line summary, a muted meta line (kind,
-source, age, expiry or "Outcome not confirmed") and one pill for the likely action — **Allow once**
-(still confirmed with the owner password, which shows exactly what is allowed) or **Accept** — plus
-an X for "not now". X moves the item to **Later** in this browser with Undo; nothing is decided and
-a permission still expires on its own. Tapping the card opens its details in place (arguments, note,
-Don't allow, Not now for 30 days, Never suggest this, Technical details). Filter chips (All,
-Decisions, Ideas) on top; no text box. An uncertain decision shows the warning style with a Check
-action and never retries by itself. Failed loads show inline errors and the summary says so, never
-"All clear". Earlier keeps the decided and expired requests.
+Willow-style, as the owner asked: one `InboxCard` per item (never rows inside one box), every kind
+in the same layout (`src/components/inbox/inbox-card.tsx`). Folded, a card is one glance: the mark,
+a short title, a muted "source · subject" line, the one answer that settles it and an X for "not
+now". Tapping it opens the item in place: the main thing first, then every answer, then an
+"Advanced ›" fold with the record (who asked, when, which chat, IDs, exact arguments). The server's
+approval level decides the proof: a level 2 yes first asks "Are you sure?" with where it goes, and
+a level 3 action has no folded yes, only Review, and asks for the password. X moves the item to
+**Later** in this browser with Undo; Later only reorders, nothing is decided. Filter chips (All,
+Decisions, Ideas, and From AI jobs when there are notes) on top; no text box. An uncertain decision
+shows the warning style with Check again and never retries by itself. Failed loads show
+`InlineError`s and the summary says so, never "All clear". Handled keeps what was decided.
 
 ## Lists in cards (25 October)
 
 Long lists follow the approved prototype (v4): a narrow page with one card that holds its own search
 on top, one line per item (icon, a title that says what it is, a muted sub-line, a time) and a
 footer for paging and end-of-list notes. The shared pieces are `ListCard` and `ListLine` in the
-design system; Chats, Cron jobs, Projects, Artifacts and Agents use them. Filters are `FilterChip`s
-with counts under the search (Cron jobs: All / Enabled / Paused; Inbox the same way); Archived
-chips appear only once something is archived, so an empty filter never shows. While a list loads it
-shows `ListSkeleton`; if it fails, `InlineError` takes the card's place and refreshes itself when
-the server answers again. The page-level search in the top bar stays for pages without a list card.
+design system (`src/components/design-system/list-card.tsx`); Chats, Cron jobs, Projects,
+Artifacts, Agents, Teams, Skills, Tools, MCP tools, Memory's List, Activity's Tasks and native
+sessions use them. Filters are `FilterChip`s with counts under the search (Cron jobs: All / Enabled
+/ Paused; Inbox the same way); Archived chips appear only once something is archived, so an empty
+filter never shows. While a list loads it shows `ListSkeleton`; if it fails, `InlineError` takes
+the card's place and refreshes itself when the server answers again. Activity's Runs and Activity
+log are `DataTable`s, whose search sits in the top bar through `WorkspaceSearch`.
 
 ## Details open in place (25 October)
 
 No side windows (owner, 24 October). Choosing an item opens `InlineDetails` directly under it in
-the list (Tools, Skills, MCP tools, native and Codex sessions); data tables (Activity) open it in
-the page flow above the table. The heading takes focus, Escape, the close button or choosing the item
-again closes it, and focus returns to the item. `InlineDetails` keeps DetailPanel's `open` /
-`onOpenChange` contract. Dialogs remain for focused creation and confirmation (TaskDialogContent,
-ConfirmationDialog). The chat's views (Context, Thinking, Logs) open the same way, directly under the chat bar, on every
+the list (Tools, Skills, MCP tools, Server services and backups, native and Codex sessions); data
+tables (Activity) open it in the page flow above the table. The heading takes focus, Escape, the
+close button or choosing the item again closes it, and focus returns to the item. `InlineDetails`
+takes `open` / `onOpenChange`. Dialogs remain for focused creation and confirmation
+(TaskDialogContent, ConfirmationDialog). The chat's views (Context, Thinking, Logs) open the same way, directly under the chat bar, on every
 screen size.
 On a phone the page's main action (`keepVisible`, e.g. New task) stays in the top bar and replaces the
 generic Ask Conker button; every other page action sits in the "…" menu, so the bar keeps one line.
@@ -76,7 +80,7 @@ generic Ask Conker button; every other page action sits in the "…" menu, so th
 Server > Services and Server > Backups run the host helper's operations (ADR-0014) through the
 gateway: reads with the session, actions with the password bound to the exact id, operation and
 arguments. Both use the one template: rows with a state mark open their details in place, where the
-action sits after the facts. The password sheet names the effect ("Restart Memory. Conker can't
+action sits after the facts. The password dialog names the effect ("Restart Memory. Conker can't
 recall or save memories until it is back.") and its button is named after the action. Each action
 shows the helper's receipt in the shared state words (Working with its step, Done only on the
 receipt, Failed with the helper's reason, Unknown with a Check that only reads); a lost answer is
@@ -92,22 +96,13 @@ Failed. Preview every state with `?preview-host=` (see `src/dev/fake-gateway-hos
 ## Chat-first companion — 9 October
 
 The owner chose a full product redesign around a reliable daily companion.
-Conversation is the starting place. The shell uses a single sidebar and a quiet
-working surface: New chat and Search Conker at the top, recent conversation
-history taking the remaining space, and Settings and account controls at the
-bottom. Work groups Overview, Approvals, Tasks, Runs, Schedules and the activity
-log. Memory stays directly visible. Library groups Projects, Artifacts, Agents,
-Skills, and Tools & workflows. The root path opens chat; the existing daily
-overview moves to `/overview` under Work. All session and capability deep links
-remain valid.
 
-`gatewayDestinations` and `gatewayPageNavigation` in the connected navigation
-module own the labels and sections used by the sidebar, global search, header,
-and open views. The mode rail and idle-as-ready footer are removed. Setup status
+`gatewayDestinations` and `gatewayPageNavigation` in `src/components/gateway/navigation.ts` own
+the labels and sections used by the sidebar, global search and header. Setup status
 comes from the setup service; an idle conversation says nothing about provider
-or tool readiness. System diagnostics remain available in the account menu.
+or tool readiness.
 
-Setup's sidebar prompt and page share one authenticated, client-scoped read.
+The setup card at the top of Home and the Setup page share one authenticated, client-scoped read.
 Opening Setup refreshes its evidence; visible focus, reconnect and visibility
 events trigger at most one automatic read per 30 seconds, without a timer loop.
 Explicit refresh and saved setup choices can refresh immediately. A failed read
@@ -137,15 +132,10 @@ as last checked. Failed reads, changed login identity, authentication changes an
 teardown clear private sign-in content. Busy controls retain keyboard focus without
 accepting duplicate operations. Subscription status does not prove inference readiness.
 
-Open views are a secondary header disclosure, closed initially. Their optional
-strip retains navigation history, tab switching, pinning, closing, and dragging.
-Closing the last view opens New chat; closing a tab never cancels work. Tab
-identities stay in memory and omit message text, searches and content. Forgotten
-chats disappear from both history and open views immediately. The conversation
-context panel opens on request: beside the chat on desktop, in `DetailPanel`
-with native focus handling on mobile. Its source reads run only while visible.
+The chat's views (Context, Thinking, Logs) open on request in `InlineDetails` under the chat bar,
+on every screen size. Their source reads run only while a view is open.
 
-The sidebar, chat header and open-view titles share one recent chat list in the
+The chat workspace and Chats share one recent chat list in the
 authenticated workspace. A visible, online workspace checks it
 every 15 seconds and on focus or reconnection. Background reads retain collection
 rows, search and keyboard focus; a failed read labels the retained list and offers
@@ -154,9 +144,7 @@ workspace resets discard the list and reject late responses. These reads never
 send messages, change drafts or resolve uncertain actions.
 
 Recent discovery contains at most 200 chats. Absence from that window never means
-deletion or forgetting and never closes an open view. Tabs retain navigation
-identity, with a generic Chat title when no current title is available; they do
-not retain a separate private title cache. Explicit forgotten records cross the
+deletion or forgetting. Explicit forgotten records cross the
 shared privacy boundary before any list consumer can display them.
 
 Chats browses a separate compact directory, in pages of up to 50 records, so
@@ -175,24 +163,14 @@ the same query's results, with their stale-state explanation. Invalid cursors
 retire continuation and offer an explicit refresh. A page containing only
 forgotten records still exposes Load older when another page exists. Known
 forgotten records are masked immediately; authentication and workspace changes
-clear the directory and reject late replies. CollectionPanel's optional
+clear the directory and reject late replies. `ListCard`'s optional
 emptyContent slot lets these states retain the shared search and toolbar.
-CollectionRow descriptions wrap long unbroken text, including URLs and compact
-summary previews, without expanding the collection beyond its available width.
 
-`connected-workspace.css` owns these semantic shell roles. Use the existing theme
-and typeface, `--sidebar` for the navigation surface, `--background` for the work
-surface, and `--sidebar-primary` only for New chat and attention counts. Sidebar
-controls use `--control-height` (40px), primary and account rows use
-`--control-height-lg` (44px), and subordinate desktop links use
-`--control-height-sm` (32px). Mobile subordinate links return to 40px. Corners
-follow `--radius-md` / `--radius-sm`; custom themes and radius remain functional.
-History and expanded destinations have separate bounded scroll regions. Opening
-Work or Library closes the other group so history keeps its place. The
-header retains the shared appbar geometry; when its search slot is empty the
-conversation title and actions use the available width. Global search is always
-in the sidebar and appears in the header when the sidebar is hidden. Collection
-pages retain their own scoped search in that header slot.
+Use the existing theme and typeface, `--sidebar` for the navigation surface and
+`--background` for the work surface. Corners follow `--radius-md` / `--radius-sm`;
+custom themes and radius remain functional. The header retains the shared appbar
+geometry; when its search slot is empty the conversation title and actions use the
+available width (`src/styles/connected-workspace.css`).
 
 The mobile sidebar restores focus to its actual opener after dismissal, including
 keyboard shortcuts and its internal close control. Choosing a destination moves
@@ -243,7 +221,7 @@ navigation, retaining streams and recovery state. The production entry-size
 guard remains unchanged.
 
 Calls & usage is a shared, initially closed disclosure in chat Details,
-conversation context and recorded run details. Its component and authenticated
+the chat's Logs view and recorded run details. Its component and authenticated
 read load only while opened on a visible surface. Closing, changing routes or
 forgetting the source cancels the read; authenticated session changes reject
 old responses. Usage is never retained in browser storage.
@@ -291,8 +269,6 @@ uses known public cases or a safe generic explanation, never provider errors.
 
 This is the implementation contract for the active dashboard. The owner's accepted Chats layout is the reference for collections throughout the app: use the same components, not copied markup or a similar collection of classes. Product direction remains in [design-language.md](../docs/reference/design-language.md).
 
-The foundation is the Vite version of [shadcnstore/shadcn-dashboard-landing-template](https://github.com/shadcnstore/shadcn-dashboard-landing-template/tree/65fc11224e96d56a62e224a58f7ed590aea5ac24/vite-version), reviewed at commit `65fc11224e96d56a62e224a58f7ed590aea5ac24`. Preserve shadcn's native props, Radix keyboard interactions, Button `asChild` composition and semantic theme variables.
-
 ## Structural workspace rules (4 October)
 
 The active gateway workspace translates SiYuan's organization and Asri's quiet
@@ -305,20 +281,17 @@ consequences; and whether it directs the user toward their intended action.
 
 | Component family | Shared rule | Active consumers |
 | --- | --- | --- |
-| Find a record | One `WorkspaceSearch` in the appbar: filter the current view, or choose Search all Conker with the same query. `CollectionToolbar` retains filters, count and view actions below; no second page-search field. | Chats, Projects, Agents, Jobs, Artifacts, Tools, Activity, Inbox, Memory |
-| Browse records | `CollectionPanel` + `CollectionSection` + `CollectionRow`; one quiet divided structural surface. 64px minimum row, 16px row inset, 14px title, 12px secondary metadata. | The six record libraries; Today reuses rows inside purpose-specific groups |
-| Compare structured records | `DataTable` uses the same toolbar and `collection-surface`, preserving sorting, columns, keyboard opening and pagination. Native tables use shared shadcn table primitives, not separately styled HTML. | Activity and system inventories; Memory List retains its canvas-owned search and bounded server pagination |
-| Edit related fields | `WorkspaceSection` owns the 16px semibold heading, readable description, 16px within-group gap and 24px separation. `StudioSection` delegates to it. | General/Search Settings, Character Studio; Inbox's waiting group uses the same heading without a divider |
-| Inspect a selection | `ReferenceSection` is a quiet topic divider inside the already framed inspector, never another card or toolbar slab. Option sets use a named select rather than a row of pseudo-command buttons. | Memory content fields and relationships; contextual reference panels |
-| Loading / empty | `CollectionLoading` reflects search and rows, not decorative dashboard cards. Empty feedback names the state and provides the appropriate creation or filter recovery action. | Collection libraries, lazy workspaces, Activity |
-| Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | System diagnostics, Today, Inbox, Chat |
+| Find a record | A list searches inside its own `ListCard`; the appbar keeps Search (Ctrl/Cmd+K). A `DataTable` puts its query in the appbar through `WorkspaceSearch`, whose scope menu offers Search all Conker with the same query. No second page-search field. | Chats, Projects, Agents, Cron jobs, Artifacts, Tools, Skills, Memory List; Activity's tables |
+| Browse records | `ListCard` + `ListLine`; one quiet card per list. Grouped rows use `CollectionSection` + `CollectionRow` (64px minimum row). | The record libraries; Server Services and Backups |
+| Compare structured records | `DataTable` uses `CollectionToolbar` and `collection-surface`, preserving sorting, columns, keyboard opening and pagination. Native tables use the shared table primitives, not separately styled HTML. | Activity's Runs and Activity log |
+| Edit related fields | `WorkspaceSection` owns the 16px semibold heading, readable description, 16px within-group gap and 24px separation. `StudioSection` delegates to it. | Settings > Providers, Server pages, Character Studio |
+| Inspect a selection | `ReferenceSection` is a quiet topic divider inside the already framed inspector, never another card or toolbar slab. Option sets use a named select rather than a row of pseudo-command buttons. | Memory and tool-step inspectors; details opened in place |
+| Loading / empty | `ListSkeleton` / `CollectionLoading` reflect the rows, not decorative dashboard cards. Empty feedback names the state and provides the appropriate creation or filter recovery action. | Collection libraries, lazy workspaces, Activity |
+| Status / priority | Align status at the row end, explanation beneath the record label. Reserve raised card tone and elevation for actual priority decisions, composer, and floating overlays. | Server, Home, Inbox, Chat |
 
 Keep the main shell flat and the shared appbar geometry consistent. Meaningful
 record headings remain; duplicate route headings do not. Search has one visible
 page entry point, with its current scope named by the field and scope menu.
-Expanded sidebar destinations have their own height-bounded scroll region;
-fixed navigation and profile do not shrink away, and recent chat history retains
-room even in short desktop windows.
 Guidance about permission, expiry, model
 processing, provenance and recovery stays visible at the relevant action.
 Search/list hints can follow results; they do not compete with the find controls.
@@ -327,35 +300,27 @@ available workspace its search entry becomes an icon. Route actions measure
 their assigned column, keep the primary command visible, and disclose secondary
 commands when narrow or when there are more than two. Mobile result counts stay
 available to assistive technology without consuming a separate visual row.
-Memory List keeps its native comparison table on desktop and uses the same
-`RecordItem` anatomy on mobile. Inspectors present preview, explicitly requested
+Inspectors present preview, explicitly requested
 content and relationships before destructive commands; the consequence stays
-beside that command. Selection communicates current context, not bulk selection.
+beside that command.
 
 Shared UI does not mean shared authority or transport state: keep source-owned
 abort/revision/draft hooks in their existing modules. Centralize presentation
-and composition only. Use the shared tokens, native Radix controls, dark arrowless
+and composition only. Use the shared tokens, native controls, dark arrowless
 tooltips and unclipped/reduced-motion icon behavior already in the system.
 
-Active Settings separates General, Providers and Search. General retains personal
-preferences and answer/idea choices; Providers owns authentication, runtime status,
-catalogue and role assignments. ChatGPT subscription sign-in precedes the optional
-API-key disclosure. Reuse `WorkspaceSection` and native controls; don't invent a
+Settings > Providers reuses `WorkspaceSection` and native controls; don't invent a
 new provider palette or card grid. Show pending authorization, cancel, failure and
 disconnect consequences in place. Never retain OAuth codes in browser storage or
-present connection as proof of model access. A sign-in grant cannot change model
-choices or tool permissions.
+present connection as proof of model access.
 Design guards enforce shared slot ownership and semantic tokens; the workspace
 primitive render checks cover grouping, list semantics and empty/loading states.
 
-`WorkspaceSearch` keeps query/filter state owned by the route and portals only
-the control into the appbar. It replaces the universal-search trigger there;
-routes without a local query keep that universal entry. On narrow workspaces the
-same control opens a focused, viewport-bounded search popover. Typing still filters
-loaded collections without provider calls; Memory submits its bounded server read
-with Enter. Search all Conker opens the existing authenticated search with the
-current query, retaining the local query on return and restoring focus. Exact,
-semantic, coverage and privacy behavior are unchanged. `CollectionSearch` remains
+`WorkspaceSearch` keeps query/filter state owned by its source and portals only
+the control into the appbar. While it is mounted it replaces the universal-search
+trigger there; pages without one keep that universal entry. On narrow workspaces the
+same control opens a focused, viewport-bounded search popover. Search all Conker
+opens the universal search with the current query. `CollectionSearch` remains
 an inline field only for task-specific pickers inside forms/dialogs, not another
 page query. Review necessity and scope before component styling, not afterward.
 
@@ -363,83 +328,70 @@ page query. Review necessity and scope before component styling, not afterward.
 
 | Need | Use | Owner |
 | --- | --- | --- |
-| Standard route shell and heading | `BaseLayout` with `title` and `description` | `src/components/layouts/base-layout.tsx` |
-| Find-and-manage collection shell | `BaseLayout variant="collection"`; compact shared heading and section rhythm | Same layout module |
-| Prioritized overview groups | `OverviewSection`; `priority` for the leading decision surface | `src/components/design-system/index.tsx` |
-| Viewport-filling tool beneath a standard heading | `BaseLayout variant="workspace"`; tool owns its scroll regions | Same layout module |
-| Canvas-led workspace without a separate page heading | `BaseLayout variant="canvas"`; local workflow toolbar and independent canvas/inspector regions | Same layout module; Memory is the current consumer |
-| Page heading outside that shell | `PageHeader` | `src/components/design-system/index.tsx` |
-| Route sections | `RouteSection`; navigation is rendered by `SiteHeader` | `src/config/navigation.ts`, `src/components/appbar-navigation.tsx` |
-| Page search / scope | `WorkspaceSearch`, mounted once into workspace chrome | Same design-system module |
-| Collection or table filters | `CollectionToolbar`; page search moves to the appbar | Same design-system module |
+| Connected shell: sidebar, appbar and work area | `ConnectedWorkspaceShell` over `LayoutFrame variant="canvas"` | `src/components/gateway/workspace-shell.tsx`, `src/components/layouts/layout-frame.tsx` |
+| Appbar: page name, Search, actions and section links | `GatewayHeader` over `WorkspaceAppbar` | `src/components/gateway/header.tsx`, `src/components/design-system/workspace-chrome.tsx` |
+| Scrolling page body with page gutters | `GatewayPageFrame` | `src/components/gateway/page-frame.tsx` |
+| Page actions in the appbar | `PageHeader actionsOnly` with `WorkspaceAction` (`keepVisible` for the phone's main action) | `src/components/design-system/primitives.tsx`, `src/components/design-system/workspace-chrome.tsx` |
+| Route sections | `routeSections`; the appbar's `AppbarSections` renders them as `?tab=` links | `src/components/gateway/navigation.ts`, `src/components/appbar-navigation.tsx` |
+| Long list with its own search, filters, sort and selection | `ListCard`, `ListLine`, `FilterChip` | `src/components/design-system/list-card.tsx` |
+| Details under an item | `InlineDetails` | `src/components/design-system/overlays.tsx` |
+| Compare structured records | `DataTable`, with `RecordItem` rows below 1280px | `src/components/data-table.tsx` |
+| Collection or table filters | `CollectionToolbar`; a table's search moves to the appbar | `src/components/design-system/primitives.tsx` |
 | Task-specific option search | `CollectionSearch` inside the picker | Same design-system module |
-| Search, results announcement and empty state together | `CollectionPanel` | Same design-system module |
-| Group heading and divided collection | `CollectionSection` | Same design-system module |
-| Compact linked item | `CollectionRow` | Same design-system module |
+| Group heading and divided rows | `CollectionSection` + `CollectionRow` | Same design-system module |
 | No results / no items | `CollectionEmpty` | Same design-system module |
-| Agent identity in a collection | `AgentIdentityPortrait` | Same design-system module |
-| Related form fields / section heading | `WorkspaceSection`; Studio delegates through `StudioSection` | Shared design-system module |
+| Related form fields / section heading | `WorkspaceSection`; Studio delegates through `StudioSection` | Same design-system module; `src/components/character-studio/fields.tsx` |
 | Topic within a reference panel | Quiet `ReferenceSection` divider | `src/components/reference-section.tsx` |
 | Inspect a canvas selection without blocking further selection | `WorkspaceInspector` with `OverlayBody` and `ReferenceSection` | `src/components/design-system/overlays.tsx` |
-| General buttons, fields, cards, badges, dialogs | Existing `@/components/ui/*` and `StatusBadge` | Shadcn primitives plus application status composition |
+| Loading and failure | `ListSkeleton`, `InlineError`, `ConnectionBanner` and the error fallbacks | `src/components/resilience/` |
+| General buttons, fields, cards, badges, dialogs | Existing `@/components/ui/*` and `StatusBadge` | coss ui primitives plus application status composition |
 | Dimensions and density | CSS tokens | `src/styles/design-system.css` |
-| Colors and radius | Semantic CSS variables and theme customizer | `src/index.css`, `ThemeRuntime`, existing theme manager |
+| Colors and radius | Semantic CSS variables and `ThemeRuntime` | `src/index.css`, `src/components/theme-customizer/runtime.tsx` |
 
-Import the shared application patterns from `@/components/design-system`. Their exported TypeScript props are the API. Route code supplies content, destinations and state; these components own matching dimensions, insets, typography, dividers and hover/focus treatment. `BaseLayout` / `PageHeader` accept a `status` beside the title for page-wide context such as Home's Preview data label; keep that context visible before the content on narrow screens.
+Import the shared application patterns from `@/components/design-system`. Their exported TypeScript props are the API. Route code supplies content, destinations and state; these components own matching dimensions, insets, typography, dividers and hover/focus treatment.
 
-```tsx
-import { BaseLayout } from "@/components/layouts/base-layout"
-import { RouteSection } from "@/components/design-system"
+Declare a route's sections in `routeSections` in `src/components/gateway/navigation.ts`. The shared appbar owns their links and selected state. Route content must not add another navigation strip below its title. Memory is an explicit exception for local workflow modes: its Map/Tree/List select belongs to the workspace toolbar and uses the `view` URL parameter. The appbar remains application navigation.
 
-<BaseLayout title="Inbox" description="Review requests and past decisions.">
-  <RouteSection value="pending">{/* Shared search and pending collection */}</RouteSection>
-  <RouteSection value="history">{/* Shared search and reviewed collection */}</RouteSection>
-</BaseLayout>
-```
+For working collection examples, read `src/components/gateway/chats-workspace.tsx` and `src/components/gateway/projects-workspace.tsx`. Both use the same `ListCard` pattern. Their content differs while corresponding UI elements match.
 
-Declare the route's sections in `src/config/navigation.ts`. The shared appbar owns their links and selected state. Route content must not add another navigation strip below its title. Memory is an explicit exception for local workflow modes: its Network/Hierarchy/Database dropdown belongs to the workspace toolbar and uses the `view` URL parameter. The appbar remains application navigation.
+`WorkspaceSearch` takes a required accessible `label` and normal input props (`value`, `onChange`, `placeholder`), plus optional `onSubmit` for server retrieval. It owns appbar placement, scope, compact presentation and accessible focus behavior. `CollectionSearch` is its field primitive and the inline task-picker alternative. `CollectionRow` takes `to`, `title`, `description` and optional `descriptionTitle`, `leading` and `trailing` slots.
 
-For working collection examples, read `src/app/chat/page.tsx` and `src/app/inbox/page.tsx`. Both routes import the same patterns. Chats shows sessions or each agent's latest session; Inbox shows requests or past decisions. Their content differs while corresponding UI elements match.
-
-`WorkspaceSearch` takes a required accessible `label` and normal input props (`value`, `onChange`, `placeholder`), plus optional `onSubmit` for server retrieval. It owns appbar placement, scope, compact presentation and accessible focus behavior. `CollectionSearch` is its field primitive and the inline task-picker alternative. `CollectionRow` takes `to`, `title`, `description` and optional `descriptionTitle`, `leading` and `trailing` slots. Use `AgentIdentityPortrait name={agentName}` in the leading slot. `CollectionPanel` owns the shared search registration, live result count and clearable empty-state composition for list screens.
-
-`DataTable` uses `WorkspaceSearch` too. It retains columns, sorting, filters, selection and pagination where structured comparison needs them. Do not replace a useful data table with a collection merely to make every screen identical.
+`DataTable` uses `WorkspaceSearch`. It retains columns, sorting, filters, selection and pagination where structured comparison needs them. Do not replace a useful data table with a collection merely to make every screen identical.
 
 ## Interaction placement (owner-approved, September 16)
 
 Choose the surface from the user's task, then reuse the same pattern wherever that task occurs. This is a frontend contract; it does not imply a connected executor or permission to add backend behavior.
 
-There are two overlay kinds (owner, 7 November): the centered `Dialog` for create, edit, confirm and connect, and the Ctrl+K palette. A view the owner keeps open while working is an inline panel in the page (`InlineDetails`, the chat's views strip, the 1280px conversation and canvas asides), never an overlay. There are no side sheets; below 1280px the conversation rail and the artifact canvas open in the centered dialog. The only edge sheet left is the phone sidebar, which is navigation.
+There are two overlay kinds (owner, 7 November): the centered `Dialog` for create, edit, confirm and connect, and the Ctrl+K palette (`src/components/gateway/universal-search-dialog.tsx`). A view the owner keeps open while working is an inline panel in the page (`InlineDetails`, including the chat's views), never an overlay. There are no side sheets. The only edge sheet left is the phone sidebar, which is navigation.
 
 | User intent | Surface / shared pattern | Examples |
 | --- | --- | --- |
-| Create an item or change several related fields | Centered `TaskDialogContent` inside the shared `Dialog`; `size="wide"` for a job form | New/edit job, conversation model, message edit, theme import |
-| Configure multiple sections with previews or long-lived navigation | Dedicated page with `BaseLayout` | Settings, Character Studio, first-run setup |
-| Inspect a record while preserving list position | `InlineDetails` under the item; older screens use `DetailPanel` (the centered dialog, same contract) with `OverlayBody` and `ReferenceSection` topics | Agent conversations, tool scope, journal source, job history |
-| Inspect successive canvas points without a modal interruption | Shared nonmodal `WorkspaceInspector`, docked right on desktop and below the canvas on mobile | Memory records, category folders, topics and source evidence |
-| Make a small immediate preference change | Labeled inline control, with state feedback | Theme, layout, Incognito toggles |
-| Review a consequential request with evidence | Dedicated detail page, decision actions beside the request | Inbox approval/proposal; do not add a second generic confirmation |
-| Delete/redact an item | `ConfirmationDialog`, naming the target and consequence; Cancel receives initial focus | Job deletion, conversation deletion/clear, message redaction |
-| Submit a draft | `FormActions`: feedback at the left, secondary action before primary at the right | Save/discard in Settings and Studio, Cancel/Create in dialogs |
+| Create an item or change several related fields | Centered `TaskDialogContent` inside the shared `Dialog`; `size="wide"` when the content needs room | New AI job, New agent, Add a memory, Hand off this chat, Import character |
+| Configure multiple sections with previews or long-lived navigation | Dedicated page with appbar sections | Settings, Character Studio, Setup |
+| Inspect a record while preserving list position | `InlineDetails` under the item, with `OverlayBody` and `ReferenceSection` topics | Tools, Skills, MCP tools, Server services, native sessions |
+| Inspect successive canvas points without a modal interruption | Shared nonmodal `WorkspaceInspector`, docked right on desktop and below the canvas on mobile | Memory records, tool steps |
+| Make a small immediate preference change | Labeled inline control, with state feedback | Light/dark switch, Incognito |
+| Review a consequential request with evidence | The Inbox card opened in place, its answers beside the request; the server's level decides any extra confirmation | Inbox approvals and Conker's requests; do not add a second generic confirmation |
+| Delete an item | `ConfirmationDialog`, naming the target and consequence; Cancel receives initial focus | Delete chats forever, forget a memory, delete an imported chat |
+| Submit a draft | `FormActions`: feedback at the left, secondary action before primary at the right | Save/discard in Character Studio, Cancel/Create in dialogs |
 
-Import application patterns from `@/components/design-system`. `TaskDialogContent` and `DetailPanel` own header spacing, close-control clearance, viewport bounds, scroll-body composition and corner clipping. Compose their children with `OverlayBody` and `FormActions`; a specialized form such as `JobEditor` may own its scrollable fieldset. Use a 16px minimum outer dialog gutter, a viewport-bounded height, 20px internal insets, and 32px close controls inset 12px from the corner. Dialogs keep theme-derived corners. Terminal fullscreen and the expanded call stage are explicit edge-to-edge shared Dialog exceptions; the ended-call summary returns to a bounded dialog with theme-derived corners.
+Import application patterns from `@/components/design-system`. `TaskDialogContent` owns header spacing, close-control clearance, viewport bounds, scroll-body composition and corner clipping. Compose its children with `OverlayBody` and `FormActions`; a specialized form may own its scrollable fieldset. Use a 16px minimum outer dialog gutter, a viewport-bounded height, 20px internal insets, and 32px close controls inset 12px from the corner. Dialogs keep theme-derived corners; Call mode is a wide bounded dialog too.
 
 Creation and substantial editing never share a generic details drawer. Completing creation returns to the collection with visible feedback; editing from an inspector returns to that inspector. Preserve validation, prevent accidental outside-click dismissal of draft forms, disable submission while pending, and restore useful keyboard focus when closing or moving between surfaces. Keep existing drafts, Incognito behavior and conversation feature ownership intact.
 
-Common actions remain visible: Run/Pause for jobs, New chat for agents, source links for evidence. Use named buttons; reserve icon-only controls for familiar actions with accessible labels/tooltips. Secondary actions belong in a menu. Avoid duplicate page-navigation strips: the sidebar chooses roots, the appbar owns route sections and context, and the page header may own creation actions.
+Common actions remain visible, and source links stay beside evidence. Use named buttons; reserve icon-only controls for familiar actions with accessible labels/tooltips. Secondary actions belong in a menu. Avoid duplicate page-navigation strips: the sidebar chooses roots, the appbar owns route sections and context, and the page header may own creation actions.
 
-Legacy Agents, Tools, Memory's Database mode, Journal and Jobs share `DataTable`. Supply `renderItem` using `RecordItem` below 1280px; desktop keeps the table for comparison. System services use the same responsive pattern with read-only summaries and a Connections action. One table instance owns search, filters, sorting and pagination across both representations. Mobile sorting remains available. Row titles open details using real buttons; visible actions remain separate. Keep column definitions stable when selection changes so a closing inspector can restore focus to its initiating control. Tables use wrapping content and one quiet structural surface, not an elevated card. Active gateway consumers follow the component-family rules above. Empty states explain the next action; filtered empties offer a clear action, and creation empties link to the working creation flow.
+Activity's Runs and Activity log use `DataTable`. Supply `renderItem` using `RecordItem` below 1280px; desktop keeps the table for comparison. One table instance owns search, filters, sorting and pagination across both representations. Mobile sorting remains available. Row titles open details using real buttons; visible actions remain separate. Keep column definitions stable when selection changes so a closing inspector can restore focus to its initiating control. Tables use wrapping content and one quiet structural surface, not an elevated card. Empty states explain the next action; filtered empties offer a clear action, and creation empties link to the working creation flow.
 
 Bounded forms scroll a normal `div` around their fieldset, with `min-height: 0` throughout the flex chain. Do not make the fieldset itself the flex scroll region: browser fieldset sizing can allow its content to overlap the footer on short screens. The action footer stays outside that scroll region. Validate this visually at a short mobile viewport, not only a tall desktop window.
 
-Do not relocate a correctly placed feature just to touch every screen. Home remains an overview; Companion remains the proactive conversation; Chats preserves message/appbar/composer/reference ownership; System keeps Overview, Terminal and Files as separate sections.
+Do not relocate a correctly placed feature just to touch every screen. Home remains an overview; Chats preserves message/appbar/composer ownership; Server keeps its sections separate.
 
 ## Density and layout contract
 
 ### Technical workspace chrome
 
-Connected workspaces share `WorkspaceAppbar`: a 56px primary row, 24px desktop and
-16px mobile insets, a bounded 420px central universal-search entry, and right-hand
+Connected workspaces share `WorkspaceAppbar` (through `GatewayHeader`): a 56px primary row, a bounded 420px central universal-search entry, and right-hand
 route actions. The sidebar opener appears only when navigation is hidden; its
 artwork aligns to the title inset. Chat and Memory retain ownership of their
 stateful controls but use this frame. `PageHeader actionsOnly` portals actions
@@ -450,7 +402,6 @@ Local collection filters remain labeled separately from universal search.
 Secondary sections and graph controls occupy a quiet, unfilled secondary row.
 Main shells have no elevation. Inner decision surfaces and composers retain
 their semantic shadow tokens; floating overlays retain their stronger depth.
-Today keeps setup progress above the sidebar profile, not in a second banner.
 
 Route commands use `WorkspaceRouteActions`: on phones keep the primary command
 reachable and disclose secondary commands in the named workspace-actions menu.
@@ -498,11 +449,10 @@ activity payloads, protected tool inputs, credentials or filesystem crawling.
 | Related collection controls/results: `--collection-section-gap` | 16px / `1rem` |
 | Appbar section navigation | 40px links in a horizontally scrollable row below the 56px appbar toolbar |
 | Standard page title | 30px type / 36px line height, semibold weight |
-| Collection page title | 24px type / 32px line height, semibold weight |
+| Compact page title (`PageHeader density="compact"`) | 20px type / 28px line height, semibold weight |
 | Page description | 14px type / 24px line height |
-| Collection description | 14px type / 20px line height; 4px after its title |
-| Page top inset | 24px; no extra desktop-only gap before the heading |
-| Page gutters | 16px mobile / 24px desktop |
+| Compact description | 14px type / 20px line height; 4px after its title |
+| Page insets (`GatewayPageFrame`) | 16px mobile / 24px desktop on every side |
 | Width | Full available width; no centered route-wide maximum |
 | Corners | Derive from editable `--radius` |
 
@@ -512,28 +462,25 @@ Dimensions describe roles. A small inline action can use the compact variant; co
 
 Consistency means equivalent controls behave and look alike; it does not mean every screen repeats the same stack of cards. Define the first useful action or piece of information before choosing a composition. The selected theme owns color, type family, tracking, corners and elevation; the screen owns reading order and emphasis.
 
-- **Collections** (Chats, Inbox, Agents, Tools, Journal, Jobs): use `BaseLayout variant="collection"`. Keep heading/help, search and results close, with 16px between related regions. Keep the 64px minimum row and usable controls; reclaim overhead before shrinking content. At 1280×720, aim to begin an ordinary unfiltered list in the upper third to two-fifths of the viewport, allowing real content to wrap. Tabs stay in the appbar.
-- **Home**: pending decisions lead. `OverviewSection priority` gives that group the card surface and a 20px heading; supporting sections use 16px headings and their content/dividers without another enclosing card. Workspace values use 24px tabular numerals with quieter labels. Resource links remain secondary to actions. Desktop has an attention/activity column and a workspace/agents/conversations column; narrow screens preserve that reading order in one column. Preview labels remain visible.
+- **Collections** (Chats, Agents, Tools, Cron jobs): use `GatewayPageFrame` with a `ListCard`. Keep heading/help, search and results close, with 16px between related regions. Keep the 64px minimum row and usable controls; reclaim overhead before shrinking content. At 1280×720, aim to begin an ordinary unfiltered list in the upper third to two-fifths of the viewport, allowing real content to wrap. Tabs stay in the appbar.
 - **Forms and settings**: retain the standard heading, 24px between meaningful sections and existing task-specific editors. Bound long prose inside the full-width page when it aids reading; do not cap the whole route.
-- **Conversations and tools**: preserve their viewport-filling variants and existing control ownership. They do not need collection headings to be consistent. Memory uses the canvas role with its own workflow toolbar, including when showing its Database mode.
+- **Conversations and tools**: preserve their viewport-filling variants and existing control ownership. They do not need collection headings to be consistent. Memory uses the canvas role with its own workflow toolbar, including when showing its List view.
 
 Use 4–8px within a label/detail group, 16px between related controls or list regions, and 24px between distinct sections. A container must communicate a boundary, state or priority. Do not enclose every heading or supporting group just to fill space. Borders define structure, muted foreground carries supporting detail, and primary color identifies actions/selection rather than decorating every heading. Keep the surface's foreground for essential information; use size and weight before adding colors.
 
 Review the complete vertical stack, not each component in isolation. Desktop and narrow screenshots must show the leading task, readable supporting content, intact corners and reachable actions. Shared token compliance is a baseline, not a substitute for this review.
 
-Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The appbar collapse control uses the default 40px icon size with an 8px edge inset. In the live product shell the theme control lives in the sidebar's account menu (Settings, Light/Dark mode, Sign out), like other chat apps; the fixture workspace keeps it beside the Conker label. Conversation appbar controls use the compact 32px control role.
+Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The light/dark switch sits beside Ask Conker at the top of the sidebar; Sign out lives in Settings. Conversation appbar controls use the compact 32px control role.
 
-`BaseLayout` owns a viewport-height frame for every sidebar variant. The appbar stays outside the standard page's keyboard-accessible scroll region; route/section changes reset that region to the top. Inset clips its children to the theme-derived radius and retains its 8px outer frame while content scrolls, on either sidebar side and in expanded/collapsed states. On mobile the frame is edge-to-edge and the sidebar opens as a sheet. Conversations keep their existing transcript and reference-panel scroll regions.
+`LayoutFrame` owns the viewport-height frame. The connected shell uses its `canvas` variant, so the appbar stays outside each page's own scroll region (`GatewayPageFrame`). The inset clips its children to the theme-derived radius. On mobile the sidebar opens as a sheet. Conversations keep their own transcript scroll region.
 
-The opt-in `workspace` variant retains the shared heading and gutters, lets its child fill the remaining height, and delegates scrolling to the tool's own regions. System uses this variant for its Terminal and Files sections, with matching `RouteSection variant="workspace"` containers. Overview and regular pages retain page scrolling; conversations retain their separate layout.
-
-The opt-in `canvas` variant fills the remaining viewport below the appbar without a separate page heading or `PageContainer` insets. Memory owns a compact toolbar, spacious canvas, optional folder browser, nonmodal inspector and status line within this frame. Maximize temporarily fills the viewport with that workspace; Restore returns to the shared application frame. This is a canvas role, not a new default page layout.
+Memory and the tool editor fill the space below the appbar with their own toolbar, canvas and nonmodal inspector. Maximize temporarily fills the viewport with that workspace; Restore returns to the shared application frame. This is a canvas role, not a new default page layout.
 
 Use minimum row height instead of a fixed clipping box. Long content, translated text, browser zoom and responsive wrapping must remain usable. Keep title/preview truncation deliberate and retain accessible names. Collection navigation should use actual links, not divs that only respond to mouse clicks.
 
 Photo avatars use the shared neutral outlined frame. The complete image uses `size-3/4 object-contain`, leaving one eighth of the inner frame on each side. Preserve the full artwork and its aspect ratio without zoom transforms or an inner crop. No green tint behind photo portraits. Apply this proportional padding across brand, appbar, thread, collections, and studio; larger studio previews do not change collection density.
 
-Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `src/styles/design-system.css`. Native scroll containers and the Radix `ScrollArea` use a rounded thumb inset by 2px, a transparent track, brighter hover, and the primary accent while dragging. Firefox uses its native thin scrollbar with the same resting colors. Preserve native wheel, keyboard, and touch scrolling; forced-colors mode retains system colors. Do not hide overflowing content's scrollbar or add route-specific scrollbar skins.
+Scrollbars share `--scrollbar-size` (10px) and theme-derived thumb tokens in `src/styles/design-system.css`. Native scroll containers and the `ScrollArea` primitive use a rounded thumb inset by 2px, a transparent track, brighter hover, and the primary accent while dragging. Firefox uses its native thin scrollbar with the same resting colors. Preserve native wheel, keyboard, and touch scrolling; forced-colors mode retains system colors. Do not hide overflowing content's scrollbar or add route-specific scrollbar skins.
 
 ## Palette and theming
 
@@ -543,9 +490,9 @@ Use the template's semantic pairs directly: background/foreground, card/card-for
 
 Keep standard button, field, menu, tab, tooltip, dialog and selection treatments from coss ui. Their approved opacity recipes belong to the owning primitive, recorded in `scripts/template-foundation.json`. Do not ban legitimate upstream recipes or recreate them differently in each route. Application code consumes shared components and ordinary semantic utilities; a new visual role requires a documented owner.
 
-Conker's default look is neutral and quiet (owner decision, September 25, modelled on Kimi's layout; palette may change later): the live shell uses the inset sidebar on a soft backdrop with the main area as a white (dark: charcoal) canvas, the system font stack, black (dark: white) for primary actions, a floating composer (`shadow-composer` token, 24px radius, round send), and pill-shaped starters. Use Conker's own name, mark and wording; never another product's logo, assets or copy. Conker keeps compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
+Conker's default look is neutral and quiet (owner decision, September 25, modelled on Kimi's layout; palette may change later): the live shell uses the floating sidebar on a soft backdrop with the main area as a white (dark: charcoal) canvas, the system font stack, black (dark: white) for primary actions, a floating composer (`shadow-composer` token, 24px radius, round send), and pill-shaped starters. Use Conker's own name, mark and wording; never another product's logo, assets or copy. Conker keeps compact density, custom navigation and controls, complete photo portraits, native scrollbars and black terminal region. Existing secondary-text/destructive-foreground contrast adjustments and labeled success/warning statuses remain explicit extensions. Custom themes, imports and radius must still work. Do not add `--surface-*` remapping, route-specific palettes, another theme provider or `!important` color overrides.
 
-Collections own one card container. The composer, plans and requests use card roles. Tool details and reference headings use muted. Appbar, dialogs and the reference rail use background; sidebar navigation keeps sidebar roles. Shared field styling comes from Input/Select/Textarea, including collection searches.
+Collections own one card container. The composer, plans and requests use card roles. Tool details and reference headings use muted. Appbar and dialogs use background; sidebar navigation keeps sidebar roles. Shared field styling comes from Input/Select/Textarea, including collection searches.
 
 The guard checks direct color mappings and upstream recipe ownership in addition to shared heading, search and navigation rules. Rendered review remains required: preset/import correctness, contrast, focus and component behavior cannot be inferred solely from token names.
 
@@ -553,22 +500,16 @@ The guard checks direct color mappings and upstream recipe ownership in addition
 
 Exceptions have a concrete UI role and narrow ownership. They do not permit an unrelated search, tab or palette implementation in the same file.
 
-- `src/app/chat/conversation.tsx`: the conversation has an accessible hidden h1 and specialized transcript/composer. Its h1 is allowed; palette and search rules still apply. Visible identity and conversation controls live in the appbar.
-- `src/app/login/page.tsx` and `src/app/setup/page.tsx`: standalone authentication/onboarding headings use AuthLayout. Their `h1` elements are allowed.
-- `src/app/errors/not-found/components/not-found-error.tsx`: the standalone error code heading is allowed.
-- `src/components/design-system/index.tsx`: owns raw shared heading/search markup and primitive tab composition. Other route code consumes it.
+- `src/components/design-system/primitives.tsx`: owns raw shared heading/search markup (including the hidden `h1` that `PageHeader actionsOnly` adds for each page) and primitive tab composition. Other route code consumes it.
 - `src/components/ui/*`: foundational primitives retain their raw implementation APIs. Product routes must use the shared application pattern where one exists.
-- `src/lib/character-options.ts`: swatches represent artwork colors. Character Studio can use larger portrait previews while keeping shared fields and surfaces.
 - `src/config/theme-data.ts`, `src/config/theme-customizer-constants.ts`, `src/utils/tweakcn-theme-presets.ts`, `src/utils/shadcn-ui-theme-presets.ts`: theme definition/swatch files may contain actual color values. They must not become a place to hide route styling.
-- The customizer's nested controls can compose primitive tabs inside their own editor. Page-level navigation uses the shared appbar and URL-addressed `RouteSection` content. `PageTabs` remains available for local, non-routing tab interactions.
-- Memory owns local URL-backed workflow modes in its toolbar, a searchable command-style point picker, and the shared `WorkspaceInspector` for immediate nonmodal inspection. Its graph uses chart-derived category colors with a local dark-theme lightness bound; this data-visualization role does not establish a separate application palette or replace shared collection search and form controls.
-- The terminal's neutral surface variables in `src/index.css` preserve a black command area, graphite chrome and readable text in both themes. Its inset command area has an 8px frame and fills the available width; the info control opens project/connection context. Fullscreen uses a viewport-filling shared Dialog with Escape and focus restoration. These variables do not establish a separate general application palette.
+- Page-level navigation uses the shared appbar's `?tab=` section links. `PageTabs` remains available for local, non-routing tab interactions.
+- Memory owns its URL-backed Map/Tree/List view in its toolbar and the shared `WorkspaceInspector` for immediate nonmodal inspection. Its graph uses chart-derived category colors (`--memory-category-*` in `src/app/memory/memory-graph.css`) with local lightness bounds for light and dark themes; this data-visualization role does not establish a separate application palette or replace shared collection search and form controls.
+- The terminal's neutral surface variables in `src/index.css` (`.terminal-surface`) keep a black command area and readable text in both themes; its info control opens the terminal's access details. These variables do not establish a separate general application palette.
 
-System is one sidebar destination with Overview, Terminal and Files in the shared appbar section navigation, exactly like Chats and Inbox. Overview (`/system`) owns system stats and services; Terminal (`/system?tab=terminal`) and Files (`/system?tab=files`) are separate section bodies. Files owns the expandable tree, selected path and copy action, using normal card/accent theme roles on desktop and mobile. Do not embed the tree in Terminal or its fullscreen view. Command search links directly to each section; old `/terminal` and `/files` bookmarks redirect to the matching System section.
+Server is one sidebar place whose sections (Overview, Services, Backups, Processes, Ports, Terminal, Native sessions, Files; Containers opens from Services) are `?tab=` links under `/system`. The sidebar lists them under Server; the appbar repeats them only while a collapsed sidebar hides them. Do not embed Files in Terminal.
 
-Both remain frontend previews with separate `ConkerClient` snapshots: `TerminalSnapshot` supplies shell context and `FilesSnapshot` supplies the sample directory tree. Directory disclosure, path selection and copying work locally; no file editor, filesystem access or shell command transport is implied. Keep the Files sample label and Terminal offline state visible until those connections exist.
-
-Dormant template demo routes are outside the guard until imported by the active route graph. Do not broaden exceptions just to make a new finding disappear; choose the shared component or document and narrowly implement a real new role.
+Modules that `src/App.tsx` does not import are outside the guard. Do not broaden exceptions just to make a new finding disappear; choose the shared component or document and narrowly implement a real new role.
 
 ## Validation and maintenance
 
@@ -578,15 +519,15 @@ The connected/preview gateway chat uses `ChatComposerFrame` for both the initial
 
 Saved conversation headers keep the compact title, call and secondary menu. Next-turn agent/model selection, privacy and voice typing stay in the composer.
 
-The composer bar shows only the text box, Mode and Agent (the two outlined controls), voice typing and Send. Everything else (template, model, skills, Think, the chat's access and Incognito) sits behind one plain More, on every screen size; More names each value that differs from its default (on a phone, in a line above the bar), so nothing changed is out of sight. Controls the workspace passes among the actions mark themselves with `belongsBehindMore`; controls behind More report their value with `useComposerMoreValue`. Starters are worded pills that fill the box and never send.
+The composer bar keeps the text box, Mode and Agent (the two outlined controls), voice typing and Send. Every other control (model, template, skills, output, Think, the chat's access, Incognito, media) is a composer item registered with `composerItem` in `src/components/chat/composer-items.ts`: it stands on the bar while there is room and folds into the "…" menu when the bar gets narrow, in the fixed order of `FOLD_BELOW`, and a folded item still reports its value so its choice stays named. Starters are worded pills that fill the box and never send.
 
 The composer's first control is the mode (Auto, Fast, Balanced, Deep). Modes are presets over complexity, Think and research; Auto takes them from the routing model's proposal for the typed draft and shows each value with its reason before sending. Any change shows Custom; sending uses the values on screen. Think and research live in the draft; complexity travels with the turn (Hard = Pi's analysis hint). Auto never invents values: without helpers or a routing model it says so and leaves the settings to the owner.
 
-Conversation views (Context, Thinking, Logs) sit in the shell actions as one soft grouped strip of plain icons; the open view is pressed inside the strip. Each opens the reference drawer, one view at a time, closed by default; the same icon or the drawer's close button shuts it. Phones fold the strip into one "Conversation views" menu and open the view in the shared `DetailPanel`. Views read saved Pi records only (turns, thinking results, memory status, usage): no timers, no invented steps. More views (Files, Browser, Terminal) join the same strip when their records reach the client. When navigation is hidden, the sidebar opener remains visible on both new and saved chat, including mobile. `ConversationHistory` follows changing content only while near the bottom; reading older content exposes a latest-message control and linked-message navigation retains its target.
+Conversation views (Context, Thinking, Logs) sit in the shell actions as one soft grouped strip of plain icons (`ConversationViewStrip`); the open view is pressed inside the strip. Each opens in `InlineDetails` under the chat bar, one view at a time, closed by default; the same icon or the close button shuts it. Phones fold the strip into the chat's "…" menu and open the view the same way. Views read saved Pi records only (turns, thinking results, memory status, usage): no timers, no invented steps. When navigation is hidden, the sidebar opener remains visible on both new and saved chat, including mobile. On a phone a chat's header has a back arrow to Chats, and a swipe right on the history does the same. `ConversationHistory` follows changing content only while near the bottom; reading older content exposes a latest-message control and linked-message navigation retains its target.
 
 Message actions reveal on hover/focus for pointer users and remain visible on touch. A reply's action row ends with its saved turn facts after the time (model · seconds · cost, or "free"), read from the turn Pi linked to the message; a running or forgotten turn shows none. Keep user-message actions outside the bubble's layout height, avoid empty feedback rows, and retain full timestamps in accessible labels/tooltips. Runtime memory/tool evidence and approval/recovery controls remain sourced from saved turns: never turn prose into executable proposals or imply unsupported attachments/video calls.
 
-Run `npm run design:check` for the TypeScript AST guard. It follows local static imports, exports and literal dynamic imports from `src/config/routes.tsx`. This covers active routes and their dependencies while avoiding unused template demos.
+Run `npm run design:check` for the TypeScript AST guard. It follows local static imports, exports and literal dynamic imports from `src/App.tsx`. This covers every module the app reaches while leaving unused files out.
 
 The guard rejects standard raw `h1` headings, direct primitive-tab imports from active route modules, raw `Input`/native search fields, and hard-coded Tailwind palette/literal-color classes in reachable application code. It recognizes aliased inputs and search placeholders such as `searchPlaceholder`. It does not ban arbitrary layout dimensions or normal form fields.
 
@@ -597,188 +538,56 @@ Static checks cover recognizable source patterns, not every possible runtime-gen
 Update the shared component and its contract first; migrate consumers together. A new page should compose these patterns from the start. Shared implementation, automated checks and rendered review are the mechanism for keeping screens consistent.
 
 
-## Jobs
-
-Jobs owns direct management at `/jobs`: New job, editable instructions/agent/schedule/time zone, visible Run now and Pause/Resume, and a compact menu for details/history, editing, duplication and deletion. New/edit forms use a wide centered task dialog with a scrollable fieldset and fixed action footer. Details/history use `DetailPanel`; deletion uses `ConfirmationDialog`. Copies start paused with no inherited run history. Running a paused job does not enable its schedule.
-
-Use the shared searchable/sortable `DataTable` for desktop comparison and its `renderItem`/`RecordItem` presentation below 1280px. Search and status/last-failure filters belong to the page and survive these responsive changes; sorting stays in the shared table instance. Reuse the same `JobActions` in the table, stacked rows and detail dialog. Keep long titles wrapped, instructions readable, keyboard focus restored, and form errors beside their fields.
-
-All job mutations go through the existing `ConkerClient` fixture adapter. Daily, weekly and hourly-interval schedules are configuration previews; new/edited jobs show “Awaiting scheduler.” Run now records an explicit simulated receipt and never invokes agents, tools or server commands. The in-memory data resets on reload. Keep the Preview label, sample-receipt provenance and form limitation copy. Validate via `npm run check:jobs` plus affected lint, build and rendered desktop/mobile checks.
-
-## Home and Companion
-
-Home (`/`) is the workspace overview for Conker's internal screens. Linked counts open Agents, Tools, Memory and Jobs; the remaining sections show pending requests, agent status, recent Journal activity, recent conversations and System status. The page-header actions are New chat and Open companion, and System status links to Connections and System.
-
-Compose Home with `BaseLayout`, shared cards, `CollectionRow`, `AgentIdentityPortrait`, buttons and status badges. The resource strip has two columns on narrow screens and four on large screens. At extra-large widths, requests and activity occupy the wider left column, with agents and conversations on the right; smaller screens stack these sections. System status spans the page. Preserve shared section gaps, density, theme/radius behavior, the inset frame and complete padded portraits.
-
-Tasks and calendars belong to the separate productivity app, which may later connect through MCP/ToolGate. Home has no daily briefing, agenda, news feed, planning starters or chat composer. Journal summaries may include recorded calendar-tool activity as audit data; they must not become a personal calendar interface.
-
-Home reads the `ConkerClient` snapshot and derives its summaries through `getWorkspaceOverview` in `src/lib/workspace-overview.ts`. Show up to three pending requests and agents, four recent Journal entries, and three recent conversations; conversations exclude the permanent Companion, archived sessions and empty drafts. Enabled jobs count scheduled jobs, with paused jobs reported separately. Preserve the Preview data label and explicit sample-service status; fixture activity dates remain anchored to their recorded date. `getDailyOverview` remains available for Companion's day context.
-
-Home has one quiet overview arrival: 420ms with a 6px upward settle and a small opacity change, enabled only when reduced motion is not requested. Keep it an entrance treatment rather than an imitation of live agent activity. No new palette, density or motion tokens are introduced.
-
-Companion (`/companion`) is the main-agent workspace: a dedicated stable conversation, daily briefing, action starters, and contextual events/news. It uses the shared `Conversation` shell and composer. Existing chats remain at `/chat/:id`. Never choose the main companion by session array position.
-
-Companion has its own appbar identity, with no Chats ancestor. Its check-in stays in the thread after the first exchange and folds into an expandable summary. Recent conversations and pending decisions use the shared collection rows and real fixture destinations. Action starters prepare editable prompts; they never send automatically. The main companion cannot be handed to another agent, archived, or mixed into regular chat history.
-
-`/chat/new` opens a separate topic with Conker by default; `?agent=<id>` preselects an existing agent. New chat is available from conversation and collection appbars, Agents rows, and command search. The client reuses an empty draft for the selected agent, preserving unsent words on route navigation. The first message names the conversation and adds it to history. Empty drafts stay out of Chats and daily recent activity. Conversations and drafts are memory-only in this preview and reset on a full reload.
-
-The ordinary chat's appbar avatar opens the agent picker. Before the first message it selects the agent; afterward it becomes an explicit handoff. Handoffs appear at their message boundary, retain previous authors, preserve Incognito preferences and the separate model selection, and clear execution grants. A fork restores the agent at its selected message boundary rather than inheriting a later handoff. The canonical Companion identity remains fixed; separate chats can still use the companion agent.
-
-Character customization lives at `/settings/companion`, separate from conversation. Brand navigation opens Companion. In the fixture workspace the sidebar brand row owns the theme switcher; the live shell uses the account menu.
-
-`BaseLayout` accepts an optional `actions` slot for standard page-header actions. DailyNews owns feed content; its parent owns the section heading. It renders publisher/date/source metadata for ready feeds and a truthful unavailable state otherwise.
-
-When Companion receives `{ prompt }` in React Router state, append it to an existing draft, never overwrite the user's words or send automatically. Home's New chat and Open companion actions navigate directly without planning prompts. The 4,000-character composer limit remains enforced.
-
-The current transport is a sample preview. No AI replies, news headlines, weather, or external actions may be implied to be live until corresponding providers are connected. Keep the briefing date explicit; render plans as proposals rather than booked calendar events.
-
-
 ## Appbar routing
 
-`src/config/navigation.ts` owns route paths, breadcrumb ancestry, page sections, and related-page actions. The router, sidebar, and command search use those paths. Companion stays accessible through the Conker brand and command search, with no separate sidebar item.
+`src/components/gateway/navigation.ts` owns route paths, page sections and the sidebar groups. The router, sidebar and command search use those paths.
 
-Every sidebar destination is an independent navigation root. Home remains the entry page at `/`; it is never an automatic breadcrumb ancestor. Companion is also an independent root. Only actual detail relationships have parents: Chats → conversation, Inbox → request, and Settings → Companion settings. Unknown routes have their own not-found breadcrumb.
+Every sidebar destination is an independent navigation root. Home is the entry page at `/` (and `/overview`); it is never a breadcrumb ancestor. The appbar shows the page's icon and name. Do not add back links or section tabs under page titles or in conversation headers; the phone chat header's back arrow to Chats is the one exception. Task-specific links inside content (opening a request or a source conversation) stay with their context.
 
-`SiteHeader` renders the page path, related-page actions, command search, and section navigation above the content title. Do not add back links, section tabs, or companion-customization shortcuts under page titles or in conversation headers. The one exception is the phone: a chat's header has a back arrow to Chats, and a swipe right on the history does the same (issue #40), because on a phone the places sit behind the menu. Task-specific links inside content (opening a request, a source conversation, or a proposed plan) stay with their context.
+Pages with sections use `?tab=` URLs. Their first section is the default; unknown values fall back to it. `AppbarSections` renders them as real links with `aria-current` on the open one, not ARIA tabs: normal Tab/Enter and open-in-new-tab behavior apply.
 
-Chats, Inbox, and Settings use `?tab=` URLs. Their first section is the default; unknown values fall back safely. Links preserve other query parameters and participate in browser Back/Forward. `RouteSection` renders the selected content, while page-owned form/search state remains in the route component. These are real links, not ARIA tabs: normal Tab/Enter and open-in-new-tab behavior apply.
+The appbar is sticky on scrolling pages. Global search becomes an icon below 1024px of viewport or 900px of appbar width, keeping its keyboard shortcut. Run `npm run check:navigation` alongside the design guard, affected-file lint, and build when changing route metadata or section behavior.
 
-Breadcrumbs resolve conversation and request names from the current snapshot. Reviewed requests return to Inbox's history view. Parent links provide a deterministic route on direct loads. Long names truncate with a full title; the owning section stays visible at mobile widths. Related-page actions retain accessible names.
-
-The appbar is sticky on scrolling pages. Conversation layouts keep their bounded viewport and docked composer. Global search becomes an icon on narrow screens, retaining the keyboard shortcut. Run `npm run check:navigation` alongside the design guard, affected-file lint, and build when changing route metadata or section behavior.
-
-
-## Models and conversation data
-
-Settings owns the Models / Providers catalogue at `/settings?tab=models`: provider endpoint/key drafts, enabled catalogue routes, and the workspace default. These are explicit sample configurations; saving never contacts a provider. Keys remain masked and memory-only. Chat picks only enabled catalogue entries and exposes no provider credentials.
-
-All conversation mutations and simulated replies go through ConkerClient. Normalized messages retain source identity, edits, redacted tombstones, and independent fork copies. Conversation defaults differ from per-turn model overrides. Preview incognito stores independent memory/harness exclusions; no transport or production privacy promise is implied.
-
-
-## The four conversation homes
-
-Conversation-wide actions live in the appbar: the avatar owns agent selection/handoff, and the title menu owns rename, conversation-default model/route, pin, archive/restore, delete/clear, Conversation info, Sessions & forks, and edit companion. The permanent Companion omits rename, pin, and archive and adds Daily context. The right-side order is New chat, search, Incognito. There is no standalone right-panel toggle: features open the relevant reference view. Incognito uses the standard hat-and-glasses icon, with no visible text label; its tooltip and accessible name expose the current mode. There is no separate conversation header. The theme switcher stays beside the sidebar brand. All sidebar destinations retain independent roots.
-
-Incognito opens a dialog with two independent switches, **No memory** and **No harness**. All four combinations are supported and stored per conversation through ConkerClient; forks copy them independently. Only the memory switch changes the declared memory scope. The aggregate `incognito` flag means at least one exclusion is enabled, and the legacy boolean update remains a shortcut for both. The rail reports both settings separately. These preview preferences do not imply server enforcement, deletion of existing transcripts, or private browser speech processing.
-
-Every completed message has an always-visible, compact action row directly beneath it. `MessageActions` owns both its controls and metadata, using 32px icon buttons with tooltips. Response actions are Copy, Read aloud/Stop, Good response, Bad response, Try again, Share, and More; user actions are Copy, Edit, Reply, Share, and More. The timestamp and Edited/Pin markers share this row and wrap when space is tight. User rows align right, response rows left. A short user bubble must retain its natural width independently of its toolbar.
-
-Less frequent actions stay in the same message's More menu: Fork, Reply/Edit when absent from the visible row, Retry with model, Pin, Redact, Message info, and Open source. Message info replaces the old Explain label and shows recorded metadata and provenance; it does not imply an AI-generated explanation. Fork copies only through that message. Edits are visibly marked; redaction keeps a tombstone and does not alter independent forks. Sharing copies a local preview link and never publishes content. Ratings are optional, mutually exclusive, reversible preview data saved through ConkerClient; editing or redacting a response clears its rating.
-
-Read aloud uses the browser's speech synthesis with one message playing at a time, a visible Stop control, and error recovery. Playback stops on navigation, message changes, backgrounding, or starting microphone input. This is text playback, not an AI voice call. Run `npm run check:voice` for playback chunking, cancellation, and failure behavior alongside dictation checks.
-
-The composer owns the next turn: preserved draft, reply target, Tools menu, direct model/provider picker, voice typing, call entry, send, and stop. Toolbar actions use compact icon buttons with accessible names and tooltips, including Tools and dictation's cancel/return-to-keyboard actions. Model names remain visible because they communicate the selected route. The microphone starts inline voice typing. The separate final phone action starts or returns to the call for an empty/whitespace-only draft, becomes Send once there is text, and Stop while streaming. The conversation title menu also offers Start call / Return to call, including when the composer has a draft. The model chip reads enabled entries from Settings' catalogue; it truncates on narrow screens so the action buttons remain inside the composer. The conversation default remains separate from a one-turn override, which clears after that turn. The quiet provider/cost line clearly labels the fixture. Streaming and thinking are deterministic simulations with abort support; they never run tools.
-
-The reference panel is closed by default and shows one requested topic at a time. It has a context-specific title and conversation name or selected message author/time/excerpt. Each topic uses `ReferenceSection`: a quiet top divider with 16px top spacing and 12px internal spacing, inheriting the inspector's inset and surface. Do not nest another filled panel or append the entire conversation's metadata beneath a selected source.
-
-| Entry point | Reference view / content |
-| --- | --- |
-| Message ⋯ → Open source | Original request or recorded source, with a working link back; no unrelated sample references |
-| Message ⋯ → Message info | Author, time, state, recorded model and preview provenance |
-| Provider/cost line beneath composer | Usage & cost: conversation route, input/output tokens and sample cost |
-| Conversation title → Conversation info | Agent, message count, state, files and pinned messages |
-| Conversation title → Sessions & forks | Current/parent/fork relationships and other chats with this agent, without duplicates or empty drafts |
-| Incognito → View memory & permissions; Conversation info → Memory & permissions | Separate memory, harness, and permissions/autonomy sections |
-| Companion check-in or title menu → Daily context | Upcoming plan, pending decisions and sourced news status |
-
-The panel is a 352px inline aside from 1280px, and the shared centered dialog below that width. Switching topic resets its scroll position; desktop headings receive focus and Escape closes the panel. Close restores focus to the initiating control when available. The composer draft and transcript remain intact. Usage totals are conversation-level sample data, not per-message measurements or live billing. Keep Incognito's two editable switches in its existing dialog; the reference view explains their current scope.
-
-The thread retains recorded tool status/arguments, plan/summary cards, blocked requests linking to Inbox, and acted-no-reply cards with reply-only recovery. Source details open from the message's More → Open source action into the reference rail; do not add a duplicate row of “Saved request” source buttons beneath responses. User messages align right; companion messages align left; the thread and composer use the shared page gutters. No provider credentials enter thread or rail metadata.
-
-Inline approval requests use `ApprovalRequest`: a compact, neutral outlined link with the requested action, service icon, approval status, and Review request / View decision affordance. It uses the existing muted surface and theme border, not a warning-colored Alert. The full row opens its exact Inbox request; making a decision remains in Inbox with the full arguments and risk information. Titles wrap, the action moves below on narrow screens, and reviewed requests show their actual outcome. Reserve warning alerts for conditions that need warning treatment, not routine approval navigation.
 
 ## Rich answers, continuity and execution
 
-Use `RichAnswer` for both streaming and finished assistant text. Its Markdown, code, table, math and supplied-citation controls inherit semantic colors and shared dialogs/popovers. Keep code and wide tables locally scrollable; never widen the thread. Copy/export original content, neutralize CSV formulas, reject unsafe links, and leave raw HTML and remote images inert. Read-aloud consumes readable text. Source IDs come from client evidence, not invented links in prose.
+Use `RichAnswer` for both streaming and finished assistant text. Its Markdown, code, table, math and supplied-citation controls inherit semantic colors and shared dialogs/popovers. Keep code and wide tables locally scrollable; never widen the thread. Copy/export original content, neutralize CSV formulas, reject unsafe links, and leave raw HTML and remote images inert. Source IDs come from client evidence, not invented links in prose.
 
-Queue controls belong immediately above the composer. Enter queues while a response runs; Stop remains separate. Each of up to five entries captures its text, reply target, agent, model, privacy and options. Changing the next-turn controls never silently changes a queued entry. Stop, failure, unresolved approval or revoked/changed context pauses dispatch. Resume is explicit; changed settings require review. Queues survive route navigation but remain memory-only. Deleting a conversation explicitly warns that its queue is removed.
+Answering again makes versions of one response. Previous version / Next version in the reply's toolbar switch between them; Branch from here continues from that message in a new chat.
 
-Retries are versions of one response, with compact Previous/Next controls beneath that response. Viewing an old version does not rewrite the active continuation. Continue in a fork makes that intent explicit; editing an earlier submitted message also creates a fork when later turns exist. Preserve each version's sources, model, partial text and public activity. Redaction clears its derived evidence and cached previews.
-
-`ConversationRun` is the sole activity disclosure: public steps, tools, named agents, handoffs, plans and supplied receipts. Inspector actions open the existing reference rail; approval actions open Inbox. Group repetitive steps and bound logs. Label simulated evidence Preview. Normal fixture replies must never invent executed work. Development scenarios are available only in development with `?fixtures=1` and never in the production composer. Text retry does not replay an action scenario.
-
-Activity artwork follows supplied state, with a Focus orb and Character media/fallback. Keep padded full artwork, quiet terminal states and motion suppression for reduced motion, hidden/offscreen content and disabled Studio motion. Failed or blocked media playback falls back to the portrait. Announce phase changes, not every token or timer tick. Automatic queue dispatch, streamed updates and completion preserve manual reading position; only explicit send/jump actions force the thread to the bottom.
-
-Checks: `check:rich-answer`, `check:chat-continuity`, `check:chat-workspace` and `check:activity`, alongside existing conversation/call/voice/theme checks. The scoped delivery evidence and limits live in [chat-delivery-progress.md](https://github.com/Conker-AI/conker/blob/b3044002de91003c70e64e8138c0a6e1293e9bbf/docs/archive/chat-delivery-progress.md).
+Checks: `check:rich-answer` and `check:answer-versions`, alongside the conversation and theme checks.
 
 ## Voice typing
 
-`ConversationComposer` is shared by Companion and agent conversations. Keep dictation inside this same docked surface: microphone → listening → **Use text** → editable draft. While listening, live text sits above a microphone-level waveform, with a quiet status/timer and Cancel / Use text controls below. Confirmed words use foreground text; interim words use muted text. The waveform displays actual audio levels, arriving in the center and moving outward, with semantic accent color and reduced-motion support. Do not add a recording modal or a second conversation toolbar.
+The microphone in the composer (`src/components/gateway/new-chat-voice-control.tsx`) starts voice typing through the browser's speech recognition (`src/lib/voice/browser-voice-input.ts`), in English. Words go into the draft at the cursor or selection as they arrive, and it never sends; pressing it again stops. An unsupported browser or a failed start shows a short message beside the button. Disabling the composer or leaving the chat cancels the recording. Enter sends; Shift+Enter inserts a newline. On a phone (touch, phone width) Enter inserts a newline and the Send button sends, as in WhatsApp, Messages and Telegram.
 
-Finishing dictation inserts words at the original cursor/selection and never sends. Cancel discards only the current recording. Leaving the conversation or backgrounding the page releases the microphone and keeps words already received in that conversation's draft. Drafts remain memory-only and survive route navigation, not a full reload. Speech exceeding the 4,000-character limit is preserved for editing, with Send disabled until shortened. Enter sends; Shift+Enter inserts a newline; Escape cancels active dictation. On a phone (touch, phone width) Enter inserts a newline and the Send button sends, as in WhatsApp, Messages and Telegram.
-
-The browser speech adapter is composed through `ConkerClient.voiceInput`; the fixture client itself has no recording capability. Speech recognition uses the browser's speech service and may process audio online. Conker does not retain recordings. Microphone permission, unsupported browsers, unavailable speech services, and empty recordings have explicit recovery messages. Dictation follows the browser's preferred language; Tools has no dictation-language submenu. The microphone enters inline dictation; the waveform is its level display. The phone opens the separate call preview. Starting a call from the appbar cancels active dictation and any late microphone request, preserves received words in the chat draft, and leaves focus in the call. Voice typing stays unavailable during an active call. Attachment and live AI speech remain unconnected; do not label browser dictation as a live call.
-
-Use `npm run check:voice` for transcription merging, finalization, cancellation, permission races, microphone cleanup, and draft limits. Verify listening and editable states in light/dark themes and at narrow widths. Automated speech events validate the UI lifecycle; they do not establish that a physical microphone or an external recognition service worked.
+Run `npm run check:voice` when changing it. Automated speech events validate the UI lifecycle; they do not establish that a physical microphone or an external recognition service worked.
 
 ## Calls
 
-`CallHost` is global, outside route content. It owns one call preview in a viewport-filling shared `Dialog`, with equal-width participant sides: Conker's conversation by default, and the user's full-frame camera preview with optional live captions at the bottom and typing below. Appearance is an optional replacement for the conversation view, off by default. Use `object-contain` for camera video; never crop the frame to fill its side. Participant labels and audio controls sit at the bottom. Mobile stacks two equal rows with a 20rem minimum in a scrolling region; the main dock remains reachable. Keep existing semantic colors, compact controls, theme-derived surfaces, padded uncropped character artwork and reduced-motion behavior.
-
-The header owns Call, model/provider choice, Incognito, optional browser fullscreen and minimize. The main bottom toolbar aligns companion controls/settings to the left and user controls/settings to the right, with Pause/Resume and End call in the center. On narrow screens those participant groups retain their sides above the session controls and use the shared compact 32px control role. Settings use centered `TaskDialogContent`: companion settings own Focus/Character, voice and session details; user settings own devices and language. Browser fullscreen failure must leave the expanded call usable.
-
-Minimize and Escape preserve the active session in a floating in-app mini call across route navigation. Expansion restores the same call, channels and separate call draft; ordinary conversation drafts remain intact. The mini call uses the same appearance preference and offers mic, camera, audio activity, expand and hang-up controls, with received live captions when enabled. It is not an OS picture-in-picture window or a separate browser tab. Only End call ends the session; dismissing its summary restores focus to the invoking control when available, otherwise to a visible enabled shell control. Minimizing moves focus to the mini call's Expand control.
-
-Keep six independent channels: the user's microphone, camera and keyboard, and the companion's voice, avatar and text/captions. A camera never enables a microphone; typing works with both off. The user's optional live-caption control is separate from companion text visibility, which does not hide the user's sent messages. Focus and Character remain delivery modes for one identity, separate from the model, channels, privacy and permissions. Reuse the Studio's existing character media; the appearance preference applies in expanded, mini and ended states.
-
-Reuse `ConversationIncognito` in the call header with independent No memory and No harness switches. A call inherits the conversation's exclusions and can change them for that call without changing the conversation. Details explain each setting and link to the existing character/voice editor; do not add a second privacy implementation or imply server enforcement.
-
-The phone opens a frontend preview through `ConkerClient.calls`; typed turns produce labeled sample replies. Microphone/camera actions enable local capture, with no Conker recording or camera analysis. Optional live captions use the real `ConkerClient.voiceInput` browser speech adapter in English with the system-default microphone; disclose that its speech service may process audio online in the waiting state and settings. Captions never send a turn or change either draft. Keep the internal rolling buffer bounded to 4,000 characters; display the latest 40 words as a bottom-anchored two-line subtitle tail without a text scrollbar. Mute, caption-off and hang-up cancel recognition; normal/silence endings restart, while other errors offer Retry. Pause captions during any browser read-aloud, including while minimized. The caption adapter borrows the call's stream for level analysis and must not stop the call-owned tracks.
-
-Play on Conker's side manually reads the latest sample reply with the browser's voice, preferring local English. It opens the speech view: full padded portrait, centered bar waveform beneath it, then the complete reply. `CallSpeechText` owns both sides' word styling. Spoken words use foreground, future words muted-foreground, and the actual current word primary plus an underline and a brief settling motion. Follow speech-engine boundary events with absolute text offsets across chunks; never estimate exact word timings. Without boundary support, keep the text readable and disclose the limit. The portrait/waveform stay visible while long lyrics scroll within their own keyboard-accessible region. New microphone words use a brief arrival animation and never show predicted words. Reduced motion removes movement while preserving color and underline states.
-
-Pause is a session preference through `ConkerClient.calls`: hold fixture generation and browser playback, cancel caption recognition and disable owned camera/mic tracks. Preserve channel preferences, current word, received captions and draft; Resume re-enables previous channels and continues playback. Paused drafts remain editable but cannot send. Mini calls expose the same pause/resume action. Hanging up still stops and releases devices; pause is not hang-up.
-
-Character voice and live AI remain unconnected. Shared audio bars show measured microphone level for input and a playback indicator for output, never claimed output amplitude. Preserve permission/device recovery, release capture on hang-up or page exit, and synchronize device flags on cleanup/remount so a stopped stream cannot appear on. The timeline records sent messages, pauses and mode events, not saved word-aligned audio/video or live captions. Session state is memory-only; reload does not reconnect or preserve the call.
-
-## Conversation activity (September 19)
-
-`ConversationRun` owns the response activity disclosure: a compact animated mark, transport-supplied phase label, measured elapsed time and chevron while running; a quiet Worked for / Stopped after / Failed after summary afterward. A vertical list exposes each supplied step, with nested disclosure for public details and tool arguments/results. Keep the summary above the answer, including recorded scenario receipts; do not duplicate it in another full-width tool card. Details use existing muted/background roles. Ordinary completion needs no toast or celebration.
-
-`ConversationActivity` supplies the mark. Character mode uses Studio's assigned Thinking media (falling back to the complete padded portrait) with an indeterminate ring; Focus and agents without character media use a dotted orb. Studio's artwork-motion preference applies to artwork; progress motion independently respects reduced motion, hidden tabs and whether the inline indicator is visible. No fabricated tool tasks, elapsed estimates or emotion inference.
-
-`ReplyOptions.onActivity` carries immutable `ConversationRun` snapshots through `ConkerClient`. Responses retain their activity with the message; forks copy it independently, and edit/redaction removes stale activity. The workspace retains an interrupted attempt with no output until the next attempt, without inventing an empty assistant message. This fixture state survives route navigation, not reload. Live preview events describe only preparation and simulated writing. Recorded tool receipts are explicitly Preview and have no invented total duration. Future searching, waiting, tool and agent phases must come from the transport; never cycle labels on a timer. The elapsed clock is not a screen-reader live region.
-
-When reading earlier messages, show a small opaque floating control at the bottom center of the thread viewport, just above the composer: 32px visible circle, with a 44px pointer target and a 16px arrow. Keep it 12px above the thread's bottom edge and open its tooltip upward. Compact activity artwork scales within that same circle; inline activity keeps its existing size. It shows active character/orb progress and becomes a down arrow once work ends. Clicking it jumps to the latest content and focuses the thread. It occupies no composer/header row. Follow new content only when already near the bottom, or after the owner sends a new message; completion, retries and stopped partial replies never pull the owner away from older messages. Preserve source hash navigation and announce phase changes once, separately from streamed tokens. The indicator remains labelled as a preview while the fixture client supplies responses.
+The Call button in a chat's header (`GatewayCallLauncher`, `src/components/gateway/call-workspace.tsx`) opens Call mode in a wide `TaskDialogContent`. On top: the call's state (ready, thinking, paused or ended), whether voice is ready, "Video unavailable", both participants and the Focus/Character style. Then the saved transcript, a typed box (4,000 characters) with a voice-turn button, and Pause/Resume, Refresh and End call in the footer. Audio is transient; the transcript is saved. An uncertain turn offers Check saved call instead of sending again.
 
 ## Character Studio
 
-Companion settings at `/settings/companion` extend the accepted dashboard world. Keep `BaseLayout`, existing semantic colors, editable radius, shared fields/cards and `FormActions`; this surface introduces no new design tokens. Its six sections belong to the shared appbar: Identity & soul, Speaking style, Appearance, Voice, Expression & modes, and Harness. Do not duplicate section navigation inside the page. Harness edits the durable primary-agent role, instructions, model reference, tool references and memory scope; Character Studio owns presentation and authored personality. Use the dedicated page for editing, a centered `TaskDialogContent` for import review, and the appbar's existing Companion destination for returning to conversation.
+Companion settings at `/settings/companion` (`src/components/gateway/character-workspace.tsx`) use the existing semantic colors, editable radius, shared fields and `FormActions`; this surface introduces no new design tokens. Its six sections belong to the shared appbar: Identity & soul, Speaking style, Appearance, Voice, Expression & modes, and Harness. Do not duplicate section navigation inside the page. Harness opens the companion's agent editor; Character Studio owns presentation and authored personality. Import, history and restore use the centered `TaskDialogContent` and `ConfirmationDialog`.
 
-The editor and live draft preview sit beside each other on large screens and stack on smaller screens. The preview may stay sticky on large screens; Save and Discard remain in the shared action footer. Preserve visible pending, error, draft and memory-only feedback. Export includes the current draft; import requires review before replacing that draft and does not save automatically.
+The editor and live draft preview sit beside each other on large screens and stack on smaller screens. The preview stays sticky on large screens; Save and Discard remain in the shared action footer with visible pending, error and draft feedback. Import reads a Conker package or Character Card file into the draft only after Use draft and does not save by itself; Export downloads the saved revision. Every save and restore adds a new version; earlier ones never change.
 
-Personality, soul, backstory, relationship and speaking style are user-authored text. Do not replace them with personality presets. Activities (idle, listening, thinking, speaking) describe what the companion is doing; named expressions describe how it presents itself. Keep the two independently assignable. Assigned expression artwork takes priority, then activity artwork, then the main portrait. Preserve the complete, uncropped portrait with at least the existing one-eighth inset on each side. Uploaded video loops are muted; disabled motion or reduced-motion preference replaces a video with the still main portrait. Still assigned images remain usable.
+Personality, backstory, relationship and speaking style are user-authored text. Activities (idle, listening, thinking, speaking) describe what the companion is doing; named expressions describe how it presents itself. Keep the two independently assignable. Assigned expression artwork takes priority, then activity artwork, then the main portrait. Preserve the complete, uncropped portrait with at least the existing one-eighth inset on each side. Uploaded video loops are muted; disabled motion or reduced-motion preference replaces a video with the still main portrait, and failed media falls back to it too.
 
-Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Keep the conversation menu's preview label and the Studio's authored-example label. Qwen voice design/cloning is not connected; reference playback is an uploaded recording, and existing browser read-aloud still uses a device voice. Show these limitations beside the relevant control.
-
-The structural pass inspected Studio's editor layout at desktop and 390 x 844, including the width-aware appbar and its secondary-action menu. This verifies layout and navigation, not newly authored media, voice integration or production save behavior.
+Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Qwen voice design is not connected; the Voice section says so beside the control.
 
 ## Memory workspace
 
 ### Gateway memory atlas
 
-Gateway Memory owns the shared `GatewayHeader`. Its one `WorkspaceSearch` occupies the primary appbar search slot; Map/Tree/List, type and graph commands use the secondary toolbar slot. Never add a second record-search field beside the universal trigger. Controls wrap without overflowing or hiding sidebar reopening. The appbar keeps the normal semantic background; only record search has a subtle field fill. Maximize carries the same header with the workspace.
+Gateway Memory (`src/components/gateway/memory-workspace.tsx`) uses the shared `GatewayHeader`. Map/Tree/List, memory type, Add memory, Refresh and Maximize use its secondary toolbar row; List searches inside its `ListCard`. Never add a second record-search field beside the universal trigger. Controls wrap without overflowing or hiding sidebar reopening. Maximize carries the same header with the workspace.
 
-The active gateway workspace defaults to Map; Tree and List use `?view=graph|hierarchy|database`. Tree restores the previously unreachable hierarchy mode. Map uses a bounded, static D3 force layout and Tree uses D3 hierarchy; neither continuously runs a simulation. React Flow owns pan, zoom, dragging, keyboard point selection and one/two-hop focus. Preserve manually dragged positions within a mode, not stale coordinates when switching layouts.
+Memory opens on Map (List on phones); the view lives in `?view=graph|hierarchy|database`. Map uses a bounded, static D3 force layout and Tree uses D3 hierarchy; neither continuously runs a simulation. React Flow owns pan, zoom, dragging, keyboard point selection and one/two-hop focus. Preserve manually dragged positions within a mode, not stale coordinates when switching layouts.
 
 Map and Tree share gateway metadata records, the existing semantic surfaces and bounded chart-category colors. Small type hubs carry record counts; finer curves expose recorded connections. Dashed branches are type organization, never factual relationships. Solid curves represent server-supplied links only. A quiet legend distinguishes them; relation labels appear on edge hover and the inspector retains the exact relationship. Labels stay visible in small graphs, and zoom/selection reveal detail in larger graphs. No fabricated points, embedding similarity, unrelated glows or route-specific palette.
 
-Load relationship metadata for up to 100 loaded records, four requests at a time, one connection page per record, at most 250 distinct records. Cancel on navigation/filter changes and announce loading, incomplete pages or failed reads as a partial graph. Content remains an explicit inspector read; graph exploration cannot write memories. The five-record gateway preview is not the legacy 50-record illustrative dataset below. Keep List as the structured alternative, including search and pagination, and preserve the shared mobile/desktop inspector and revision-bound Forget flow.
-
-### Legacy fixture workspace
-
-Memory uses `BaseLayout variant="canvas"`. The shared appbar remains navigation; a local toolbar owns the Network, Hierarchy and Database dropdown, searchable point picker, dataset choice, filters, folder-browser toggle and Maximize/Restore action. Modes use `?view=graph|hierarchy|database`; legacy `tab` links remain accepted, including `sources` as Hierarchy. Text/category filters stay URL-backed across modes. The point picker searches the currently available points, supports keyboard selection and focuses a chosen point; it is distinct from the shared record-text filter.
-
-The React Flow graph combines small filled record points, outlined topic points, source symbols and labeled category folders. Existing chart tokens supply five category colors; the graph locally bounds their lightness for visibility in light and dark themes. This color has a data role, while chrome, labels, controls and selection retain semantic theme roles. Labels reveal with zoom and selection/neighbor emphasis; folder labels stay visible. Thin curved edges keep the overall structure readable: dotted means shared topic; solid means category parent or source reference. Hover/selection highlights connected points, and controls provide dragging, pan/zoom, fit/reset and one/two-hop focus. Reduced motion disables optional transitions.
-
-`src/lib/memory-layout.ts` projects Library → category → record parent-child links. Network uses deterministic organic category clusters and bounded spacing relaxation; Hierarchy uses deterministic category columns with linked topics/sources arranged below. These are starting positions, not a running force simulation or embedding similarity. Dragging changes the view only. The expandable folder browser groups categories and records; neither it nor the hierarchy represents server folders or physical file storage. Topic links express shared metadata, not agreement between claims. Original source references remain separate and intact.
-
-Selecting a graph point, folder-browser record or database record immediately updates the shared nonmodal `WorkspaceInspector`. It docks right on desktop and at the bottom on mobile, preserving space for further canvas selection. Compose its evidence, linked records, topic navigation, JSON payload and copy action with `OverlayBody` and `ReferenceSection`. Database retains `DataTable` sorting/column controls and `RecordItem` mobile presentation. New/edit remain centered `TaskDialogContent` flows with `FormActions`; delete remains `ConfirmationDialog`.
-
-The default illustrative dataset contains 50 fictional, read-only records across five categories in `src/lib/memory-demo.ts`. Keep it isolated from the memory store and explicitly labeled as illustrative, not the user's data. Sample records selects the original four claims and preserved source URLs; only that fixture dataset supports create/edit/delete through `ConkerClient`. Source-hash links open the sample dataset. Edits retain original source/text for review, new notes are unreviewed, and fixture changes reset on reload. JSON inspection/export reports the selected dataset with its preview/demo boundary. There is no live vector search, media upload/transcription, physical file editing or production MemoryGate write.
-
-Research and integration boundaries are in [memory-workspace-research.md](https://github.com/Conker-AI/conker/blob/5e71ee97a09bb2d5a7fcef73c8bf8bff87229d29/docs/archive/memory-workspace-research.md). The canvas revision was reviewed in desktop dark/light and 390×844 mobile captures, including searchable selection, dock geometry, hierarchy and maximize/restore. The review found stale layout zoom and mobile point occlusion; both were corrected and visually rechecked. Build, design guard, affected lint, memory/layout, navigation and daily-overview checks passed. This verifies the frontend preview, not a production memory connection.
+Load relationship metadata for up to 100 loaded records, four requests at a time, one connection page per record, at most 250 distinct records. Cancel on navigation/filter changes and announce loading, incomplete pages or failed reads as a partial graph. Content remains an explicit inspector read; graph exploration cannot write memories. Keep List as the structured alternative, including search and pagination, and preserve the shared mobile/desktop inspector and revision-bound Forget flow.
 
 ## Memory forgetting and recovery
 
@@ -794,23 +603,23 @@ either. No memory text or deletion intent is stored in browser storage.
 
 ## Tools workspace
 
-Tools extends the existing compact, full-width shadcn New York foundation without new theme or density tokens. One searchable library combines connector actions and workflows using `BaseLayout variant="collection"`, `DataTable` and responsive `RecordItem` rows. Keep one Tools sidebar destination; implementation type is a library filter, not separate Flows navigation.
+Tools adds no new theme or density tokens. The library (`src/components/gateway/tools-inventory.tsx`) is a `ListCard` whose items open their details in place. Keep one Tools sidebar destination; MCP servers (`?view=mcp`) and workflow drafts (`?draft=`) live under it, not in separate navigation.
 
-Opening a capability uses `BaseLayout variant="canvas"`. Build, Source and Configure are local views of the same definition, selected in the compact workspace toolbar; this extends Memory's local-mode exception and does not add appbar route sections. Keep the canvas in the leading viewport, with a searchable step palette, optional step outline, visible Save/Test actions and secondary actions in the existing menu. Maximize/Restore changes the workspace frame. Preserve the selected theme's semantic surfaces, editable corners, shared controls and focus treatment; chart colors may distinguish step types without becoming a route palette.
+Opening a draft shows `ToolEditor` (`src/app/tools/tool-editor.tsx`) below the appbar. Build, Source and Configure are local views of the same definition, selected in the compact editor toolbar; this extends Memory's local-mode exception and does not add appbar route sections. Keep the canvas in the leading viewport, with an add-step palette, optional step outline, visible Save/Test actions and secondary actions in the existing menu. Maximize/Restore changes the workspace frame. Preserve the selected theme's semantic surfaces, editable corners, shared controls and focus treatment; chart colors may distinguish step types without becoming a route palette.
 
-Selection opens the shared nonmodal `WorkspaceInspector`, composed with `OverlayBody` and `ReferenceSection`, for focused step properties, connections and matching test output. This is contextual editing within the dedicated workspace. Shared inspector docking styles belong to `src/styles/design-system.css`, so Tools does not depend on Memory's stylesheet. Desktop docks the inspector on the right; mobile docks it below the usable selection region. Narrow screens default to a readable step list with an optional graph. Keep keyboard step selection and connection forms available alongside dragging, ports and stored directed edges.
+Selection opens the shared nonmodal `WorkspaceInspector`, composed with `OverlayBody` and `ReferenceSection`, for focused step properties, connections and matching test output. This is contextual editing within the dedicated workspace. Shared inspector docking styles belong to `src/styles/design-system.css`, so Tools does not depend on Memory's stylesheet. Desktop docks the inspector on the right; mobile docks it below the usable selection region. Keep keyboard step selection and connection forms available alongside dragging, ports and stored directed edges.
 
 Test results and version/run history occupy an optional bottom panel. Only a receipt matching the exact current draft may color steps or supply their output; historical receipts remain inspectable with their earlier-draft/version notice. Source edits canonical JSON. Preserve invalid source and unapplied step arguments until explicit Apply/Discard, with validation beside the task and visible draft feedback. Creation uses `TaskDialogContent` and `FormActions`; deletion uses `ConfirmationDialog`.
 
-Keep local-preview and reload-reset boundaries visible. Fixture tests, credential references and preview publication do not imply external execution, real credentials, live MCP registration or scheduled jobs. The current graph supports bounded transformations and published child calls; arbitrary scripts, general loop bodies, joins, waits, retries, AI nodes and resumable workers remain deferred. [tools-workspace.md](https://github.com/Conker-AI/conker/blob/b3044002de91003c70e64e8138c0a6e1293e9bbf/docs/archive/tools-workspace.md) owns the exact implemented scope and verification record. Check this surface in desktop light/dark and narrow layouts, including inspector and receipt-panel coexistence; use `npm run check:tools` and the shared design/build checks for relevant changes.
+Check this surface in desktop light/dark and narrow layouts, including inspector and receipt-panel coexistence; use `npm run check:tools` and the shared design/build checks for relevant changes.
 
 API-key provider controls serialize status reads and mutations under the current owner and client lifetime. Status reads have a 15-second deadline; mutations have a 210-second deadline starting after owner verification at dispatch. Pending and failed reads label retained revisions and spending policy as last-checked evidence. A dispatched failure or timeout requires an explicit read-only status check before another action and retains the earlier-unconfirmed notice after that check; no operation is automatically replayed. Server revision, activation recovery and spending-policy guards remain authoritative.
 
 Each credential editor opening has a distinct identity. An unchanged successful status check can preserve its unsent in-memory key; changed provider evidence, owner/client replacement, closing, or submission clears it. Submission clears the key before password verification and never restores it after cancellation or failure; only the scoped in-flight request holds that value. Stale form/input/close callbacks cannot address a reopened editor. Refresh and recovery controls preserve keyboard focus; dialog closure restores the current opener or a live status action without taking focus from another dialog.
 
-Native sessions (`/system?tab=native-sessions`) is a System section with a Work shortcut and a Terminal link. The provider selector separates Conker-owned isolated Claude background sessions from saved Codex history and from Chats. Claude interactive native entries are not implied; truncation and omitted-entry counts are independent. Use the shared collection search and record rows, with `DetailPanel` for exact identity, working directory, native state and recovery. The attach command is a manual Conker-root CLI instruction, never automatically injected into a terminal; native permissions and approvals remain in Claude.
+Native sessions (`/system?tab=native-sessions`) is a Server section with a Terminal link. The provider selector separates Conker-owned isolated Claude background sessions from saved Codex history and from Chats. Claude interactive native entries are not implied; truncation and omitted-entry counts are independent. Use the shared `ListCard` search and `RecordItem` rows, with `InlineDetails` for exact identity, working directory, native state and recovery. The attach command is a manual Conker-root CLI instruction, never automatically injected into a terminal; native permissions and approvals remain in Claude.
 
-Toolbar choices use `WorkspaceChoice`: a Select inline, a radio submenu in desktop overflow, and labeled radio groups directly in the mobile menu so choices stay within the viewport. Composite Select roots must not be slotted as menu items because they have no focusable DOM node. Provider changes restore focus only after the new provider commits, with owner, source and navigation-generation fences. Selecting the checked provider leaves navigation unchanged. Mobile route actions wrap inside their reserved width, keeping Open views independently reachable.
+Toolbar choices use `WorkspaceChoice`: a Select inline, a radio submenu in desktop overflow, and labeled radio groups directly in the mobile menu so choices stay within the viewport. Composite Select roots must not be slotted as menu items because they have no focusable DOM node. Provider changes restore focus only after the new provider commits, with owner, source and navigation-generation fences. Selecting the checked provider leaves navigation unchanged.
 
 Native metadata is last-checked evidence with explicit Refresh/Check status. Reads are bounded to 35 seconds and fenced by owner, client lifetime and selection; output is an explicit, identity-matched, bounded plain-text snapshot, cleared on source changes or failed identity reconciliation. No output polling or browser persistence. Stop uses `ConfirmationDialog` then owner verification for the exact ID and immutable identity, with a 45-second deadline beginning only at dispatch. Success means Stop requested, never stopped without a fresh read. Unknown outcomes require explicit status reconciliation and retain an uncertainty note; no Stop is automatically replayed. Closing the owner shell does not promise that independently supervised background native sessions have ended.
 
