@@ -381,8 +381,9 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
-         *     none of them deletes or replaces anything. Answers are the helper's own.
+         *     and the actions: backup.verify, services.restart and backup.run with his session (none of
+         *     them deletes or replaces anything), update.run with his password too. Answers are the
+         *     helper's own.
          */
         post: operations["host_operations_api_host_read_post"];
         delete?: never;
@@ -401,16 +402,18 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
-         *     none of them deletes or replaces anything. Answers are the helper's own.
+         *     and the actions: backup.verify, services.restart and backup.run with his session (none of
+         *     them deletes or replaces anything), update.run with his password too. Answers are the
+         *     helper's own.
          */
         get: operations["host_operations_api_host_ops_get"];
         put?: never;
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
-         *     none of them deletes or replaces anything. Answers are the helper's own.
+         *     and the actions: backup.verify, services.restart and backup.run with his session (none of
+         *     them deletes or replaces anything), update.run with his password too. Answers are the
+         *     helper's own.
          */
         post: operations["host_operations_api_host_ops_post"];
         delete?: never;
@@ -429,8 +432,9 @@ export interface paths {
         /**
          * Host Operations
          * @description Server actions (ADR-0014): the receipts, the two reads (services.status, backup.list)
-         *     and the three actions (backup.verify, services.restart, backup.run), all with his session:
-         *     none of them deletes or replaces anything. Answers are the helper's own.
+         *     and the actions: backup.verify, services.restart and backup.run with his session (none of
+         *     them deletes or replaces anything), update.run with his password too. Answers are the
+         *     helper's own.
          */
         get: operations["host_operations_api_host_ops__identity__get"];
         put?: never;

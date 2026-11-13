@@ -510,6 +510,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/self-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description Each check's last status and since when, and the open alerts.
+         */
+        get: operations["overview_self_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/self-check/alerts/{alert_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description Hide an alert until its check recovers and breaks again.
+         */
+        post: operations["dismiss_self_check_alerts__alert_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description The newest release still offered and every update result not dismissed.
+         */
+        get: operations["overview_updates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/updates/offers/{version}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Offer
+         * @description Stop offering this version; a newer release makes a new offer.
+         */
+        post: operations["dismiss_offer_updates_offers__version__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/updates/results/{result_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Result
+         * @description Clear one update result from the Inbox.
+         */
+        post: operations["dismiss_result_updates_results__result_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/updates/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report
+         * @description The host's daily check and finished update receipts. Sending one twice changes nothing.
+         */
+        post: operations["report_updates_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/change-requests": {
         parameters: {
             query?: never;
@@ -1801,75 +1921,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/memory-proposals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listing */
-        get: operations["listing_memory_proposals_get"];
-        put?: never;
-        /** Create */
-        post: operations["create_memory_proposals_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/memory-proposals/{identity}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get */
-        get: operations["get_memory_proposals__identity__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/memory-proposals/{identity}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Decide */
-        post: operations["decide_memory_proposals__identity__decision_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/memory-proposals/{identity}/reconcile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reconcile */
-        post: operations["reconcile_memory_proposals__identity__reconcile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/team-runs/from-team/{team_id}": {
         parameters: {
             query?: never;
@@ -2333,6 +2384,26 @@ export interface paths {
          * @description Recent service calls and the last day's totals; no prompt or answer text.
          */
         get: operations["usage_inference_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/inference/spending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spending
+         * @description Today's paid model calls against the owner's daily cap; ids and counts only.
+         */
+        get: operations["spending_inference_spending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4284,7 +4355,7 @@ export interface paths {
         put?: never;
         /**
          * Delete
-         * @description Delete one imported chat for good; memories made from it stay until forgotten.
+         * @description Delete one imported chat for good; its words are erased from memory in the background.
          */
         post: operations["delete_imports_chats__chat_id__delete_post"];
         delete?: never;
@@ -5377,6 +5448,45 @@ export interface components {
             /** Count */
             count?: number | null;
         };
+        /** AskList */
+        AskList: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Results */
+            results: components["schemas"]["AskView"][];
+        };
+        /**
+         * AskView
+         * @description One question; `chatTitle` is "Private chat" for a private one.
+         */
+        AskView: {
+            /** Id */
+            id: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Chattitle */
+            chatTitle: string;
+            /** Question */
+            question: string;
+            /** Options */
+            options: string[];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "answered" | "dismissed";
+            /** Answer */
+            answer: string | null;
+            /** Chosen */
+            chosen: boolean | null;
+            /** Createdat */
+            createdAt: number;
+            /** Answeredat */
+            answeredAt: number | null;
+        };
         /** Assignment */
         Assignment: {
             /** Enabled */
@@ -5829,6 +5939,49 @@ export interface components {
             /** Requiredfacts */
             requiredFacts?: string[];
         };
+        /** ChangeRequestList */
+        ChangeRequestList: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Results */
+            results: components["schemas"]["ChangeRequestView"][];
+        };
+        /** ChangeRequestView */
+        ChangeRequestView: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ai_job" | "tool_draft" | "memory" | "agent" | "team";
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Sessionid */
+            sessionId?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "approved" | "declined" | "failed";
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Createdat */
+            createdAt: number;
+            /** Decidedat */
+            decidedAt?: number | null;
+        };
         /** ChannelUpdate */
         ChannelUpdate: {
             /** Microphone */
@@ -5877,6 +6030,266 @@ export interface components {
              */
             captions: boolean;
         };
+        /** CharacterActivities */
+        CharacterActivities: {
+            /** Idle */
+            idle: string | null;
+            /** Listening */
+            listening: string | null;
+            /** Thinking */
+            thinking: string | null;
+            /** Speaking */
+            speaking: string | null;
+        };
+        /** CharacterAppearance */
+        CharacterAppearance: {
+            /** Description */
+            description: string;
+            /** Inset */
+            inset: number;
+            /** Assets */
+            assets: components["schemas"]["CharacterAsset"][];
+            activities: components["schemas"]["CharacterActivities"];
+            /** Expressions */
+            expressions: components["schemas"]["CharacterExpression"][];
+        };
+        /** CharacterAsset */
+        CharacterAsset: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "video";
+            /** Src */
+            src: string;
+        };
+        /** CharacterDetail */
+        CharacterDetail: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** CharacterEmotions */
+        CharacterEmotions: {
+            /**
+             * Neutral
+             * @enum {string}
+             */
+            neutral: "default" | "sprout" | "round" | "cat" | "portrait";
+            /**
+             * Happy
+             * @enum {string}
+             */
+            happy: "default" | "sprout" | "round" | "cat" | "portrait";
+            /**
+             * Thinking
+             * @enum {string}
+             */
+            thinking: "default" | "sprout" | "round" | "cat" | "portrait";
+            /**
+             * Concerned
+             * @enum {string}
+             */
+            concerned: "default" | "sprout" | "round" | "cat" | "portrait";
+            /**
+             * Celebrating
+             * @enum {string}
+             */
+            celebrating: "default" | "sprout" | "round" | "cat" | "portrait";
+        };
+        /** CharacterExamples */
+        CharacterExamples: {
+            /** Prompt */
+            prompt: string;
+            /** Focus */
+            focus: string;
+            /** Character */
+            character: string;
+        };
+        /** CharacterExpression */
+        CharacterExpression: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Instruction */
+            instruction: string;
+            /** Assetid */
+            assetId: string | null;
+        };
+        /** CharacterHistory */
+        CharacterHistory: {
+            /** Results */
+            results: components["schemas"]["CharacterVersion"][];
+        };
+        /**
+         * CharacterImportDraft
+         * @description POST /characters/{agent_id}/import: a draft to review; nothing is saved.
+         */
+        CharacterImportDraft: {
+            profile: components["schemas"]["CharacterProfile"];
+            /** Note */
+            note: string;
+        };
+        /** CharacterMode */
+        CharacterMode: {
+            /** Text */
+            text: string;
+            /** Voice */
+            voice: string;
+            /** Expressiveness */
+            expressiveness: number;
+            /** Motion */
+            motion: boolean;
+        };
+        /** CharacterModes */
+        CharacterModes: {
+            /**
+             * Default
+             * @enum {string}
+             */
+            default: "focus" | "character";
+            focus: components["schemas"]["CharacterMode"];
+            character: components["schemas"]["CharacterMode"];
+        };
+        /**
+         * CharacterPackage
+         * @description GET /characters/{agent_id}/export: a Conker v1 character package.
+         */
+        CharacterPackage: {
+            /**
+             * Format
+             * @constant
+             */
+            format: "conker-character";
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            character: components["schemas"]["CharacterProfile"];
+        };
+        /** CharacterProfile */
+        CharacterProfile: {
+            /** Name */
+            name: string;
+            /** Mood */
+            mood: string;
+            /** Personality */
+            personality: string;
+            /** Speakingstyle */
+            speakingStyle: string;
+            /**
+             * Speakingpreset
+             * @enum {string}
+             */
+            speakingPreset: "warm" | "direct" | "curious" | "custom";
+            /** Portrait */
+            portrait: string;
+            /**
+             * Renderer
+             * @enum {string}
+             */
+            renderer: "static" | "live-2d" | "live-3d";
+            /**
+             * Face
+             * @enum {string}
+             */
+            face: "sprout" | "round" | "cat";
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "green" | "soft" | "graphite";
+            emotions: components["schemas"]["CharacterEmotions"];
+            studio: components["schemas"]["CharacterStudio"];
+        };
+        /**
+         * CharacterRecord
+         * @description GET /characters/{agent_id}: the current or a chosen revision; revision 0 and no profile
+         *     before the first save.
+         */
+        CharacterRecord: {
+            /** Agentid */
+            agentId: string;
+            /** Revision */
+            revision: number;
+            profile: components["schemas"]["CharacterProfile"] | null;
+        };
+        /**
+         * CharacterSaved
+         * @description A save or restore: the new revision with the profile it holds.
+         */
+        CharacterSaved: {
+            /** Agentid */
+            agentId: string;
+            /** Revision */
+            revision: number;
+            profile: components["schemas"]["CharacterProfile"];
+        };
+        /** CharacterStudio */
+        CharacterStudio: {
+            /** Soul */
+            soul: string;
+            /** Backstory */
+            backstory: string;
+            /** Relationship */
+            relationship: string;
+            /** Details */
+            details: components["schemas"]["CharacterDetail"][];
+            examples: components["schemas"]["CharacterExamples"];
+            appearance: components["schemas"]["CharacterAppearance"];
+            voice: components["schemas"]["CharacterVoice"];
+            modes: components["schemas"]["CharacterModes"];
+        };
+        /** CharacterVersion */
+        CharacterVersion: {
+            /** Revision */
+            revision: number;
+            /** Created At */
+            created_at: number;
+            /** Restored From */
+            restored_from: number | null;
+        };
+        /** CharacterVoice */
+        CharacterVoice: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "design" | "reference";
+            /**
+             * Engine
+             * @constant
+             */
+            engine: "qwen3-tts";
+            /** Description */
+            description: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "English" | "Chinese" | "Japanese" | "Korean" | "German" | "French" | "Russian" | "Portuguese" | "Spanish" | "Italian";
+            /** Pronunciation */
+            pronunciation: string;
+            /** Transcript */
+            transcript: string;
+            reference: components["schemas"]["CharacterVoiceReference"] | null;
+        };
+        /** CharacterVoiceReference */
+        CharacterVoiceReference: {
+            /** Name */
+            name: string;
+            /** Src */
+            src: string;
+        };
         /** Chart */
         Chart: {
             /**
@@ -5902,6 +6315,519 @@ export interface components {
             label: string;
             /** Values */
             values: number[];
+        };
+        /**
+         * ChatArchiveResult
+         * @description POST /sessions/archive: the chats now in that state, each once, in the order sent.
+         */
+        ChatArchiveResult: {
+            /** Sessions */
+            sessions: string[];
+            /** Archived */
+            archived: boolean;
+        };
+        /** ChatAttachmentPrivacy */
+        ChatAttachmentPrivacy: {
+            /** Memorydisabled */
+            memoryDisabled: boolean;
+            /** Harnessdisabled */
+            harnessDisabled: boolean;
+            /** Incognito */
+            incognito: boolean;
+        };
+        /** ChatAttachmentProcessing */
+        ChatAttachmentProcessing: {
+            /** Status */
+            status: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * ChatBackgroundThinking
+         * @description Background work for one turn (pi.turns.thinking).
+         */
+        ChatBackgroundThinking: {
+            /** Turn Id */
+            turn_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: number;
+            /** Ended At */
+            ended_at: number | null;
+            /** Model */
+            model: string | null;
+            /** Provider */
+            provider: string | null;
+            /** Result */
+            result: string | null;
+            /** Detail */
+            detail: string | null;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Input Message Id */
+            input_message_id: string | null;
+        };
+        /** ChatContextBudget */
+        ChatContextBudget: {
+            /** Contextwindowtokens */
+            contextWindowTokens: number;
+            /** Outputreservetokens */
+            outputReserveTokens: number;
+            /** Otherinputtokens */
+            otherInputTokens: number;
+        };
+        /**
+         * ChatContextPolicy
+         * @description The saved policy, as pi.context.controls.Policy validated it.
+         */
+        ChatContextPolicy: {
+            /** Sessioninstructions */
+            sessionInstructions: string;
+            /** Messagepolicies */
+            messagePolicies: {
+                [key: string]: "keep-exact" | "allow-summary" | "retrieve" | "exclude";
+            };
+            budget: components["schemas"]["ChatContextBudget"];
+        };
+        /**
+         * ChatContextPolicyDocument
+         * @description GET and POST /context/{session_id}: revision 0 and no policy until the first save.
+         */
+        ChatContextPolicyDocument: {
+            /** Revision */
+            revision: number;
+            policy: components["schemas"]["ChatContextPolicy"] | null;
+        };
+        /**
+         * ChatForgetDone
+         * @description 200: every named chat was already forgotten, so nothing was queued.
+         */
+        ChatForgetDone: {
+            /**
+             * State
+             * @constant
+             */
+            state: "done";
+            /** Sessions */
+            sessions: string[];
+        };
+        /** ChatForgetOverview */
+        ChatForgetOverview: {
+            /** Supervised */
+            supervised: boolean;
+            /** Pending */
+            pending: string[];
+            /** Results */
+            results: components["schemas"]["ChatForgetResult"][];
+            /** Chats */
+            chats: components["schemas"]["ChatForgetPlan"][];
+        };
+        /**
+         * ChatForgetPlan
+         * @description What deleting one named chat reaches (forget_queue.summary) and the confirmation to send.
+         */
+        ChatForgetPlan: {
+            /** Sessionid */
+            sessionId: string;
+            /** Sessionids */
+            sessionIds: string[];
+            /** Messages */
+            messages: number;
+            /** Turns */
+            turns: number;
+            /** Approvalrequests */
+            approvalRequests: number;
+            /** Confirmation */
+            confirmation: string;
+            /** Alreadyforgotten */
+            alreadyForgotten: boolean;
+        };
+        /**
+         * ChatForgetQueued
+         * @description 202: the chats are queued and Pi restarts to forget them before it opens again.
+         */
+        ChatForgetQueued: {
+            /**
+             * State
+             * @constant
+             */
+            state: "restarting";
+            /** Sessions */
+            sessions: string[];
+        };
+        /**
+         * ChatForgetResult
+         * @description How a queued chat ended at a start (forget_queue._record); `receiptId` only when done.
+         */
+        ChatForgetResult: {
+            /** Sessionid */
+            sessionId: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "done" | "refused" | "retrying";
+            /** Receiptid */
+            receiptId: string | null;
+            /** Finishedat */
+            finishedAt: number;
+            /** Detail */
+            detail: string | null;
+        };
+        /**
+         * ChatMemoryAdmission
+         * @description How many saved messages MemoryGate admitted, filtered out or deleted.
+         */
+        ChatMemoryAdmission: {
+            /** Admitted */
+            admitted: number;
+            /** Filtered */
+            filtered: number;
+            /** Deleted */
+            deleted: number;
+        };
+        /**
+         * ChatMemoryRetrieval
+         * @description What memory a turn was given; `turn_id` and `recorded_at` only when it was recorded.
+         */
+        ChatMemoryRetrieval: {
+            /** Status */
+            status: string;
+            package: components["schemas"]["JsonValue"];
+            /** Turn Id */
+            turn_id?: string | null;
+            /** Recorded At */
+            recorded_at?: number | null;
+        };
+        /**
+         * ChatMemoryStatus
+         * @description Memory delivery of the chat's messages; `retrieval` is null for the chat, set per turn.
+         */
+        ChatMemoryStatus: {
+            /** Configured */
+            configured: boolean;
+            /** Pending Ingestion */
+            pending_ingestion: number;
+            /** Blocked Delivery */
+            blocked_delivery: number;
+            /** Pending Deletion */
+            pending_deletion: number;
+            admission: components["schemas"]["ChatMemoryAdmission"];
+            /** Delivery Error */
+            delivery_error: string | null;
+            retrieval: components["schemas"]["ChatMemoryRetrieval"] | null;
+            /** Notices */
+            notices: string[];
+        };
+        /**
+         * ChatMessage
+         * @description One message. A forgotten one carries `content_status`, `receipt_id` and `forgotten_at`;
+         *     the other optional keys are present only when they apply.
+         */
+        ChatMessage: {
+            /** Id */
+            id: string;
+            /** Session Id */
+            session_id: string;
+            /** Seq */
+            seq: number;
+            /** Role */
+            role: string;
+            content: components["schemas"]["JsonValue"];
+            /** Created At */
+            created_at: number;
+            /** Receipt Id */
+            receipt_id?: string | null;
+            /** Forgotten At */
+            forgotten_at?: number | null;
+            /** Content Status */
+            content_status?: "forgotten" | null;
+            /** Citations */
+            citations?: components["schemas"]["Citation"][] | null;
+            memory_delivery?: components["schemas"]["ChatMessageMemoryDelivery"] | null;
+            response_family?: components["schemas"]["ChatResponseFamily"] | null;
+            /** Turn Id */
+            turn_id?: string | null;
+            /** Agent Id */
+            agent_id?: string | null;
+            /** Reply To */
+            reply_to?: string | null;
+            /** Attachments */
+            attachments?: components["schemas"]["ChatMessageAttachment"][] | null;
+        };
+        /**
+         * ChatMessageAttachment
+         * @description A file sent with a message; an unreadable one keeps its id and size but not its name.
+         */
+        ChatMessageAttachment: {
+            /** Id */
+            id: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+            /** Type */
+            type: string;
+            /** Lastmodified */
+            lastModified: number;
+            /** Createdat */
+            createdAt: number;
+            /** Sha256 */
+            sha256: string | null;
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "available" | "source-archived" | "removed" | "source_unavailable" | "privacy_unknown";
+            privacy: components["schemas"]["ChatAttachmentPrivacy"] | null;
+            /** Privateorigin */
+            privateOrigin: boolean | null;
+            processing: components["schemas"]["ChatAttachmentProcessing"];
+            /**
+             * Execution
+             * @constant
+             */
+            execution: "not-wired";
+            /** Storage */
+            storage: string;
+        };
+        /**
+         * ChatMessageMemoryDelivery
+         * @description What became of one owner message in long-term memory (pi.memory.delivery).
+         */
+        ChatMessageMemoryDelivery: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "saved" | "filtered" | "pending" | "excluded" | "removed" | "unavailable";
+            /** Reason Code */
+            reason_code: ("forgotten" | "legacy_unknown" | "privacy_disabled" | "agent_excluded" | "forget_pending" | "retry_scheduled" | "queued" | "blocked" | "invalid_receipt" | "destination_unknown") | null;
+            /** Admission Method */
+            admission_method: ("owner_requested" | "signal" | "filtered") | null;
+            /** Memory Id */
+            memory_id: string | null;
+        };
+        /**
+         * ChatPendingSubmission
+         * @description A saved input not yet resolved; `status` is its turn's status, else its state.
+         */
+        ChatPendingSubmission: {
+            /** Request Id */
+            request_id: string;
+            /** Requested Session Id */
+            requested_session_id: string;
+            /** Effective Session Id */
+            effective_session_id: string | null;
+            /** Turn Id */
+            turn_id: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "preparing" | "bound" | "preparation_failed" | "preparation_interrupted" | "forgotten";
+            /** Created At */
+            created_at: number;
+            /** Updated At */
+            updated_at: number;
+            /** Status */
+            status: string;
+            /**
+             * Content Status
+             * @constant
+             */
+            content_status: "available";
+        };
+        /**
+         * ChatResponseFamily
+         * @description The answer versions a message belongs to, and which one is selected.
+         */
+        ChatResponseFamily: {
+            /** Root Message Id */
+            root_message_id: string;
+            /** Retry Of */
+            retry_of: string | null;
+            /** Selected Message Id */
+            selected_message_id: string;
+            /** Revision */
+            revision: number;
+        };
+        /**
+         * ChatSessionDocument
+         * @description GET /sessions/{session_id}: the sessions row with what belongs to it.
+         */
+        ChatSessionDocument: {
+            /** Id */
+            id: string;
+            /** Parent Id */
+            parent_id: string | null;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: number;
+            /** Closed At */
+            closed_at: number | null;
+            /** Summary */
+            summary: string | null;
+            /** Pending Submissions */
+            pending_submissions: components["schemas"]["ChatPendingSubmission"][];
+            /** Pending Submissions Truncated */
+            pending_submissions_truncated: boolean;
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Turns */
+            turns: components["schemas"]["ChatTurn"][];
+            memory: components["schemas"]["ChatMemoryStatus"];
+            /** Thinking */
+            thinking: components["schemas"]["ChatBackgroundThinking"][];
+        };
+        /**
+         * ChatSettings
+         * @description A chat's saved settings (pi.conversation.settings.Settings); keys a chat was saved
+         *     without are absent.
+         */
+        ChatSettings: {
+            /** Agentid */
+            agentId: string;
+            privacy: components["schemas"]["ChatSettingsPrivacy"];
+            /** Projectid */
+            projectId?: string | null;
+            /** Projectsources */
+            projectSources?: (components["schemas"]["Conversation"] | components["schemas"]["Task"] | components["schemas"]["File"])[] | null;
+            /** Presentationmode */
+            presentationMode?: ("focus" | "character") | null;
+            /** Access */
+            access?: ("default" | "ask" | "ai" | "full") | null;
+        };
+        /**
+         * ChatSettingsDocument
+         * @description GET and POST /sessions/{identity}/settings: revision 0 until the first save. `settings`
+         *     keeps the keys it was saved with, so a chat saved before a field existed omits it.
+         */
+        ChatSettingsDocument: {
+            /** Revision */
+            revision: number;
+            settings: components["schemas"]["ChatSettings"];
+        };
+        /** ChatSettingsPrivacy */
+        ChatSettingsPrivacy: {
+            /** Memorydisabled */
+            memoryDisabled: boolean;
+            /** Harnessdisabled */
+            harnessDisabled: boolean;
+        };
+        /**
+         * ChatSummaryDocument
+         * @description GET and POST /context/{session_id}/summary: the current summary and the newest 100
+         *     versions, newest first.
+         */
+        ChatSummaryDocument: {
+            /** Revision */
+            revision: number;
+            /** Summary */
+            summary: string | null;
+            /** Source Session Id */
+            source_session_id: string | null;
+            /** Versions */
+            versions: components["schemas"]["ChatSummaryVersion"][];
+        };
+        /**
+         * ChatSummaryVersion
+         * @description One kept summary; `restored_from` names the revision a restore copied.
+         */
+        ChatSummaryVersion: {
+            /** Revision */
+            revision: number;
+            /** Summary */
+            summary: string | null;
+            /** Source Session Id */
+            source_session_id: string | null;
+            /** Created At */
+            created_at: number;
+            /** Restored From */
+            restored_from: number | null;
+        };
+        /**
+         * ChatTrashResult
+         * @description POST /sessions/trash: the chats moved to the Trash (`trashed`) or restored from it.
+         */
+        ChatTrashResult: {
+            /** Sessions */
+            sessions: string[];
+            /** Trashed */
+            trashed: boolean;
+        };
+        /**
+         * ChatTurn
+         * @description One turn row; `acted` is 0 or 1.
+         */
+        ChatTurn: {
+            /** Id */
+            id: string;
+            /** Session Id */
+            session_id: string;
+            /** Status */
+            status: string;
+            /** Provider */
+            provider: string | null;
+            /** Model */
+            model: string | null;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Cached Tokens */
+            cached_tokens: number | null;
+            /** Cost Usd */
+            cost_usd: number | null;
+            /** Latency Ms */
+            latency_ms: number | null;
+            /** Route Tier */
+            route_tier: string | null;
+            /** Route Reason */
+            route_reason: string | null;
+            /** Approval Request Id */
+            approval_request_id: string | null;
+            /** Approval Tool Id */
+            approval_tool_id: string | null;
+            approval_args: components["schemas"]["JsonValue"];
+            /** Approval Expires At */
+            approval_expires_at: string | null;
+            /** Approval Intent */
+            approval_intent: string | null;
+            /** Acted */
+            acted: number;
+            /** Started At */
+            started_at: number;
+            /** Ended At */
+            ended_at: number | null;
+            /** Detail */
+            detail: string | null;
+            /** Usage Version */
+            usage_version: number | null;
+            action: components["schemas"]["ChatTurnAction"] | null;
+            memory: components["schemas"]["ChatMemoryStatus"];
+        };
+        /**
+         * ChatTurnAction
+         * @description The turn's latest tool action.
+         */
+        ChatTurnAction: {
+            /** Id */
+            id: string;
+            /** State */
+            state: string;
+            /** Job Id */
+            job_id: string | null;
         };
         /** Check */
         Check: {
@@ -5995,6 +6921,52 @@ export interface components {
             /** Defaultmodelid */
             defaultModelId: string | null;
             roleSettings: components["schemas"]["Roles"];
+        };
+        /**
+         * ConfigurationDocument
+         * @description What GET and POST /models/configuration answer; no configuration before the first save.
+         */
+        ConfigurationDocument: {
+            /** Revision */
+            revision: number;
+            configuration: components["schemas"]["Configuration"] | null;
+        };
+        /** ConfiguredRootCatalogue */
+        ConfiguredRootCatalogue: {
+            /**
+             * Schemaversion
+             * @default 1
+             * @constant
+             */
+            schemaVersion: 1;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "configured";
+            /** Code */
+            code: null;
+            /** Roots */
+            roots: components["schemas"]["FileRoot"][];
+            capabilities: components["schemas"]["RootCapabilities"];
+            /**
+             * Authority
+             * @default none
+             * @constant
+             */
+            authority: "none";
+            /**
+             * Execution
+             * @default directory-listing-only
+             * @constant
+             */
+            execution: "directory-listing-only";
+            /**
+             * Contentincluded
+             * @default false
+             * @constant
+             */
+            contentIncluded: false;
         };
         /** ConfiguredTarget */
         ConfiguredTarget: {
@@ -6098,6 +7070,15 @@ export interface components {
             /** Sessionid */
             sessionId: string;
         };
+        /** Create */
+        Create: {
+            /** Title */
+            title: string;
+            /** Content */
+            content: components["schemas"]["Text"] | components["schemas"]["Code"] | components["schemas"]["Media"] | components["schemas"]["Table"] | components["schemas"]["Diagram"] | components["schemas"]["Chart"];
+            /** Taskid */
+            taskId?: string | null;
+        };
         /** CreateTask */
         CreateTask: {
             /** Outcome */
@@ -6134,6 +7115,14 @@ export interface components {
              * @default
              */
             note: string;
+        };
+        /** Decision */
+        Decision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "decline" | "never";
         };
         /** Decline */
         Decline: {
@@ -6494,6 +7483,36 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HandledAction
+         * @description One action that ran without asking him (Inbox Handled), and who decided it.
+         */
+        HandledAction: {
+            /** Id */
+            id: string;
+            /** Sessionid */
+            sessionId: string | null;
+            /** Turnid */
+            turnId: string | null;
+            /** Toolid */
+            toolId: string;
+            /** Decidedby */
+            decidedBy: string;
+            /** Reason */
+            reason: string;
+            /** Createdat */
+            createdAt: number;
+        };
+        /** HandledList */
+        HandledList: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Results */
+            results: components["schemas"]["HandledAction"][];
+        };
         /** Handoff */
         Handoff: {
             /** Id */
@@ -6543,6 +7562,261 @@ export interface components {
             expected_revision: number;
             /** Expected Id */
             expected_id?: string | null;
+        };
+        /**
+         * ImportBatchResult
+         * @description One import as it was reported, also kept as a line of the import history.
+         */
+        ImportBatchResult: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Batchid */
+            batchId: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chatgpt" | "claude";
+            /** Label */
+            label: string;
+            /** Digest */
+            digest: string;
+            /** Importedat */
+            importedAt: number;
+            chats: components["schemas"]["ImportChatCounts"];
+            messages: components["schemas"]["ImportMessageCounts"];
+            skipped: components["schemas"]["ImportSkipCounts"];
+            memory: components["schemas"]["ImportMemoryChoice"];
+        };
+        /** ImportChatCounts */
+        ImportChatCounts: {
+            /** New */
+            new: number;
+            /** Updated */
+            updated: number;
+            /** Unchanged */
+            unchanged: number;
+        };
+        /** ImportHistory */
+        ImportHistory: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Imports */
+            imports: components["schemas"]["ImportBatchResult"][];
+            memory: components["schemas"]["ImportMemoryStatus"];
+        };
+        /**
+         * ImportMemoryChoice
+         * @description Whether imported words were offered to memory; `reason` says why not when `on` is off.
+         */
+        ImportMemoryChoice: {
+            /** On */
+            on: boolean;
+            /** Reason */
+            reason: string | null;
+            /** Configured */
+            configured: boolean;
+        };
+        /**
+         * ImportMemoryStatus
+         * @description Imported words waiting for, sent to or refused by MemoryGate, and erasures still owed.
+         */
+        ImportMemoryStatus: {
+            /** Configured */
+            configured: boolean;
+            /** Waiting */
+            waiting: number;
+            /** Offered */
+            offered: number;
+            /** Refused */
+            refused: number;
+            /** Erasing */
+            erasing: number;
+            /** Notfoundtoerase */
+            notFoundToErase: number;
+            /** Problem */
+            problem: string | null;
+        };
+        /** ImportMessageCounts */
+        ImportMessageCounts: {
+            /** Added */
+            added: number;
+            /** Offeredtomemory */
+            offeredToMemory: number;
+        };
+        /**
+         * ImportSkipCounts
+         * @description What the export held that was left out or shortened (import_formats.SKIP_REASONS).
+         */
+        ImportSkipCounts: {
+            /** Chatsnotmatching */
+            chatsNotMatching: number;
+            /** Duplicatechats */
+            duplicateChats: number;
+            /** Emptychats */
+            emptyChats: number;
+            /** Longchats */
+            longChats: number;
+            /** Toolorhiddenmessages */
+            toolOrHiddenMessages: number;
+            /** Emptymessages */
+            emptyMessages: number;
+            /** Duplicatemessages */
+            duplicateMessages: number;
+            /** Shortenedmessages */
+            shortenedMessages: number;
+        };
+        /**
+         * ImportedChatDeletion
+         * @description `fileScrubbed` is None when this repeats an earlier deletion's record.
+         */
+        ImportedChatDeletion: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Chatid */
+            chatId: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chatgpt" | "claude";
+            /** Label */
+            label: string;
+            /** Deletedat */
+            deletedAt: number;
+            /** Messagesdeleted */
+            messagesDeleted: number;
+            /** Offeredtomemory */
+            offeredToMemory: number;
+            /** Memorynote */
+            memoryNote: string | null;
+            /** Filescrubbed */
+            fileScrubbed: boolean | null;
+        };
+        /** ImportedChatList */
+        ImportedChatList: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Total */
+            total: number;
+            /** Chats */
+            chats: components["schemas"]["ImportedChatSummary"][];
+            /** Nextoffset */
+            nextOffset: number | null;
+        };
+        /** ImportedChatSummary */
+        ImportedChatSummary: {
+            /** Id */
+            id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chatgpt" | "claude";
+            /** Label */
+            label: string;
+            /** Title */
+            title: string;
+            /** Exportid */
+            exportId: string;
+            /** Startedat */
+            startedAt: number | null;
+            /** Updatedat */
+            updatedAt: number | null;
+            /** Importedat */
+            importedAt: number;
+            /** Messagecount */
+            messageCount: number;
+            /**
+             * Archived
+             * @constant
+             */
+            archived: true;
+            /**
+             * Readonly
+             * @constant
+             */
+            readOnly: true;
+        };
+        /** ImportedChatTranscript */
+        ImportedChatTranscript: {
+            /** Id */
+            id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chatgpt" | "claude";
+            /** Label */
+            label: string;
+            /** Title */
+            title: string;
+            /** Exportid */
+            exportId: string;
+            /** Startedat */
+            startedAt: number | null;
+            /** Updatedat */
+            updatedAt: number | null;
+            /** Importedat */
+            importedAt: number;
+            /** Messagecount */
+            messageCount: number;
+            /**
+             * Archived
+             * @constant
+             */
+            archived: true;
+            /**
+             * Readonly
+             * @constant
+             */
+            readOnly: true;
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Messages */
+            messages: components["schemas"]["ImportedMessage"][];
+            /** Nextafter */
+            nextAfter: number | null;
+        };
+        /**
+         * ImportedMessage
+         * @description `memory` is None for the other assistant's replies, which are never offered.
+         */
+        ImportedMessage: {
+            /** Id */
+            id: string;
+            /** Seq */
+            seq: number;
+            /**
+             * Author
+             * @enum {string}
+             */
+            author: "user" | "assistant";
+            /** Text */
+            text: string;
+            /** Createdat */
+            createdAt: number | null;
+            /** Shortened */
+            shortened: boolean;
+            /** Exportid */
+            exportId: string;
+            /** Memory */
+            memory: ("offering" | "offered" | "refused" | "not_offered") | null;
         };
         /** InferenceAnswer */
         InferenceAnswer: {
@@ -6734,6 +8008,7 @@ export interface components {
              */
             execution: "not-triggered";
         };
+        JsonValue: unknown;
         /** Judge */
         Judge: {
             /** Request Id */
@@ -6790,6 +8065,240 @@ export interface components {
             url: string;
             /** Description */
             description: string;
+        };
+        /**
+         * MemoryCorrectionPending
+         * @description The one correction whose outcome is not settled yet, or null.
+         */
+        MemoryCorrectionPending: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            pending: components["schemas"]["MemoryCorrectionWaiting"] | null;
+        };
+        /**
+         * MemoryCorrectionPreview
+         * @description The exact current text and revision of a memory the owner is about to correct.
+         */
+        MemoryCorrectionPreview: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Memoryid */
+            memoryId: string;
+            /** Revision */
+            revision: number;
+            /** Text */
+            text: string;
+            /** Sourcetype */
+            sourceType: string;
+            /** Confidence */
+            confidence: string;
+        };
+        /**
+         * MemoryCorrectionStatus
+         * @description One correction; `revision` and `indexing` come from MemoryGate's receipt once applied.
+         */
+        MemoryCorrectionStatus: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Requestid */
+            requestId: string;
+            /** Memoryid */
+            memoryId: string;
+            /** Previousrevision */
+            previousRevision: number;
+            /** Payloadhash */
+            payloadHash: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applying" | "unknown" | "applied" | "rejected";
+            /** Revision */
+            revision: number | null;
+            /** Indexing */
+            indexing: ("pending" | "indexed" | "degraded") | null;
+            /** Errorcode */
+            errorCode: string | null;
+            /** Cachedpackagescleared */
+            cachedPackagesCleared: number;
+            /**
+             * Sourceconversationkept
+             * @constant
+             */
+            sourceConversationKept: true;
+        };
+        /** MemoryCorrectionWaiting */
+        MemoryCorrectionWaiting: {
+            /** Requestid */
+            requestId: string;
+            /** Memoryid */
+            memoryId: string;
+            /** Expectedrevision */
+            expectedRevision: number;
+            /** Payloadhash */
+            payloadHash: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applying" | "unknown";
+        };
+        /** MemoryForgetManyResult */
+        MemoryForgetManyResult: {
+            /** Requestid */
+            requestId: string;
+            /** Results */
+            results: components["schemas"]["MemoryForgetReceipt"][];
+            stopped: components["schemas"]["MemoryForgetStop"] | null;
+        };
+        /**
+         * MemoryForgetPending
+         * @description The forget request whose outcome is not settled yet (recall is paused), or null.
+         */
+        MemoryForgetPending: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            pending: components["schemas"]["MemoryForgetWaiting"] | null;
+        };
+        /**
+         * MemoryForgetReceipt
+         * @description `indexRemoval` is MemoryGate's word, checked before any receipt is stored (forget.py).
+         */
+        MemoryForgetReceipt: {
+            /** Requestid */
+            requestId: string;
+            /** Memoryid */
+            memoryId: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "forgotten";
+            /**
+             * Indexremoval
+             * @enum {string}
+             */
+            indexRemoval: "removed" | "degraded" | "pending";
+            /** Cachedpackagescleared */
+            cachedPackagesCleared: number;
+            /**
+             * Sourceconversationkept
+             * @constant
+             */
+            sourceConversationKept: true;
+        };
+        /**
+         * MemoryForgetStop
+         * @description Where a batch stopped: the item's position, its memory and the refusal.
+         */
+        MemoryForgetStop: {
+            /** Index */
+            index: number;
+            /** Memoryid */
+            memoryId: string;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** MemoryForgetWaiting */
+        MemoryForgetWaiting: {
+            /** Requestid */
+            requestId: string;
+            /** Memoryid */
+            memoryId: string;
+            /** Revision */
+            revision: number;
+        };
+        /**
+         * MemoryLibraryCard
+         * @description One record of MemoryGate's library page (its `memory_explorer.card` plus `connections`).
+         *
+         *     The keys from `memory_type` to `valid_until` come only on a memory, `hypothesis` and
+         *     `hypothesis_confidence` only on an observation. `confidence` is a word on a memory and a
+         *     number on an analysis, episode or pattern; records without one send null.
+         */
+        MemoryLibraryCard: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "memory" | "entity" | "evidence" | "analysis" | "episode" | "observation" | "pattern" | "transcript";
+            /** Id */
+            id: string;
+            /** Preview */
+            preview: string;
+            /** Preview Truncated */
+            preview_truncated: boolean;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string | null;
+            /** Confidence */
+            confidence: string | number | null;
+            /** Available Fields */
+            available_fields: string[];
+            /** Memory Type */
+            memory_type?: string | null;
+            /** Source Type */
+            source_type?: string | null;
+            /** Do Not Generalize */
+            do_not_generalize?: boolean | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+            /** Hypothesis */
+            hypothesis?: string | null;
+            /** Hypothesis Confidence */
+            hypothesis_confidence?: number | null;
+            /** Connections */
+            connections: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * MemoryLibraryPage
+         * @description `total` counts the whole scope, less this page's records from a hidden chat.
+         */
+        MemoryLibraryPage: {
+            /** Objects */
+            objects: components["schemas"]["MemoryLibraryCard"][];
+            /** Total */
+            total: number;
+            /**
+             * Scope
+             * @constant
+             */
+            scope: "all";
+            /** Next After */
+            next_after: string | null;
+            /** Search Mode */
+            search_mode: string;
+            /** Instruction */
+            instruction: string;
+        };
+        /** MemoryRemembered */
+        MemoryRemembered: {
+            /** Memoryid */
+            memoryId: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "remembered" | "already_remembered";
         };
         /** MemoryReviewInput */
         MemoryReviewInput: {
@@ -6873,6 +8382,76 @@ export interface components {
              * @constant
              */
             execution: "not-wired";
+        };
+        /**
+         * NewChatDraftDocument
+         * @description GET and POST /drafts/new: the one draft of a chat not started yet.
+         */
+        NewChatDraftDocument: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Session Id */
+            session_id: null;
+            /** Task Id */
+            task_id: null;
+            /**
+             * Content Status
+             * @constant
+             */
+            content_status: "available";
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: number | null;
+            /** Text */
+            text: string;
+            /**
+             * Research Mode
+             * @enum {string}
+             */
+            research_mode: "off" | "web" | "deep";
+            /** Model Id */
+            model_id: string | null;
+            /** Skill Ids */
+            skill_ids: string[];
+            /** Think */
+            think: boolean;
+            /** Title */
+            title: string;
+            /** Agent Id */
+            agent_id: string | null;
+            /** Privacy */
+            privacy: {
+                [key: string]: boolean;
+            };
+        };
+        /**
+         * NewChatStartDocument
+         * @description POST /drafts/new/start and GET /drafts/new/start/{request_id}: the chat a start made.
+         *     A forgotten chat keeps its id; its revisions are gone (null).
+         */
+        NewChatStartDocument: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Request Id */
+            request_id: string;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Content Status
+             * @enum {string}
+             */
+            content_status: "available" | "forgotten";
+            /** Source Revision */
+            source_revision: number | null;
+            /** Draft Revision */
+            draft_revision: number | null;
         };
         /**
          * NewDraft
@@ -7010,6 +8589,15 @@ export interface components {
              */
             level: "auto" | "strict" | "plain" | "normal" | "deep";
         };
+        /**
+         * OutputDocument
+         * @description A chat's saved output settings and their revision (D-01).
+         */
+        OutputDocument: {
+            /** Revision */
+            revision: number;
+            output: components["schemas"]["Output"];
+        };
         /** OwnerPreferences */
         OwnerPreferences: {
             quietHours: components["schemas"]["QuietHours"];
@@ -7028,6 +8616,33 @@ export interface components {
              * @enum {string}
              */
             newChatAccess: "default" | "ask" | "ai" | "full";
+            spendingCap?: components["schemas"]["SpendingCap"];
+        };
+        /**
+         * OwnerPreferencesDocument
+         * @description What GET and POST /owner/preferences answer: the preferences after the read or save.
+         */
+        OwnerPreferencesDocument: {
+            /** Revision */
+            revision: number;
+            preferences: components["schemas"]["OwnerPreferences"];
+        };
+        /**
+         * OwnerSettingsDocument
+         * @description What GET and POST /owner/settings answer: the whole document after the read or save.
+         */
+        OwnerSettingsDocument: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Revision */
+            revision: number;
+            /** Values */
+            values: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
         };
         /** Phase */
         Phase: {
@@ -7039,12 +8654,72 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /**
+         * PlanAlertItem
+         * @description An open alert the owner has not dismissed; its two numbers come from the alert's facts.
+         */
+        PlanAlertItem: {
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "plan";
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Since */
+            since: number;
+            /** Usedpercent */
+            usedPercent: number | null;
+            /** Resetsat */
+            resetsAt: string | null;
+            source: components["schemas"]["PlanAlertLink"];
+        };
+        /** PlanAlertLink */
+        PlanAlertLink: {
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "plan-alert";
+            /** Alertid */
+            alertId: string;
+        };
         /** PlanAlerts */
         PlanAlerts: {
             /** Enabled */
             enabled: boolean;
             /** Percent */
             percent: number;
+        };
+        /** PlanUsageOverview */
+        PlanUsageOverview: {
+            /** Windows */
+            windows: components["schemas"]["PlanUsageWindow"][];
+            /** Alerts */
+            alerts: components["schemas"]["PlanAlertItem"][];
+        };
+        /**
+         * PlanUsageWindow
+         * @description The latest reading of one plan window, as a subscription runtime reported it.
+         */
+        PlanUsageWindow: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "chatgpt" | "claude";
+            /** Window */
+            window: string;
+            /** Label */
+            label: string;
+            /** Usedpercent */
+            usedPercent: number;
+            /** Resetsat */
+            resetsAt: string | null;
+            /** Checkedat */
+            checkedAt: number;
         };
         /** Policy */
         "Policy-Input": {
@@ -7398,6 +9073,20 @@ export interface components {
             /** Expectedrevision */
             expectedRevision: number;
         };
+        /**
+         * Release
+         * @description The newest published Conker release, as the host read it.
+         */
+        Release: {
+            /** Version */
+            version: string;
+            /** Notes */
+            notes: string;
+            /** Url */
+            url: string;
+            /** Publishedat */
+            publishedAt?: string | null;
+        };
         /** Remember */
         Remember: {
             /** Request Id */
@@ -7416,6 +9105,36 @@ export interface components {
         ReplyRecoveryRequest: {
             /** Request Id */
             request_id: string;
+        };
+        /**
+         * Report
+         * @description What the host found. `running` is None for a build that is not a release.
+         */
+        Report: {
+            /** Running */
+            running?: string | null;
+            latest?: components["schemas"]["Release"] | null;
+            /** Results */
+            results?: components["schemas"]["Result"][];
+        };
+        /**
+         * Result
+         * @description One finished update: its receipt id, the version it went to and how it ended.
+         */
+        Result: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "applied" | "rolled_back" | "held" | "failed";
+            /** Reason */
+            reason?: string | null;
+            /** Finishedat */
+            finishedAt: number;
         };
         /** ResumeRequest */
         ResumeRequest: {
@@ -7501,43 +9220,11 @@ export interface components {
              */
             write: false;
         };
-        /** RootCatalogue */
-        RootCatalogue: {
-            /**
-             * Schemaversion
-             * @default 1
-             * @constant
-             */
-            schemaVersion: 1;
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "configured" | "unavailable";
-            /** Code */
-            code?: ("disabled" | "not_configured" | "invalid_configuration" | "unsupported_platform") | null;
-            /** Roots */
-            roots: components["schemas"]["FileRoot"][];
-            capabilities?: components["schemas"]["RootCapabilities"] | null;
-            /**
-             * Authority
-             * @default none
-             * @constant
-             */
-            authority: "none";
-            /**
-             * Execution
-             * @default directory-listing-only
-             * @constant
-             */
-            execution: "directory-listing-only";
-            /**
-             * Contentincluded
-             * @default false
-             * @constant
-             */
-            contentIncluded: false;
-        };
+        /**
+         * RootCatalogue
+         * @description GET /system/files/roots: one shape per mode, chosen by `mode` (D-01).
+         */
+        RootCatalogue: components["schemas"]["ConfiguredRootCatalogue"] | components["schemas"]["UnavailableRootCatalogue"];
         /** Run */
         Run: {
             /** Request Id */
@@ -7693,6 +9380,95 @@ export interface components {
             expected_revision: number;
             configuration: components["schemas"]["pi__context__universal_search__Settings"];
         };
+        /** SearchCapabilities */
+        SearchCapabilities: {
+            /** Sources */
+            sources: string[];
+            /** Exacttext */
+            exactText: boolean;
+            /** Semanticsources */
+            semanticSources: string[];
+            /** Reranking */
+            reranking: boolean;
+            /**
+             * Indexing
+             * @constant
+             */
+            indexing: "source-owned";
+            /** Scanlimit */
+            scanLimit: number;
+        };
+        /** SearchCoverage */
+        SearchCoverage: {
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "searched" | "partial" | "degraded" | "unavailable";
+        };
+        /** SearchPage */
+        SearchPage: {
+            /** Results */
+            results: components["schemas"]["SearchResult"][];
+            /** Coverage */
+            coverage: components["schemas"]["SearchCoverage"][];
+            /** Nextcursor */
+            nextCursor: string | null;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "metadata" | "text" | "semantic";
+            ranking: components["schemas"]["SearchRanking"];
+        };
+        /**
+         * SearchRanking
+         * @description `modelId` and `candidates` only when the page was ranked.
+         */
+        SearchRanking: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "disabled" | "unavailable" | "not_needed" | "ranked" | "fallback";
+            /** Modelid */
+            modelId?: string | null;
+            /** Candidates */
+            candidates?: number | null;
+        };
+        /**
+         * SearchResult
+         * @description One record: `matchType` says how it matched (`text` when semantic memory fell back).
+         */
+        SearchResult: {
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** Recordid */
+            recordId: string;
+            /** Title */
+            title: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Href */
+            href: string;
+            /**
+             * Matchtype
+             * @enum {string}
+             */
+            matchType: "metadata" | "text" | "semantic";
+            /** Role */
+            role: string | null;
+        };
+        /** SearchSettingsDocument */
+        SearchSettingsDocument: {
+            /** Revision */
+            revision: number;
+            configuration: components["schemas"]["Settings-Output"];
+        };
         /** Send */
         Send: {
             /** Request Id */
@@ -7722,6 +9498,26 @@ export interface components {
              * @enum {string}
              */
             action: "start" | "stop" | "restart";
+        };
+        /** Settings */
+        "Settings-Output": {
+            /** Sources */
+            sources?: string[];
+            /**
+             * Exacttext
+             * @default true
+             */
+            exactText: boolean;
+            /**
+             * Semantic
+             * @default false
+             */
+            semantic: boolean;
+            /**
+             * Reranking
+             * @default false
+             */
+            reranking: boolean;
         };
         /** SetupStatus */
         SetupStatus: {
@@ -7754,6 +9550,62 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["Step-Output"][];
         };
+        /**
+         * SkillDetail
+         * @description One skill with its SKILL.md text exactly as imported.
+         */
+        SkillDetail: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Revision */
+            revision: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Sha256 */
+            sha256: string;
+            /** Createdat */
+            createdAt: number;
+            /** Updatedat */
+            updatedAt: number;
+            /** Markdown */
+            markdown: string;
+        };
+        /** SkillList */
+        SkillList: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Results */
+            results: components["schemas"]["SkillSummary"][];
+        };
+        /**
+         * SkillSummary
+         * @description One skill in the registry; `revision` grows on every import or state change.
+         */
+        SkillSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Revision */
+            revision: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Sha256 */
+            sha256: string;
+            /** Createdat */
+            createdAt: number;
+            /** Updatedat */
+            updatedAt: number;
+        };
         /** SourceReference */
         SourceReference: {
             /** Sessionid */
@@ -7778,6 +9630,18 @@ export interface components {
              * @enum {string}
              */
             containers: "configured-docker-daemon" | "configured-container-source" | "unavailable";
+        };
+        /**
+         * SpendingCap
+         * @description One daily cap over every paid model call (pi.models.spending_cap); either limit stops.
+         */
+        SpendingCap: {
+            /** Enabled */
+            enabled: boolean;
+            /** Cents */
+            cents: number;
+            /** Tokens */
+            tokens: number;
         };
         /** StateChange */
         StateChange: {
@@ -8175,6 +10039,55 @@ export interface components {
             hours: number;
         };
         /**
+         * TitleDocument
+         * @description A chat's name and how it got it (D-01): `source` is None until it is named.
+         */
+        TitleDocument: {
+            /** Revision */
+            revision: number;
+            /** Title */
+            title: string;
+            /** Source */
+            source: ("owner" | "auto") | null;
+            /** Modelid */
+            modelId: string | null;
+        };
+        /**
+         * ToolGatePolicySummary
+         * @description `digest` is the SHA-256 of the other three fields, canonical JSON.
+         */
+        ToolGatePolicySummary: {
+            /** Lockdown */
+            lockdown: boolean;
+            /** Scopepatterns */
+            scopePatterns: string[];
+            /** Tools */
+            tools: components["schemas"]["ToolGatePolicyTool"][];
+            /** Digest */
+            digest: string;
+        };
+        /**
+         * ToolGatePolicyTool
+         * @description One active tool Pi may call. `usageLimits` holds the tool policy's own limits that are set
+         *     (max_per_minute, max_per_hour, cooldown_seconds, max_runtime_seconds, max_steps), unchecked.
+         */
+        ToolGatePolicyTool: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Authorization */
+            authorization: string;
+            /** Executiontype */
+            executionType: string;
+            /** Usagelimits */
+            usageLimits: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Definitiondigest */
+            definitionDigest: string;
+        };
+        /**
          * ToolWatch
          * @description Start an AI job when a get tool's answer changes; Pi looks every few minutes.
          */
@@ -8261,6 +10174,47 @@ export interface components {
              * @default false
              */
             think: boolean;
+        };
+        /** UnavailableRootCatalogue */
+        UnavailableRootCatalogue: {
+            /**
+             * Schemaversion
+             * @default 1
+             * @constant
+             */
+            schemaVersion: 1;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "unavailable";
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "disabled" | "not_configured" | "invalid_configuration" | "unsupported_platform";
+            /** Roots */
+            roots: components["schemas"]["FileRoot"][];
+            /** Capabilities */
+            capabilities: null;
+            /**
+             * Authority
+             * @default none
+             * @constant
+             */
+            authority: "none";
+            /**
+             * Execution
+             * @default directory-listing-only
+             * @constant
+             */
+            execution: "directory-listing-only";
+            /**
+             * Contentincluded
+             * @default false
+             * @constant
+             */
+            contentIncluded: false;
         };
         /** UpdateAgent */
         UpdateAgent: {
@@ -8432,15 +10386,6 @@ export interface components {
             expected_revision: number;
             /** Archived */
             archived: boolean;
-        };
-        /** Create */
-        pi__content__artifact_models__Create: {
-            /** Title */
-            title: string;
-            /** Content */
-            content: components["schemas"]["Text"] | components["schemas"]["Code"] | components["schemas"]["Media"] | components["schemas"]["Table"] | components["schemas"]["Diagram"] | components["schemas"]["Chart"];
-            /** Taskid */
-            taskId?: string | null;
         };
         /** Privacy */
         pi__content__artifact_models__Privacy: {
@@ -8685,36 +10630,6 @@ export interface components {
             /** Expected Payload Hash */
             expected_payload_hash: string;
         };
-        /** Create */
-        pi__memory__proposals__Create: {
-            /** Request Id */
-            request_id: string;
-            /** Session Id */
-            session_id: string;
-            /** Memory Id */
-            memory_id: string;
-            /** Expected Memory Revision */
-            expected_memory_revision: number;
-            /** Text */
-            text: string;
-            /** Reason */
-            reason: string;
-            /**
-             * Basis
-             * @enum {string}
-             */
-            basis: "stated" | "inferred";
-            /** Source Message Ids */
-            source_message_ids: string[];
-        };
-        /** Decision */
-        pi__memory__proposals__Decision: {
-            /**
-             * Decision
-             * @enum {string}
-             */
-            decision: "apply" | "reject";
-        };
         /** Request */
         pi__models__auto_settings__Request: {
             /** Text */
@@ -8766,14 +10681,6 @@ export interface components {
              * @default false
              */
             urgent: boolean;
-        };
-        /** Decision */
-        pi__schedule__proposals__Decision: {
-            /**
-             * Decision
-             * @enum {string}
-             */
-            decision: "accept" | "decline" | "never";
         };
         /** Selection */
         pi__setup__models__Selection: {
@@ -9186,7 +11093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SkillList"];
                 };
             };
             /** @description Validation Error */
@@ -9221,7 +11128,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SkillDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9257,7 +11164,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SkillDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9295,7 +11202,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SkillDetail"];
                 };
             };
             /** @description Validation Error */
@@ -9329,7 +11236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatContextPolicyDocument"];
                 };
             };
             /** @description Validation Error */
@@ -9367,7 +11274,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatContextPolicyDocument"];
                 };
             };
             /** @description Validation Error */
@@ -9509,7 +11416,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatSummaryDocument"];
                 };
             };
             /** @description Validation Error */
@@ -9547,7 +11454,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatSummaryDocument"];
                 };
             };
             /** @description Validation Error */
@@ -9895,7 +11802,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PlanUsageOverview"];
                 };
             };
             /** @description Validation Error */
@@ -9943,7 +11850,7 @@ export interface operations {
             };
         };
     };
-    listing_change_requests_get: {
+    overview_self_check_get: {
         parameters: {
             query?: never;
             header?: {
@@ -9962,6 +11869,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_self_check_alerts__alert_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_updates_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_offer_updates_offers__version__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_result_updates_results__result_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_updates_report_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Key"?: string | null;
+                "X-Pi-Gateway-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Report"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_change_requests_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeRequestList"];
                 };
             };
             /** @description Validation Error */
@@ -9995,7 +12104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10029,7 +12138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10067,7 +12176,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10105,7 +12214,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10143,7 +12252,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10181,7 +12290,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10217,7 +12326,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChangeRequestView"];
                 };
             };
             /** @description Validation Error */
@@ -10249,7 +12358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HandledList"];
                 };
             };
             /** @description Validation Error */
@@ -10285,7 +12394,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterRecord"];
                 };
             };
             /** @description Validation Error */
@@ -10319,7 +12428,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterSaved"];
                 };
             };
             /** @description Validation Error */
@@ -10353,7 +12462,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterSaved"];
                 };
             };
             /** @description Validation Error */
@@ -10387,7 +12496,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterHistory"];
                 };
             };
             /** @description Validation Error */
@@ -10423,7 +12532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterPackage"];
                 };
             };
             /** @description Validation Error */
@@ -10457,7 +12566,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterImportDraft"];
                 };
             };
             /** @description Validation Error */
@@ -10491,7 +12600,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CharacterSaved"];
                 };
             };
             /** @description Validation Error */
@@ -12550,7 +14659,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryCorrectionPending"];
                 };
             };
             /** @description Validation Error */
@@ -12584,7 +14693,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryCorrectionPreview"];
                 };
             };
             /** @description Validation Error */
@@ -12620,7 +14729,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryCorrectionStatus"];
                 };
             };
             /** @description Validation Error */
@@ -12654,7 +14763,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryCorrectionStatus"];
                 };
             };
             /** @description Validation Error */
@@ -12685,182 +14794,6 @@ export interface operations {
                 "application/json": components["schemas"]["pi__memory__edits__Retry"];
             };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listing_memory_proposals_get: {
-        parameters: {
-            query: {
-                session_id: string;
-            };
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_memory_proposals_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["pi__memory__proposals__Create"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_memory_proposals__identity__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                identity: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    decide_memory_proposals__identity__decision_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                identity: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["pi__memory__proposals__Decision"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reconcile_memory_proposals__identity__reconcile_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
-            };
-            path: {
-                identity: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -13084,7 +15017,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13122,7 +15055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13191,7 +15124,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OutputDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13229,7 +15162,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OutputDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13376,7 +15309,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatArchiveResult"];
                 };
             };
             /** @description Validation Error */
@@ -13412,7 +15345,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatTrashResult"];
                 };
             };
             /** @description Validation Error */
@@ -13446,7 +15379,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TitleDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13484,7 +15417,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TitleDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13522,7 +15455,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TitleDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13621,7 +15554,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__content__artifact_models__Create"];
+                "application/json": components["schemas"]["Create"];
             };
         };
         responses: {
@@ -13957,7 +15890,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ConfigurationDocument"];
                 };
             };
             /** @description Validation Error */
@@ -13993,7 +15926,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ConfigurationDocument"];
                 };
             };
             /** @description Validation Error */
@@ -14068,6 +16001,38 @@ export interface operations {
             query?: {
                 limit?: number;
             };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    spending_inference_spending_get: {
+        parameters: {
+            query?: never;
             header?: {
                 "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
@@ -14469,7 +16434,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ToolGatePolicySummary"];
                 };
             };
             /** @description Validation Error */
@@ -14605,7 +16570,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ConfigurationDocument"];
                 };
             };
             /** @description Validation Error */
@@ -14886,7 +16851,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryLibraryPage"];
                 };
             };
             /** @description Validation Error */
@@ -14960,7 +16925,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SearchSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -14996,7 +16961,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SearchSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -15028,7 +16993,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SearchCapabilities"];
                 };
             };
             /** @description Validation Error */
@@ -15065,7 +17030,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SearchPage"];
                 };
             };
             /** @description Validation Error */
@@ -15097,7 +17062,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["NewChatDraftDocument"];
                 };
             };
             /** @description Validation Error */
@@ -15133,7 +17098,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["NewChatDraftDocument"];
                 };
             };
             /** @description Validation Error */
@@ -15169,7 +17134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["NewChatStartDocument"];
                 };
             };
             /** @description Validation Error */
@@ -15203,7 +17168,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["NewChatStartDocument"];
                 };
             };
             /** @description Validation Error */
@@ -16705,7 +18670,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AskList"];
                 };
             };
             /** @description Validation Error */
@@ -16739,7 +18704,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AskView"];
                 };
             };
             /** @description Validation Error */
@@ -16777,7 +18742,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AskView"];
                 };
             };
             /** @description Validation Error */
@@ -16811,7 +18776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AskView"];
                 };
             };
             /** @description Validation Error */
@@ -16843,7 +18808,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OwnerSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -16879,7 +18844,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OwnerSettingsDocument"];
                 };
             };
             /** @description Validation Error */
@@ -16911,7 +18876,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OwnerPreferencesDocument"];
                 };
             };
             /** @description Validation Error */
@@ -16947,7 +18912,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["OwnerPreferencesDocument"];
                 };
             };
             /** @description Validation Error */
@@ -17350,7 +19315,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatSessionDocument"];
                 };
             };
             /** @description Validation Error */
@@ -18045,7 +20010,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatForgetOverview"];
                 };
             };
             /** @description Validation Error */
@@ -18081,7 +20046,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChatForgetDone"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatForgetQueued"];
                 };
             };
             /** @description Validation Error */
@@ -18113,7 +20087,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryForgetPending"];
                 };
             };
             /** @description Validation Error */
@@ -18183,7 +20157,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryForgetReceipt"];
                 };
             };
             /** @description Validation Error */
@@ -18219,7 +20193,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryForgetManyResult"];
                 };
             };
             /** @description Validation Error */
@@ -18255,7 +20229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MemoryRemembered"];
                 };
             };
             /** @description Validation Error */
@@ -18356,7 +20330,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ImportBatchResult"];
                 };
             };
             /** @description Validation Error */
@@ -18388,7 +20362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ImportHistory"];
                 };
             };
             /** @description Validation Error */
@@ -18424,7 +20398,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ImportedChatList"];
                 };
             };
             /** @description Validation Error */
@@ -18461,7 +20435,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ImportedChatTranscript"];
                 };
             };
             /** @description Validation Error */
@@ -18495,7 +20469,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ImportedChatDeletion"];
                 };
             };
             /** @description Validation Error */
@@ -18558,7 +20532,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__schedule__proposals__Decision"];
+                "application/json": components["schemas"]["Decision"];
             };
         };
         responses: {

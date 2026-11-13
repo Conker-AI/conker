@@ -22,11 +22,11 @@ it, or that a server runs it.
 <!-- generated:release -->
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.24.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
-| ToolGate | 0.15.1 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
-| MemoryGate | 0.8.2 | Memory with sources; its AI through Pi |
-| SystemGate | 0.5.2 | Read-only view of the machine |
-| Embeddings | 0.1.7 | Text to vectors |
+| Pi and the Gateway | 0.25.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| ToolGate | 0.16.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
+| MemoryGate | 0.9.0 | Memory with sources; its AI through Pi |
+| SystemGate | 0.5.3 | Read-only view of the machine |
+| Embeddings | 0.1.8 | Text to vectors |
 | Agent sandbox | active | Terminal and Install packages for agents |
 | Owner terminal | deferred | See Deferred below |
 <!-- /generated:release -->
