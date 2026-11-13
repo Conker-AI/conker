@@ -17,7 +17,7 @@ import sys
 import tarfile
 import tempfile
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 
@@ -188,7 +188,7 @@ def _permissions(path: Path, member: tarfile.TarInfo, preserve_owner: bool) -> N
 
 
 def invalidate_approvals(database: Path) -> dict:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     with closing(sqlite3.connect(database)) as db, db:
         db.execute("BEGIN IMMEDIATE")
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -208,7 +208,7 @@ def invalidate_approvals(database: Path) -> dict:
                 "INSERT INTO v2_spend_allowance_revocations(allowance_id,revoked_at) "
                 "SELECT allowance_id,? FROM v2_spend_allowances a WHERE NOT EXISTS "
                 "(SELECT 1 FROM v2_spend_allowance_revocations r WHERE r.allowance_id=a.allowance_id)",
-                (datetime.now(timezone.utc).timestamp(),),
+                (datetime.now(UTC).timestamp(),),
             ).rowcount
         # Reject an unknown schema rather than quietly invalidating zero tokens.
         rows = db.execute(
@@ -349,7 +349,7 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception as exc:  # noqa: BLE001 - sanitize every failure at the CLI boundary
+    except Exception as exc:  # sanitize every failure at the CLI boundary
         # Exception messages from crypto/parsers may carry payloads. Only our
         # own errors are safe to show; never print recovered credentials.
         message = str(exc) if isinstance(exc, RecoveryError) else type(exc).__name__

@@ -159,7 +159,7 @@ def test_an_unconfirmed_request_names_the_id_to_repeat_it_with():
     def lost(method, path, body):
         raise OSError("connection reset")
 
-    with pytest.raises(OSError, match="--request-id tooldraft_x{16}"):
+    with pytest.raises(OSError, match=r"--request-id tooldraft_x{16}"):
         run(lost, request_id="tooldraft_" + "x" * 16)
 
 

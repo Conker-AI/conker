@@ -38,7 +38,8 @@ def initialize():
     keys["salt"] = secrets.token_hex(16)
     for name in SERVICES:
         (STATE / name).mkdir(exist_ok=True, mode=0o700)
-    key_hash = lambda name: hashlib.sha256(keys[name].encode()).hexdigest()
+    def key_hash(name):
+        return hashlib.sha256(keys[name].encode()).hexdigest()
     config = {
         "python": sys.executable,
         "decision_python": str(Path.home() / (".cache/conker-decisions/Scripts/python.exe" if os.name == "nt" else ".cache/conker-decisions/bin/python")),
@@ -137,7 +138,8 @@ def serve(name, config):
         terminal_factory = None
         if os.name == "nt" and config.get("native_terminal"):
             from windows_terminal import WindowsTerminal
-            terminal_factory = lambda _shell, _label, _identity: WindowsTerminal(ROOT, config)
+            def terminal_factory(_shell, _label, _identity):
+                return WindowsTerminal(ROOT, config)
         uvicorn.run(create_app(Config.environment(), terminal_factory=terminal_factory), host="127.0.0.1", port=SERVICES[name],
                     ssl_certfile=str(certificate), ssl_keyfile=str(key), proxy_headers=False,
                     access_log=False)

@@ -152,7 +152,7 @@ def with_value(document: dict, field: str, value, flat: bool = False) -> dict:
     *parents, leaf = field.split(".")
     for part in parents:
         if not isinstance(target.get(part), dict):
-            raise ValueError(f"The stored document has no {field!r}.")  # noqa: TRY004 - reported to the owner like every CLI input error
+            raise ValueError(f"The stored document has no {field!r}.")  # reported to the owner like every CLI input error
         target = target[part]
     target[leaf] = value
     return changed

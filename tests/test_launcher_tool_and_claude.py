@@ -134,7 +134,7 @@ def repository_launcher(
     shell = shutil.which("bash") or shutil.which("sh")
     if sys.platform == "win32":
         git = (
-            Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+            Path(os.environ.get("ProgramFiles", "C:/Program Files"))  # noqa: SIM112
             / "Git/usr/bin/bash.exe"
         )
         shell = str(git) if git.exists() else shell

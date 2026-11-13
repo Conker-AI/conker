@@ -39,8 +39,7 @@ class PaidPolicy:
         ]
         if (
             len(values) > 1
-            or values
-            and values[0] not in {"", "0", "false", "no", "1", "true", "yes"}
+            or (values and values[0] not in {"", "0", "false", "no", "1", "true", "yes"})
         ):
             raise ProviderSecretError("Provider spending policy is ambiguous.")
         return bool(values and values[0] in {"1", "true", "yes"})

@@ -348,7 +348,7 @@ def test_scripts_are_pointed_at_the_step_commands(monkeypatch, capsys):
 def bash():
     if sys.platform != "win32":
         return shutil.which("bash")
-    found = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git/usr/bin/bash.exe"
+    found = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git/usr/bin/bash.exe"  # noqa: SIM112
     return str(found) if found.exists() else None
 
 

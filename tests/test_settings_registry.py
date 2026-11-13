@@ -11,7 +11,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import conker_config as config
+import conker_config as config  # noqa: E402
 
 SETTINGS = config.load_registry()
 GROUPS = config.load_groups()

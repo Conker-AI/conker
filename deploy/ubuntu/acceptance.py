@@ -17,7 +17,8 @@ if not origin.startswith("https://"):
     raise SystemExit("A verified HTTPS origin is required")
 password = args.password_file.read_text().strip()
 client = httpx.Client(base_url=origin, trust_env=False, timeout=240)
-start = client.get("/auth/session"); start.raise_for_status()
+start = client.get("/auth/session")
+start.raise_for_status()
 headers = {"Origin": origin, "X-CSRF-Token": start.json()["csrf_token"]}
 login = client.post("/auth/login", headers=headers, json={"password": password})
 login.raise_for_status()

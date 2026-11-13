@@ -62,7 +62,7 @@ def test_future_third_party_images_are_also_required_to_use_digests():
     values = parse_env(MANIFEST)
     values["REDIS_IMAGE"] = "redis:7"
 
-    with pytest.raises(ManifestError, match="REDIS_IMAGE.*tags are mutable"):
+    with pytest.raises(ManifestError, match=r"REDIS_IMAGE.*tags are mutable"):
         validate_manifest(values)
 
 
