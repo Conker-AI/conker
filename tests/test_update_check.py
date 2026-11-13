@@ -40,6 +40,14 @@ def release(version="0.2.0"):
     return lambda: parse_release(page("v" + version))
 
 
+SHA = "0123456789abcdef0123456789abcdef01234567"
+
+
+def commit(version):
+    assert update_check.VERSION.fullmatch(version)
+    return SHA
+
+
 def test_a_release_page_keeps_only_what_conker_uses():
     assert parse_release(page()) == {
         "version": "0.2.0",
@@ -219,3 +227,130 @@ def test_the_command_says_why_it_could_not_check(tmp_path, monkeypatch, capsys):
     )
     assert code == 1
     assert "could not check for updates: GitHub could not be reached." in capsys.readouterr().err
+
+
+# --- the offers: the only releases update.run installs, by their commits ------------------------
+
+
+def test_the_tag_commit_is_read_anonymously_as_a_bare_sha():
+    opener = Opener((SHA + "\n").encode())
+    assert update_check.tag_commit("0.2.0", opener) == SHA
+    [request] = opener.requests
+    assert request.full_url == "https://api.github.com/repos/Conker-AI/conker/commits/v0.2.0"
+    assert request.headers["Accept"] == "application/vnd.github.sha"
+    assert "Authorization" not in request.headers
+
+
+@pytest.mark.parametrize("answer", [b"main", b"{}", SHA[:39].encode(), SHA.upper().encode()])
+def test_an_answer_that_is_not_a_commit_is_refused(answer):
+    with pytest.raises(CheckError, match="no commit"):
+        update_check.tag_commit("0.2.0", Opener(answer))
+
+
+def test_a_missing_tag_is_said_plainly():
+    missing = HTTPError(update_check.TAG_COMMIT, 422, "No commit", {}, None)
+    with pytest.raises(CheckError, match="HTTP 422"):
+        update_check.tag_commit("0.2.0", Opener(missing))
+
+
+def found(running, latest):
+    """What check() found: `latest` None means no release is published."""
+    newer = latest is not None and (
+        running is None or update_check.version_key(latest) > update_check.version_key(running)
+    )
+    return {"running": running, "latest": {"version": latest} if latest else None, "newer": newer}
+
+
+OTHER = "f" * 40
+
+
+def test_an_offer_keeps_the_commit_it_was_first_offered_with(tmp_path):
+    update_check.save_offers(tmp_path, found("0.1.0", "0.2.0"), commit_of=lambda _v: SHA)
+    # The tag moved: a later check must not install what it points at now.
+    kept = update_check.save_offers(tmp_path, found("0.1.0", "0.2.0"), commit_of=lambda _v: OTHER)
+    assert kept == {"0.2.0": SHA}
+    assert update_check.offered(tmp_path, "0.2.0") == SHA
+
+
+def test_an_older_offer_stays_installable_beside_a_newer_one(tmp_path):
+    update_check.save_offers(tmp_path, found("0.1.0", "0.2.0"), commit_of=lambda _v: SHA)
+    update_check.save_offers(tmp_path, found("0.1.0", "0.3.0"), commit_of=lambda _v: OTHER)
+    # Pi may still show the 0.2.0 card (its report failed, or the shell checked): it still works.
+    assert update_check.offers(tmp_path) == {"0.2.0": SHA, "0.3.0": OTHER}
+
+
+def test_installed_passed_and_pulled_releases_are_dropped(tmp_path):
+    for version in ("0.2.0", "0.3.0", "0.4.0"):
+        update_check.save_offers(tmp_path, found("0.1.0", version), commit_of=lambda _v: SHA)
+    # 0.2.0 is running now, and 0.4.0 was pulled (the latest is 0.3.0 again).
+    assert update_check.save_offers(tmp_path, found("0.2.0", "0.3.0")) == {"0.3.0": SHA}
+    assert update_check.save_offers(tmp_path, found("0.3.0", "0.3.0")) == {}
+    assert not (tmp_path / "offer.json").exists()
+
+
+def test_no_commit_is_looked_up_when_nothing_is_newer(tmp_path):
+    def lookup(_version):
+        pytest.fail("not looked up")
+
+    assert update_check.save_offers(tmp_path, found("0.2.0", "0.2.0"), commit_of=lookup) == {}
+    assert update_check.save_offers(tmp_path, found("0.2.0", None), commit_of=lookup) == {}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{bad",
+        "[]",
+        json.dumps({"version": "0.2.0", "commit": SHA}),
+        json.dumps({"offers": {"v0.2.0": SHA}}),
+        json.dumps({"offers": {"0.2.0": "main"}}),
+        json.dumps({"offers": {"0.2.0": SHA, "0.3.0": SHA[:39]}}),
+    ],
+)
+def test_an_offer_file_that_is_not_one_offers_nothing(tmp_path, text):
+    (tmp_path / "offer.json").write_text(text, encoding="utf-8")
+    assert update_check.offers(tmp_path) == {}
+    assert update_check.offered(tmp_path, "0.2.0") is None
+
+
+def test_the_daily_check_keeps_the_offer_before_telling_pi(tmp_path, monkeypatch):
+    root, seen = tmp_path / "deploy", []
+    folder = root / "state" / "update"
+    monkeypatch.setattr(update_check, "latest_release", release("0.2.0"))
+    monkeypatch.setattr(update_check, "tag_commit", commit)
+    monkeypatch.setattr(
+        update_check, "relay", lambda *args: seen.append(update_check.offers(folder))
+    )
+    arguments = ["--root", str(root), "--source", str(source(tmp_path / "src", "0.1.0"))]
+
+    assert update_check.main([*arguments, "--layout", "ubuntu", "--report"]) == 0
+
+    assert seen == [{"0.2.0": SHA}]  # there when Pi showed the card
+
+
+def test_a_commit_that_cannot_be_read_fails_the_check_and_keeps_the_offers(tmp_path, monkeypatch):
+    root = tmp_path / "deploy"
+    folder = root / "state" / "update"
+    update_check.save_offers(folder, found("0.1.0", "0.2.0"), commit_of=lambda _v: SHA)
+    sent = []
+
+    def offline(_version):
+        raise CheckError("GitHub could not be reached.")
+
+    monkeypatch.setattr(update_check, "latest_release", release("0.3.0"))
+    monkeypatch.setattr(update_check, "tag_commit", offline)
+    monkeypatch.setattr(update_check, "relay", lambda *args: sent.append(args[2]))
+    arguments = ["--root", str(root), "--source", str(source(tmp_path / "src", "0.1.0"))]
+
+    assert update_check.main([*arguments, "--layout", "ubuntu", "--report"]) == 1
+    assert update_check.offers(folder) == {"0.2.0": SHA}
+    assert sent == []  # Pi is not offered 0.3.0, which could not be installed
+
+
+def test_the_repository_layout_looks_up_no_commit(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(update_check, "latest_release", release("0.2.0"))
+    monkeypatch.setattr(update_check, "tag_commit", lambda _v: pytest.fail("not looked up"))
+    arguments = ["--root", str(tmp_path), "--source", str(source(tmp_path / "src", "0.1.0"))]
+
+    assert update_check.main([*arguments, "--layout", "repository"]) == 0
+    assert "0.2.0 is available" in capsys.readouterr().out

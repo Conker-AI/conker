@@ -158,8 +158,12 @@ as proof that the service works. Password reset prompts privately and uses the s
 persistent auth database as the gateway. Lifecycle, logs, model downloads and auth
 are supported. Verified backup, snapshot verification, held restore and recovery status use
 the generated layout's strict service and storage profile. `conker update --check` reads the latest
-Conker release page and says whether it is newer; `conker update --to X.Y.Z` (or Update on the
-Inbox card) stages that release's sources and the module tags it pins, builds the dashboard, takes a
+Conker release page and says whether it is newer; on this layout each newer release it finds is kept
+as an offer (`state/update/offer.json`: the version and the commit its tag named when first offered;
+dropped once installed or passed, or pulled). Update on the Inbox card installs only an offered
+release, with Conker's own sources downloaded by that commit, so moving Conker's tag afterwards
+changes nothing (the module sources it pins are still fetched by their version tags).
+`conker update --to X.Y.Z` (from a shell, any newer release) stages that release's sources and the module tags it pins, builds the dashboard, takes a
 verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swaps the sources
 (the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
 --strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
