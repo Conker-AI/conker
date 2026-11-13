@@ -11,8 +11,9 @@ the next run:
    staging folder, and the dashboard built from it in the pinned Node image; nothing running
    changes;
 3. protect: a verified snapshot (`conker backup`), before anything running changes;
-4. apply code: the old sources and compose.json move to recovery/pre-update-STAMP, the staged
-   sources take their place;
+4. apply code: compose.json is copied to recovery/pre-update-STAMP, the staged sources trade
+   places with sources/ in one step (scripts/update_swap.py, so a power cut never leaves sources/
+   missing) and the old ones move into that folder;
 5. apply services: prepare.py with the installed origin and agent workspaces, build, start, and the
    refreshed launcher;
 6. verify: `conker status --strict` until every service answers.
@@ -57,6 +58,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         _release_lock,
         _token,
     )
+    from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
     from update_check import COMMIT, VERSION, _Stay, installed_version, report, version_key
     from update_core import (
@@ -68,6 +70,7 @@ except ModuleNotFoundError:
         _release_lock,
         _token,
     )
+    from update_swap import identity, put_back, swap_in
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
 COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/conker/tar.gz/{commit}"
@@ -288,6 +291,8 @@ class UbuntuTransport:
             "modules": modules,
             "staging": str(staging),
             "recovery": str(self.recovery),
+            # How a rollback knows the sources from before wherever a cut left them (update_swap).
+            "sources_id": identity(self.sources),
         }
 
     def _build_dashboard(self, companion: Path, image: str) -> None:
@@ -337,8 +342,7 @@ class UbuntuTransport:
         recovery, staging = Path(candidate["recovery"]), Path(candidate["staging"])
         recovery.mkdir(parents=True, mode=0o700)
         shutil.copy2(self.compose_file, recovery / "compose.json")
-        os.replace(self.sources, recovery / "sources")
-        os.replace(staging, self.sources)
+        swap_in(staging, self.sources, recovery / "sources")  # sources/ exists at every instant
 
     def _start(self, what: str) -> None:
         extra = {"CONKER_WORKSPACES_DIR": folder} if (folder := self.workspaces()) else {}
@@ -380,9 +384,14 @@ class UbuntuTransport:
         if candidate is None:
             return
         recovery = Path(candidate["recovery"])
-        if (recovery / "sources").is_dir():
+        failed = self.root / "recovery" / f"failed-update-{self.stamp}"
+        if before := candidate.get("sources_id"):
+            places = [recovery / "sources", Path(candidate["staging"])]
+            if not put_back(before, places, self.sources, failed):
+                raise UpdateError("the sources from before the update are missing")
+        elif (recovery / "sources").is_dir():  # an update an older release started
             if self.sources.exists():
-                os.replace(self.sources, self.root / "recovery" / f"failed-update-{self.stamp}")
+                os.replace(self.sources, failed)
             os.replace(recovery / "sources", self.sources)
         if (recovery / "compose.json").is_file():
             shutil.copy2(recovery / "compose.json", self.compose_file)
