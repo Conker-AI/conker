@@ -1058,6 +1058,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
   ${BOLD}start${OFF} / ${BOLD}stop${OFF} / ${BOLD}restart${OFF} [SERVICE]
   ${BOLD}update${OFF}      Stage, verify and roll back a pinned release${limited}
   ${BOLD}update${OFF} --check  Is a newer Conker release out, and what changed
+  ${BOLD}post-update-check${OFF}
+              After an update: every check of the release runbook, read-only
   ${BOLD}update${OFF} --to X.Y.Z  Go to that release: snapshot first, rolled back if unhealthy
   ${BOLD}setup${OFF}       Guided first run, one plain question at a time
   ${BOLD}setup${OFF} status
@@ -1145,6 +1147,15 @@ case "$command" in
     stop)      [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_stop ;;
     restart)   [ "$#" -le 2 ] || { usage >&2; exit 2; }; shift; cmd_restart "$@" ;;
     update)    shift; cmd_update "$@" ;;
+    post-update-check)
+        [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+        command -v python3 >/dev/null 2>&1 || {
+            printf 'Python 3.11+ is required for conker post-update-check. Install python3, then retry.
+' >&2
+            exit 1
+        }
+        python3 "$SOURCE_ROOT/scripts/post_update_check.py" --root "$ROOT" --source "$SOURCE_ROOT"             --layout "$LAYOUT" --launcher "$SOURCE_ROOT/conker"
+        exit $? ;;
     setup)     shift; cmd_setup "$@" ;;
     key)       [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_key ;;
     *) printf '\n  No command called %s.\n' "$command" >&2; usage >&2; exit 2 ;;
