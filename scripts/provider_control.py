@@ -14,11 +14,12 @@ import socket
 import socketserver
 import stat
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-from scripts import host_ops
+from scripts import helper_restart, host_ops
 from scripts.chatgpt_provider import (
     ChatGPTControl,
     ChatGPTError,
@@ -358,6 +359,41 @@ class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     address_family = getattr(socket, "AF_UNIX", socket.AF_INET)
     daemon_threads = True
 
+    def __init__(self, *arguments, **options):
+        super().__init__(*arguments, **options)
+        self._count, self._paused, self._counting = 0, False, threading.Lock()
+
+    def active(self) -> int:
+        """Requests being answered now (a ChatGPT answer streams for its whole length)."""
+        with self._counting:
+            return self._count
+
+    def pause(self) -> int:
+        """Refuse new requests from now on; returns how many are still being answered."""
+        with self._counting:
+            self._paused = True
+            return self._count
+
+    def resume(self) -> None:
+        with self._counting:
+            self._paused = False
+
+    def verify_request(self, request, client_address) -> bool:
+        # Counted in the accepting thread, under the same lock as pause(), so no request slips
+        # in between pause() reading zero and the helper exiting.
+        with self._counting:
+            if self._paused:
+                return False
+            self._count += 1
+            return True
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._counting:
+                self._count -= 1
+
 
 def private_socket(path):
     if not path.is_absolute() or path.parent.is_symlink() or path.is_symlink():
@@ -427,10 +463,25 @@ def main():
     if host is not None:
         # Once a day: is a newer Conker release out? The Inbox offers it (scripts/update_check.py).
         threading.Thread(target=host_ops.watch_for_updates, args=(host,), daemon=True).start()
+    restart, held = threading.Event(), []
+
+    def idle() -> bool:
+        lock_path = host.lock_path if host else None
+        return helper_restart.quiet(inference_server, lock_path, state / "update", held)
+
     with socketserver.UnixStreamServer(
         str(args.socket), handler(control, chatgpt, host)
     ) as server:
         args.socket.chmod(0o600)
+
+        def stop() -> None:
+            restart.set()
+            server.shutdown()  # the request being answered finishes first
+
+        # After an update changed this helper's code: restart on it once idle.
+        threading.Thread(
+            target=helper_restart.watch_own_code, args=(args.source, idle, stop), daemon=True
+        ).start()
         try:
             server.serve_forever()
         finally:
@@ -441,6 +492,8 @@ def main():
                 chatgpt.rpc.close()
             if args.socket.exists() and stat.S_ISSOCK(args.socket.lstat().st_mode):
                 args.socket.unlink()
+    if restart.is_set():
+        sys.exit(helper_restart.RESTART_EXIT)
 
 
 if __name__ == "__main__":
