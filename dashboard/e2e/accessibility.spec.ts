@@ -11,7 +11,17 @@ async function violations(page: Page, include?: string) {
   await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
   const builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
   const { violations } = await (include ? builder.include(include) : builder).analyze()
-  return violations.map(rule => `${rule.id} (${rule.impact}): ${rule.nodes.slice(0, 4).map(node => node.target.join(' ')).join(' | ')}`)
+  const found: string[] = []
+  for (const rule of violations) {
+    const nodes = []
+    for (const node of rule.nodes) {
+      // WCAG 1.4.3 exempts inactive controls; axe misses a disabled trigger around the text it checks.
+      if (rule.id === 'color-contrast' && await page.locator(node.target.join(' ')).first().evaluate(element => !!element.closest(':disabled, [data-disabled], [aria-disabled="true"]'))) continue
+      nodes.push(node.target.join(' '))
+    }
+    if (nodes.length) found.push(`${rule.id} (${rule.impact}): ${nodes.slice(0, 4).join(' | ')}`)
+  }
+  return found
 }
 
 for (const theme of ['light', 'dark'] as const) test.describe(theme, () => {

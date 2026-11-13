@@ -4,6 +4,8 @@ import { expect, test } from '@playwright/test'
 import { card, open } from './pages'
 
 test('chat: a sent message shows in the chat, then the answer', async ({ page }) => {
+  // No saved draft: one that loads after typing is a conflict the app reports, not this flow.
+  await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
   const composer = page.getByRole('textbox', { name: /Ask Conker anything|Message Conker/ })
   await composer.fill('What should I plan for this week?')
