@@ -45,6 +45,7 @@ conker providers status
 conker providers set PROVIDER
 conker providers verify PROVIDER
 conker providers activate PROVIDER credential_0123456789abcdef0123456789abcdef
+conker providers discard PROVIDER REVISION   # drop a staged key that is not active
 ```
 
 `set` prompts without echo. For automation, send the value on standard input with

@@ -19,6 +19,7 @@ Five guides, read in order, about 20 minutes in all.
 
 - [Settings](reference/settings.md): every setting, its default and its home; `conker config`
 - [Chat CLI](reference/chat-cli.md): every chat feature from the terminal
+- [Agents and teams](reference/agents-cli.md) · [Memory](reference/memory-cli.md) · [Spending cap](reference/spending-cli.md): the owner's own commands
 - [Workflow builder](reference/workflow-builder.md): describe a workflow in words, review the draft, publish it
 - [Glossary](reference/glossary.md): every kind of thing in plain words, and the other names code uses
 

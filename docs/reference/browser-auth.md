@@ -61,6 +61,9 @@ The local certificate lasts one year. Run `./conker auth renew-certificate`,
 then restart the gateway with the normal Compose command and export/trust the new
 certificate. A renewal never silently replaces your password or session data.
 
+`./conker auth health` asks the running gateway's HTTPS listener whether it answers, with the
+gateway's own certificate and name, the way a browser would.
+
 Tailscale membership alone cannot reach a localhost-bound port. Remote use needs
 an HTTPS reverse proxy forwarding to the local HTTPS gateway; configure its exact
 public browser origin as `GATEWAY_ORIGIN`. Preserve that origin as the Host and
