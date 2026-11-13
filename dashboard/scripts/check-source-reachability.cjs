@@ -70,12 +70,14 @@ while (pending.length) {
 // The coss ui kit is vendored whole at a pinned revision (docs/reference/template-reference.md), so
 // primitives a screen does not use yet are not dead Conker code.
 const vendored = (file) => file.startsWith("components/ui/")
+// *.check.ts files hold compile-time type assertions only; tsc -b checks them and nothing imports them.
+const typeCheck = (file) => file.endsWith(".check.ts")
 
 const unreachable = files
   .filter((file) => !file.endsWith(".d.ts"))
   .filter((file) => !reachable.has(file))
   .map((file) => path.relative(sourceRoot, file).replaceAll("\\", "/"))
-  .filter((file) => !vendored(file))
+  .filter((file) => !vendored(file) && !typeCheck(file))
   .sort()
 
 if (unreachable.length) {

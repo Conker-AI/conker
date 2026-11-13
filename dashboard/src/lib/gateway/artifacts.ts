@@ -30,8 +30,8 @@ const tableContent = z.object({ kind: z.literal('table'), columns: z.array(z.str
   .refine(value => value.rows.every(row => row.length === value.columns.length), 'Every table row must match the columns.')
 const diagramContent = z.object({
   kind: z.literal('diagram'),
-  nodes: z.array(z.object({ id: nodeId, label: z.string().trim().min(1).max(200), description: z.string().max(2000).optional(), x: z.number().finite().min(-10000).max(10000), y: z.number().finite().min(-10000).max(10000) }).strict()).max(100),
-  edges: z.array(z.object({ id: nodeId, source: nodeId, target: nodeId, label: z.string().max(200).optional() }).strict()).max(200),
+  nodes: z.array(z.object({ id: nodeId, label: z.string().trim().min(1).max(200), description: z.string().max(2000).nullable().optional().transform(value => value ?? undefined), x: z.number().finite().min(-10000).max(10000), y: z.number().finite().min(-10000).max(10000) }).strict()).max(100),
+  edges: z.array(z.object({ id: nodeId, source: nodeId, target: nodeId, label: z.string().max(200).nullable().optional().transform(value => value ?? undefined) }).strict()).max(200),
 }).strict().refine(value => {
   const nodes = new Set(value.nodes.map(item => item.id)), edges = new Set(value.edges.map(item => item.id))
   return nodes.size === value.nodes.length && edges.size === value.edges.length && value.edges.every(item => nodes.has(item.source) && nodes.has(item.target) && item.source !== item.target)
@@ -75,6 +75,8 @@ const nativeExport = z.object({
 
 export type GatewayArtifactSummary = z.infer<typeof summary>
 export type GatewayArtifact = z.infer<typeof view>
+/** What Pi sends, before the client fills defaults. */
+export type GatewayArtifactWire = z.input<typeof view>
 export type GatewayArtifactExport = z.infer<typeof nativeExport>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {

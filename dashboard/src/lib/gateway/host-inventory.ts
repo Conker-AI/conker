@@ -7,7 +7,8 @@ const errorCode = z.enum([
   'process_identity_unavailable', 'process_changed_during_collection', 'process_unavailable',
   'collection_failed', 'process_link_unavailable', 'listener_collection_failed',
   'container_identity_unavailable', 'invalid_container_binding', 'container_unavailable',
-  'container_bindings_unavailable', 'client_close_failed',
+  'container_bindings_unavailable', 'container_telemetry_not_configured',
+  'container_bindings_not_configured', 'client_close_failed',
 ])
 const section = z.object({ status: z.enum(['ok', 'partial', 'unavailable']), truncated: z.boolean(), errors: z.array(errorCode).max(16) }).strict()
 const capabilities = z.object({
@@ -19,7 +20,7 @@ const observation = z.object({
   ageSeconds: z.number().finite().nonnegative(), collectionSeconds: z.number().finite().nonnegative(),
   sourceScopes: z.object({
     process: z.enum(['configured-procfs', 'collector-namespace']), network: z.literal('collector-namespace'),
-    containers: z.literal('configured-docker-daemon'),
+    containers: z.enum(['configured-docker-daemon', 'configured-container-source', 'unavailable']),
   }).strict(),
   processes: section.extend({ results: z.array(z.object({
     id: z.string().regex(/^process_[a-f0-9]{64}$/), name: z.string().max(160), status: z.string().max(40),

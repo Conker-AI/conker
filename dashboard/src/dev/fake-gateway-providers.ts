@@ -98,7 +98,7 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
       if (!target) return fail(404)
       if (body?.expected_revision !== target.revision) return fail(409)
       const config = target.definition as Json
-      Object.assign(config, { createdBy: 'owner', adoptedAt: new Date().toISOString() })
+      Object.assign(config, { createdBy: 'owner', adoptedAt: now() })
       target.revision = Number(target.revision) + 1
       return structuredClone(target)
     }
