@@ -114,12 +114,12 @@ async function main() {
   // Make this job mine: strict shape, exact route and body, a changed revision is a conflict, never a silent success.
   const madeByConker = { ...aiJob, definition: { ...aiJob.definition, createdBy: 'conker', adoptedAt: null, turnedOff: 'chat_forgotten', enabled: false, state: 'paused' } }
   agentReply = madeByConker; assert.equal((await agents.get(jobId)).definition.adoptedAt, null, 'adoptedAt may be null')
-  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, createdBy: 'owner', adoptedAt: '2026-10-30T09:15:00+00:00', turnedOff: null } }
-  assert.equal((await agents.adoptJob(jobId, 3)).definition.adoptedAt, '2026-10-30T09:15:00+00:00')
+  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, createdBy: 'owner', adoptedAt: 1793352900, turnedOff: null } }
+  assert.equal((await agents.adoptJob(jobId, 3)).definition.adoptedAt, 1793352900)
   assert.deepEqual(agentCalls.at(-1)[0], `/api/control/pi/jobs/${jobId}/adopt`)
   assert.deepEqual(agentCalls.at(-1)[1], { method: 'POST', body: { expected_revision: 3 } })
-  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, adoptedAt: 'yesterday' } }
-  await assert.rejects(agents.get(jobId), error => error.kind === 'invalid-response', 'adoptedAt is an ISO time')
+  agentReply = { ...madeByConker, definition: { ...madeByConker.definition, adoptedAt: -1 } }
+  await assert.rejects(agents.get(jobId), error => error.kind === 'invalid-response', 'adoptedAt is a non-negative Unix time, as Pi sends it')
   await assert.rejects(agents.adoptJob(jobId, 0), error => error.kind === 'validation')
   await assert.rejects(agents.adoptJob('job_bad', 3), error => error.kind === 'validation')
   await assert.rejects(conflict.adoptJob(jobId, 3), error => error instanceof GatewayJobMutationError && error.outcome === 'conflict', 'A changed revision is a conflict')

@@ -7,7 +7,7 @@ const teamId = z.string().regex(/^team_[0-9a-f]{32}$/)
 const agentId = z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/)
 const roleId = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
 const budget = z.object({ maxTurns: z.number().int().min(1).max(200), maxTokens: z.number().int().min(1).max(1_000_000), maxCostCents: z.number().int().min(0).max(1_000_000) }).strict()
-const memory = z.object({ scope: z.enum(['none', 'conversation', 'selected']), memoryIds: z.array(reference).max(100) }).strict().superRefine((value, context) => {
+const memory = z.object({ scope: z.enum(['none', 'owner', 'conversation', 'selected']), memoryIds: z.array(reference).max(100) }).strict().superRefine((value, context) => {
   if ((value.scope === 'selected') !== Boolean(value.memoryIds.length)) context.addIssue({ code: 'custom', message: 'Selected memory requires record IDs.' })
   if (new Set(value.memoryIds).size !== value.memoryIds.length) context.addIssue({ code: 'custom', message: 'Memory IDs must be unique.' })
 })
