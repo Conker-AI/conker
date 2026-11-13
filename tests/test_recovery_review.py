@@ -2,19 +2,19 @@
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import recovery
 import recovery_layout
 import recovery_restore
 from test_recovery import (
-    installed as installed,  # noqa: PLC0414 - register the shared pytest fixture
+    installed as installed,  # register the shared pytest fixture
 )
 
 
 def operator_review(state, path, **changes):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     review = {
         "format": recovery_layout.REVIEW_FORMAT,
         "recovery_id": state["recovery_id"],

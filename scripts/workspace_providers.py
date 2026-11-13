@@ -9,7 +9,7 @@ import hmac
 import json
 import queue
 import threading
-from contextlib import asynccontextmanager, closing
+from contextlib import asynccontextmanager, closing, suppress
 from pathlib import Path
 
 from chatgpt_provider import (
@@ -165,7 +165,7 @@ def create_app(config, *, chatgpt_relay=None):
     async def claude_operation(request: Request):
         try:
             return await run_in_threadpool(claude.apply, await request.json())
-        except Exception:  # noqa: BLE001 - Native errors may contain credentials; publish only a fixed code.
+        except Exception:  # Native errors may contain credentials; publish only a fixed code.
             return JSONResponse({"error": "provider_operation_failed"}, status_code=503)
 
     @app.get("/claude/sessions")
@@ -247,16 +247,12 @@ def create_app(config, *, chatgpt_relay=None):
                         put(item)
             except ChatGPTError as error:
                 if not control.canceled.is_set():
-                    try:
+                    with suppress(ValueError):
                         put({"type": "error", "code": str(error)})
-                    except ValueError:
-                        pass
-            except Exception:  # noqa: BLE001 - Provider errors may contain private data.
+            except Exception:
                 if not control.canceled.is_set():
-                    try:
+                    with suppress(ValueError):
                         put({"type": "error", "code": "provider_unavailable"})
-                    except ValueError:
-                        pass
             finally:
                 requests.finish(key, control)
 
@@ -321,7 +317,7 @@ def create_app(config, *, chatgpt_relay=None):
             )
         try:
             return await run_in_threadpool(claude.complete, value, cancellation=control)
-        except Exception:  # noqa: BLE001 - Native errors may contain prompts or credentials.
+        except Exception:  # Native errors may contain prompts or credentials.
             return JSONResponse({"error": "native_inference_failed"}, status_code=503)
         finally:
             requests.finish(key, control)

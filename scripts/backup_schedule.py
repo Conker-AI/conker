@@ -183,7 +183,7 @@ class Schedule:
     def _write(self, kind: str) -> None:
         self.units.mkdir(parents=True, exist_ok=True)
         for path, text in zip(
-            self._paths(kind), unit_texts(kind, self.root, self.source, self.layout)
+            self._paths(kind), unit_texts(kind, self.root, self.source, self.layout), strict=False
         ):
             if path.is_symlink():
                 raise ScheduleError("Timer and service units must be regular files.")

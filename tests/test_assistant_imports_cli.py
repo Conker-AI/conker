@@ -151,7 +151,7 @@ def test_oversized_and_missing_exports_are_refused_before_pi_is_called(
         assistant_imports.read_export(tmp_path / "missing.json")
     empty = tmp_path / "empty"
     empty.mkdir()
-    with pytest.raises(ValueError, match="no conversations.json"):
+    with pytest.raises(ValueError, match=r"no conversations\.json"):
         assistant_imports.read_export(empty)
     pi = Pi()
     with pytest.raises(ValueError):

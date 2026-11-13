@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -333,7 +333,7 @@ def canonical_sha256(value: Any) -> str:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def parse_timestamp(value: Any, field: str) -> datetime:
@@ -345,7 +345,7 @@ def parse_timestamp(value: Any, field: str) -> datetime:
         raise RecoveryError(f"Review {field} is not a valid ISO-8601 timestamp.") from exc
     if parsed.tzinfo is None:
         raise RecoveryError(f"Review {field} must include a timezone.")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def read_json_file(path: Path, label: str) -> dict[str, Any]:

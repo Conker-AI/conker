@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import conker_config
+import conker_config  # noqa: E402
 
 OUTPUT = ROOT / "docs" / "reference" / "settings.md"
 # Pages that quote how many settings take effect and how many are planned (saved, nothing reads

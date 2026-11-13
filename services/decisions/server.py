@@ -92,8 +92,9 @@ class LayaBackend:
              "criteria": request.choices}
         internal = agent._to_internal(q)
         tok = agent.tok
-        encode = lambda text: tok(text.replace(tok.mask_token, " "),
-                                  add_special_tokens=False)["input_ids"]
+        def encode(text):
+            return tok(text.replace(tok.mask_token, " "), add_special_tokens=False)["input_ids"]
+
         options = [encode(" " + option) for option in render_options(internal)]
         head = encode("choice question: " + request.instructions)
         option_size = sum(len(item) + 1 for item in options)
@@ -187,7 +188,7 @@ def create_app(backend: Backend | None = None, *, key: str | None = None):
         except ContextTooLarge:
             raise HTTPException(422, "decision_context_too_large") from None
         # Provider failures are intentionally collapsed at this public boundary.
-        except Exception:  # noqa: BLE001
+        except Exception:
             raise HTTPException(503, "decision_unavailable") from None
         finally:
             lock.release()

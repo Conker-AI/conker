@@ -10,10 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import recovery_layout
-from release_manifest import parse_env
+import recovery_layout  # noqa: E402
+from release_manifest import parse_env  # noqa: E402
 
-from tests.ubuntu_generator import prepare
+from tests.ubuntu_generator import prepare  # noqa: E402
 
 
 def ubuntu_deployment(tmp_path: Path) -> tuple[dict, dict[str, dict[str, str]]]:

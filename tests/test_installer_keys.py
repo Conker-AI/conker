@@ -30,7 +30,7 @@ def test_generated_secrets_are_always_32_characters():
 
 
 @needs_docker
-def test_a_short_gateway_key_from_an_older_install_is_replaced(install):  # noqa: F811 - fixture
+def test_a_short_gateway_key_from_an_older_install_is_replaced(install):
     """The two keys the gateway shares with Pi must be 32 characters or the
     gateway will not start. They protect no stored data, so a short one from an
     older installer is replaced, and its SHA256 follows."""
@@ -55,7 +55,7 @@ def test_a_short_gateway_key_from_an_older_install_is_replaced(install):  # noqa
 
 
 @needs_docker
-def test_memorygate_and_toolgate_get_their_own_pi_keys_and_pi_the_hashes(install):  # noqa: F811
+def test_memorygate_and_toolgate_get_their_own_pi_keys_and_pi_the_hashes(install):
     """Contract C1: each service asks Pi for model text with its own key; Pi holds only the
     hashes. A key from an older install is kept, a short one made again, and an install from
     before them gets them on the next run without any other key changing."""

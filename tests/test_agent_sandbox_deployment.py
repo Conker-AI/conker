@@ -228,7 +228,7 @@ def test_launcher_and_installer_select_overlay_only_for_active_sandbox():
 # --- release manifest cases ---
 
 sys.path.insert(0, str(ROOT / "scripts"))
-from release_manifest import ManifestError, parse_env, validate_manifest
+from release_manifest import ManifestError, parse_env, validate_manifest  # noqa: E402
 
 MANIFEST = ROOT / "versions.env"
 
@@ -267,7 +267,7 @@ def test_active_sandbox_with_a_digest_of_another_repository_fails():
     values["AGENT_SANDBOX_IMAGE"] = "ghcr.io/other/toolgate-sandbox@sha256:" + "a" * 64
     values["TOOLGATE_VERSION"] = "0.6.0"
 
-    with pytest.raises(ManifestError, match="ghcr.io/conker-ai/toolgate-sandbox"):
+    with pytest.raises(ManifestError, match=r"ghcr\.io/conker-ai/toolgate-sandbox"):
         validate_manifest(values)
 
 
@@ -277,7 +277,7 @@ def test_active_sandbox_with_toolgate_version_below_0_6_0_fails():
     values["AGENT_SANDBOX_IMAGE"] = "ghcr.io/conker-ai/toolgate-sandbox@sha256:" + "a" * 64
     values["TOOLGATE_VERSION"] = "0.5.1"
 
-    with pytest.raises(ManifestError, match="TOOLGATE_VERSION at least 0.6.0"):
+    with pytest.raises(ManifestError, match=r"TOOLGATE_VERSION at least 0\.6\.0"):
         validate_manifest(values)
 
 
@@ -296,8 +296,8 @@ def test_active_sandbox_with_0_6_0_and_correct_digest_passes():
 
 # --- recovery cases ---
 
-from recovery_layout import REPOSITORY_PROFILE
-from recovery_snapshot import valid_service_inventory
+from recovery_layout import REPOSITORY_PROFILE  # noqa: E402
+from recovery_snapshot import valid_service_inventory  # noqa: E402
 
 
 def test_repository_inventory_is_valid_with_and_without_sandbox_services():

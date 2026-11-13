@@ -216,7 +216,7 @@ def test_compose_matrix_requires_exact_set_without_substitutes():
 
     changed = list(plan["runtime_references"])
     changed[0] = "ghcr.io/conker-ai/pi:latest"
-    with pytest.raises(AcceptanceError, match="missing=.*unexpected="):
+    with pytest.raises(AcceptanceError, match=r"missing=.*unexpected="):
         assert_compose_matrix(plan, changed)
 
 
@@ -257,7 +257,7 @@ def test_build_only_images_are_pulled_but_excluded_from_compose_matrix():
     assert node in plan["build_only_references"]
     assert node not in plan["runtime_references"]
     assert_compose_matrix(plan, plan["runtime_references"])
-    with pytest.raises(AcceptanceError, match="unexpected=.*node_build"):
+    with pytest.raises(AcceptanceError, match=r"unexpected=.*node_build"):
         assert_compose_matrix(plan, plan["pull_references"])
 
 

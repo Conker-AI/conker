@@ -54,7 +54,7 @@ def read_json(path, maximum_bytes=1048576):
     except RecursionError:
         raise ValueError("JSON nesting exceeds the supported limit.") from None
     if not isinstance(value, dict):
-        raise ValueError("JSON must contain an object.")  # noqa: TRY004 - invalid file content, not a Python caller type
+        raise ValueError("JSON must contain an object.")  # invalid file content, not a Python caller type
     return value
 
 
@@ -129,7 +129,7 @@ def memory_edit_operation(args):
         body = {"expected_payload_hash": args.expected_payload_hash}
     elif args.operation == "apply":
         if not 1 <= args.expected_revision <= 2147483646:
-            raise ValueError("Use the reviewed memory revision (1–2147483646).")
+            raise ValueError("Use the reviewed memory revision (1–2147483646).")  # noqa: RUF001
         text = read_text(args.file, 64003, "Replacement memory text")
         if not text.strip() or len(text) > 16000 or "\x00" in text:
             raise ValueError(

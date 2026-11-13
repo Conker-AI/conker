@@ -206,10 +206,7 @@ def test_saved_policy_is_read_like_conker_setup_protection(tmp_path):
     ops = HostOps(tmp_path, tmp_path / "source", "ubuntu", reader=reader)
     assert ops.policy()["destination"] == destination
     argv, kwargs = calls[0]
-    assert argv == ["bash", str((tmp_path / "source").resolve() / "conker")] + [
-        "setup",
-        "protection",
-    ]
+    assert argv == ["bash", str((tmp_path / "source").resolve() / "conker"), "setup", "protection"]
     assert kwargs["env"]["CONKER_LAYOUT"] == "ubuntu"
     answers[0] = {**policy, "revision": 0, "destination": None}
     assert ops.policy() is None

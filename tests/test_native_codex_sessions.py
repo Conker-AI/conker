@@ -237,7 +237,7 @@ def test_native_cursor_overflow_or_no_progress_is_not_empty_success(inventory):
         {"limit": "01"},
         {"limit": 0},
         {"limit": 51},
-        {"limit": "２"},
+        {"limit": "２"},  # noqa: RUF001
         {"archived": 1},
         {"archived": "True"},
         {"cursor": ""},

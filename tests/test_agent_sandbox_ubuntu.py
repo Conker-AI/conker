@@ -19,11 +19,11 @@ TOOLGATE_BUILD = {"context": "./sources/toolgate", "dockerfile": "toolgate/Docke
 LOGGING = {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}
 
 sys.path.insert(0, str(ROOT / "scripts"))
-from agent_workspaces import AgentWorkspacesError, validate_workspaces
-from recovery_layout import UBUNTU_PROFILE
-from recovery_snapshot import valid_service_inventory
+from agent_workspaces import AgentWorkspacesError, validate_workspaces  # noqa: E402
+from recovery_layout import UBUNTU_PROFILE  # noqa: E402
+from recovery_snapshot import valid_service_inventory  # noqa: E402
 
-from tests.ubuntu_generator import ACCEPT_FOLDER
+from tests.ubuntu_generator import ACCEPT_FOLDER  # noqa: E402
 
 
 def versions(active: bool) -> str:

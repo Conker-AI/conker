@@ -20,14 +20,14 @@ BUILT_IN_TOOLS = (
     "tool:sandbox.run,tool:sandbox.install"
 )
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces
-from scripts.import_listener import pi_environment as import_listener_environment
-from scripts.provider_records import FIRST_PROVIDERS, PROVIDERS
-from scripts.provider_secrets import ProviderSecretError, SecretStore
-from scripts.release_manifest import ManifestError, load_release_manifest
-from scripts.service_keys import environments as service_environments
-from scripts.service_keys import new_key, usable
-from scripts.terminal_workspace import TerminalWorkspaceError, validate_workspace
+from scripts.agent_workspaces import AgentWorkspacesError, validate_workspaces  # noqa: E402
+from scripts.import_listener import pi_environment as import_listener_environment  # noqa: E402
+from scripts.provider_records import FIRST_PROVIDERS, PROVIDERS  # noqa: E402
+from scripts.provider_secrets import ProviderSecretError, SecretStore  # noqa: E402
+from scripts.release_manifest import ManifestError, load_release_manifest  # noqa: E402
+from scripts.service_keys import environments as service_environments  # noqa: E402
+from scripts.service_keys import new_key, usable  # noqa: E402
+from scripts.terminal_workspace import TerminalWorkspaceError, validate_workspace  # noqa: E402
 
 origin = sys.argv[1]
 parsed = urlsplit(origin)
@@ -132,7 +132,8 @@ if fresh or added:
     written.write_text(json.dumps(keys))
     written.chmod(0o600)
     written.replace(keyfile)
-digest = lambda name: hashlib.sha256(keys[name].encode()).hexdigest()
+def digest(name):
+    return hashlib.sha256(keys[name].encode()).hexdigest()
 
 def preserved_pi_setting(name):
     value = os.environ.get(name)

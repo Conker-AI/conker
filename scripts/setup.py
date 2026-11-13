@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -219,10 +220,8 @@ def write_receipt(path: Path, receipt: dict[str, object]) -> None:
     if len(payload) > 16_384:
         raise SetupError("receipt output exceeds 16 KiB")
     path.write_bytes(payload)
-    try:
+    with contextlib.suppress(OSError):
         path.chmod(0o600)
-    except OSError:
-        pass
 
 
 def main() -> int:
@@ -241,7 +240,7 @@ def main() -> int:
         write_receipt(args.output, receipt)
         print(f"Verified coordinated backup: {snapshot}", file=sys.stderr)
         return 0
-    except Exception as exc:  # noqa: BLE001 - sanitize the host CLI boundary
+    except Exception as exc:  # sanitize the host CLI boundary
         message = str(exc) if isinstance(exc, SetupError) else type(exc).__name__
         print(f"Setup evidence failed: {message}", file=sys.stderr)
         return 1

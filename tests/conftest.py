@@ -21,7 +21,7 @@ def ubuntu_cli(tmp_path: Path):
     shell = shutil.which("sh")
     if sys.platform == "win32":
         git_sh = (
-            Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+            Path(os.environ.get("ProgramFiles", "C:/Program Files"))  # noqa: SIM112
             / "Git/usr/bin/sh.exe"
         )
         shell = str(git_sh) if git_sh.exists() else None

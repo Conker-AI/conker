@@ -266,7 +266,7 @@ def drill(
         receipt.update(outcome="refused", reason=str(error))
     except RecoveryError as error:
         receipt["reason"] = str(error)[:500]
-    except Exception as error:  # noqa: BLE001 - a receipt holds the type, never the text
+    except Exception as error:  # a receipt holds the type, never the text
         receipt["reason"] = f"The drill stopped on an unexpected {type(error).__name__}."
     receipt["durationSeconds"] = round(time.monotonic() - start)
     receipt["endedAt"] = utc_now()

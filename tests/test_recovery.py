@@ -22,11 +22,11 @@ from tests.recovery_fakes import Engine, database, toolgate_store
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import recovery
-import recovery_data
-import recovery_layout
-import recovery_restore
-import recovery_snapshot
+import recovery  # noqa: E402
+import recovery_data  # noqa: E402
+import recovery_layout  # noqa: E402
+import recovery_restore  # noqa: E402
+import recovery_snapshot  # noqa: E402
 
 
 @pytest.fixture
@@ -238,7 +238,7 @@ def test_backup_refuses_legacy_plaintext_provider_credentials(installed):
     root, engine = installed
     (root / ".env").write_text("OPENROUTER_KEY=legacy-plaintext-provider-key\n")
 
-    with pytest.raises(recovery.RecoveryError, match="rerun install.sh"):
+    with pytest.raises(recovery.RecoveryError, match=r"rerun install\.sh"):
         recovery.backup(root, None, engine)
 
     assert not (root / ".conker-backup.lock").exists()
@@ -483,7 +483,7 @@ def test_shell_commands_cannot_bypass_recovery_hold(tmp_path, command):
 def test_missing_pi_store_cannot_produce_a_complete_snapshot(installed):
     root, engine = installed
     (engine.volumes["original-pi"] / "pi.db").unlink()
-    with pytest.raises(recovery_data.RecoveryError, match="pi.db"):
+    with pytest.raises(recovery_data.RecoveryError, match=r"pi\.db"):
         recovery.backup(root, None, engine)
     assert not list((engine.tmp / "backup-location").rglob("manifest.json"))
 

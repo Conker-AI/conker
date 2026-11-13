@@ -22,7 +22,7 @@ from tests.test_installer import (  # noqa: F401
 PINNED = "ghcr.io/conker-ai/subscriptions@sha256:" + "a" * 64
 
 
-def activate(install):  # noqa: F811 - fixture
+def activate(install):
     """This copy's release, with the image pinned (by a digest compose never pulls here)."""
     versions = install.dir / "versions.env"
     versions.write_text(
@@ -33,7 +33,7 @@ def activate(install):  # noqa: F811 - fixture
     )
 
 
-def resolved(install, *overlays: str) -> dict:  # noqa: F811 - fixture
+def resolved(install, *overlays: str) -> dict:  # fixture
     command = [
         "docker",
         "compose",
@@ -56,13 +56,13 @@ def resolved(install, *overlays: str) -> dict:  # noqa: F811 - fixture
     return json.loads(result.stdout)
 
 
-def test_help_names_the_choice(install):  # noqa: F811 - fixture
+def test_help_names_the_choice(install):
     result = install("--help")
     assert "--claude-plan" in result.stdout and "--no-claude-plan" in result.stdout
 
 
 @needs_docker
-def test_keys_are_made_while_the_release_keeps_it_off(install):  # noqa: F811 - fixture
+def test_keys_are_made_while_the_release_keeps_it_off(install):
     result = install("--yes", "--dry-run", "--claude-plan")
     values = env_values(install.env_file)
 
@@ -87,7 +87,7 @@ def test_keys_are_made_while_the_release_keeps_it_off(install):  # noqa: F811 - 
 
 
 @needs_docker
-def test_the_owner_turns_it_on_and_compose_wires_its_keys(install):  # noqa: F811 - fixture
+def test_the_owner_turns_it_on_and_compose_wires_its_keys(install):
     activate(install)
     install("--yes", "--dry-run")
     # Unattended, the answer is the default: no.

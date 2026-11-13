@@ -12,7 +12,7 @@ import subprocess
 import threading
 import time
 import unicodedata
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from native_claude import environment
@@ -98,10 +98,8 @@ class Sessions:
         self.closed.set()
         with self.command_lock:
             if self.process is not None and self.process.poll() is None:
-                try:
+                with suppress(OSError):
                     self.process.kill()
-                except OSError:
-                    pass
 
     @contextmanager
     def _operation(self):
@@ -203,10 +201,12 @@ class Sessions:
         if (
             not isinstance(identity, str)
             or not IDENTITY.fullmatch(identity)
-            or native_session is not None
-            and (
-                not isinstance(native_session, str)
-                or not IDENTITY.fullmatch(native_session)
+            or (
+                native_session is not None
+                and (
+                    not isinstance(native_session, str)
+                    or not IDENTITY.fullmatch(native_session)
+                )
             )
             or not isinstance(cwd, str)
             or not 1 <= len(cwd) <= 4096

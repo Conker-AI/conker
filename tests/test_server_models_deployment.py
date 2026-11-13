@@ -13,10 +13,10 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import recovery_layout
-import service_keys
+import recovery_layout  # noqa: E402
+import service_keys  # noqa: E402
 
-from tests.ubuntu_generator import prepare
+from tests.ubuntu_generator import prepare  # noqa: E402
 
 
 def generated(tmp_path, **environment):

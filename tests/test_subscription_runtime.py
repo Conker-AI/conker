@@ -16,9 +16,9 @@ from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import subscription_runtime
-from chatgpt_relay import ChatGPTRelay
-from workspace_providers import create_app
+import subscription_runtime  # noqa: E402
+from chatgpt_relay import ChatGPTRelay  # noqa: E402
+from workspace_providers import create_app  # noqa: E402
 
 CONTROL = {"Authorization": "Bearer " + "c" * 32}
 INFERENCE = {"Authorization": "Bearer " + "i" * 32}

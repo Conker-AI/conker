@@ -10,7 +10,7 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-import workspace_build as build
+import workspace_build as build  # noqa: E402
 
 
 @pytest.fixture
@@ -183,7 +183,7 @@ def test_publish_refuses_missing_index_or_outside_destination(project, tmp_path)
     stage = checkpoint / "staged"
     stage.mkdir(parents=True)
     before = build.manifest(dashboard / "dist")
-    with pytest.raises(RuntimeError, match="index.html"):
+    with pytest.raises(RuntimeError, match=r"index\.html"):
         build.publish(root, stage, dashboard / "dist", checkpoint)
     (stage / "index.html").write_text("new")
     with pytest.raises(ValueError, match="inside this workspace"):

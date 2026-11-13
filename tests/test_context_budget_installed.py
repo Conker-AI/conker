@@ -13,8 +13,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import config_cli
-import context_cli
+import config_cli  # noqa: E402
+import context_cli  # noqa: E402
 
 INSTALLED = ["--root", "/srv/conker", "--layout", "ubuntu"]
 BUDGET = ["budget", "ses_1", "--window", "8192", "--reserve", "1024"]
