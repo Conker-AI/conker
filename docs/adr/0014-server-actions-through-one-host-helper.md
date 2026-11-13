@@ -41,6 +41,14 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   a day, skipping while an action holds the lock. It is a read, not an action: no receipt. It tells
   Pi about a newer release (an Inbox offer) and about finished updates (their receipts, each once).
 
+  Amended 2026-11-13: an `update.run` cut off part way (a reboot, a killed helper) is the one
+  thing the helper finishes on its own, because Conker must not stay between two versions. When it
+  starts and before each daily check it runs `conker update --recover` if the update store shows
+  one in flight: once Docker answers, under the action lock, with no time limit, never while that
+  update still runs (its `update.lock`), a backup runs, a recovery is held or the update is held.
+  It rolls the update back and proves the old version, as a failed update is (or holds it); its
+  receipt is the update receipt the Inbox gets, not a journal row.
+
   The next ones follow the server-actions design (start and stop, model download, drills,
   recovery, updates, certificates). An operation never takes a secret; secrets keep their
   write-only provider routes.
@@ -63,7 +71,7 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
 - **Unknown, never retried.** An action whose runner is gone (the helper restarted, the CLI was
   interrupted, a time limit stopped it) is recorded as `unknown` with a check step: the read that
   shows what happened (`services.status`, `backup.list`, or verifying the same snapshot again).
-  Nothing retries it; the owner checks and decides. A backup has no time limit, because stopping
+  Nothing retries it; the owner checks and decides (a cut-off `update.run` is rolled back, above). A backup has no time limit, because stopping
   it mid-capture would leave Conker's writers stopped.
 - **The CLI stays the bootstrap plane.** Every operation is a plain `conker` command first.
   `conker ops` reads and writes the journal directly, so it works with the helper down, and

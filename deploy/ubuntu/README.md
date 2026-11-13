@@ -164,7 +164,10 @@ verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swa
 (the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
 --strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
 already changed stays changed, and the snapshot is the way back); if that cannot be
-proven the update holds and the snapshot is the way back. Receipts are in `state/update/`. Plain
+proven the update holds and the snapshot is the way back. An update cut off part way (a reboot)
+gets the same rollback from `conker update --recover`, which the host helper runs when it starts
+and before each daily check (never while an update still runs, a backup runs or a recovery or the
+update is held; a manual `conker backup` waits for a running update in turn). Receipts are in `state/update/`. Plain
 `conker update` (follow a branch) and the repository-wide `key` command remain unavailable. The launcher does not depend on Hermes. Direct
 Compose equivalents:
 

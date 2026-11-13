@@ -354,6 +354,7 @@ cmd_key() {
 # conker update --check [--json] [--report]   is a newer release out (--report: tell the Inbox)
 # conker update --to X.Y.Z      go to that release (Ubuntu layout): staged, snapshotted, verified,
 #                               rolled back on failure (scripts/update_ubuntu.py)
+# conker update --recover       finish an update a reboot cut off (the host helper runs it at start)
 cmd_update() {
     command -v python3 >/dev/null 2>&1 || {
         printf 'Python 3.11+ is required for updates. Install python3, then retry.\n' >&2
@@ -375,6 +376,13 @@ cmd_update() {
             info "Staged and checked first, then a verified snapshot, then the switch."
             say ""
             python3 "$SOURCE_ROOT/scripts/update_ubuntu.py" --root "$ROOT" --to "$2"
+            return
+            ;;
+        --recover)
+            [ "$#" -eq 1 ] || { printf 'Use conker update --recover.\n' >&2; exit 2; }
+            [ "$LAYOUT" = ubuntu ] || unavailable 'update --recover' \
+                'A repository install recovers a cut-off update at its next conker update.'
+            python3 "$SOURCE_ROOT/scripts/update_ubuntu.py" --root "$ROOT" --recover
             return
             ;;
         "") ;;
