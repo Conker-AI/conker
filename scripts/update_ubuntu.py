@@ -30,7 +30,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import sqlite3
 import subprocess
@@ -61,6 +60,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         _release_lock,
         _token,
     )
+    from scripts.update_snapshots import SNAPSHOT_NAME, after_update_snapshot
     from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
     import update_pi_db
@@ -74,12 +74,11 @@ except ModuleNotFoundError:
         _release_lock,
         _token,
     )
+    from update_snapshots import SNAPSHOT_NAME, after_update_snapshot
     from update_swap import identity, put_back, swap_in
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
 COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/conker/tar.gz/{commit}"
-# A snapshot `conker backup` made (scripts/recovery_backup.py): the update's own, named in its state.
-SNAPSHOT_NAME = re.compile(r"snapshot-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}")
 # Source folder -> (its repository, the versions.env line that pins its tag).
 MODULES = {
     "pi": ("pi", "PI_VERSION"),
@@ -344,7 +343,13 @@ class UbuntuTransport:
         )
         if len(made) != 1:
             raise UpdateError("the snapshot before the update could not be found")
+        receipts = self.root / "state" / "update" / "receipts"
+        after_update_snapshot(destination, made[0], receipts, self._verify)  # older update ones
         return {"snapshot": made[0]}
+
+    def _verify(self, snapshot: Path) -> None:
+        """Raises for a snapshot that does not verify; the prune keeps the newest that does."""
+        self._run(self._conker("verify-backup", str(snapshot)), "a snapshot check", timeout=3600)
 
     def apply_code(self, candidate: dict[str, Any]) -> None:
         recovery, staging = Path(candidate["recovery"]), Path(candidate["staging"])
