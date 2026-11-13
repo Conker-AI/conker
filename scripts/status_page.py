@@ -1,10 +1,10 @@
 """Write the generated parts of docs/status.md from capabilities.json and versions.env, or check
 that they still match.
 
-Three blocks between `<!-- generated:NAME -->` and `<!-- /generated:NAME -->` are written here:
+Four blocks between `<!-- generated:NAME -->` and `<!-- /generated:NAME -->` are written here:
 `families` (how many capability families are active and deferred), `release` (the version or
-state versions.env pins for each service) and `deferred` (each deferred family, its gap and what
-it still needs). Everything else on the page is written by hand. Run from the repository root
+state versions.env pins for each service), `deferred` (each deferred family, its gap and what
+it still needs) and `frozen` (each family kept as built, and why). Everything else on the page is written by hand. Run from the repository root
 after changing either file: python scripts/status_page.py [--check]
 """
 
@@ -86,11 +86,20 @@ def deferred(capabilities: list[dict]) -> str:
     return "\n".join(rows) + "\n"
 
 
+def frozen(capabilities: list[dict]) -> str:
+    rows = ["| Capability | Why it is frozen |", "| --- | --- |"]
+    rows += [f"| {item['name']} | {item['frozen']} |" for item in capabilities if "frozen" in item]
+    if len(rows) == 2:
+        return "Nothing is frozen.\n"
+    return "\n".join(rows) + "\n"
+
+
 def render(text: str, capabilities: list[dict], pins: dict[str, str]) -> str:
     bodies = {
         "families": families(capabilities),
         "release": release(pins),
         "deferred": deferred(capabilities),
+        "frozen": frozen(capabilities),
     }
     found = [match["name"] for match in BLOCK.finditer(text)]
     if sorted(found) != sorted(bodies):

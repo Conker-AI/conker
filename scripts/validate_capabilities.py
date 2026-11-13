@@ -104,7 +104,7 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
         seen.add(identity)
         state = row.get("state")
         allowed = FIELDS | ({"gap"} if state == "deferred" else set())
-        if set(row) != allowed:
+        if set(row) - {"frozen"} != allowed:
             raise MatrixError(f"{identity} has missing or unexpected fields")
         if row.get("authority") not in AUTHORITIES or state not in STATES:
             raise MatrixError(f"{identity} has an invalid authority or state")
@@ -138,6 +138,12 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
                 )
             if not isinstance(row.get("gap"), str) or len(row["gap"].strip()) < 20:
                 raise MatrixError(f"{identity}.gap must explain the deferral")
+
+        # Frozen: kept as built, no new work on it until the hero screens ship (H-02).
+        if "frozen" in row and (
+            not isinstance(row["frozen"], str) or len(row["frozen"].strip()) < 20
+        ):
+            raise MatrixError(f"{identity}.frozen must say why the family is frozen")
 
         evidence = row.get("evidence")
         if not isinstance(evidence, list) or not evidence:

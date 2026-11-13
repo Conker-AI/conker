@@ -145,14 +145,14 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/control.ts", "contains": "async agents(signal?: AbortSignal)"}, {"path": "dashboard/src/components/gateway/agents-workspace.tsx", "contains": "Each picks its model, tools and memory; your approval rules still apply."}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Authored agents are owner-controlled records"}, {"path": "conker", "contains": "cmd_inspect"}, {"path": "dashboard/src/lib/gateway/characters.ts", "contains": "The Companion changed elsewhere"}, {"path": "dashboard/src/components/gateway/character-workspace.tsx", "contains": "Saved immutable revision"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Only this authenticated owner route gets the larger envelope"}]
     },
     {
-      "id": "projects-context", "name": "Projects and project context", "authority": "pi", "state": "active",
+      "id": "projects-context", "name": "Projects and project context", "authority": "pi", "state": "active", "frozen": "Kept as built; no new features until the hero screens (chat, calls, Home, character) ship.",
       "gatewayRoutes": ["/api/control/pi/projects", "/api/control/pi/projects/{id}", "/api/control/pi/projects/{id}/update", "/api/control/pi/projects/{id}/archive", "/api/control/pi/projects/{id}/link", "/api/control/pi/projects/{id}/unlink", "/api/control/pi/sessions/{id}/settings"],
       "uiRoutes": ["/projects", "/projects/{id}"], "cliCommands": ["conker inspect projects", "conker apply projects FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
       "evidence": [{"path": "dashboard/src/lib/gateway/projects.ts", "contains": "authority: z.literal('none')"}, {"path": "dashboard/src/components/gateway/projects-workspace.tsx", "contains": "Pi will recheck every source"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "destructive removal stays host-admin only"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
-      "id": "artifacts", "name": "Artifact library and exports", "authority": "pi", "state": "active",
+      "id": "artifacts", "name": "Artifact library and exports", "authority": "pi", "state": "active", "frozen": "Kept as built; no new features until the hero screens (chat, calls, Home, character) ship.",
       "gatewayRoutes": ["/api/control/pi/artifacts", "/api/control/pi/artifacts/from-message", "/api/control/pi/artifacts/{id}", "/api/control/pi/artifacts/{id}/versions", "/api/control/pi/artifacts/{id}/restore", "/api/control/pi/artifacts/{id}/archive", "/api/control/pi/artifacts/{id}/export"],
       "uiRoutes": ["/artifacts", "/artifacts/{id}"], "cliCommands": ["conker inspect artifacts", "conker apply artifacts FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store"],
@@ -185,7 +185,7 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/calls.ts", "contains": "execution: z.literal('typed-turn')"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "client.interrupt(call.id, call.revision)"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "Browser call audio is one bounded transient WAV turn"}, {"path": "dashboard/src/hooks/use-gateway-call-audio.ts", "contains": "Owns ephemeral microphone capture and playback"}, {"path": "dashboard/src/lib/gateway/calls.ts", "contains": "async audioTurn"}, {"path": "dashboard/src/components/gateway/call-workspace.tsx", "contains": "recordings and generated audio are not retained"}, {"path": "dashboard/src/components/gateway/setup-progress.tsx", "contains": "conker speech configure"}, {"path": "scripts/speech_config.py", "contains": "Secret values never enter browser state or argv"}]
     },
     {
-      "id": "teams-collaboration", "name": "Agent teams and collaboration", "authority": "pi", "state": "active",
+      "id": "teams-collaboration", "name": "Agent teams and collaboration", "authority": "pi", "state": "active", "frozen": "Kept as built; no new features until the hero screens (chat, calls, Home, character) ship.",
       "gatewayRoutes": ["/api/control/pi/collaboration/teams", "/api/control/pi/collaboration/teams/{id}", "/api/control/pi/collaboration/teams/{id}/update", "/api/control/pi/collaboration/teams/{id}/archive", "/api/control/pi/collaboration/teams/{id}/restore", "/api/control/pi/collaboration/teams/{id}/versions", "/api/control/pi/collaboration/teams/{id}/versions/{revision}"],
       "uiRoutes": ["/agents?tab=teams"], "cliCommands": ["conker inspect teams", "conker apply teams FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store", "saved agent profiles"],
@@ -199,7 +199,7 @@
       "evidence": [{"path": "dashboard/src/lib/gateway/filesystem.ts", "contains": "execution: z.literal('directory-listing-only')"}, {"path": "dashboard/src/components/gateway/filesystem-workspace.tsx", "contains": "No file contents, editing, uploads, deletes, or shell access"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "No content or mutation route is browser reachable"}]
     },
     {
-      "id": "owner-terminal", "name": "Owner terminal", "authority": "gateway", "state": "deferred", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
+      "id": "owner-terminal", "name": "Owner terminal", "authority": "gateway", "state": "deferred", "frozen": "Kept as built; no new features until the hero screens (chat, calls, Home, character) ship.", "gatewayRoutes": [], "uiRoutes": [], "cliCommands": [],
       "deploymentRequirements": ["operator-selected validated workspace", "digest-pinned owner-terminal registry image", "hashed target-Linux acceptance bundle", "explicit owner terminal transport", "production UI"],
       "gap": "The constrained gateway PTY is not configured or mounted by the release deployment, and it has no production UI.",
       "evidence": [{"path": "versions.env", "contains": "OWNER_TERMINAL_STATE=deferred"}, {"path": "docker-compose.terminal.yml", "contains": "network_mode: none"}, {"path": "docs/reference/owner-terminal-candidate-2026-09-27.md", "contains": "not a release identity"}]

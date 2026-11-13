@@ -64,6 +64,19 @@ tests, but not yet exercised end to end on an installed stack.
 | Owner terminal | The constrained gateway PTY is not configured or mounted by the release deployment, and it has no production UI. | operator-selected validated workspace; digest-pinned owner-terminal registry image; hashed target-Linux acceptance bundle; explicit owner terminal transport; production UI |
 <!-- /generated:deferred -->
 
+## Frozen
+
+These work and stay working, but get no new features for now.
+
+<!-- generated:frozen -->
+| Capability | Why it is frozen |
+| --- | --- |
+| Projects and project context | Kept as built; no new features until the hero screens (chat, calls, Home, character) ship. |
+| Artifact library and exports | Kept as built; no new features until the hero screens (chat, calls, Home, character) ship. |
+| Agent teams and collaboration | Kept as built; no new features until the hero screens (chat, calls, Home, character) ship. |
+| Owner terminal | Kept as built; no new features until the hero screens (chat, calls, Home, character) ship. |
+<!-- /generated:frozen -->
+
 ## Known gaps
 
 - **Small CPU models are the weak spot.** A 3B model sometimes breaks the tool-call format, a 4B

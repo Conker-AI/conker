@@ -70,7 +70,16 @@ def test_a_new_pin_and_a_deferred_family_change_the_page():
     assert "| Pi and the Gateway | 9.9.9 |" in page
     assert f"**{len(items)} tracked\ncapability families: {len(items) - 2} active and 2 deferred**" in page
     assert "| Shelved thing | No gap recorded in capabilities.json. |" in page
-    assert page.count("<!-- /generated:") == 3  # hand-written text around the blocks is kept
+    assert page.count("<!-- /generated:") == 4  # hand-written text around the blocks is kept
+
+
+def test_a_frozen_family_is_listed_with_its_reason():
+    text = STATUS.read_text(encoding="utf-8")
+    reason = "Kept while the hero screens are built."
+    items = [{**capabilities()[0], "name": "Held thing", "frozen": reason}]
+    assert f"| Held thing | {reason} |" in status_page.render(text, items, parse_env(MANIFEST))
+    unfrozen = [{k: v for k, v in item.items() if k != "frozen"} for item in capabilities()]
+    assert "Nothing is frozen." in status_page.render(text, unfrozen, parse_env(MANIFEST))
 
 
 def test_a_page_without_its_blocks_or_a_missing_pin_is_refused():

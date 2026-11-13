@@ -371,13 +371,10 @@ durable hold under Git's private `conker-update` directory and refuses another u
 Each attempt leaves a redacted JSON receipt in `.git/conker-update/receipts/` (or the
 equivalent private Git directory for a worktree). Receipts contain revisions and
 status, never `.env` values or command output. An interrupted mutating attempt is
-rolled back and verified before a rerun starts. On the source-built Ubuntu layout
-an update names a release: `conker update --check` compares the installed `CONKER_VERSION` with
-the latest release page, and `conker update --to X.Y.Z` stages that tag and the module tags it
-pins, takes a verified snapshot first, swaps the sources, rebuilds and accepts only `conker status
---strict`; a failure restores the old sources, and an unprovable restore holds. The host helper
-checks once a day and the Inbox offers the release with its notes; Update there asks for the
-password and reports the result back to the Inbox (deploy/ubuntu/README.md).
+rolled back and verified before a rerun starts. On the source-built Ubuntu layout an update
+names a release (`conker update --check`, `conker update --to X.Y.Z`, or Update in the Inbox):
+see [looking after your server](reference/server-care.md#update-to-a-new-release) for the steps
+and what each result means, and deploy/ubuntu/README.md for how it works.
 
 ### Reset the password
 
@@ -399,12 +396,9 @@ A restore starts held and does not go straight back into service. Keep a copy on
 machine. See [recovery](reference/recovery.md), and [looking after your
 server](reference/server-care.md) for the owner's steps in plain words.
 
-On a Linux server, `conker backup schedule on` backs up to the folder saved in setup every night
-(about 03:30 local time) and keeps the number you chose (7 unless you changed it); add
-`--drill weekly` to also try a restore every Sunday. Nothing is scheduled until you turn it on.
-`conker backup drill` restores the newest backup into a throwaway copy, checks it and removes the
-copy; `conker backup drill --last` shows how the last one went, and `conker backup schedule
-status` shows both timers and the last runs.
+Nightly backups (`conker backup schedule on`) and restore drills (`conker backup drill`) are
+off until you turn them on: [looking after your
+server](reference/server-care.md#set-up-backups-once) has the steps.
 
 ### Server actions and the host helper
 
