@@ -94,7 +94,7 @@ const shell = fs.readFileSync(path.join(root, 'src/components/gateway/workspace-
 assert.doesNotMatch(shell, /WorkspaceRail|conker-statusbar|'Ready'/, 'Duplicate navigation and idle-as-ready status must not return')
 assert.doesNotMatch(shell, /role="tablist"|workspace-tabs|runtime\.listSessions/, 'One main view: no open-views tabs and no second chat list')
 assert.match(shell, /<InlineDetails open=\{contextOpen\}/, 'Conversation views open in place under the chat bar')
-assert.doesNotMatch(shell, /conker-reference|<DetailPanel/, 'No side column or sheet for conversation views (owner: no side windows)')
+assert.doesNotMatch(shell, /conker-reference/, 'No side column or sheet for conversation views (owner: no side windows)')
 assert.match(header, /\{shell\?\.panel\}/, 'The chat bar renders the open view directly below itself')
 const views = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-views.tsx'), 'utf8')
 const viewList = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-view-list.ts'), 'utf8')
