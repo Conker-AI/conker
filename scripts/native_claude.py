@@ -10,6 +10,7 @@ import time
 import uuid
 from contextlib import nullcontext
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 SYSTEM_PROMPT = (
@@ -79,7 +80,7 @@ class Claude:
         self.url = None
         self.started = 0
 
-    def options(self):
+    def options(self) -> dict[str, Any]:
         return dict(
             env=environment(self.home),
             cwd=self.home,
