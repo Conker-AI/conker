@@ -30,7 +30,9 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tarfile
@@ -41,6 +43,7 @@ from typing import Any, NoReturn
 from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
+    from scripts import update_pi_db
     from scripts.update_check import (
         COMMIT,
         VERSION,
@@ -60,6 +63,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
     )
     from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
+    import update_pi_db
     from update_check import COMMIT, VERSION, _Stay, installed_version, report, version_key
     from update_core import (
         LOCK_TOKEN,
@@ -74,6 +78,8 @@ except ModuleNotFoundError:
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
 COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/conker/tar.gz/{commit}"
+# A snapshot `conker backup` made (scripts/recovery_backup.py): the update's own, named in its state.
+SNAPSHOT_NAME = re.compile(r"snapshot-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}")
 # Source folder -> (its repository, the versions.env line that pins its tag).
 MODULES = {
     "pi": ("pi", "PI_VERSION"),
@@ -317,10 +323,12 @@ class UbuntuTransport:
         """Nothing to pull: this layout builds its images from the sources in apply_services."""
         return {}
 
+    def _snapshots(self) -> Path:
+        return Path(os.environ.get("CONKER_UPDATE_SNAPSHOTS", self.home / "conker-snapshots"))
+
     def protect(self, candidate: dict[str, Any]) -> dict[str, str]:
         """A verified snapshot of everything Conker holds, before anything running changes."""
-        default = self.home / "conker-snapshots"
-        destination = Path(os.environ.get("CONKER_UPDATE_SNAPSHOTS", default))
+        destination = self._snapshots()
         destination.mkdir(mode=0o700, parents=True, exist_ok=True)
         before = {path.name for path in destination.iterdir()}
         self._run(
@@ -399,11 +407,43 @@ class UbuntuTransport:
             raise UpdateError("the sources from before the update are missing")
         self._start(f"Conker {prior['revision']} again")
 
-    def verify_rollback(self, prior: dict[str, Any]) -> None:
+    def verify_rollback(self, prior: dict[str, Any], protection: dict | None = None) -> None:
         running = installed_version(self.sources / "companion") or "unreleased"
         if running != prior["revision"]:
             raise UpdateError("the sources from before the update are not the ones running")
-        self._answering(f"Conker {prior['revision']}")
+        try:
+            self._answering(f"Conker {prior['revision']}")
+        except UpdateError:
+            # A Pi does not start on a database a newer Pi migrated: only then is the snapshot's
+            # copy of it put back (scripts/update_pi_db.py); anything else holds.
+            if not self._pi_database_back((protection or {}).get("snapshot")):
+                raise
+            self._answering(f"Conker {prior['revision']} with Pi's database from before the update")
+
+    def _pi_database_back(self, snapshot: str | None) -> bool:
+        live = self.root / "state" / "pi" / update_pi_db.DATABASE
+        if not snapshot or not SNAPSHOT_NAME.fullmatch(snapshot):
+            return False
+        with tempfile.TemporaryDirectory(prefix="conker-pi-db-") as scratch:
+            try:
+                saved = update_pi_db.from_snapshot(self._snapshots() / snapshot, Path(scratch))
+                newer = update_pi_db.migrated_since(live, saved)
+            except (update_pi_db.DatabaseError, sqlite3.Error) as error:
+                raise UpdateError(f"Pi's database could not be compared: {error}") from None
+            if not newer:
+                return False
+            self._run(self._compose("stop", "pi"), "stopping Pi")
+            try:
+                kept = update_pi_db.put_back(live, saved, f"from-update-{self.stamp}")
+            except OSError as error:  # held, Pi stopped: the snapshot is the way back
+                raise UpdateError(f"Pi's database could not be put back ({error})") from None
+        print(
+            f"Pi's database from before the update is back; the one migrated by "
+            f"{', '.join(sorted(newer))} is kept as {kept}.",
+            file=sys.stderr,
+        )
+        self._run(self._compose("up", "-d"), "starting Pi with its database from before the update")
+        return True
 
 
 def tell_inbox(root: Path, send=None) -> None:

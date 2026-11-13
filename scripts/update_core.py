@@ -128,7 +128,9 @@ class UpdateCoordinator:
         self.store.save_active(state)
         try:
             self.transport.rollback(state["prior"], state.get("candidate"))
-            self.transport.verify_rollback(state["prior"])
+            # The snapshot from before the update, for data a newer release changed (Pi's
+            # migrations, scripts/update_pi_db.py).
+            self.transport.verify_rollback(state["prior"], state.get("protection") or {})
         except Exception as error:  # rollback is the last safety boundary
             failure = f"rollback could not be proven: {_why(error)}"
             self.store.receipt(state, "rollback_unproven", failure)

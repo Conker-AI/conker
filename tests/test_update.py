@@ -66,7 +66,7 @@ class FakeTransport:
     def rollback(self, prior, candidate):
         self._call("rollback")
 
-    def verify_rollback(self, prior):
+    def verify_rollback(self, prior, protection):
         self._call("verify_rollback")
 
 
