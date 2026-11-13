@@ -45,6 +45,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
     from scripts import update_pi_db
     from scripts.update_check import (
         COMMIT,
+        MODULES,
         VERSION,
         _Stay,
         installed_version,
@@ -64,7 +65,15 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
     from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
     import update_pi_db
-    from update_check import COMMIT, VERSION, _Stay, installed_version, report, version_key
+    from update_check import (
+        COMMIT,
+        MODULES,
+        VERSION,
+        _Stay,
+        installed_version,
+        report,
+        version_key,
+    )
     from update_core import (
         LOCK_TOKEN,
         UpdateCoordinator,
@@ -78,15 +87,7 @@ except ModuleNotFoundError:
     from update_swap import identity, put_back, swap_in
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
-COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/conker/tar.gz/{commit}"
-# Source folder -> (its repository, the versions.env line that pins its tag).
-MODULES = {
-    "pi": ("pi", "PI_VERSION"),
-    "toolgate": ("toolgate", "TOOLGATE_VERSION"),
-    "memorygate": ("memorygate", "MEMORYGATE_VERSION"),
-    "systemgate": ("systemgate", "SYSTEMGATE_VERSION"),
-    "embeddings": ("embeddings", "EMBEDDINGS_VERSION"),
-}
+COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/{commit}"
 MAX_ARCHIVE = 300 * 1024 * 1024
 # Markers in the deployment that no update or rollback may run beside.
 QUIET = {".conker-recovery.json": "a recovery is held", ".conker-backup.lock": "a backup is running"}
@@ -147,17 +148,45 @@ def download(url: str, target: Path) -> None:
             bundle.extractall(target, members=members, filter="data")
 
 
+def module_commits(text: str) -> dict[str, tuple[str, str]]:
+    """`pi=X.Y.Z@SHA,toolgate=...` (every module once) as folder -> (version, commit)."""
+    found: dict[str, tuple[str, str]] = {}
+    for part in text.split(","):
+        folder, _, pin = part.partition("=")
+        version, _, commit = pin.partition("@")
+        if folder not in MODULES or folder in found:
+            raise UpdateError(f"name each module once: {', '.join(MODULES)}")
+        if not VERSION.fullmatch(version) or not COMMIT.fullmatch(commit):
+            raise UpdateError(f"name {folder} as {folder}=X.Y.Z@<40 hex digits>")
+        found[folder] = (version, commit)
+    if set(found) != set(MODULES):
+        raise UpdateError(f"name each module once: {', '.join(MODULES)}")
+    return found
+
+
 class UbuntuTransport:
     """Source exports, Compose and health for the Ubuntu layout (deploy/ubuntu)."""
 
     def __init__(
-        self, root: Path, version: str, *, commit=None, run=None, fetch=download, home=None
+        self,
+        root: Path,
+        version: str,
+        *,
+        commit=None,
+        modules=None,
+        run=None,
+        fetch=download,
+        home=None,
     ):
         if not VERSION.fullmatch(version):
             raise UpdateError("name a release as X.Y.Z")
         if commit is not None and not COMMIT.fullmatch(commit):
             raise UpdateError("name the release's commit as 40 hex digits")
+        if (commit is None) != (modules is None):
+            raise UpdateError("name the release's commit together with each module's")
         self.commit = commit  # the commit the offer's tag named; None: the tag as it is now
+        # folder -> (version, commit) the offer's module tags named; None: the tags as they are now
+        self.modules = None if modules is None else module_commits(modules)
         self.root, self.target = root.resolve(), version
         self.sources, self.compose_file = self.root / "sources", self.root / "compose.json"
         self.fetch, self.home = fetch, Path(home or Path.home())
@@ -270,7 +299,7 @@ class UbuntuTransport:
         staging = self.staging
         try:
             if self.commit:
-                url = COMMIT_ARCHIVE.format(commit=self.commit)
+                url = COMMIT_ARCHIVE.format(repository="conker", commit=self.commit)
             else:
                 url = ARCHIVE.format(repository="conker", version=self.target)
             self.fetch(url, staging / "companion")
@@ -282,9 +311,16 @@ class UbuntuTransport:
                 version = pinned.get(key, "")
                 if not VERSION.fullmatch(version):
                     raise UpdateError(f"the release pins no exact {folder} version")
-                self.fetch(
-                    ARCHIVE.format(repository=repository, version=version), staging / folder
-                )
+                if self.modules is None:
+                    url = ARCHIVE.format(repository=repository, version=version)
+                else:
+                    offered, commit = self.modules[folder]
+                    if offered != version:
+                        raise UpdateError(
+                            f"the offer named {folder} {offered}, the release pins {version}"
+                        )
+                    url = COMMIT_ARCHIVE.format(repository=repository, commit=commit)
+                self.fetch(url, staging / folder)
                 modules[folder] = version
             self._build_dashboard(staging / "companion", pinned.get("NODE_BUILD_IMAGE", ""))
         except BaseException:
@@ -294,6 +330,7 @@ class UbuntuTransport:
             "revision": self.target,
             "commit": self.commit,
             "modules": modules,
+            "module_commits": self.modules,
             "staging": str(staging),
             "recovery": str(self.recovery),
             # How a rollback knows the sources from before wherever a cut left them (update_swap).
@@ -515,9 +552,12 @@ def main(argv: list[str] | None = None) -> int:
     action.add_argument("--to", dest="version")
     action.add_argument("--recover", action="store_true", help="finish an update that was cut off")
     parser.add_argument("--commit", help="the commit the offered release's tag named (--to only)")
+    parser.add_argument("--modules", help="pi=X.Y.Z@SHA,...: each offered module tag's commit")
     args = parser.parse_args(argv)
-    if args.commit and not args.version:
-        parser.error("--commit goes with --to")
+    if (args.commit or args.modules) and not args.version:
+        parser.error("--commit and --modules go with --to")
+    if bool(args.commit) != bool(args.modules):
+        parser.error("--commit and --modules go together")
     os.umask(0o022)  # public sources stay readable to the containers' user (README)
     status = 1
     try:
@@ -525,7 +565,9 @@ def main(argv: list[str] | None = None) -> int:
             print(recover(args.root))
             status = 0
         else:
-            transport = UbuntuTransport(args.root, args.version, commit=args.commit)
+            transport = UbuntuTransport(
+                args.root, args.version, commit=args.commit, modules=args.modules
+            )
             store = UpdateStore(transport.root / "state" / "update")
             lock = _acquire_lock(store)
             try:

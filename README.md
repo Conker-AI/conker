@@ -55,7 +55,21 @@ It remembers you, shows its work, and never acts without your say.</p>
 
 <sub>Screenshots show the built-in preview with sample data.</sub>
 
-## Get started
+## Quickstart
+
+**See it in five minutes.** The interface runs on its own with sample data. Needs Git and
+Node.js 22.12+.
+
+```sh
+git clone https://github.com/Conker-AI/conker.git
+cd conker/dashboard
+npm ci
+npm run dev -- --host localhost --port 5173 --strictPort
+```
+
+Open http://localhost:5173. Answers, memories and approvals are simulated in the browser. CI runs
+these lines as written on every dashboard change and fails if the page is not up within five
+minutes ([`scripts/check_quickstart.py`](scripts/check_quickstart.py)).
 
 **Install on a server.** Any Linux machine with Docker (WSL2 works too). 16 GB of RAM is
 comfortable for local models.
@@ -76,16 +90,6 @@ time. Day to day:
 ./conker config list     # every setting, from the terminal
 ./conker backup          # a verified snapshot
 ```
-
-**Just look around.** The interface runs on its own with sample data. Needs Node.js 22.12+.
-
-```sh
-cd conker/dashboard
-npm ci
-npm run dev -- --host localhost --port 5173 --strictPort
-```
-
-Open http://localhost:5173. Answers, memories and approvals are simulated in the browser.
 
 Other ways to run it, including a native development stack on Windows and the source-built
 Ubuntu layout: [4 · Running Conker](docs/4-running.md).

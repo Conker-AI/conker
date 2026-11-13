@@ -4,7 +4,8 @@ The host reads the latest release anonymously from the GitHub API (Pi reads noth
 ADR-0005) and compares it with CONKER_VERSION in the installed versions.env; a tree without
 CONKER_VERSION is an unreleased build, so any release is newer. On the Ubuntu layout a newer release
 is kept as an offer (state/update/offer.json: each version with the commit its tag named when first
-offered): the only releases the Inbox's Update (`update.run`) installs, by those commits. With --report, what it found and
+offered, and the commit each module tag its versions.env pins named then): the only releases the
+Inbox's Update (`update.run`) installs, by those commits. With --report, what it found and
 every update receipt not reported yet go to Pi's /updates/report through the relay in Pi's own
 container (scripts/config_cli.py), with the recovery key that never leaves that container. The
 host helper runs `conker update --check --report` once a day (scripts/provider_control.py).
@@ -24,7 +25,17 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 RELEASES = "https://api.github.com/repos/Conker-AI/conker/releases/latest"
 # The commit a release tag names, as 40 hex digits (Accept: application/vnd.github.sha).
-TAG_COMMIT = "https://api.github.com/repos/Conker-AI/conker/commits/v{version}"
+TAG_COMMIT = "https://api.github.com/repos/Conker-AI/{repository}/commits/v{version}"
+# The versions.env a Conker commit holds (Accept: application/vnd.github.raw).
+PINS_AT = "https://api.github.com/repos/Conker-AI/conker/contents/versions.env?ref={commit}"
+# Source folder -> (its repository, the versions.env line that pins its tag).
+MODULES = {
+    "pi": ("pi", "PI_VERSION"),
+    "toolgate": ("toolgate", "TOOLGATE_VERSION"),
+    "memorygate": ("memorygate", "MEMORYGATE_VERSION"),
+    "systemgate": ("systemgate", "SYSTEMGATE_VERSION"),
+    "embeddings": ("embeddings", "EMBEDDINGS_VERSION"),
+}
 COMMIT = re.compile(r"[0-9a-f]{40}")
 OFFER = "offer.json"
 RELEASE_PAGE = "https://github.com/Conker-AI/conker/releases/tag/"
@@ -130,59 +141,121 @@ def latest_release(opener=None) -> dict | None:
         raise CheckError("The release answer was not JSON.") from None
 
 
-def tag_commit(version: str, opener=None) -> str:
-    """The commit the release's tag names now, read without a key. The update downloads that
-    commit, so a tag moved after the offer cannot change what is installed."""
+def _read(url: str, accept: str, limit: int, what: str, opener=None) -> bytes:
+    """One anonymous GitHub API read; any failure is a CheckError naming `what`."""
     request = Request(
-        TAG_COMMIT.format(version=version),
+        url,
         headers={
-            "Accept": "application/vnd.github.sha",
+            "Accept": accept,
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "conker-update-check",
         },
     )
     try:
         with (opener or build_opener(_Stay())).open(request, timeout=30) as response:
-            raw = response.read(128)
+            raw = response.read(limit + 1)
     except HTTPError as error:
-        raise CheckError(f"GitHub answered HTTP {error.code} for the release's commit.") from None
+        raise CheckError(f"GitHub answered HTTP {error.code} for {what}.") from None
     except (URLError, OSError, TimeoutError):
         raise CheckError("GitHub could not be reached.") from None
-    commit = raw.decode("ascii", "replace").strip()
+    if len(raw) > limit:
+        raise CheckError(f"The answer for {what} was too large.")
+    return raw
+
+
+def tag_commit(version: str, opener=None, repository: str = "conker") -> str:
+    """The commit a release tag names now, read without a key. The update downloads that
+    commit, so a tag moved after the offer cannot change what is installed."""
+    what = "the release's commit" if repository == "conker" else f"the {repository} tag's commit"
+    url = TAG_COMMIT.format(repository=repository, version=version)
+    commit = _read(url, "application/vnd.github.sha", 128, what, opener)
+    commit = commit.decode("ascii", "replace").strip()
     if not COMMIT.fullmatch(commit):
-        raise CheckError("GitHub named no commit for the release.")
+        raise CheckError(f"GitHub named no commit for {what}.")
     return commit
 
 
-def offers(directory: Path) -> dict[str, str]:
-    """Every release a check offered that is still installable, each with the commit its tag named
-    when it was first offered; {} when there is none or the file is not one."""
+def pins_at(commit: str, opener=None) -> dict[str, str]:
+    """The KEY=VALUE lines of versions.env at a Conker commit."""
+    url = PINS_AT.format(commit=commit)
+    raw = _read(url, "application/vnd.github.raw", MAX_ANSWER, "the release's versions.env", opener)
+    pins = {}
+    for line in raw.decode("utf-8", "replace").splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and not key.startswith("#"):
+            pins[key.strip()] = value.strip()
+    return pins
+
+
+def release_commits(version: str, opener=None) -> dict:
+    """What an offer installs: the release's commit, and the commit each module tag pinned in that
+    commit's versions.env names now (so a module tag moved later changes nothing either)."""
+    commit = tag_commit(version, opener)
+    pins = pins_at(commit, opener)
+    modules = {}
+    for folder, (repository, key) in MODULES.items():
+        pinned = pins.get(key, "")
+        if not VERSION.fullmatch(pinned):
+            raise CheckError(f"The {version} release pins no exact {folder} version.")
+        modules[folder] = {"version": pinned, "commit": tag_commit(pinned, opener, repository)}
+    return {"commit": commit, "modules": modules}
+
+
+def _is_offer(value: object) -> bool:
+    if not isinstance(value, dict) or set(value) != {"commit", "modules"}:
+        return False
+    modules = value["modules"]
+    return (
+        isinstance(value["commit"], str)
+        and COMMIT.fullmatch(value["commit"]) is not None
+        and isinstance(modules, dict)
+        and set(modules) == set(MODULES)
+        and all(
+            isinstance(module, dict)
+            and set(module) == {"version", "commit"}
+            and isinstance(module["version"], str)
+            and VERSION.fullmatch(module["version"]) is not None
+            and isinstance(module["commit"], str)
+            and COMMIT.fullmatch(module["commit"]) is not None
+            for module in modules.values()
+        )
+    )
+
+
+def offers(directory: Path) -> dict[str, dict]:
+    """Every release a check offered that is still installable, each with the commits its tags
+    named when it was first offered; {} when there is none or the file is not one (an offer from
+    before module commits were kept is not one: the next check offers it again)."""
     try:
         value = json.loads((directory / OFFER).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
     found = value.get("offers") if isinstance(value, dict) else None
     if not isinstance(found, dict) or not all(
-        isinstance(version, str)
-        and VERSION.fullmatch(version)
-        and isinstance(commit, str)
-        and COMMIT.fullmatch(commit)
-        for version, commit in found.items()
+        isinstance(version, str) and VERSION.fullmatch(version) and _is_offer(offer)
+        for version, offer in found.items()
     ):
         return {}
     return dict(found)
 
 
-def offered(directory: Path, version: str) -> str | None:
-    """The commit `update.run` installs for `version`, or None: never offered, or gone."""
+def offered(directory: Path, version: str) -> dict | None:
+    """What `update.run` installs for `version` ({"commit", "modules"}), or None: never offered,
+    or gone."""
     return offers(directory).get(version)
 
 
-def save_offers(directory: Path, result: dict, commit_of=None) -> dict[str, str]:
+def offer_arguments(offer: dict) -> list[str]:
+    """`conker update --to X.Y.Z` arguments that install an offer by its commits."""
+    pins = (f"{name}={pin['version']}@{pin['commit']}" for name, pin in offer["modules"].items())
+    return ["--commit", offer["commit"], "--modules", ",".join(pins)]
+
+
+def save_offers(directory: Path, result: dict, commits_of=None) -> dict[str, dict]:
     """Keep what `update.run` may install (the Ubuntu layout, before Pi hears of the release).
 
-    The latest release is added with the commit its tag names now; one offered before keeps the
-    commit it was offered with, so moving a tag later changes nothing. A release at or below the
+    The latest release is added with the commits its tags name now; one offered before keeps the
+    commits it was offered with, so moving a tag later changes nothing. A release at or below the
     running one is dropped (installed or passed), and so is one above the latest (pulled). Every
     other offer stays, so any card Pi still shows can be installed. A check that failed changes
     nothing (this is not called)."""
@@ -193,9 +266,9 @@ def save_offers(directory: Path, result: dict, commit_of=None) -> dict[str, str]
         above = running is None or version_key(version) > version_key(running)
         return above and latest is not None and version_key(version) <= version_key(latest)
 
-    kept = {version: commit for version, commit in offers(directory).items() if keep(version)}
+    kept = {version: offer for version, offer in offers(directory).items() if keep(version)}
     if result["newer"] and latest is not None and latest not in kept:
-        kept[latest] = (commit_of or tag_commit)(latest)
+        kept[latest] = (commits_of or release_commits)(latest)
     path = directory / OFFER
     if not kept:
         path.unlink(missing_ok=True)
