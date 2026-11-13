@@ -61,7 +61,7 @@ tests, but not yet exercised end to end on an installed stack.
 <!-- generated:deferred -->
 | Capability | Why it is deferred | What it still needs |
 | --- | --- | --- |
-| Owner terminal | The constrained gateway PTY is not configured or mounted by the release deployment, and its fixture screen is not a connected product route. | operator-selected validated workspace; digest-pinned owner-terminal registry image; hashed target-Linux acceptance bundle; explicit owner terminal transport; production UI |
+| Owner terminal | The constrained gateway PTY is not configured or mounted by the release deployment, and it has no production UI. | operator-selected validated workspace; digest-pinned owner-terminal registry image; hashed target-Linux acceptance bundle; explicit owner terminal transport; production UI |
 <!-- /generated:deferred -->
 
 ## Known gaps
