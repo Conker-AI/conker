@@ -49,6 +49,14 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   It rolls the update back and proves the old version, as a failed update is (or holds it); its
   receipt is the update receipt the Inbox gets, not a journal row.
 
+  Amended again 2026-11-13: state the helper cannot read (or that names no release) is held, and
+  the hold also writes a receipt for the likeliest release (the newest offered above the installed
+  one, else the installed one; its reason says so), so the Inbox shows it as held. And the helper
+  restarts itself on new code: it fingerprints its scripts and launcher at start and every minute;
+  after a change it waits until no action holds the lock and no ChatGPT answer streams, keeps the
+  lock, stops serving and exits 75, which its Restart=on-failure unit turns into a start on the new
+  code (scripts/helper_restart.py).
+
   The next ones follow the server-actions design (start and stop, model download, drills,
   recovery, updates, certificates). An operation never takes a secret; secrets keep their
   write-only provider routes.

@@ -10,7 +10,7 @@ scripts/host_ops_reads.py 4
 scripts/native_claude.py 1
 scripts/native_claude_sessions.py 3
 scripts/native_codex_sessions.py 3
-scripts/provider_control.py 2
+scripts/provider_control.py 1
 scripts/recovery_backup.py 3
 scripts/recovery_data.py 1
 scripts/release_manifest.py 1

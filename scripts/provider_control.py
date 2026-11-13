@@ -14,11 +14,12 @@ import socket
 import socketserver
 import stat
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-from scripts import host_ops
+from scripts import helper_restart, host_ops
 from scripts.chatgpt_provider import (
     ChatGPTControl,
     ChatGPTError,
@@ -358,6 +359,24 @@ class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     address_family = getattr(socket, "AF_UNIX", socket.AF_INET)
     daemon_threads = True
 
+    def __init__(self, *arguments, **options):
+        super().__init__(*arguments, **options)
+        self._count, self._counting = 0, threading.Lock()
+
+    def active(self) -> int:
+        """Requests being answered now (a ChatGPT answer streams for its whole length)."""
+        with self._counting:
+            return self._count
+
+    def process_request_thread(self, request, client_address):
+        with self._counting:
+            self._count += 1
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._counting:
+                self._count -= 1
+
 
 def private_socket(path):
     if not path.is_absolute() or path.parent.is_symlink() or path.is_symlink():
@@ -427,10 +446,27 @@ def main():
     if host is not None:
         # Once a day: is a newer Conker release out? The Inbox offers it (scripts/update_check.py).
         threading.Thread(target=host_ops.watch_for_updates, args=(host,), daemon=True).start()
+    restart, held = threading.Event(), []
+
+    def idle() -> bool:
+        claim = helper_restart.claim_idle(host.lock_path if host else None, inference_server.active)
+        if claim:
+            held.append(claim)  # the action lock stays held until the process exits
+        return bool(claim)
+
     with socketserver.UnixStreamServer(
         str(args.socket), handler(control, chatgpt, host)
     ) as server:
         args.socket.chmod(0o600)
+
+        def stop() -> None:
+            restart.set()
+            server.shutdown()  # the request being answered finishes first
+
+        # After an update changed this helper's code: restart on it once idle.
+        threading.Thread(
+            target=helper_restart.watch_own_code, args=(args.source, idle, stop), daemon=True
+        ).start()
         try:
             server.serve_forever()
         finally:
@@ -441,6 +477,8 @@ def main():
                 chatgpt.rpc.close()
             if args.socket.exists() and stat.S_ISSOCK(args.socket.lstat().st_mode):
                 args.socket.unlink()
+    if restart.is_set():
+        sys.exit(helper_restart.RESTART_EXIT)
 
 
 if __name__ == "__main__":
