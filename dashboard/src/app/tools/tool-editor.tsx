@@ -3,32 +3,20 @@ import type { ToolNode } from '@/lib/tool-workspace';
 import { type Connection } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/design-system";
-import { conkerClient } from "@/lib/api";
 import {
   createToolNode,
   editorValidation,
-  type JsonValue,
   type NodeKind,
   type SavedCheck,
   type ToolDefinition,
-  type ToolRun,
   type WorkspaceRecord,
 } from "@/lib/tool-workspace";
 import { ToolConfiguration } from "./tool-fields";
-import { ToolTestPanel } from "./tool-test-panel";
 import { ToolEditorToolbar, type EditorMode } from "./tool-editor-toolbar";
 import { ToolStepCanvas } from "./tool-editor-canvas";
 import { ToolStepInspector } from "./tool-editor-inspector";
 import { ToolSource } from "./tool-editor-source";
 
-const drafts = new Map<
-  string,
-  {
-    definition: ToolDefinition;
-    source: string | null;
-    argumentSources: Record<string, string>;
-  }
->();
 const serial = (value: unknown) => JSON.stringify(value, null, 2);
 export function ToolEditor({
   record,
@@ -44,24 +32,17 @@ export function ToolEditor({
   record: WorkspaceRecord;
   records: WorkspaceRecord[];
   onBack: () => void;
-  liveSave?: (definition: ToolDefinition) => Promise<void>;
-  livePublish?: () => void;
-  liveHistory?: () => void;
-  liveRun?: () => void;
+  liveSave: (definition: ToolDefinition) => Promise<void>;
+  livePublish: () => void;
+  liveHistory: () => void;
+  liveRun: () => void;
   capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
-  /** ToolGate's check of the saved draft (live only); it wins over the quick local check. */
+  /** ToolGate's check of the saved draft; it wins over the quick local check. */
   savedCheck?: SavedCheck;
 }) {
-  const [definition, setDefinition] = useState(
-    () => (liveSave ? undefined : drafts.get(record.id)?.definition) ?? record.draft,
-  );
-  const [source, setSource] = useState<string | null>(
-    () => (liveSave ? undefined : drafts.get(record.id)?.source) ?? null,
-  );
-  const [argumentSources, setArgumentSources] = useState<
-    Record<string, string>
-  >(() => (liveSave ? undefined : drafts.get(record.id)?.argumentSources) ?? {});
-  const [testedDefinition, setTestedDefinition] = useState<string | null>(null);
+  const [definition, setDefinition] = useState(record.draft);
+  const [source, setSource] = useState<string | null>(null);
+  const [argumentSources, setArgumentSources] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<EditorMode>("build"),
     [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolDefinition[]>([]),
@@ -70,22 +51,9 @@ export function ToolEditor({
     [palette, setPalette] = useState(false),
     [outline, setOutline] = useState(false),
     [expanded, setExpanded] = useState(false);
-  const [panel, setPanel] = useState<"test" | "history" | null>(null),
-    [version, setVersion] = useState("draft");
-  const [input, setInput] = useState(() =>
-    serial(
-      Object.fromEntries(
-        definition.inputs
-          .filter((f) => f.default !== undefined)
-          .map((f) => [f.name, f.default]),
-      ),
-    ),
-  );
-  const [run, setRun] = useState<ToolRun | undefined>(),
-    [error, setError] = useState(""),
+  const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false),
-    [remove, setRemove] = useState(false);
+    [busy, setBusy] = useState(false);
   const [leave, setLeave] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null),
     [connectTo, setConnectTo] = useState<string | null>(null),
@@ -95,14 +63,8 @@ export function ToolEditor({
     sourceDirty = source !== null && source !== serial(definition);
   const hasUnappliedFields = Object.keys(argumentSources).length > 0;
   const pendingEdits = sourceDirty || hasUnappliedFields;
-  const { issues, label: checkLabel } = editorValidation(definition, !!liveSave, dirty, savedCheck),
+  const { issues, label: checkLabel } = editorValidation(definition, true, dirty, savedCheck),
     node = definition.nodes.find((n) => n.id === selected);
-  const canvasRun =
-    !pendingEdits && testedDefinition === serial(definition) ? run : undefined;
-  const stepReceipt = canvasRun?.steps.find((s) => s.nodeId === selected);
-  useEffect(() => {
-    if (!liveSave) drafts.set(record.id, { definition, source, argumentSources });
-  }, [record.id, definition, source, argumentSources, liveSave]);
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => {
       if (dirty || pendingEdits) event.preventDefault();
@@ -210,9 +172,8 @@ export function ToolEditor({
         throw new Error(
           "Apply or discard pending source and argument changes before saving.",
         );
-      if (liveSave) await liveSave(definition);
-      else await conkerClient.toolWorkspace.save(definition);
-      setNotice(liveSave ? "Draft saved to ToolGate." : "Draft saved for this preview session.");
+      await liveSave(definition);
+      setNotice("Draft saved to ToolGate.");
     });
   const connect = (connection: Connection) => {
     const from = definition.nodes.find((n) => n.id === connection.source);
@@ -257,7 +218,7 @@ export function ToolEditor({
       x: (base?.position.x ?? 0) + 260,
       y: (base?.position.y ?? 160) + 150,
     });
-    if (liveSave && type === 'tool_call') next.config.tool = '';
+    if (type === 'tool_call') next.config.tool = '';
     let edges = definition.edges;
     if (
       base &&
@@ -284,45 +245,13 @@ export function ToolEditor({
     setSelected(next.id);
     setPalette(false);
   };
-  const test = () =>
-    task(async () => {
-      if (liveSave) throw new Error("Live workflow execution is not connected yet.");
-      if (pendingEdits)
-        throw new Error(
-          "Apply or discard pending source and argument changes before testing.",
-        );
-      const args: unknown = (() => {
-        try {
-          return JSON.parse(input);
-        } catch {
-          throw new Error("Test inputs must be valid JSON.");
-        }
-      })();
-      if (!args || typeof args !== "object" || Array.isArray(args))
-        throw new Error("Test inputs must be a JSON object.");
-      if (version === "draft")
-        await conkerClient.toolWorkspace.save(definition);
-      const result = await conkerClient.toolWorkspace.run(
-        record.id,
-        args as Record<string, JsonValue>,
-        version === "draft" ? undefined : Number(version),
-      );
-      setRun(result);
-      setTestedDefinition(version === "draft" ? serial(definition) : null);
-      setPanel("test");
-      setNotice(
-        result.status === "completed"
-          ? "Fixture test completed. No external action performed."
-          : "Fixture test failed. Inspect the error below.",
-      );
-    });
   const exportDefinition = () => {
     const url = URL.createObjectURL(
       new Blob([serial(definition)], { type: "application/json" }),
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${definition.id}.${liveSave ? "draft" : "preview"}.json`;
+    a.download = `${definition.id}.draft.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -333,31 +262,23 @@ export function ToolEditor({
     >
       <ToolEditorToolbar
         definition={definition}
-        record={record}
         busy={busy}
         dirty={dirty}
         pendingEdits={pendingEdits}
         expanded={expanded}
         mode={mode}
-        version={version}
         issues={issues}
-        liveSave={liveSave}
         livePublish={livePublish}
         liveHistory={liveHistory}
         liveRun={liveRun}
         onBack={onBack}
         setLeave={setLeave}
-        setPanel={setPanel}
-        setRemove={setRemove}
         setExpanded={setExpanded}
-        setNotice={setNotice}
         switchMode={switchMode}
         save={save}
-        test={test}
-        task={task}
         exportDefinition={exportDefinition}
       />
-      {liveSave && <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>}
+      <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>
       {error && (
         <div role="alert" className="tools-feedback text-destructive-foreground">
           {error}
@@ -382,7 +303,6 @@ export function ToolEditor({
               definition={definition}
               selected={selected}
               setSelected={setSelected}
-              canvasRun={canvasRun}
               palette={palette}
               setPalette={setPalette}
               query={query}
@@ -391,10 +311,7 @@ export function ToolEditor({
               setOutline={setOutline}
               history={history}
               future={future}
-              panel={panel}
-              setPanel={setPanel}
               pendingEdits={pendingEdits}
-              liveSave={liveSave}
               liveRun={liveRun}
               sourceDirty={sourceDirty}
               connect={connect}
@@ -412,7 +329,6 @@ export function ToolEditor({
                 definition={definition}
                 records={records}
                 capabilityPicker={capabilityPicker}
-                canvasRun={canvasRun}
                 argumentSources={argumentSources}
                 changeArgumentSource={changeArgumentSource}
                 change={change}
@@ -424,9 +340,7 @@ export function ToolEditor({
                 branch={branch}
                 setBranch={setBranch}
                 connect={connect}
-                stepReceipt={stepReceipt}
                 explainPendingEdits={explainPendingEdits}
-                serial={serial}
               />
             )}
           </>
@@ -448,46 +362,10 @@ export function ToolEditor({
         )}
         {mode === "configure" && (
           <div className="tool-config-scroll">
-            <ToolConfiguration definition={definition} onChange={change} live={!!liveSave} />
+            <ToolConfiguration definition={definition} onChange={change} />
           </div>
         )}
       </div>
-      {panel && (
-        <ToolTestPanel
-          panel={panel}
-          setPanel={setPanel}
-          record={record}
-          definition={definition}
-          version={version}
-          setVersion={setVersion}
-          input={input}
-          setInput={setInput}
-          run={run}
-          runMatchesDraft={!!canvasRun}
-          onRun={test}
-          disabled={
-            busy || pendingEdits || (version === "draft" && issues.length > 0)
-          }
-          onRestore={(d) => {
-            if (pendingEdits) {
-              explainPendingEdits();
-              return;
-            }
-            change(structuredClone(d));
-            setNotice(
-              "Version restored to draft. Published versions are unchanged.",
-            );
-          }}
-          onSelectRun={(selectedRun) => {
-            setRun(selectedRun);
-            setTestedDefinition(null);
-          }}
-          onSelectStep={(id) => {
-            if (!switchMode("build")) return;
-            setSelected(id);
-          }}
-        />
-      )}
       {issues.length > 0 && (
         <details className="tool-validation">
           <summary>
@@ -516,29 +394,13 @@ export function ToolEditor({
       <footer className="tools-status">
         <span role="status">
           {notice ||
-            `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : liveSave ? "Save to preserve changes" : "Changes reset on reload"}`}
+            `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : "Save to preserve changes"}`}
         </span>
         <span className="hidden sm:inline">
-          {checkLabel} · {liveRun ? 'Published runs via ToolGate' : 'No live execution'}
+          {checkLabel} · Published runs via ToolGate
         </span>
       </footer>
       <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved ToolGate draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />
-      <ConfirmationDialog
-        open={remove}
-        onOpenChange={setRemove}
-        title={`Delete “${definition.name}”?`}
-        description="Removes this tool and its preview versions and test runs from this browser session. Nothing is deleted from ToolGate."
-        actionLabel="Delete preview tool"
-        pending={busy}
-        error={error}
-        onConfirm={() =>
-          task(async () => {
-            await conkerClient.toolWorkspace.remove(record.id);
-            drafts.delete(record.id);
-            onBack();
-          })
-        }
-      />
     </div>
   );
 }

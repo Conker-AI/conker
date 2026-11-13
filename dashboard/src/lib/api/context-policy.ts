@@ -64,11 +64,6 @@ export function createContextPolicy(contextWindowTokens: number, outputReserveTo
   return normalizeContextPolicy({ sessionInstructions: "", messagePolicies: {}, budget: { contextWindowTokens, outputReserveTokens, otherInputTokens: 0 } })
 }
 
-/** Keep instructions/budget, pruning selectors outside a fork/retry or redacted boundary. */
-export function contextPolicyForMessages(policy: ContextPolicy, messages: readonly ConversationMessage[]): ContextPolicy {
-  const valid = new Set(messages.filter(message => !message.redacted).map(message => message.id))
-  return { ...normalizeContextPolicy(policy), messagePolicies: Object.fromEntries(Object.entries(policy.messagePolicies).filter(([id]) => valid.has(id))) }
-}
 
 /** Validate drafts without contacting a tokenizer, provider, memory service or harness. */
 export function normalizeContextPolicy(value: ContextPolicy): ContextPolicy {

@@ -104,9 +104,7 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
   }
 }
 
-export type ChatNamesClient = ReturnType<typeof createChatNamesClient>
 export type OutputFormat = z.infer<typeof outputFormat>
 export type OutputLength = z.infer<typeof outputLength>
 export type ChatOutputLevel = z.infer<typeof outputLevel>
-export type ChatName = z.infer<typeof chatName>
 export type ChatOutput = z.infer<typeof chatOutput>
