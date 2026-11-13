@@ -48,7 +48,6 @@ export function FormActions({ children, description, inset = false, className }:
  */
 export function InlineDetails({ open = true, onOpenChange, onClose, ...props }: {
   title: ReactNode; description?: ReactNode; busy?: boolean; children: ReactNode
-  /** Same contract as DetailPanel, so a screen can switch without changing its state. */
   open?: boolean; onOpenChange?: (open: boolean) => void; onClose?: () => void
 }) {
   return open ? <InlineDetailsBody {...props} onClose={() => { onClose?.(); onOpenChange?.(false) }} /> : null
@@ -85,19 +84,6 @@ function InlineDetailsBody({ title, description, onClose, busy = false, children
     </div>
     {children}
   </div>
-}
-
-/** Reference/details in the shared centered dialog (owner, 24 October: no side windows). New
- * screens open details in place with `InlineDetails`, which keeps this same contract. */
-export function DetailPanel({ open, onOpenChange, title, description, children, finalFocus, busy = false }: {
-  open: boolean; onOpenChange: (open: boolean) => void; title: ReactNode; description: ReactNode;
-  children: ReactNode; finalFocus?: ComponentProps<typeof DialogContent>["finalFocus"]; busy?: boolean
-}) {
-  return <Dialog open={open} onOpenChange={next => { if (!busy) onOpenChange(next) }}>
-    <TaskDialogContent title={title} description={description} size="wide" closeProps={{ disabled: busy }} finalFocus={finalFocus}>
-      {children}
-    </TaskDialogContent>
-  </Dialog>
 }
 
 export function ConfirmationDialog({ open, onOpenChange, title, description, children, actionLabel, pending, error, onConfirm, finalFocus, actionVariant = "destructive" }: {
