@@ -37,7 +37,6 @@ tests/test_inbox_cli.py 1
 tests/test_inspection_doc_contract.py 2
 tests/test_installer_keys.py 1
 tests/test_local_stack_config.py 8
-tests/test_memory_authority_contract.py 1
 tests/test_message_cli.py 1
 tests/test_native_claude_sessions.py 4
 tests/test_native_codex_observer.py 5

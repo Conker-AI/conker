@@ -102,7 +102,9 @@ def test_namespace_and_revocation_rechecked_on_every_pi_read(tmp_path, monkeypat
                 assert denied.value.response.status_code == 401
                 client.read_headers["X-Agent-Id"] = "specialist"
                 with sessions() as db:
-                    db.get(AgentAccessKey, identity).revoked = True
+                    key = db.get(AgentAccessKey, identity)
+                    assert key is not None
+                    key.revoked = True
                     db.commit()
                 with pytest.raises(httpx.HTTPStatusError) as revoked:
                     client.retrieve("question", scope="selected", memory_ids=["own"])
