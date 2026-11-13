@@ -396,7 +396,8 @@ conker restore SNAPSHOT --into DIR  # restores into fresh, isolated volumes, hel
 ```
 
 A restore starts held and does not go straight back into service. Keep a copy on another
-machine. See [recovery](reference/recovery.md).
+machine. See [recovery](reference/recovery.md), and [looking after your
+server](reference/server-care.md) for the owner's steps in plain words.
 
 On a Linux server, `conker backup schedule on` backs up to the folder saved in setup every night
 (about 03:30 local time) and keeps the number you chose (7 unless you changed it); add
