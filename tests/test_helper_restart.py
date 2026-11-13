@@ -92,30 +92,95 @@ def test_a_helper_started_mid_swap_takes_the_first_whole_tree_as_its_own(tmp_pat
     assert watch(tmp_path, ticks) == []
 
 
+def test_a_failing_idle_check_is_logged_and_the_watch_goes_on(tmp_path, capsys):
+    source = tree(tmp_path)
+    answers = iter([OSError("no host-ops folder"), True])
+
+    def idle():
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    stops: list[bool] = []
+    ticks = Ticks(lambda: tree(source, "print('new')\n"), lambda: None)
+    helper_restart.watch_own_code(source, idle, lambda: stops.append(True), sleep=ticks)
+    assert stops == [True]
+    assert "no host-ops folder" in capsys.readouterr().err
+
+
 def test_idle_holds_the_action_lock_so_no_action_starts(tmp_path):
     lock_path = tmp_path / "operation.lock"
-    claim = helper_restart.claim_idle(lock_path, lambda: 0)
+    claim = helper_restart.claim_idle(lock_path, lambda: False)
     assert isinstance(claim, OperationLock)
     assert not OperationLock(lock_path).acquire()  # host_ops answers busy meanwhile
     claim.release()
 
 
-def test_a_running_action_or_a_streaming_answer_is_not_idle(tmp_path):
+def test_a_running_action_or_other_work_is_not_idle(tmp_path):
     lock_path = tmp_path / "operation.lock"
     action = OperationLock(lock_path)
     assert action.acquire()
-    assert helper_restart.claim_idle(lock_path, lambda: 0) is False
+    assert helper_restart.claim_idle(lock_path, lambda: False) is False
     action.release()
 
-    assert helper_restart.claim_idle(lock_path, lambda: 1) is False
+    assert helper_restart.claim_idle(lock_path, lambda: True) is False
     after = OperationLock(lock_path)
-    assert after.acquire()  # the lock was let go again while the answer streamed
+    assert after.acquire()  # the lock was let go again
     after.release()
 
 
-def test_a_helper_without_server_actions_is_idle_when_nothing_streams():
-    assert helper_restart.claim_idle(None, lambda: 0) is True
-    assert helper_restart.claim_idle(None, lambda: 2) is False
+def test_a_helper_without_server_actions_is_idle_when_nothing_else_runs():
+    assert helper_restart.claim_idle(None, lambda: False) is True
+    assert helper_restart.claim_idle(None, lambda: True) is False
+
+
+class Answers:
+    def __init__(self, streaming=0):
+        self.streaming, self.paused = streaming, False
+
+    def pause(self):
+        self.paused = True
+        return self.streaming
+
+    def resume(self):
+        self.paused = False
+
+
+def test_quiet_keeps_the_lock_and_refuses_new_answers(tmp_path):
+    answers, held = Answers(), []
+    assert helper_restart.quiet(answers, tmp_path / "operation.lock", tmp_path / "update", held)
+    assert answers.paused and len(held) == 1
+    assert not OperationLock(tmp_path / "operation.lock").acquire()
+    held[0].release()
+
+
+def test_a_streaming_answer_is_not_quiet_and_answers_resume(tmp_path):
+    answers, held = Answers(streaming=1), []
+    assert not helper_restart.quiet(answers, tmp_path / "operation.lock", tmp_path / "update", held)
+    assert not answers.paused and held == []
+
+
+def test_an_update_from_a_shell_is_not_quiet(tmp_path, monkeypatch):
+    updates = tmp_path / "update"
+    monkeypatch.setattr(helper_restart, "update_running", lambda directory: directory == updates)
+    answers, held = Answers(), []
+    assert not helper_restart.quiet(answers, tmp_path / "operation.lock", updates, held)
+    assert not answers.paused and held == []
+    after = OperationLock(tmp_path / "operation.lock")
+    assert after.acquire()  # the action lock was let go again
+    after.release()
+
+
+def test_a_failing_quiet_check_resumes_answers(tmp_path, monkeypatch):
+    def broken(_directory):
+        raise OSError("unreadable lock")
+
+    monkeypatch.setattr(helper_restart, "update_running", broken)
+    answers = Answers()
+    with pytest.raises(OSError):
+        helper_restart.quiet(answers, None, tmp_path / "update", [])
+    assert not answers.paused
 
 
 @pytest.mark.skipif(not hasattr(socket, "AF_UNIX"), reason="needs Unix sockets")
@@ -134,6 +199,12 @@ def test_the_inference_server_counts_requests_while_they_run(tmp_path):
         with socket.socket(socket.AF_UNIX) as client:
             client.connect(str(path))
             assert started.wait(5)
+            assert server.active() == 1
+            assert server.pause() == 1
+            with socket.socket(socket.AF_UNIX) as late:
+                late.connect(str(path))  # accepted by the kernel, refused by the server
+                late.settimeout(5)
+                assert late.recv(1) == b""
             assert server.active() == 1
             release.set()
         for _ in range(250):

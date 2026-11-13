@@ -361,16 +361,33 @@ class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def __init__(self, *arguments, **options):
         super().__init__(*arguments, **options)
-        self._count, self._counting = 0, threading.Lock()
+        self._count, self._paused, self._counting = 0, False, threading.Lock()
 
     def active(self) -> int:
         """Requests being answered now (a ChatGPT answer streams for its whole length)."""
         with self._counting:
             return self._count
 
-    def process_request_thread(self, request, client_address):
+    def pause(self) -> int:
+        """Refuse new requests from now on; returns how many are still being answered."""
         with self._counting:
+            self._paused = True
+            return self._count
+
+    def resume(self) -> None:
+        with self._counting:
+            self._paused = False
+
+    def verify_request(self, request, client_address) -> bool:
+        # Counted in the accepting thread, under the same lock as pause(), so no request slips
+        # in between pause() reading zero and the helper exiting.
+        with self._counting:
+            if self._paused:
+                return False
             self._count += 1
+            return True
+
+    def process_request_thread(self, request, client_address):
         try:
             super().process_request_thread(request, client_address)
         finally:
@@ -449,10 +466,8 @@ def main():
     restart, held = threading.Event(), []
 
     def idle() -> bool:
-        claim = helper_restart.claim_idle(host.lock_path if host else None, inference_server.active)
-        if claim:
-            held.append(claim)  # the action lock stays held until the process exits
-        return bool(claim)
+        lock_path = host.lock_path if host else None
+        return helper_restart.quiet(inference_server, lock_path, state / "update", held)
 
     with socketserver.UnixStreamServer(
         str(args.socket), handler(control, chatgpt, host)

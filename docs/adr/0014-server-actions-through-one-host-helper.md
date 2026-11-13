@@ -53,8 +53,8 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   the hold also writes a receipt for the likeliest release (the newest offered above the installed
   one, else the installed one; its reason says so), so the Inbox shows it as held. And the helper
   restarts itself on new code: it fingerprints its scripts and launcher at start and every minute;
-  after a change it waits until no action holds the lock and no ChatGPT answer streams, keeps the
-  lock, stops serving and exits 75, which its Restart=on-failure unit turns into a start on the new
+  after a change it waits until no action holds the lock, no shell `conker update` holds
+  update.lock and no ChatGPT answer streams, keeps the lock, refuses new answers, stops serving and exits 75, which its Restart=on-failure unit turns into a start on the new
   code (scripts/helper_restart.py).
 
   The next ones follow the server-actions design (start and stop, model download, drills,
