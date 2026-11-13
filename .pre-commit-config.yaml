@@ -11,6 +11,12 @@ repos:
     language: system
     pass_filenames: false
     types: [python]
+  - id: types
+    name: type check (pyright basic, baseline may only shrink)
+    entry: python scripts/check_types.py
+    language: system
+    pass_filenames: false
+    types: [python]
   - id: file-sizes
     name: file sizes (600 lines)
     entry: python scripts/check_file_sizes.py
