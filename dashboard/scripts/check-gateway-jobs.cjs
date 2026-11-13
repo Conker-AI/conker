@@ -126,7 +126,7 @@ async function main() {
   await assert.rejects(uncertain.adoptJob(jobId, 3), error => error instanceof GatewayJobMutationError && error.outcome === 'unknown')
   const adoptTransport = createGatewayTransport({ origin: 'https://localhost:8050', fetch: async () => new Response(JSON.stringify(aiJob), { headers: { 'content-type': 'application/json' } }) })
   await adoptTransport.request(`/api/control/pi/jobs/${jobId}/adopt`, { method: 'POST', csrfToken: 'x'.repeat(43), body: { expected_revision: 3 } })
-  assert.match(fs.readFileSync(path.join(root, 'src/lib/gateway/verification.ts'), 'utf8'), /title: 'Make this job yours'/, 'The password prompt says what it is for')
+  assert.match(fs.readFileSync(path.join(root, 'src/lib/gateway/operation-review.ts'), 'utf8'), /title: 'Make this job yours'/, 'The password prompt says what it is for')
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/jobs-workspace.tsx'), 'utf8')
   assert.match(ui, /Queued is not finished: Run history shows the result/, 'Run now never claims the run finished')

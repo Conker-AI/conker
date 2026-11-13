@@ -87,7 +87,7 @@ async function freshReview(){
  const late=x.control.reviewNew(x.state().recovery),held=x.calls.at(-1);x.control.select('mem_two');x.control.select('mem_one');held.resolve(null);await late;assert.equal(x.state().editor,null);assert.equal(x.calls.filter(c=>c.method==='snapshot').length,0);x.stop()
 }
 async function clients(){
- const load=loader(),{createMemoryCorrectionsClient,correctionTextValid}=load('src/lib/gateway/memory-corrections.ts'),{createGatewayTransport,snapshotGatewayOperation}=load('src/lib/gateway/transport.ts'),{describeGatewayOperation}=load('src/lib/gateway/verification.ts')
+ const load=loader(),{createMemoryCorrectionsClient,correctionTextValid}=load('src/lib/gateway/memory-corrections.ts'),{createGatewayTransport,snapshotGatewayOperation}=load('src/lib/gateway/transport.ts'),{describeGatewayOperation}=load('src/lib/gateway/operation-review.ts')
  const calls=[];let response=snapshot();const client=createMemoryCorrectionsClient({request:async(path,options)=>{calls.push({path,options});return response}})
  assert.equal((await client.snapshot('mem_one')).text,snapshot().text)
  for(const id of ['../x','mem\n','mem/x',''])await assert.rejects(()=>client.snapshot(id))

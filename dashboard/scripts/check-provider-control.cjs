@@ -13,7 +13,7 @@ function load(file) {
 }
 const { createProviderControlClient } = load('provider-control.ts')
 const { snapshotGatewayOperation } = load('transport.ts')
-const { describeGatewayOperation } = load('verification.ts')
+const { describeGatewayOperation } = load('operation-review.ts')
 const { createBrowserSessionsClient } = load('browser-sessions.ts')
 const { createChatGPTClient } = load('chatgpt.ts')
 const { createNativeClaudeClient } = load('native-claude.ts')

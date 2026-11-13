@@ -4,10 +4,10 @@ import { CompanionPortrait } from "@/components/companion-portrait"
 import { useConker } from "@/lib/api/store"
 import { cn } from "@/lib/utils"
 
-export { PageHeader, WorkspaceAction, WorkspaceSection, OverviewSection, PageTabs, PageTabsList, PageTabsTrigger, PageTabsContent, CollectionSearch, WorkspaceSearch, CollectionToolbar, CollectionLoading, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
+export { PageHeader, WorkspaceAction, WorkspaceSection, OverviewSection, CollectionSearch, WorkspaceSearch, CollectionToolbar, CollectionLoading, CollectionRow, CollectionSection, RecordItem, CollectionEmpty, CollectionPanel } from "./primitives"
 export { TaskDialogContent, OverlayBody, FormActions, InlineDetails, WorkspaceInspector, ConfirmationDialog } from "./overlays"
 export { FilterChip, ListCard, ListLine, ListLineMenu, type ListSort } from "./list-card"
-export { WorkspaceChoice } from "./workspace-chrome"
+export { WorkspaceChoice } from "./workspace-choice"
 
 /** URL-addressed page content. Navigation is rendered once in SiteHeader. */
 export function RouteSection({ value, children, variant = "page" }: { value: string; children: ReactNode; variant?: "page" | "workspace" }) {

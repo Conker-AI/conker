@@ -29,7 +29,7 @@ const writes = [
   `${context}/summary/restore`, `${context}/summary/draft`, `${context}/compact`, `${context}/items`,
   `${context}/items/dec_${'c3'.repeat(8)}/state`, `${context}/items/thr_${'d4'.repeat(8)}/state`,
 ]
-const { describeGatewayOperation } = load('src/lib/gateway/verification.ts')
+const { describeGatewayOperation } = load('src/lib/gateway/operation-review.ts')
 const titles = new Set()
 for (const target of writes) {
   assert.ok(allowed(target), `${target} is a chat write`)

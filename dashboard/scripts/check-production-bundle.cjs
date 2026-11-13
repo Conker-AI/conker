@@ -9,7 +9,7 @@ assert.equal(files.some(file => file.includes('fixture')), false, 'production bu
 const gateway = files.filter(file => /^gateway-entry-.*\.js$/.test(file))
 assert.equal(gateway.length, 1, `expected one connected gateway entry chunk, found ${gateway.length}`)
 const bytes = fs.statSync(path.join(assets, gateway[0])).size
-assert.ok(bytes <= 700_000, `connected gateway entry is ${bytes} bytes; route-level splitting regressed`)
+assert.ok(bytes <= 600_000, `connected gateway entry is ${bytes} bytes; route-level splitting regressed`)
 
 // Interactive answers (OpenUI) must never load remote code: its development inspector fetches an
 // unpinned script from jsDelivr, so neither the inspector nor any CDN address may ship.

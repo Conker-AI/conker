@@ -93,9 +93,6 @@ function inspect(file, tree) {
       }
       if (bindings && ts.isNamespaceImport(bindings)) inputs.add(`${bindings.name.text}.Input`)
     }
-    if (file.startsWith("src/app/") && /(?:^|\/)ui\/tabs$/.test(module)) {
-      report(node, "page-tabs", "Import PageTabs, PageTabsList, PageTabsTrigger and PageTabsContent from @/components/design-system.")
-    }
   }
   const visit = node => {
     if (!isFoundation(file) && (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))) {
@@ -181,7 +178,6 @@ function selfTest() {
     assert.deepEqual(check(source, "src/components/design-system/primitives.tsx"), [])
     assert.deepEqual(check(source, "src/components/design-system/index.tsx").map(issue => issue.rule), ["page-heading", "collection-search"])
   })
-  test("raw Radix wrapper tabs in a route are rejected", () => assert.equal(check('import { Tabs } from "@/components/ui/tabs"')[0]?.rule, "page-tabs"))
   test("aliased raw search Input is rejected", () => assert.equal(check('import { Input as Field } from "@/components/ui/input"; const Page = () => <Field type="search" />')[0]?.rule, "collection-search"))
   test("DataTable searchPlaceholder bypass is rejected", () => assert.equal(check('const Toolbar = () => <Input placeholder={searchPlaceholder} />', "src/components/data-table.tsx")[0]?.rule, "collection-search"))
   test("native search and conditional labels are rejected", () => assert.equal(check('const Page = () => <input aria-label={active ? "Search requests" : "Search history"} />')[0]?.rule, "collection-search"))
