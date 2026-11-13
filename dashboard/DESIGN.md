@@ -653,7 +653,7 @@ The appbar is sticky on scrolling pages. Conversation layouts keep their bounded
 
 Settings owns the Models / Providers catalogue at `/settings?tab=models`: provider endpoint/key drafts, enabled catalogue routes, and the workspace default. These are explicit sample configurations; saving never contacts a provider. Keys remain masked and memory-only. Chat picks only enabled catalogue entries and exposes no provider credentials.
 
-All conversation mutations and simulated replies go through ConkerClient. Normalized messages retain source identity, edits, redacted tombstones, and independent fork copies. Conversation defaults differ from per-turn model overrides. Preview incognito stores independent memory/harness exclusions; no transport or production privacy promise is implied. Run `npm run check:conversation` for mutation, fork, model, retry, privacy, and abort behavior.
+All conversation mutations and simulated replies go through ConkerClient. Normalized messages retain source identity, edits, redacted tombstones, and independent fork copies. Conversation defaults differ from per-turn model overrides. Preview incognito stores independent memory/harness exclusions; no transport or production privacy promise is implied.
 
 
 ## The four conversation homes
@@ -730,7 +730,7 @@ Play on Conker's side manually reads the latest sample reply with the browser's 
 
 Pause is a session preference through `ConkerClient.calls`: hold fixture generation and browser playback, cancel caption recognition and disable owned camera/mic tracks. Preserve channel preferences, current word, received captions and draft; Resume re-enables previous channels and continues playback. Paused drafts remain editable but cannot send. Mini calls expose the same pause/resume action. Hanging up still stops and releases devices; pause is not hang-up.
 
-Character voice and live AI remain unconnected. Shared audio bars show measured microphone level for input and a playback indicator for output, never claimed output amplitude. Preserve permission/device recovery, release capture on hang-up or page exit, and synchronize device flags on cleanup/remount so a stopped stream cannot appear on. The timeline records sent messages, pauses and mode events, not saved word-aligned audio/video or live captions. Session state is memory-only; reload does not reconnect or preserve the call. See [CALL_INTERFACE.md](CALL_INTERFACE.md) for scope and validation; run `npm run check:calls` alongside the voice, conversation, navigation and design checks for relevant changes.
+Character voice and live AI remain unconnected. Shared audio bars show measured microphone level for input and a playback indicator for output, never claimed output amplitude. Preserve permission/device recovery, release capture on hang-up or page exit, and synchronize device flags on cleanup/remount so a stopped stream cannot appear on. The timeline records sent messages, pauses and mode events, not saved word-aligned audio/video or live captions. Session state is memory-only; reload does not reconnect or preserve the call.
 
 ## Conversation activity (September 19)
 
@@ -750,7 +750,7 @@ The editor and live draft preview sit beside each other on large screens and sta
 
 Personality, soul, backstory, relationship and speaking style are user-authored text. Do not replace them with personality presets. Activities (idle, listening, thinking, speaking) describe what the companion is doing; named expressions describe how it presents itself. Keep the two independently assignable. Assigned expression artwork takes priority, then activity artwork, then the main portrait. Preserve the complete, uncropped portrait with at least the existing one-eighth inset on each side. Uploaded video loops are muted; disabled motion or reduced-motion preference replaces a video with the still main portrait. Still assigned images remain usable.
 
-Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Keep the conversation menu's preview label and the Studio's authored-example label. Qwen voice design/cloning is not connected; reference playback is an uploaded recording, and existing browser read-aloud still uses a device voice. Show these limitations beside the relevant control. See [CHARACTER_STUDIO.md](CHARACTER_STUDIO.md) for data ownership, import formats and integration boundaries.
+Focus and Character are delivery modes for one identity, separate from models, tools, memory, harness and permissions. Keep the conversation menu's preview label and the Studio's authored-example label. Qwen voice design/cloning is not connected; reference playback is an uploaded recording, and existing browser read-aloud still uses a device voice. Show these limitations beside the relevant control.
 
 The structural pass inspected Studio's editor layout at desktop and 390 x 844, including the width-aware appbar and its secondary-action menu. This verifies layout and navigation, not newly authored media, voice integration or production save behavior.
 

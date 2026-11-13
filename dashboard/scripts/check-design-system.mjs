@@ -15,17 +15,10 @@ const template = JSON.parse(fs.readFileSync(path.join(root, "scripts/template-fo
 const applicationRecipes = {
   "src/components/status-badge.tsx": ["border-success/30", "bg-success/10", "border-warning/30", "bg-warning/10"],
   "src/components/ui/alert.tsx": ["border-warning/30", "bg-warning/10"],
-  "src/app/tools/columns.tsx": ["border-warning/30", "bg-warning/10"],
 }
 const ownedRecipe = (file, token) => template.colorClasses[file]?.includes(token) || applicationRecipes[file]?.includes(token)
 
 // Exceptions describe different UI roles, never a route-wide escape from theming.
-const headingExceptions = new Map([
-  ["src/app/chat/conversation.tsx", "The transcript has a compact persistent conversation title."],
-  ["src/app/login/page.tsx", "Authentication uses the standalone AuthLayout."],
-  ["src/app/setup/page.tsx", "Onboarding steps use the standalone AuthLayout."],
-  ["src/app/errors/not-found/components/not-found-error.tsx", "The error code is a standalone error heading."],
-])
 const paletteExceptions = new Map([
   ["src/lib/character-options.ts", "Character swatches represent selectable artwork colors."],
   ["src/config/theme-data.ts", "Theme definitions are the source of palette values."],
@@ -122,7 +115,7 @@ function inspect(file, tree) {
           && ['collection-toolbar', 'workspace-section'].includes(attribute.initializer.text))
         if (ownedSlot) report(node, 'workspace-pattern', 'Use CollectionToolbar or WorkspaceSection; shared pattern slots belong to the design-system owner.')
       }
-      if (tag === "h1" && !headingExceptions.has(file) && !isDesignSystem(file)) {
+      if (tag === "h1" && !isDesignSystem(file)) {
         report(node, "page-heading", "Use BaseLayout title/description or PageHeader for a standard page heading.")
       }
       if (inputs.has(tag) && !isDesignSystem(file)) {
@@ -217,10 +210,6 @@ function selfTest() {
     assert.equal(inspectTheme(valid.replace("--color-card: var(--card);", "--color-card: var(--surface-panel);"))[0]?.rule, "template-token")
   })
   test("ordinary fields and arbitrary dimensions remain allowed", () => assert.deepEqual(check('const Page = () => <Input placeholder="Agent name" className="text-[15px] w-[12rem]" />'), []))
-  test("conversation/auth/error headings are intentional", () => {
-    for (const file of headingExceptions.keys()) assert.deepEqual(check('const Page = () => <h1>Title</h1>', file), [])
-  })
-  test("exceptions do not disable unrelated checks", () => assert.equal(check('const Page = () => <h1 className="text-red-500">Title</h1>', "src/app/login/page.tsx")[0]?.rule, "semantic-color"))
   test("foundation and swatch owners remain permitted", () => {
     assert.deepEqual(check('const Field = () => <Input type="search" className="dark:bg-input/30" />', "src/components/ui/input.tsx"), [])
     assert.deepEqual(check('const tone = "bg-green-500"', "src/lib/character-options.ts"), [])

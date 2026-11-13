@@ -16,7 +16,7 @@ function load(relative) {
   }, module, module.exports)
   return module.exports
 }
-const { memoryDemo } = load('src/lib/memory-demo.ts')
+const { memoryDemo } = load('scripts/fixtures/memory-demo.ts')
 const { workspaceGraph, layoutMemoryGraph } = load('src/lib/memory-layout.ts')
 assert.equal(memoryDemo.length, 50)
 assert.equal(new Set(memoryDemo.map(memory => memory.category)).size, 5)

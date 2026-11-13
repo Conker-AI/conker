@@ -25,14 +25,6 @@ with HMR and an ignored cache. Standard development and builds use Vite's config
 runner. Do not change unrelated services or terminate an unknown port owner to
 start the frontend.
 
-The older fixture-rich workspace is available only for component archaeology:
-
-```sh
-npm run dev:legacy-fixtures
-```
-
-It is a separate development build, not a switch exposed in the product UI.
-
 ## Screen map
 
 The sidebar follows the owner-approved structure: **Overview** (Home, Inbox, Chats),
@@ -77,9 +69,7 @@ transport; do not scatter direct service calls through UI components.
   support. Speech recognition may process audio online; a local URL is not an
   offline-audio guarantee.
 - Calls are not connected to a realtime AI/TTS service or durable call storage.
-  See [Call interface](CALL_INTERFACE.md) for the implemented UI and remaining work.
-- Character authoring and previews are documented in [Character Studio](CHARACTER_STUDIO.md).
-  Configuration is not proof that voice cloning, emotion inference or 3D rendering runs.
+- Character configuration is not proof that voice cloning, emotion inference or 3D rendering runs.
 
 See [status](../docs/status.md) for what is connected.
 
@@ -99,7 +89,7 @@ TypeScript build does not establish visual correctness.
 ```sh
 npm run build
 npm run design:check:test
-npm run check:conversation
+npm run check:gateway
 ```
 
 `build` runs the design guard, TypeScript and the production Vite build. Use the
@@ -108,11 +98,8 @@ feature checks relevant to a change:
 ```sh
 npm run check:navigation
 npm run check:theme
-npm run check:daily-overview
-npm run check:character
 npm run check:jobs
 npm run check:voice
-npm run check:calls
 npm run lint
 ```
 

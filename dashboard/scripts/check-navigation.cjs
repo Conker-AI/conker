@@ -30,9 +30,12 @@ function load(relative) {
 
 async function main() {
   const { appNavigation, pageSections, matchAppRoute, activePageSection, pageSectionHref, getPageNavigation } = load('src/config/navigation.ts')
-  const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
-  const client = createFixtureClient()
-  const data = await client.load()
+  const ticket = (id, status) => ({ id, status })
+  const data = {
+    profile: { name: 'Conker' }, projects: [], artifacts: [],
+    sessions: [{ id: 'week', title: 'Weekly plan' }, { id: 'reading', title: 'Reading' }],
+    tickets: [ticket('coach', 'Needs you'), ticket('b', 'Needs you'), ticket('c', 'Needs you'), ticket('old', 'Approved')],
+  }
   const checks = []
   const check = (name, run) => { run(); checks.push(name) }
 
@@ -120,8 +123,7 @@ async function main() {
     assert.equal(getPageNavigation('/chat/reading', '', data).actions.length, 0)
     assert.equal(getPageNavigation('/settings/companion', '', data).actions[0].to, '/companion')
   })
-  await client.decideTicket('coach', 'Denied')
-  const updated = await client.load()
+  const updated = { ...data, tickets: data.tickets.map(item => item.id === 'coach' ? { ...item, status: 'Denied' } : item) }
   check('Decision counts refresh and reviewed requests return to the history route', () => {
     assert.equal(getPageNavigation('/inbox', '', data).sections[0].badge, 3)
     assert.equal(getPageNavigation('/inbox', '', updated).sections[0].badge, 2)
