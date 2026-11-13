@@ -15,9 +15,49 @@ const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "conker-rich-answer-")
 const requireFromRoot = createRequire(path.join(root, "package.json"))
 const checks = []
 const check = (name, run) => { run(); checks.push(name) }
+// Inlined from the deleted src/lib/api/rich-answer-fixture.ts (local copy of the same sample).
+const richAnswerFixture = {
+  text: `## A useful answer, with inspectable blocks
+
+This is a **local rendering preview**, with a list, code, a table, mathematics and supplied citations.
+
+1. Read the answer normally.
+2. Copy or download a block without copying its controls.
+3. Open a source to inspect what was actually supplied.
+
+> Nothing in this example contacts a provider, searches the web or executes code.
+
+### A small function
+
+\`\`\`typescript
+function mean(values: number[]): number {
+  if (values.length === 0) return 0
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+\`\`\`
+
+The inline expression $x^2 + y^2 = r^2$ is rendered as mathematics. A display formula:
+
+$$
+\\bar{x} = \\frac{1}{n} \\sum_{i=1}^{n} x_i
+$$
+
+| Feature | What you can do | Boundary |
+| :--- | :--- | :--- |
+| Code | Copy, collapse, download | Source is never executed |
+| Tables | Copy Markdown or CSV, expand, download | Spreadsheet formulas are neutralized |
+| Sources | Inspect supplied metadata | No invented URLs |
+
+The renderer follows CommonMark with GFM tables. [Markdown documentation](citation:markdown-docs) An example of missing metadata: [Unavailable source](citation:missing-source).
+
+An image remains an explicit link rather than fetching media automatically: ![Sample illustration](https://example.com/illustration.png)
+`,
+  citations: [{ id: "markdown-docs", label: "react-markdown documentation", href: "https://github.com/remarkjs/react-markdown", excerpt: "Reference supplied with this local preview. The renderer uses react-markdown and remark plugins; this example did not perform a live search." }],
+}
+
 try {
   await build({
-    entryPoints: [path.join(root, "src/lib/rich-answer.ts"), path.join(root, "src/components/rich-answer.tsx"), path.join(root, "src/lib/api/rich-answer-fixture.ts"), path.join(root, "src/components/gateway/model-routing-evidence.tsx")],
+    entryPoints: [path.join(root, "src/lib/rich-answer.ts"), path.join(root, "src/components/rich-answer.tsx"), path.join(root, "src/components/gateway/model-routing-evidence.tsx")],
     outdir: temporary, outbase: path.join(root, "src"), bundle: true, platform: "node", format: "cjs", jsx: "automatic", logLevel: "silent", loader: { ".css": "empty" },
     tsconfig: path.join(root, "tsconfig.app.json"), define: { "import.meta.env": "{}" },
     plugins: [{ name: "one-react-runtime", setup(builder) {
@@ -26,7 +66,6 @@ try {
   })
   const helpers = await import(pathToFileURL(path.join(temporary, "lib/rich-answer.js")))
   const { RichAnswer } = await import(pathToFileURL(path.join(temporary, "components/rich-answer.js")))
-  const { richAnswerFixture } = await import(pathToFileURL(path.join(temporary, "lib/api/rich-answer-fixture.js")))
   const { ModelRoutingEvidence } = await import(pathToFileURL(path.join(temporary, "components/gateway/model-routing-evidence.js")))
   const render = text => renderToStaticMarkup(React.createElement(RichAnswer, { text }))
   const evidence = value => renderToStaticMarkup(React.createElement(ModelRoutingEvidence, { detail: typeof value === 'string' ? value : JSON.stringify(value) }))

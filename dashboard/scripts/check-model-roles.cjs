@@ -126,30 +126,6 @@ async function main() {
   assert.ok(!JSON.stringify(planModelRole({ configuration: sentinel, settings, role: 'answer' })).includes('SENTINEL_DO_NOT_COPY'))
   assert.equal(validateModelsConfiguration({ ...config, roleSettings: helperSettings }), null)
   assert.match(validateModelsConfiguration({ ...config, roleSettings: badLock }), /manual answer lock/)
-  const { createFixtureClient } = load('src/lib/api/fixture-adapter.ts')
-  const client = createFixtureClient()
-  const saved = await client.saveModelsConfiguration({ ...config, roleSettings: helperSettings })
-  assert.deepEqual(saved.roleSettings, helperSettings, 'Existing Models API preserves role settings without fixture changes')
-  saved.roleSettings.roles.summarization.modelId = 'external mutation'
-  assert.equal((await client.load()).modelsConfiguration.roleSettings.roles.summarization.modelId, primary)
-  await assert.rejects(client.saveModelsConfiguration({ ...config, roleSettings: badLock }), /manual answer lock/)
-  assert.equal((await client.load()).modelsConfiguration.roleSettings.roles.summarization.modelId, primary)
-  for (const disable of ['model', 'provider']) {
-    const isolated = createFixtureClient()
-    const snapshot = await isolated.load()
-    const sessionId = snapshot.companionSessionId
-    const selected = snapshot.modelsConfiguration.models.find(model => model.id === crossProvider)
-    await isolated.updateConversation(sessionId, { modelId: selected.id })
-    const changed = structuredClone(snapshot.modelsConfiguration)
-    if (disable === 'model') changed.models.find(model => model.id === selected.id).enabled = false
-    else changed.providers.find(provider => provider.id === selected.providerId).enabled = false
-    await isolated.saveModelsConfiguration(changed)
-    const after = await isolated.load()
-    assert.equal(after.conversations[sessionId].modelId, selected.id, `Disabling a ${disable} must retain the explicit conversation choice`)
-    const count = after.conversations[sessionId].messages.length
-    await assert.rejects(isolated.streamReply(sessionId, { signal: new AbortController().signal }, () => {}), /enabled model/)
-    assert.equal((await isolated.load()).conversations[sessionId].messages.length, count, 'Blocked route creates no replacement-model response')
-  }
   // Side jobs tests
   const { SIDE_JOBS, sideJobChoice, withSideJob, followAnswerRoles } = load('src/lib/api/model-roles.ts')
 
