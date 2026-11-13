@@ -16,6 +16,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -481,12 +482,78 @@ def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
     return True
 
 
-def watch_for_updates(host: HostOps, *, sleep=None, check=check_for_updates) -> None:
-    """The daily update check, for the helper's lifetime (scripts/provider_control.py)."""
+DOCKER_WAIT = 10 * 60  # after a reboot this user unit may start before Docker does
+DOCKER_POLL = 10
+
+
+def _docker_answers(runner, sleep) -> bool:
+    deadline = time.monotonic() + DOCKER_WAIT
+    while True:
+        try:  # a socket-activated Docker can hang `docker info` until dockerd is up
+            quiet = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL}
+            answer = runner(["docker", "info"], **quiet, stderr=subprocess.DEVNULL, timeout=30)
+            if answer.returncode == 0:
+                return True
+        except (OSError, subprocess.SubprocessError):
+            pass  # not up yet (or no CLI yet): asked again until the wait runs out
+        if time.monotonic() >= deadline:
+            return False
+        sleep(DOCKER_POLL)
+
+
+def recover_interrupted_update(host: HostOps, runner=subprocess.run, sleep=time.sleep) -> bool:
+    """At helper start (and before each daily check): `conker update --recover` when an update was
+    cut off part way (a reboot, a killed helper), so Conker is not left between two versions. Runs
+    only when the update store shows one in flight and is not held, once Docker answers (a
+    rollback without Docker could not be proven and would hold), and only under the action lock,
+    so no action starts meanwhile; an update still running keeps that lock (it inherits it) or its
+    update.lock, and then nothing is done. No time limit: a rollback rebuilds and restarts."""
+    store = host.root / "state" / "update"
+    if host.layout != "ubuntu" or not (store / "active.json").exists():
+        return False
+    if (store / "HOLD.json").exists():
+        return False  # the owner restores the snapshot; nothing here may touch it
+    try:
+        if not _docker_answers(runner, sleep):
+            return False  # tried again before the next daily check
+        lock = OperationLock(host.lock_path)
+        if not lock.acquire():
+            return False
+        try:
+            done = runner(
+                host._conker("update", "--recover"),
+                cwd=host.root,
+                env=host._environment(),
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+        finally:
+            lock.release()
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"conker update --recover did not run: {error}", file=sys.stderr)
+        return False
+    if done.returncode != 0:  # the helper's log (journalctl --user); tried again tomorrow
+        why = (done.stderr or "").strip()[-500:] or f"exit {done.returncode}"
+        print(f"conker update --recover did not finish: {why}", file=sys.stderr)
+    return done.returncode == 0
+
+
+def watch_for_updates(
+    host: HostOps, *, sleep=None, check=check_for_updates, recover=recover_interrupted_update
+) -> None:
+    """At start, recover a cut-off update; then the daily update check, each after another try at
+    recovery, for the helper's lifetime (scripts/provider_control.py)."""
     pause = sleep or time.sleep
+    with contextlib.suppress(Exception):
+        recover(host)
     pause(FIRST_CHECK)
     while True:
-        with contextlib.suppress(Exception):  # the watch outlives any one check; next try tomorrow
+        with contextlib.suppress(Exception):  # the watch outlives any one try; next try tomorrow
+            recover(host)
+        with contextlib.suppress(Exception):
             check(host)
         pause(CHECK_EVERY)
 

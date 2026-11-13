@@ -92,7 +92,7 @@ Ubuntu layout: [4 · Running Conker](docs/4-running.md).
 
 ## Status
 
-Conker is early. The current source has 43 of 44 tracked capability families active; the
+Conker is early. The current source has 40 of 41 tracked capability families active; the
 owner's own terminal is still deferred. Local models on a CPU work but are slow; a hosted or larger
 model makes tool use and drafts much more reliable. [What works today](docs/status.md)
 

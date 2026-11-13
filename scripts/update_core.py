@@ -11,9 +11,16 @@ import json
 import os
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
+
+try:
+    import fcntl
+except ImportError:  # Windows: the repository layout's tests; one updater per checkout there
+    fcntl = None
 
 
 class UpdateError(RuntimeError):
@@ -131,6 +138,9 @@ class UpdateCoordinator:
         self.store.clear_active()
 
     def recover_interrupted(self) -> None:
+        """Called under update.lock, so the hold is checked where no other update can write one."""
+        if self.store.hold_path.exists():
+            raise UpdateError(f"Update is held: {self.store.hold_path}")
         state = self.store.load_active()
         if not state:
             return
@@ -141,8 +151,6 @@ class UpdateCoordinator:
         self.store.clear_active()
 
     def run(self) -> dict[str, Any]:
-        if self.store.hold_path.exists():
-            raise UpdateError(f"Update is held: {self.store.hold_path}")
         self.recover_interrupted()
 
         state: dict[str, Any] = {
@@ -214,32 +222,125 @@ class UpdateCoordinator:
         return {"status": "applied", "receipt": str(receipt)}
 
 
+BOOT_ID = Path("/proc/sys/kernel/random/boot_id")
+PROC_STAT = Path("/proc/stat")
+
+
+def _boot_id() -> str:
+    """This boot's id on Linux, else empty: a lock from an earlier boot is stale whatever its pid."""
+    try:
+        return BOOT_ID.read_text(encoding="ascii").strip()
+    except OSError:
+        return ""
+
+
+def _booted_at() -> float | None:
+    """When this boot started (Linux), for a lock written before boot ids were recorded."""
+    try:
+        for line in PROC_STAT.read_text(encoding="ascii").splitlines():
+            name, _, value = line.partition(" ")
+            if name == "btime":
+                return float(value)
+    except (OSError, ValueError):
+        return None
+    return None
+
+
+def _token() -> str:
+    return f"{os.getpid()} {_boot_id()}".rstrip()
+
+
+def _stale(lock: Path) -> bool:
+    """The lock's owner is gone: an earlier boot wrote it, or its pid no longer runs."""
+    owner, _, boot = lock.read_text(encoding="ascii").strip().partition(" ")
+    pid = int(owner)  # ValueError: a torn or foreign file
+    current = _boot_id()
+    if boot and current and boot != current:
+        return True  # after a reboot another process may have the same pid
+    booted = None if boot else _booted_at()
+    if booted is not None and lock.stat().st_mtime < booted:
+        return True  # a pid-only lock (an older release) written before this boot
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return False
+
+
+@contextmanager
+def _guard(directory: Path) -> Iterator[None]:
+    """One process at a time checks, breaks, takes or drops update.lock (POSIX; the kernel lets go
+    on exit). update.lock itself stays a plain file: backups and drills read it as "an update runs"."""
+    if fcntl is None:
+        yield
+        return
+    descriptor = os.open(directory / "update.lock.guard", os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(descriptor)
+
+
+LOCK_TOKEN = "CONKER_UPDATE_LOCK"  # the token an update hands its own snapshot (`conker backup`)
+
+
+def update_running(directory: Path, own: str | None = None) -> bool:
+    """Another update or a recovery holds `directory`'s update.lock right now. A stale lock does
+    not count, nor the lock whose token is `own` (an update's own snapshot runs under its lock)."""
+    lock = directory / "update.lock"
+    if not lock.exists():
+        return False
+    with _guard(directory):
+        try:
+            if own and lock.read_text(encoding="ascii").strip() == own:
+                return False
+            return not _stale(lock)
+        except FileNotFoundError:
+            return False
+        except ValueError:
+            # Under the guard nobody is half way through writing it: a writer died (stale).
+            # Without one (Windows) a write may be in progress, so it counts.
+            return fcntl is None
+        except OSError:
+            return True
+
+
 def _acquire_lock(store: UpdateStore) -> Path:
     lock = store.directory / "update.lock"
     store.directory.mkdir(parents=True, exist_ok=True)
-    for attempt in range(2):
-        try:
-            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            break
-        except FileExistsError as error:
+    with _guard(store.directory):
+        for attempt in range(2):
             try:
-                owner = int(lock.read_text(encoding="ascii").strip())
-            except ValueError:
-                if attempt == 0:
+                descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                break
+            except FileExistsError as error:
+                try:
+                    stale = _stale(lock)
+                except ValueError:
+                    stale = None  # unreadable: replaced once, then refused
+                if stale is not False and attempt == 0:
                     lock.unlink(missing_ok=True)
                     continue
-                raise UpdateError(f"invalid update lock: {lock}") from error
-            try:
-                os.kill(owner, 0)
-            except ProcessLookupError:
-                if attempt == 0:
-                    lock.unlink(missing_ok=True)
-                    continue
-            except PermissionError:
-                pass
-            raise UpdateError(f"another update may be active: {lock}") from error
-    else:  # pragma: no cover - the loop either opens or raises
-        raise UpdateError(f"could not acquire update lock: {lock}")
-    with os.fdopen(descriptor, "w", encoding="ascii") as stream:
-        stream.write(f"{os.getpid()}\n")
+                if stale is None:
+                    raise UpdateError(f"invalid update lock: {lock}") from error
+                raise UpdateError(f"another update may be active: {lock}") from error
+        else:  # pragma: no cover - the loop either opens or raises
+            raise UpdateError(f"could not acquire update lock: {lock}")
+        with os.fdopen(descriptor, "w", encoding="ascii") as stream:
+            stream.write(_token() + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
     return lock
+
+
+def _release_lock(lock: Path) -> None:
+    """Drop update.lock only while it is still this process's (never another update's)."""
+    with _guard(lock.parent):
+        try:
+            if lock.read_text(encoding="ascii").strip() == _token():
+                lock.unlink()
+        except FileNotFoundError:
+            pass

@@ -25,6 +25,7 @@ from recovery_layout import (
     read_json_file,
     sha256,
 )
+from update_core import LOCK_TOKEN, update_running
 
 
 def recovery_fingerprint(state: dict[str, Any]) -> str:
@@ -278,6 +279,10 @@ def operation_lock(root: Path):
     try:
         with os.fdopen(descriptor, "w") as stream:
             stream.write(str(os.getpid()))
+        # Checked after taking the backup lock, as an update checks it after taking its own: an
+        # update or the helper's rollback of a cut-off one restarts what the backup stops.
+        if update_running(root / "state" / "update", own=os.environ.get(LOCK_TOKEN)):
+            raise RecoveryError("An update is running. Back up again when it has finished.")
         yield
     finally:
         lock.unlink()
