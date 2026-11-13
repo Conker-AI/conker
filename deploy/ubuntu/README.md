@@ -164,7 +164,10 @@ dropped once installed or passed, or pulled). Update on the Inbox card installs 
 release, with Conker's own sources downloaded by that commit, so moving Conker's tag afterwards
 changes nothing (the module sources it pins are still fetched by their version tags).
 `conker update --to X.Y.Z` (from a shell, any newer release) stages that release's sources and the module tags it pins, builds the dashboard, takes a
-verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`), swaps the sources
+verified snapshot (`CONKER_UPDATE_SNAPSHOTS`, default `~/conker-snapshots`; older snapshots
+earlier updates made are then pruned to the newest `CONKER_UPDATE_SNAPSHOTS_KEEP`, default 3, and
+the newest one that verifies always stays; snapshots made by hand or by the nightly timer are never
+touched, and a prune that cannot run only says so), swaps the sources
 (the old ones stay in `recovery/pre-update-*`), rebuilds and starts, and checks `conker status
 --strict`. A failed check puts the old sources back and proves them healthy (code only: data the new version
 already changed stays changed, and the snapshot is the way back). One exception: when the old Pi
