@@ -368,8 +368,9 @@ cmd_update() {
             return
             ;;
         --to)
-            # --commit SHA: the commit the offered release's tag named (the helper's update.run)
-            [ "$#" -eq 2 ] || { [ "$#" -eq 4 ] && [ "$3" = --commit ]; } \
+            # --commit SHA --modules pi=X.Y.Z@SHA,...: the commits the offered release's tags named
+            # (the helper's update.run)
+            [ "$#" -eq 2 ] || { [ "$#" -eq 6 ] && [ "$3" = --commit ] && [ "$5" = --modules ]; } \
                 || { printf 'Use conker update --to X.Y.Z.\n' >&2; exit 2; }
             [ "$LAYOUT" = ubuntu ] || unavailable 'update --to' \
                 'A repository install follows its branch: run conker update.'
@@ -377,7 +378,8 @@ cmd_update() {
             say "${BOLD}Updating to Conker $2${OFF}"
             info "Staged and checked first, then a verified snapshot, then the switch."
             say ""
-            python3 "$SOURCE_ROOT/scripts/update_ubuntu.py" --root "$ROOT" --to "$2" ${4:+--commit "$4"}
+            python3 "$SOURCE_ROOT/scripts/update_ubuntu.py" --root "$ROOT" --to "$2" \
+                ${4:+--commit "$4"} ${6:+--modules "$6"}
             return
             ;;
         --recover)

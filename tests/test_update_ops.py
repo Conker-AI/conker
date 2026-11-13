@@ -38,13 +38,25 @@ def update(version, identity="ui-update-0123456789abcdef"):
 
 
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
+MODULE = "f" * 40
+PINS = {"pi": "0.25.0", "toolgate": "0.16.0", "memorygate": "0.9.0"}
+PINS.update(systemgate="0.6.0", embeddings="0.2.0")
+MODULES = ",".join(f"{name}={version}@{MODULE}" for name, version in PINS.items())
+
+
+def pinned(commit=COMMIT, module=MODULE):
+    """One offer as the daily check keeps it (scripts/update_check.py release_commits)."""
+    return {
+        "commit": commit,
+        "modules": {name: {"version": v, "commit": module} for name, v in PINS.items()},
+    }
 
 
 def offer(ops: HostOps, offers=None) -> None:
     """What the daily check saved (scripts/update_check.py save_offers)."""
     folder = ops.root / "state" / "update"
     folder.mkdir(parents=True, exist_ok=True)
-    value = json.dumps({"offers": {"0.25.0": COMMIT} if offers is None else offers})
+    value = json.dumps({"offers": {"0.25.0": pinned()} if offers is None else offers})
     (folder / "offer.json").write_text(value, encoding="utf-8")
 
 
@@ -56,6 +68,7 @@ def test_an_update_runs_the_fixed_argv_with_no_time_limit(tmp_path):
     argv, kwargs = runner.calls[0]
     assert argv == [
         "bash", str(ops.source / "conker"), "update", "--to", "0.25.0", "--commit", COMMIT,
+        "--modules", MODULES,
     ]  # fmt: skip
     assert kwargs["timeout"] is None  # stopping an update midway is worse than waiting
     assert receipt["outcome"] == "done" and receipt["arguments"] == {"version": "0.25.0"}
@@ -63,7 +76,15 @@ def test_an_update_runs_the_fixed_argv_with_no_time_limit(tmp_path):
 
 @pytest.mark.parametrize(
     "saved",
-    [None, {"0.24.0": COMMIT}, {"0.26.0": COMMIT}, {"0.25.0": "main"}, {"0.25.0": COMMIT[:39]}],
+    [
+        None,
+        {"0.24.0": pinned()},
+        {"0.26.0": pinned()},
+        {"0.25.0": pinned("main")},
+        {"0.25.0": pinned(COMMIT[:39])},
+        {"0.25.0": pinned(module="main")},
+        {"0.25.0": COMMIT},  # from before module commits were kept
+    ],
 )
 def test_only_an_offered_release_is_installed(tmp_path, saved):
     ops = host(tmp_path)  # its runner fails the test if anything runs
@@ -78,9 +99,9 @@ def test_only_an_offered_release_is_installed(tmp_path, saved):
 def test_each_offered_release_installs_by_its_own_commit(tmp_path):
     runner = Runner()
     ops = host(tmp_path, runner)
-    offer(ops, {"0.25.0": COMMIT, "0.26.0": "f" * 40})
+    offer(ops, {"0.25.0": pinned(), "0.26.0": pinned("e" * 40, "d" * 40)})
     ops.start(update("0.25.0", "ui-update-older-card-000001"), wait=True)
-    assert runner.calls[0][0][-4:] == ["--to", "0.25.0", "--commit", COMMIT]
+    assert runner.calls[0][0][-6:] == ["--to", "0.25.0", "--commit", COMMIT, "--modules", MODULES]
 
 
 def test_a_failed_update_says_where_to_look(tmp_path):

@@ -254,44 +254,105 @@ def test_only_ascii_release_numbers_are_accepted(version):
 
 
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
+MODULE = "f" * 40
+FOLDERS = {"pi": "PI", "toolgate": "TOOLGATE", "memorygate": "MEMORYGATE"}
+FOLDERS.update(systemgate="SYSTEMGATE", embeddings="EMBEDDINGS")
+# What the offer names for each module (scripts/update_check.py offer_arguments).
+OFFERED = ",".join(f"{name}={PINS[key + '_VERSION']}@{MODULE}" for name, key in FOLDERS.items())
 
 
-def test_the_offered_release_is_fetched_by_the_commit_its_tag_named(deployment):
-    host = Host(deployment, {"0.2.0": True}, release="0.2.0")
-    transport = UbuntuTransport(
-        deployment, "0.2.0", commit=COMMIT, run=host.run, fetch=host.fetch, home=deployment.parent
+def offered_transport(deployment, host, modules=OFFERED):
+    return UbuntuTransport(
+        deployment,
+        "0.2.0",
+        commit=COMMIT,
+        modules=modules,
+        run=host.run,
+        fetch=host.fetch,
+        home=deployment.parent,
     )
+
+
+def test_the_offered_release_and_its_modules_are_fetched_by_their_commits(deployment):
+    host = Host(deployment, {"0.2.0": True}, release="0.2.0")
     store = UpdateStore(deployment / "state" / "update")
 
-    assert UpdateCoordinator(transport, store).run()["status"] == "applied"
+    assert UpdateCoordinator(offered_transport(deployment, host), store).run()["status"] == "applied"
 
-    assert host.fetched[0] == f"https://codeload.github.com/Conker-AI/conker/tar.gz/{COMMIT}"
-    assert any(url.endswith("/pi/tar.gz/refs/tags/v0.25.0") for url in host.fetched)
+    codeload = "https://codeload.github.com/Conker-AI/"
+    assert host.fetched == [f"{codeload}conker/tar.gz/{COMMIT}"] + [
+        f"{codeload}{name}/tar.gz/{MODULE}" for name in FOLDERS
+    ]  # no tag is read, so a tag moved after the offer changes nothing
+
+
+def test_an_offer_naming_another_module_version_than_the_release_pins_is_refused(deployment):
+    host = Host(deployment, {"0.2.0": True}, release="0.2.0")
+    modules = OFFERED.replace("pi=0.25.0@", "pi=0.24.0@")
+    store = UpdateStore(deployment / "state" / "update")
+
+    with pytest.raises(UpdateError, match="the offer named pi 0.24.0, the release pins 0.25.0"):
+        UpdateCoordinator(offered_transport(deployment, host, modules), store).run()
+
+    assert [receipt["status"] for receipt in receipts(deployment)] == ["failed_before_apply"]
+    assert host.running() == "0.1.0"
+    assert not list(deployment.glob("staging-*"))  # what was staged is gone
+
+
+@pytest.mark.parametrize(
+    "modules",
+    [
+        OFFERED.rsplit(",", 1)[0],  # embeddings missing
+        OFFERED + f",pi=0.25.0@{MODULE}",  # pi twice
+        OFFERED.replace("pi=", "pie="),
+        OFFERED.replace("pi=0.25.0@", "pi=0.25@"),
+        OFFERED.replace(f"pi=0.25.0@{MODULE}", "pi=0.25.0@main"),
+        OFFERED.replace(f"pi=0.25.0@{MODULE}", "pi=0.25.0"),
+        "",
+    ],
+)
+def test_each_module_is_named_once_by_version_and_commit(modules):
+    with pytest.raises(UpdateError, match="name"):
+        UbuntuTransport(Path("."), "0.2.0", commit=COMMIT, modules=modules)
+
+
+@pytest.mark.parametrize("pins", [{"commit": COMMIT}, {"modules": OFFERED}])
+def test_a_release_commit_goes_together_with_its_module_commits(pins):
+    with pytest.raises(UpdateError, match="together"):
+        UbuntuTransport(Path("."), "0.2.0", **pins)
 
 
 @pytest.mark.parametrize("commit", ["main", COMMIT[:39], COMMIT.upper(), COMMIT + "0"])
 def test_a_commit_is_forty_hex_digits(commit):
     with pytest.raises(UpdateError, match="40 hex"):
-        UbuntuTransport(Path("."), "0.2.0", commit=commit)
+        UbuntuTransport(Path("."), "0.2.0", commit=commit, modules=OFFERED)
 
 
-def test_the_command_hands_the_commit_to_the_update(tmp_path, monkeypatch):
+def test_the_command_hands_the_commits_to_the_update(tmp_path, monkeypatch):
     made = []
 
     class Stop(BaseException):  # main() turns any Exception into a refusal
         pass
 
-    def transport(root, version, *, commit=None):
-        made.append((version, commit))
+    def transport(root, version, *, commit=None, modules=None):
+        made.append((version, commit, modules))
         raise Stop
 
     monkeypatch.setattr(update_ubuntu, "UbuntuTransport", transport)
     monkeypatch.setattr(update_ubuntu, "tell_inbox", lambda _root: None)
+    arguments = ["--root", str(tmp_path), "--to", "0.2.0", "--commit", COMMIT]
     with pytest.raises(Stop):
-        update_ubuntu.main(["--root", str(tmp_path), "--to", "0.2.0", "--commit", COMMIT])
-    assert made == [("0.2.0", COMMIT)]
+        update_ubuntu.main([*arguments, "--modules", OFFERED])
+    assert made == [("0.2.0", COMMIT, OFFERED)]
 
 
-def test_a_commit_goes_only_with_to(tmp_path):
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--recover", "--commit", COMMIT, "--modules", OFFERED],
+        ["--to", "0.2.0", "--commit", COMMIT],
+        ["--to", "0.2.0", "--modules", OFFERED],
+    ],
+)
+def test_the_commits_go_together_and_only_with_to(tmp_path, arguments):
     with pytest.raises(SystemExit):
-        update_ubuntu.main(["--root", str(tmp_path), "--recover", "--commit", COMMIT])
+        update_ubuntu.main(["--root", str(tmp_path), *arguments])

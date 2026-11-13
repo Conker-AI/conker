@@ -33,7 +33,7 @@ from scripts.host_ops_reads import (
     read_command,
 )
 from scripts.setup import SetupError, check_protection_policy
-from scripts.update_check import offered
+from scripts.update_check import offer_arguments, offered
 
 CUT_OFF = (
     "This was cut off before it finished, so it may or may not have happened. "
@@ -308,12 +308,12 @@ class HostOps:
             # `conker restart pi` also restarts the services sharing Pi's network namespace.
             return self._conker("restart", arguments["service"])
         if operation.name == "update.run":
-            # Only a release the daily check offered, by the commit its tag named when first
-            # offered (the updater itself refuses one not newer than the running release).
-            commit = offered(self.root / "state" / "update", arguments["version"])
-            if commit is None:
+            # Only a release the daily check offered, by the commits its tags (Conker's and each
+            # module's) named when first offered (the updater refuses one not newer than running).
+            offer = offered(self.root / "state" / "update", arguments["version"])
+            if offer is None:
                 raise refused("Conker installs only a release its daily check offered.")
-            return self._conker("update", "--to", arguments["version"], "--commit", commit)
+            return self._conker("update", "--to", arguments["version"], *offer_arguments(offer))
         destination = self._destination()
         if operation.name == "backup.run":
             return self._conker("setup", "run", "protection")
