@@ -54,6 +54,18 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Two lazy screens import recharts' index; without one shared chunk Rollup splits the index
+        // from its own modules and warns of a circular chunk with broken execution order.
+        // Only recharts' own modules: shared ones (React and friends) stay where they were, so the
+        // entry does not start loading the chart library.
+        manualChunks: id => (id.includes("/node_modules/recharts/") ? "recharts" : undefined),
+        onlyExplicitManualChunks: true,
+      },
+    },
+  },
   define: {
     'import.meta.env.VITE_BASENAME': JSON.stringify(process.env.VITE_BASENAME || ''),
   }
