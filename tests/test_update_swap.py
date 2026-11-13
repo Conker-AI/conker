@@ -112,6 +112,15 @@ def test_a_cut_in_the_two_renames_brings_the_missing_sources_back(tmp_path, plac
     assert holds(sources) == "old"
 
 
+def test_a_device_number_changed_by_a_reboot_still_finds_the_sources(tmp_path, places, exchanges):
+    # LVM or device-mapper roots can come back with another st_dev; the inode is the same.
+    kept, staging = places
+    sources = folder(tmp_path / "sources", "new")
+    device, inode = identity(folder(kept, "old"))
+    assert put_back([device + 1, inode], [kept, staging], sources, tmp_path / "failed")
+    assert holds(sources) == "old" and holds(tmp_path / "failed") == "new"
+
+
 def test_the_failed_release_is_never_taken_for_the_sources_from_before(tmp_path, places):
     kept, staging = places
     sources = folder(tmp_path / "sources", "new")

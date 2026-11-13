@@ -208,10 +208,9 @@ def test_an_update_cut_off_after_its_sources_moved_is_rolled_back(tmp_path, boot
     assert not (store.directory / "update.lock").exists()
 
 
-@pytest.mark.parametrize(
-    "phase", ["recorded", "candidate_validated", "candidate_ready", "protecting"]
-)
+@pytest.mark.parametrize("phase", ["recorded", "candidate_validated", "candidate_ready"])
 def test_an_update_cut_off_before_anything_changed_is_closed(tmp_path, boot, phase):
+    # A cut during the update's own snapshot ("protecting"): tests/test_update_cutoff.py.
     store, transport = cut_off(tmp_path, phase), Transport()
 
     message = update_ubuntu.recover(tmp_path, transport_for=lambda root, target: transport)

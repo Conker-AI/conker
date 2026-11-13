@@ -26,7 +26,9 @@ def database(path: Path, ids: list[str] | None, note: str) -> Path:
         db.execute("INSERT INTO notes VALUES (?)", (note,))
         if ids is not None:
             db.execute("CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY)")
-            db.executemany("INSERT OR IGNORE INTO schema_migrations VALUES (?)", [(i,) for i in ids])
+            db.executemany(
+                "INSERT OR IGNORE INTO schema_migrations VALUES (?)", [(i,) for i in ids]
+            )
     return path
 
 
@@ -165,4 +167,26 @@ def test_a_restored_database_the_old_pi_still_refuses_holds(deployment):
 @pytest.mark.parametrize("name", [None, "", "../../etc", "snapshot-x"])
 def test_no_snapshot_of_its_own_means_no_database_is_touched(deployment, name):
     transport = update(deployment, MigratingHost(deployment))[1].transport
-    assert not transport._pi_database_back(name)
+    assert not transport._pi_database_back({"snapshot": name})
+
+
+def test_the_snapshot_is_found_where_it_was_made_not_where_snapshots_go_now(
+    deployment, monkeypatch, tmp_path
+):
+    # A shell update ran with CONKER_UPDATE_SNAPSHOTS set; the rollback (the helper's recover)
+    # runs without it. The folder recorded with the snapshot is the one looked in.
+    class Moving(MigratingHost):
+        def run(self, argv, *, cwd, env, timeout):
+            code = super().run(argv, cwd=cwd, env=env, timeout=timeout)
+            if "backup" in argv:
+                monkeypatch.setenv("CONKER_UPDATE_SNAPSHOTS", str(tmp_path / "elsewhere"))
+            return code
+
+    host = Moving(deployment)
+    database(host.live, ["0001"], "from before the update")
+    with pytest.raises(UpdateError, match="prior release was restored"):
+        update(deployment, host)[1].run()
+    assert ledger(host.live) == {"0001"} and note(host.live) == "from before the update"
+    [receipt] = receipts(deployment)
+    assert receipt["status"] == "rolled_back"
+    assert receipt["protection"]["folder"] == str(tmp_path / "snapshots")

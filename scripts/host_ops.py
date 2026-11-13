@@ -34,6 +34,7 @@ from scripts.host_ops_reads import (
 )
 from scripts.setup import SetupError, check_protection_policy
 from scripts.update_check import offer_arguments, offered
+from scripts.update_core import update_running
 
 CUT_OFF = (
     "This was cut off before it finished, so it may or may not have happened. "
@@ -291,13 +292,10 @@ class HostOps:
     def _require_no_hold(self) -> None:
         state = holds(self.root)
         if state["recoveryHeld"]:
-            raise busy(
-                "A recovery is held. Finish or abort it with conker recovery-status first."
-            )
+            raise busy("A recovery is held. Finish or abort it with conker recovery-status first.")
         if state["backupLock"]:
             raise busy(
-                "A backup is running or was cut off. "
-                "Check the backup folder before trying again."
+                "A backup is running or was cut off. Check the backup folder before trying again."
             )
 
     def _command(self, operation: Operation, arguments: dict[str, str]) -> list[str]:
@@ -328,9 +326,7 @@ class HostOps:
             raise refused("No backup folder is saved yet. Choose one in setup first.")
         destination = Path(str(policy["destination"]))
         if destination.is_symlink() or not destination.is_dir():
-            raise refused(
-                "The backup folder is not there. Check that the disk is mounted."
-            )
+            raise refused("The backup folder is not there. Check that the disk is mounted.")
         return destination
 
     def _finish(self, lock, operation: Operation, identity: str, argv: list[str]):
@@ -422,9 +418,7 @@ class HostOps:
     def _saved_policy(self) -> dict | None:
         """The backup folder saved in setup (Pi), read as `conker setup protection` prints it."""
         try:
-            raw = self._read(
-                self._conker("setup", "protection"), limit=16384, timeout=60
-            )
+            raw = self._read(self._conker("setup", "protection"), limit=16384, timeout=60)
             value = json.loads(raw)
             if isinstance(value, dict) and value.get("destination") is None:
                 return None
@@ -462,12 +456,15 @@ CHECK_TIMEOUT = 10 * 60
 
 def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
     """One `conker update --check --report`: the newest release and any finished update go to
-    the Inbox. Skipped while a server action runs (an update moves the sources it runs from).
-    Keeps no output; a failure is tried again at the next check. Only the Ubuntu layout: the
+    the Inbox. Skipped while a server action runs or a `conker update` from a shell holds
+    update.lock: an update moves the sources the check reads the running version from, and a
+    release reported as running mid-update is no longer offered. Keeps no output; a failure is tried again at the next check. Only the Ubuntu layout: the
     repository layout cannot update to a release (`conker update --to` is refused there)."""
     if host.layout != "ubuntu":
         return False
     try:
+        if update_running(host.root / "state" / "update"):
+            return False
         lock = OperationLock(host.lock_path)
         if not lock.acquire():
             return False

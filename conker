@@ -122,12 +122,14 @@ compose() {
     fi
 }
 
+# recovery_guard [--backup-checked]: the second form leaves the backup lock to the caller
+# (`update --recover` tells a backup that still runs from the lock one cut off left behind).
 recovery_guard() {
     if [ -f "$ROOT/.conker-recovery.json" ] || [ -f "$PWD/.conker-recovery.json" ]; then
         printf 'Recovery is held. Run conker recovery-status DIRECTORY and resolve its blockers before deployment.\n' >&2
         exit 1
     fi
-    if [ -f "$ROOT/.conker-backup.lock" ]; then
+    if [ "${1:-}" != --backup-checked ] && [ -f "$ROOT/.conker-backup.lock" ]; then
         printf 'Backup is running or was interrupted. Inspect its partial snapshot and source-state.json before restarting writers.\n' >&2
         exit 1
     fi
@@ -1110,7 +1112,13 @@ esac
 
 case "$command" in
     start|restart|model|auth) recovery_guard ;;
-    update) [ "${2:-}" = --check ] || recovery_guard ;;
+    update)
+        case "${2:-}" in
+            --check) ;;
+            --recover) recovery_guard --backup-checked ;;  # scripts/update_cutoff.py
+            *) recovery_guard ;;
+        esac
+        ;;
 esac
 
 load_layout

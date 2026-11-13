@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import backup_cli, update
+from scripts import backup_cli, update, update_core
 from scripts.backup_schedule import (
     NO_DESTINATION,
     UPDATE_BUSY,
@@ -72,7 +72,10 @@ def test_units_run_the_scheduled_command_nightly_and_catch_up_after_downtime(tmp
     name = unit_names(root)["backup"]
 
     assert "Type=oneshot" in service
-    assert f'{quoted(str(root))} "--source" {quoted(str(source))} "--layout" "ubuntu" "scheduled" "backup"' in service
+    assert (
+        f'{quoted(str(root))} "--source" {quoted(str(source))} "--layout" "ubuntu" "scheduled" "backup"'
+        in service
+    )
     assert f"WorkingDirectory={source}\n" in service
     assert '"-m" "scripts.backup_cli"' in service
     assert "TimeoutStartSec" not in service  # a backup is never cut off half way
@@ -128,7 +131,11 @@ def test_schedule_off_disables_and_removes_both_timers(tmp_path):
 
 @pytest.mark.parametrize(
     "platform, which",
-    [("win32", lambda name: "C:/x"), ("darwin", lambda name: "/bin/x"), ("linux", lambda name: None)],
+    [
+        ("win32", lambda name: "C:/x"),
+        ("darwin", lambda name: "/bin/x"),
+        ("linux", lambda name: None),
+    ],
 )
 def test_schedule_refuses_without_a_linux_systemd_user_session(tmp_path, platform, which):
     systemctl = Systemctl()
@@ -217,7 +224,12 @@ def hold_update(checkout: Path, name: str) -> None:
     subprocess.run(["git", "init", "-q", str(checkout)], check=True, capture_output=True)
     directory = checkout / ".git" / "conker-update"
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / name).write_text("{}\n")
+    (directory / name).write_text(update_marker(name))
+
+
+def update_marker(name: str) -> str:
+    """A marker as an update writes it: update.lock holds a live process's token (this one's)."""
+    return update_core._token() + "\n" if name == "update.lock" else "{}\n"
 
 
 def test_update_markers_are_the_ones_update_py_writes(tmp_path):
@@ -249,13 +261,31 @@ def test_nightly_run_refuses_while_an_ubuntu_update_runs_or_is_held(tmp_path, ma
     ops = host(tmp_path)
     store = ops.root / "state" / "update"  # where scripts/update_ubuntu.py keeps its state
     store.mkdir(parents=True)
-    (store / marker).write_text("{}", encoding="utf-8")
+    (store / marker).write_text(update_marker(marker), encoding="utf-8")
     log = journal(ops.root, "ubuntu")
 
     assert scheduled_backup(ops, log) == 1
 
     assert last_record(log, "backup")["reason"] == UPDATE_BUSY
     assert ops.receipts()["operations"] == []
+
+
+def test_a_stale_update_lock_with_nothing_in_flight_blocks_no_nightly_backup(tmp_path, monkeypatch):
+    # An update killed between closing its state and dropping its lock leaves only update.lock;
+    # its holder is gone (it names an earlier boot), so the nightly backup runs.
+    boot = tmp_path / "boot_id"
+    boot.write_text("boot-now\n", encoding="ascii")
+    monkeypatch.setattr(update_core, "BOOT_ID", boot)
+    (tmp_path / "backups").mkdir()
+    ops = host(tmp_path, runner=Runner(0))
+    store = ops.root / "state" / "update"
+    store.mkdir(parents=True)
+    (store / "update.lock").write_text("424242 boot-before\n", encoding="ascii")
+    log = journal(ops.root, "ubuntu")
+
+    assert scheduled_backup(ops, log) == 0
+
+    assert (last_record(log, "backup") or {}).get("outcome") == "done"
 
 
 def test_a_nightly_run_stopped_midway_is_recorded_and_the_stop_goes_on(tmp_path):

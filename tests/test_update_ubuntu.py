@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import update_core, update_ubuntu
+from scripts import update_core, update_download, update_ubuntu
 from scripts.update_core import UpdateCoordinator, UpdateError, UpdateStore
 from scripts.update_ubuntu import UbuntuTransport, tell_inbox
 
@@ -131,7 +131,10 @@ def test_an_update_stages_snapshots_swaps_and_is_reported_applied(deployment):
     assert backup < build  # the snapshot comes before anything running changes
     [receipt] = receipts(deployment)
     assert receipt["target"] == "0.2.0"
-    assert receipt["protection"] == {"snapshot": "snapshot-20261112T090000Z-0a1b2c3d"}
+    assert receipt["protection"] == {
+        "snapshot": "snapshot-20261112T090000Z-0a1b2c3d",
+        "folder": str(deployment.parent / "snapshots"),  # where it was made, for a rollback
+    }
     [body] = told(deployment)
     assert body["running"] == "0.2.0"
     outcomes = [(item["outcome"], item["version"]) for item in body["results"]]
@@ -225,7 +228,7 @@ def serve(monkeypatch, body: bytes) -> None:
         def open(self, _request, timeout):
             return io.BytesIO(body)
 
-    monkeypatch.setattr(update_ubuntu, "build_opener", lambda *_handlers: Opener())
+    monkeypatch.setattr(update_download, "build_opener", lambda *_handlers: Opener())
 
 
 def test_a_release_archive_unpacks_without_its_top_folder(tmp_path, monkeypatch):
@@ -236,7 +239,7 @@ def test_a_release_archive_unpacks_without_its_top_folder(tmp_path, monkeypatch)
 
 def test_an_archive_that_unpacks_too_large_is_refused_before_writing(tmp_path, monkeypatch):
     serve(monkeypatch, archive(("conker-0.2.0/a", b"x" * 64), ("conker-0.2.0/b", b"y" * 64)))
-    monkeypatch.setattr(update_ubuntu, "MAX_UNPACKED", 100)
+    monkeypatch.setattr(update_download, "MAX_UNPACKED", 100)
     with pytest.raises(UpdateError, match="unpacks to more"):
         update_ubuntu.download("https://codeload.github.com/x", tmp_path / "out")
     assert not (tmp_path / "out").exists()
@@ -277,7 +280,9 @@ def test_the_offered_release_and_its_modules_are_fetched_by_their_commits(deploy
     host = Host(deployment, {"0.2.0": True}, release="0.2.0")
     store = UpdateStore(deployment / "state" / "update")
 
-    assert UpdateCoordinator(offered_transport(deployment, host), store).run()["status"] == "applied"
+    assert (
+        UpdateCoordinator(offered_transport(deployment, host), store).run()["status"] == "applied"
+    )
 
     codeload = "https://codeload.github.com/Conker-AI/"
     assert host.fetched == [f"{codeload}conker/tar.gz/{COMMIT}"] + [
@@ -290,7 +295,9 @@ def test_an_offer_naming_another_module_version_than_the_release_pins_is_refused
     modules = OFFERED.replace("pi=0.25.0@", "pi=0.24.0@")
     store = UpdateStore(deployment / "state" / "update")
 
-    with pytest.raises(UpdateError, match=r"the offer named pi 0\.24\.0, the release pins 0\.25\.0"):
+    with pytest.raises(
+        UpdateError, match=r"the offer named pi 0\.24\.0, the release pins 0\.25\.0"
+    ):
         UpdateCoordinator(offered_transport(deployment, host, modules), store).run()
 
     assert [receipt["status"] for receipt in receipts(deployment)] == ["failed_before_apply"]

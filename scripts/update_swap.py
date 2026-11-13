@@ -5,9 +5,12 @@ Linux's renameat2(RENAME_EXCHANGE) trades two folders in one step. The sources f
 update are known by their (device, inode), recorded in the update's candidate before the swap
 (a rename keeps both), so a rollback finds them wherever a cut left them: in recovery/, in the
 staging folder (cut between the exchange and the move), or already back in sources/ (cut during
-a rollback), and never mistakes the failed release for them. Where the kernel or file system
-cannot exchange, the swap falls back to two renames and says so: a cut between those two leaves
-sources/ missing, the gap the exchange closes.
+a rollback), and never mistakes the failed release for them. The inode is matched on the file
+system the deployment is on now, not by the recorded device number: on LVM or device-mapper roots
+that number can change across the reboot that cut the update, and one file system never holds
+two folders with one inode. Where the kernel or file system cannot exchange, the swap falls back
+to two renames and says so: a cut between those two leaves sources/ missing, the gap the
+exchange closes.
 """
 
 from __future__ import annotations
@@ -74,6 +77,8 @@ def swap_in(staging: Path, sources: Path, kept: Path) -> None:
 def put_back(before: list[int], places: list[Path], sources: Path, failed: Path) -> bool:
     """The sources from before (`before` is their identity) back in sources/, the release they
     replace moved to `failed`. False when they are nowhere to be found."""
+    device = os.stat(sources.parent).st_dev  # every place is on the deployment's file system
+    before = [device, before[1]]
     if _is(sources, before):
         for place in places:  # a cut after a rollback's exchange left the failed release here
             if place.is_dir() and not place.is_symlink() and not _is(place, before):

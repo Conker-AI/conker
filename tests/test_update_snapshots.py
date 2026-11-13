@@ -106,6 +106,22 @@ def test_a_bad_keep_setting_removes_nothing_and_says_why(folders, keep, capsys):
     assert "must be a whole number from 2 to 64" in capsys.readouterr().err
 
 
+def test_a_receipt_counts_only_for_the_folder_it_recorded(folders, tmp_path):
+    folder, receipts = folders
+    make(folder, 1, 2, 3, 4, 5)
+    record(receipts, 2)  # an older receipt names no folder: it counts wherever snapshots are
+    receipts.mkdir(parents=True, exist_ok=True)
+    elsewhere = {"snapshot": name(1), "folder": str(tmp_path / "elsewhere")}
+    here = {"snapshot": name(3), "folder": str(folder)}
+    for index, protection in enumerate((elsewhere, here)):
+        receipt = {"status": "applied", "protection": protection}
+        (receipts / f"{index:032x}.json").write_text(json.dumps(receipt), encoding="utf-8")
+    environ = {"CONKER_UPDATE_SNAPSHOTS_KEEP": "2"}
+    removed = after_update_snapshot(folder, name(5), receipts, environ=environ, verify=refuse)
+    assert removed == [name(3), name(2)]  # day 1 was made in another folder: not this one's
+    assert present(folder) == [name(1), name(4), name(5)]
+
+
 def test_an_unreadable_receipt_removes_nothing(folders, capsys):
     folder, receipts = folders
     make(folder, 1, 2, 3, 4, 5)
