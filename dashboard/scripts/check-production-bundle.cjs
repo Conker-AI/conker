@@ -27,7 +27,8 @@ const CHUNK_BUDGET = 520_000
 const js = files.filter(file => file.endsWith('.js')).map(file => ({ file, size: fs.statSync(path.join(assets, file)).size }))
 const total = js.reduce((sum, { size }) => sum + size, 0)
 assert.ok(total <= TOTAL_JS_BUDGET, `JavaScript totals ${total} bytes; budget ${TOTAL_JS_BUDGET}`)
-const largest = js.filter(({ file }) => file !== gateway[0]).sort((a, b) => b.size - a.size)[0]
+// An isolated stage (the installer's test) may hold the entry alone.
+const largest = js.filter(({ file }) => file !== gateway[0]).sort((a, b) => b.size - a.size)[0] ?? { file: 'none', size: 0 }
 assert.ok(largest.size <= CHUNK_BUDGET, `${largest.file} is ${largest.size} bytes; chunk budget ${CHUNK_BUDGET}`)
 
 console.log(`Production bundle passed: no fixture chunk; no CDN code; gateway entry ${bytes} bytes; JS total ${total} bytes in ${js.length} files; largest other chunk ${largest.file} ${largest.size} bytes.`)
