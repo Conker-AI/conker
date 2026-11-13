@@ -164,7 +164,7 @@ const setupReceiptWritableStep = z.literal('boundaries')
 const setupReceipt = z.object({
   step: setupReceiptStep, revision: z.number().int().positive(), receiptId: z.string().min(1).max(128),
   source: z.string().min(1).max(128), subject: z.string().min(1).max(96), evidenceDigest: z.string().regex(/^[0-9a-f]{64}$/),
-  completedAt: z.string().datetime({ offset: true }), expiresAt: z.string().datetime({ offset: true }),
+  completedAt: z.string().datetime({ offset: true }), expiresAt: z.string().datetime({ offset: true }).nullable(),
   recordedAt: z.string().datetime({ offset: true }), state: z.enum(['valid', 'stale']),
 })
 const setupReceiptInput = setupReceipt.pick({ receiptId: true, source: true, subject: true, evidenceDigest: true, completedAt: true, expiresAt: true })
