@@ -34,20 +34,17 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-import tarfile
 import tempfile
 import time
 from pathlib import Path
 from typing import Any, NoReturn
-from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
-    from scripts import update_held, update_pi_db
+    from scripts import update_cutoff, update_held, update_pi_db
     from scripts.update_check import (
         COMMIT,
         MODULES,
         VERSION,
-        _Stay,
         installed_version,
         report,
         version_key,
@@ -61,16 +58,17 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         _release_lock,
         _token,
     )
+    from scripts.update_download import download
     from scripts.update_snapshots import SNAPSHOT_NAME, after_update_snapshot
     from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
+    import update_cutoff
     import update_held
     import update_pi_db
     from update_check import (
         COMMIT,
         MODULES,
         VERSION,
-        _Stay,
         installed_version,
         report,
         version_key,
@@ -84,17 +82,17 @@ except ModuleNotFoundError:
         _release_lock,
         _token,
     )
+    from update_download import download
     from update_snapshots import SNAPSHOT_NAME, after_update_snapshot
     from update_swap import identity, put_back, swap_in
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
 COMMIT_ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/{commit}"
-MAX_ARCHIVE = 300 * 1024 * 1024
 # Markers in the deployment that no update or rollback may run beside.
-QUIET = {".conker-recovery.json": "a recovery is held", ".conker-backup.lock": "a backup is running"}
-# What one unpacked release may hold: a hostile archive cannot fill the disk before the update starts.
-MAX_UNPACKED = 3 * 1024 * 1024 * 1024
-MAX_MEMBERS = 200_000
+QUIET = {
+    ".conker-recovery.json": "a recovery is held",
+    ".conker-backup.lock": "a backup is running",
+}
 MIN_FREE = 20 * 1024**3  # a snapshot (about 10 GB today) plus the build
 BUILD_SECONDS = 3600
 START_SECONDS = 900
@@ -118,35 +116,6 @@ def versions(path: Path) -> dict[str, str]:
         if separator and not name.lstrip().startswith("#"):
             values[name.strip()] = value.strip()
     return values
-
-
-def download(url: str, target: Path) -> None:
-    """One GitHub tag archive into `target`, without its top folder. Links stay inside it."""
-    with tempfile.TemporaryFile() as buffer:
-        request = Request(url, headers={"User-Agent": "conker-update"})
-        with build_opener(_Stay()).open(request, timeout=120) as response:
-            size = 0
-            while chunk := response.read(1 << 20):
-                size += len(chunk)
-                if size > MAX_ARCHIVE:
-                    raise UpdateError("a release archive was larger than expected")
-                buffer.write(chunk)
-        buffer.seek(0)
-        with tarfile.open(fileobj=buffer, mode="r:gz") as bundle:
-            members, unpacked = [], 0
-            for count, member in enumerate(bundle, start=1):
-                unpacked += max(member.size, 0)
-                if count > MAX_MEMBERS or unpacked > MAX_UNPACKED:
-                    raise UpdateError("a release archive unpacks to more than expected")
-                _, _, inner = member.name.partition("/")
-                if not inner:
-                    continue
-                member.name = inner
-                if member.islnk():
-                    member.linkname = member.linkname.partition("/")[2]
-                members.append(member)
-            target.mkdir(parents=True)
-            bundle.extractall(target, members=members, filter="data")
 
 
 def module_commits(text: str) -> dict[str, tuple[str, str]]:
@@ -360,8 +329,14 @@ class UbuntuTransport:
         """Nothing to pull: this layout builds its images from the sources in apply_services."""
         return {}
 
-    def _snapshots(self) -> Path:
-        return Path(os.environ.get("CONKER_UPDATE_SNAPSHOTS", self.home / "conker-snapshots"))
+    def _snapshots(self, protection: dict | None = None) -> Path:
+        """Where the update's snapshot went: the folder it recorded, else (an older update's
+        state) where snapshots go now."""
+        folder = (protection or {}).get("folder")
+        if isinstance(folder, str) and Path(folder).is_absolute():
+            return Path(folder)
+        default = self.home / "conker-snapshots"
+        return Path(os.environ.get("CONKER_UPDATE_SNAPSHOTS", default)).absolute()
 
     def protect(self, candidate: dict[str, Any]) -> dict[str, str]:
         """A verified snapshot of everything Conker holds, before anything running changes."""
@@ -383,7 +358,7 @@ class UbuntuTransport:
             raise UpdateError("the snapshot before the update could not be found")
         receipts = self.root / "state" / "update" / "receipts"
         after_update_snapshot(destination, made[0], receipts, self._verify)  # older update ones
-        return {"snapshot": made[0]}
+        return {"snapshot": made[0], "folder": str(destination)}
 
     def _verify(self, snapshot: Path) -> None:
         """Raises for a snapshot that does not verify; the prune keeps the newest that does."""
@@ -414,6 +389,14 @@ class UbuntuTransport:
 
     def apply_services(self, candidate: dict[str, Any]) -> None:
         self._start(f"Conker {self.target}")
+
+    def restart_writers(self) -> None:
+        """Start what a cut-off snapshot stopped (update_cutoff); running services stay as they are."""
+        up = self._compose("up", "-d", "--remove-orphans")
+        self._run(up, "starting Conker again", timeout=START_SECONDS)
+
+    def discard_candidate(self, candidate: dict[str, Any]) -> None:
+        update_cutoff.discard_staging(self.root, candidate.get("staging"))
 
     def _answering(self, what: str) -> None:
         limit = int(os.environ.get("CONKER_UPDATE_HEALTH_TIMEOUT", "300"))
@@ -459,17 +442,21 @@ class UbuntuTransport:
         except UpdateError:
             # A Pi does not start on a database a newer Pi migrated: only then is the snapshot's
             # copy of it put back (scripts/update_pi_db.py); anything else holds.
-            if not self._pi_database_back((protection or {}).get("snapshot")):
+            if not self._pi_database_back(protection or {}):
                 raise
             self._answering(f"Conker {prior['revision']} with Pi's database from before the update")
 
-    def _pi_database_back(self, snapshot: str | None) -> bool:
-        live = self.root / "state" / "pi" / update_pi_db.DATABASE
-        if not snapshot or not SNAPSHOT_NAME.fullmatch(snapshot):
+    def _pi_database_back(self, protection: dict) -> bool:
+        live, snapshot = (
+            self.root / "state" / "pi" / update_pi_db.DATABASE,
+            protection.get("snapshot"),
+        )
+        if not isinstance(snapshot, str) or not SNAPSHOT_NAME.fullmatch(snapshot):
             return False
         with tempfile.TemporaryDirectory(prefix="conker-pi-db-") as scratch:
             try:
-                saved = update_pi_db.from_snapshot(self._snapshots() / snapshot, Path(scratch))
+                at = self._snapshots(protection) / snapshot
+                saved = update_pi_db.from_snapshot(at, Path(scratch))
                 newer = update_pi_db.migrated_since(live, saved)
             except (update_pi_db.DatabaseError, sqlite3.Error) as error:
                 raise UpdateError(f"Pi's database could not be compared: {error}") from None
@@ -506,9 +493,11 @@ def recover(root: Path, transport_for=None, tell=None) -> str:
     """`conker update --recover`: finish an update that was cut off (a reboot, a killed helper).
 
     One cut off after its sources moved is rolled back and proven answering, as a failed one is;
-    one cut off before is closed as abandoned. Refused while an update still runs (its update.lock),
-    while a backup runs or a recovery is held (a rollback restarts services), and once the update is
-    held (the snapshot is the way back). State that cannot be read is held, never guessed at. The
+    one cut off before is closed as abandoned and its staged release removed; one cut off during its
+    own snapshot first gets the writers that snapshot stopped started again (scripts/update_cutoff.py).
+    Refused while an update still runs (its update.lock), while a backup runs or a recovery is held
+    (a rollback restarts services), and once the update is held (the snapshot is the way back).
+    State that cannot be read is held, never guessed at. The
     host helper runs this when it starts and before each daily check.
     """
     store = UpdateStore(root.resolve() / "state" / "update")
@@ -521,7 +510,9 @@ def recover(root: Path, transport_for=None, tell=None) -> str:
         try:
             state = store.load_active()
         except (OSError, ValueError) as error:
-            _hold_unreadable(store, root, None, f"its saved state could not be read ({error})", tell)
+            _hold_unreadable(
+                store, root, None, f"its saved state could not be read ({error})", tell
+            )
         if not state:
             return "No update was cut off. Nothing to do."
         target = state.get("target") if isinstance(state, dict) else None
@@ -529,14 +520,18 @@ def recover(root: Path, transport_for=None, tell=None) -> str:
             _hold_unreadable(store, root, state, "its saved state names no release", tell)
         transport = (transport_for or UbuntuTransport)(root, target)
         coordinator = UpdateCoordinator(transport, store)
-        moved = state.get("phase") in coordinator.MUTATING_PHASES
+        moved, snapshotting = state.get("phase") in coordinator.MUTATING_PHASES, False
         if moved:
             transport.require_quiet()
+        elif snapshotting := state.get("phase") == "protecting":
+            update_cutoff.after_cut_snapshot(root.resolve(), transport.restart_writers)
         coordinator.recover_interrupted()
     finally:
         _release_lock(lock)
     if moved:
         return f"The update to {target} was cut off part way: Conker is back on the version it had."
+    if snapshotting:
+        return f"The update to {target} was cut off during its snapshot. Conker runs as before."
     return f"The update to {target} was cut off before anything changed. Nothing changed."
 
 
@@ -544,7 +539,9 @@ def _hold_unreadable(store: UpdateStore, root: Path, state, why: str, tell) -> N
     """Nobody can tell whether the sources moved, so nothing retries: the owner restores. The
     Inbox hears of it (scripts/update_held.py)."""
     update_held.hold_unreadable(store, root, state, why, tell or tell_inbox)
-    raise UpdateError(f"An update was cut off and {why}. Held: restore the snapshot from before it.")
+    raise UpdateError(
+        f"An update was cut off and {why}. Held: restore the snapshot from before it."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

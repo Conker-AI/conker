@@ -3,7 +3,8 @@ enforce_retention): the newest KEEP by name plus the one just made stay; so does
 in the folder that verifies, whatever made it.
 
 Only snapshots an update's receipt names (state/update/receipts/*.json, `protection.snapshot`) are
-ever removed, so a snapshot made by hand or by the nightly timer stays the owner's to delete.
+ever removed, so a snapshot made by hand or by the nightly timer stays the owner's to delete. A
+receipt that records its snapshot's folder (`protection.folder`) counts only for that folder.
 Only real folders directly in the snapshot folder whose name is a `conker backup` name. A prune that
 cannot finish says so and never fails the update: the snapshot it just made is safe either way.
 """
@@ -40,8 +41,9 @@ def keep_count(environ: Mapping[str, str]) -> int:
     return int(raw)
 
 
-def update_made(receipts: Path) -> set[str]:
-    """The snapshot names update receipts record; an unreadable receipt stops the prune."""
+def update_made(receipts: Path, folder: Path | None = None) -> set[str]:
+    """The snapshot names update receipts record (in `folder`, where a receipt names one); an
+    unreadable receipt stops the prune."""
     names: set[str] = set()
     if not receipts.is_dir():
         return names
@@ -51,10 +53,19 @@ def update_made(receipts: Path) -> set[str]:
         except (OSError, ValueError) as error:
             raise PruneError(f"update receipt {path.name} cannot be read: {error}") from error
         protection = receipt.get("protection") if isinstance(receipt, dict) else None
-        name = protection.get("snapshot") if isinstance(protection, dict) else None
+        if not isinstance(protection, dict) or not _in(protection.get("folder"), folder):
+            continue
+        name = protection.get("snapshot")
         if isinstance(name, str) and SNAPSHOT_NAME.fullmatch(name):
             names.add(name)
     return names
+
+
+def _in(recorded: object, folder: Path | None) -> bool:
+    """An older receipt records no folder: it counts wherever the snapshots are now."""
+    if recorded is None or folder is None:
+        return True
+    return isinstance(recorded, str) and Path(recorded).resolve() == folder.resolve()
 
 
 def snapshots(folder: Path) -> list[Path]:
@@ -122,7 +133,7 @@ def after_update_snapshot(
     """
     try:
         keep = keep_count(environ)
-        made = update_made(receipts)
+        made = update_made(receipts, folder)
         removed = prune(folder, folder / current, made, keep, verify)
     except (OSError, PruneError) as error:
         print(f"Older update snapshots were not pruned: {error}", file=sys.stderr)

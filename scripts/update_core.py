@@ -5,6 +5,7 @@ A layout supplies a transport (scripts/update.py for the repository layout, scri
 for the Ubuntu layout). The coordinator saves each phase before it starts, so an update cut off at
 any point is rolled back on the next run instead of being left half applied.
 """
+
 from __future__ import annotations
 
 import json
@@ -150,7 +151,15 @@ class UpdateCoordinator:
             self._rollback(state, "interrupted update recovered before rerun")
             return
         self.store.receipt(state, "abandoned_before_apply", "interrupted preflight")
+        self._discard(state)
         self.store.clear_active()
+
+    def _discard(self, state: dict[str, Any]) -> None:
+        """An update that stopped before anything changed leaves nothing staged (the layout's
+        own hook; it says so and goes on if it cannot)."""
+        discard = getattr(self.transport, "discard_candidate", None)
+        if discard is not None and state.get("candidate"):
+            discard(state["candidate"])
 
     def run(self) -> dict[str, Any]:
         self.recover_interrupted()
@@ -178,6 +187,7 @@ class UpdateCoordinator:
 
             if candidate["revision"] == state["prior"]["revision"]:
                 receipt = self.store.receipt(state, "no_change")
+                self._discard(state)
                 self.store.clear_active()
                 return {"status": "no_change", "receipt": str(receipt)}
 
@@ -210,14 +220,19 @@ class UpdateCoordinator:
         except Exception as error:
             if state.get("phase") in self.MUTATING_PHASES:
                 self._rollback(state, f"candidate failed: {_why(error)}")
-                raise UpdateError("Candidate failed acceptance; prior release was restored.") from error
+                raise UpdateError(
+                    "Candidate failed acceptance; prior release was restored."
+                ) from error
             receipt = self.store.receipt(
                 state, "failed_before_apply", f"preflight failed: {_why(error)}"
             )
+            self._discard(state)
             self.store.clear_active()
             # Say why (an UpdateError's own words, e.g. a dirty checkout or a version not newer).
             reason = _why(error).rstrip(".")
-            raise UpdateError(f"Update stopped before apply: {reason}. Receipt: {receipt}") from error
+            raise UpdateError(
+                f"Update stopped before apply: {reason}. Receipt: {receipt}"
+            ) from error
 
         receipt = self.store.receipt(state, "applied")
         self.store.clear_active()

@@ -137,8 +137,14 @@ def test_ubuntu_update_to_the_offered_commits_forwards_them(ubuntu_cli):
         "--root", str(ubuntu_cli.deployment), "--to", "0.2.0", "--commit", sha, "--modules", modules,
     ]  # fmt: skip
     assert ubuntu_cli("update", "--to", "0.2.0", "--commit", sha).returncode == 2
-    assert ubuntu_cli("update", "--to", "0.2.0", "--sideways", sha, "--modules", modules).returncode == 2
-    assert ubuntu_cli("update", "--to", "0.2.0", "--commit", sha, "--sideways", modules).returncode == 2
+    assert (
+        ubuntu_cli("update", "--to", "0.2.0", "--sideways", sha, "--modules", modules).returncode
+        == 2
+    )
+    assert (
+        ubuntu_cli("update", "--to", "0.2.0", "--commit", sha, "--sideways", modules).returncode
+        == 2
+    )
 
 
 def test_ubuntu_update_recover_finishes_a_cut_off_update(ubuntu_cli):
@@ -149,6 +155,20 @@ def test_ubuntu_update_recover_finishes_a_cut_off_update(ubuntu_cli):
     forwarded = json.loads(result.stdout.strip().splitlines()[-1])
     assert forwarded == ["--root", str(ubuntu_cli.deployment), "--recover"]
     assert ubuntu_cli("update", "--recover", "now").returncode == 2
+
+
+def test_ubuntu_update_recover_leaves_a_backup_lock_to_the_updater(ubuntu_cli):
+    # A cut during the update's own snapshot leaves the backup lock; only the updater can tell it
+    # from a backup that still runs (scripts/update_cutoff.py). A held recovery still stops it.
+    recorder(ubuntu_cli, "update_ubuntu.py")
+    (ubuntu_cli.deployment / ".conker-backup.lock").write_text("4242", encoding="ascii")
+
+    assert ubuntu_cli("update", "--recover").returncode == 0
+    refused = ubuntu_cli("update", "--to", "0.2.0")
+    assert refused.returncode == 1 and "Backup is running" in refused.stderr
+    (ubuntu_cli.deployment / ".conker-recovery.json").write_text("{}", encoding="utf-8")
+    held = ubuntu_cli("update", "--recover")
+    assert held.returncode == 1 and "Recovery is held" in held.stderr
 
 
 @pytest.mark.parametrize("arguments", [("update", "--to"), ("update", "--sideways")])
@@ -210,10 +230,7 @@ def test_ubuntu_safe_operations_use_the_generated_compose_layout(ubuntu_cli):
     assert all("compose --project-directory" in call and "-f" in call for call in calls)
     assert any("logs --tail 25 pi" in call for call in calls)
     assert any("exec -T ollama ollama pull qwen3:4b" in call for call in calls)
-    assert any(
-        "run --rm --no-deps -T gateway python -m gateway health" in call
-        for call in calls
-    )
+    assert any("run --rm --no-deps -T gateway python -m gateway health" in call for call in calls)
 
 
 def test_provider_status_is_host_only_and_contains_no_secrets(ubuntu_cli):
@@ -249,7 +266,14 @@ def test_a_release_with_direct_providers_lists_every_provider(ubuntu_cli):
 
     assert result.returncode == 0, result.stderr
     assert [item["id"] for item in json.loads(result.stdout)["providers"]] == [
-        "openrouter", "openai", "anthropic", "gemini", "xai", "mistral", "deepseek", "groq",
+        "openrouter",
+        "openai",
+        "anthropic",
+        "gemini",
+        "xai",
+        "mistral",
+        "deepseek",
+        "groq",
     ]
 
 
@@ -274,17 +298,23 @@ def test_verified_provider_activation_recreates_pi_and_commits_revision(ubuntu_c
 def test_speech_status_and_activation_are_host_owned_and_secret_free(ubuntu_cli):
     initial = ubuntu_cli("speech", "status", "--json")
     configured = ubuntu_cli(
-        "speech", "configure", "--url", "https://speech.example.test/v1",
-        "--stt-model", "whisper-1", "--tts-model", "kokoro", "--voice", "af_heart",
+        "speech",
+        "configure",
+        "--url",
+        "https://speech.example.test/v1",
+        "--stt-model",
+        "whisper-1",
+        "--tts-model",
+        "kokoro",
+        "--voice",
+        "af_heart",
     )
 
     assert initial.returncode == 0, initial.stderr
     assert json.loads(initial.stdout)["secretsIncluded"] is False
     assert configured.returncode == 0, configured.stderr
     value = next(
-        json.loads(line)
-        for line in configured.stdout.splitlines()
-        if '"speechInput"' in line
+        json.loads(line) for line in configured.stdout.splitlines() if '"speechInput"' in line
     )
     assert value["speechInput"] == "configured"
     assert value["speechOutput"] == "configured"
@@ -303,8 +333,12 @@ def test_failed_speech_runtime_confirmation_restores_previous_host_files(ubuntu_
     ubuntu_cli.environment["SPEECH_RUNTIME_RESULT"] = "waiting"
 
     result = ubuntu_cli(
-        "speech", "configure", "--url", "https://speech.example.test/v1",
-        "--stt-model", "whisper-1",
+        "speech",
+        "configure",
+        "--url",
+        "https://speech.example.test/v1",
+        "--stt-model",
+        "whisper-1",
     )
 
     assert result.returncode == 1
@@ -362,9 +396,7 @@ def test_setup_optional_choices_are_explicit_bounded_commands(ubuntu_cli):
 
 
 @pytest.mark.parametrize("argument", ["skip", "--later", "--skip:all"])
-def test_setup_optional_choices_reject_unknown_arguments_without_compose(
-    ubuntu_cli, argument
-):
+def test_setup_optional_choices_reject_unknown_arguments_without_compose(ubuntu_cli, argument):
     result = ubuntu_cli("setup", "run", "memory", argument)
 
     assert result.returncode == 2
@@ -413,9 +445,7 @@ def test_setup_rehearsal_cli_uses_the_same_server_owned_workflow(ubuntu_cli):
     status = ubuntu_cli("setup", "rehearsal")
     memory = ubuntu_cli("setup", "run", "rehearsal", "--review-memory")
     started = ubuntu_cli("setup", "run", "rehearsal", "--start-approval")
-    resumed = ubuntu_cli(
-        "setup", "run", "rehearsal", "--finish-approval", "setup-approval-test"
-    )
+    resumed = ubuntu_cli("setup", "run", "rehearsal", "--finish-approval", "setup-approval-test")
     finished = ubuntu_cli("setup", "run", "rehearsal", "--finalize")
 
     for result in (status, memory, started, resumed, finished):
@@ -440,9 +470,7 @@ def test_boundary_review_uses_exact_inspected_digest(ubuntu_cli):
 
     inspected = ubuntu_cli("inspect", "boundaries")
     assert json.loads(inspected.stdout)["digest"] == digest
-    recorded = ubuntu_cli(
-        "setup", "run", "boundaries", "--confirm-digest", digest
-    )
+    recorded = ubuntu_cli("setup", "run", "boundaries", "--confirm-digest", digest)
 
     assert recorded.returncode == 0, recorded.stderr
     assert json.loads(recorded.stdout)["evidenceDigest"] == digest
@@ -512,8 +540,7 @@ def test_config_changes_settings_through_pi_inside_its_container(ubuntu_cli, tmp
     calls = [line for line in log.splitlines() if line.startswith("compose ")]
     assert len(calls) == 6  # set and reset read, then write; get and list read once
     assert all(
-        "compose --project-directory" in call and "exec -T pi python -c" in call
-        for call in calls
+        "compose --project-directory" in call and "exec -T pi python -c" in call for call in calls
     )
     assert log.count("\n GET /owner/settings\n") == 4
     assert log.count("\n POST /owner/settings\n") == 2

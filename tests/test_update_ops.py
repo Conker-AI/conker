@@ -8,7 +8,7 @@ import subprocess
 
 import pytest
 
-from scripts import host_ops
+from scripts import host_ops, update_core
 from scripts.host_ops import HostOps, HostOpsError
 from scripts.host_ops_journal import OperationLock
 
@@ -153,6 +153,24 @@ def test_the_daily_check_skips_while_an_action_runs(tmp_path):
         assert not host_ops.check_for_updates(ops, runner=lambda *_a, **_k: pytest.fail("ran"))
     finally:
         holder.release()
+
+
+@pytest.mark.parametrize("holder", ["live", "stale"])
+def test_the_daily_check_skips_while_a_shell_update_holds_its_lock(tmp_path, monkeypatch, holder):
+    # `conker update --to` from a shell takes update.lock, not the action lock. Mid-update the
+    # sources already say the new release runs, and a check then would close its offer in Pi.
+    boot = tmp_path / "boot_id"
+    boot.write_text("boot-now\n", encoding="ascii")
+    monkeypatch.setattr(update_core, "BOOT_ID", boot)
+    ops, calls = host(tmp_path), []
+    store = ops.root / "state" / "update"
+    store.mkdir(parents=True)
+    token = update_core._token() if holder == "live" else "424242 boot-before"
+    (store / "update.lock").write_text(token + "\n", encoding="ascii")
+
+    ran = host_ops.check_for_updates(ops, runner=lambda argv, **_kw: calls.append(argv))
+
+    assert ran is (holder == "stale") and len(calls) == (holder == "stale")
 
 
 def test_the_daily_check_survives_a_failure(tmp_path):

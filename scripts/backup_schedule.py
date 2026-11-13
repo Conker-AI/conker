@@ -28,6 +28,7 @@ from pathlib import Path
 from scripts.host_ops import HostOps, HostOpsError
 from scripts.host_ops_journal import Journal
 from scripts.provider_control_install import quoted, working_directory
+from scripts.update_core import update_running
 
 BACKUP_AT = "*-*-* 03:30:00"  # local time, then up to RANDOM_DELAY later
 DRILL_AT = "Sun *-*-* 05:00:00"
@@ -284,12 +285,19 @@ def update_directory(checkout: Path) -> Path | None:
 
 
 def update_busy(*checkouts: Path) -> bool:
-    """An update runs, was cut off or is held in one of these checkouts or deployments."""
+    """An update runs, was cut off or is held in one of these checkouts or deployments. Only a live
+    update.lock counts: one its holder left behind (a reboot, a killed process) blocks nothing."""
     for checkout in dict.fromkeys(checkouts):
         for directory in (update_directory(checkout), checkout / "state" / "update"):
-            if directory and any((directory / name).exists() for name in UPDATE_MARKERS):
+            if directory and any(_marked(directory, name) for name in UPDATE_MARKERS):
                 return True
     return False
+
+
+def _marked(directory: Path, name: str) -> bool:
+    if name == "update.lock":
+        return update_running(directory)
+    return (directory / name).exists()
 
 
 def scheduled_backup(host: HostOps, log: Journal, *, now=utc_now) -> int:
