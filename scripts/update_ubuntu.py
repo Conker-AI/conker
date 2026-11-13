@@ -42,7 +42,7 @@ from typing import Any, NoReturn
 from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
-    from scripts import update_pi_db
+    from scripts import update_held, update_pi_db
     from scripts.update_check import (
         COMMIT,
         MODULES,
@@ -64,6 +64,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
     from scripts.update_snapshots import SNAPSHOT_NAME, after_update_snapshot
     from scripts.update_swap import identity, put_back, swap_in
 except ModuleNotFoundError:
+    import update_held
     import update_pi_db
     from update_check import (
         COMMIT,
@@ -501,7 +502,7 @@ def tell_inbox(root: Path, send=None) -> None:
         )
 
 
-def recover(root: Path, transport_for=None) -> str:
+def recover(root: Path, transport_for=None, tell=None) -> str:
     """`conker update --recover`: finish an update that was cut off (a reboot, a killed helper).
 
     One cut off after its sources moved is rolled back and proven answering, as a failed one is;
@@ -520,12 +521,12 @@ def recover(root: Path, transport_for=None) -> str:
         try:
             state = store.load_active()
         except (OSError, ValueError) as error:
-            _hold_unreadable(store, f"its saved state could not be read ({error})")
+            _hold_unreadable(store, root, None, f"its saved state could not be read ({error})", tell)
         if not state:
             return "No update was cut off. Nothing to do."
         target = state.get("target") if isinstance(state, dict) else None
         if not isinstance(target, str) or not VERSION.fullmatch(target):
-            _hold_unreadable(store, "its saved state names no release")
+            _hold_unreadable(store, root, state, "its saved state names no release", tell)
         transport = (transport_for or UbuntuTransport)(root, target)
         coordinator = UpdateCoordinator(transport, store)
         moved = state.get("phase") in coordinator.MUTATING_PHASES
@@ -539,9 +540,10 @@ def recover(root: Path, transport_for=None) -> str:
     return f"The update to {target} was cut off before anything changed. Nothing changed."
 
 
-def _hold_unreadable(store: UpdateStore, why: str) -> NoReturn:
-    """Nobody can tell whether the sources moved, so nothing retries: the owner restores."""
-    store.hold({"transaction_id": None}, f"an update was cut off and {why}")
+def _hold_unreadable(store: UpdateStore, root: Path, state, why: str, tell) -> NoReturn:
+    """Nobody can tell whether the sources moved, so nothing retries: the owner restores. The
+    Inbox hears of it (scripts/update_held.py)."""
+    update_held.hold_unreadable(store, root, state, why, tell or tell_inbox)
     raise UpdateError(f"An update was cut off and {why}. Held: restore the snapshot from before it.")
 
 
