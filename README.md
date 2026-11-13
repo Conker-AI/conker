@@ -132,6 +132,7 @@ pins the exact release of each service. More in [2 · How it works](docs/2-how-i
 | [2 · How it works](docs/2-how-it-works.md) | Services, one message, one approval, in diagrams |
 | [3 · Using Conker](docs/3-using.md) | Each screen and common tasks |
 | [4 · Running Conker](docs/4-running.md) | Install, update, back up, recover |
+| [Looking after your server](docs/reference/server-care.md) | Update, back up, restore and roll back, in plain steps |
 | [5 · Developing](docs/5-developing.md) | Repositories, checks, rules, decisions |
 | [Status](docs/status.md) | What works today, and what doesn't yet |
 
