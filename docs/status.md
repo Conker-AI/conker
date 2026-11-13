@@ -6,12 +6,20 @@ inventory of what the source can do, [`versions.env`](../versions.env) pins the 
 [release-acceptance](reference/release-acceptance.md) evidence bundle is the only proof that an
 assembled deployment works. One never stands in for another.
 
-Last updated **12 November 2026**. The source has **41 tracked
-capability families: 40 active and 1 deferred**. Active means a real product surface exists; it
-does not by itself mean the screen, the CLI and the gateway all reach it, or that a server runs it.
+Last updated **13 November 2026**. The family counts, the release table and the deferred table
+are written by `python scripts/status_page.py` from `capabilities.json` and `versions.env`; CI
+fails when they drift.
+
+<!-- generated:families -->
+The source has **41 tracked
+capability families: 40 active and 1 deferred**. Active means a real
+product surface exists; it does not by itself mean the screen, the CLI and the gateway all reach
+it, or that a server runs it.
+<!-- /generated:families -->
 
 ## The current release
 
+<!-- generated:release -->
 | Service | Version | |
 |---|---|---|
 | Pi and the Gateway | 0.24.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
@@ -20,7 +28,8 @@ does not by itself mean the screen, the CLI and the gateway all reach it, or tha
 | SystemGate | 0.5.2 | Read-only view of the machine |
 | Embeddings | 0.1.7 | Text to vectors |
 | Agent sandbox | active | Terminal and Install packages for agents |
-| Owner terminal | deferred | See below |
+| Owner terminal | deferred | See Deferred below |
+<!-- /generated:release -->
 
 Every image is published at `ghcr.io/conker-ai/<service>:<version>` and pinned in `versions.env`.
 
@@ -49,9 +58,11 @@ tests, but not yet exercised end to end on an installed stack.
 
 ## Deferred
 
-| Capability | Why it is deferred |
-| --- | --- |
-| Owner terminal | The constrained PTY, UI, candidate image, health probe, workspace preflight, recovery exclusions and guarded deployment shapes exist. Manifest v2 records the capability as deferred and needs both a registry digest and hashed target-Linux acceptance to activate it; neither exists yet. |
+<!-- generated:deferred -->
+| Capability | Why it is deferred | What it still needs |
+| --- | --- | --- |
+| Owner terminal | The constrained gateway PTY is not configured or mounted by the release deployment, and its fixture screen is not a connected product route. | operator-selected validated workspace; digest-pinned owner-terminal registry image; hashed target-Linux acceptance bundle; explicit owner terminal transport; production UI |
+<!-- /generated:deferred -->
 
 ## Known gaps
 
