@@ -114,6 +114,8 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
+An installed stack runs `inbox`, `spending`, `memory search`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+
 ## Memory, Agents and Teams
 
 These are your own counterparts of Conker's tools `conker.recall`, `conker.create_agent` and `conker.create_team`: you make things at once, with no request to approve.

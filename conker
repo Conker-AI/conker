@@ -331,6 +331,15 @@ cmd_context() {
     python3 "$SOURCE_ROOT/scripts/context_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
 }
 
+# conker memory search, agent create, team create, inbox, spending: Pi's owner routes for them.
+cmd_owner() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'Python 3.11+ is required for conker %s. Install python3, then retry.\n' "$1" >&2
+        exit 1
+    }
+    python3 "$SOURCE_ROOT/scripts/owner_cli.py" --root "$ROOT" --layout "$LAYOUT" "$@"
+}
+
 # conker import chatgpt|claude PATH: preview an export, or import it with --yes.
 cmd_import() {
     command -v python3 >/dev/null 2>&1 || {
@@ -1010,6 +1019,14 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Read and change the settings of the Settings screen (--chat CHAT_ID for one chat)
   ${BOLD}context${OFF} budget CHAT_ID --window TOKENS --reserve TOKENS [--other TOKENS]
               Start one chat's context settings, or change its budget
+  ${BOLD}memory${OFF} search "WORDS" [--limit N]
+              Find memories by their words, as the Memory screen does
+  ${BOLD}agent${OFF} create --name NAME --role ROLE --instructions TEXT [--tool ID...]
+              Make an agent now (${BOLD}team${OFF} create --name NAME --objective TEXT --role NAME AGENT TEXT...)
+  ${BOLD}inbox${OFF} [--json]
+              Everything that happened and everything that needs you
+  ${BOLD}spending${OFF} [cap --dollars N | --tokens N | --on | --off]
+              Today's paid model calls against the daily cap, or change the cap
   ${BOLD}tool${OFF} draft "DESCRIPTION" [--no-wait]
               Have Conker make a tool; the draft waits in the Inbox for review
   ${BOLD}ops${OFF} [show ID | run OPERATION [NAME=VALUE...]]
@@ -1118,6 +1135,7 @@ case "$command" in
     config)    shift; cmd_config "$@" ;;
     tool)      shift; cmd_tool "$@" ;;
     context)   shift; cmd_context "$@" ;;
+    memory|agent|team|inbox|spending) cmd_owner "$@" ;;
     ops)       shift; cmd_ops "$@" ;;
     import)    shift; cmd_import "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;
