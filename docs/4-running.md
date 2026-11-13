@@ -159,7 +159,14 @@ and the one packaging difference are recorded in [deployment parity](reference/d
 
 ### Commands in detail
 
-`conker help` is the authoritative command list in both installation layouts.
+`conker help` is the authoritative command list in both installation layouts. Every command
+group it lists has a page here or under [reference](reference/) (tests/test_cli_docs.py); the
+owner's own ones are [agents and teams](reference/agents-cli.md),
+[memory](reference/memory-cli.md) and [spending](reference/spending-cli.md).
+
+`conker model NAME` fetches another local model into Ollama (`conker model qwen3:4b`).
+`conker key` shows the repository layout's single admin key; the Ubuntu layout has separate
+scoped keys and refuses it.
 
 ChatGPT subscription sign-in needs the private provider service and official
 Codex CLI **0.160.1** at `~/conker-model-runtime/bin/codex` (isolated from any personal
