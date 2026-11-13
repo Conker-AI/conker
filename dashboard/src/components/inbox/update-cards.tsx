@@ -91,7 +91,7 @@ function OfferCard({ offer, busy, error, progress, settled, onUpdate, onSkip }: 
 
 const outcomeWords: Record<UpdateResult['outcome'], { icon: ReactNode; source: string; next: string | null }> = {
   applied: { icon: <CircleCheck className="text-success-foreground" />, source: 'Conker is running the new version', next: null },
-  rolled_back: { icon: <RotateCcw className="text-warning-foreground" />, source: 'Conker went back to the version it had', next: 'Conker is back on the version it had and answers its health checks. The new version may already have changed saved data before it failed: if anything looks wrong, restore the snapshot taken before the update (Server > Backups).' },
+  rolled_back: { icon: <RotateCcw className="text-warning-foreground" />, source: 'Conker went back to the version it had', next: 'Conker is back on the version it had and answers its health checks. If the new version had already changed Pi’s database, Conker put back Pi’s copy from the snapshot taken before the update. If anything else looks wrong, restore that snapshot (Server > Backups).' },
   held: { icon: <TriangleAlert className="text-destructive-foreground" />, source: 'Needs you: restore the snapshot', next: 'Conker could not prove the old version works again, so it stopped and changes nothing more. Restore the snapshot taken before the update (Server > Backups, or conker recovery-status on the server).' },
   failed: { icon: <CircleX className="text-muted-foreground" />, source: 'Nothing changed', next: 'The update stopped before switching, so Conker runs as before.' },
 }
