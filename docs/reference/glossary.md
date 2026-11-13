@@ -2,7 +2,8 @@
 
 Every kind of thing in Conker, in plain words. The **bold** word is the one screens and docs use. When
 the code or an older screen uses another name for it, that name appears under
-[Same thing, other names](#same-thing-other-names).
+[Same thing, other names](#same-thing-other-names). Where each part lives (domain, chat pillar,
+capability family, settings topic, Pi package) is in one table: the [product map](product-map.md).
 
 ## Your companion and agents
 
