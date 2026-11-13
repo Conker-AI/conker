@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import update_ubuntu
+from scripts import update_core, update_ubuntu
 from scripts.update_core import UpdateCoordinator, UpdateError, UpdateStore
 from scripts.update_ubuntu import UbuntuTransport, tell_inbox
 
@@ -75,6 +75,10 @@ class Host:
             (dist / "index.html").write_text("<!doctype html>", encoding="utf-8")
             return 0
         if "backup" in argv:
+            # The update's own snapshot carries the token of the lock this process takes (main),
+            # so the backup's "an update is running" check (recovery_snapshot.operation_lock)
+            # lets it in.
+            assert env["CONKER_UPDATE_LOCK"] == update_core._token()
             if not self.snapshot:
                 return 1
             destination = Path(argv[argv.index("--destination") + 1])

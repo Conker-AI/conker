@@ -125,6 +125,16 @@ def test_ubuntu_update_to_a_release_runs_the_staged_update(ubuntu_cli):
     assert forwarded == ["--root", str(ubuntu_cli.deployment), "--to", "0.2.0"]
 
 
+def test_ubuntu_update_recover_finishes_a_cut_off_update(ubuntu_cli):
+    recorder(ubuntu_cli, "update_ubuntu.py")
+    result = ubuntu_cli("update", "--recover")
+
+    assert result.returncode == 0, result.stderr
+    forwarded = json.loads(result.stdout.strip().splitlines()[-1])
+    assert forwarded == ["--root", str(ubuntu_cli.deployment), "--recover"]
+    assert ubuntu_cli("update", "--recover", "now").returncode == 2
+
+
 @pytest.mark.parametrize("arguments", [("update", "--to"), ("update", "--sideways")])
 def test_ubuntu_update_refuses_unknown_forms(ubuntu_cli, arguments):
     result = ubuntu_cli(*arguments)

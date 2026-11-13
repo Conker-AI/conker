@@ -18,7 +18,8 @@ the next run:
 6. verify: `conker status --strict` until every service answers.
 
 A failure after step 4 puts the old sources and compose.json back, builds and starts them and
-proves them answering (rolled back). When that cannot be proven the coordinator leaves a HOLD and
+proves them answering (rolled back). An update cut off part way (a reboot) gets the same rollback
+from `conker update --recover`, which the host helper runs when it starts. When that cannot be proven the coordinator leaves a HOLD and
 the snapshot is the way back. The result goes to the Inbox (scripts/update_check.py report).
 """
 
@@ -35,7 +36,7 @@ import tarfile
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 from urllib.request import Request, build_opener
 
 try:  # imported as the scripts package, or run as a script with scripts/ on the path
@@ -47,14 +48,25 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         version_key,
     )
     from scripts.update_core import (
+        LOCK_TOKEN,
         UpdateCoordinator,
         UpdateError,
         UpdateStore,
         _acquire_lock,
+        _release_lock,
+        _token,
     )
 except ModuleNotFoundError:
     from update_check import VERSION, _Stay, installed_version, report, version_key
-    from update_core import UpdateCoordinator, UpdateError, UpdateStore, _acquire_lock
+    from update_core import (
+        LOCK_TOKEN,
+        UpdateCoordinator,
+        UpdateError,
+        UpdateStore,
+        _acquire_lock,
+        _release_lock,
+        _token,
+    )
 
 ARCHIVE = "https://codeload.github.com/Conker-AI/{repository}/tar.gz/refs/tags/v{version}"
 # Source folder -> (its repository, the versions.env line that pins its tag).
@@ -66,6 +78,8 @@ MODULES = {
     "embeddings": ("embeddings", "EMBEDDINGS_VERSION"),
 }
 MAX_ARCHIVE = 300 * 1024 * 1024
+# Markers in the deployment that no update or rollback may run beside.
+QUIET = {".conker-recovery.json": "a recovery is held", ".conker-backup.lock": "a backup is running"}
 # What one unpacked release may hold: a hostile archive cannot fill the disk before the update starts.
 MAX_UNPACKED = 3 * 1024 * 1024 * 1024
 MAX_MEMBERS = 200_000
@@ -193,19 +207,19 @@ class UbuntuTransport:
         running = installed_version(self.sources / "companion")
         if running is not None and version_key(running) >= version_key(self.target):
             raise UpdateError(f"Conker {running} is running; {self.target} is not newer")
-        held = {
-            ".conker-recovery.json": "a recovery is held",
-            ".conker-backup.lock": "a backup is running",
-        }
-        for name, label in held.items():
-            if (self.root / name).exists():
-                raise UpdateError(f"{label}, so nothing was changed")
+        self.require_quiet()
         if not self.compose_file.is_file() or not (self.sources / "companion").is_dir():
             raise UpdateError("this is not an installed Ubuntu-layout Conker")
         if not self.origin():
             raise UpdateError("the installed gateway origin is missing")
         if shutil.disk_usage(self.root).free < MIN_FREE:
             raise UpdateError("the disk needs 20 GB free for the snapshot and the build")
+
+    def require_quiet(self) -> None:
+        """No held recovery and no running backup: a rollback restarts what a backup stops."""
+        for name, label in QUIET.items():
+            if (self.root / name).exists():
+                raise UpdateError(f"{label}, so nothing was changed")
 
     def origin(self) -> str | None:
         try:
@@ -298,6 +312,7 @@ class UbuntuTransport:
             self._conker("backup", "--destination", str(destination)),
             "the snapshot before the update",
             timeout=4 * 3600,
+            env={LOCK_TOKEN: _token()},  # this update's own snapshot may run under its lock
         )
         made = sorted(
             path.name
@@ -385,25 +400,78 @@ def tell_inbox(root: Path, send=None) -> None:
         )
 
 
+def recover(root: Path, transport_for=None) -> str:
+    """`conker update --recover`: finish an update that was cut off (a reboot, a killed helper).
+
+    One cut off after its sources moved is rolled back and proven answering, as a failed one is;
+    one cut off before is closed as abandoned. Refused while an update still runs (its update.lock),
+    while a backup runs or a recovery is held (a rollback restarts services), and once the update is
+    held (the snapshot is the way back). State that cannot be read is held, never guessed at. The
+    host helper runs this when it starts and before each daily check.
+    """
+    store = UpdateStore(root.resolve() / "state" / "update")
+    if store.hold_path.exists():  # checked again under the lock, where no update can write one
+        raise UpdateError(
+            f"Update is held: {store.hold_path}. Restore the snapshot from before it."
+        )
+    lock = _acquire_lock(store)  # refuses while the update that wrote active.json still runs
+    try:
+        try:
+            state = store.load_active()
+        except (OSError, ValueError) as error:
+            _hold_unreadable(store, f"its saved state could not be read ({error})")
+        if not state:
+            return "No update was cut off. Nothing to do."
+        target = state.get("target") if isinstance(state, dict) else None
+        if not isinstance(target, str) or not VERSION.fullmatch(target):
+            _hold_unreadable(store, "its saved state names no release")
+        transport = (transport_for or UbuntuTransport)(root, target)
+        coordinator = UpdateCoordinator(transport, store)
+        moved = state.get("phase") in coordinator.MUTATING_PHASES
+        if moved:
+            transport.require_quiet()
+        coordinator.recover_interrupted()
+    finally:
+        _release_lock(lock)
+    if moved:
+        return f"The update to {target} was cut off part way: Conker is back on the version it had."
+    return f"The update to {target} was cut off before anything changed. Nothing changed."
+
+
+def _hold_unreadable(store: UpdateStore, why: str) -> NoReturn:
+    """Nobody can tell whether the sources moved, so nothing retries: the owner restores."""
+    store.hold({"transaction_id": None}, f"an update was cut off and {why}")
+    raise UpdateError(f"An update was cut off and {why}. Held: restore the snapshot from before it.")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="conker update --to", description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--to", dest="version", required=True)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument("--to", dest="version")
+    action.add_argument("--recover", action="store_true", help="finish an update that was cut off")
     args = parser.parse_args(argv)
     os.umask(0o022)  # public sources stay readable to the containers' user (README)
     status = 1
     try:
-        transport = UbuntuTransport(args.root, args.version)
-        store = UpdateStore(transport.root / "state" / "update")
-        lock = _acquire_lock(store)
-        try:
-            result = UpdateCoordinator(transport, store).run()
-        finally:
-            lock.unlink(missing_ok=True)
-        print(f"Conker update {result['status']}. Receipt: {result['receipt']}")
-        status = 0
+        if args.recover:
+            print(recover(args.root))
+            status = 0
+        else:
+            transport = UbuntuTransport(args.root, args.version)
+            store = UpdateStore(transport.root / "state" / "update")
+            lock = _acquire_lock(store)
+            try:
+                transport.require_quiet()  # its own rollback of a cut-off update restarts services
+                result = UpdateCoordinator(transport, store).run()
+            finally:
+                _release_lock(lock)
+            print(f"Conker update {result['status']}. Receipt: {result['receipt']}")
+            status = 0
     except (OSError, UpdateError, json.JSONDecodeError) as error:
         print(f"Conker update stopped: {error}", file=sys.stderr)
+    except Exception as error:  # never skip telling the Inbox what was already written
+        print(f"Conker update stopped unexpectedly: {error!r}", file=sys.stderr)
     tell_inbox(args.root.resolve())
     return status
 

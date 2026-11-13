@@ -21,6 +21,7 @@ try:  # imported as the scripts package, or run as a script with scripts/ on the
         UpdateStore,
         _acquire_lock,
         _atomic_json,
+        _release_lock,
     )
 except ModuleNotFoundError:
     from compose_overlays import overlay_files
@@ -30,6 +31,7 @@ except ModuleNotFoundError:
         UpdateStore,
         _acquire_lock,
         _atomic_json,
+        _release_lock,
     )
 
 __all__ = ["HostTransport", "UpdateCoordinator", "UpdateError", "UpdateStore"]
@@ -397,7 +399,7 @@ def main() -> int:
         try:
             result = UpdateCoordinator(transport, store).run()
         finally:
-            lock.unlink(missing_ok=True)
+            _release_lock(lock)
     except (OSError, UpdateError, json.JSONDecodeError, subprocess.TimeoutExpired) as error:
         parser.exit(1, f"Conker update stopped: {error}\n")
     print(f"Conker update {result['status']}. Receipt: {result['receipt']}")
