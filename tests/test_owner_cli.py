@@ -58,7 +58,7 @@ ANOTHER_COMMAND = {"auth", "stop"}
 
 def parser_verbs() -> set[str]:
     action = next(a for a in build_parser("conker")._actions if a.dest == "command")
-    return set(action.choices)
+    return set(action.choices or ())
 
 
 def launcher_verbs() -> set[str]:

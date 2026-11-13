@@ -9,13 +9,30 @@ import re
 import ssl
 import urllib.request
 import uuid
+from pathlib import Path
 from typing import Any
 
-from release_checks import AcceptanceError, assert_complete_setup, write_json
+from release_checks import (
+    AcceptanceError,
+    CommandRunner,
+    Evidence,
+    assert_complete_setup,
+    write_json,
+)
 
 
 class FirstRunSteps:
     """The first-run steps of the acceptance gate, from sign-in to the completed rehearsal."""
+
+    # Set by the gate that mixes these steps in (release_acceptance.AcceptanceGate).
+    runner: CommandRunner
+    evidence: Evidence
+    work: Path
+    snapshot_store: Path | None
+    cert: Path
+    password: str
+    require_conversation: bool
+    _verified_post: Any
 
     def setup_password_and_authenticate(self) -> None:
         self.runner.run(

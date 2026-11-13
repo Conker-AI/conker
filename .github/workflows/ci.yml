@@ -61,6 +61,11 @@ jobs:
         # Pi's policy (ruff.toml); findings that predate it are listed per file there.
         run: python -m ruff check .
 
+      - name: Type check
+        # pyright basic mode (pyrightconfig.json). Errors that predate the check are counted
+        # per file in type-baseline.txt; a count may only shrink.
+        run: python scripts/check_types.py
+
       - name: ShellCheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
@@ -82,9 +87,9 @@ jobs:
         # nothing is started.
         env:
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/.test-gates/toolgate
-        # The coverage floor is CI's Linux coverage when it arrived (76.33%), rounded down, so it
-        # only stops coverage from falling (.coveragerc names what is measured).
-        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=76
+        # The coverage floor is CI's Linux coverage after the refusal tests (78.31%, 2026-11-13),
+        # rounded down, so it only stops coverage from falling (.coveragerc names what is measured).
+        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=78
 
       - name: Browser deployment and recovery mutation drill
         run: python scripts/auth_mutation_drill.py
