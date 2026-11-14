@@ -1,8 +1,12 @@
 """Input validation for the conker CLI: identities, bounded files, MCP endpoints, drafts and history queries."""
 
 import hashlib
+import importlib
 import json
 import re
+import sys
+from pathlib import Path
+from types import ModuleType
 from urllib.parse import urlsplit
 
 SKILL_ID = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -279,3 +283,11 @@ def history_query(values):
         ):
             raise ValueError("Use the next_cursor returned by the same chat search.")
     return values
+
+
+def codex_sessions() -> ModuleType:
+    """native_codex_sessions, which lives with the subscriptions image (services/subscriptions)."""
+    folder = str(Path(__file__).resolve().parents[1] / "services" / "subscriptions")
+    if folder not in sys.path:
+        sys.path.append(folder)
+    return importlib.import_module("native_codex_sessions")

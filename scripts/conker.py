@@ -24,6 +24,7 @@ from conker_files import operation as files_operation
 from conker_inbox import operation as inbox_operation
 from conker_inputs import (
     SKILL_ID,
+    codex_sessions,
     draft_path,
     draft_payload,
     history_query,
@@ -38,9 +39,6 @@ from conker_spending import spending_operation
 from conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from plan_limits import limits_operation
 from workspace import read_config
-
-# The subscriptions image's modules (native_codex_sessions) live with the image's Dockerfile.
-sys.path.append(str(Path(__file__).resolve().parents[1] / "services" / "subscriptions"))
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -108,7 +106,7 @@ def request(
                 {key: query[key] for key in ("limit", "cursor") if key in query}
             )
         elif service == "providers" and path == "/codex/sessions" and body is None:
-            from native_codex_sessions import list_query
+            list_query = codex_sessions().list_query
 
             values = list_query(query)
             encoded = urlencode(
@@ -196,7 +194,7 @@ def main():
     native_query = None
     if args.command == "native-sessions":
         if args.provider == "codex":
-            from native_codex_sessions import list_query, thread_id
+            list_query, thread_id = codex_sessions().list_query, codex_sessions().thread_id
 
             if args.operation not in {"list", "status"}:
                 raise ValueError(
