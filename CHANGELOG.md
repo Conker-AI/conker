@@ -15,7 +15,7 @@ which module versions a release pins.
   `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
 
 - **Retired cleanup scripts removed.** `deploy/ubuntu/retire_legacy.py` and `retire_freellmapi.py` ran once
-  (September) and nothing calls them; the server guide says `conker update` is the only update path. (#PR)
+  (September) and nothing calls them; the server guide says `conker update` is the only update path. (#325)
 
 - **Character preview works again.** "Preview example" in Character settings failed with an error since the
   old preview client was removed; it plays the authored example again (no model is called). The tool editor's
