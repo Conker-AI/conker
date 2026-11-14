@@ -18,7 +18,10 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from release_checks import (
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.release_checks import (
     FIXED_CONTAINER_NAMES,
     HEALTH_ENDPOINTS,
     ROOT,
@@ -29,7 +32,7 @@ from release_checks import (
     assert_compose_matrix,
     build_image_plan,
 )
-from release_first_run import FirstRunSteps
+from scripts.release_first_run import FirstRunSteps
 
 
 class AcceptanceGate(FirstRunSteps):
