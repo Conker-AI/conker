@@ -91,7 +91,7 @@ which module versions a release pins.
 
 - **A wand in the composer.** One small button turns your draft into a clearer prompt: a goal, the context and the shape of the answer you want. It never sends. You read the rewrite in the text box, see what changed, open "Show original" and press Undo if you prefer your own words. One model call, counted in the daily spending cap. Needs Pi with Conker-AI/pi#271. (#349)
 
-- **What Conker believes.** Memory has a "What Conker believes" button: every memory with whose words it came from (you told me, or I worked it out), whether a source was later forgotten, when it was last used and whether it disagrees with another, filtered by who said it or by what needs a look. Read only; each memory opens for Fix or forget. Needs Pi with Conker-AI/pi#248. Also fixes the browser transport, which did not list the Memory care and prompt wand routes, so those two would have been refused on a real server. (#PR)
+- **What Conker believes.** Memory has a "What Conker believes" button: every memory with whose words it came from (you told me, or I worked it out), whether a source was later forgotten, when it was last used and whether it disagrees with another, filtered by who said it or by what needs a look. Read only; each memory opens for Fix or forget. Needs Pi with Conker-AI/pi#248. Also fixes the browser transport, which did not list the Memory care and prompt wand routes, so those two would have been refused on a real server. (#350)
 
 ## 0.1.0
 
