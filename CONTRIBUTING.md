@@ -26,13 +26,12 @@ open an issue or a draft pull request to claim one.
 - **Shrink the type baseline.** `tests/test_settings_registry.py` and
   `tests/test_local_stack_config.py` have baselined pyright errors (Optional access, module
   attributes). Fix them type-only and delete their lines from `type-baseline.txt`.
-- **Docs name npm scripts that exist.** `docs/5-developing.md` and
-  `docs/reference/gateway-workspace.md` still mention `npm run dev:legacy-fixtures`, which is gone.
-  Fix them and add a test that every `npm run NAME` in the docs is in `dashboard/package.json`.
-- **Complete the ADR table.** The decisions table in `docs/5-developing.md` stops at ADR-0011;
-  add 0012-0014 and a test that every `docs/adr/NNNN-*.md` has a row.
-- **Drop names of deleted code.** `docs/5-developing.md` still describes a `ConkerClient`
-  interface; describe the gateway clients in `dashboard/src/lib/gateway` and `src/lib/api` instead.
+- **Docs name npm scripts that exist.** Add a test that every `npm run NAME` named in `docs/` and
+  the READMEs is in `dashboard/package.json` (a stale `dev:legacy-fixtures` was just removed by hand).
+- **Keep the ADR table complete.** Add a test that every `docs/adr/NNNN-*.md` has a row in the
+  decisions table of `docs/5-developing.md` (0012-0014 were just added by hand).
+- **Find paths and names that no longer exist.** Add a test that every backticked repo path in
+  `docs/` exists (a short allowlist for Pi's own docs and archived permalinks, each with a reason).
 - **Check heading anchors.** `tests/test_doc_links.py` skips `#anchor` links; resolve them against
   the target file's headings with GitHub's slug rules, with a self-test for a broken one.
 - **Say "updating" on the folded update card.** In `dashboard/src/components/inbox/update-cards.tsx`

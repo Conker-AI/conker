@@ -23,7 +23,7 @@ The owner selected the shadcnstore template as the color and component authority
 
 Buttons, fields, menus, tabs, switches, checkboxes, dialogs and tooltips use the source template's treatments. For example, outline buttons use the background and the template's dark input fill; fields are transparent in light mode and use the prescribed input tint in dark mode. Neutral hover/selection follows accent roles. Do not replace all component states with one new universal fill.
 
-The template legitimately uses opacity in specific primitives. Its exact recipes are recorded by owner in `scripts/template-foundation.json`. Consumers compose those primitives instead of choosing new opacity values. Collection search owns its shared 40px height and inherits Input styling; Chats and Inbox share the same component.
+The template legitimately uses opacity in specific primitives. Its exact recipes are recorded by owner in `dashboard/scripts/template-foundation.json`. Consumers compose those primitives instead of choosing new opacity values. Collection search owns its shared 40px height and inherits Input styling; Chats and Inbox share the same component.
 
 Main text uses the surface's foreground pair; supporting text uses `muted-foreground`. Conker retains its existing slight secondary-text contrast adjustment and readable destructive foreground pair. Status uses labeled success/warning extensions; color must not be the only cue. The terminal owns its local black command-area tokens; photo portraits remain neutral and uncropped.
 

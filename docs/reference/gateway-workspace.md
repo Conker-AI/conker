@@ -1,9 +1,7 @@
 # Authenticated gateway workspace
 
 This dashboard shell connects to Pi's browser gateway. Development uses the same
-shell with an in-memory gateway. The retired fixture-rich workspace is available
-only through the explicit `npm run dev:legacy-fixtures` build and is never linked
-from product routes.
+shell with an in-memory gateway.
 
 ## Modes and hosting
 
