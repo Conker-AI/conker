@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **What Conker believes about you, from the CLI.** `conker memory beliefs` lists one page of what Conker
+  believes (`--stated`, `--concluded`, `--review`, `--type`, `--limit`, `--after`, `--json`): a header with the
+  counts, then origin, confidence, how many records back it, the text and its id and revision. Installed stacks
+  run it as `./conker memory beliefs`. Needs Pi with Conker-AI/pi#248. (#326)
 - **One command after an update.** `conker post-update-check` runs every check of a release update in one go
   and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
   search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
