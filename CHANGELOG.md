@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Character preview works again.** "Preview example" in Character settings failed with an error since the
+  old preview client was removed; it plays the authored example again (no model is called). The tool editor's
+  "More tool actions" menu no longer shows Duplicate and Delete preview tool, which were always disabled. (#322)
+
+- **Accessibility checks in CI.** Every sidebar place and the Ctrl+K, "are you sure" and forget dialogs are
+  checked against WCAG 2.1 AA in both themes on every dashboard change. What they found is fixed: the red
+  for destructive actions has enough contrast for its white text, the canvas attribution link and two error
+  lines are readable, and Server check rows are a real list. Five more flows are tested end to end: Trash and
+  Restore, bulk archive with Undo, a Models change with Undo, an update from offer to "Updated", and a
+  rolled-back update card. (#316, #317)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
