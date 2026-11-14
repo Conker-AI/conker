@@ -128,6 +128,9 @@ routes.GET.unshift(/^\/api\/host\/chatgpt$/)
 routes.POST.unshift(/^\/api\/host\/chatgpt$/)
 routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
+// Memory care, what Conker believes about the owner, and the prompt wand: owner reads and one unsent rewrite.
+routes.GET.unshift(/^\/api\/control\/pi\/memory\/(?:upkeep|beliefs)$/)
+routes.POST.unshift(/^\/api\/control\/pi\/prompts\/enhance$/)
 routes.GET.unshift(/^\/api\/diagnostics$/)
 // Authored agents are owner-controlled records; every mutation receives operation-bound verification.
 routes.GET.unshift(/^\/api\/control\/pi\/agents(?:\/(?:companion|agent_[0-9a-f]{32})(?:\/versions(?:\/[1-9][0-9]{0,9})?)?)?$/)

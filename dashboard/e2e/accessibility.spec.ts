@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { card, open } from './pages'
 
-const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care']
+const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs']
 
 async function violations(page: Page, include?: string) {
   // Skeletons mark themselves busy; check the loaded screen, not the placeholder.

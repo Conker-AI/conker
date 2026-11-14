@@ -130,6 +130,22 @@ export function createFakeMemory(fail: (status: number) => never) {
 Context: say what you already know and what is unclear.
 Output: a short answer first, then the reasons.`, notes: ['Added a goal, context and the shape of the answer.'], modelId: 'preview-drafting', templateId: null, fields: {} }
       }
+      if (path === '/api/control/pi/memory/beliefs' && method === 'GET') {
+        const origins: Record<string, 'stated' | 'concluded'> = { mem_judo: 'stated', mem_physics: 'stated', mem_revision: 'concluded' }
+        const iso = (daysAgo: number | null) => daysAgo === null ? null : new Date(Date.now() - daysAgo * 86_400_000).toISOString()
+        const all = memories.filter(row => row.type === 'memory').map(row => ({
+          id: row.id, revision: 1, text: row.preview, memoryType: row.memory_type ?? 'fact', origin: origins[row.id] ?? 'stated', sourceType: 'conversation',
+          confidence: origins[row.id] === 'concluded' ? 'medium' : 'high', state: row.id === 'mem_revision' ? 'needs_review' as const : 'current' as const,
+          validFrom: null, validUntil: null, reviewBy: null, createdAt: iso(40), updatedAt: iso(40), lastRecalledAt: iso(row.id === 'mem_revision' ? null : 2),
+          evidence: { supporting: row.id === 'mem_revision' ? 2 : 1, withdrawn: row.id === 'mem_revision' ? 1 : 0 },
+          lineage: [{ objectType: 'evidence', objectId: 'evi_week', withdrawn: false }],
+          conflicts: row.id === 'mem_judo' ? [{ conflictId: 'cfl_one', memoryId: 'mem_revision' }] : row.id === 'mem_revision' ? [{ conflictId: 'cfl_one', memoryId: 'mem_judo' }] : [],
+        }))
+        const origin = String(options.query?.origin ?? 'all'), state = String(options.query?.state ?? 'all')
+        const items = all.filter(row => (origin === 'all' || row.origin === origin) && (state === 'all' || row.state === state))
+        return { agentId: 'agent_preview', total: items.length, nextAfter: null, items,
+          counts: { stated: all.filter(row => row.origin === 'stated').length, concluded: all.filter(row => row.origin === 'concluded').length, needsReview: all.filter(row => row.state === 'needs_review').length } }
+      }
       if (path === '/api/control/pi/memory/upkeep' && method === 'GET') {
         const live = (ids: string[]) => ids.every(id => memories.some(row => row.id === id))
         const items = (rows: { ids: string[]; reason: string }[]) => rows.filter(row => live(row.ids))

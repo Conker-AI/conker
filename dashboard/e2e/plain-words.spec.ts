@@ -5,7 +5,7 @@ import { gatewayDestinations, gatewayPageNavigation } from '../src/components/ga
 import { open } from './pages'
 
 // Screens reached from a link on another page are listed by hand.
-const linked = ['/memory?view=care']
+const linked = ['/memory?view=care', '/memory?view=beliefs']
 const places = [...new Set([...linked, ...gatewayDestinations.flatMap(item => {
   const path = item.path.split('?')[0]
   return [path, ...gatewayPageNavigation(path, '').sections.map(section => section.to)]
