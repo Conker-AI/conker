@@ -11,6 +11,7 @@ import type { GatewayCall, GatewayCallAudioTurn, GatewayCallAvailability } from 
 import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolicy, SetupReceipt, SetupRehearsal, SetupStatus } from '../gateway/control'
 import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
 import type { GatewayAgentNote } from '../gateway/jobs'
+import type { MemoryUpkeepPage } from '../gateway/memory-care'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
@@ -26,6 +27,7 @@ type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
 type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? true : false) : false
 
 export const piWire = {
+  memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
   project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,

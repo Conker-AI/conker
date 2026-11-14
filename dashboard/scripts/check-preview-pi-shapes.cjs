@@ -43,6 +43,7 @@ export async function run() {
     setupChoice: () => control.setupChoice('memory'), setupProtection: () => control.setupProtection(),
     setupModels: () => control.setupModels(), rehearsal: () => control.setupRehearsal(),
     agent: async () => control.agent(first(await control.agents())),
+    memoryUpkeep: () => control.memoryCare.upkeep(),
   }
 }
 `

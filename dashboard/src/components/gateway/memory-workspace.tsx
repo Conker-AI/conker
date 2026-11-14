@@ -8,7 +8,7 @@ import { AddMemory } from './add-memory'
 import { ForgetMemoryRecovery } from './forget-memory-recovery'
 import { GatewayHeader } from './header'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Maximize, Minimize, RefreshCw } from 'lucide-react'
 import { MemoryGraph } from '@/app/memory/memory-graph'
 import { Button } from '@/components/ui/button'
@@ -189,6 +189,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
     <GatewayHeader toolbar={<div className="memory-workspace-toolbar memory-appbar-toolbar" role="toolbar" aria-label="Memory controls">
       {mapOn && <Select value={view} onValueChange={value => { if (value !== null) setView(value) }} items={[{ value: "network", label: "Map" }, { value: "hierarchy", label: "Tree" }, { value: "database", label: "List" }]}><SelectTrigger aria-label="Memory view" className="w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Map</SelectItem><SelectItem value="hierarchy">Tree</SelectItem><SelectItem value="database">List</SelectItem></SelectContent></Select>}
       <Select value={type} onValueChange={value => { if (value === null) return; setType(value as typeof type); refresh() }} items={[{ value: "all", label: "All memories" }, ...kinds.map((kind) => ({ value: kind, label: kindLabels[kind] }))]}><SelectTrigger aria-label="Memory type" className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All memories</SelectItem>{kinds.map(kind => <SelectItem key={kind} value={kind}>{kindLabels[kind]}</SelectItem>)}</SelectContent></Select>
+      <Button size="sm" variant="outline" render={<Link to="/memory?view=care" />}>Memory care</Button>
       <AddMemory client={client} onAdded={message => { setAdded(message); refresh() }} />
       <Button ref={memoryRefresh} size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
