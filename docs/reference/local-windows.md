@@ -51,8 +51,8 @@ host command, from `$HOME\dev\gates\pi`:
 
 This command prompts interactively and revokes existing browser sessions. After
 success, the initial-password file is obsolete. Do not paste service credentials
-into browser fields. The dashboard asks for the password only to forget, delete or
-pay and for security settings (ADR-0010).
+into browser fields. The dashboard asks for the password only for actions that cannot be
+undone or that change protection; ADR-0010 lists them.
 
 ## Serving a new frontend build
 

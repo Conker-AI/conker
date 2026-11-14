@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Stale reference pages removed.** Four one-off or outdated pages are gone (a never-published terminal
+  candidate, a September tool-workspace gap table, a retry contract for deleted code, a September QA log);
+  five more lose text that described the per-write password rule ADR-0010 replaced, deleted files or the
+  old preview. (#PR)
+
 - **The subscriptions image's code lives with its Dockerfile.** Seven modules only the Claude plan runtime
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
   now also runs when the two modules it shares with the host helper change. (#327)
