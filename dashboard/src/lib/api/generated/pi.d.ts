@@ -2094,6 +2094,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/open-loops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Open Loops
+         * @description Promises in visible chats, soonest due first and undated last (read only).
+         *
+         *     `today` is the owner's local date, in the zone the quiet hours use; `overdue` compares
+         *     an open loop's due date with it.
+         */
+        get: operations["list_open_loops_open_loops_get"];
+        put?: never;
+        /**
+         * Add Open Loop
+         * @description File one promise for a visible chat, optionally pointing at one of its messages.
+         */
+        post: operations["add_open_loop_open_loops_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/open-loops/{loop_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Open Loop State
+         * @description Mark a promise done, dropped or open again, also in a forked or closed chat.
+         */
+        post: operations["change_open_loop_state_open_loops__loop_id__state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/tomorrow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tomorrow
+         * @description What starts on its own in the next `hours` hours; nothing is run or changed.
+         */
+        get: operations["tomorrow_insights_tomorrow_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/quiet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quiet
+         * @description The last `days` days against the `days` before: what asked for the owner, what did not.
+         */
+        get: operations["quiet_insights_quiet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/archive": {
         parameters: {
             query?: never;
@@ -4239,6 +4326,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/memory/beliefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Beliefs
+         * @description What Conker believes about the owner, one page at a time (read only).
+         *
+         *     A memory with a forget pending or done, or made from a hidden chat, is left out; `total`
+         *     and `counts` drop only by the rows left out of this page.
+         */
+        get: operations["list_beliefs_memory_beliefs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memory/upkeep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Upkeep
+         * @description Upkeep candidates (duplicates, open contradictions, expired, not recalled), read only.
+         *
+         *     A candidate naming a memory with a forget pending or done, or one made from a hidden chat,
+         *     is left out whole; each kind's `total` drops only by the items left out of this reply.
+         */
+        get: operations["list_upkeep_memory_upkeep_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memory/{memory_id}/uses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Memory Uses
+         * @description The answers that used one memory, newest first (read only, ids and chat titles).
+         *
+         *     Works for a memory since corrected or forgotten: the notes hold no words. Chats that are
+         *     forgotten or in the Trash are left out. `since` is when Pi began noting uses.
+         */
+        get: operations["list_memory_uses_memory__memory_id__uses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memory": {
         parameters: {
             query?: never;
@@ -5518,6 +5674,92 @@ export interface components {
         AutoName: {
             /** Expected Revision */
             expected_revision: number;
+        };
+        /** Belief */
+        Belief: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /** Text */
+            text: string;
+            /** Memorytype */
+            memoryType: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "stated" | "concluded";
+            /** Sourcetype */
+            sourceType: string | null;
+            /** Confidence */
+            confidence: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "current" | "needs_review";
+            /** Validfrom */
+            validFrom: string | null;
+            /** Validuntil */
+            validUntil: string | null;
+            /** Reviewby */
+            reviewBy: string | null;
+            /** Createdat */
+            createdAt: string | null;
+            /** Updatedat */
+            updatedAt: string | null;
+            /** Lastrecalledat */
+            lastRecalledAt: string | null;
+            evidence: components["schemas"]["BeliefEvidence"];
+            /** Lineage */
+            lineage: components["schemas"]["BeliefLineage"][];
+            /** Conflicts */
+            conflicts: components["schemas"]["BeliefConflict"][];
+        };
+        /** BeliefConflict */
+        BeliefConflict: {
+            /** Conflictid */
+            conflictId: string;
+            /** Memoryid */
+            memoryId: string;
+        };
+        /** BeliefCounts */
+        BeliefCounts: {
+            /** Stated */
+            stated: number;
+            /** Concluded */
+            concluded: number;
+            /** Needsreview */
+            needsReview: number;
+        };
+        /** BeliefEvidence */
+        BeliefEvidence: {
+            /** Supporting */
+            supporting: number;
+            /** Withdrawn */
+            withdrawn: number;
+        };
+        /** BeliefLineage */
+        BeliefLineage: {
+            /** Objecttype */
+            objectType: string;
+            /** Objectid */
+            objectId: string;
+            /** Withdrawn */
+            withdrawn: boolean;
+        };
+        /** BeliefPage */
+        BeliefPage: {
+            /** Agentid */
+            agentId: string;
+            /** Total */
+            total: number;
+            counts: components["schemas"]["BeliefCounts"];
+            /** Items */
+            items: components["schemas"]["Belief"][];
+            /** Nextafter */
+            nextAfter: string | null;
         };
         /** BrowserAudio */
         BrowserAudio: {
@@ -8035,6 +8277,83 @@ export interface components {
             /** Linkedat */
             linkedAt: number;
         };
+        /** Loop */
+        Loop: {
+            /** Id */
+            id: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Sessiontitle */
+            sessionTitle: string;
+            /** Messageid */
+            messageId: string | null;
+            /** Quote */
+            quote: string | null;
+            /** Text */
+            text: string;
+            /**
+             * Promisedby
+             * @enum {string}
+             */
+            promisedBy: "owner" | "conker";
+            /** Dueon */
+            dueOn: string | null;
+            /** Overdue */
+            overdue: boolean;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "done" | "dropped";
+            /** Revision */
+            revision: number;
+            /** Createdat */
+            createdAt: number;
+            /** Updatedat */
+            updatedAt: number;
+        };
+        /** LoopAdd */
+        LoopAdd: {
+            /** Session Id */
+            session_id: string;
+            /** Text */
+            text: string;
+            /**
+             * Promised By
+             * @default owner
+             * @enum {string}
+             */
+            promised_by: "owner" | "conker";
+            /** Due On */
+            due_on?: string | null;
+            /** Message Id */
+            message_id?: string | null;
+        };
+        /** LoopPage */
+        LoopPage: {
+            /** Today */
+            today: string;
+            /** Timezone */
+            timeZone: string;
+            /** Items */
+            items: components["schemas"]["Loop"][];
+            /** Nextafter */
+            nextAfter: string | null;
+        };
+        /** LoopReceipt */
+        LoopReceipt: {
+            loop: components["schemas"]["Loop"];
+        };
+        /** LoopState */
+        LoopState: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "done" | "dropped";
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
         /** Mapping */
         Mapping: {
             /** Hostaddress */
@@ -8316,6 +8635,24 @@ export interface components {
             scope: "none" | "conversation" | "selected" | "owner";
             /** Memoryids */
             memoryIds: string[];
+        };
+        /** MemoryUse */
+        MemoryUse: {
+            /** Sessionid */
+            sessionId: string;
+            /** Sessiontitle */
+            sessionTitle: string;
+            /** Turnid */
+            turnId: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "context" | "recall";
+            /** Revision */
+            revision: number | null;
+            /** At */
+            at: number;
         };
         /** Model */
         Model: {
@@ -9017,6 +9354,53 @@ export interface components {
             timeZone: string;
             /** Urgentexceptions */
             urgentExceptions: boolean;
+        };
+        /** QuietInsights */
+        QuietInsights: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Days */
+            days: number;
+            current: components["schemas"]["QuietWindow"];
+            previous: components["schemas"]["QuietWindow"];
+        };
+        /** QuietWindow */
+        QuietWindow: {
+            /** Since */
+            since: number;
+            /** Until */
+            until: number;
+            /** Handledwithoutasking */
+            handledWithoutAsking: number;
+            /** Asked */
+            asked: number;
+            /** Changerequestsraised */
+            changeRequestsRaised: number;
+            /** Questionsasked */
+            questionsAsked: number;
+            /** Noticesraised */
+            noticesRaised: number;
+            /** Approved */
+            approved: number;
+            /** Declined */
+            declined: number;
+            /** Failed */
+            failed: number;
+            /** Questionsanswered */
+            questionsAnswered: number;
+            /** Questionsdismissed */
+            questionsDismissed: number;
+            /** Upvotes */
+            upVotes: number;
+            /** Downvotes */
+            downVotes: number;
+            /** Mediananswerseconds */
+            medianAnswerSeconds: number | null;
+            /** Quietshare */
+            quietShare: number | null;
         };
         /** Receipt */
         Receipt: {
@@ -10052,6 +10436,58 @@ export interface components {
             /** Modelid */
             modelId: string | null;
         };
+        /** Tomorrow */
+        Tomorrow: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Since */
+            since: number;
+            /** Until */
+            until: number;
+            /** Hours */
+            hours: number;
+            /** Jobs */
+            jobs: components["schemas"]["TomorrowJob"][];
+            /** Runsplanned */
+            runsPlanned: number;
+            /** Approvals */
+            approvals: components["schemas"]["TomorrowApproval"][];
+        };
+        /** TomorrowApproval */
+        TomorrowApproval: {
+            /** Sessionid */
+            sessionId: string;
+            /** Toolid */
+            toolId: string | null;
+            /** Expiresat */
+            expiresAt: number;
+        };
+        /** TomorrowJob */
+        TomorrowJob: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "clock" | "watch";
+            /**
+             * Createdby
+             * @enum {string}
+             */
+            createdBy: "owner" | "conker";
+            /** Nextat */
+            nextAt: number | null;
+            /** Runs */
+            runs: number | null;
+            /** Held */
+            held: boolean;
+        };
         /**
          * ToolGatePolicySummary
          * @description `digest` is the SHA-256 of the other three fields, canonical JSON.
@@ -10253,6 +10689,58 @@ export interface components {
             expected_revision: number;
             definition: components["schemas"]["Template"];
         };
+        /** UpkeepItem */
+        UpkeepItem: {
+            /** Ids */
+            ids: string[];
+            /** Reason */
+            reason: string;
+            /** Conflictid */
+            conflictId?: string | null;
+        };
+        /** UpkeepKind */
+        UpkeepKind: {
+            /** Items */
+            items: components["schemas"]["UpkeepItem"][];
+            /** Total */
+            total: number;
+        };
+        /** UpkeepMemory */
+        UpkeepMemory: {
+            /** Text */
+            text: string;
+            /** Revision */
+            revision: number;
+            /** Memorytype */
+            memoryType: string | null;
+            /** Sourcetype */
+            sourceType: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "current" | "needs_review";
+        };
+        /** UpkeepPage */
+        UpkeepPage: {
+            /** Agentid */
+            agentId: string;
+            /** Checkedat */
+            checkedAt: string;
+            /** Memorieschecked */
+            memoriesChecked: number;
+            /** Truncated */
+            truncated: boolean;
+            exactDuplicates: components["schemas"]["UpkeepKind"];
+            nearDuplicates: components["schemas"]["UpkeepKind"];
+            contradictions: components["schemas"]["UpkeepKind"];
+            expired: components["schemas"]["UpkeepKind"];
+            notRecalled: components["schemas"]["UpkeepKind"];
+            /** Memories */
+            memories?: {
+                [key: string]: components["schemas"]["UpkeepMemory"];
+            };
+        };
         /** Usage */
         Usage: {
             /** Suggestions */
@@ -10261,6 +10749,21 @@ export interface components {
             researchMinutes: number;
             /** Costcents */
             costCents: number;
+        };
+        /** UsePage */
+        UsePage: {
+            /** Memoryid */
+            memoryId: string;
+            /** Since */
+            since: number | null;
+            /** Total */
+            total: number;
+            /** Chats */
+            chats: number;
+            /** Items */
+            items: components["schemas"]["MemoryUse"][];
+            /** Nextafter */
+            nextAfter: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -15287,6 +15790,185 @@ export interface operations {
             };
         };
     };
+    list_open_loops_open_loops_get: {
+        parameters: {
+            query?: {
+                state?: "open" | "done" | "dropped" | "all";
+                due_before?: string | null;
+                limit?: number;
+                after?: string | null;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_open_loop_open_loops_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoopAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_open_loop_state_open_loops__loop_id__state_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                loop_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoopState"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tomorrow_insights_tomorrow_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tomorrow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quiet_insights_quiet_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuietInsights"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     archive_chats_sessions_archive_post: {
         parameters: {
             query?: never;
@@ -20230,6 +20912,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemoryRemembered"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_beliefs_memory_beliefs_get: {
+        parameters: {
+            query?: {
+                origin?: "stated" | "concluded" | "all";
+                state?: "current" | "needs_review" | "all";
+                memory_type?: ("fact" | "phase" | "context" | "watch") | null;
+                limit?: number;
+                after?: string | null;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeliefPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_upkeep_memory_upkeep_get: {
+        parameters: {
+            query?: {
+                unused_days?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpkeepPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_memory_uses_memory__memory_id__uses_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after?: string | null;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsePage"];
                 };
             };
             /** @description Validation Error */
