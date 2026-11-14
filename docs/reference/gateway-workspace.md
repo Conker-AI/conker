@@ -182,8 +182,8 @@ Browser QA uses the actual Pi HTTPS gateway and cookie/CSRF implementation with 
 Durable task metadata, Activity, tools, memory and model routing are connected.
 System diagnostics are also connected through one bounded gateway contract shared
 with `conker doctor`; findings and recovery instructions are not rebuilt in the UI.
-Fresh operation-bound password verification, a server-enforced unlock deadline,
-durable turn identities and exact message associations are also connected; see
+The password rule and idle sign-out follow ADR-0010. Durable turn identities and exact
+message associations are also connected; see
 [gateway-verification-recovery.md](gateway-verification-recovery.md). The chat header also
 connects durable typed calls with bounded history, retained request identities and explicit
 pause, interrupt, end and uncertain-result recovery. It also exposes one exact transient
