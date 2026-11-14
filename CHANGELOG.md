@@ -10,6 +10,21 @@ which module versions a release pins.
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
   now also runs when the two modules it shares with the host helper change. (#327)
 
+- **What Conker believes about you, from the CLI.** `conker memory beliefs` lists one page of what Conker
+  believes (`--stated`, `--concluded`, `--review`, `--type`, `--limit`, `--after`, `--json`): a header with the
+  counts, then origin, confidence, how many records back it, the text and its id and revision. Installed stacks
+  run it as `./conker memory beliefs`. Needs Pi with Conker-AI/pi#248. (#326)
+- **One command after an update.** `conker post-update-check` runs every check of a release update in one go
+  and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
+  search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
+  failure exits non-zero. (#318)
+
+- **A page for every CLI group.** `docs/reference/` has pages for `conker agent`/`team`, `memory` and
+  `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
+
+- **Retired cleanup scripts removed.** `deploy/ubuntu/retire_legacy.py` and `retire_freellmapi.py` ran once
+  (September) and nothing calls them; the server guide says `conker update` is the only update path. (#325)
+
 - **Character preview works again.** "Preview example" in Character settings failed with an error since the
   old preview client was removed; it plays the authored example again (no model is called). The tool editor's
   "More tool actions" menu no longer shows Duplicate and Delete preview tool, which were always disabled. (#322)
