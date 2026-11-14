@@ -8,7 +8,7 @@ which module versions a release pins.
 
 - **The subscriptions image's code lives with its Dockerfile.** Seven modules only the Claude plan runtime
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
-  now also runs when the two modules it shares with the host helper change. (#PR)
+  now also runs when the two modules it shares with the host helper change. (#327)
 
 - **Character preview works again.** "Preview example" in Character settings failed with an error since the
   old preview client was removed; it plays the authored example again (no model is called). The tool editor's
