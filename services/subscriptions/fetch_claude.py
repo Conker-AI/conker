@@ -54,6 +54,8 @@ def extract(data: bytes, destination: Path) -> None:
         if not member.isfile():
             raise ValueError("The Claude Code package has no plain binary.")
         source = archive.extractfile(member)
+        if source is None:
+            raise ValueError("The Claude Code package has no plain binary.")
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(source.read())
     destination.chmod(0o755)

@@ -1,7 +1,7 @@
 name: Publish the Claude plan runtime image
 
 # ghcr.io/conker-ai/subscriptions, from services/subscriptions/Dockerfile: the private bridge
-# (scripts/subscription_runtime.py) and the official Claude Code CLI, whose download the build
+# (services/subscriptions/subscription_runtime.py) and the official Claude Code CLI, whose download the build
 # checks against its pinned SHA-512 (services/subscriptions/fetch_claude.py). The repository
 # install pins it by digest in versions.env (SUBSCRIPTIONS_IMAGE); the release steps are in
 # docs/reference/claude-plan-runtime.md.
@@ -19,6 +19,8 @@ on:
     paths:
       - ".github/workflows/publish-subscriptions.yml"
       - "services/subscriptions/**"
+      - "scripts/chatgpt_provider.py"
+      - "scripts/plan_limits.py"
 
 permissions:
   contents: read

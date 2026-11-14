@@ -39,6 +39,9 @@ from conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from plan_limits import limits_operation
 from workspace import read_config
 
+# The subscriptions image's modules (native_codex_sessions) live with the image's Dockerfile.
+sys.path.append(str(Path(__file__).resolve().parents[1] / "services" / "subscriptions"))
+
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs):

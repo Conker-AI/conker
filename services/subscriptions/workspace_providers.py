@@ -1,7 +1,7 @@
 """Private loopback bridge: separate owner-auth and model-inference credentials.
 
 The Windows workspace runs it with both native runtimes. The server layouts run it as the Claude
-plan runtime (scripts/subscription_runtime.py) with `chatgpt_relay`: ChatGPT answers then go to the
+plan runtime (subscription_runtime.py) with `chatgpt_relay`: ChatGPT answers then go to the
 host's ChatGPT worker, which keeps that sign-in, and the ChatGPT and Codex control routes are absent.
 """
 
