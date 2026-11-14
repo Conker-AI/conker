@@ -8,8 +8,6 @@ Design for the owner's useful outcomes first, with broader adoption later. Keep 
 
 The owner's latest instructions, actual gateway contracts, shared components, and [dashboard design contract](../../dashboard/DESIGN.md) remain implementation authorities. Older reference descriptions may conflict with the active gateway UI. This playbook does not reconcile or rewrite them, replace theme tokens, authorize new features, or add runtime dependencies.
 
-The reusable skill is installed locally at `~/.codex/skills/behavioral-ux/SKILL.md`. Its evidence register (`references/evidence.md` in that folder) identifies 17 evidence groups, source access limits, and distinctions between findings, standards, heuristics, and hypotheses. It is local guidance, not model training.
-
 ## How To Make A Decision
 
 Write a short decision record before a meaningful change:
@@ -26,20 +24,6 @@ Write a short decision record before a meaningful change:
 | How will we know? | Task test, benefit metric, and comprehension/control guardrail |
 
 Give each persistent element a task role: orient, find, act, explain state, inspect, or recover. Delight and identity can also be intentional roles. An element without a useful role is a candidate for removal, not automatic clutter. Do not estimate attention percentages from element area or demand that every pixel is interactive.
-
-## Current Observations
-
-Inspected the local preview at `http://127.0.0.1:18160/`: Today, Memory Map, saved chat, and Inbox at desktop widths; Inbox at 390 by 844. Used screenshots, accessibility state, and source reads. Navigated only; did not send messages, approve requests, change preferences, or run tasks. Preview content is not proof of production integrations or capabilities. This was not a usability study or a complete app audit.
-
-| Surface | Observed | Hypothesis to test |
-| --- | --- | --- |
-| Today | An actions-only band precedes setup; setup also appears above the sidebar profile; a waiting-request surface competes with setup | A contextual priority order may make the next useful action clearer than equal permanent emphasis |
-| Memory | Map, scoped search, submit, type filter, refresh, maximize, and page search share the appbar | Search scope and discovery may matter more than merely removing controls |
-| Saved chat | Quiet transcript, distinct user/assistant presentation, composer, compact identity/options header | Reading and resumption should drive the layout; do not add decorative dashboard panels |
-| Inbox | Recipient/content and permission-only explanation precede decision actions; explicit defer/refusal exists for suggestions | Preserve consequence visibility even if that limits compactness |
-| Narrow Inbox | Fields stack, navigation is hidden with an opener, and the decision explanation wraps above both actions | Test comprehension and reachable controls rather than shrinking all typography to save height |
-
-The Today title is present in accessibility state but its actions-only layout suppresses the visible repeated heading. Do not diagnose a duplicated visible h1 from DOM text alone.
 
 ## Worked Decisions
 
@@ -154,4 +138,4 @@ For owner-only pilots, record tasks, context, order, observed difficulty, and pr
 
 ## Unresolved Questions
 
-Which actions are actually frequent for the owner? What makes a returning session useful? Is centered search understood by scope? How does a real large memory graph perform? Do progress cues help rather than distract? These need observation, not another design-law list. No baseline, eye tracking, brain-state inference, or representative participant study was performed. Revisit the evidence register when stronger research or standards could change a decision.
+Which actions are actually frequent for the owner? What makes a returning session useful? Is centered search understood by scope? How does a real large memory graph perform? Do progress cues help rather than distract? These need observation, not another design-law list. No baseline, eye tracking, brain-state inference, or representative participant study was performed.

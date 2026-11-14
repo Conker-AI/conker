@@ -9,7 +9,12 @@ which module versions a release pins.
 - **Memories worth tidying, from the CLI.** `conker memory upkeep` lists exact and near duplicates, open
   contradictions, expired memories and ones not recalled for a while (`--unused-days`, `--limit`, `--json`),
   each with its ids, the reason and every memory's revision and words. Installed stacks run it as
-  `./conker memory upkeep`. Needs Pi with Conker-AI/pi#250.
+  `./conker memory upkeep`. Needs Pi with Conker-AI/pi#250. (#331)
+
+- **Stale reference pages removed.** Four one-off or outdated pages are gone (a never-published terminal
+  candidate, a September tool-workspace gap table, a retry contract for deleted code, a September QA log);
+  five more lose text that described the per-write password rule ADR-0010 replaced, deleted files or the
+  old preview. (#329)
 
 - **For new contributors.** CONTRIBUTING lists seven small open tasks, each with where to look and when it is
   done, and the README's diagram shows the CLI, the approval path and what flows along each arrow. (#328)
