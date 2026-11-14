@@ -88,11 +88,7 @@ def request(
             encoded = urlencode(history_query(query))
         elif service == "pi" and path == "/definitions" and body is None:
             encoded = urlencode(
-                {
-                    key: query[key]
-                    for key in ("kind", "search", "archived")
-                    if key in query
-                }
+                {key: query[key] for key in ("kind", "search", "archived") if key in query}
             )
         elif service == "pi" and path in ("/memory/objects", "/memory/beliefs") and body is None:
             keys = ("search", "limit", "origin", "state", "memory_type", "after")
