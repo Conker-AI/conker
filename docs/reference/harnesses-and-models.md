@@ -173,7 +173,7 @@ snapshot of the entire history. `show SESSION_ID` reads the full retained chat.
 For scripts needing the earlier raw recent-list response, use
 `python scripts/conker.py api pi /sessions`; that HTTP contract is unchanged.
 
-`definitions` lists agents, teams, team templates, skills, cron jobs and projects in one shape
+`definitions` lists agents, teams, agent templates, skills, cron jobs and projects in one shape
 (kind, name, description, state, revision, times, and the kind's own route). `--kind`, `--search` and
 `--archived` filter it; each kind keeps its own commands for details and changes.
 
