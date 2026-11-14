@@ -11,6 +11,10 @@ which module versions a release pins.
   each with its ids, the reason and every memory's revision and words. Installed stacks run it as
   `./conker memory upkeep`. Needs Pi with Conker-AI/pi#250. (#331)
 
+- **One home per fact in the server guide.** docs/4-running.md keeps an overview and links to the reference
+  pages instead of repeating them; facts it alone had moved first, and four errors in it are fixed (an
+  18-resource `inspect` list, `apply memory` "only forget", the rehearsal flow, "drills are off"). (#330)
+
 - **Stale reference pages removed.** Four one-off or outdated pages are gone (a never-published terminal
   candidate, a September tool-workspace gap table, a retry contract for deleted code, a September QA log);
   five more lose text that described the per-write password rule ADR-0010 replaced, deleted files or the

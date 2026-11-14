@@ -50,6 +50,8 @@ receipt. Their request IDs are 16-100 characters under the same alphabet.
 `conker inspect call CALL_ID` and `active-call CONVERSATION_ID` select one typed
 call or the active call for one conversation; neither exposes a media route.
 Tool editor detail views use a 1-64 character draft ID beginning with a letter.
+They are `conker inspect tool-draft ID`, `tool-validation ID`, `tool-publications ID`, `tool-runs ID`
+and `tool-access ID VERSION DIGEST`.
 `tool-access` additionally requires the exact positive publication version and
 64-character lowercase SHA-256 digest. Access and run-history reads use both the
 owner and scoped execution credentials; all other editor reads use only the owner
@@ -139,3 +141,10 @@ For a new correction, the JSON file contains `operation: "correct"`,
 it contains only `operation: "retry-correction"`, `request_id`, and
 `expected_payload_hash`. These commands call the same owner service and do not
 accept a different memory namespace or destination.
+
+`conker apply memory` also forgets and remembers. To forget one reviewed revision,
+the file contains `operation: "forget"`, `memory_id`, `expected_revision` and
+`request_id`; after an uncertain response, repeating the exact same `request_id`
+reconciles the operation and never deletes twice. A revision conflict needs a fresh
+review. To remember, it contains `operation: "remember"`, `request_id` and `text`
+(1-2000 characters).
