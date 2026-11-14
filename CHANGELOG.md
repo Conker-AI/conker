@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One navigation table.** Character settings tabs read the same table as the sidebar and header, the
+  fixture shell's leftover copy is gone, and a check fails when the owner's guide names the sidebar
+  differently (it said System for Server). (#332)
+
 - **For new contributors.** CONTRIBUTING lists seven small open tasks, each with where to look and when it is
   done, and the README's diagram shows the CLI, the approval path and what flows along each arrow. (#328)
 
