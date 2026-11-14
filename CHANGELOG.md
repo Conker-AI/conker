@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override).
+
 - **conker memory used ID (R-U3).** Lists the answers that used one memory (needs Pi with `GET /memory/{id}/uses`): time, source, chat title and ids, the memory's revision then; read only, paged. Also on an installed stack through `./conker` (scripts/owner_cli.py allows that one read route by pattern).
 
 - **`scripts/` becomes a package, step 2: the development CLI and workspace.** The `conker_*` modules, `workspace*`, `local_stack` and the other helpers of `scripts/conker.py` import each other as `scripts.X`; every entry point (`conker.py`, `owner_cli.py`, `context_cli.py`, `import_cli.py`, `tool_draft_cli.py`, `workspace.py`, `workspace_models.py`, `local_stack.py`) still runs by path from any folder. No change for installed stacks (#338).
