@@ -30,7 +30,7 @@ Writes check the revision and never retry automatically. Run `conker context bud
 
 `output show SESSION` - Show current output settings.
 
-`output set SESSION [--format F] [--length L] [--language TAG] [--level L]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB). `--level` sets the answer's style: strict (short controlled sentences), plain (everyday words), normal, or deep (full detail and technical terms); `auto` follows your `chats.language_level` owner setting.
+`output set SESSION [--format F] [--length L] [--language TAG] [--level L] [--effort E]` - Set output format (auto text list table document code json), length (auto short medium long), and language (auto or a language tag like ru or en-GB). `--level` sets the answer's style: strict (short controlled sentences), plain (everyday words), normal, or deep (full detail and technical terms); `auto` follows your `chats.language_level` owner setting. `--effort` (auto, light, medium, high, max) sets how hard the answering model thinks; it reaches only the answer, only models with such a control (OpenAI reasoning models, OpenRouter models that list reasoning, Claude models that support it, Ollama gpt-oss) and is ignored elsewhere. `output show` lists in `effortSupport` which models it applies to (`null` = known only when the provider is asked). Needs a Pi release with the setting; an older Pi refuses the flag.
 
 ## Names
 

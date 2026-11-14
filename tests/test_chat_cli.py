@@ -103,7 +103,7 @@ def test_output_set_validation_exits_without_request(invoke, capsys):
     run, calls, _, _state, _ = invoke
     assert run("output", "set", "ses_a") == 1
     assert len(calls) == 0
-    assert "Give --format, --length, --language or --level." in capsys.readouterr().err
+    assert "Give --format, --length, --language, --level or --effort." in capsys.readouterr().err
 
     calls.clear()
     assert run("output", "set", "ses_a", "--language", "English") == 1
@@ -300,4 +300,43 @@ def test_suggest_refuses_a_count_pi_would_refuse(invoke):
     with pytest.raises(SystemExit):
         run("suggest", "ses_a", "--count", "4")
     assert run("suggest", "../x") == 1
+    assert calls == []
+
+
+def test_output_set_effort_sends_effort_and_keeps_other_keys(invoke):
+    run, calls, _, state, _ = invoke
+    state["responses"] = [
+        {
+            "revision": 1,
+            "output": {"format": "list", "length": "auto", "language": "auto", "level": "deep"},
+            "effortSupport": [],
+        },
+        {"revision": 2, "output": {"effort": "high"}, "effortSupport": []},
+    ]
+    assert run("output", "set", "ses_a", "--effort", "high") == 0
+    body = json.loads(calls[1][0].data)
+    assert body["expected_revision"] == 1
+    assert body["output"] == {
+        "format": "list",
+        "length": "auto",
+        "language": "auto",
+        "level": "deep",
+        "effort": "high",
+    }
+
+
+def test_output_set_without_effort_leaves_effort_out_of_request(invoke):
+    run, calls, _, state, _ = invoke
+    state["responses"] = [
+        {"revision": 1, "output": {"format": "auto", "length": "auto", "language": "auto"}},
+        {"revision": 2, "output": {"format": "text"}},
+    ]
+    assert run("output", "set", "ses_a", "--format", "text") == 0
+    assert "effort" not in json.loads(calls[1][0].data)["output"]
+
+
+def test_output_set_refuses_invalid_effort(invoke):
+    run, calls, _, _state, _ = invoke
+    with pytest.raises(SystemExit):
+        run("output", "set", "ses_a", "--effort", "extreme")
     assert calls == []

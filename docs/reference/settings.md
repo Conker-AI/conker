@@ -528,7 +528,7 @@ Who works for you and how your companion behaves.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Your agents**<br>`agents.list` | Each agent's soul, skills, tools, access and model. (applies right away) | its own screen | Settings screen |
+| **Your agents**<br>`agents.list` | Each agent's soul, tools, access and model. (applies right away) | its own screen | Settings screen |
 | **Agents passing work on**<br>`agents.handoff` | Whether one agent may hand work to another. Choices: Ask you, Allowed, Off. (saved, not used yet) | Ask you | owner settings |
 
 ### Companion

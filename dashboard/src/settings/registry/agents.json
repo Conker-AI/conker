@@ -14,7 +14,7 @@
         {
           "id": "agents.list",
           "title": "Your agents",
-          "description": "Each agent's soul, skills, tools, access and model.",
+          "description": "Each agent's soul, tools, access and model.",
           "type": "custom",
           "default": null,
           "tier": "basic",

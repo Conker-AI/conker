@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting.
 - **conker prompt enhance (B1).** `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` has Jev rewrite an unsent draft into a clearer prompt and prints it with what changed and the model that wrote it; nothing is sent or saved. Needs Pi with `POST /prompts/enhance` (Pi one model call on the drafting model, counted by the daily spending cap). Also on an installed stack as `./conker prompt enhance`. (#344)
 - **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override).
 
@@ -83,6 +84,8 @@ which module versions a release pins.
 - **Memory care.** Memory has a "Memory care" button that lists what is worth tidying (memories that disagree, saved twice,
   almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
+- **Docs say what teams and skills are.** The glossary and guides no longer mention team templates (Pi's templates are for agents, kept for recovery; there are no built-in teams) or agents holding skills (a skill is picked per message and is not attached to an agent); the Teams editor calls a role's own text "Extra instructions for this team", since Pi appends it to the agent's instructions. Text only.
+- **`conker team run` (and `next`, `show`, `finish`).** Run a saved team from the CLI, one role at a time: `run` starts a run from a chat and runs its first role, `next --reviewed` runs the next role over the team's handoff after you read the last answer, `show` and `finish [--cancel]` read and end it. Also on an installed stack as `./conker team ...`. Needs a Pi with the owner-scope `/team-runs` routes; Pi refuses a run while the daily spending cap is off. (#346)
 
 - **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
 

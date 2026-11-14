@@ -54,6 +54,10 @@ ROUTES = {
 ROUTE_PATTERNS = (
     ("POST", re.compile(r"/open-loops/loop_[0-9a-f]{32}/state")),
     ("GET", MEMORY_USES),
+    ("GET", re.compile(r"/collaboration/teams/team_[0-9a-f]{32}")),
+    ("POST", re.compile(r"/team-runs/from-team/team_[0-9a-f]{32}")),
+    ("GET", re.compile(r"/team-runs/teamrun_[0-9a-f]{32}")),
+    ("POST", re.compile(r"/team-runs/teamrun_[0-9a-f]{32}/(?:steps|finish)")),
 )
 
 
