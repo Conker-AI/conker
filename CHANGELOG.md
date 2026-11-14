@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Memories worth tidying, from the CLI.** `conker memory upkeep` lists exact and near duplicates, open
+  contradictions, expired memories and ones not recalled for a while (`--unused-days`, `--limit`, `--json`),
+  each with its ids, the reason and every memory's revision and words. Installed stacks run it as
+  `./conker memory upkeep`. Needs Pi with Conker-AI/pi#250.
+
 - **The subscriptions image's code lives with its Dockerfile.** Seven modules only the Claude plan runtime
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
   now also runs when the two modules it shares with the host helper change. (#327)

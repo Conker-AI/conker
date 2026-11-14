@@ -12,6 +12,14 @@ ROLE_CENTS = 25
 MAX_ROLES = 12
 MAX_ROLE_TOOLS = 100
 BELIEF_TYPES = ("fact", "phase", "context", "watch")
+# Pi's upkeep groups, in the order they print, with the word each line starts with.
+UPKEEP_KINDS = (
+    ("exactDuplicates", "duplicate"),
+    ("nearDuplicates", "near-duplicate"),
+    ("contradictions", "contradiction"),
+    ("expired", "expired"),
+    ("notRecalled", "unused"),
+)
 
 
 def register(commands):
@@ -38,6 +46,20 @@ def register(commands):
     )
     beliefs.add_argument("--after", help="The page cursor the previous page printed")
     beliefs.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
+    upkeep = memory_commands.add_parser(
+        "upkeep",
+        help="Memories to merge, resolve, retire or check: duplicates, contradictions, old ones",
+    )
+    upkeep.add_argument(
+        "--unused-days",
+        type=int,
+        default=90,
+        help="Not recalled for this many days counts as unused, 1 to 3650 (default 90)",
+    )
+    upkeep.add_argument(
+        "--limit", type=int, default=50, help="How many per group, 1 to 500 (default 50)"
+    )
+    upkeep.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
 
     agent = commands.add_parser("agent", help="Make a new agent")
     agent_commands = agent.add_subparsers(dest="operation", required=True)
@@ -237,10 +259,51 @@ def team_definition(args, agents):
     }
 
 
+def render_upkeep(page):
+    """A header, then per group one line `kind  ids  reason` with each memory's words below."""
+    lines = [f"Checked {page['memoriesChecked']} memories."]
+    if page.get("truncated"):
+        lines[0] += " Only the newest were checked; run it again after tidying these."
+    memories = page.get("memories") or {}
+    found = False
+    for key, word in UPKEEP_KINDS:
+        group = page[key]
+        for item in group["items"]:
+            found = True
+            lines.append(f"{word}  {','.join(item['ids'])}  {item['reason']}")
+            for memory_id in item["ids"]:
+                memory = memories.get(memory_id)
+                if memory:
+                    text = " ".join(memory["text"].split())
+                    lines.append(f"    {memory_id} rev {memory['revision']}  {text}")
+        more = group["total"] - len(group["items"])
+        if more > 0:
+            lines.append(f"{word}  ... and {more} more (raise --limit)")
+    if not found:
+        lines.append("Nothing to tidy.")
+    return "\n".join(lines)
+
+
+def _upkeep(args, config, request):
+    """With --json, Pi's reply to print; otherwise prints the groups itself and returns None."""
+    if not 1 <= args.unused_days <= 3650:
+        raise ValueError("--unused-days must be from 1 to 3650.")
+    if not 1 <= args.limit <= 500:
+        raise ValueError("--limit must be from 1 to 500.")
+    query = {"unused_days": args.unused_days, "limit": args.limit}
+    page = pi_call(request, config, "/memory/upkeep", query=query)
+    if args.json:
+        return page
+    print(render_upkeep(page))
+    return None
+
+
 def operation(args, config, request):
     """Run one memory, agent or team subcommand and return the value to print (None: printed)."""
     if args.command == "memory" and args.operation == "beliefs":
         return _beliefs(args, config, request)
+    if args.command == "memory" and args.operation == "upkeep":
+        return _upkeep(args, config, request)
     if args.command == "memory":
         return _search(args, config, request)
     if args.command == "agent":
