@@ -210,7 +210,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
             {readingField && <p role="status" className="text-xs text-muted-foreground">Reading {fieldLabel(readingField).toLocaleLowerCase()}…</p>}
             {content && <><p className="text-xs text-muted-foreground">{fieldLabel(content.field)} · {content.total_characters} characters</p><pre className="whitespace-pre-wrap break-words font-sans text-sm">{content.content}</pre>{content.next_offset !== null && <Button size="sm" variant="outline" disabled={readingField !== null} onClick={() => void expandField(content.field, content.next_offset!)}>Next part</Button>}</>}
           </ReferenceSection>
-          <ReferenceSection title="Connections">{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No recorded relationships.</p> : detail.links.map(link => {
+          <ReferenceSection title="Connections">{!detail ? <p role="status">Loading connections…</p> : !detail.links.length ? <p className="text-muted-foreground">No links yet.</p> : detail.links.map(link => {
             const outgoing = link.source_type === selected.type && link.source_id === selected.id
             const neighbor = detail.nodes.find(item => item.type === (outgoing ? link.target_type : link.source_type) && item.id === (outgoing ? link.target_id : link.source_id))
             return <Button key={link.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal text-left" onClick={() => { if (neighbor) selectRecord(neighbor) }}>{outgoing ? 'To' : 'From'} {link.relationship.replaceAll('_', ' ')} · {neighbor?.title ?? 'Memory'}</Button>
@@ -220,6 +220,6 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
         </div>
       </WorkspaceInspector>}
     </div>
-    <div className="memory-workspace-status"><span role="status">{page ? `${page.objects.length} of ${page.total} records loaded` : 'Memory'}{isGraph && snapshot?.partial ? ' · Partial graph' : ''}</span>{page?.next_after && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void more()}>Load more</Button>}<span className="hidden md:inline">{isGraph ? `${records.length} visible records` : 'Memory library'}</span></div>
+    <div className="memory-workspace-status"><span role="status">{page ? `${page.objects.length} of ${page.total} memories loaded` : 'Memory'}{isGraph && snapshot?.partial ? ' · Partial graph' : ''}</span>{page?.next_after && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void more()}>Load more</Button>}<span className="hidden md:inline">{isGraph ? `${records.length} visible memories` : 'Memory library'}</span></div>
   </div>
 }

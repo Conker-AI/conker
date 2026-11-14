@@ -23,6 +23,7 @@ import { HomeJumpBackIn } from './home-resume'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
+import { useInboxAttention } from '@/lib/workspace-chrome'
 import './home-bento.css'
 
 type Props = { runtime: GatewayRuntimeClient; activity: GatewayActivityClient; owner: GatewayOwnerClient; proposals: GatewayProposalClient; control: GatewayControlClient }
@@ -148,6 +149,8 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
   const retry = () => { void load(); void reloadPlan(); setRefreshed(value => value + 1) }
   const allFailed = !!failed && failed.sources.size === sources.length && loaded.size === 0
   const peak = Math.max(0, ...home.runDays.map(item => item.count))
+  // The sidebar and the Inbox count every kind of item; Home shows that same number (its list holds only decisions and ideas).
+  const waitingTotal = useInboxAttention() ?? home.needsTotal
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
   const counted = (source: Source) => !waiting(source) && !missing(source)
   const earned = greetingStyle === 'encouraging' && counted('requests') && counted('proposals') ? earnedLine(home.decidedToday, counted('runs') ? home.runsToday : 0) : null
@@ -171,8 +174,8 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
       {allFailed && <InlineError error={failed.error} onRetry={() => Promise.all([load(), reloadPlan()])} />}
 
       <div className="home-bento" data-layout={layout}>
-        <Tile area="needs" label="Needs you" icon={<Inbox />} count={missing('requests') ? null : home.needsTotal}
-          link={home.needsTotal > 0 && <TileLink to="/inbox">{home.needsTotal > home.needs.length ? `All ${home.needsTotal} in Inbox` : 'Open Inbox'}</TileLink>} className="home-needs">
+        <Tile area="needs" label="Needs you" icon={<Inbox />} count={missing('requests') ? null : waitingTotal}
+          link={waitingTotal > 0 && <TileLink to="/inbox">{waitingTotal > home.needs.length ? `All ${waitingTotal} in Inbox` : 'Open Inbox'}</TileLink>} className="home-needs">
           {waiting('requests') ? <TileLoading rows={3} /> : missing('requests') ? <TileFailed onRetry={retry} />
             : home.needs.length ? <ul className="-mx-2 flex flex-col">{home.needs.map(item => <Need key={`${item.kind}:${item.id}`} item={item} />)}</ul>
               : <div className="flex flex-1 items-center gap-3 py-2 text-sm text-muted-foreground"><CheckCheck className="size-5 shrink-0 text-success-foreground" aria-hidden="true" />Nothing needs you right now.</div>}
@@ -225,7 +228,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
         <Tile area="decided" label="Decided by you" icon={<ShieldCheck />}>
           {waiting('requests') ? <TileLoading rows={1} /> : missing('requests') ? <TileFailed onRetry={retry} /> : <>
             <p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tabular-nums leading-none">{home.decidedToday}</span><span className="text-sm text-muted-foreground">today</span></p>
-            <p className="text-sm text-muted-foreground">{home.needsTotal ? `${home.needsTotal} still waiting` : 'Nothing waiting'}</p>
+            <p className="text-sm text-muted-foreground">{waitingTotal ? `${waitingTotal} still waiting` : 'Nothing waiting'}</p>
           </>}
         </Tile>
 
