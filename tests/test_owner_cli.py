@@ -154,6 +154,25 @@ def test_memory_beliefs_reaches_pi_through_the_relay(monkeypatch, capsys):
     assert capsys.readouterr().out.startswith("Conker believes 0 things about you")
 
 
+def test_memory_upkeep_reaches_pi_through_the_relay(monkeypatch, capsys):
+    group = {"items": [], "total": 0}
+    kinds = ("exactDuplicates", "nearDuplicates", "contradictions", "expired", "notRecalled")
+    page = {
+        "agentId": "companion",
+        "checkedAt": "2026-11-14T08:00:00+00:00",
+        "memoriesChecked": 0,
+        "truncated": False,
+        **{key: group for key in kinds},
+        "memories": {},
+    }
+    relay = Relay(monkeypatch, {("GET", "/memory/upkeep?unused_days=30&limit=5"): (200, page)})
+    assert main("memory", "upkeep", "--unused-days", "30", "--limit", "5", "--json") == 0
+    assert relay.sent == [("GET", "/memory/upkeep?unused_days=30&limit=5", None)]
+    assert json.loads(capsys.readouterr().out) == page
+    assert main("memory", "upkeep", "--unused-days", "30", "--limit", "5") == 0
+    assert capsys.readouterr().out.splitlines() == ["Checked 0 memories.", "Nothing to tidy."]
+
+
 def test_a_query_cannot_change_the_checked_path(monkeypatch):
     relay = Relay(monkeypatch, {("GET", "/inbox?a=%2F..%2Fsessions"): (200, {})})
     config_cli.request(["docker"], "pi", "/inbox", query={"a": "/../sessions"})

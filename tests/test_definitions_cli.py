@@ -254,3 +254,87 @@ def test_memory_beliefs_refuses_bad_flags_before_calling_pi(monkeypatch, capsys)
     ):
         code, sent, out = calls(monkeypatch, capsys, arguments)
         assert code == 1 and sent == [] and out.err
+
+
+def _group(*items, total=None):
+    return {"items": list(items), "total": len(items) if total is None else total}
+
+
+UPKEEP = {
+    "agentId": "companion",
+    "checkedAt": "2026-11-14T08:00:00+00:00",
+    "memoriesChecked": 12,
+    "truncated": False,
+    "exactDuplicates": _group({"ids": ["m1", "m2"], "reason": "same text", "conflictId": None}),
+    "nearDuplicates": _group(),
+    "contradictions": _group(
+        {"ids": ["m3", "m4"], "reason": "say different things", "conflictId": "c1"}
+    ),
+    "expired": _group(),
+    "notRecalled": _group(
+        {"ids": ["m5"], "reason": "never recalled", "conflictId": None}, total=4
+    ),
+    "memories": {
+        "m1": {"text": "Tea at\nfour", "revision": 1},
+        "m2": {"text": "Tea at four", "revision": 3},
+        "m3": {"text": "Lives in Riga", "revision": 1},
+        "m4": {"text": "Lives in Tallinn", "revision": 2},
+    },
+}
+
+
+def test_memory_upkeep_flags_map_to_the_query(monkeypatch, capsys):
+    code, sent, out = calls(
+        monkeypatch,
+        capsys,
+        ["memory", "upkeep", "--unused-days", "30", "--limit", "5", "--json"],
+        [UPKEEP],
+    )
+    assert code == 0 and json.loads(out.out) == UPKEEP
+    url = urlsplit(sent[0].full_url)
+    assert url.path == "/memory/upkeep" and sent[0].get_method() == "GET"
+    assert parse_qs(url.query) == {"unused_days": ["30"], "limit": ["5"]}
+    code, sent, _ = calls(monkeypatch, capsys, ["memory", "upkeep", "--json"], [UPKEEP])
+    assert parse_qs(urlsplit(sent[0].full_url).query) == {
+        "unused_days": ["90"],
+        "limit": ["50"],
+    }
+
+
+def test_memory_upkeep_prints_each_group_with_the_words(monkeypatch, capsys):
+    code, _, out = calls(monkeypatch, capsys, ["memory", "upkeep"], [UPKEEP])
+    assert code == 0
+    assert out.out.splitlines() == [
+        "Checked 12 memories.",
+        "duplicate  m1,m2  same text",
+        "    m1 rev 1  Tea at four",
+        "    m2 rev 3  Tea at four",
+        "contradiction  m3,m4  say different things",
+        "    m3 rev 1  Lives in Riga",
+        "    m4 rev 2  Lives in Tallinn",
+        "unused  m5  never recalled",
+        "unused  ... and 3 more (raise --limit)",
+    ]
+
+
+def test_memory_upkeep_says_when_there_is_nothing(monkeypatch, capsys):
+    empty = {**UPKEEP, "truncated": True, "memories": {}}
+    for key in ("exactDuplicates", "contradictions", "notRecalled"):
+        empty[key] = _group()
+    code, _, out = calls(monkeypatch, capsys, ["memory", "upkeep"], [empty])
+    assert code == 0
+    assert out.out.splitlines() == [
+        "Checked 12 memories. Only the newest were checked; run it again after tidying these.",
+        "Nothing to tidy.",
+    ]
+
+
+def test_memory_upkeep_refuses_bad_flags_before_calling_pi(monkeypatch, capsys):
+    for arguments in (
+        ["memory", "upkeep", "--unused-days", "0"],
+        ["memory", "upkeep", "--unused-days", "3651"],
+        ["memory", "upkeep", "--limit", "0"],
+        ["memory", "upkeep", "--limit", "501"],
+    ):
+        code, sent, out = calls(monkeypatch, capsys, arguments)
+        assert code == 1 and sent == [] and out.err

@@ -6,6 +6,11 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Memories worth tidying, from the CLI.** `conker memory upkeep` lists exact and near duplicates, open
+  contradictions, expired memories and ones not recalled for a while (`--unused-days`, `--limit`, `--json`),
+  each with its ids, the reason and every memory's revision and words. Installed stacks run it as
+  `./conker memory upkeep`. Needs Pi with Conker-AI/pi#250. (#331)
+
 - **One home per fact in the server guide.** docs/4-running.md keeps an overview and links to the reference
   pages instead of repeating them; facts it alone had moved first, and four errors in it are fixed (an
   18-resource `inspect` list, `apply memory` "only forget", the rehearsal flow, "drills are off"). (#330)
