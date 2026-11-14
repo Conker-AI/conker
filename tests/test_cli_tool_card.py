@@ -7,8 +7,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import conker_parser
-import conker_toolgate
+from scripts import conker_parser, conker_toolgate
 
 
 def run(template=None, cards=None):

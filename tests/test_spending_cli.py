@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import conker as cli
+from scripts import conker as cli
 
 CAP = {"enabled": True, "cents": 500, "tokens": 2_000_000}
 PREFERENCES = {

@@ -17,7 +17,11 @@ import sys
 from pathlib import Path
 
 import config_cli
-import conker_context
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts import conker_context
 
 CONTEXT = re.compile(r"/context/[A-Za-z0-9_-]{1,128}")
 

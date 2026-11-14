@@ -3,8 +3,8 @@
 import mimetypes
 from pathlib import Path
 
-from conker_context import pi_call
-from conker_inputs import identity
+from scripts.conker_context import pi_call
+from scripts.conker_inputs import identity
 
 ATTACHMENT = r"attachment_[0-9a-f]{32}"
 
