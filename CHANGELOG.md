@@ -89,6 +89,8 @@ which module versions a release pins.
 
 - **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
 
+- **A wand in the composer.** One small button turns your draft into a clearer prompt: a goal, the context and the shape of the answer you want. It never sends. You read the rewrite in the text box, see what changed, open "Show original" and press Undo if you prefer your own words. One model call, counted in the daily spending cap. Needs Pi with Conker-AI/pi#271. (#349)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every

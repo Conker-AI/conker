@@ -33,6 +33,7 @@ import { GatewayCallLauncher } from './call-workspace'
 import { GatewaySessionAgentControl } from './session-agent-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { ModeControl, TemplateInput, TemplatePicker } from './composer-parts'
+import { PromptEnhanceControl } from './prompt-enhance-control'
 import { ChatTitle } from './chat-title'
 import { nameChat } from './chat-title-actions'
 import { ChatOutputControl } from './chat-output-control'
@@ -95,6 +96,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         {control && current && current.status === 'open' && <ChatOutputControl key={`output:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} onChanged={refreshChat} />}
         <ThinkControl companion={activeAgentId === 'companion'} checked={selectedValue.think} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={think => setThinkChoice(selected, think)} />
         {headerExtra}
+        {control && <PromptEnhanceControl key={`wand:${selected}`} client={control.promptEnhance} value={chat.draft} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} options={{ sessionId: selected }} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation) || dictating || sendPending || Boolean(attempt)} />}
         <NewChatVoiceControl value={chat.draft} input={replyComposer} onRecordingChange={setDictating} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation)} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} />
       </>} />
       <DraftSaveStatus key={`draft-status:${selected}`} entry={draftEntries[selected]} controller={draftController} draftKey={selected} disabled={sendPending || current?.status === 'forgotten'} />

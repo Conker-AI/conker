@@ -2267,6 +2267,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/prompts/enhance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enhance
+         * @description A clearer, better organised version of the draft, with notes on what changed.
+         */
+        post: operations["enhance_prompts_enhance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/artifacts": {
         parameters: {
             query?: never;
@@ -4389,6 +4409,26 @@ export interface paths {
         get: operations["list_memory_uses_memory__memory_id__uses_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memory/recall-notices/{notice_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Recall Notice
+         * @description Hide an Inbox notice that answers used a memory since changed; the uses stay listed.
+         */
+        post: operations["dismiss_recall_notice_memory_recall_notices__notice_id__dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7583,6 +7623,21 @@ export interface components {
             target: string;
             /** Label */
             label?: string | null;
+        };
+        /** EnhancedPrompt */
+        EnhancedPrompt: {
+            /** Text */
+            text: string;
+            /** Notes */
+            notes: string[];
+            /** Modelid */
+            modelId: string;
+            /** Templateid */
+            templateId?: string | null;
+            /** Fields */
+            fields?: {
+                [key: string]: string;
+            };
         };
         /** Enqueue */
         Enqueue: {
@@ -10800,6 +10855,19 @@ export interface components {
             lastCheckedAt?: number | null;
             /** Problem */
             problem?: ("needs_approval" | "no_credential" | "failed") | null;
+        };
+        /** Request */
+        pi__agents__prompt_enhance__Request: {
+            /** Text */
+            text: string;
+            /** Sessionid */
+            sessionId?: string | null;
+            /** Privacy */
+            privacy?: {
+                [key: string]: boolean;
+            };
+            /** Templateid */
+            templateId?: string | null;
         };
         /** State */
         pi__agents__skills__State: {
@@ -15322,8 +15390,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 team_id: string;
@@ -15360,8 +15428,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 identity: string;
@@ -15394,8 +15462,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 identity: string;
@@ -15432,8 +15500,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 identity: string;
@@ -15466,8 +15534,8 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Pi-Owner-Key"?: string | null;
                 "X-Pi-Key"?: string | null;
-                "X-Pi-Gateway-Key"?: string | null;
             };
             path: {
                 identity: string;
@@ -16176,6 +16244,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enhance_prompts_enhance_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["pi__agents__prompt_enhance__Request"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnhancedPrompt"];
                 };
             };
             /** @description Validation Error */
@@ -21022,6 +21126,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_recall_notice_memory_recall_notices__notice_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                notice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

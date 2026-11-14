@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import { NewChatPrivacyControl, type NewChatPrivacy } from './new-chat-privacy-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
+import { PromptEnhanceControl } from './prompt-enhance-control'
 import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
 import { SendIcon } from '@/components/icons/animated/icons'
 import { ConversationStarters, ModeControl, NewChatMediaPlaceholders, TemplateInput, TemplatePicker } from './composer-parts'
@@ -50,6 +51,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
               <ThinkControl companion={firstAgent === 'companion'} checked={firstValue.think} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={think => setThinkChoice('__new__', think)} />
               <NewChatPrivacyControl revisionKey={JSON.stringify(firstValue.privacy)} value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
               <NewChatMediaPlaceholders />
+              {control && <PromptEnhanceControl client={control.promptEnhance} value={firstMessage} onChange={setFirstMessage} options={{ privacy: firstPrivacy }} disabled={createPending || sendPending || Boolean(createUnknown) || dictating} />}
               <NewChatVoiceControl value={firstMessage} onChange={setFirstMessage} input={newChatComposer} onRecordingChange={setDictating} disabled={!visible || createPending || sendPending || Boolean(createUnknown)} />
               <AnimatedIconButton icon={SendIcon} type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={dictating || createPending || sendPending || !firstMessage.trim() || !draftCanSend(draftEntries.new) || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)} />
         </>} />
