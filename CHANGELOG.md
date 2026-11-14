@@ -6,7 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
-- **Type errors 206 to 129, coverage floor 78 to 80.** Type-only fixes in 9 scripts and 10 test files, and refusal tests for settings docs, release first run, import and config CLIs, capability status, the installed CLI and the repository updater (#PR).
+- **Type errors 206 to 129, coverage floor 78 to 80.** Type-only fixes in 9 scripts and 10 test files, and refusal tests for settings docs, release first run, import and config CLIs, capability status, the installed CLI and the repository updater (#335).
 - **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due
   first, with overdue ones marked; `conker loops add` files one for a chat and `done`, `drop` and `reopen`
   close or reopen it. Installed stacks run it as `./conker loops`. Needs Pi with Conker-AI/pi#251.
