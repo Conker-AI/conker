@@ -219,19 +219,9 @@ only to independently verified snapshots, and records policy-bound setup evidenc
 files are deliberately excluded and must be reprovisioned during held recovery. Keep this
 verified snapshot path; an ad hoc archive is not equivalent recovery evidence.
 
-### Dedicated-server cleanup, 23 September 2026
+### Firewall follow-up
 
-`retire_freellmapi.py` archives and verifies FreeLLMAPI's volume before removing its
-container, volume and image. It also removes the exact obsolete AgentGate backup
-cron entry and archives old Hermes state, backup files and development scripts.
-The old AgentGate review virtual environment was archived separately. Six unused
-legacy Docker networks and an empty old SystemGate backup directory were removed.
-Only the ten Conker application containers remain. Gateway health, MemoryGate's
-Postgres/Qdrant/embedding checks, semantic retrieval and Laya ranking passed after
-cleanup. No application credentials are recorded in this repository.
-
-**Firewall follow-up requires interactive sudo:** the existing LAN SSH exception
-must be removed before claiming Tailscale-only inbound application access:
+The existing LAN SSH exception must be removed before claiming Tailscale-only inbound application access:
 
 ```sh
 sudo ufw delete allow from 192.168.1.0/24 to any port 22 proto tcp
@@ -243,5 +233,4 @@ After applying, verify a fresh Tailscale SSH connection and HTTPS on port 8443,
 then verify that a LAN connection to port 22 fails. Conker's Docker gateway is
 published only on loopback; do not publish backend ports on all interfaces.
 Tailscale transport traffic itself remains necessary. The firewall change was
-prepared but not applied by the cleanup script because sudo requires the owner's
-password.
+prepared but not applied, because sudo requires the owner's password.

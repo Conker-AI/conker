@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One command after an update.** `conker post-update-check` runs every check of a release update in one go
+  and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
+  search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
+  failure exits non-zero. (#318)
+
+- **A page for every CLI group.** `docs/reference/` has pages for `conker agent`/`team`, `memory` and
+  `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
+
+- **Retired cleanup scripts removed.** `deploy/ubuntu/retire_legacy.py` and `retire_freellmapi.py` ran once
+  (September) and nothing calls them; the server guide says `conker update` is the only update path. (#325)
+
 - **Character preview works again.** "Preview example" in Character settings failed with an error since the
   old preview client was removed; it plays the authored example again (no model is called). The tool editor's
   "More tool actions" menu no longer shows Duplicate and Delete preview tool, which were always disabled. (#322)
