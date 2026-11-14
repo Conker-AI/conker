@@ -13,6 +13,7 @@ from scripts.conker_files import register as register_files
 from scripts.conker_inbox import register as register_inbox
 from scripts.conker_loops import register as register_loops
 from scripts.conker_messages import register as register_message
+from scripts.conker_prompt import register as register_prompt
 from scripts.conker_spending import add_parser as register_spending
 from scripts.conker_workflows import register as register_workflows
 from scripts.tool_drafts import register as register_tool
@@ -23,12 +24,8 @@ def build_parser(description):
     commands = parser.add_subparsers(dest="command", required=True)
     sessions = commands.add_parser("sessions", help="Browse compact chat history pages")
     sessions.add_argument("--limit", type=int, default=50, help="Chats per page (1-50)")
-    sessions.add_argument(
-        "--query", help="Literal title/summary search, at most 200 characters"
-    )
-    sessions.add_argument(
-        "--cursor", help="next_cursor from the same query; omit to refresh"
-    )
+    sessions.add_argument("--query", help="Literal title/summary search, at most 200 characters")
+    sessions.add_argument("--cursor", help="next_cursor from the same query; omit to refresh")
     new = commands.add_parser("new")
     new.add_argument("title", nargs="?", default="")
     chat = commands.add_parser("chat")
@@ -90,9 +87,7 @@ def build_parser(description):
         "memory-delivery", help="Read acknowledged memory delivery for saved messages"
     )
     delivery.add_argument("session")
-    delivery.add_argument(
-        "--message", help="Read one saved user message, including older history"
-    )
+    delivery.add_argument("--message", help="Read one saved user message, including older history")
     register_context(commands)
     register_files(commands)
     register_message(commands)
@@ -100,13 +95,12 @@ def build_parser(description):
     register_inbox(commands)
     register_agents(commands)
     register_loops(commands)
+    register_prompt(commands)
     register_config(commands)
     register_workflows(commands)
     register_tool(commands)
     register_import(commands)
-    stop = commands.add_parser(
-        "stop", help="Stop the saved submission by its request ID"
-    )
+    stop = commands.add_parser("stop", help="Stop the saved submission by its request ID")
     stop.add_argument("request_id")
     submission = commands.add_parser(
         "submission", help="Inspect a durable submission before deciding how to recover"
@@ -118,9 +112,7 @@ def build_parser(description):
     draft_commands = draft.add_subparsers(dest="operation", required=True)
     for operation in ("show", "save", "clear"):
         item = draft_commands.add_parser(operation)
-        item.add_argument(
-            "target", help="Conversation ID, or new for the unsent first message"
-        )
+        item.add_argument("target", help="Conversation ID, or new for the unsent first message")
         item.add_argument("--task", help="Separate task draft within this conversation")
         if operation == "save":
             item.add_argument(
@@ -165,16 +157,12 @@ def build_parser(description):
     skill_import = skill_commands.add_parser("import")
     skill_import.add_argument("file", type=Path)
     skill_import.add_argument("--expected-revision", type=int, default=0)
-    skill_import.add_argument(
-        "--expected-id", help="Bind a replacement to the inspected skill ID"
-    )
+    skill_import.add_argument("--expected-id", help="Bind a replacement to the inspected skill ID")
     skill_state = skill_commands.add_parser("state")
     skill_state.add_argument("id")
     skill_state.add_argument("--enabled", choices=["true", "false"], required=True)
     skill_state.add_argument("--expected-revision", type=int, required=True)
-    mcp = commands.add_parser(
-        "mcp", help="Discover and manage remote MCP tools through ToolGate"
-    )
+    mcp = commands.add_parser("mcp", help="Discover and manage remote MCP tools through ToolGate")
     mcp_commands = mcp.add_subparsers(dest="operation", required=True)
     mcp_commands.add_parser("list")
     discover = mcp_commands.add_parser("discover")
@@ -183,9 +171,7 @@ def build_parser(description):
         "--secret-ref",
         help="Existing ToolGate vault reference; never a credential value",
     )
-    mcp_import = mcp_commands.add_parser(
-        "import", help="Import one tool from saved discovery JSON"
-    )
+    mcp_import = mcp_commands.add_parser("import", help="Import one tool from saved discovery JSON")
     mcp_import.add_argument("file", type=Path)
     mcp_import.add_argument("--tool", required=True, help="Exact remote tool name")
     mcp_import.add_argument("--id", required=True, help="New mcp.<name> capability ID")
@@ -194,9 +180,7 @@ def build_parser(description):
     for operation in ("state", "access"):
         item = mcp_commands.add_parser(operation)
         item.add_argument("id")
-        item.add_argument(
-            "--enabled", choices=["true", "false"], required=operation == "state"
-        )
+        item.add_argument("--enabled", choices=["true", "false"], required=operation == "state")
         item.add_argument("--expected-digest", required=operation == "state")
     tool_access = commands.add_parser(
         "tool-access", help="Show or switch whether Conker may use one ToolGate tool"
@@ -229,9 +213,7 @@ def build_parser(description):
         "--role", help="Point one model role at one model, e.g. drafting or reviewer"
     )
     choice = models.add_mutually_exclusive_group()
-    choice.add_argument(
-        "--model", help="The model ID for --role, as conker models lists it"
-    )
+    choice.add_argument("--model", help="The model ID for --role, as conker models lists it")
     choice.add_argument("--off", action="store_true", help="Switch --role off")
     models.add_argument(
         "--backup",
@@ -239,9 +221,7 @@ def build_parser(description):
         metavar="ID",
         help="A backup model for --model, tried after it fails; repeat for more, first first",
     )
-    commands.add_parser(
-        "profiles", help="Read-only model profiles from recorded outcomes"
-    )
+    commands.add_parser("profiles", help="Read-only model profiles from recorded outcomes")
     definitions = commands.add_parser(
         "definitions",
         help="Agents, teams, templates, skills, cron jobs and projects in one list",
@@ -250,9 +230,7 @@ def build_parser(description):
         "--kind", choices=["agent", "team", "template", "skill", "job", "project"]
     )
     definitions.add_argument("--search", help="Text to find in names and descriptions")
-    definitions.add_argument(
-        "--archived", action="store_true", help="Include archived ones"
-    )
+    definitions.add_argument("--archived", action="store_true", help="Include archived ones")
     register_spending(commands)
     limits = commands.add_parser(
         "limits",
@@ -275,9 +253,7 @@ def build_parser(description):
         default="status",
         nargs="?",
     )
-    auth.add_argument(
-        "--billing", choices=["subscription", "api"], default="subscription"
-    )
+    auth.add_argument("--billing", choices=["subscription", "api"], default="subscription")
     native = commands.add_parser(
         "native",
         help="Run the official agent with Conker's isolated sign-in; native permissions apply",
@@ -291,9 +267,7 @@ def build_parser(description):
     native_sessions.add_argument("provider", choices=["claude", "codex"])
     native_operations = native_sessions.add_subparsers(dest="operation", required=True)
     native_list = native_operations.add_parser("list")
-    native_list.add_argument(
-        "--limit", type=int, help="Codex page size, 1 to 50 (default 25)"
-    )
+    native_list.add_argument("--limit", type=int, help="Codex page size, 1 to 50 (default 25)")
     native_list.add_argument(
         "--cursor", help="Next cursor from the same Codex history scope and page size"
     )
