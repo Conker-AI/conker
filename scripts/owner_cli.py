@@ -1,6 +1,6 @@
-"""conker memory search, beliefs and upkeep, agent create, team create, inbox, spending and loops on
-an installed stack: the development CLI's own modules (conker_agents, conker_inbox, conker_spending,
-conker_loops), with Pi reached in its container.
+"""conker memory search, beliefs and upkeep, agent create, team create, inbox, spending, loops and
+prompt enhance on an installed stack: the development CLI's own modules (conker_agents,
+conker_inbox, conker_spending, conker_loops, conker_prompt), with Pi reached in its container.
 
 As for conker config (scripts/config_cli.py), each call is one `docker compose exec` into the pi
 container, where a short relay calls Pi on its own port with the key Pi was started with: the key
@@ -28,10 +28,12 @@ from scripts.conker_inbox import operation as inbox_operation
 from scripts.conker_inbox import register as register_inbox
 from scripts.conker_loops import operation as loops_operation
 from scripts.conker_loops import register as register_loops
+from scripts.conker_prompt import operation as prompt_operation
+from scripts.conker_prompt import register as register_prompt
 from scripts.conker_spending import add_parser as register_spending
 from scripts.conker_spending import spending_operation
 
-COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops")
+COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops", "prompt")
 # What these commands may ask of Pi: (method, path). A body makes it a POST.
 ROUTES = {
     ("GET", "/memory/objects"),
@@ -46,6 +48,7 @@ ROUTES = {
     ("POST", "/owner/preferences"),
     ("GET", "/open-loops"),
     ("POST", "/open-loops"),
+    ("POST", "/prompts/enhance"),
 }
 # Routes with an id in the path: (method, whole-path pattern).
 ROUTE_PATTERNS = (
@@ -76,6 +79,7 @@ def parser() -> argparse.ArgumentParser:
     register_inbox(commands)
     register_spending(commands)
     register_loops(commands)
+    register_prompt(commands)
     return parsed
 
 
@@ -87,6 +91,10 @@ def run(args, request) -> int:
     elif args.command == "loops":
         value = loops_operation(args, None, request)
         if value is None:  # the list printed itself
+            return 0
+    elif args.command == "prompt":
+        value = prompt_operation(args, None, request)
+        if value is None:  # the rewrite printed itself
             return 0
     else:
         value = agents_operation(args, None, request)

@@ -1031,6 +1031,8 @@ ${BOLD}conker${OFF} - your companion, on this machine
               Today's paid model calls against the daily cap, or change the cap
   ${BOLD}loops${OFF} [list [--all] [--due-before DATE] | add CHAT_ID "TEXT" [--due DATE] | done|drop|reopen LOOP_ID]
               Promises across chats: what you and Conker said you would do, by when
+  ${BOLD}prompt${OFF} enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]
+              Have Jev rewrite a draft into a clearer prompt; nothing is sent or saved
   ${BOLD}tool${OFF} draft "DESCRIPTION" [--no-wait]
               Have Conker make a tool; the draft waits in the Inbox for review
   ${BOLD}ops${OFF} [show ID | run OPERATION [NAME=VALUE...]]
@@ -1147,7 +1149,7 @@ case "$command" in
     config)    shift; cmd_config "$@" ;;
     tool)      shift; cmd_tool "$@" ;;
     context)   shift; cmd_context "$@" ;;
-    memory|agent|team|inbox|spending|loops) cmd_owner "$@" ;;
+    memory|agent|team|inbox|spending|loops|prompt) cmd_owner "$@" ;;
     ops)       shift; cmd_ops "$@" ;;
     import)    shift; cmd_import "$@" ;;
     tailscale) [ "$#" -eq 1 ] || { usage >&2; exit 2; }; cmd_tailscale ;;

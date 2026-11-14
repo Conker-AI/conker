@@ -114,7 +114,7 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
-An installed stack runs `inbox`, `spending`, `loops`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+An installed stack runs `inbox`, `spending`, `loops`, `prompt enhance`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
 
 ## Open loops
 
@@ -125,6 +125,12 @@ Promises across every chat you can see: what you said you would do and what Conk
 `conker loops add CHAT_ID "TEXT" [--by owner|conker] [--due YYYY-MM-DD] [--message MESSAGE_ID]` - File a promise (1-500 characters) for a chat, optionally pointing at the message it came from; prints the new promise with its id.
 
 `conker loops done LOOP_ID`, `conker loops drop LOOP_ID`, `conker loops reopen LOOP_ID` - Mark a promise done, dropped, or open again. This works in a chat that has since been forked or closed.
+
+## Prompt enhance
+
+`conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` - Jev rewrites an unsent draft (1-8000 characters) into a clearer, better organised prompt: goal or role, context, task and wanted output format. Prints the rewrite, then what changed and which model wrote it. Nothing is sent or saved: copy the text into a chat yourself.
+
+It makes one model call on the drafting model (the answer model when none is set) that sees only your draft, no memory and no history. A paid model counts in the daily spending cap; when the cap is reached, or cannot be checked, nothing is sent and the command says so. With `--chat`, a chat that has helper models off is refused. `--template` is accepted but Pi refuses it for now: prompt templates exist only in the dashboard, so this command only rewrites. Needs Pi with `POST /prompts/enhance`.
 
 ## Memory, Agents and Teams
 
