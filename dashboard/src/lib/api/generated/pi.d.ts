@@ -10156,6 +10156,11 @@ export interface components {
              * @default false
              */
             conditionReviewed: boolean;
+            /**
+             * Background
+             * @default false
+             */
+            background: boolean;
         };
         /** Step */
         "Step-Output": {
@@ -15508,6 +15513,13 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Started in the background; read the run until done. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

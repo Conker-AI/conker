@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { gatewayError } from '@/lib/gateway/transport'
 import type { AgentConfiguration, AgentProfile, GatewayControlClient } from '@/lib/gateway/control'
 import { AgentToolAccess } from './agent-tool-access'
+import { AgentSkills } from './agent-skills'
 
 const blank: AgentConfiguration = {
   name: '', role: '', instructions: '', modelId: null, toolIds: [], memory: { scope: 'conversation', memoryIds: [] },
@@ -70,7 +71,7 @@ function AgentEditor({ client, profile, creating, companion, onSaved, onCancel, 
     } catch (cause) { setError(changedMessage(cause)) } finally { setPending(false) }
   }
   return <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-    <OverlayBody><div className="space-y-5"><AgentFields value={value} onChange={edit} disabled={pending} companion={profile?.kind === 'companion'} /><AgentToolAccess client={client} value={value} onChange={edit} disabled={pending} companion={profile?.kind === 'companion' || Boolean(companion)} /></div></OverlayBody>
+    <OverlayBody><div className="space-y-5"><AgentFields value={value} onChange={edit} disabled={pending} companion={profile?.kind === 'companion'} /><AgentToolAccess client={client} value={value} onChange={edit} disabled={pending} companion={profile?.kind === 'companion' || Boolean(companion)} /><AgentSkills client={client} value={value} onChange={edit} disabled={pending} /></div></OverlayBody>
     <FormActions inset description={error ? <span role="alert" className="text-destructive-foreground">{error}</span> : companion ? `Saved profile, version ${profile?.revision ?? 1}.` : 'Saving creates an immutable revision.'}>
       <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>Cancel</Button>
       <Button type="submit" disabled={pending || !value.name.trim() || !value.role.trim() || !value.instructions.trim() || (value.memory.scope === 'selected' && !value.memory.memoryIds.length)}><Save />{pending ? 'Saving…' : 'Save'}</Button>
