@@ -29,7 +29,7 @@ Base UI has been a release candidate for eight weeks with no publish. Radix ship
 The `new-york-v4` style the registry serves today still lists `radix-ui` as `button`'s dependency,
 so Radix is not a legacy path being kept alive out of politeness.
 
-`docs/research/frontend-and-streaming.md` already caught secondary sources confidently claiming Base
+[`docs/research/frontend-and-streaming.md`](https://github.com/Conker-AI/conker/blob/5e71ee97a09bb2d5a7fcef73c8bf8bff87229d29/docs/archive/research/frontend-and-streaming.md) already caught secondary sources confidently claiming Base
 UI "reached v1.0 stable in December 2025". npm disagreed then and disagrees now.
 
 ## Decision

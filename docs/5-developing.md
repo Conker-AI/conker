@@ -48,8 +48,7 @@ npm run dev -- --host localhost --port 5173 --strictPort
 The dev server shows the live (gateway) screens against an in-memory fake gateway
 (`src/dev/`, dev builds only), so no server or sign-in is needed. A message mentioning
 email asks for an approval; a first message containing `[fail]` exercises the
-create-failure path. The retired full-fixture shell is isolated behind
-`npm run dev:legacy-fixtures`; it is not selectable from product routes.
+create-failure path.
 
 Before handing off:
 
@@ -62,8 +61,9 @@ npm run e2e                # chat, approval and forget in Chromium (Playwright)
 
 - UI rules: [dashboard/DESIGN.md](../dashboard/DESIGN.md). Colours and fonts come from the design
   tokens. Don't add raw hex values or font-families; CI rejects them.
-- All data goes through the `ConkerClient` interface (`src/lib/api`). Fixture mode and gateway mode
-  are separate, and gateway mode never falls back to sample data.
+- All data goes through the gateway clients in `src/lib/gateway` and the typed clients in
+  `src/lib/api`. Fixture mode (dev builds) and gateway mode are separate, and gateway mode never
+  falls back to sample data.
 - Check affected screens at phone width and desktop width, in light and dark themes.
 - Types for Pi's and the gateway's APIs are generated, not written: `src/lib/api/generated/*.d.ts`
   come from Pi's OpenAPI documents (`npm run api:types`, with the pinned Pi beside this repo). CI
@@ -117,3 +117,6 @@ The docs stay small on purpose. If a new document seems necessary, update one of
 | [0009](adr/0009-radix-primitives-for-now.md) | Radix UI primitives for now |
 | [0010](adr/0010-conversation-writes-are-session-bound.md) | Chatting needs the session, not a password per message |
 | [0011](adr/0011-one-control-plane-and-verified-setup.md) | CLI and UI operate one typed control plane with durable, verified setup |
+| [0012](adr/0012-owner-terminal-is-an-isolated-sidecar.md) | The owner terminal is an isolated sidecar (deferred) |
+| [0013](adr/0013-agent-sandbox.md) | Agent commands run in a fresh, networkless container per command |
+| [0014](adr/0014-server-actions-through-one-host-helper.md) | Server actions go through one host helper |
