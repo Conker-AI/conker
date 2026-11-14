@@ -85,6 +85,8 @@ which module versions a release pins.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
 - **Docs say what teams and skills are.** The glossary and guides no longer mention team templates (Pi's templates are for agents, kept for recovery; there are no built-in teams) or agents holding skills (a skill is picked per message and is not attached to an agent); the Teams editor calls a role's own text "Extra instructions for this team", since Pi appends it to the agent's instructions. Text only.
 
+- **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
