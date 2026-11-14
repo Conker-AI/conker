@@ -373,7 +373,7 @@ services["decisions"] = {"build": {"context": "./sources/companion/services/deci
     "security_opt": ["no-new-privileges:true"], "env_file": ["./state/decisions.env"],
     "user": "1000:1000", "network_mode": "service:pi", "depends_on": ["pi"], "volumes": ["./state/decisions:/models"],
     "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}}
-# The Claude plan runtime (scripts/subscription_runtime.py): the official Claude Code CLI, holding
+# The Claude plan runtime (services/subscriptions/subscription_runtime.py): the official Claude Code CLI, holding
 # the owner's sign-in in state/subscriptions alone. It joins Pi's network namespace because Pi
 # reaches a subscription runtime only at 127.0.0.1, and listens only there. ChatGPT answers go on
 # to the host's private ChatGPT worker through its socket, as Pi's went before.
