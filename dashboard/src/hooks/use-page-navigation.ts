@@ -1,7 +1,8 @@
 import { useLocation } from "react-router-dom"
-import { activePageSection, matchAppRoute } from "@/config/navigation"
+import { gatewayPageNavigation } from "@/components/gateway/navigation"
 
+/** The tab a page shows, from the one navigation table the sidebar and header use. */
 export function usePageSection() {
   const { pathname, search } = useLocation()
-  return activePageSection(matchAppRoute(pathname).key, search)
+  return gatewayPageNavigation(pathname, search).activeSection
 }

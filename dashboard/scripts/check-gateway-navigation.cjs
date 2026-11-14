@@ -232,4 +232,13 @@ for (const file of sourceFiles(path.join(root, 'src'))) for (const [, tab] of fs
   assert.ok(oldTabs.has(tab), `${path.relative(root, file)} links to /settings?tab=${tab}, which opens no topic`)
 }
 
+// The owner's guide names the sidebar exactly as it is: one row per group, its places in order.
+const guide = fs.readFileSync(path.join(root, '../docs/3-using.md'), 'utf8').split('## Find your way around')[1].split('\n## ')[0]
+for (const group of loaded.exports.gatewaySidebarGroups) {
+  const row = guide.split('\n').find(line => line.startsWith(`| **${group.label}** |`))
+  assert.ok(row, `docs/3-using.md has no sidebar row for ${group.label}`)
+  const named = [...row.split('|')[2].matchAll(/\*\*([^*]+)\*\*/g)].map(match => match[1])
+  assert.deepEqual(named, gatewaySidebarDestinations.filter(item => item.group === group.id).map(item => item.title), `docs/3-using.md lists the ${group.label} places as the sidebar does`)
+}
+
 console.log('Connected navigation, route continuity and mobile sidebar focus restoration/lifetime fences passed.')
