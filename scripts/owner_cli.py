@@ -19,7 +19,7 @@ from pathlib import Path
 import config_cli
 from conker_agents import operation as agents_operation
 from conker_agents import register as register_agents
-from conker_context import pi_call
+from conker_context import MEMORY_USES, pi_call
 from conker_inbox import operation as inbox_operation
 from conker_inbox import register as register_inbox
 from conker_loops import operation as loops_operation
@@ -44,7 +44,10 @@ ROUTES = {
     ("POST", "/open-loops"),
 }
 # Routes with an id in the path: (method, whole-path pattern).
-ROUTE_PATTERNS = (("POST", re.compile(r"/open-loops/loop_[0-9a-f]{32}/state")),)
+ROUTE_PATTERNS = (
+    ("POST", re.compile(r"/open-loops/loop_[0-9a-f]{32}/state")),
+    ("GET", MEMORY_USES),
+)
 
 
 def caller(command: list[str]):

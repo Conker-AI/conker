@@ -18,7 +18,7 @@ import tool_drafts
 from conker_agents import operation as agents_operation
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
-from conker_context import PI_QUERY_KEYS, pi_call
+from conker_context import MEMORY_USES, PI_QUERY_KEYS, pi_call
 from conker_context import operation as context_operation
 from conker_files import operation as files_operation
 from conker_inbox import operation as inbox_operation
@@ -87,6 +87,8 @@ def request(
     if query is not None:
         if service == "pi" and path == "/sessions/history" and body is None:
             encoded = urlencode(history_query(query))
+        elif service == "pi" and MEMORY_USES.fullmatch(path) and body is None:
+            encoded = urlencode({key: query[key] for key in ("limit", "after") if key in query})
         elif service == "pi" and path in PI_QUERY_KEYS and body is None:
             keys = PI_QUERY_KEYS[path]
             encoded = urlencode({key: query[key] for key in keys if key in query})

@@ -5,7 +5,9 @@ These are the owner's counterparts of Conker's built-in tools `conker.recall`,
 directly, without a change request. Pi validates every body; this module only shapes it.
 """
 
-from conker_context import pi_call
+from datetime import UTC, datetime
+
+from conker_context import MEMORY_USES, pi_call
 
 ROLE_TOKENS = 50_000
 ROLE_CENTS = 25
@@ -46,6 +48,15 @@ def register(commands):
     )
     beliefs.add_argument("--after", help="The page cursor the previous page printed")
     beliefs.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
+    used = memory_commands.add_parser(
+        "used", help="The answers that used one memory, also after it was corrected or forgotten"
+    )
+    used.add_argument("memory_id", help="The memory's id, as `memory beliefs` prints it")
+    used.add_argument(
+        "--limit", type=int, default=20, help="How many to show, 1 to 100 (default 20)"
+    )
+    used.add_argument("--after", help="The page cursor the previous page printed")
+    used.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
     upkeep = memory_commands.add_parser(
         "upkeep",
         help="Memories to merge, resolve, retire or check: duplicates, contradictions, old ones",
@@ -298,10 +309,66 @@ def _upkeep(args, config, request):
     return None
 
 
+def used_path(memory_id):
+    """Pi's route for one memory's uses; the id is checked before it joins a path."""
+    memory_id = memory_id.strip()
+    path = f"/memory/{memory_id}/uses"
+    if not MEMORY_USES.fullmatch(path):
+        raise ValueError("Give the memory's id (letters, digits and _ . : - only).")
+    return path
+
+
+def _when(seconds):
+    return datetime.fromtimestamp(seconds, UTC).strftime("%Y-%m-%d %H:%M")
+
+
+def render_uses(page):
+    """A header, one line per use (when, chat, source, revision, turn), then the next page."""
+    since = f" since {_when(page['since'])} UTC" if page.get("since") is not None else ""
+    if not page["total"]:
+        return (
+            f"No answers are noted as using {page['memoryId']}{since or ' (Pi has noted no uses yet)'}."
+            " Answers before Pi began noting uses are not listed."
+        )
+    lines = [
+        (
+            f"{page['memoryId']} was used in {page['total']} answers in {page['chats']} chats"
+            f"{' (noted' + since + ')' if since else ''}."
+        )
+    ]
+    for item in page["items"]:
+        title = " ".join(item["sessionTitle"].split()) or "(untitled)"
+        revision = f" rev {item['revision']}" if item["revision"] is not None else ""
+        lines.append(
+            f"{_when(item['at'])}  {item['source']:<7}  {title}  "
+            f"(chat {item['sessionId']}, turn {item['turnId']}{revision})"
+        )
+    if page.get("nextAfter"):
+        lines.append(f"Next page: --after {page['nextAfter']}")
+    return "\n".join(lines)
+
+
+def _used(args, config, request):
+    """With --json, Pi's reply to print; otherwise prints the page itself and returns None."""
+    if not 1 <= args.limit <= 100:
+        raise ValueError("--limit must be from 1 to 100.")
+    path = used_path(args.memory_id)
+    query = {"limit": args.limit}
+    if args.after is not None:
+        query["after"] = _text(args.after, "--after", 200)
+    page = pi_call(request, config, path, query=query)
+    if args.json:
+        return page
+    print(render_uses(page))
+    return None
+
+
 def operation(args, config, request):
     """Run one memory, agent or team subcommand and return the value to print (None: printed)."""
     if args.command == "memory" and args.operation == "beliefs":
         return _beliefs(args, config, request)
+    if args.command == "memory" and args.operation == "used":
+        return _used(args, config, request)
     if args.command == "memory" and args.operation == "upkeep":
         return _upkeep(args, config, request)
     if args.command == "memory":

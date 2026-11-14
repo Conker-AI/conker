@@ -220,6 +220,16 @@ def test_loops_reach_pi_through_the_relay(monkeypatch, capsys):
     ]
 
 
+def test_memory_used_reaches_pi_through_the_relay_for_a_checked_id_only(monkeypatch, capsys):
+    page = {"memoryId": "mem_1", "since": None, "total": 0, "chats": 0, "items": [], "nextAfter": None}
+    relay = Relay(monkeypatch, {("GET", "/memory/mem_1/uses?limit=5"): (200, page)})
+    assert main("memory", "used", "mem_1", "--limit", "5", "--json") == 0
+    assert relay.sent == [("GET", "/memory/mem_1/uses?limit=5", None)]
+    assert json.loads(capsys.readouterr().out) == page
+    with pytest.raises(ValueError, match="cannot be reached"):
+        owner_cli.caller(["docker"])({}, "pi", "/memory/mem_1/forget", None)
+
+
 def test_a_query_cannot_change_the_checked_path(monkeypatch):
     relay = Relay(monkeypatch, {("GET", "/inbox?a=%2F..%2Fsessions"): (200, {})})
     config_cli.request(["docker"], "pi", "/inbox", query={"a": "/../sessions"})
