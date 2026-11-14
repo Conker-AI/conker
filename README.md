@@ -107,14 +107,16 @@ repository and runs on its own.
 
 ```mermaid
 flowchart LR
-    You([You]) --> GW[Gateway<br/>login, approvals]
-    GW --> Pi[Pi<br/>conversations]
-    Pi --> MG[MemoryGate<br/>remembers]
-    Pi --> TG[ToolGate<br/>acts, as allowed]
-    Pi --> SG[SystemGate<br/>observes]
-    Pi --> M[Models<br/>local or hosted]
+    You([You, in the browser]) -->|sign-in, requests| GW[Gateway<br/>login, owner checks]
+    CLI([conker CLI]) -->|same operations| Pi
+    GW -->|chats, changes| Pi[Pi<br/>conversations, model roles]
+    GW -->|approval decisions| TG
+    Pi -->|tool requests| TG[ToolGate<br/>acts, as allowed]
+    Pi -->|recall, evidence| MG[MemoryGate<br/>remembers, with sources]
+    Pi -->|host reads| SG[SystemGate<br/>observes]
+    Pi -->|turn context| M[Models<br/>local or hosted]
     MG --> EM[Embeddings]
-    TG --> SB[Sandbox<br/>agent terminal]
+    TG -->|terminal, installs| SB[Sandbox<br/>no network]
 ```
 
 | Repository | Job | Release |
