@@ -83,6 +83,7 @@ which module versions a release pins.
 - **Memory care.** Memory has a "Memory care" button that lists what is worth tidying (memories that disagree, saved twice,
   almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
+- **`conker team run` (and `next`, `show`, `finish`).** Run a saved team from the CLI, one role at a time: `run` starts a run from a chat and runs its first role, `next --reviewed` runs the next role over the team's handoff after you read the last answer, `show` and `finish [--cancel]` read and end it. Also on an installed stack as `./conker team ...`. Needs a Pi with the owner-scope `/team-runs` routes; Pi refuses a run while the daily spending cap is off. (#346)
 
 - **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
 
