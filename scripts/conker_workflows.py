@@ -14,7 +14,7 @@ import re
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
-import tool_drafts
+from scripts import tool_drafts
 
 DRAFT_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")

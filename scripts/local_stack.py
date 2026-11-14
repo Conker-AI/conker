@@ -16,6 +16,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
@@ -81,8 +84,9 @@ def initialize():
         },
     }
     import import_listener
-    from service_keys import ensure
-    from workspace_memory import prepare
+
+    from scripts.service_keys import ensure
+    from scripts.workspace_memory import prepare
     ensure(config, "http://127.0.0.1:8051")
     import_listener.ensure(config)
     config, _ = prepare(config)
@@ -137,7 +141,7 @@ def serve(name, config):
         certificate, key = create_certificate(STATE / "gateway", "localhost")
         terminal_factory = None
         if os.name == "nt" and config.get("native_terminal"):
-            from windows_terminal import WindowsTerminal
+            from scripts.windows_terminal import WindowsTerminal
             def terminal_factory(_shell, _label, _identity):
                 return WindowsTerminal(ROOT, config)
         uvicorn.run(create_app(Config.environment(), terminal_factory=terminal_factory), host="127.0.0.1", port=SERVICES[name],
@@ -220,7 +224,7 @@ def main():
             if str(Path(__file__).resolve()) not in command or command[-2:] != ["serve", args.service]:
                 raise SystemExit("Process identity no longer matches; nothing stopped.")
             if args.service == "providers":
-                from provider_lifecycle import stop
+                from scripts.provider_lifecycle import stop
                 stop(process, config, SERVICES[args.service], Path(__file__).resolve())
                 print("Stopped local providers; native background sessions retained.")
                 return

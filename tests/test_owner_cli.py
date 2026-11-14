@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import config_cli  # noqa: E402
 import owner_cli  # noqa: E402
-from conker_parser import build_parser  # noqa: E402
+
+from scripts.conker_parser import build_parser  # noqa: E402
 
 # Development CLI commands an installed stack does not route, and why. Route a command (and drop it
 # here) rather than add to this list; a new command must land in one or the other.

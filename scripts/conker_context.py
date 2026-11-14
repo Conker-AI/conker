@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from urllib.error import HTTPError
 
-from conker_inputs import identity, read_text
+from scripts.conker_inputs import identity, read_text
 
 SESSION = r"[A-Za-z0-9_-]{1,128}"
 MESSAGE = r"[A-Za-z0-9_-]{1,200}"

@@ -11,9 +11,9 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import conker as cli
-import conker_workflows as workflows
-import tool_drafts
+from scripts import conker as cli
+from scripts import conker_workflows as workflows
+from scripts import tool_drafts
 
 REQUEST = "creq_" + "a" * 32
 TOOL_ID = "workflow:morning-weather:1:" + "c" * 64

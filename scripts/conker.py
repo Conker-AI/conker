@@ -11,18 +11,20 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
-import assistant_imports
-import conker_models
-import conker_toolgate
-import tool_drafts
-from conker_agents import operation as agents_operation
-from conker_chat import operation as chat_operation
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from conker_config import config_operation
-from conker_context import MEMORY_USES, PI_QUERY_KEYS, pi_call
-from conker_context import operation as context_operation
-from conker_files import operation as files_operation
-from conker_inbox import operation as inbox_operation
-from conker_inputs import (
+from plan_limits import limits_operation
+
+from scripts import assistant_imports, conker_models, conker_toolgate, tool_drafts
+from scripts.conker_agents import operation as agents_operation
+from scripts.conker_chat import operation as chat_operation
+from scripts.conker_context import MEMORY_USES, PI_QUERY_KEYS, pi_call
+from scripts.conker_context import operation as context_operation
+from scripts.conker_files import operation as files_operation
+from scripts.conker_inbox import operation as inbox_operation
+from scripts.conker_inputs import (
     SKILL_ID,
     codex_sessions,
     draft_path,
@@ -33,13 +35,12 @@ from conker_inputs import (
     read_json,
     read_text,
 )
-from conker_loops import operation as loops_operation
-from conker_messages import operation as message_operation
-from conker_parser import build_parser
-from conker_spending import spending_operation
-from conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
-from plan_limits import limits_operation
-from workspace import read_config
+from scripts.conker_loops import operation as loops_operation
+from scripts.conker_messages import operation as message_operation
+from scripts.conker_parser import build_parser
+from scripts.conker_spending import spending_operation
+from scripts.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
+from scripts.workspace import read_config
 
 
 class NoRedirect(HTTPRedirectHandler):

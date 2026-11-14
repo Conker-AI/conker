@@ -7,7 +7,7 @@ directly, without a change request. Pi validates every body; this module only sh
 
 from datetime import UTC, datetime
 
-from conker_context import MEMORY_USES, pi_call
+from scripts.conker_context import MEMORY_USES, pi_call
 
 ROLE_TOKENS = 50_000
 ROLE_CENTS = 25

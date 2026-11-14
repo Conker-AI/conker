@@ -7,6 +7,8 @@ which module versions a release pins.
 ## Unreleased
 
 - **conker memory used ID (R-U3).** Lists the answers that used one memory (needs Pi with `GET /memory/{id}/uses`): time, source, chat title and ids, the memory's revision then; read only, paged. Also on an installed stack through `./conker` (scripts/owner_cli.py allows that one read route by pattern).
+
+- **`scripts/` becomes a package, step 2: the development CLI and workspace.** The `conker_*` modules, `workspace*`, `local_stack` and the other helpers of `scripts/conker.py` import each other as `scripts.X`; every entry point (`conker.py`, `owner_cli.py`, `context_cli.py`, `import_cli.py`, `tool_draft_cli.py`, `workspace.py`, `workspace_models.py`, `local_stack.py`) still runs by path from any folder. No change for installed stacks (#338).
 - **`scripts/` becomes a package, step 1: the release acceptance gate.** `release_acceptance`, `release_checks` and `release_first_run` import each other as `scripts.X`, and the gate still runs as `python3 scripts/release_acceptance.py` from any folder. No change for installed stacks (#337).
 - **Type errors 206 to 129, coverage floor 78 to 80.** Type-only fixes in 9 scripts and 10 test files, and refusal tests for settings docs, release first run, import and config CLIs, capability status, the installed CLI and the repository updater (#335).
 - **Which layout is for whom.** The table at the top of docs/4-running.md names who each of the four ways is
@@ -67,6 +69,11 @@ which module versions a release pins.
   lines are readable, and Server check rows are a real list. Five more flows are tested end to end: Trash and
   Restore, bulk archive with Undo, a Models change with Undo, an update from offer to "Updated", and a
   rolled-back update card. (#316, #317)
+
+- **Plainer words on screen.** Home's "Needs you" now shows the same count as the sidebar and the Inbox (it
+  counted only decisions and ideas); Memory says memories and links; "Revision N" is "Version N"; the Teams
+  dialog and the Native sessions list no longer show internal state names or raw ids. A new e2e walks every
+  place and tab and fails on these words. (#336)
 
 ## 0.1.0
 

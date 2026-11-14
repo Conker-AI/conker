@@ -45,7 +45,7 @@ async function main() {
 
   const ui = fs.readFileSync(path.join(root, 'src/components/gateway/teams-workspace.tsx'), 'utf8')
   assert.match(ui, /Saving a team grants no permissions and starts no work/, 'A team definition grants no authority and starts no work')
-  assert.match(ui, /No preparation or execution endpoint is exposed here/)
+  assert.match(ui, /Nothing on this screen starts one/)
   assert.match(ui, /Sign-ins, memory and permissions are never handed over/, 'Credentials, memory scope and authority never transfer')
   assert.doesNotMatch(ui, /Prepare snapshot|Run team|Start team/)
   console.log('Gateway teams passed: canonical strict DTOs, optimistic configuration, immutable history, exact routes, and no preparation or execution surface.')

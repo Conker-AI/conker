@@ -8,10 +8,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import local_stack
-import workspace
-import workspace_memory as memory
-import workspace_setup as setup
+from scripts import local_stack, workspace
+from scripts import workspace_memory as memory
+from scripts import workspace_setup as setup
 
 
 def config():

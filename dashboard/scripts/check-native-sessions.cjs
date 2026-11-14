@@ -139,7 +139,7 @@ async function focusCases(h){
 }
 async function components(){
  const h=componentHarness(),a=record('native_A',{name:'Session A'}),b=record('native_B',{name:'Session B',state:'blocked',processStatus:'waiting',waitingFor:'permission_prompt'})
- h.render();h.reads[0].resolve({...list(a,b),omittedCount:3});await h.settle();assert.match(h.text(),/3 native entries are omitted/)
+ h.render();h.reads[0].resolve({...list(a,b),omittedCount:3});await h.settle();assert.match(h.text(),/3 sessions are not shown/)
  h.row('Session A').props.onOpen();h.reads[1].resolve({...a});await h.settle();assert.equal(h.node('detail').props.open,true);assert.equal(h.reads.filter(r=>r.kind==='output').length,0)
  h.button('Read recent output').props.onClick();h.reads[2].resolve(output(a));await h.settle();assert.equal(h.node('pre').props.children,output(a).text);assert.equal(h.node('pre').props.dangerouslySetInnerHTML,undefined);await focusCases(h)
  h.button('Stop session').props.onClick();await h.settle();assert.equal(h.node('confirmation').props.open,true);const confirm=h.node('confirmation').props.onConfirm;void confirm();void confirm();await h.settle();assert.equal(h.writes.length,1);assert.equal(h.node('confirmation').props.open,true)
