@@ -207,10 +207,6 @@ def port_listening(service):
         return sock.connect_ex(("127.0.0.1", PORTS[service])) == 0
 
 
-def postgres_state(config, listening):
-    return container_state(config, listening, "postgres")
-
-
 def container_state(config, listening, service):
     """Inspect the named container even while its published port is closed."""
     label, container, volume, port, mount = CONTAINERS[service]
