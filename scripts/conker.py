@@ -38,6 +38,7 @@ from scripts.conker_inputs import (
 from scripts.conker_loops import operation as loops_operation
 from scripts.conker_messages import operation as message_operation
 from scripts.conker_parser import build_parser
+from scripts.conker_prompt import operation as prompt_operation
 from scripts.conker_spending import spending_operation
 from scripts.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from scripts.workspace import read_config
@@ -79,9 +80,7 @@ def request(
     if data is not None and body is not None:
         raise ValueError("data and body are exclusive")
 
-    if query_params is not None and (
-        service != "pi" or not ATTACHMENT_UPLOAD.fullmatch(path)
-    ):
+    if query_params is not None and (service != "pi" or not ATTACHMENT_UPLOAD.fullmatch(path)):
         raise ValueError("query_params only allowed for Pi attachment uploads")
 
     suffix = ""
@@ -98,9 +97,7 @@ def request(
                 {key: query[key] for key in ("kind", "limit", "after") if key in query}
             )
         elif service == "pi" and path.endswith("/branch-history") and body is None:
-            encoded = urlencode(
-                {key: query[key] for key in ("limit", "cursor") if key in query}
-            )
+            encoded = urlencode({key: query[key] for key in ("limit", "cursor") if key in query})
         elif service == "providers" and path == "/codex/sessions" and body is None:
             list_query = codex_sessions().list_query
 
@@ -109,17 +106,11 @@ def request(
                 {
                     "limit": values["limit"],
                     "archived": "true" if values["archived"] else "false",
-                    **(
-                        {"cursor": values["cursor"]}
-                        if values["cursor"] is not None
-                        else {}
-                    ),
+                    **({"cursor": values["cursor"]} if values["cursor"] is not None else {}),
                 }
             )
         else:
-            raise ValueError(
-                "Structured query options are only for reading chat or Codex history."
-            )
+            raise ValueError("Structured query options are only for reading chat or Codex history.")
         suffix = "?" + encoded if encoded else ""
     elif query_params is not None:
         suffix = "?" + urlencode(query_params)
@@ -135,26 +126,16 @@ def request(
             {"X-ToolGate-Owner-Key": gateway["GATEWAY_TOOLGATE_OWNER_KEY"]},
         )
         if path.endswith("/access"):
-            headers["X-ToolGate-Execution-Key"] = gateway[
-                "GATEWAY_TOOLGATE_EXECUTION_KEY"
-            ]
+            headers["X-ToolGate-Execution-Key"] = gateway["GATEWAY_TOOLGATE_EXECUTION_KEY"]
     elif service == "pi-owner":
         origin, headers = (
             "http://127.0.0.1:18551",
-            {
-                "X-Pi-Owner-Key": config["environments"]["gateway"][
-                    "GATEWAY_PI_OWNER_KEY"
-                ]
-            },
+            {"X-Pi-Owner-Key": config["environments"]["gateway"]["GATEWAY_PI_OWNER_KEY"]},
         )
     elif service == "toolgate":
         origin, headers = (
             "http://127.0.0.1:18510",
-            {
-                "X-ToolGate-Key": config["environments"]["toolgate"][
-                    "TOOLGATE_ADMIN_KEY"
-                ]
-            },
+            {"X-ToolGate-Key": config["environments"]["toolgate"]["TOOLGATE_ADMIN_KEY"]},
         )
     else:
         origin, headers = (
@@ -165,11 +146,7 @@ def request(
         headers["Content-Type"] = content_type or "application/octet-stream"
     else:
         headers["Content-Type"] = "application/json"
-        data = (
-            json.dumps(body, ensure_ascii=False).encode("utf-8")
-            if body is not None
-            else None
-        )
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
     with build_opener(ProxyHandler({}), NoRedirect()).open(
         Request(origin + path + suffix, data=data, headers=headers, method=method),
         timeout=timeout,
@@ -193,9 +170,7 @@ def main():
             list_query, thread_id = codex_sessions().list_query, codex_sessions().thread_id
 
             if args.operation not in {"list", "status"}:
-                raise ValueError(
-                    "Codex saved history supports only list and status reads."
-                )
+                raise ValueError("Codex saved history supports only list and status reads.")
             if args.operation == "list":
                 native_query = list_query(
                     {
@@ -209,9 +184,7 @@ def main():
         elif args.operation == "list" and any(
             getattr(args, key) is not None for key in ("limit", "cursor", "archived")
         ):
-            raise ValueError(
-                "Pagination and archive options apply only to Codex saved history."
-            )
+            raise ValueError("Pagination and archive options apply only to Codex saved history.")
         if args.operation != "list":
             identity(
                 args.id,
@@ -265,9 +238,7 @@ def main():
         if hasattr(args, "expected_revision") and args.expected_revision < (
             1 if args.operation == "start" else 0
         ):
-            raise ValueError(
-                "Use a current nonnegative revision; starting requires a saved draft."
-            )
+            raise ValueError("Use a current nonnegative revision; starting requires a saved draft.")
         if args.operation == "save":
             draft_body = draft_payload(args.file, args.target, args.expected_revision)
     if args.command == "skills":
@@ -282,9 +253,7 @@ def main():
         if args.operation == "import" and args.expected_id:
             identity(args.expected_id, SKILL_ID, "skill ID", 64)
     conker_toolgate.check(args)
-    memory_edit_request = (
-        memory_edit_operation(args) if args.command == "memory-edit" else None
-    )
+    memory_edit_request = memory_edit_operation(args) if args.command == "memory-edit" else None
     config = read_config()
 
     def pi_caller(method, path, body):
@@ -297,8 +266,7 @@ def main():
             if key.startswith(("OPENAI_", "ANTHROPIC_", "CLAUDE_CODE_OAUTH")):
                 del env[key]
         env["CODEX_HOME" if args.harness == "codex" else "CLAUDE_CONFIG_DIR"] = str(
-            Path(native["state"])
-            / ("chatgpt-auth" if args.harness == "codex" else "claude-auth")
+            Path(native["state"]) / ("chatgpt-auth" if args.harness == "codex" else "claude-auth")
         )
         return subprocess.call([native[args.harness], *args.arguments], env=env)
     if args.command == "native-sessions":
@@ -360,16 +328,8 @@ def main():
             **({"model_id": args.model} if args.model else {}),
             **({"skill_ids": args.skill} if args.skill else {}),
             **({"think": True} if args.think else {}),
-            **(
-                {"draft_revision": args.draft_revision}
-                if args.draft_revision is not None
-                else {}
-            ),
-            **(
-                {"research_mode": args.research_mode}
-                if args.research_mode != "off"
-                else {}
-            ),
+            **({"draft_revision": args.draft_revision} if args.draft_revision is not None else {}),
+            **({"research_mode": args.research_mode} if args.research_mode != "off" else {}),
         }
 
         if args.attach:
@@ -405,9 +365,7 @@ def main():
         else:
             if args.operation == "clear":
                 draft_body = {"text": "", "expected_revision": args.expected_revision}
-            value = request(
-                config, "pi-owner", draft_path(args.target, args.task), draft_body
-            )
+            value = request(config, "pi-owner", draft_path(args.target, args.task), draft_body)
     elif args.command == "resume":
         value = request(config, "pi", f"/turns/{args.turn}/resume", {})
     elif args.command == "usage":
@@ -484,13 +442,9 @@ def main():
         )
     elif args.command == "models" and args.role:
         if bool(args.model) == args.off or args.save or (args.off and args.backup):
-            raise ValueError(
-                "Use --role ROLE with --model ID [--backup ID]... or with --off."
-            )
+            raise ValueError("Use --role ROLE with --model ID [--backup ID]... or with --off.")
         model = None if args.off else args.model
-        value = conker_models.set_role(
-            request, config, args.role, model, args.backup or []
-        )
+        value = conker_models.set_role(request, config, args.role, model, args.backup or [])
     elif args.command == "models":
         value = request(
             config,
@@ -533,6 +487,10 @@ def main():
         value = loops_operation(args, config, request)
         if value is None:  # the list printed itself
             return 0
+    elif args.command == "prompt":
+        value = prompt_operation(args, config, request)
+        if value is None:  # the rewrite printed itself
+            return 0
     elif args.command == "config":
         return config_operation(args, config, request)
     elif args.command == "context":
@@ -553,13 +511,10 @@ def main():
     elif args.command == "auth":
         body = (
             None
-            if args.action == "status"
-            or (args.provider == "claude" and args.action == "models")
+            if args.action == "status" or (args.provider == "claude" and args.action == "models")
             else {"operation": args.action}
         )
-        if args.action == "cancel" or (
-            args.provider == "chatgpt" and args.action == "logout"
-        ):
+        if args.action == "cancel" or (args.provider == "chatgpt" and args.action == "logout"):
             status = request(config, "providers", "/" + args.provider)
             key = "loginId" if args.action == "cancel" else "connectionId"
             if not status.get(key):
