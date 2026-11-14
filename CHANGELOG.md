@@ -68,6 +68,11 @@ which module versions a release pins.
   Restore, bulk archive with Undo, a Models change with Undo, an update from offer to "Updated", and a
   rolled-back update card. (#316, #317)
 
+- **Plainer words on screen.** Home's "Needs you" now shows the same count as the sidebar and the Inbox (it
+  counted only decisions and ideas); Memory says memories and links; "Revision N" is "Version N"; the Teams
+  dialog and the Native sessions list no longer show internal state names or raw ids. A new e2e walks every
+  place and tab and fails on these words. (#336)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every

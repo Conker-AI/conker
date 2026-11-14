@@ -170,7 +170,7 @@ export function GatewayAgentsWorkspace({ client, companion = false }: { client: 
         emptyTitle={view.query.trim() ? 'No matching agents' : showing === 'archived' ? 'No archived agents' : 'No agents yet'} emptyDescription={showing === 'archived' ? 'Archived agents keep their history.' : 'Create an agent for a focused kind of work.'}
         emptyAction={showing === 'archived' || view.query.trim() ? undefined : <Button onClick={() => setCreating(true)}><Plus />New agent</Button>} icon={<Bot />}>
         {shown.map(item => <ListLine key={item.id} id={item.id} selection={item.kind === 'companion' ? undefined : selection} actions={rowMenu(item) || undefined} to={item.kind === 'companion' ? '/settings/companion' : `/agents/${item.id}/edit`} icon={<IdentityMark brand={serviceIn(item.configuration.name, item.configuration.role)} kind="agent" name={item.configuration.name} size="sm" />} title={item.configuration.name} sub={item.configuration.role}
-          meta={item.kind === 'companion' ? 'Primary' : `Revision ${item.revision}`} />)}
+          meta={item.kind === 'companion' ? 'Primary' : `Version ${item.revision}`} />)}
       </ListCard>
     </div>
     <Dialog open={creating} onOpenChange={setCreating}><TaskDialogContent title="New agent" description="Set up a helper for one kind of work." size="wide"><AgentEditor client={client} creating onSaved={saved} onCancel={() => setCreating(false)} /></TaskDialogContent></Dialog>
