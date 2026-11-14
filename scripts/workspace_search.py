@@ -13,8 +13,8 @@ import json
 import secrets
 import urllib.request
 
-from workspace import CONFIG, PORTS, ROOT, STATE, owned_process, prepare_source
-from workspace_memory import write_config
+from scripts.workspace import CONFIG, PORTS, ROOT, STATE, owned_process, prepare_source
+from scripts.workspace_memory import write_config
 
 MODEL, DIMENSION = (
     "qwen3-embedding:0.6b",

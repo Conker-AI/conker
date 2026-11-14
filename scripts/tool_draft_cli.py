@@ -16,8 +16,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-import tool_drafts
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from config_cli import RELAY, compose, reason
+
+from scripts import tool_drafts
 
 ROUTES = re.compile(r"/tool-drafts|/change-requests/creq_[a-f0-9]{32}(?:/retry)?")
 

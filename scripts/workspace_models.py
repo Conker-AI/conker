@@ -2,10 +2,14 @@
 
 import json
 import sys
+from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, build_opener
 
-from workspace import read_config
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.workspace import read_config
 
 
 class NoRedirect(HTTPRedirectHandler):
