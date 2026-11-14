@@ -62,7 +62,7 @@ Weekly checks, backups, updates and restores step by step (source-built Ubuntu):
 your server](reference/server-care.md).
 
 <details>
-<summary>Every command, with an example</summary>
+<summary>More commands, with an example (all of them: <code>conker help</code>)</summary>
 
 ```sh
 conker apply models models.json # apply a revision-checked model-role document
@@ -177,7 +177,7 @@ are validated before dispatch. Preparation, execution and permission grants are
 deliberately absent from this command.
 
 `conker apply jobs FILE` covers the UI's `state` (pause/resume) and `run` (one manual run)
-operations; cancelling, allowances and reconciling are UI-only. A manual run requires a stable 16-128 character `request_id`; an
+operations; every other job write is UI-only. A manual run requires a stable 16-128 character `request_id`; an
 accepted response records admission, not completion, and uncertain outcomes must
 be reconciled through run history. Raw target authoring remains unavailable in both
 UI and CLI because job inputs and publication identity need a dedicated safe editor.

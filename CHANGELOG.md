@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One home per fact in the server guide.** docs/4-running.md keeps an overview and links to the reference
+  pages instead of repeating them; facts it alone had moved first, and four errors in it are fixed (an
+  18-resource `inspect` list, `apply memory` "only forget", the rehearsal flow, "drills are off"). (#PR)
+
 - **The subscriptions image's code lives with its Dockerfile.** Seven modules only the Claude plan runtime
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
   now also runs when the two modules it shares with the host helper change. (#327)
