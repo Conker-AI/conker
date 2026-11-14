@@ -256,6 +256,81 @@ def test_memory_beliefs_refuses_bad_flags_before_calling_pi(monkeypatch, capsys)
         assert code == 1 and sent == [] and out.err
 
 
+USES = {
+    "memoryId": "mem_1",
+    "since": 1770000000.0,
+    "total": 3,
+    "chats": 2,
+    "items": [
+        {
+            "sessionId": "ses_a",
+            "sessionTitle": "  Training\nplans ",
+            "turnId": "turn_2",
+            "source": "context",
+            "revision": 2,
+            "at": 1770003600.0,
+        },
+        {
+            "sessionId": "ses_b",
+            "sessionTitle": "",
+            "turnId": "turn_1",
+            "source": "recall",
+            "revision": None,
+            "at": 1770000000.0,
+        },
+    ],
+    "nextAfter": "1770000000.0|turn_1|recall",
+}
+
+
+def test_memory_used_flags_map_to_the_path_and_query(monkeypatch, capsys):
+    code, sent, out = calls(
+        monkeypatch,
+        capsys,
+        ["memory", "used", "mem_1", "--limit", "7", "--after", "1.5|turn_1|recall", "--json"],
+        [USES],
+    )
+    assert code == 0 and json.loads(out.out) == USES
+    url = urlsplit(sent[0].full_url)
+    assert url.path == "/memory/mem_1/uses" and sent[0].get_method() == "GET"
+    assert parse_qs(url.query) == {"limit": ["7"], "after": ["1.5|turn_1|recall"]}
+    code, sent, _ = calls(monkeypatch, capsys, ["memory", "used", "mem_1"], [USES])
+    assert parse_qs(urlsplit(sent[0].full_url).query) == {"limit": ["20"]}
+
+
+def test_memory_used_prints_one_line_per_use_and_the_next_page(monkeypatch, capsys):
+    code, _, out = calls(monkeypatch, capsys, ["memory", "used", "mem_1"], [USES])
+    assert code == 0
+    assert out.out.splitlines() == [
+        "mem_1 was used in 3 answers in 2 chats (noted since 2026-02-02 02:40 UTC).",
+        "2026-02-02 03:40  context  Training plans  (chat ses_a, turn turn_2 rev 2)",
+        "2026-02-02 02:40  recall   (untitled)  (chat ses_b, turn turn_1)",
+        "Next page: --after 1770000000.0|turn_1|recall",
+    ]
+
+
+def test_memory_used_says_when_nothing_is_noted(monkeypatch, capsys):
+    empty = {**USES, "total": 0, "chats": 0, "items": [], "nextAfter": None}
+    code, _, out = calls(monkeypatch, capsys, ["memory", "used", "mem_1"], [empty])
+    assert code == 0 and out.out.startswith("No answers are noted as using mem_1 since 2026-02-02")
+    never = {**empty, "since": None}
+    _, _, out = calls(monkeypatch, capsys, ["memory", "used", "mem_1"], [never])
+    assert "Pi has noted no uses yet" in out.out
+
+
+def test_memory_used_refuses_bad_input_before_calling_pi(monkeypatch, capsys):
+    for arguments in (
+        ["memory", "used", "bad id"],
+        ["memory", "used", "../sessions"],
+        ["memory", "used", "x" * 201],
+        ["memory", "used", "mem_1", "--limit", "0"],
+        ["memory", "used", "mem_1", "--limit", "101"],
+        ["memory", "used", "mem_1", "--after", "   "],
+    ):
+        code, sent, out = calls(monkeypatch, capsys, arguments)
+        assert code == 1 and sent == [] and out.err, arguments
+
+
 def _group(*items, total=None):
     return {"items": list(items), "total": len(items) if total is None else total}
 

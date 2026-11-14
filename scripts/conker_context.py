@@ -27,6 +27,8 @@ NO_SETTINGS = "This chat has no context settings yet. Start them with: " + START
 ITEM_TEXT_ERROR = "Use 1-500 characters of text."
 # The query keys each Pi read route may carry; conker.py's request() drops the rest.
 _MEMORY_LIST_KEYS = ("search", "limit", "origin", "state", "memory_type", "after")
+# GET /memory/{id}/uses: one memory's uses (R-U3); the id is part of the path, so no exact key.
+MEMORY_USES = re.compile(r"/memory/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}/uses")
 PI_QUERY_KEYS = {
     "/definitions": ("kind", "search", "archived"),
     "/memory/objects": _MEMORY_LIST_KEYS,
