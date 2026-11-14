@@ -12,6 +12,7 @@ import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolic
 import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
 import type { GatewayAgentNote } from '../gateway/jobs'
 import type { MemoryUpkeepPage } from '../gateway/memory-care'
+import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
@@ -28,6 +29,7 @@ type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? t
 
 export const piWire = {
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
+  promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
   project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,

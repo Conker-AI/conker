@@ -121,6 +121,15 @@ export function createFakeMemory(fail: (status: number) => never) {
         try { globalThis.sessionStorage?.removeItem(forgetKey) } catch { /* Preview storage is optional. */ }
         return receipt
       }
+      // Pi's prompt enhance has no screen of its own in the preview, so it is answered here.
+      if (path === '/api/control/pi/prompts/enhance' && method === 'POST') {
+        const text = String((options.body as { text?: unknown } | undefined)?.text ?? '').trim()
+        if (!text) throw new GatewayError('http', 422)
+        return { text: `Goal: ${text}
+
+Context: say what you already know and what is unclear.
+Output: a short answer first, then the reasons.`, notes: ['Added a goal, context and the shape of the answer.'], modelId: 'preview-drafting', templateId: null, fields: {} }
+      }
       if (path === '/api/control/pi/memory/upkeep' && method === 'GET') {
         const live = (ids: string[]) => ids.every(id => memories.some(row => row.id === id))
         const items = (rows: { ids: string[]; reason: string }[]) => rows.filter(row => live(row.ids))
