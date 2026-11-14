@@ -15,6 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "subscriptions"))
 import workspace_providers
 from chatgpt_provider import RESPONSES_URL, ChatGPTError, inference_events
 from inference_requests import AdmissionError, RequestControl, Requests

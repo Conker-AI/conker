@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "services" / "subscriptions"))
 import subscription_runtime  # noqa: E402
 from chatgpt_relay import ChatGPTRelay  # noqa: E402
 from workspace_providers import create_app  # noqa: E402
@@ -276,11 +277,9 @@ def test_every_platform_is_pinned_to_one_version():
     copied = {
         word
         for word in dockerfile.replace("\\\n", " ").split()
-        if word.startswith("scripts/")
+        if word.startswith(("scripts/", "services/"))
     }
-    assert copied == {
-        line[1:] for line in ignored.splitlines() if line.startswith("!scripts/")
-    }
+    assert copied == {line[1:] for line in ignored.splitlines() if line.startswith("!")}
 
 
 def test_it_exits_when_pis_network_namespace_is_gone(tmp_path):

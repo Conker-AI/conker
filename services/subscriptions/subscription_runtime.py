@@ -1,9 +1,9 @@
 """The Claude plan runtime of the source-built server layout: official Claude Code, in its own box.
 
 `serve` is the container's command (services/subscriptions/Dockerfile). It runs the private bridge
-of scripts/workspace_providers.py at 127.0.0.1:8070 inside Pi's network namespace: Pi asks it for
+of workspace_providers.py at 127.0.0.1:8070 inside Pi's network namespace: Pi asks it for
 Claude plan answers with the inference key, and ChatGPT answers go on to the host's ChatGPT worker
-(scripts/chatgpt_relay.py). The sign-in lives in /state, this service's own folder.
+(chatgpt_relay.py). The sign-in lives in /state, this service's own folder.
 
 `login`, `status` and `logout` are what `conker providers claude ...` runs in the container. Login
 is the CLI's own sign-in in the owner's terminal: Claude Code prints a link, the owner opens it on

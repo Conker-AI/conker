@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "subscriptions"))
 import native_codex_sessions as native
 
 from tests.test_native_codex_sessions import ID, row
