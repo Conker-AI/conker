@@ -114,7 +114,17 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
-An installed stack runs `inbox`, `spending`, `memory search`, `memory beliefs`, `memory upkeep`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+An installed stack runs `inbox`, `spending`, `loops`, `memory search`, `memory beliefs`, `memory upkeep`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+
+## Open loops
+
+Promises across every chat you can see: what you said you would do and what Conker said it would do, each with who promised, an optional due date in your time zone and the chat it belongs to. A promise in a chat in the Trash is not shown; forgetting the chat removes it.
+
+`conker loops list [--done | --dropped | --all] [--due-before DATE] [--limit N] [--after CURSOR] [--json]` - Open promises by default, soonest due first and undated last (default 50, at most 100). A header gives today's date and zone, then one line per promise: `due  owner|conker  text  OVERDUE  (id in chat)`. When there is another page, the last line gives its `--after` value.
+
+`conker loops add CHAT_ID "TEXT" [--by owner|conker] [--due YYYY-MM-DD] [--message MESSAGE_ID]` - File a promise (1-500 characters) for a chat, optionally pointing at the message it came from; prints the new promise with its id.
+
+`conker loops done LOOP_ID`, `conker loops drop LOOP_ID`, `conker loops reopen LOOP_ID` - Mark a promise done, dropped, or open again. This works in a chat that has since been forked or closed.
 
 ## Memory, Agents and Teams
 

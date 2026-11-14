@@ -18,8 +18,8 @@ import tool_drafts
 from conker_agents import operation as agents_operation
 from conker_chat import operation as chat_operation
 from conker_config import config_operation
+from conker_context import PI_QUERY_KEYS, pi_call
 from conker_context import operation as context_operation
-from conker_context import pi_call
 from conker_files import operation as files_operation
 from conker_inbox import operation as inbox_operation
 from conker_inputs import (
@@ -33,6 +33,7 @@ from conker_inputs import (
     read_json,
     read_text,
 )
+from conker_loops import operation as loops_operation
 from conker_messages import operation as message_operation
 from conker_parser import build_parser
 from conker_spending import spending_operation
@@ -86,15 +87,8 @@ def request(
     if query is not None:
         if service == "pi" and path == "/sessions/history" and body is None:
             encoded = urlencode(history_query(query))
-        elif service == "pi" and path == "/definitions" and body is None:
-            encoded = urlencode(
-                {key: query[key] for key in ("kind", "search", "archived") if key in query}
-            )
-        elif service == "pi" and path in ("/memory/objects", "/memory/beliefs") and body is None:
-            keys = ("search", "limit", "origin", "state", "memory_type", "after")
-            encoded = urlencode({key: query[key] for key in keys if key in query})
-        elif service == "pi" and path == "/memory/upkeep" and body is None:
-            keys = ("unused_days", "limit")
+        elif service == "pi" and path in PI_QUERY_KEYS and body is None:
+            keys = PI_QUERY_KEYS[path]
             encoded = urlencode({key: query[key] for key in keys if key in query})
         elif service == "toolgate-owner" and path == "/v2/owner/editor-capabilities":
             encoded = urlencode(
@@ -531,6 +525,10 @@ def main():
     elif args.command in {"memory", "agent", "team"}:
         value = agents_operation(args, config, request)
         if value is None:  # memory beliefs/upkeep printed it itself
+            return 0
+    elif args.command == "loops":
+        value = loops_operation(args, config, request)
+        if value is None:  # the list printed itself
             return 0
     elif args.command == "config":
         return config_operation(args, config, request)

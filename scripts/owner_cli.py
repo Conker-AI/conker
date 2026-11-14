@@ -1,6 +1,6 @@
-"""conker memory search, beliefs and upkeep, agent create, team create, inbox and spending on an
-installed stack: the development CLI's own modules (conker_agents, conker_inbox, conker_spending),
-with Pi reached in its container.
+"""conker memory search, beliefs and upkeep, agent create, team create, inbox, spending and loops on
+an installed stack: the development CLI's own modules (conker_agents, conker_inbox, conker_spending,
+conker_loops), with Pi reached in its container.
 
 As for conker config (scripts/config_cli.py), each call is one `docker compose exec` into the pi
 container, where a short relay calls Pi on its own port with the key Pi was started with: the key
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -21,10 +22,12 @@ from conker_agents import register as register_agents
 from conker_context import pi_call
 from conker_inbox import operation as inbox_operation
 from conker_inbox import register as register_inbox
+from conker_loops import operation as loops_operation
+from conker_loops import register as register_loops
 from conker_spending import add_parser as register_spending
 from conker_spending import spending_operation
 
-COMMANDS = ("memory", "agent", "team", "inbox", "spending")
+COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops")
 # What these commands may ask of Pi: (method, path). A body makes it a POST.
 ROUTES = {
     ("GET", "/memory/objects"),
@@ -37,7 +40,11 @@ ROUTES = {
     ("GET", "/inference/spending"),
     ("GET", "/owner/preferences"),
     ("POST", "/owner/preferences"),
+    ("GET", "/open-loops"),
+    ("POST", "/open-loops"),
 }
+# Routes with an id in the path: (method, whole-path pattern).
+ROUTE_PATTERNS = (("POST", re.compile(r"/open-loops/loop_[0-9a-f]{32}/state")),)
 
 
 def caller(command: list[str]):
@@ -45,7 +52,10 @@ def caller(command: list[str]):
 
     def call(_config, service: str, path: str, body=None, *, query=None, **_options):
         method = "GET" if body is None else "POST"
-        if service != "pi" or (method, path) not in ROUTES:
+        known = (method, path) in ROUTES or any(
+            method == verb and pattern.fullmatch(path) for verb, pattern in ROUTE_PATTERNS
+        )
+        if service != "pi" or not known:
             raise ValueError(f"{method} {path} cannot be reached from this command.")
         return config_cli.request(command, service, path, body, query=query)
 
@@ -58,6 +68,7 @@ def parser() -> argparse.ArgumentParser:
     register_agents(commands)
     register_inbox(commands)
     register_spending(commands)
+    register_loops(commands)
     return parsed
 
 
@@ -66,6 +77,10 @@ def run(args, request) -> int:
         return inbox_operation(args, None, request)  # prints the Inbox itself
     if args.command == "spending":
         value = spending_operation(args, None, request, pi_call)
+    elif args.command == "loops":
+        value = loops_operation(args, None, request)
+        if value is None:  # the list printed itself
+            return 0
     else:
         value = agents_operation(args, None, request)
         if value is None:  # memory beliefs/upkeep printed it itself
