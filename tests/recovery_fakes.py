@@ -248,6 +248,7 @@ class Engine:
             elif "pg_restore" in args:
                 if self.fail_restore:
                     raise KeyboardInterrupt("Interrupted during database restore")
+                assert input is not None
                 assert input.read().startswith(b"PGDMP")
             elif "psql" in args:
                 if "pg_database" in args[-1]:
@@ -283,6 +284,7 @@ class Engine:
                 recovery_data.snapshot_tree(path, buffer, required)
                 data = buffer.getvalue()
             elif operation == "restore-tree":
+                assert input is not None
                 recovery_data.restore_tree(input, path)
             elif operation == "hold-toolgate":
                 data = json.dumps(

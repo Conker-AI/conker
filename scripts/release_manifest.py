@@ -7,8 +7,44 @@ import re
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
+from typing import TypedDict
 
 SUPPORTED_MANIFEST_VERSION = "2"
+
+
+class OwnerTerminalCapability(TypedDict):
+    state: str
+    image: str | None
+    acceptance_sha256: str | None
+
+
+class ImageCapability(TypedDict):
+    state: str
+    image: str | None
+
+
+class StateCapability(TypedDict):
+    state: str
+
+
+Capabilities = TypedDict(
+    "Capabilities",
+    {
+        "owner-terminal": OwnerTerminalCapability,
+        "agent-sandbox": ImageCapability,
+        "subscriptions": ImageCapability,
+        "direct-providers": StateCapability,
+    },
+)
+
+
+class ReleaseManifest(TypedDict):
+    manifest_version: int
+    conker_dashboard_revision: str
+    gates: dict[str, str]
+    third_party_images: dict[str, str]
+    capabilities: Capabilities
+
 GATE_VERSION_KEYS = {
     "pi": "PI_VERSION",
     "toolgate": "TOOLGATE_VERSION",
@@ -97,7 +133,7 @@ def dashboard_tree_revision(root: Path) -> str | None:
 
 def validate_manifest(
     values: Mapping[str, str], *, actual_dashboard_revision: str | None = None
-) -> dict[str, object]:
+) -> ReleaseManifest:
     missing = sorted(REQUIRED_KEYS - values.keys())
     if missing:
         raise ManifestError("missing required keys: " + ", ".join(missing))
@@ -209,7 +245,7 @@ def validate_manifest(
     if direct_state == "active" and not _version_at_least(gates["pi"], "0.16.1"):
         raise ManifestError("active direct providers require PI_VERSION newer than 0.16.0")
 
-    capabilities = {
+    capabilities: Capabilities = {
         "owner-terminal": {
             "state": terminal_state,
             "image": terminal_image,
@@ -235,7 +271,7 @@ def validate_manifest(
     }
 
 
-def load_release_manifest(path: Path, *, verify_checkout: bool = True) -> dict[str, object]:
+def load_release_manifest(path: Path, *, verify_checkout: bool = True) -> ReleaseManifest:
     root = path.resolve().parent
     actual = dashboard_tree_revision(root) if verify_checkout else None
     return validate_manifest(parse_env(path), actual_dashboard_revision=actual)

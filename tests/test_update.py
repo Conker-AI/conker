@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -74,7 +75,7 @@ def store(tmp_path: Path) -> UpdateStore:
     return UpdateStore(tmp_path / "update-state")
 
 
-def receipt_payload(result: dict[str, str]) -> dict[str, object]:
+def receipt_payload(result: dict[str, str]) -> dict[str, Any]:
     return json.loads(Path(result["receipt"]).read_text(encoding="utf-8"))
 
 
@@ -278,8 +279,10 @@ def test_services_start_only_after_every_provider_key_file_exists(tmp_path):
     transport.root = tmp_path
     commands: list[list[str]] = []
     transport._write_override = lambda images: tmp_path / "override.yml"
-    transport._compose_command = lambda *args, override: ["docker", "compose", *args]
-    transport._run = lambda command, **_: commands.append([str(part) for part in command])
+    transport._compose_command = cast(Any, lambda *args, override: ["docker", "compose", *args])
+    transport._run = cast(
+        Any, lambda command, **_: commands.append([str(part) for part in command])
+    )
 
     transport.apply_services({"resolved_images": {}})
 

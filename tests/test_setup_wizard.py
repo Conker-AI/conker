@@ -23,7 +23,7 @@ ORDER = [
     "protection",
     "rehearsal",
 ]
-OPERATION = {
+OPERATION: dict[str | None, str] = {
     "security": "configure_owner_channel",
     "companion": "configure_companion",
     "model": "configure_model",
@@ -100,7 +100,7 @@ class Conker:
             if approvals is None
             else approvals
         )
-        self.next_operation = None
+        self.next_operation: str | None = None
 
     def finish(self, step):
         if step not in self.sticky:

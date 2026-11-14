@@ -31,6 +31,13 @@ from tests.test_host_ops import Runner, host
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def newest(log, kind: str) -> dict:
+    """last_record, asserting that a line of that kind exists."""
+    record = last_record(log, kind)
+    assert record is not None
+    return record
+
+
 class Systemctl:
     """Records `systemctl --user` calls; a timer counts as enabled once enabled here."""
 
@@ -172,8 +179,10 @@ def test_nightly_run_is_the_helpers_backup_run_with_its_receipt(tmp_path):
     argv = runner.calls[0][0]
     assert argv[-3:] == ["setup", "run", "protection"]
     record = last_record(log, "backup")
+    assert record is not None
     assert record["outcome"] == "done" and record["operation"].startswith("schedule-")
     receipt = ops.receipt(record["operation"])
+    assert receipt is not None
     assert receipt["operation"] == "backup.run" and receipt["outcome"] == "done"
 
 
@@ -183,8 +192,8 @@ def test_nightly_run_with_no_destination_does_nothing_and_says_so(tmp_path):
 
     assert scheduled_backup(ops, log) == 0
 
-    assert last_record(log, "backup")["outcome"] == "skipped"
-    assert last_record(log, "backup")["reason"] == NO_DESTINATION
+    assert newest(log, "backup")["outcome"] == "skipped"
+    assert newest(log, "backup")["reason"] == NO_DESTINATION
     assert ops.receipts()["operations"] == []
 
 
@@ -203,7 +212,7 @@ def test_nightly_run_refuses_at_once_while_something_holds_the_lock(tmp_path, ho
     finally:
         lock.release()
 
-    record = last_record(log, "backup")
+    record = newest(log, "backup")
     assert record["outcome"] == "refused" and record["reason"]
     assert ops.receipts()["operations"] == []
 
@@ -215,7 +224,7 @@ def test_a_failed_nightly_backup_is_recorded_with_the_helpers_reason(tmp_path):
 
     assert scheduled_backup(ops, log) == 1
 
-    record = last_record(log, "backup")
+    record = newest(log, "backup")
     assert record["outcome"] == "failed" and "backup disk is mounted" in record["reason"]
 
 
@@ -251,7 +260,7 @@ def test_nightly_run_refuses_while_an_update_runs_or_is_held(tmp_path, marker, w
 
     assert scheduled_backup(ops, log) == 1
 
-    assert last_record(log, "backup")["reason"] == UPDATE_BUSY
+    assert newest(log, "backup")["reason"] == UPDATE_BUSY
     assert ops.receipts()["operations"] == []
 
 
@@ -266,7 +275,7 @@ def test_nightly_run_refuses_while_an_ubuntu_update_runs_or_is_held(tmp_path, ma
 
     assert scheduled_backup(ops, log) == 1
 
-    assert last_record(log, "backup")["reason"] == UPDATE_BUSY
+    assert newest(log, "backup")["reason"] == UPDATE_BUSY
     assert ops.receipts()["operations"] == []
 
 
@@ -300,9 +309,10 @@ def test_a_nightly_run_stopped_midway_is_recorded_and_the_stop_goes_on(tmp_path)
     with pytest.raises(KeyboardInterrupt):
         scheduled_backup(ops, log)
 
-    record = last_record(log, "backup")
+    record = newest(log, "backup")
     assert record["outcome"] == "failed" and "Stopped before it finished" in record["reason"]
-    assert ops.receipt(record["operation"])["outcome"] == "unknown"
+    receipt = ops.receipt(record["operation"])
+    assert receipt is not None and receipt["outcome"] == "unknown"
     assert OperationLock(ops.lock_path).acquire()
 
 
@@ -346,7 +356,7 @@ def test_last_record_skips_torn_and_foreign_lines(tmp_path):
     with log.path.open("ab") as stream:
         stream.write(b'{"torn": \n{"v": 2, "kind": "backup"}\n')
 
-    assert last_record(log, "backup")["at"] == "a"
+    assert newest(log, "backup")["at"] == "a"
     assert last_record(log, "drill") is None
     assert json.loads(log.path.read_bytes().splitlines()[0])["kind"] == "backup"
 

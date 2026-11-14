@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -24,6 +25,8 @@ import update_core as bare_core
 
 
 class Transport:
+    root: Path
+
     def __init__(self, fail=False):
         self.calls, self.fail = [], fail
 
@@ -43,7 +46,9 @@ def quiet(root):
     """A transport whose quiet check is the real one (backup lock, held recovery)."""
     transport = Transport()
     transport.root = root
-    transport.require_quiet = lambda: update_ubuntu.UbuntuTransport.require_quiet(transport)
+    transport.require_quiet = lambda: update_ubuntu.UbuntuTransport.require_quiet(
+        cast(Any, transport)
+    )
     return transport
 
 
@@ -261,7 +266,8 @@ def test_no_rollback_beside_a_backup_or_a_held_recovery(tmp_path, boot, marker):
         update_ubuntu.recover(tmp_path, transport_for=lambda root, target: transport)
 
     assert transport.calls == []
-    assert store.load_active()["phase"] == "applying"
+    active = store.load_active()
+    assert active is not None and active["phase"] == "applying"
     assert receipts(store) == []
     assert not (store.directory / "update.lock").exists()
 
@@ -295,7 +301,8 @@ def test_an_update_that_still_runs_is_not_touched(tmp_path, boot):
     with pytest.raises(UpdateError, match="another update may be active"):
         update_ubuntu.recover(tmp_path, transport_for=lambda *_: pytest.fail("no transport"))
 
-    assert store.load_active()["phase"] == "applying"
+    active = store.load_active()
+    assert active is not None and active["phase"] == "applying"
     assert receipts(store) == []
     assert (store.directory / "update.lock").exists()  # never another update's lock
 
@@ -335,7 +342,8 @@ def test_an_update_waits_for_a_backup_before_its_own_recovery(tmp_path, boot, mo
     assert update_ubuntu.main(["--root", str(tmp_path), "--to", "0.3.0"]) == 1
 
     assert transport.calls == []
-    assert store.load_active()["phase"] == "applying"
+    active = store.load_active()
+    assert active is not None and active["phase"] == "applying"
     assert not (store.directory / "update.lock").exists()
 
 

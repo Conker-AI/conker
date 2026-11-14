@@ -62,7 +62,7 @@ def docker(rows=None, calls=None):
 
 
 class Runner:
-    def __init__(self, result=0):
+    def __init__(self, result: int | BaseException = 0):
         self.calls, self.result = [], result
 
     def __call__(self, argv, **kwargs):
@@ -74,6 +74,12 @@ class Runner:
 
 def no_command(*_args, **_kwargs):
     pytest.fail("no host command may run")
+
+
+def stored(ops: HostOps, identity: str) -> dict:
+    receipt = ops.receipt(identity)
+    assert receipt is not None
+    return receipt
 
 
 def host(tmp_path, **kwargs) -> HostOps:
@@ -204,7 +210,9 @@ def test_saved_policy_is_read_like_conker_setup_protection(tmp_path):
         return json.dumps(answers[0]).encode()
 
     ops = HostOps(tmp_path, tmp_path / "source", "ubuntu", reader=reader)
-    assert ops.policy()["destination"] == destination
+    policy = ops.policy()
+    assert policy is not None
+    assert policy["destination"] == destination
     argv, kwargs = calls[0]
     assert argv == ["bash", str((tmp_path / "source").resolve() / "conker"), "setup", "protection"]
     assert kwargs["env"]["CONKER_LAYOUT"] == "ubuntu"
@@ -387,10 +395,10 @@ def test_one_action_at_a_time(tmp_path):
 
     release.set()
     for _ in range(200):
-        if ops.receipt("op-first-000000001")["outcome"] != "working":
+        if stored(ops, "op-first-000000001")["outcome"] != "working":
             break
         threading.Event().wait(0.05)
-    assert ops.receipt("op-first-000000001")["outcome"] == "done"
+    assert stored(ops, "op-first-000000001")["outcome"] == "done"
     assert [row["id"] for row in ops.receipts()["operations"]] == ["op-first-000000001"]
 
 
@@ -437,6 +445,7 @@ def test_the_lock_spans_processes_and_the_kernel_drops_it_when_its_holder_dies(
         text=True,
     )
     try:
+        assert holder.stdout is not None
         assert holder.stdout.readline().strip() == "held"
         error = refusal(
             lambda: ops.start(action("services.restart", {"service": "pi"}))
@@ -499,11 +508,11 @@ def test_an_action_cut_off_by_a_restart_becomes_unknown_and_is_never_rerun(
     ops.journal.append(
         started(identity, operation, arguments, digest, "ui", "2026-10-29T09:00:00Z")
     )
-    assert ops.receipt(identity)["outcome"] == "unknown"  # nobody holds the lock
+    assert stored(ops, identity)["outcome"] == "unknown"  # nobody holds the lock
 
     restarted = host(tmp_path, runner=no_command)
     assert restarted.settle() == 0, "settled once, recorded once"
-    receipt = restarted.receipt(identity)
+    receipt = stored(restarted, identity)
     assert receipt["outcome"] == "unknown" and receipt["reason"] == CUT_OFF
     assert receipt["check"] == {"operation": check[0], "arguments": check[1]}
     retry = restarted.start(
@@ -516,7 +525,7 @@ def test_an_interrupted_cli_run_records_unknown(tmp_path):
     ops = host(tmp_path, runner=Runner(KeyboardInterrupt()))
     with pytest.raises(KeyboardInterrupt):
         ops.start(action("services.restart", {"service": "pi"}), wait=True)
-    receipt = ops.receipt("op-1234567890abcdef")
+    receipt = stored(ops, "op-1234567890abcdef")
     assert receipt["outcome"] == "unknown" and receipt["check"]["operation"] == (
         "services.status"
     )
