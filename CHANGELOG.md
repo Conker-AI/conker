@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting.
 - **conker prompt enhance (B1).** `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` has Jev rewrite an unsent draft into a clearer prompt and prints it with what changed and the model that wrote it; nothing is sent or saved. Needs Pi with `POST /prompts/enhance` (Pi one model call on the drafting model, counted by the daily spending cap). Also on an installed stack as `./conker prompt enhance`. (#344)
 - **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override).
 
