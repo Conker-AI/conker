@@ -136,6 +136,24 @@ def test_memory_search_sends_its_words_as_a_query(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out) == {"results": []}
 
 
+def test_memory_beliefs_reaches_pi_through_the_relay(monkeypatch, capsys):
+    page = {
+        "agentId": "companion",
+        "total": 0,
+        "counts": {"stated": 0, "concluded": 0, "needsReview": 0},
+        "items": [],
+        "nextAfter": None,
+    }
+    relay = Relay(
+        monkeypatch, {("GET", "/memory/beliefs?limit=5&state=needs_review"): (200, page)}
+    )
+    assert main("memory", "beliefs", "--review", "--limit", "5", "--json") == 0
+    assert relay.sent == [("GET", "/memory/beliefs?limit=5&state=needs_review", None)]
+    assert json.loads(capsys.readouterr().out) == page
+    assert main("memory", "beliefs", "--review", "--limit", "5") == 0
+    assert capsys.readouterr().out.startswith("Conker believes 0 things about you")
+
+
 def test_a_query_cannot_change_the_checked_path(monkeypatch):
     relay = Relay(monkeypatch, {("GET", "/inbox?a=%2F..%2Fsessions"): (200, {})})
     config_cli.request(["docker"], "pi", "/inbox", query={"a": "/../sessions"})
