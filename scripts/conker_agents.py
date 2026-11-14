@@ -7,6 +7,7 @@ directly, without a change request. Pi validates every body; this module only sh
 
 from datetime import UTC, datetime
 
+from scripts import conker_team_run
 from scripts.conker_context import MEMORY_USES, pi_call
 
 ROLE_TOKENS = 50_000
@@ -93,7 +94,7 @@ def register(commands):
         help="What it remembers: nothing, only its chat (default), or what Conker knows about you",
     )
 
-    team = commands.add_parser("team", help="Make a new team of existing agents")
+    team = commands.add_parser("team", help="Make a team of existing agents, and run it")
     team_commands = team.add_subparsers(dest="operation", required=True)
     team_create = team_commands.add_parser(
         "create", help="Make a linear team: each role hands its result to the next"
@@ -117,6 +118,7 @@ def register(commands):
         default=ROLE_CENTS,
         help="Cost budget per role, in cents",
     )
+    conker_team_run.register(team_commands)
 
 
 def _text(value, name, limit):
@@ -375,6 +377,8 @@ def operation(args, config, request):
         return _search(args, config, request)
     if args.command == "agent":
         return _agent(args, config, request)
+    if args.operation != "create":
+        return conker_team_run.operation(args, config, request)
     agents = pi_call(request, config, "/agents")["results"]
     return pi_call(
         request, config, "/collaboration/teams", team_definition(args, agents)
