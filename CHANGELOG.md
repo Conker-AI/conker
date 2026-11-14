@@ -9,7 +9,7 @@ which module versions a release pins.
 - **Plainer words on screen.** Home's "Needs you" now shows the same count as the sidebar and the Inbox (it
   counted only decisions and ideas); Memory says memories and links; "Revision N" is "Version N"; the Teams
   dialog and the Native sessions list no longer show internal state names or raw ids. A new e2e walks every
-  place and tab and fails on these words. (#333)
+  place and tab and fails on these words. (#336)
 
 - **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due
   first, with overdue ones marked; `conker loops add` files one for a chat and `done`, `drop` and `reopen`
