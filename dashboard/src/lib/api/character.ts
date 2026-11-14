@@ -76,26 +76,6 @@ export function removeCharacterAsset(studio: CharacterStudio, assetId: string): 
     expressions: studio.appearance.expressions.map(item => item.assetId === assetId ? { ...item, assetId: null } : item),
   } }
 }
-export function exportCharacter(profile: Character) {
-  return JSON.stringify({ format: "conker-character", version: 1, character: validateCharacter(profile) }, null, 2)
-}
-export function importCharacter(text: string, current: Character): { profile: CharacterDraft; note: string } {
-  if (text.length > 32 * 1024 * 1024) throw new Error("Choose a character JSON file under 32 MB.")
-  let raw: unknown
-  try { raw = JSON.parse(text) } catch { throw new Error("This file is not valid JSON.") }
-  const bundle = z.object({ format: z.literal("conker-character"), version: z.literal(1), character: z.unknown() }).safeParse(raw)
-  if (bundle.success) return { profile: validateCharacter(bundle.data.character as Character), note: "Character imported into your draft. Review it, then save." }
-  const card = z.object({ spec: z.enum(["chara_card_v2", "chara_card_v3"]), data: z.object({ name: z.string().min(1).max(60), description: notes.optional(), personality: notes.optional(), scenario: notes.optional(), mes_example: notes.optional(), first_mes: notes.optional() }) }).safeParse(raw)
-  if (!card.success) throw new Error("Choose a Conker character package or Character Card V2/V3 JSON.")
-  const next = characterDraft(current)
-  next.name = card.data.data.name
-  next.personality = card.data.data.personality ?? ""
-  next.studio.backstory = card.data.data.description ?? ""
-  next.studio.relationship = card.data.data.scenario ?? ""
-  next.speakingStyle = card.data.data.mes_example ?? ""
-  next.studio.examples.character = card.data.data.first_mes ?? ""
-  return { profile: validateCharacter(next), note: "Imported character text. Current artwork and voice are kept. Embedded PNG/CHARX packs and card instructions are not imported yet." }
-}
 
 /** A presentation example, not model inference. Never sends prompts or runs tools. */
 export function previewCharacter(profile: Character, mode: CharacterMode) {

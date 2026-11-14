@@ -94,17 +94,4 @@ export type ConversationState = {
   files: { id: string; name: string; kind: "reference"; source?: string }[]
 }
 
-export type ConversationUpdate = {
-  contextPolicy?: import("./context-policy").ContextPolicy
-  presentationMode?: import("./character").CharacterMode
-  title?: string
-  pinned?: boolean
-  archived?: boolean
-  incognito?: boolean
-  privacy?: Partial<ConversationPrivacy>
-  modelId?: string | null
-}
 
-export type MessageUpdate = { text?: string; pinned?: boolean; redacted?: boolean; rating?: "up" | "down" | null }
-export type SteeringReceipt = { requestId: string; runId: string; messageId: string; status: "applied" }
-export type ReplyOptions = { modelId?: string; retryMessageId?: string; signal?: AbortSignal; onActivity?: (run: ConversationRun) => void; onReset?: () => void; /** Explicit developer fixture selection; absent for ordinary turns. */ previewScenario?: string }

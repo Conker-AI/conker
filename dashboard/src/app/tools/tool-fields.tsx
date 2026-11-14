@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ReferenceSection } from "@/components/reference-section";
-import { useConker } from "@/lib/api/store";
 import {
   type ToolDefinition,
   type ToolField,
@@ -202,28 +200,8 @@ function SchemaFields({
     </ReferenceSection>
   );
 }
-type ConfigurationProps = { live?: boolean; definition: ToolDefinition; onChange: (definition: ToolDefinition) => void }
-export function ToolConfiguration(props: ConfigurationProps & { live?: boolean }) {
-  return props.live ? <ConfigurationFields {...props} registryTools={[]} tickets={[]} /> : <PreviewConfiguration {...props} />;
-}
-function PreviewConfiguration(props: ConfigurationProps) {
-  const registryTools = useConker((data) => data.tools);
-  const tickets = useConker((data) => data.tickets);
-  return <ConfigurationFields {...props} registryTools={registryTools} tickets={tickets} />;
-}
-function ConfigurationFields({ definition, onChange, registryTools, tickets, live }: ConfigurationProps & {
-  registryTools: import("@/lib/api/models").Tool[];
-  tickets: import("@/lib/api/models").Ticket[];
-}) {
-  const registryTool =
-    registryTools.find((tool) => tool.id === definition.id) ??
-    registryTools.find((tool) => tool.name === definition.name);
-  const relatedRequests = registryTool
-    ? tickets.filter(
-        (ticket) =>
-          ticket.tool === registryTool.name || ticket.tool === registryTool.id,
-      )
-    : [];
+/** Draft metadata for a ToolGate tool; saving grants no execution access. */
+export function ToolConfiguration({ definition, onChange }: { definition: ToolDefinition; onChange: (definition: ToolDefinition) => void }) {
   const update = (value: Partial<ToolDefinition>) =>
     onChange({ ...definition, ...value });
   return (
@@ -258,54 +236,6 @@ function ConfigurationFields({ definition, onChange, registryTools, tickets, liv
           fields={definition.outputs}
           onChange={(outputs) => update({ outputs })}
         />
-        {registryTool && (
-          <ReferenceSection title="Published capability">
-            <p className="text-xs text-muted-foreground">
-              Latest visible preview publication for {registryTool.name}
-              {registryTool.publishedVersion ? ` · v${registryTool.publishedVersion}` : ""}.
-              These details describe the published configuration and grant no
-              authority. Unpublished draft changes are excluded.
-            </p>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-xs text-muted-foreground">Scope</dt>
-                <dd>{registryTool.scope}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Sensitivity</dt>
-                <dd>{registryTool.sensitivity}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Recent use</dt>
-                <dd>{registryTool.recentUse}</dd>
-              </div>
-            </dl>
-            {relatedRequests.length > 0 ? (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Related Inbox requests</h4>
-                <ul className="space-y-2">
-                  {relatedRequests.map((ticket) => (
-                    <li key={ticket.id}>
-                      <Link
-                        to={`/inbox/${encodeURIComponent(ticket.id)}`}
-                        className="text-primary underline underline-offset-4"
-                      >
-                        {ticket.request}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {ticket.status} · {ticket.agent}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No related fixture requests in Inbox.
-              </p>
-            )}
-          </ReferenceSection>
-        )}
       </div>
       <div className="space-y-6">
         <ReferenceSection title="Access & effects">
@@ -328,7 +258,7 @@ function ConfigurationFields({ definition, onChange, registryTools, tickets, liv
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {live ? "Draft metadata only. Saving grants no execution access." : "Preview metadata only. Publishing here grants no live access."}
+            Draft metadata only. Saving grants no execution access.
           </p>
           <Field
             label="Connection references"
@@ -348,7 +278,6 @@ function ConfigurationFields({ definition, onChange, registryTools, tickets, liv
               }
             />
           </Field>
-          {!live && <Button variant="link" render={<Link to="/settings?tab=connections" />}>Manage connections</Button>}
         </ReferenceSection>
         <ReferenceSection title="Execution limits">
           {(
@@ -379,7 +308,7 @@ function ConfigurationFields({ definition, onChange, registryTools, tickets, liv
         </ReferenceSection>
         <ReferenceSection title="Runtime boundary">
           <p className="text-sm text-muted-foreground">
-            {live ? "ToolGate stores this draft. Compilation, publication, credential binding and execution remain unavailable." : "ToolGate owns credentials and action policy. Tests use local fixtures. Arbitrary code, real model calls and scheduling are not connected."}
+            ToolGate stores this draft. Compilation, publication, credential binding and execution remain unavailable.
           </p>
         </ReferenceSection>
       </div>

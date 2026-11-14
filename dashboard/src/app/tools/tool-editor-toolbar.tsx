@@ -2,14 +2,12 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
-  Copy,
   Download,
   History,
   Maximize,
   Minimize,
   Save,
   TestTube2,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,11 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { conkerClient } from "@/lib/api";
 import {
   type ToolDefinition,
   type ValidationIssue,
-  type WorkspaceRecord,
 } from "@/lib/tool-workspace";
 
 export type EditorMode = "build" | "source" | "configure";
@@ -32,53 +28,37 @@ export type EditorMode = "build" | "source" | "configure";
 /** Top bar with back, view switch, save, test, publish and maximize actions. */
 export function ToolEditorToolbar({
   definition,
-  record,
   busy,
   dirty,
   pendingEdits,
   expanded,
   mode,
-  version,
   issues,
-  liveSave,
   livePublish,
   liveHistory,
   liveRun,
   onBack,
   setLeave,
-  setPanel,
-  setRemove,
   setExpanded,
-  setNotice,
   switchMode,
   save,
-  test,
-  task,
   exportDefinition,
 }: {
   definition: ToolDefinition;
-  record: WorkspaceRecord;
   busy: boolean;
   dirty: boolean;
   pendingEdits: boolean;
   expanded: boolean;
   mode: EditorMode;
-  version: string;
   issues: ValidationIssue[];
-  liveSave?: (definition: ToolDefinition) => Promise<void>;
-  livePublish?: () => void;
-  liveHistory?: () => void;
-  liveRun?: () => void;
+  livePublish: () => void;
+  liveHistory: () => void;
+  liveRun: () => void;
   onBack: () => void;
   setLeave: (leave: boolean) => void;
-  setPanel: (panel: "test" | "history" | null) => void;
-  setRemove: (remove: boolean) => void;
   setExpanded: (expanded: boolean) => void;
-  setNotice: (notice: string) => void;
   switchMode: (next: EditorMode) => boolean;
   save: () => void;
-  test: () => void;
-  task: (action: () => Promise<void>) => Promise<void>;
   exportDefinition: () => void;
 }) {
   return (
@@ -88,14 +68,14 @@ export function ToolEditorToolbar({
         size="icon"
         aria-label="Back to tool library"
         disabled={busy}
-        onClick={() => { if (liveSave && (dirty || pendingEdits)) setLeave(true); else onBack(); }}
+        onClick={() => { if (dirty || pendingEdits) setLeave(true); else onBack(); }}
       >
         <ArrowLeft />
       </Button>
       <div className="tool-title">
         <strong className="truncate text-sm">{definition.name}</strong>
         <span className="text-xs text-muted-foreground">
-          {dirty ? "Unsaved draft" : "Draft"} · {liveSave ? "ToolGate draft" : "local preview"}
+          {dirty ? "Unsaved draft" : "Draft"} · ToolGate draft
         </span>
       </div>
       <Select
@@ -125,17 +105,11 @@ export function ToolEditorToolbar({
       </Button>
       <Button
         size="sm"
-        disabled={
-          (!!liveSave && (!liveRun || dirty)) || busy || pendingEdits || (version === "draft" && issues.length > 0)
-        }
-        onClick={() => {
-          if (liveRun) { liveRun(); return; }
-          setPanel("test");
-          void test();
-        }}
+        disabled={dirty || busy || pendingEdits || issues.length > 0}
+        onClick={liveRun}
       >
         <TestTube2 />
-        {liveRun ? 'Run' : 'Test'}
+        Run
       </Button>
       <Popover>
         <PopoverTrigger render={<Button
@@ -147,24 +121,11 @@ export function ToolEditorToolbar({
         <PopoverContent align="end" className="flex flex-col gap-2">
           <Button
             variant="outline"
-            disabled={(!!liveSave && (!livePublish || dirty)) || busy || pendingEdits || issues.length > 0}
-            onClick={() =>
-              void task(async () => {
-                if (livePublish) { livePublish(); return; }
-                if (pendingEdits)
-                  throw new Error(
-                    "Apply or discard pending changes before publishing.",
-                  );
-                await conkerClient.toolWorkspace.save(definition);
-                const v = await conkerClient.toolWorkspace.publish(record.id);
-                setNotice(
-                  `Preview v${v.version} published. No live tool or access was created.`,
-                );
-              })
-            }
+            disabled={dirty || busy || pendingEdits || issues.length > 0}
+            onClick={livePublish}
           >
             <Check />
-            {liveSave ? "Publish saved version" : "Publish preview version"}
+            Publish saved version
           </Button>
           <Button
             variant="ghost"
@@ -174,34 +135,9 @@ export function ToolEditorToolbar({
             <Download />
             Export definition
           </Button>
-          <Button variant="ghost" disabled={!!liveSave && !liveHistory} onClick={() => liveHistory ? liveHistory() : setPanel("history")}>
+          <Button variant="ghost" onClick={liveHistory}>
             <History />
             Versions & runs
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={!!liveSave || pendingEdits}
-            onClick={() =>
-              void task(async () => {
-                const copied = await conkerClient.toolWorkspace.create(
-                  `${definition.name} copy`,
-                  definition.kind,
-                );
-                await conkerClient.toolWorkspace.save({
-                  ...definition,
-                  id: copied.id,
-                  name: `${definition.name} copy`,
-                });
-                setNotice("Copy added to the tool library.");
-              })
-            }
-          >
-            <Copy />
-            Duplicate tool
-          </Button>
-          <Button variant="ghost" disabled={!!liveSave} onClick={() => setRemove(true)}>
-            <Trash2 />
-            Delete preview tool
           </Button>
         </PopoverContent>
       </Popover>

@@ -12,7 +12,6 @@ const result = z.object({
   results: z.array(z.object({ at: z.number().finite().nonnegative(), origin, seen: z.boolean() }).strict()).max(50),
 }).strict()
 
-export type PasswordAlertsClient = ReturnType<typeof createPasswordAlertsClient>
 /** Pi keeps every wrong password against the owner's account; the Inbox shows the ones he has not seen. */
 export function createPasswordAlertsClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {

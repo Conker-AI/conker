@@ -7,14 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { StudioSection } from "./fields"
 import { CharacterMedia } from "./media"
-import { activityNames, sameCharacterValue, type CharacterActivity, type CharacterDraft, type CharacterMode } from "@/lib/api/character"
-import { conkerClient } from "@/lib/api"
+import { activityNames, previewCharacter, sameCharacterValue, type CharacterActivity, type CharacterDraft, type CharacterMode } from "@/lib/api/character"
 
 export function CharacterPreview({ profile }: { profile: CharacterDraft }) {
   const [mode, setMode] = useState<CharacterMode>(profile.studio.modes.default)
   const [activity, setActivity] = useState<CharacterActivity>("idle")
   const [expression, setExpression] = useState("neutral")
-  const [result, setResult] = useState<Awaited<ReturnType<typeof conkerClient.previewCharacter>> | null>(null)
+  const [result, setResult] = useState<ReturnType<typeof previewCharacter> | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [previewed, setPreviewed] = useState<CharacterDraft | null>(null)
@@ -31,7 +30,7 @@ export function CharacterPreview({ profile }: { profile: CharacterDraft }) {
       <div className="space-y-3 border-t pt-4"><p className="text-sm font-medium">Try the conversation</p><p className="text-sm leading-6 text-muted-foreground break-words">{profile.studio.examples.prompt || "Add a sample question in Speaking style."}</p>
         <Button type="button" variant="outline" disabled={loading || !profile.name.trim() || !profile.studio.examples[mode].trim()} onClick={async () => {
           setLoading(true); setError("")
-          try { setResult(await conkerClient.previewCharacter(profile, mode)); setPreviewed(profile) } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not preview this character.") } finally { setLoading(false) }
+          try { setResult(previewCharacter(profile, mode)); setPreviewed(profile) } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not preview this character.") } finally { setLoading(false) }
         }}><Play />{loading ? "Loading example…" : "Preview example"}</Button>
         {result && <div className="space-y-3 border-t pt-4"><div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">Authored example</Badge>{stale && <span className="text-xs text-muted-foreground">Draft changed · preview again</span>}</div><p className="whitespace-pre-wrap break-words text-sm leading-6">{result.text}</p><p className="text-xs leading-5 text-muted-foreground">Delivery: {result.delivery || "Natural delivery"}</p></div>}
         {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
