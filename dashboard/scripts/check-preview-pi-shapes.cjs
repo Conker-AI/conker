@@ -44,6 +44,7 @@ export async function run() {
     setupModels: () => control.setupModels(), rehearsal: () => control.setupRehearsal(),
     agent: async () => control.agent(first(await control.agents())),
     memoryUpkeep: () => control.memoryCare.upkeep(),
+    chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),
     promptEnhance: () => control.promptEnhance.enhance('Plan my week'),
   }

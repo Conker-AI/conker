@@ -31,3 +31,12 @@ test('the wand rewrites the draft without sending it, and Undo brings the origin
   await expect(box).toHaveValue(draft)
   expect(errors).toEqual([])
 })
+
+test('the Effort button sets how hard the model thinks and says when a model ignores it', async ({ page }) => {
+  const errors = await open(page, '/chat?session=ses_1111111111111111')
+  await page.getByRole('button', { name: 'Effort', exact: true }).click()
+  await expect(page.getByText('Not used by 1 of the 2 models that may answer.')).toBeVisible()
+  await page.getByRole('radio', { name: 'High' }).click()
+  await expect(page.getByRole('button', { name: 'Effort: High' })).toBeVisible()
+  expect(errors).toEqual([])
+})

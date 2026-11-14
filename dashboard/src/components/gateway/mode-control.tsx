@@ -58,7 +58,7 @@ export function ModeControl({ text, think, research, thinkAvailable, harnessDisa
     setComplexity(preset.complexity); apply({ think: preset.think && thinkAvailable, researchMode: preset.research })
   }
   // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
-  const summary = mode === 'auto' && current === 'auto' && proposal ? ` · ${[complexity === 'hard' ? 'Hard' : 'Easy', think && 'Thinking', research !== 'off' && (research === 'deep' ? 'Deep research' : 'Web')].filter(Boolean).join(' · ')}` : ''
+  const summary = mode === 'auto' && current === 'auto' && proposal ? ` · ${[complexity === 'hard' ? 'Hard' : 'Easy', think && 'Thinking', research !== 'off' && (research === 'deep' ? 'Deep research' : 'Web'), proposal.effort && `${proposal.effort[0].toUpperCase()}${proposal.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
   const reason = (field: AutoSettingsField) => mode === 'auto' && current === 'auto' && proposal ? <p className="text-xs leading-5 text-muted-foreground">{proposal.reasons[field]}</p> : null
   const note = status.kind === 'choosing' ? 'Choosing settings…'
     : status.kind === 'error' ? status.message
@@ -74,6 +74,7 @@ export function ModeControl({ text, think, research, thinkAvailable, harnessDisa
         <Setting label="Complexity" value={complexity} options={complexityOptions} onChange={setComplexity} disabled={disabled} />{reason('complexity')}
         <div className="flex items-center justify-between gap-3"><Label htmlFor="mode-think" className="text-sm">Think</Label><Switch id="mode-think" checked={think} disabled={disabled || !thinkAvailable} onCheckedChange={checked => apply({ think: checked, researchMode: research })} /></div>{reason('think')}
         <Setting label="Research" value={research} options={researchOptions} onChange={value => apply({ think, researchMode: value })} disabled={disabled} />{reason('research')}
+        {proposal?.effort && mode === 'auto' && current === 'auto' && <p className="text-xs leading-5 text-muted-foreground">Effort {proposal.effort}: {proposal.reasons.effort}. Set it with the Effort button.</p>}
       </div>
       <p role="status" className="text-xs leading-5 text-muted-foreground">{note}</p>
     </PopoverContent></Popover>

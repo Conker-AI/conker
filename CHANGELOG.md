@@ -92,6 +92,7 @@ which module versions a release pins.
 - **A wand in the composer.** One small button turns your draft into a clearer prompt: a goal, the context and the shape of the answer you want. It never sends. You read the rewrite in the text box, see what changed, open "Show original" and press Undo if you prefer your own words. One model call, counted in the daily spending cap. Needs Pi with Conker-AI/pi#271. (#349)
 
 - **What Conker believes.** Memory has a "What Conker believes" button: every memory with whose words it came from (you told me, or I worked it out), whether a source was later forgotten, when it was last used and whether it disagrees with another, filtered by who said it or by what needs a look. Read only; each memory opens for Fix or forget. Needs Pi with Conker-AI/pi#248. Also fixes the browser transport, which did not list the Memory care and prompt wand routes, so those two would have been refused on a real server. (#350)
+- **Effort chip in the composer (#351).** Each existing chat can set Auto, Light, Medium, High or Max effort from the bar; it says when the answering models ignore effort. Auto's proposed effort shows on the mode button. The prompt wand now folds into More options on narrow bars, where it covered that button.
 
 ## 0.1.0
 

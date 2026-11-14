@@ -92,14 +92,15 @@ test('auto-name on an empty chat gives empty', async () => {
 test('auto-name with a stale revision gives revision_conflict', async () => {
   await refused(client.autoName(A, 0), error => assert.equal(error.code, 'revision_conflict'))
 })
+const support = [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-haiku', providerId: 'anthropic', applies: null }]
 test('output of a new chat is all auto at revision 0', async () => {
-  assert.deepEqual(await client.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto' } })
+  assert.deepEqual(await client.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto', effort: 'auto' }, effortSupport: support })
 })
 test('saveOutput stores all fields and bumps the revision', async () => {
   const result = await client.saveOutput(A, { format: 'list', length: 'short', language: 'ru' }, 0)
-  assert.deepEqual(result, { revision: 1, output: { format: 'list', length: 'short', language: 'ru', level: 'auto' } })
+  assert.deepEqual(result, { revision: 1, output: { format: 'list', length: 'short', language: 'ru', level: 'auto', effort: 'auto' }, effortSupport: support })
   assert.deepEqual(await client.output(A), result)
-  assert.deepEqual((await client.saveOutput(A, { format: 'json', length: 'long', language: 'en-GB' }, 1)).output, { format: 'json', length: 'long', language: 'en-GB', level: 'auto' })
+  assert.deepEqual((await client.saveOutput(A, { format: 'json', length: 'long', language: 'en-GB' }, 1)).output, { format: 'json', length: 'long', language: 'en-GB', level: 'auto', effort: 'auto' })
 })
 test('level round-trips through the fake', async () => {
   const saved = await client.saveOutput(A, { format: 'text', length: 'short', language: 'en', level: 'plain' }, 2)
@@ -174,8 +175,19 @@ test('an unknown chat is a plain HTTP 404 and other paths are not answered', () 
 })
 test('each fixture instance keeps its own state (no globals)', async () => {
   const other = createChatNamesClient(authFor(createFakeChatNames(() => 1, fail, makeStore())))
-  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto' } })
+  assert.deepEqual(await other.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto', effort: 'auto' }, effortSupport: support })
   assert.equal((await other.title(A)).revision, 0)
+})
+
+test('effort is sent only when chosen and round-trips through the fake', async () => {
+  const seen = []
+  const spy = createChatNamesClient({ request: async (_path, options = {}) => { seen.push(options.body); return { revision: 3, output: { format: 'text', length: 'short', language: 'en', effort: 'high' } } } })
+  await spy.saveOutput(A, { format: 'text', length: 'short', language: 'en', effort: 'auto' }, 2)
+  await spy.saveOutput(A, { format: 'text', length: 'short', language: 'en', effort: 'high' }, 2)
+  assert.deepEqual(seen, [{ expected_revision: 2, output: { format: 'text', length: 'short', language: 'en' } }, { expected_revision: 2, output: { format: 'text', length: 'short', language: 'en', effort: 'high' } }])
+  const saved = await client.saveOutput(A, { format: 'text', length: 'short', language: 'en', effort: 'max' }, (await client.output(A)).revision)
+  assert.equal(saved.output.effort, 'max')
+  await refused(client.saveOutput(A, { format: 'text', length: 'short', language: 'en', effort: 'extreme' }, saved.revision), () => {})
 })
 
 async function main() {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { gatewayError } from '@/lib/gateway/transport'
 import type { EnhanceOptions, PromptEnhanceClient } from '@/lib/gateway/prompt-enhance'
-import { composerOutlined } from './composer-select'
+import { composerItem } from '@/components/chat/composer-items'
 
 type Result = { kind: 'done'; original: string; text: string; notes: string[]; modelId: string } | { kind: 'error'; message: string }
 
@@ -28,8 +28,8 @@ export function PromptEnhanceControl({ client, value, onChange, options, disable
   }
   const edited = result?.kind === 'done' && value !== result.text
   return <Popover open={open} onOpenChange={setOpen}>
-    <PopoverTrigger render={<Button type="button" size="icon" variant="ghost" className={`${composerOutlined} size-9 shrink-0 rounded-full`} aria-label="Improve my prompt" title="Improve my prompt" disabled={disabled || busy || !value.trim()} onClick={event => { if (!result) { event.preventDefault(); void press() } }} />}>
-      <Wand2 className={busy ? 'size-4 animate-pulse motion-reduce:animate-none' : 'size-4'} aria-hidden="true" />
+    <PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className="shrink-0" aria-label="Improve my prompt" title="Improve my prompt" disabled={disabled || busy || !value.trim()} onClick={event => { if (!result) { event.preventDefault(); void press() } }} />}>
+      <Wand2 className={busy ? 'size-4 animate-pulse motion-reduce:animate-none' : 'size-4'} aria-hidden="true" /><span data-label className="sr-only">Improve my prompt</span>
     </PopoverTrigger>
     <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] space-y-3">
       {result?.kind === 'error' && <><p role="alert" className="text-sm text-destructive-foreground">{result.message}</p>
@@ -47,3 +47,4 @@ export function PromptEnhanceControl({ client, value, onChange, options, disable
     </PopoverContent>
   </Popover>
 }
+composerItem(PromptEnhanceControl, 'enhance')

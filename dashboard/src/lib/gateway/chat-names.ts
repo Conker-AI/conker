@@ -15,6 +15,7 @@ const chatName = z.object({
 const outputFormat = z.enum(['auto', 'text', 'list', 'table', 'document', 'code', 'json'])
 const outputLength = z.enum(['auto', 'short', 'medium', 'long'])
 const outputLevel = z.enum(['auto', 'strict', 'plain', 'normal', 'deep'])
+const outputEffort = z.enum(['auto', 'light', 'medium', 'high', 'max'])
 const language = z.string().max(35).regex(/^(auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3})$/)
 
 const chatOutput = z.object({
@@ -25,7 +26,11 @@ const chatOutput = z.object({
     language: language,
     // An older Pi does not send it; missing reads as auto.
     level: outputLevel.optional(),
+    // Pi before the effort setting does not send it; missing reads as auto.
+    effort: outputEffort.optional(),
   }).strict(),
+  // Which models may answer this chat and whether effort reaches each: null is known only when the provider is asked.
+  effortSupport: z.array(z.object({ modelId: z.string(), providerId: z.string(), applies: z.boolean().nullable() }).strict()).optional(),
 }).strict()
 
 const archiveResult = z.object({ sessions: z.array(sessionId).min(1).max(100), archived: z.boolean() }).strict()
@@ -87,7 +92,7 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
       return parse(chatOutput, await auth.request(`${path(sessionId)}/output`, { signal }))
     },
 
-    async saveOutput(sessionId: string, output: { format: OutputFormat; length: OutputLength; language: string; level?: ChatOutputLevel }, expectedRevision: number) {
+    async saveOutput(sessionId: string, output: { format: OutputFormat; length: OutputLength; language: string; level?: ChatOutputLevel; effort?: ChatEffort }, expectedRevision: number) {
       // `auto` is Pi's own default and an older Pi refuses unknown keys, so it is not sent.
       const sent = output.level && output.level !== 'auto' ? { ...output, level: output.level } : output
       const checked = parse(chatOutput.shape.output, {
@@ -95,6 +100,8 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
         length: sent.length,
         language: sent.language,
         ...(sent.level && sent.level !== 'auto' ? { level: sent.level } : {}),
+        // A save replaces the whole document, so a chosen effort is always sent; auto is Pi's default.
+        ...(sent.effort && sent.effort !== 'auto' ? { effort: sent.effort } : {}),
       }, true)
       return parse(chatOutput, await auth.request(`${path(sessionId)}/output`, {
         method: 'POST',
@@ -107,4 +114,5 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
 export type OutputFormat = z.infer<typeof outputFormat>
 export type OutputLength = z.infer<typeof outputLength>
 export type ChatOutputLevel = z.infer<typeof outputLevel>
+export type ChatEffort = z.infer<typeof outputEffort>
 export type ChatOutput = z.infer<typeof chatOutput>

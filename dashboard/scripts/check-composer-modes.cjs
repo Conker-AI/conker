@@ -32,6 +32,10 @@ assert.deepEqual(modes.complexityHints('hard'), { isAnalysis: true })
 assert.deepEqual(modes.complexityHints('easy'), {})
 
 assert.deepEqual(auto.parseAutoSettings(proposal), proposal)
+// Effort comes with its reason or not at all.
+const withEffort = { ...proposal, effort: 'high', reasons: { ...proposal.reasons, effort: 'A hard question.' } }
+assert.deepEqual(auto.parseAutoSettings(withEffort), withEffort)
+for (const bad of [{ ...proposal, effort: 'high' }, { ...proposal, reasons: { ...proposal.reasons, effort: 'x' } }, { ...withEffort, effort: 'extreme' }, { ...withEffort, reasons: { ...withEffort.reasons, effort: ' ' } }]) assert.throws(() => auto.parseAutoSettings(bad))
 for (const broken of [
   { ...proposal, complexity: 'medium' }, { ...proposal, research: 'maybe' }, { ...proposal, think: 'yes' }, { ...proposal, modelId: '' },
   { ...proposal, reasons: { complexity: 'x', think: 'y' } }, { ...proposal, reasons: { ...proposal.reasons, extra: 'z' } },
