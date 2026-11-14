@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **One navigation table.** Character settings tabs read the same table as the sidebar and header, the
+  fixture shell's leftover copy is gone, and a check fails when the owner's guide names the sidebar
+  differently (it said System for Server). (#332)
+
 - **Memories worth tidying, from the CLI.** `conker memory upkeep` lists exact and near duplicates, open
   contradictions, expired memories and ones not recalled for a while (`--unused-days`, `--limit`, `--json`),
   each with its ids, the reason and every memory's revision and words. Installed stacks run it as

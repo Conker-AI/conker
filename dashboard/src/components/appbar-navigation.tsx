@@ -1,14 +1,12 @@
 import { useEffect, useRef, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { MessageCircle, SlidersHorizontal, SquarePen } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import type { getPageNavigation } from "@/config/navigation"
 import { cn } from "@/lib/utils"
 
-type Navigation = ReturnType<typeof getPageNavigation>
+type Crumb = { title: string; to: string }
+type Section = { value: string; label: string; to: string; badge?: number }
 
-export function AppbarBreadcrumbs({ crumbs, className }: Pick<Navigation, "crumbs"> & { className?: string }) {
+export function AppbarBreadcrumbs({ crumbs, className }: { crumbs: Crumb[]; className?: string }) {
   return <Breadcrumb aria-label="Page path" className={cn("min-w-0 flex-1", className)}>
     <BreadcrumbList className="flex-nowrap gap-1.5">
       {crumbs.flatMap((crumb, index) => {
@@ -27,16 +25,7 @@ export function AppbarBreadcrumbs({ crumbs, className }: Pick<Navigation, "crumb
   </Breadcrumb>
 }
 
-export function AppbarActions({ actions }: Pick<Navigation, "actions">) {
-  if (!actions.length) return null
-  return <nav aria-label="Related pages" className="flex shrink-0 items-center gap-1">
-    {actions.map(action => <Button key={action.to} variant="ghost" size="icon" render={<Link to={action.to} aria-label={action.label} title={action.label} />}>
-        {action.icon === "message" ? <MessageCircle aria-hidden="true" /> : action.icon === "new-chat" ? <SquarePen aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}
-      </Button>)}
-  </nav>
-}
-
-export function AppbarSections({ sections, activeSection, trailing }: Pick<Navigation, "sections" | "activeSection"> & { trailing?: ReactNode }) {
+export function AppbarSections({ sections, activeSection, trailing }: { sections: Section[]; activeSection?: string; trailing?: ReactNode }) {
   const activeLink = useRef<HTMLAnchorElement>(null)
   useEffect(() => {
     activeLink.current?.scrollIntoView({ block: "nearest", inline: "nearest" })

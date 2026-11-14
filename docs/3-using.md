@@ -32,7 +32,7 @@ The sidebar has three groups. Everything else is one search away (**Ctrl/Cmd+K**
 |---|---|
 | **Overview** | **Home** (what needs you today), **Inbox** (every decision waiting for you), **Chats** |
 | **Workspace** | **Projects**, **Memory**, **Agents** (with teams and skills), **Tools**, **Cron jobs** |
-| **System** | **Server** (health, processes, ports, containers, files), **Settings** |
+| **Server** | **Server** (health, processes, ports, containers, files), **Settings** |
 
 ## Decide in the Inbox
 
