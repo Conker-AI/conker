@@ -11,6 +11,7 @@ import sys
 import threading
 from functools import partial
 from pathlib import Path
+from typing import cast
 
 import pytest
 import yaml
@@ -112,7 +113,9 @@ def test_helper_socket_handler_serves_host_routes_beside_providers(tmp_path):
     worker.start()
 
     def request(method, path, body=None, content_type="application/json"):
-        connection = http.client.HTTPConnection(*server.server_address, timeout=10)
+        connection = http.client.HTTPConnection(
+            *cast("tuple[str, int]", server.server_address), timeout=10
+        )
         try:
             payload = json.dumps(body) if body is not None else None
             headers = {"Content-Type": content_type} if body is not None else {}
@@ -146,7 +149,9 @@ def test_without_a_working_journal_host_routes_answer_unavailable(tmp_path):
     worker = threading.Thread(target=server.serve_forever, daemon=True)
     worker.start()
     try:
-        connection = http.client.HTTPConnection(*server.server_address, timeout=10)
+        connection = http.client.HTTPConnection(
+            *cast("tuple[str, int]", server.server_address), timeout=10
+        )
         connection.request("GET", "/host/ops")
         response = connection.getresponse()
         assert response.status == 503

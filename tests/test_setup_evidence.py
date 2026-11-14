@@ -70,6 +70,7 @@ def test_protection_creates_then_reverifies_snapshot_before_building_receipt(tmp
     assert calls[0][3] is docker
     assert saved == snapshot
     assert receipt["receiptId"] == "protection-" + hashlib.sha256(raw).hexdigest()
+    assert isinstance(receipt["subject"], str)
     assert receipt["subject"].startswith("installation.repository.protection.3.")
     assert receipt["expiresAt"] == "2026-12-25T17:58:00Z"
 
@@ -130,7 +131,7 @@ def test_policy_is_digest_bound_and_retention_prunes_only_verified_snapshots(tmp
 
 
 def test_receipt_output_must_be_precreated_regular_file(tmp_path):
-    receipt = {"receiptId": "protection-" + "a" * 64}
+    receipt: dict[str, object] = {"receiptId": "protection-" + "a" * 64}
     output = tmp_path / "receipt.json"
     with pytest.raises(setup.SetupError, match="pre-created"):
         setup.write_receipt(output, receipt)

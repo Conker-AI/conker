@@ -9,10 +9,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 import recovery  # on sys.path through tests.recovery_fakes
 import recovery_data
+from recovery_docker import Docker
 
 from scripts import backup_cli, backup_drill
 from scripts.backup_schedule import UPDATE_BUSY, UPDATE_MARKERS, journal, last_record
@@ -68,7 +70,7 @@ def stack(tmp_path):
     for name in (".env", "versions.env", "docker-compose.yml"):
         (root / name).write_text("test configuration\n")
     engine = DrillEngine(tmp_path)
-    snapshot = recovery.backup(root, None, engine)
+    snapshot = recovery.backup(root, None, cast(Docker, engine))
     workspace = root / ".conker" / "backup-schedule"
     workspace.mkdir(parents=True)
     lock = OperationLock(root / ".conker" / "operation.lock")
@@ -286,6 +288,7 @@ def test_a_drill_stopped_by_sigterm_still_cleans_up_and_records_it(tmp_path):
     lines = journal(root, "repository").path.read_text(encoding="utf-8").splitlines()
     assert [json.loads(line)["outcome"] for line in lines] == ["running", "failed"]
     receipt = last_record(journal(root, "repository"), "drill")
+    assert receipt is not None
     assert receipt["reason"] == backup_cli.STOPPED
     assert receipt["checks"] == ["snapshot verified", "cleaned up"]
     assert receipt["leftovers"] is None
@@ -330,6 +333,7 @@ def test_scheduled_drill_with_no_destination_is_skipped_and_recorded(tmp_path):
     assert backup_cli.run_drill(ops, ops.root, "ubuntu", None, "cli") == 1
 
     record = last_record(journal(ops.root, "ubuntu"), "drill")
+    assert record is not None
     assert record["outcome"] == "skipped" and record["snapshot"] is None
     assert "No backup destination" in record["reason"]
 

@@ -19,7 +19,7 @@ import tempfile
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 
 class RecoveryError(RuntimeError):
@@ -235,7 +235,7 @@ def invalidate_approvals(database: Path) -> dict:
         row = db.execute(
             "SELECT body FROM v2_objects WHERE kind='settings' AND id='control-plane'"
         ).fetchone()
-        settings = json.loads(row[0]) if row else {"id": "control-plane"}
+        settings: dict[str, Any] = json.loads(row[0]) if row else {"id": "control-plane"}
         settings.update(
             lockdown=True,
             reason="Recovery hold: reconciliation is required",

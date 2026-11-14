@@ -22,6 +22,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from scripts.host_ops_journal import OP_ID, Journal, OperationLock, finished, started
 from scripts.host_ops_reads import (
@@ -252,7 +253,7 @@ class HostOps:
             receipts, _ = self.journal.receipts()
             if identity in receipts:
                 lock.release()
-                return self._existing(identity, digest)
+                return cast(dict, self._existing(identity, digest))
             self._settle(receipts)
             self._require_no_hold()
             argv = self._command(operation, arguments)
@@ -275,7 +276,7 @@ class HostOps:
                 self.journal.append(finished(identity, "failed", NO_START, self.now()))
                 lock.release()
                 raise
-        return self.receipt(identity)
+        return cast(dict, self.receipt(identity))
 
     def _existing(self, identity: str, digest: str) -> dict | None:
         receipt = self.journal.receipts()[0].get(identity)

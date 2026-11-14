@@ -7,6 +7,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 import yaml
@@ -23,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import recovery  # noqa: E402
 import recovery_layout  # noqa: E402
 import recovery_snapshot  # noqa: E402
+from recovery_docker import Docker  # noqa: E402
 
 MANIFEST = ROOT / "versions.env"
 OVERLAY = ROOT / "docker-compose.subscriptions.yml"
@@ -282,7 +284,7 @@ def test_backup_stops_the_runtime_and_leaves_its_sign_in_out(tmp_path):
         "Config": {"Image": PINNED, "Env": []},
     }
 
-    snapshot = recovery.backup(root, None, engine)
+    snapshot = recovery.backup(root, None, cast(Docker, engine))
     manifest = recovery_snapshot.verify_snapshot(snapshot)
 
     assert "subscriptions" in manifest["images"]

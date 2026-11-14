@@ -10,7 +10,7 @@ import tarfile
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 from recovery_data import RecoveryError, safe_member
@@ -142,7 +142,7 @@ def backup(root: Path, destination: Path | None, docker: Docker) -> Path:
 def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
     profile = detect_layout(root)
     compose = compose_command(root, profile)
-    config = docker.json(*compose, "config", "--format", "json")
+    config = cast(dict[str, Any], docker.json(*compose, "config", "--format", "json"))
     configured_services = set(config.get("services", {}))
     if not valid_service_inventory(configured_services, profile):
         raise RecoveryError(

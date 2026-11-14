@@ -14,6 +14,7 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
+from typing import cast
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -197,7 +198,7 @@ def prepare_protection(
             "verified snapshot completion time is invalid or already stale"
         )
     (prune or enforce_retention)(
-        destination, snapshot, int(policy["retentionCopies"]), verify
+        destination, snapshot, int(cast(int, policy["retentionCopies"])), verify
     )
     digest = hashlib.sha256(raw).hexdigest()
     return (
