@@ -4,10 +4,12 @@ import { expect, test } from '@playwright/test'
 import { gatewayDestinations, gatewayPageNavigation } from '../src/components/gateway/navigation'
 import { open } from './pages'
 
-const places = [...new Set(gatewayDestinations.flatMap(item => {
+// Screens reached from a link on another page are listed by hand.
+const linked = ['/memory?view=care']
+const places = [...new Set([...linked, ...gatewayDestinations.flatMap(item => {
   const path = item.path.split('?')[0]
   return [path, ...gatewayPageNavigation(path, '').sections.map(section => section.to)]
-}))]
+})])]
 // Mechanism words, and snake_case ids such as review_changes.
 const engineerWords = /\bRevision \d|records? loaded|recorded relationships|\bendpoint\b|Configuration only|selection conflict|\b[a-z]+_[a-z]+\b/i
 

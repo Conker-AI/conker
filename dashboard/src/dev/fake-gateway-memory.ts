@@ -121,6 +121,20 @@ export function createFakeMemory(fail: (status: number) => never) {
         try { globalThis.sessionStorage?.removeItem(forgetKey) } catch { /* Preview storage is optional. */ }
         return receipt
       }
+      if (path === '/api/control/pi/memory/upkeep' && method === 'GET') {
+        const live = (ids: string[]) => ids.every(id => memories.some(row => row.id === id))
+        const items = (rows: { ids: string[]; reason: string }[]) => rows.filter(row => live(row.ids))
+        const group = (rows: { ids: string[]; reason: string }[]) => { const kept = items(rows); return { items: kept, total: kept.length } }
+        return {
+          agentId: 'agent_preview', checkedAt: new Date().toISOString(), memoriesChecked: memories.length, truncated: false,
+          exactDuplicates: group([]),
+          nearDuplicates: group([{ ids: ['mem_physics', 'mem_revision'], reason: 'Both describe a weekly school routine.' }]),
+          contradictions: group([{ ids: ['mem_judo', 'mem_revision'], reason: 'One says evenings are busy, the other plans a block before school on those days.' }]),
+          expired: group([{ ids: ['mem_physics'], reason: 'Set for the autumn term, which ended.' }]),
+          notRecalled: group([{ ids: ['mem_revision'], reason: 'Not used in any answer for 60 days.' }]),
+          memories: Object.fromEntries(memories.filter(row => row.type === 'memory').map(row => [row.id, { text: row.preview, revision: 1, memoryType: row.memory_type ?? null, sourceType: 'conversation', state: 'current' }])),
+        }
+      }
       if (path === '/api/control/pi/memory/objects') {
         const search = String(options.query?.search ?? '').toLocaleLowerCase(), type = options.query?.object_type
         const objects = memories.filter(item => (!type || item.type === type) && `${item.title} ${item.preview}`.toLocaleLowerCase().includes(search))

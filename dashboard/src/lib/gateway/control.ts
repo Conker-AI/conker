@@ -7,6 +7,7 @@ import { createGatewayImportsClient } from './imports'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
+import { createMemoryCareClient } from './memory-care'
 import { createChatAnswersClient } from './chat-answers'
 import { createChatReviewsClient } from './chat-reviews'
 import { createChatNamesClient } from './chat-names'
@@ -326,6 +327,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
     asks: createAsksClient(auth),
+    /** Memories worth tidying: duplicates, disagreements, expired, unused. Read only. */
+    memoryCare: createMemoryCareClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */
     chatAnswers: createChatAnswersClient(auth),
     chatReviews: createChatReviewsClient(auth),

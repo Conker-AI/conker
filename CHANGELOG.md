@@ -79,6 +79,10 @@ which module versions a release pins.
   dialog and the Native sessions list no longer show internal state names or raw ids. A new e2e walks every
   place and tab and fails on these words. (#336)
 
+- **Memory care.** Memory has a "Memory care" button that lists what is worth tidying (memories that disagree, saved twice,
+  almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
+  Read only; needs Pi with Conker-AI/pi#250. (#343)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
