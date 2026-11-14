@@ -12,6 +12,7 @@ import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolic
 import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
 import type { GatewayAgentNote } from '../gateway/jobs'
 import type { MemoryUpkeepPage } from '../gateway/memory-care'
+import type { ChatOutput } from '../gateway/chat-names'
 import type { BeliefPage } from '../gateway/memory-beliefs'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 
@@ -31,6 +32,7 @@ type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? t
 export const piWire = {
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
+  chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
   project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,

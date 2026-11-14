@@ -33,6 +33,7 @@ import { GatewayCallLauncher } from './call-workspace'
 import { GatewaySessionAgentControl } from './session-agent-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { ModeControl, TemplateInput, TemplatePicker } from './composer-parts'
+import { ChatEffortControl } from './chat-effort-control'
 import { PromptEnhanceControl } from './prompt-enhance-control'
 import { ChatTitle } from './chat-title'
 import { nameChat } from './chat-title-actions'
@@ -94,6 +95,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={selectedValue.modelId ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => draftController.edit(selected, { modelId: value || null })} />}
         <GatewaySkillPicker key={`skills:${selected}`} client={client} value={selectedValue.skillIds} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={ids => setSkillChoices(selected, ids)} />
         {control && current && current.status === 'open' && <ChatOutputControl key={`output:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} onChanged={refreshChat} />}
+        {control && current && current.status === 'open' && <ChatEffortControl key={`effort:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} />}
         <ThinkControl companion={activeAgentId === 'companion'} checked={selectedValue.think} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={think => setThinkChoice(selected, think)} />
         {headerExtra}
         {control && <PromptEnhanceControl key={`wand:${selected}`} client={control.promptEnhance} value={chat.draft} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} options={{ sessionId: selected }} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation) || dictating || sendPending || Boolean(attempt)} />}

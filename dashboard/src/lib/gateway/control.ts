@@ -250,6 +250,8 @@ const agentConfiguration = z.object({
   instructions: z.string().trim().min(1).max(8000), modelId: agentReference.nullable(),
   toolIds: z.array(agentReference).max(1000).refine(values => new Set(values).size === values.length),
   toolAccess: z.record(agentReference, z.enum(['allow', 'ai', 'ask'])).refine(value => Object.keys(value).length <= 1000).optional(),
+  // Up to three skills an agent always carries; Pi leaves the key out when there are none.
+  skillIds: z.array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(64)).max(3).refine(values => new Set(values).size === values.length).optional(),
   memory: z.object({
     scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(agentReference).max(1000),
   }).superRefine((value, context) => {

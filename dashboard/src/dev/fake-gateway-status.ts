@@ -10,7 +10,7 @@ export function createFakeStatus(now: () => number, iso: (seconds: number) => st
     if (path === '/api/pi/models/auto-settings' && method === 'POST') {
       // Deterministic stand-in for the routing model: long or comparative asks are Hard; price-like asks research the web.
       const text = String(options.body?.text ?? ''), hard = text.length > 80 || /compare|best|plan|why/i.test(text), web = /price|latest|best|news|today|buy/i.test(text)
-      return { complexity: hard ? 'hard' : 'easy', think: hard, research: web ? 'web' : 'off', reasons: { complexity: hard ? 'This needs careful comparison or planning.' : 'A short, direct question.', think: hard ? 'A background check of the trade-offs helps.' : 'No separate analysis needed.', research: web ? 'Current facts matter here.' : 'Answerable without the web.' }, modelId: 'jev-preview', configurationRevision: 1 }
+      return { complexity: hard ? 'hard' : 'easy', think: hard, research: web ? 'web' : 'off', effort: hard ? 'high' : 'light', reasons: { effort: hard ? 'A hard question deserves full attention.' : 'A quick answer needs little effort.', complexity: hard ? 'This needs careful comparison or planning.' : 'A short, direct question.', think: hard ? 'A background check of the trade-offs helps.' : 'No separate analysis needed.', research: web ? 'Current facts matter here.' : 'Answerable without the web.' }, modelId: 'jev-preview', configurationRevision: 1 }
     }
     if (path === '/api/pi/models') {
       const scenario = globalThis.sessionStorage?.getItem('conker-fake-fail')

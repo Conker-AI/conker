@@ -5261,6 +5261,8 @@ export interface components {
                 [key: string]: "allow" | "ai" | "ask";
             };
             memory: components["schemas"]["MemorySelection"];
+            /** Skillids */
+            skillIds?: string[];
         };
         /**
          * AgentJobCreate
@@ -7624,6 +7626,20 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /**
+         * EffortSupport
+         * @description Whether the effort reaches one model that may answer: True, False, or None when Pi learns
+         *     it only when it asks the provider (a Claude model's capability list, an OpenRouter model's
+         *     parameters). Where it is False the chosen effort is ignored for that model.
+         */
+        EffortSupport: {
+            /** Modelid */
+            modelId: string;
+            /** Providerid */
+            providerId: string;
+            /** Applies */
+            applies: boolean | null;
+        };
         /** EnhancedPrompt */
         EnhancedPrompt: {
             /** Text */
@@ -8980,6 +8996,12 @@ export interface components {
              * @enum {string}
              */
             level: "auto" | "strict" | "plain" | "normal" | "deep";
+            /**
+             * Effort
+             * @default auto
+             * @enum {string}
+             */
+            effort: "auto" | "light" | "medium" | "high" | "max";
         };
         /**
          * OutputDocument
@@ -8989,6 +9011,8 @@ export interface components {
             /** Revision */
             revision: number;
             output: components["schemas"]["Output"];
+            /** Effortsupport */
+            effortSupport?: components["schemas"]["EffortSupport"][];
         };
         /** OwnerPreferences */
         OwnerPreferences: {
