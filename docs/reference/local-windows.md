@@ -51,8 +51,8 @@ host command, from `$HOME\dev\gates\pi`:
 
 This command prompts interactively and revokes existing browser sessions. After
 success, the initial-password file is obsolete. Do not paste service credentials
-into browser fields. Dashboard mutations use a fresh password verification for
-the exact submitted operation.
+into browser fields. The dashboard asks for the password only to forget, delete or
+pay and for security settings (ADR-0010).
 
 ## Serving a new frontend build
 
@@ -78,8 +78,7 @@ or connector works. For dependency readiness inspect ToolGate `/health` separate
 
 ### Feature availability
 
-Read `local-integration-plan.md` for verified journeys and remaining work. The
-live shell connects memory inspection, model settings, conversations, activity,
+The live shell connects memory inspection, model settings, conversations, activity,
 Inbox approvals and System health;
 unconnected screens say so explicitly. Memory retrieval uses text fallback without
 vector embeddings. Laya is an English decision classifier; CPU answer generation

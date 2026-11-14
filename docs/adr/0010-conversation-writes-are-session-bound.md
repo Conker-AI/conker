@@ -1,7 +1,7 @@
 # ADR-0010 — Conversation writes need the signed-in session, not a fresh password
 
 **Status:** accepted, 24 September 2026. Changes the browser verification rule described in
-[reference/gateway-verification-recovery.md](../reference/gateway-verification-recovery.md).
+[reference/gateway-verification-recovery.md](https://github.com/Conker-AI/conker/blob/79a4cbf6b6a7ae93b8f54559edb2e1db823b8d3b/docs/reference/gateway-verification-recovery.md).
 
 ## Context
 
