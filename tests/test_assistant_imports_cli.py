@@ -15,9 +15,10 @@ from urllib.error import HTTPError
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import assistant_imports
-import conker as cli
 import import_cli
+
+from scripts import assistant_imports
+from scripts import conker as cli
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT = json.dumps([{"uuid": "k1", "name": "Essay", "chat_messages": []}]).encode()
@@ -160,8 +161,7 @@ def test_oversized_and_missing_exports_are_refused_before_pi_is_called(
 
 
 def test_the_parser_takes_preview_or_yes_but_not_both(capsys):
-    import conker_parser
-
+    from scripts import conker_parser
     parser = conker_parser.build_parser("conker")
     parsed = parser.parse_args(["import", "chatgpt", "export.zip"])
     assert (parsed.command, parsed.source, parsed.yes) == ("import", "chatgpt", False)

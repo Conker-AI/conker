@@ -17,6 +17,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
@@ -64,7 +67,7 @@ def install(model):
     pins = json.loads((ROOT / "scripts/workspace-sources.json").read_text())
     pythons = {name: prepare_source(name, revision) for name, revision in pins.items()}
     # Reuse the established scoped-key configuration and service launcher.
-    import local_stack
+    from scripts import local_stack
     local_stack.initialize()
     config = json.loads(CONFIG.read_text())
     config.update(workspace_schema=1, ports=PORTS, python=pythons["pi"],
@@ -151,7 +154,7 @@ print('Owner login initialized. Password retained only in the private local gate
 
 
 def build():
-    from workspace_build import build_dashboard
+    from scripts.workspace_build import build_dashboard
 
     def require_stopped():
         if CONFIG.exists() and owned_process(read_config(), "gateway"):
@@ -327,15 +330,15 @@ def main():
         return
     config = read_config()
     if args.command == "memory-corrections":
-        from workspace_setup import configure_memory_corrections
+        from scripts.workspace_setup import configure_memory_corrections
         configure_memory_corrections(config)
         return
     if args.command == "meaning-search":
-        from workspace_search import enable
+        from scripts.workspace_search import enable
         enable(config)
         return
     if args.command == "enhance":
-        from workspace_setup import enhance
+        from scripts.workspace_setup import enhance
         enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
         return
     # Computed per call, never stored: a second call in one process must not add services twice.
@@ -353,7 +356,8 @@ def main():
         if not (ROOT / "dashboard/dist/index.html").is_file():
             raise SystemExit("Build the dashboard first: python scripts/workspace.py build")
         import import_listener
-        from service_keys import ensure
+
+        from scripts.service_keys import ensure
         # A workspace made before MemoryGate and ToolGate asked Pi for model text, or before Pi
         # offered imported chats to memory, gets those keys here; a service already running picks
         # its key up when it next starts.
@@ -394,7 +398,7 @@ def main():
             label = {"stopped": "stopped", "starting": "running; port not listening (starting or unhealthy)",
                      "listening": "running; listening (inspect System for health)"}[state]
             print(f"{service}: {label}")
-        from workspace_memory import status as memory_correction_status
+        from scripts.workspace_memory import status as memory_correction_status
         print("memory corrections: " + memory_correction_status(config))
         search = config.get("meaning_search")
         print("meaning search: " + (f"configured ({search['model']})" if search else

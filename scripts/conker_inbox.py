@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from conker_context import pi_call
+from scripts.conker_context import pi_call
 
 # What each kind of Conker's change request would make; a newer kind shows as "request".
 REQUEST_KINDS = {

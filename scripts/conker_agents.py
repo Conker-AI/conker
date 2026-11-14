@@ -5,7 +5,7 @@ These are the owner's counterparts of Conker's built-in tools `conker.recall`,
 directly, without a change request. Pi validates every body; this module only shapes it.
 """
 
-from conker_context import pi_call
+from scripts.conker_context import pi_call
 
 ROLE_TOKENS = 50_000
 ROLE_CENTS = 25

@@ -9,8 +9,8 @@ from urllib.error import HTTPError
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import conker as cli
-from conker_context import NO_SETTINGS
+from scripts import conker as cli
+from scripts.conker_context import NO_SETTINGS
 
 
 @pytest.fixture

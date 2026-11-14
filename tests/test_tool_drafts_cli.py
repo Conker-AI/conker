@@ -11,8 +11,8 @@ from urllib.error import HTTPError
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import conker as cli
-import tool_drafts
+from scripts import conker as cli
+from scripts import tool_drafts
 
 IDENTITY = "creq_" + "a" * 32
 

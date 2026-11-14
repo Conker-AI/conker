@@ -15,8 +15,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-import assistant_imports
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from config_cli import compose, reason
+
+from scripts import assistant_imports
 
 ROUTES = re.compile(r"/imports/(?:chatgpt|claude)/(?:preview|[0-9a-f]{64})")
 # Runs inside the pi container: the export arrives on stdin and goes to Pi as the request body.

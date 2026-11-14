@@ -5,8 +5,8 @@ import uuid
 from pathlib import Path
 from urllib.error import HTTPError
 
-from conker_context import _file_text, pi_call
-from conker_inputs import identity
+from scripts.conker_context import _file_text, pi_call
+from scripts.conker_inputs import identity
 
 MESSAGE = r"[A-Za-z0-9_-]{1,200}"
 REQUEST = r"[A-Za-z0-9_-]{16,128}"

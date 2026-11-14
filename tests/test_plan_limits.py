@@ -251,8 +251,7 @@ def test_limits_routes_need_the_control_key(tmp_path):
 def test_cli_lists_both_plans_and_marks_a_missing_runtime(monkeypatch, capsys):
     from urllib.error import HTTPError
 
-    import conker as cli
-
+    from scripts import conker as cli
     asked = []
 
     def request(config, service, path, body=None, **_):
@@ -369,8 +368,7 @@ def test_a_malformed_responses_body_gets_a_422_not_a_closed_connection():
 
 
 def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
-    import conker as cli
-
+    from scripts import conker as cli
     asked = []
 
     def request(config, service, path, body=None, **_):
@@ -395,8 +393,7 @@ def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
 def test_a_workspace_without_subscription_runtimes_reports_not_configured(
     monkeypatch, capsys
 ):
-    import conker as cli
-
+    from scripts import conker as cli
     def request(*_args, **_options):
         raise AssertionError("no runtime to ask")
 
