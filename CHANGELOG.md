@@ -6,6 +6,9 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **For new contributors.** CONTRIBUTING lists seven small open tasks, each with where to look and when it is
+  done, and the README's diagram shows the CLI, the approval path and what flows along each arrow. (#328)
+
 - **The subscriptions image's code lives with its Dockerfile.** Seven modules only the Claude plan runtime
   runs moved from `scripts/` to `services/subscriptions/` (the image's /app is unchanged); its publish workflow
   now also runs when the two modules it shares with the host helper change. (#327)
