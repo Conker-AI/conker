@@ -25,6 +25,15 @@ BUDGET_RULE = (
 START = "conker context budget {session} --window TOKENS --reserve TOKENS"
 NO_SETTINGS = "This chat has no context settings yet. Start them with: " + START
 ITEM_TEXT_ERROR = "Use 1-500 characters of text."
+# The query keys each Pi read route may carry; conker.py's request() drops the rest.
+_MEMORY_LIST_KEYS = ("search", "limit", "origin", "state", "memory_type", "after")
+PI_QUERY_KEYS = {
+    "/definitions": ("kind", "search", "archived"),
+    "/memory/objects": _MEMORY_LIST_KEYS,
+    "/memory/beliefs": _MEMORY_LIST_KEYS,
+    "/memory/upkeep": ("unused_days", "limit"),
+    "/open-loops": ("state", "due_before", "limit", "after"),
+}
 
 
 def register(commands):

@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due
+  first, with overdue ones marked; `conker loops add` files one for a chat and `done`, `drop` and `reopen`
+  close or reopen it. Installed stacks run it as `./conker loops`. Needs Pi with Conker-AI/pi#251.
+
 - **One navigation table.** Character settings tabs read the same table as the sidebar and header, the
   fixture shell's leftover copy is gone, and a check fails when the owner's guide names the sidebar
   differently (it said System for Server). (#332)

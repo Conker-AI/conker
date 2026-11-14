@@ -95,6 +95,9 @@ def test_the_owner_commands_are_routed_to_the_owner_cli():
         ("/memory/objects", {"forget": True}),  # GET only
         ("/agents/companion", None),
         ("/inference/spending", {}),
+        ("/open-loops/loop_" + "a" * 32 + "/state", None),  # POST only
+        ("/open-loops/loop_" + "a" * 32 + "/state/x", {"state": "done"}),
+        ("/open-loops/loop_../state", {"state": "done"}),
     ],
 )
 def test_nothing_outside_the_commands_routes_is_reached(monkeypatch, path, body):
@@ -171,6 +174,50 @@ def test_memory_upkeep_reaches_pi_through_the_relay(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out) == page
     assert main("memory", "upkeep", "--unused-days", "30", "--limit", "5") == 0
     assert capsys.readouterr().out.splitlines() == ["Checked 0 memories.", "Nothing to tidy."]
+
+
+LOOP = {
+    "id": "loop_" + "b" * 32,
+    "sessionId": "chat_1",
+    "sessionTitle": "Exams",
+    "messageId": None,
+    "quote": None,
+    "text": "Send the essay",
+    "promisedBy": "owner",
+    "dueOn": "2026-11-20",
+    "overdue": False,
+    "state": "open",
+    "revision": 1,
+    "createdAt": 1.0,
+    "updatedAt": 1.0,
+}
+
+
+def test_loops_reach_pi_through_the_relay(monkeypatch, capsys):
+    page = {"today": "2026-11-14", "timeZone": "Europe/Riga", "items": [LOOP], "nextAfter": None}
+    state = f"/open-loops/{LOOP['id']}/state"
+    relay = Relay(
+        monkeypatch,
+        {
+            ("GET", "/open-loops?state=all&limit=5"): (200, page),
+            ("POST", "/open-loops"): (200, {"loop": LOOP}),
+            ("POST", state): (200, {"loop": {**LOOP, "state": "done"}}),
+        },
+    )
+    assert main("loops", "list", "--all", "--limit", "5") == 0
+    assert capsys.readouterr().out.splitlines()[0] == "1 shown; today is 2026-11-14 (Europe/Riga)."
+    assert main("loops", "add", "chat_1", "Send the essay", "--due", "2026-11-20") == 0
+    assert main("loops", "done", LOOP["id"]) == 0
+    assert relay.sent == [
+        ("GET", "/open-loops?state=all&limit=5", None),
+        (
+            "POST",
+            "/open-loops",
+            {"session_id": "chat_1", "text": "Send the essay", "promised_by": "owner",
+             "due_on": "2026-11-20"},
+        ),
+        ("POST", state, {"state": "done"}),
+    ]
 
 
 def test_a_query_cannot_change_the_checked_path(monkeypatch):
