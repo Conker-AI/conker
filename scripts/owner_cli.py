@@ -1,6 +1,6 @@
-"""conker memory search, agent create, team create, inbox and spending on an installed stack: the
-development CLI's own modules (conker_agents, conker_inbox, conker_spending), with Pi reached in its
-container.
+"""conker memory search and beliefs, agent create, team create, inbox and spending on an installed
+stack: the development CLI's own modules (conker_agents, conker_inbox, conker_spending), with Pi
+reached in its container.
 
 As for conker config (scripts/config_cli.py), each call is one `docker compose exec` into the pi
 container, where a short relay calls Pi on its own port with the key Pi was started with: the key
@@ -28,6 +28,7 @@ COMMANDS = ("memory", "agent", "team", "inbox", "spending")
 # What these commands may ask of Pi: (method, path). A body makes it a POST.
 ROUTES = {
     ("GET", "/memory/objects"),
+    ("GET", "/memory/beliefs"),
     ("GET", "/agents"),
     ("POST", "/agents"),
     ("POST", "/collaboration/teams"),
@@ -66,6 +67,8 @@ def run(args, request) -> int:
         value = spending_operation(args, None, request, pi_call)
     else:
         value = agents_operation(args, None, request)
+        if value is None:  # memory beliefs printed its page itself
+            return 0
     print(json.dumps(value, indent=2, ensure_ascii=False))
     return 0
 

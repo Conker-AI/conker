@@ -185,3 +185,72 @@ def test_team_create_refuses_unknown_and_archived_agents(monkeypatch, capsys):
             "--role", "One", agent, "Do it.",
         ], answers=[{"schemaVersion": 1, "results": [RESEARCH, OLD]}])
         assert code == 1 and len(sent) == 1 and words in out.err
+
+
+BELIEFS = {
+    "agentId": "companion",
+    "total": 2,
+    "counts": {"stated": 1, "concluded": 1, "needsReview": 1},
+    "items": [
+        {
+            "id": "m1",
+            "revision": 2,
+            "text": "I prefer green tea\nin the afternoon",
+            "origin": "stated",
+            "confidence": "medium",
+            "evidence": {"supporting": 0, "withdrawn": 0},
+        },
+        {
+            "id": "m2",
+            "revision": 1,
+            "text": "Studies on Sundays",
+            "origin": "concluded",
+            "confidence": None,
+            "evidence": {"supporting": 3, "withdrawn": 1},
+        },
+    ],
+    "nextAfter": "eyJ4IjogMX0",
+}
+
+
+def test_memory_beliefs_flags_map_to_the_query(monkeypatch, capsys):
+    code, sent, out = calls(
+        monkeypatch,
+        capsys,
+        ["memory", "beliefs", "--concluded", "--review", "--type", "fact", "--limit", "7",
+         "--after", "eyJ4IjogMX0", "--json"],
+        [BELIEFS],
+    )
+    assert code == 0 and json.loads(out.out) == BELIEFS
+    url = urlsplit(sent[0].full_url)
+    assert url.path == "/memory/beliefs" and sent[0].get_method() == "GET"
+    assert parse_qs(url.query) == {
+        "origin": ["concluded"],
+        "state": ["needs_review"],
+        "memory_type": ["fact"],
+        "limit": ["7"],
+        "after": ["eyJ4IjogMX0"],
+    }
+    code, sent, _ = calls(monkeypatch, capsys, ["memory", "beliefs", "--stated"], [BELIEFS])
+    assert parse_qs(urlsplit(sent[0].full_url).query) == {"origin": ["stated"], "limit": ["50"]}
+
+
+def test_memory_beliefs_prints_one_line_per_belief_and_the_next_page(monkeypatch, capsys):
+    code, _, out = calls(monkeypatch, capsys, ["memory", "beliefs"], [BELIEFS])
+    assert code == 0
+    assert out.out.splitlines() == [
+        "Conker believes 2 things about you: 1 you told it, 1 it concluded, 1 waiting for review.",
+        "stated     medium  backed-by-0  I prefer green tea in the afternoon  (m1 rev 2)",
+        "concluded  -       backed-by-3  Studies on Sundays  (m2 rev 1)",
+        "Next page: --after eyJ4IjogMX0",
+    ]
+
+
+def test_memory_beliefs_refuses_bad_flags_before_calling_pi(monkeypatch, capsys):
+    for arguments in (
+        ["memory", "beliefs", "--limit", "0"],
+        ["memory", "beliefs", "--limit", "101"],
+        ["memory", "beliefs", "--after", "   "],
+    ):
+        code, sent, out = calls(monkeypatch, capsys, arguments)
+        assert code == 1 and sent == [] and out.err

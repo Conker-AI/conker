@@ -11,6 +11,7 @@ ROLE_TOKENS = 50_000
 ROLE_CENTS = 25
 MAX_ROLES = 12
 MAX_ROLE_TOOLS = 100
+BELIEF_TYPES = ("fact", "phase", "context", "watch")
 
 
 def register(commands):
@@ -24,6 +25,19 @@ def register(commands):
     search.add_argument(
         "--limit", type=int, default=10, help="How many to show, 1 to 50 (default 10)"
     )
+    beliefs = memory_commands.add_parser(
+        "beliefs", help="What Conker believes about you: what you said and what it concluded"
+    )
+    origin = beliefs.add_mutually_exclusive_group()
+    origin.add_argument("--stated", action="store_true", help="Only what you told Conker")
+    origin.add_argument("--concluded", action="store_true", help="Only what Conker concluded")
+    beliefs.add_argument("--review", action="store_true", help="Only memories waiting for review")
+    beliefs.add_argument("--type", choices=BELIEF_TYPES, help="Only one kind of memory")
+    beliefs.add_argument(
+        "--limit", type=int, default=50, help="How many to show, 1 to 100 (default 50)"
+    )
+    beliefs.add_argument("--after", help="The page cursor the previous page printed")
+    beliefs.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
 
     agent = commands.add_parser("agent", help="Make a new agent")
     agent_commands = agent.add_subparsers(dest="operation", required=True)
@@ -86,6 +100,52 @@ def _search(args, config, request):
     return pi_call(
         request, config, "/memory/objects", query={"search": query, "limit": args.limit}
     )
+
+
+def belief_query(args):
+    """Pi's /memory/beliefs query for the flags; only the filters that were given."""
+    if not 1 <= args.limit <= 100:
+        raise ValueError("--limit must be from 1 to 100.")
+    query = {"limit": args.limit}
+    if args.stated or args.concluded:
+        query["origin"] = "stated" if args.stated else "concluded"
+    if args.review:
+        query["state"] = "needs_review"
+    if args.type:
+        query["memory_type"] = args.type
+    if args.after is not None:
+        query["after"] = _text(args.after, "--after", 600)
+    return query
+
+
+def render_beliefs(page):
+    """A header with the counts, one line per belief, then how to get the next page."""
+    counts = page["counts"]
+    lines = [
+        (
+            f"Conker believes {page['total']} things about you: {counts['stated']} you told it, "
+            f"{counts['concluded']} it concluded, {counts['needsReview']} waiting for review."
+        )
+    ]
+    for item in page["items"]:
+        text = " ".join(item["text"].split())
+        lines.append(
+            f"{item['origin']:<9}  {item['confidence'] or '-':<6}  "
+            f"backed-by-{item['evidence']['supporting']}  {text}  "
+            f"({item['id']} rev {item['revision']})"
+        )
+    if page.get("nextAfter"):
+        lines.append(f"Next page: --after {page['nextAfter']}")
+    return "\n".join(lines)
+
+
+def _beliefs(args, config, request):
+    """With --json, Pi's reply to print; otherwise prints the page itself and returns None."""
+    page = pi_call(request, config, "/memory/beliefs", query=belief_query(args))
+    if args.json:
+        return page
+    print(render_beliefs(page))
+    return None
 
 
 def _agent(args, config, request):
@@ -178,7 +238,9 @@ def team_definition(args, agents):
 
 
 def operation(args, config, request):
-    """Run one memory, agent or team subcommand and return the value to print."""
+    """Run one memory, agent or team subcommand and return the value to print (None: printed)."""
+    if args.command == "memory" and args.operation == "beliefs":
+        return _beliefs(args, config, request)
     if args.command == "memory":
         return _search(args, config, request)
     if args.command == "agent":
