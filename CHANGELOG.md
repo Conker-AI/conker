@@ -11,6 +11,8 @@ which module versions a release pins.
   dialog and the Native sessions list no longer show internal state names or raw ids. A new e2e walks every
   place and tab and fails on these words. (#336)
 
+
+- **`scripts/` becomes a package, step 1: the release acceptance gate.** `release_acceptance`, `release_checks` and `release_first_run` import each other as `scripts.X`, and the gate still runs as `python3 scripts/release_acceptance.py` from any folder. No change for installed stacks (#337).
 - **Type errors 206 to 129, coverage floor 78 to 80.** Type-only fixes in 9 scripts and 10 test files, and refusal tests for settings docs, release first run, import and config CLIs, capability status, the installed CLI and the repository updater (#335).
 - **Which layout is for whom.** The table at the top of docs/4-running.md names who each of the four ways is
   for and how each updates; the source-built Ubuntu section says what only it does and what each Compose

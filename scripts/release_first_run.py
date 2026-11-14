@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from release_checks import (
+from scripts.release_checks import (
     AcceptanceError,
     CommandRunner,
     Evidence,
