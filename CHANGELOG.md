@@ -84,6 +84,8 @@ which module versions a release pins.
   almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
 
+- **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
+
 ## 0.1.0
 
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every

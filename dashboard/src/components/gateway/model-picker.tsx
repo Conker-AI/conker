@@ -40,11 +40,17 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   // In the composer, the bar names a chosen model, or that one must be chosen; the configured default needs no mention.
   useComposerValue('model', value ? models.find(model => model.id === value)?.name ?? (catalogue ? 'Model unavailable' : value) : manualRequired ? 'Choose a model' : null)
 
-  const select = <Select value={value || 'configured'} disabled={disabled || !catalogue} onValueChange={value => { if (value !== null) onChange(value === 'configured' ? '' : value) }} items={[{ value: "configured", label: manualRequired ? "Choose an answer model" : catalogue?.roleSettings.answerMode === 'router' ? (compact ? 'Automatic' : 'Automatic · configured router') : (compact ? 'Default model' : 'Configured default model') }, ...models.map((model) => ({ value: model.id, label: model.name })), ...(value && !models.some(model => model.id === value) ? [{ value: value, label: "Selected model unavailable" }] : [])]}>
+  // The configured choice says which model will answer: the router, or the answer model's exact name and where it runs.
+  const configuredModel = models.find(model => model.id === catalogue?.roleSettings.roles.answer.modelId)
+  const configuredProvider = catalogue?.providers.find(provider => provider.id === configuredModel?.providerId)
+  const configuredLabel = manualRequired ? 'Choose an answer model'
+    : catalogue?.roleSettings.answerMode === 'router' ? 'Auto · picks per message'
+      : configuredModel ? `${configuredModel.name}${configuredProvider ? ` · ${configuredProvider.name}` : ''}` : 'Default model'
+  const select = <Select value={value || 'configured'} disabled={disabled || !catalogue} onValueChange={value => { if (value !== null) onChange(value === 'configured' ? '' : value) }} items={[{ value: "configured", label: configuredLabel }, ...models.map((model) => ({ value: model.id, label: model.name })), ...(value && !models.some(model => model.id === value) ? [{ value: value, label: "Selected model unavailable" }] : [])]}>
     {compact ? <ComposerSelectTrigger aria-label="Answer model" className="w-9 px-0 sm:w-auto sm:max-w-48 sm:px-2 max-sm:[&>[data-slot=select-icon]]:hidden" {...animationProps}><span className="sm:hidden"><AnimatedIconGlyph icon={BrainIcon} iconRef={iconRef} size={16} /></span><span className="sr-only sm:not-sr-only"><SelectValue placeholder="Loading models…" /></span></ComposerSelectTrigger>
       : <SelectTrigger aria-label="Answer model" className="w-64 max-w-full"><SelectValue placeholder="Loading models…" /></SelectTrigger>}
     <SelectContent>
-      <SelectItem value="configured" disabled={manualRequired}>{manualRequired ? "Choose an answer model" : catalogue?.roleSettings.answerMode === 'router' ? (compact ? 'Automatic' : 'Automatic · configured router') : (compact ? 'Default model' : 'Configured default model')}</SelectItem>
+      <SelectItem value="configured" disabled={manualRequired}>{configuredLabel}</SelectItem>
       {models.map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}
       {value && !models.some(model => model.id === value) && <SelectItem value={value} disabled>Selected model unavailable</SelectItem>}
     </SelectContent>
