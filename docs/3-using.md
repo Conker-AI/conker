@@ -246,7 +246,7 @@ Start a new independent chat when you need a conversation without that context.
 |---|---|
 | **Projects** | Project metadata and selected source links. |
 | **Memory** | What Conker remembers, the map of how it connects, and the chat each memory came from. Correct or forget any memory here. |
-| **Agents** | Profiles with their own model, toolkit and memory; teams and reusable skills. Instructions do not grant execution rights. |
+| **Agents** | Profiles with their own model, toolkit and memory; teams; and the skills you can pick for a message (a skill is instructions only and is not attached to an agent). Instructions do not grant execution rights. |
 | **Tools** | Registered tools, workflow drafts, publication and runs, and which tools Conker may use. |
 | **Cron jobs** | Your instructions run by the AI with tools, on a schedule, an event or a webhook, and their recorded runs. |
 | **Server** | Diagnostics and host observations. The production owner terminal remains deferred. |

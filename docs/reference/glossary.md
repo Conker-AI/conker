@@ -14,8 +14,8 @@ capability family, settings topic, Pi package) is in one table: the [product map
 | **Agent** | A saved assistant: instructions, a model choice and the tools it may ask for. The companion is one agent; you can make more. |
 | **Character** | How an agent comes across: soul, backstory, speaking style, look, voice and expression modes. Edited in Character Studio. A character never grants permissions. |
 | **Team** | Several agents working on one piece of work, started by you. |
-| **Team template** | A starter for a team that you copy and adjust. |
-| **Skill** | A bundle of instructions an agent can be given, such as how to write a report. Instructions only: a skill cannot run anything. |
+| **Agent template** | A starter for an agent that you copy and adjust. Kept for recovery; there are no built-in starter teams. |
+| **Skill** | A bundle of instructions you pick for a message, such as how to write a report. Instructions only: a skill cannot run anything, and it is not attached to an agent. (MemoryGate also stores remembered procedures; they are not skills.) |
 
 ## Talking
 
@@ -136,5 +136,5 @@ While Pi works on a message, the message is in one of these states:
 |---|---|---|
 | Mode | 1. Think, Research and Auto on a message. 2. A character's Focus or Character expression. | "message controls", "expression mode" |
 | Harness | 1. Helper models. 2. The program that runs an agent (Pi, Codex, Claude Code). | "helper models", "runtime" |
-| Template | 1. A team template. 2. A prompt template, a built-in starter message. | Name which one. |
+| Template | 1. An agent template. 2. A prompt template, a built-in starter message. | Name which one. |
 | Run | A turn, a job run, a team run or a workflow run. | Name which one when it matters. |

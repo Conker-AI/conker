@@ -83,6 +83,7 @@ which module versions a release pins.
 - **Memory care.** Memory has a "Memory care" button that lists what is worth tidying (memories that disagree, saved twice,
   almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
+- **Docs say what teams and skills are.** The glossary and guides no longer mention team templates (Pi's templates are for agents, kept for recovery; there are no built-in teams) or agents holding skills (a skill is picked per message and is not attached to an agent); the Teams editor calls a role's own text "Extra instructions for this team", since Pi appends it to the agent's instructions. Text only.
 
 ## 0.1.0
 
