@@ -52,6 +52,10 @@ conker update --check          # is there a newer release
 conker update --to 1.2.3       # update to that release
 ```
 
+`conker update` is the only update path. Older servers were updated by hand with scripts kept in
+the server's home folder (a server-update and a server-apply script); those are retired, so do not
+run them after the first release update.
+
 Either way, an update first takes a verified snapshot of everything (in `~/conker-snapshots`),
 then swaps in the new code, starts it and checks that every service answers. Older snapshots that
 earlier updates made are then removed down to the newest 3 (`CONKER_UPDATE_SNAPSHOTS_KEEP`); the
