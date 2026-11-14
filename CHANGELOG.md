@@ -6,6 +6,10 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Which layout is for whom.** The table at the top of docs/4-running.md names who each of the four ways is
+  for and how each updates; the source-built Ubuntu section says what only it does and what each Compose
+  overlay of the repository install is for. (#PR)
+
 - **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due
   first, with overdue ones marked; `conker loops add` files one for a chat and `done`, `drop` and `reopen`
   close or reopen it. Installed stacks run it as `./conker loops`. Needs Pi with Conker-AI/pi#251.
