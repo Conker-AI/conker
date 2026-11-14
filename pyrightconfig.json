@@ -4,17 +4,19 @@
   "pythonPlatform": "Linux",
   "include": [
     "scripts",
+    "services/subscriptions",
     "tests"
   ],
   "extraPaths": [
-    "scripts"
+    "scripts",
+    "services/subscriptions"
   ],
   "exclude": [
     "**/__pycache__",
     "**/node_modules",
     "**/.venv",
     "dashboard",
-    "services"
+    "services/decisions"
   ],
   "reportMissingImports": "warning"
 }

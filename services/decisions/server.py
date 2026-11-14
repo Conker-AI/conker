@@ -27,7 +27,7 @@ def watch_namespace(net=Path("/sys/class/net"), every=2.0, stop=os._exit):
     restarts (Pi restarts itself to finish "Delete forever", or crashes), Docker gives Pi a new
     namespace and this service keeps the old one: only loopback, so Pi's requests never arrive.
     Exiting lets Docker's restart policy start it again inside Pi's new namespace.
-    Copy of scripts/subscription_runtime.py's; this image is built from this folder alone.
+    Copy of services/subscriptions/subscription_runtime.py's; this image is built from this folder alone.
     """
 
     def links():

@@ -144,6 +144,7 @@ def serve(name, config):
                     ssl_certfile=str(certificate), ssl_keyfile=str(key), proxy_headers=False,
                     access_log=False)
     elif name == "providers":
+        sys.path.insert(0, str(ROOT / "services/subscriptions"))
         from workspace_providers import create_app
         app = create_app(config)
         server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=SERVICES[name], proxy_headers=False, access_log=False,
