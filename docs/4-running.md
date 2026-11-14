@@ -50,6 +50,7 @@ internet.
 conker status        # is everything working, and what isn't
 conker doctor        # the same findings as the System screen, with recovery actions
 conker update        # a pinned release, staged and health-checked, with rollback
+conker update --to X.Y.Z  # the same on source-built Ubuntu, to a named release
 conker config list   # every setting from the Settings screen
 conker backup        # a verified snapshot
 conker logs pi       # recent logs of one service
@@ -57,29 +58,13 @@ conker stop / start / restart
 conker ops           # recent server actions and how they ended
 ```
 
+Weekly checks, backups, updates and restores step by step (source-built Ubuntu): [looking after
+your server](reference/server-care.md).
+
 <details>
-<summary>Every command, with an example</summary>
+<summary>More commands, with an example (all of them: <code>conker help</code>)</summary>
 
 ```sh
-conker status                 # service health, not just container state
-conker doctor                 # shared UI/CLI findings and recovery actions as JSON
-conker inspect agents         # export a live, secret-free control-plane view as JSON
-conker inspect boundaries     # inspect the exact ToolGate policy and digest
-conker inspect approvals      # list ToolGate effect requests awaiting owner review
-conker inspect approval req_123 # inspect one request before deciding it
-conker inspect submission request_1234567890abcdef # reconcile an uncertain send
-conker inspect file-roots    # list configured directory-listing roots, never content
-conker inspect inventory-services # list configured service targets without observing them
-conker inspect character      # export the current Companion character revision
-conker inspect character-history # inspect immutable revision metadata
-conker inspect character-export # export the current portable character package
-conker inspect call call_... # inspect one durable typed call
-conker inspect active-call ses_... # find the active call for a conversation
-conker inspect call-capabilities # inspect bounded browser audio-turn readiness
-conker inspect tool-drafts   # list the first bounded page of saved editor drafts
-conker inspect tool-draft example # export one validated draft document
-conker inspect tool-validation example # validate the saved graph without publishing
-conker inspect session-settings ses_1234567890abcdef
 conker apply models models.json # apply a revision-checked model-role document
 conker apply agents agent.json # create, update, archive, or restore a profile
 conker apply projects project.json # manage metadata and bounded source links
@@ -109,26 +94,11 @@ conker setup run model CANDIDATE_ID # choose and verify one candidate with a liv
 conker setup run memory --skip # or --include to return it to the guided path
 conker setup run capabilities --skip # or --include
 conker setup run boundaries --confirm-digest REVIEWED_SHA256
-conker setup configure protection --destination /mnt/backup-device/conker --retention 7
-conker setup protection      # inspect the same policy shown in the setup UI
-conker setup run protection  # verify the mount, back up, enforce retention, record evidence
 conker setup rehearsal      # current conversation, memory-review and approval proof
 conker setup run rehearsal --review-memory
 conker setup run rehearsal --start-approval
 conker setup run rehearsal --finish-approval REQUEST_ID
 conker setup run rehearsal --finalize
-conker setup import-listener  # let imported chats reach memory (install.sh does it; Ubuntu: after start)
-conker ops                    # server actions run by the host helper, and how each ended
-conker ops run services.restart service=pi # the same action as the UI, with a receipt
-conker providers status       # secret-free hosted-provider revisions and state
-conker providers claude login # Ubuntu layout: sign in to the Claude plan once, in this terminal
-conker tool draft "Show free disk space" # Pi drafts a tool; the draft waits in the Inbox
-conker tool answer REQUEST_ID "All disks" # answer the drafter's question; drafting goes on
-conker context budget CHAT_ID --window 32768 --reserve 2048 # start one chat's context settings
-conker logs pi
-conker stop
-conker start
-conker update                 # staged, health-checked, rollback-capable
 ```
 
 </details>
@@ -138,22 +108,6 @@ conker update                 # staged, health-checked, rollback-capable
 An alternative to the installer that builds each service from source on the server. It runs the
 same services; do not mix the two layouts over the same stores.
 
-1. Export the six repositories into `~/conker-deploy/sources/` and build the dashboard.
-2. Generate configuration and credentials (safe to re-run, keeps existing data):
-   ```sh
-   python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443
-   ```
-3. Start everything:
-   ```sh
-   docker compose -f compose.json up -d
-   ```
-4. Download the configured local models, then run `conker setup`.
-5. Expose the gateway on the tailnet only. Do not use Funnel.
-6. Check it works:
-   ```sh
-   acceptance.py --origin https://HOST:8443 --password-file FILE
-   ```
-
 Full guide: [deploy/ubuntu/README.md](../deploy/ubuntu/README.md). The shared runtime contract
 and the one packaging difference are recorded in [deployment parity](reference/deployment-parity.md).
 
@@ -162,7 +116,9 @@ and the one packaging difference are recorded in [deployment parity](reference/d
 `conker help` is the authoritative command list in both installation layouts. Every command
 group it lists has a page here or under [reference](reference/) (tests/test_cli_docs.py); the
 owner's own ones are [agents and teams](reference/agents-cli.md),
-[memory](reference/memory-cli.md) and [spending](reference/spending-cli.md).
+[memory](reference/memory-cli.md), [spending](reference/spending-cli.md) and
+[chat](reference/chat-cli.md); hosted keys are in [provider
+credentials](reference/provider-credentials.md).
 
 `conker model NAME` fetches another local model into Ollama (`conker model qwen3:4b`).
 `conker key` shows the repository layout's single admin key; the Ubuntu layout has separate
@@ -172,7 +128,8 @@ ChatGPT subscription sign-in needs the private provider service and official
 Codex CLI **0.160.1** at `~/conker-model-runtime/bin/codex` (isolated from any personal
 desktop Codex login). With Node.js/npm installed, install the pinned runtime using
 `npm install --prefix "$HOME/conker-model-runtime" --no-audit --no-fund --ignore-scripts @openai/codex@0.160.1`,
-then `conker providers install-ui-control`. The UI reports unavailable when that
+then, on the Ubuntu layout or when a repository install's worker did not start,
+`conker providers install-ui-control`. The UI reports unavailable when that
 runtime is absent or the version differs; it never silently upgrades it.
 The CLI equivalents are `conker providers chatgpt status|login|models`,
 `conker providers chatgpt cancel LOGIN_ID` and
@@ -181,23 +138,20 @@ and revision-bound targets as the UI, not a second credential store.
 OAuth credentials in `state/chatgpt-auth` (Ubuntu) or `.conker/chatgpt-auth`
 (repository layout) are private and not mounted into Pi/Gateway or included in
 normal Conker snapshots. Reconnect after restoring onto another host; never copy
-desktop credentials into this store. Only Pi mounts `chatgpt-inference` (in the Ubuntu
-layout, only the Claude plan runtime, which passes Pi's ChatGPT answers on); only
-Gateway mounts `provider-control`. The main shell and tool permissions are unchanged.
+desktop credentials into this store. Pi mounts `chatgpt-inference`; with the Claude plan
+runtime on, that runtime mounts it too, and in the Ubuntu layout only the runtime does. Only
+Gateway mounts `provider-control`
+([provider credentials](reference/provider-credentials.md#browser-and-recovery-boundaries)).
+The main shell and tool permissions are unchanged.
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
 the source-built Ubuntu layout supports verified backup and held recovery, but
 cannot provide the repository install's branch-following update or single admin-key commands;
-it updates to a named release instead (`conker update --to X.Y.Z`).
+it updates to a named release instead (`conker update --to X.Y.Z`, see [looking after your
+server](reference/server-care.md#update-to-a-new-release)).
 
-`conker inspect RESOURCE` reads one fixed, bounded control-plane resource through
-the gateway container and prints the service's JSON unchanged. Supported resources
-are `agents`, `approvals`, `artifacts`, `boundaries`, `jobs`, `memory`, `models`, `projects`, `proposals`,
-`file-roots`, `inventory-containers`, `inventory-services`, `runs`, `sessions`,
-`setup`, `tasks`, `teams`, and `tools`. The command accepts no
-URL or arbitrary path, follows no redirects, ignores ambient proxies, and never
-prints the scoped credential it uses. Redirect stdout to a file for a diffable,
-secret-free inspection snapshot.
+`conker inspect RESOURCE` prints one fixed, read-only control-plane view as JSON. It takes no
+URL or path and never prints its credential, so redirect it to a file for a secret-free snapshot.
 The full route and authority table is in [CLI inspection](reference/cli-inspection.md).
 
 `conker apply models FILE` accepts the same `{expected_revision, configuration}`
@@ -222,17 +176,15 @@ versioned team definitions. Role references, graph structure and aggregate budge
 are validated before dispatch. Preparation, execution and permission grants are
 deliberately absent from this command.
 
-`conker apply jobs FILE` matches the connected UI's bounded `state` and `run`
-operations. A manual run requires a stable 16-128 character `request_id`; an
+`conker apply jobs FILE` covers the UI's `state` (pause/resume) and `run` (one manual run)
+operations; every other job write is UI-only. A manual run requires a stable 16-128 character `request_id`; an
 accepted response records admission, not completion, and uncertain outcomes must
 be reconciled through run history. Raw target authoring remains unavailable in both
 UI and CLI because job inputs and publication identity need a dedicated safe editor.
 
-`conker apply memory FILE` accepts only `forget`, with the reviewed memory ID,
-expected revision and a stable request ID. The source conversation is retained. A
-revision conflict requires a fresh review; after an uncertain response, repeating
-the exact same request ID reconciles the idempotent operation instead of deleting
-twice.
+`conker apply memory FILE` forgets or remembers one memory, or corrects one and retries a
+correction. The file shapes and recovery rules are in [CLI
+inspection](reference/cli-inspection.md#correct-retained-memory-text).
 
 `conker apply proposals FILE` records `accept`, `decline` or `never` for one
 inspected proposal. Acceptance records preference only: it cannot execute a tool or
@@ -249,9 +201,10 @@ work; they do not dispatch an agent or grant tool authority.
 the UI, message copies recheck provenance and privacy on Pi, and this command offers
 no execution or arbitrary download operation.
 
-Use `conker inspect session-settings SESSION_ID` before `conker apply sessions
-FILE`. The apply document carries that session ID, its expected settings revision,
-and the complete typed settings object. Pi refuses busy, closed or call-controlled
+Use `conker inspect session-settings SESSION_ID` ([ID
+rules](reference/cli-inspection.md)) before `conker apply sessions FILE`. The apply
+document carries that session ID, its expected settings revision, and the complete
+typed settings object. Pi refuses busy, closed or call-controlled
 sessions and prevents inherited privacy from being weakened. Changes affect future
 turns only and never grant authority.
 
@@ -282,8 +235,8 @@ requests or resumes one redacted read-only observation, and `conker inspect
 inventory REQUEST_ID` reconciles it. No process, port, container, or terminal
 action exists on either CLI resource.
 
-The Companion editor has three fixed inspection views: `character`,
-`character-history`, and `character-export`. `conker apply character FILE` accepts
+Read the Companion first with the `character` views ([CLI
+inspection](reference/cli-inspection.md)). `conker apply character FILE` accepts
 only `save`, `import`, or `restore`. Save carries the complete validated profile and
 its expected revision; import validates a portable package into a draft without
 saving it; restore appends an old revision as a new immutable revision. Embedded
@@ -299,12 +252,10 @@ UI. Microphone audio, camera, perception, recording, replay, and media endpoints
 are absent; channel fields are preferences only, external effects still require
 ToolGate approval, and an uncertain turn must be inspected before any retry.
 
-Tool workflow inspection includes `tool-capabilities`, `workflow-capabilities`,
-`tool-drafts`, and the identity-bound `tool-draft`, `tool-validation`,
-`tool-publications`, and `tool-runs` views. `conker inspect tool-access DRAFT_ID
-VERSION DIGEST` binds access review to one immutable publication. `conker apply
-tools FILE` accepts only `save`, `publish`, `access`, `run`, or `run_tool`. Drafts
-remain inert; publish creates an immutable pinned version but grants and runs nothing.
+Inspect the draft, its validation and its publications first ([CLI
+inspection](reference/cli-inspection.md)). `conker apply tools FILE` accepts only `save`,
+`publish`, `access`, `run`, or `run_tool`. Drafts remain inert; publish creates an immutable
+pinned version but grants and runs nothing.
 Access, run and run_tool require both the owner credential and the distinct scoped
 execution credential. Runs require a stable `editor_...` action ID, bound version and
 digest, and at most 32 KiB of JSON arguments; approval resumes the same recorded action
@@ -342,29 +293,19 @@ The receipt stores provider/model identity and a response digest, never prompt o
 response text. The dashboard performs the same owner operation in place. Neither
 client accepts a provider URL, credential or arbitrary model route.
 
-Protection policy is a revisioned Pi document shared by the setup UI and CLI. It
-contains a normalized absolute host path, an explicit mounted-off-machine
-destination type and the number of verified snapshots to retain. Saving policy
-does not claim that a backup exists.
-
-`setup run protection` supports the repository and generated source-built Ubuntu
-layouts. It re-reads the saved policy, requires the destination to exist on a different mounted device,
-creates a coordinated snapshot, verifies the completed manifest again, and prunes
-only older snapshots that independently pass verification. It then records
-evidence bound to the exact policy revision and digest through Pi's owner channel.
-Changing destination or retention degrades the old receipt. The receipt expires
-after 90 days. Each layout must match its exact service, storage, runtime-key and
-database contract before writers stop; unknown authority fails closed.
+`conker setup configure protection` saves where backups go and how many to keep;
+`conker setup run protection` backs up, verifies, prunes and records the receipt (it expires
+after 90 days). Procedure and failure rules: [backup and recovery](reference/recovery.md); owner
+steps: [looking after your server](reference/server-care.md#set-up-backups-once).
 
 `setup rehearsal` projects three ordinary owner proofs: one completed conversation,
 one explicit review of the current memory choice, and one owner-approved invocation
 of ToolGate's fixed `approval.test-echo`. The echo is local, content-free, and has
-no network or filesystem access. Start it with `--start-approval`, decide the exact
-request in Inbox, resume it with the returned request ID, then use `--finalize`.
+no network or filesystem access. Run `--review-memory`, then `--start-approval`, decide
+the request in Inbox, then `--finish-approval REQUEST_ID` and `--finalize`.
 Pi alone creates the rehearsal receipt after all three proofs exist; uploaded
-rehearsal receipts are rejected. This onboarding proof is intentionally separate
-from assembled Linux release acceptance, whose evidence never completes a user's
-first-run setup.
+rehearsal receipts are rejected. Release acceptance is a separate check and never
+completes it ([release acceptance](reference/release-acceptance.md)).
 
 Repository updates refuse a dirty checkout, an active backup, or any recovery or
 update hold. The updater validates the candidate manifest and Compose model in a
@@ -389,23 +330,15 @@ and what each result means, and deploy/ubuntu/README.md for how it works.
 conker auth reset-password
 ```
 
-This asks for the new password privately and signs out every browser.
+This asks for the new password privately and signs out every browser; limits in [browser
+authentication](reference/browser-auth.md#password-and-recovery-for-the-owner).
 
 ### Backups
 
-```sh
-conker backup --destination DIR     # stops writers briefly, captures, verifies
-conker verify-backup SNAPSHOT       # checks every file and hash
-conker restore SNAPSHOT --into DIR  # restores into fresh, isolated volumes, held
-```
-
-A restore starts held and does not go straight back into service. Keep a copy on another
-machine. See [recovery](reference/recovery.md), and [looking after your
-server](reference/server-care.md) for the owner's steps in plain words.
-
-Nightly backups (`conker backup schedule on`) and restore drills (`conker backup drill`) are
-off until you turn them on: [looking after your
-server](reference/server-care.md#set-up-backups-once) has the steps.
+`conker backup` makes a verified snapshot and `conker restore SNAPSHOT --into DIR` restores it
+into a held, isolated copy; the nightly backup and weekly restore drill stay off until
+`conker backup schedule on [--drill weekly]`. Steps: [looking after your
+server](reference/server-care.md#set-up-backups-once); details: [recovery](reference/recovery.md).
 
 ### Server actions and the host helper
 
@@ -446,11 +379,8 @@ python scripts/workspace.py install --model qwen2.5:3b
 python scripts/workspace.py up
 ```
 
-Open https://localhost:18550. State and logs are in `.local-run/`, which Git ignores.
-The initial password is in `.local-run/gateway/initial-owner-password.txt`. To update
-the dashboard, stop this workspace, run `python scripts/workspace.py build`, then
-start it again. The launcher checks ownership and preserves the prior served build
-if publication fails.
+Open https://localhost:18550. State and logs are in `.local-run/`, which Git ignores; the
+first password is in `.local-run/gateway/initial-owner-password.txt`.
 
 Full instructions and optional-service limits:
 [Connected workspace](reference/connected-workspace.md). The older multi-repository backend
@@ -488,13 +418,9 @@ There are two ways to connect it, and they differ by layout:
 | Repository install (`./install.sh`) | `./install.sh --claude-plan`, once a release pins the image ([Claude plan runtime](reference/claude-plan-runtime.md)) | `conker providers set anthropic` |
 | Windows workspace (C) | Settings > Providers, or `python scripts/conker.py auth claude login`, after `workspace.py enhance` | Not wired |
 
-**Claude plan on the Ubuntu layout.** The Claude plan runtime is its own service,
-`subscriptions`: the official Claude Code CLI (pinned, checked by SHA-512) behind a private
-bridge, built from the source export. It shares Pi's network namespace and listens only on
-`127.0.0.1:8070` inside it; Pi has only its inference key, and the sign-in stays in
-`state/subscriptions`, which snapshots leave out (sign in again after a restore elsewhere).
-ChatGPT answers go through it to the host ChatGPT worker, unchanged. Once, after updating the
-source export:
+**Claude plan on the Ubuntu layout.** The runtime is the `subscriptions` service, built from
+the source export ([how it is boxed in](reference/claude-plan-runtime.md)); its sign-in stays in
+`state/subscriptions` and is not in snapshots. Once, after updating the source export:
 
 ```sh
 python3 sources/companion/deploy/ubuntu/prepare.py https://HOST:8443   # adds the service and keys
@@ -510,29 +436,16 @@ only in the terminal: the server cannot receive the browser's sign-in callback, 
 Settings sign-in button stays unavailable on the server until the Gateway can reach this
 runtime. No token is copied in or out.
 
-**API key, both server layouts.** `conker providers set anthropic` (hidden prompt), then
-`conker providers verify anthropic` and `conker providers activate anthropic REVISION` (the
-revision from `conker providers status`). Pi then reads the key from its read-only file. Pi
-answers with a key only after `conker providers spending on`: until then the provider shows
-"paid models are disabled", which is why a server with a key can still say not configured.
-Settings > Providers does the same after `conker providers install-ui-control`.
-
-**Repository install, plan sign-in.** The same runtime, from the published image pinned by
-digest in `versions.env`, as the overlay `docker-compose.subscriptions.yml`:
-`./install.sh --claude-plan` adds it and its two keys. Until a release pins the image the
-capability stays deferred and `--claude-plan` changes nothing; use the API key meanwhile.
-Steps, boundaries and the release checklist: [Claude plan runtime](reference/claude-plan-runtime.md).
+**API key, both server layouts.** `conker providers set anthropic`, then `verify` and
+`activate`; Pi answers only after `conker providers spending on` (until then: "paid models are
+disabled"). Steps, rotation and the Settings worker: [hosted provider
+credentials](reference/provider-credentials.md#add-or-rotate-a-credential).
 
 ### Which command makes a tool
 
-`conker tool draft "what it should do"` files a tool request in Pi at once; Pi drafts it in the
-background with the drafting model, checks it with ToolGate and repairs it, and the command
-waits and prints its steps and issues, or why it failed (`--no-wait` returns at once). The draft
-waits in the Inbox, the same card a chat request makes. Use it from both installed layouts and
-`python scripts/conker.py tool draft` in the workspace (`workflow draft` there is the same
-command under its older name). When the drafter asks a question about a request made in a chat,
-`conker tool answer REQUEST_ID "..."` answers it, as the chat and the Inbox do
-([workflow builder](reference/workflow-builder.md)).
+`conker tool draft "what it should do"` (`python scripts/conker.py tool draft` in the workspace)
+has Pi draft the tool and puts it in the Inbox for review; flags, exit codes and answering the
+drafter: [workflow builder](reference/workflow-builder.md).
 
 ## Security in one paragraph
 

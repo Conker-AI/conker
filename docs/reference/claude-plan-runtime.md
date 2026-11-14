@@ -11,6 +11,8 @@ sends ChatGPT answers through it, and they go on unchanged to the host's ChatGPT
 | Source-built Ubuntu (`deploy/ubuntu`) | Built from the reviewed source export | `prepare.py` adds it |
 | Repository install (`./install.sh`) | The published image `ghcr.io/conker-ai/subscriptions`, pinned by digest in `versions.env` | `./install.sh --claude-plan`, once the release pins the image |
 
+Ubuntu layout steps: [Running Conker](../4-running.md#connect-claude).
+
 ## Repository install
 
 The runtime is an overlay, `docker-compose.subscriptions.yml`. It runs only when both are true:

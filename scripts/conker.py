@@ -88,14 +88,13 @@ def request(
             encoded = urlencode(history_query(query))
         elif service == "pi" and path == "/definitions" and body is None:
             encoded = urlencode(
-                {
-                    key: query[key]
-                    for key in ("kind", "search", "archived")
-                    if key in query
-                }
+                {key: query[key] for key in ("kind", "search", "archived") if key in query}
             )
         elif service == "pi" and path in ("/memory/objects", "/memory/beliefs") and body is None:
             keys = ("search", "limit", "origin", "state", "memory_type", "after")
+            encoded = urlencode({key: query[key] for key in keys if key in query})
+        elif service == "pi" and path == "/memory/upkeep" and body is None:
+            keys = ("unused_days", "limit")
             encoded = urlencode({key: query[key] for key in keys if key in query})
         elif service == "toolgate-owner" and path == "/v2/owner/editor-capabilities":
             encoded = urlencode(
@@ -531,7 +530,7 @@ def main():
         return inbox_operation(args, config, request)
     elif args.command in {"memory", "agent", "team"}:
         value = agents_operation(args, config, request)
-        if value is None:  # memory beliefs printed its page itself
+        if value is None:  # memory beliefs/upkeep printed it itself
             return 0
     elif args.command == "config":
         return config_operation(args, config, request)

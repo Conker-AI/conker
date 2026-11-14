@@ -114,7 +114,7 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
-An installed stack runs `inbox`, `spending`, `memory search`, `memory beliefs`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+An installed stack runs `inbox`, `spending`, `memory search`, `memory beliefs`, `memory upkeep`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
 
 ## Memory, Agents and Teams
 
@@ -123,6 +123,8 @@ These are your own counterparts of Conker's tools `conker.recall`, `conker.creat
 `memory search QUERY [--limit N]` - Find memories by their words (1-200 characters), as the Memory screen's search does; at most 50, default 10.
 
 `memory beliefs [--stated | --concluded] [--review] [--type fact|phase|context|watch] [--limit N] [--after CURSOR] [--json]` - What Conker believes about you, one page at a time (default 50, at most 100): a header with the counts (what you told it, what it concluded, what waits for review), then one line per belief: `stated|concluded  confidence  backed-by-N  text  (id rev N)`. `--review` shows only memories waiting for review. When there is another page, the last line gives its `--after` value. A memory being forgotten, or made from a chat in the Trash, is not shown. To fix one, use `memory-edit apply ID FILE --expected-revision N --request-id REQUEST` with its revision.
+
+`memory upkeep [--unused-days N] [--limit N] [--json]` - Memories worth tidying, read only: exact and near duplicates, open contradictions, expired memories and ones not recalled for N days (default 90, 1-3650). One line per candidate, `duplicate|near-duplicate|contradiction|expired|unused  ids  reason`, with each memory's revision and words below it; at most `--limit` per group (default 50, at most 500), and a line says how many more there are. A memory being forgotten, or made from a chat in the Trash, is not shown, and neither is any candidate that names one. To act on one, fix it with `memory-edit apply ID FILE --expected-revision N --request-id REQUEST` or forget it from the Memory screen.
 
 `agent create --name NAME --role TEXT --instructions TEXT [--tool ID ...] [--model ID] [--memory none|conversation|owner]` - Make an agent. Without `--tool` it has no tools; each tool keeps its own access setting. Memory defaults to only the chat it is in.
 

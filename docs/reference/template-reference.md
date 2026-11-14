@@ -23,7 +23,7 @@ installed through the shadcn registry (`@coss/style`). Docs for each component, 
 
 The calendar, drawer and composer primitives are not installed yet (Conker does not use them; add them
 from the registry when a screen needs them).
-`ui/chart.tsx` and `ui/loading-spinner.tsx` are Conker's own.
+`ui/chart.tsx` is Conker's own.
 
 ## Rules
 

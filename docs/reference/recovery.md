@@ -23,15 +23,20 @@ before writers stop.
 ./conker recovery-status /srv/conker-recovery-20260910 --review /secure/review.json
 ./conker recovery-status /srv/conker-recovery-20260910 --prove-ready
 ./conker setup configure protection --destination /mnt/backup-device/conker --retention 7
+./conker setup protection   # the saved policy, as the setup UI shows it
 ./conker setup run protection
 ```
 
-The setup policy is durable, revisioned and shared by UI and CLI. The execution
+The setup policy is durable, revisioned and shared by UI and CLI. It holds a
+normalized absolute host path, an explicit mounted-off-machine destination type and
+the number of verified snapshots to keep. Saving the policy does not claim that a
+backup exists. The execution
 command requires its destination to be an existing mount on a different device,
 runs the same coordinated backup implementation, verifies the completed snapshot,
 and prunes only older snapshots that also pass verification. Its bounded receipt
 is tied to the current policy; changing destination or retention degrades earlier
-evidence. A failed or partial backup never reaches the receipt endpoint. This is
+evidence, and the receipt expires after 90 days. A failed or partial backup never
+reaches the receipt endpoint. This is
 not a restore drill; assembled backup/restore rehearsal evidence is recorded
 separately.
 
