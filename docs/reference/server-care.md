@@ -4,6 +4,8 @@ Plain steps for the owner of a Linux server that runs Conker. Commands are for t
 Ubuntu layout (`conker`, deployment folder `~/conker-deploy`); in a repository checkout type
 `./conker` from the checkout instead. The details behind each step are in
 [recovery](recovery.md) and [the Ubuntu layout](../../deploy/ubuntu/README.md).
+The update steps below are for the Ubuntu layout only. A repository checkout updates with
+`./conker update`; see [Running Conker](../4-running.md#commands-in-detail).
 
 ## Every week: is it healthy?
 
