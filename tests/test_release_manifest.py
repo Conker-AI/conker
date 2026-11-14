@@ -142,9 +142,9 @@ def test_cli_emits_a_normalized_machine_readable_contract():
 def test_changelog_pins_match_the_manifest():
     """The release notes' "Pinned in this release" table says what versions.env pins."""
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = text.split("\n## Unreleased\n", 1)[1]
-    unreleased = re.split(r"^## ", unreleased, maxsplit=1, flags=re.MULTILINE)[0]
-    table = unreleased.split("\n### Pinned in this release\n", 1)[1]
+    # The table sits in the newest section that has one: Unreleased, or the version a release PR just cut.
+    section = next(s for s in re.split(r"^## ", text, flags=re.MULTILINE) if "\n### Pinned in this release\n" in s)
+    table = section.split("\n### Pinned in this release\n", 1)[1]
     rows = dict(re.findall(r"^\| (\w+) \| v(\S+) \|$", table, flags=re.MULTILINE))
     values = parse_env(MANIFEST)
     pinned = {name: values[GATE_VERSION_KEYS[name.lower()]] for name in rows}

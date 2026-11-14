@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.1.0
+
 - **Backups on a schedule and a restore drill.** On a Linux server, `conker backup schedule on` backs up every
   night through the saved backup policy (the host helper's `backup.run`, refused rather than queued when something
   else holds the lock) and `--drill weekly` adds a Sunday restore drill; nothing is turned on by itself.
