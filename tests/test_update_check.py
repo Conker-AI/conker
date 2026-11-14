@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -113,23 +114,27 @@ class Opener:
 
 def test_the_release_is_read_anonymously_from_the_github_api():
     opener = Opener(json.dumps(page()).encode())
-    assert update_check.latest_release(opener)["version"] == "0.2.0"
+    release = update_check.latest_release(opener)
+    assert release is not None
+    assert release["version"] == "0.2.0"
     [request] = opener.requests
     assert request.full_url == "https://api.github.com/repos/Conker-AI/conker/releases/latest"
     assert "Authorization" not in request.headers
 
 
 def test_no_release_answers_none_and_other_errors_are_said_plainly():
-    missing = HTTPError(update_check.RELEASES, 404, "Not Found", {}, None)
+    missing = HTTPError(update_check.RELEASES, 404, "Not Found", cast(Any, {}), None)
     assert update_check.latest_release(Opener(missing)) is None
-    limited = HTTPError(update_check.RELEASES, 403, "rate limited", {}, None)
+    limited = HTTPError(update_check.RELEASES, 403, "rate limited", cast(Any, {}), None)
     with pytest.raises(CheckError, match="HTTP 403"):
         update_check.latest_release(Opener(limited))
     with pytest.raises(CheckError, match="too large"):
         update_check.latest_release(Opener(b" " * (update_check.MAX_ANSWER + 1)))
 
 
-def receipt(folder: Path, identity: str, status: str, target="0.2.0", finished=1000):
+def receipt(
+    folder: Path, identity: str, status: str, target: str | None = "0.2.0", finished: int = 1000
+):
     (folder / "receipts").mkdir(parents=True, exist_ok=True)
     value = {
         "transaction_id": identity,

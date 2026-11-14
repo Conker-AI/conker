@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import cast
 
 SERVICE = re.compile(r"[a-z][a-z0-9-]{0,62}")
 SNAPSHOT = re.compile(r"snapshot-(\d{8})T(\d{6})Z-[0-9a-f]{8}")
@@ -84,8 +85,8 @@ def containers(read) -> list[dict]:
                 "service": service,
                 "state": status if status in STATES else "unknown",
                 "health": health if health in HEALTH else "none",
-                "startedAt": since[:19] + "Z"
-                if running and STARTED_AT.fullmatch(since)
+                "startedAt": cast(str, since)[:19] + "Z"
+                if running and STARTED_AT.fullmatch(cast(str, since))
                 else None,
                 "restarts": restarts if type(restarts) is int and restarts >= 0 else 0,
                 "oneShot": policy in {"no", ""},
@@ -139,5 +140,5 @@ def backups(root: Path, policy: dict | None) -> dict:
 
 
 def created(name: str) -> str:
-    day, time = SNAPSHOT.fullmatch(name).groups()
+    day, time = cast(re.Match[str], SNAPSHOT.fullmatch(name)).groups()
     return f"{day[:4]}-{day[4:6]}-{day[6:]}T{time[:2]}:{time[2:4]}:{time[4:]}Z"

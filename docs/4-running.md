@@ -1,12 +1,14 @@
 # 4 · Running Conker
 
-Pick one of three ways.
+Pick one way. The two server layouts run the same services; use one per machine and never point
+both at the same stores.
 
-| Way | For | Needs |
-|---|---|---|
-| [A · Preview](#a--preview-the-interface) | Looking around, UI work | Node.js 22.12+ |
-| [B · Server](#b--server) | Using Conker every day | Linux (or WSL2) with Docker; about 16 GB of RAM for local models |
-| [C · Local Windows stack](#c--local-windows-stack) | Developing the connected app | Docker Desktop, Python 3.12, Node.js 22.12+, Ollama |
+| Way | Supported for | Updates | Needs |
+|---|---|---|---|
+| [A · Preview](#a--preview-the-interface) | Looking around, UI work | `git pull` | Node.js 22.12+ |
+| [B · Server: repository install](#b--server) | A new Linux machine: trying Conker or running it without building anything | `./conker update` follows the checkout's branch: staged, health-checked, rolled back on failure | Linux (or WSL2) with Docker; about 16 GB of RAM for local models |
+| [B · Server: source-built Ubuntu](#source-built-ubuntu-layout) | The owner's server, and anyone who wants releases offered in the Inbox | Releases only: the Inbox's Update or `conker update --to X.Y.Z`, snapshot first, rollback, a daily check for new releases | Ubuntu with Docker; builds every service from source on the server |
+| [C · Local Windows stack](#c--local-windows-stack) | Developing the connected app; never a server | Rebuild from the pins | Docker Desktop, Python 3.12, Node.js 22.12+, Ollama |
 
 ## A · Preview the interface
 
@@ -105,8 +107,12 @@ conker setup run rehearsal --finalize
 
 ### Source-built Ubuntu layout
 
-An alternative to the installer that builds each service from source on the server. It runs the
-same services; do not mix the two layouts over the same stores.
+Builds each service from reviewed source exports on the server instead of pulling images. Only
+this layout updates to a named release (Inbox or `conker update --to`), recovers an update a reboot
+cut off and runs the Claude plan runtime today; it has scoped credentials and no single admin key.
+The repository install's optional parts are Compose overlays that `versions.env` turns on: the agent
+sandbox and direct providers (on), the owner terminal (frozen) and the Claude plan runtime (on
+once a release publishes its image; until then connect Claude with an API key).
 
 Full guide: [deploy/ubuntu/README.md](../deploy/ubuntu/README.md). The shared runtime contract
 and the one packaging difference are recorded in [deployment parity](reference/deployment-parity.md).

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -13,6 +14,7 @@ from release_checks import (
     EVIDENCE_SCHEMA,
     SETUP_STEP_IDS,
     AcceptanceError,
+    CommandRunner,
     Completed,
     Evidence,
     assert_complete_setup,
@@ -116,7 +118,7 @@ def test_active_terminal_release_plan_requires_an_explicit_workspace(tmp_path):
         tmp_path,
         evidence,
         require_conversation=True,
-        runner_factory=lambda *_args: runner,
+        runner_factory=lambda *_args: cast(CommandRunner, runner),
     )
 
     with pytest.raises(AcceptanceError, match="requires --terminal-workspace"):
@@ -132,7 +134,7 @@ def test_active_terminal_release_plan_forwards_the_workspace_to_install(tmp_path
         evidence,
         require_conversation=True,
         terminal_workspace=workspace,
-        runner_factory=lambda *_args: runner,
+        runner_factory=lambda *_args: cast(CommandRunner, runner),
     )
 
     gate.load_plan()
@@ -149,7 +151,7 @@ def test_active_terminal_compose_uses_the_reviewed_overlay(tmp_path):
         evidence,
         require_conversation=True,
         terminal_workspace=tmp_path / "workspace",
-        runner_factory=lambda *_args: runner,
+        runner_factory=lambda *_args: cast(CommandRunner, runner),
     )
     value = manifest()
     value["capabilities"]["owner-terminal"] = {
@@ -174,7 +176,7 @@ def test_deferred_terminal_compose_omits_the_overlay(tmp_path):
         tmp_path,
         evidence,
         require_conversation=True,
-        runner_factory=lambda *_args: runner,
+        runner_factory=lambda *_args: cast(CommandRunner, runner),
     )
     gate.plan = build_image_plan(manifest())
 
@@ -193,7 +195,7 @@ def test_active_sandbox_compose_uses_the_sandbox_overlay(tmp_path):
         tmp_path,
         evidence,
         require_conversation=True,
-        runner_factory=lambda *_args: runner,
+        runner_factory=lambda *_args: cast(CommandRunner, runner),
     )
     value = manifest()
     value["capabilities"]["agent-sandbox"] = {
@@ -466,14 +468,15 @@ class SetupRunner:
 
 def setup_gate(tmp_path: Path) -> tuple[AcceptanceGate, SetupRunner]:
     gate = AcceptanceGate.__new__(AcceptanceGate)
-    gate.runner = SetupRunner()
+    runner = SetupRunner()
+    gate.runner = cast(CommandRunner, runner)
     gate.evidence = Evidence(tmp_path / "evidence")
     gate.snapshot_store = tmp_path / "off-machine" / "snapshots"
     gate.snapshot_store.mkdir(parents=True)
     gate.work = tmp_path / "work"
     gate.work.mkdir()
     gate.require_conversation = True
-    return gate, gate.runner
+    return gate, runner
 
 
 def test_headless_setup_uses_server_candidates_and_exact_boundary_digest(tmp_path: Path):
@@ -545,13 +548,15 @@ class ProtectionRunner(SetupRunner):
 
 def test_release_backup_uses_policy_bound_protection_and_held_restore(tmp_path: Path):
     gate, _ = setup_gate(tmp_path)
-    gate.runner = ProtectionRunner(gate.snapshot_store)
+    assert gate.snapshot_store is not None
+    runner = ProtectionRunner(gate.snapshot_store)
+    gate.runner = cast(CommandRunner, runner)
     gate.recovery = tmp_path / "recovery"
     gate.recovery_started = False
 
     gate.backup_and_restore()
 
-    commands = [command for command, _ in gate.runner.calls]
+    commands = [command for command, _ in runner.calls]
     assert ["bash", "./conker", "setup", "run", "protection"] in commands
     assert not any(command[2:3] == ["backup"] for command in commands)
     evidence = json.loads(
@@ -583,7 +588,7 @@ def test_cleanup_failure_retains_repair_state_and_snapshot(tmp_path: Path):
         def run(self, *args, **kwargs):
             raise AcceptanceError("injected abort failure")
 
-    gate.runner = FailingAbort()
+    gate.runner = cast(CommandRunner, FailingAbort())
 
     with pytest.raises(AcceptanceError, match="retained for repair"):
         gate.teardown()

@@ -18,6 +18,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from typing import cast
 
 from scripts import helper_restart, host_ops
 from scripts.chatgpt_provider import (
@@ -271,7 +272,7 @@ def handler(control: ProviderControl, chatgpt=None, host=None):
                 if self.path.startswith("/host/"):
                     return self.respond(*host_ops.route(host, "POST", self.path, value))
                 result = (
-                    chatgpt.apply(value)
+                    cast(ChatGPTControl, chatgpt).apply(value)
                     if self.path == "/chatgpt"
                     else control.apply(value)
                 )

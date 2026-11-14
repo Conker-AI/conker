@@ -46,7 +46,7 @@ MAX_REASON = 300
 MAX_RESULTS = 20
 # How each update receipt (scripts/update_core.py) reads in Pi; a run that changed nothing is not
 # reported.
-OUTCOMES = {
+OUTCOMES: dict[object, str] = {
     "applied": "applied",
     "rolled_back": "rolled_back",
     "rollback_unproven": "held",
