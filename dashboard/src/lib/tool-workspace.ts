@@ -17,16 +17,6 @@ export type PublishedTool = { version: number; publishedAt: string; definition: 
 export type ToolStepReceipt = { nodeId: string; label: string; type: NodeKind; status: "completed" | "failed" | "skipped"; output?: JsonValue; error?: string; child?: ToolRun }
 export type ToolRun = { id: string; toolId: string; version: number | "draft"; startedAt: string; finishedAt: string; status: "completed" | "failed"; input: Record<string, JsonValue>; output?: JsonValue; steps: ToolStepReceipt[]; error?: string; mode: "preview" }
 export type WorkspaceRecord = { id: string; draft: ToolDefinition; published: PublishedTool[]; runs: ToolRun[] }
-export interface ToolWorkspaceClient {
-  list(): Promise<WorkspaceRecord[]>
-  get(id: string): Promise<WorkspaceRecord>
-  create(name: string, kind?: ToolDefinition["kind"]): Promise<WorkspaceRecord>
-  save(definition: ToolDefinition): Promise<WorkspaceRecord>
-  publish(id: string): Promise<PublishedTool>
-  run(id: string, input: Record<string, JsonValue>, version?: number): Promise<ToolRun>
-  remove(id: string): Promise<void>
-  subscribe(listener: () => void): () => void
-}
 export const MOCK_CONNECTORS = ["calendar.read", "email.read", "email.draft", "email.send", "files.read", "files.delete", "reminder.create", "system.status"] as const
 export const NODE_LABELS: Record<NodeKind, string> = { input: "Input", tool_call: "Call connector", workflow_call: "Call published tool", set: "Set value", calculation: "Calculate", condition: "Condition", loop: "Bounded loop", return: "Return" }
 

@@ -8,8 +8,6 @@ import {
   NODE_LABELS,
   type ToolDefinition,
   type ToolNode,
-  type ToolRun,
-  type ToolStepReceipt,
   type WorkspaceRecord,
 } from "@/lib/tool-workspace";
 import { Choice } from "./tool-fields";
@@ -21,7 +19,6 @@ export function ToolStepInspector({
   definition,
   records,
   capabilityPicker,
-  canvasRun,
   argumentSources,
   changeArgumentSource,
   change,
@@ -33,15 +30,12 @@ export function ToolStepInspector({
   branch,
   setBranch,
   connect,
-  stepReceipt,
   explainPendingEdits,
-  serial,
 }: {
   node: ToolNode;
   definition: ToolDefinition;
   records: WorkspaceRecord[];
   capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
-  canvasRun: ToolRun | undefined;
   argumentSources: Record<string, string>;
   changeArgumentSource: (id: string, text: string | null) => void;
   change: (next: ToolDefinition, track?: boolean, applyingSource?: boolean) => void;
@@ -53,9 +47,7 @@ export function ToolStepInspector({
   branch: string;
   setBranch: (branch: string) => void;
   connect: (connection: Connection) => void;
-  stepReceipt: ToolStepReceipt | undefined;
   explainPendingEdits: () => void;
-  serial: (value: unknown) => string;
 }) {
   return (
     <WorkspaceInspector
@@ -70,7 +62,6 @@ export function ToolStepInspector({
           key={node.id}
           node={node}
           definition={definition}
-          run={canvasRun}
           records={records}
           argumentSource={argumentSources[node.id]}
           onArgumentSourceChange={(text) =>
@@ -177,15 +168,6 @@ export function ToolStepInspector({
             </>
           )}
         </ReferenceSection>
-        {stepReceipt && (
-          <ReferenceSection title="Last test output">
-            <p className="text-xs">{stepReceipt.status}</p>
-            <pre className="tool-json">
-              {stepReceipt.error ??
-                serial(stepReceipt.output ?? null)}
-            </pre>
-          </ReferenceSection>
-        )}
         {node.type !== "input" && (
           <Button
             variant="outline"

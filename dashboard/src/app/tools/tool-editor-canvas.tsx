@@ -8,7 +8,6 @@ import {
   NODE_LABELS,
   type NodeKind,
   type ToolDefinition,
-  type ToolRun,
 } from "@/lib/tool-workspace";
 import { ToolCanvas } from "./tool-canvas";
 
@@ -27,7 +26,6 @@ export function ToolStepCanvas({
   definition,
   selected,
   setSelected,
-  canvasRun,
   palette,
   setPalette,
   query,
@@ -36,10 +34,7 @@ export function ToolStepCanvas({
   setOutline,
   history,
   future,
-  panel,
-  setPanel,
   pendingEdits,
-  liveSave,
   liveRun,
   sourceDirty,
   connect,
@@ -54,7 +49,6 @@ export function ToolStepCanvas({
   definition: ToolDefinition;
   selected: string | null;
   setSelected: (id: string | null) => void;
-  canvasRun: ToolRun | undefined;
   palette: boolean;
   setPalette: (palette: boolean) => void;
   query: string;
@@ -63,11 +57,8 @@ export function ToolStepCanvas({
   setOutline: (outline: boolean) => void;
   history: ToolDefinition[];
   future: ToolDefinition[];
-  panel: "test" | "history" | null;
-  setPanel: (panel: "test" | "history" | null) => void;
   pendingEdits: boolean;
-  liveSave?: (definition: ToolDefinition) => Promise<void>;
-  liveRun?: () => void;
+  liveRun: () => void;
   sourceDirty: boolean;
   connect: (connection: Connection) => void;
   add: (type: NodeKind) => void;
@@ -148,13 +139,11 @@ export function ToolStepCanvas({
         <Button
           variant="ghost"
           size="sm"
-          aria-pressed={!!panel}
-          disabled={!!liveSave && !liveRun}
-          aria-label={liveRun ? 'Workflow runs' : 'Test panel'}
-          onClick={() => liveRun ? liveRun() : setPanel(panel ? null : "test")}
+          aria-label="Workflow runs"
+          onClick={liveRun}
         >
           <PanelBottom />
-          <span className="hidden sm:inline">{liveRun ? 'Runs' : 'Test panel'}</span>
+          <span className="hidden sm:inline">Runs</span>
         </Button>
       </div>
       <div className="tools-canvas-row">
@@ -198,7 +187,6 @@ export function ToolStepCanvas({
               edges: definition.edges.filter((e) => e.id !== id),
             })
           }
-          run={canvasRun}
         />
       </div>
     </div>

@@ -1,15 +1,10 @@
-import type { Agent, AgentInput } from "./models"
+import type { AgentInput } from "./models"
 
 export type AgentTemplateInput = { name: string; description: string; agent: AgentInput }
 export type AgentTemplateVersion = { version: number; publishedAt: string; definition: AgentTemplateInput }
 export type AgentTemplateRecord = {
   id: string; draft: AgentTemplateInput; revision: number; versions: AgentTemplateVersion[];
   createdAt: string; updatedAt: string; archivedAt: string | null; provenance: "preview"
-}
-export type TemplateInstantiationInput = {
-  name: string
-  /** Whole-field replacements. Tool and memory selections never union with defaults. */
-  overrides?: Partial<Omit<AgentInput, "name">>
 }
 export type PreparedAgentConfiguration = {
   id: string; templateId: string; templateVersion: number; createdAt: string;
@@ -54,27 +49,4 @@ export type PreparedTeamConfiguration = {
 export type CollaborationData = {
   templates: AgentTemplateRecord[]; teams: AgentTeamRecord[];
   agentPreparations: PreparedAgentConfiguration[]; teamPreparations: PreparedTeamConfiguration[]
-}
-export type CollaborationReferenceKind = "agent" | "tool" | "memory" | "template" | "team" | "context"
-export type CollaborationPreviewState = CollaborationData & {
-  agents: Pick<Agent, "id" | "name" | "configuration" | "version" | "archivedAt">[]
-  companionName: string
-  /** Enabled configuration entries only; these IDs never establish live readiness. */
-  modelIds: string[]; toolIds: string[]; memoryIds: string[]; contextSourceIds: string[]
-  references?: { kind: "template" | "team"; id: string; label: string }[]
-}
-export interface AgentCollaborationClient {
-  readonly mode: "preview"
-  list(): Promise<CollaborationData>
-  createTemplate(input: AgentTemplateInput): Promise<AgentTemplateRecord>
-  updateTemplate(id: string, input: AgentTemplateInput, revision: number): Promise<AgentTemplateRecord>
-  publishTemplate(id: string, revision: number): Promise<AgentTemplateVersion>
-  instantiateTemplate(id: string, version: number, input: TemplateInstantiationInput, revision: number): Promise<PreparedAgentConfiguration>
-  archiveTemplate(id: string, archived: boolean, revision: number): Promise<AgentTemplateRecord>
-  removeTemplate(id: string, revision: number): Promise<void>
-  createTeam(input: AgentTeamInput): Promise<AgentTeamRecord>
-  updateTeam(id: string, input: AgentTeamInput, revision: number): Promise<AgentTeamRecord>
-  prepareTeam(id: string, revision: number): Promise<PreparedTeamConfiguration>
-  archiveTeam(id: string, archived: boolean, revision: number): Promise<AgentTeamRecord>
-  removeTeam(id: string, revision: number): Promise<void>
 }

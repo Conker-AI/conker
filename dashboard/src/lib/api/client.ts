@@ -1,8 +1,7 @@
-import type { Agent, Session, Ticket, TicketStatus, Job, JobInput, JournalEntry, Memory, Service, Tool, TerminalSnapshot, FilesSnapshot } from "./models"
+import type { Agent, Session, Ticket, Job, JournalEntry, Memory, Service, Tool, TerminalSnapshot, FilesSnapshot } from "./models"
 import type { Connections } from "./config"
-import type { ConversationMessage, ConversationState, ConversationUpdate, MessageUpdate, ReplyOptions } from "./conversation-types"
+import type { ConversationState } from "./conversation-types"
 import type { ModelsConfiguration } from "./model-catalogue"
-import type { VoiceInputClient } from "../voice/types"
 
 export type Face = "sprout" | "round" | "cat"
 export type PortraitTone = "green" | "soft" | "graphite"
@@ -30,8 +29,6 @@ export type Thread = {
   tool?: { name: string; summary: string; record: Record<string, unknown> }
 }
 export type AuthState = { status: "unconfigured" | "preview" | "authenticated"; ownerName: string }
-export type SetupInput = { ownerName: string; password: string; connections: Connections }
-export type AuthResult = { wired: false; message: string } | { wired: true; session: AuthState }
 export type DailyHeadline = {
   id: string
   title: string
@@ -80,47 +77,3 @@ export type Snapshot = {
 }
 
 /** Transport boundary. No React, browser storage, or fixture types in this contract. */
-export interface ConkerClient {
-  readonly ownerPreferences: import("./owner-preferences-types").OwnerPreferencesClient
-  readonly systemRuntime: import("./system-runtime-types").SystemRuntimeClient
-  readonly artifacts: import("./artifact-types").ArtifactClient
-  readonly projects: import("./project-types").ProjectClient
-  readonly collaboration: import("./agent-collaboration-types").AgentCollaborationClient
-  readonly tasks: import("./task-types").TaskClient
-  readonly mode: "fixture" | "http"
-  readonly toolWorkspace: import("../tool-workspace").ToolWorkspaceClient
-  readonly calls: import("./call-types").CallClient
-  readonly voiceInput: VoiceInputClient
-  load(): Promise<Snapshot>
-  createAgent(input: import("./models").AgentInput): Promise<Agent>
-  saveAgent(id: string, input: import("./models").AgentInput): Promise<Agent>
-  archiveAgent(id: string, archived: boolean): Promise<Agent>
-  deleteAgent(id: string): Promise<void>
-  createMemory(input: import("./models").MemoryInput): Promise<Memory>
-  saveMemory(id: string, input: import("./models").MemoryInput): Promise<Memory>
-  deleteMemory(id: string): Promise<void>
-  saveCharacter(profile: Character): Promise<Character>
-  previewCharacter(profile: Character, mode: import("./character").CharacterMode): Promise<ReturnType<typeof import("./character").previewCharacter>>
-  createConversation(agentId: string): Promise<Session>
-  handoffConversation(sessionId: string, agentId: string): Promise<Session>
-  sendMessage(sessionId: string, text: string, options?: { replyTo?: string; attachments?: import("../conversation-attachments").ConversationAttachment[]; researchMode?: import("../conversation-research").ResearchMode }): Promise<LocalMessage>
-  updateConversation(sessionId: string, update: ConversationUpdate): Promise<Session>
-  deleteConversation(sessionId: string): Promise<void>
-  updateMessage(sessionId: string, messageId: string, update: MessageUpdate): Promise<ConversationMessage>
-  forkConversation(sessionId: string, messageId: string): Promise<Session>
-  /** Text deltas and optional public activity snapshots. Fixture mode simulates text only; retry never repeats actions. */
-  streamReply(sessionId: string, options: ReplyOptions, onChunk: (chunk: string) => void): Promise<ConversationMessage>
-  steerConversation(sessionId: string, runId: string, requestId: string, text: string): Promise<import("./conversation-types").SteeringReceipt>
-  saveModelsConfiguration(value: ModelsConfiguration): Promise<ModelsConfiguration>
-  requestReply(sessionId: string): Promise<void>
-  decideTicket(id: string, status: TicketStatus): Promise<Ticket>
-  updateJob(id: string, action: "toggle" | "run"): Promise<Job>
-  createJob(input: JobInput): Promise<Job>
-  saveJob(id: string, input: JobInput): Promise<Job>
-  duplicateJob(id: string): Promise<Job>
-  deleteJob(id: string): Promise<void>
-  saveConnections(value: Connections): Promise<Connections>
-  setup(input: SetupInput): Promise<AuthResult>
-  login(password: string): Promise<AuthResult>
-  enterPreview(ownerName?: string): Promise<AuthState>
-}

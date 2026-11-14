@@ -80,7 +80,6 @@ function seed(): Session[] {
   ]
 }
 
-export type FakeGateway = ReturnType<typeof createFakeGateway>
 
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const runtimesHandle = createFakeRuntimes(fail)
