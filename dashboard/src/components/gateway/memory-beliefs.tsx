@@ -5,9 +5,11 @@ import { PageHeader, WorkspaceAction } from '@/components/design-system'
 import { InlineError } from '@/components/resilience/inline-error'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import type { MemoryUsesClient } from '@/lib/gateway/memory-uses'
 import type { Belief, BeliefFilter, BeliefPage, MemoryBeliefsClient } from '@/lib/gateway/memory-beliefs'
 import { GatewayHeader } from './header'
 import { GatewayPageFrame } from './page-frame'
+import { MemoryUsesLine } from './memory-uses-line'
 
 const filters: { id: string; label: string; value: BeliefFilter }[] = [
   { id: 'all', label: 'Everything', value: { origin: 'all', state: 'all' } },
@@ -26,7 +28,7 @@ function why(belief: Belief) {
 }
 
 /** What Conker believes about the owner: each memory, whose words it came from and when it was last used. Read-only; Fix and Forget are on the memory itself. */
-export function GatewayMemoryBeliefs({ client }: { client: MemoryBeliefsClient }) {
+export function GatewayMemoryBeliefs({ client, uses }: { client: MemoryBeliefsClient; uses: MemoryUsesClient }) {
   const [filterId, setFilterId] = useState('all')
   const [page, setPage] = useState<BeliefPage | null>(null)
   const [failed, setFailed] = useState<{ error: unknown } | null>(null)
@@ -75,6 +77,7 @@ export function GatewayMemoryBeliefs({ client }: { client: MemoryBeliefsClient }
             </div>
             <p className="text-xs text-muted-foreground">{why(belief)}{belief.state === 'needs_review' ? ' Needs a look.' : ''}</p>
             <p className="text-xs text-muted-foreground">{belief.lastRecalledAt ? `Last used ${day(belief.lastRecalledAt)}.` : 'Not used in an answer yet.'}{belief.conflicts.length ? ` Disagrees with ${plural(belief.conflicts.length, 'other memory', 'other memories')}.` : ''}</p>
+          <MemoryUsesLine client={uses} memoryId={belief.id} />
           </li>)}</ul>
           {page.nextAfter && <Button type="button" variant="outline" className="self-start" disabled={more} onClick={showMore}>{more ? 'Loading…' : 'Show more'}</Button>}
         </>}

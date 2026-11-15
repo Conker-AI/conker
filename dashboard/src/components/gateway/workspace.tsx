@@ -40,6 +40,7 @@ const GatewayMcpWorkspace = lazy(() => import('./mcp-workspace').then(module => 
 const GatewaySystemStatus = lazy(() => import('./system-status').then(module => ({ default: module.GatewaySystemStatus })))
 const GatewayOwnerWorkspace = lazy(() => import('./owner-workspace').then(module => ({ default: module.GatewayOwnerWorkspace })))
 const GatewayMemoryBeliefs = lazy(() => import('./memory-beliefs').then(module => ({ default: module.GatewayMemoryBeliefs })))
+const GatewayOpenLoops = lazy(() => import('./open-loops-workspace').then(module => ({ default: module.GatewayOpenLoops })))
 const GatewayMemoryCare = lazy(() => import('./memory-care').then(module => ({ default: module.GatewayMemoryCare })))
 const GatewayMemoryWorkspace = lazy(() => import('./memory-workspace').then(module => ({ default: module.GatewayMemoryWorkspace })))
 const SettingsScreen = lazy(() => import('@/settings/settings-screen').then(module => ({ default: module.SettingsScreen })))
@@ -109,11 +110,12 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {inboxActive && <div className="min-h-0 flex-1"><GatewayOwnerWorkspace client={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} asks={control.asks} drafts={control.editorDrafts} access={control.access} updates={{ client: control.updates, hostOps: control.hostOps }} state={ownerState} active /></div>}
       {toolsActive && (params.get("view") === "mcp" ? <GatewayMcpWorkspace client={control.mcp} /> : params.get("draft") || params.get("view") === "drafts" ? <GatewayToolDrafts key={params.get("draft") ?? "list"} client={control.editorDrafts} changes={control.changeRequests} /> : <GatewayToolsInventory client={control} />)}
       {systemActive && (systemTab === 'overview' ? <GatewaySystemStatus client={control} /> : systemTab === 'services' ? <GatewayServerServices client={control.hostOps} /> : systemTab === 'backups' ? <GatewayServerBackups client={control.hostOps} /> : systemTab === 'terminal' ? <GatewayTerminalWorkspace client={control.terminal} /> : systemTab === 'native-sessions' ? <GatewayNativeSessionsPage control={control} authStore={authStore} /> : systemTab === 'files' ? <GatewayFilesystemWorkspace client={control.filesystem} /> : <GatewayHostInventoryWorkspace client={control.hostInventory} section={systemTab as 'processes' | 'ports' | 'containers'} />)}
-      {memoryActive && (new URLSearchParams(location.search).get('view') === 'care' ? <GatewayMemoryCare client={control.memoryCare} /> : new URLSearchParams(location.search).get('view') === 'beliefs' ? <GatewayMemoryBeliefs client={control.memoryBeliefs} /> : <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />)}
+      {memoryActive && (new URLSearchParams(location.search).get('view') === 'care' ? <GatewayMemoryCare client={control.memoryCare} /> : new URLSearchParams(location.search).get('view') === 'beliefs' ? <GatewayMemoryBeliefs client={control.memoryBeliefs} uses={control.memoryUses} /> : <GatewayMemoryWorkspace client={control} authStore={authStore} sourcePrivacy={sourcePrivacy} />)}
       {modelsActive && <SettingsScreen client={control} authStore={authStore} onSignOut={() => void signOut()} />}
       {agentsActive && (location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'skills' ? <GatewaySkillsWorkspace client={control.skills} /> : location.pathname.replace(/\/+$/, '') === '/agents' && gatewayAgentSection(location.search) === 'teams' ? <GatewayTeamsWorkspace control={control} runtime={runtime} /> : <GatewayAgentsWorkspace client={control} />)}
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
+      {route === 'loops' && <GatewayOpenLoops client={control.openLoops} />}
       {artifactsActive && <GatewayArtifactsWorkspace control={control} activity={activity} />}
       {jobsActive && <GatewayJobsWorkspace control={control} />}
     </Suspense></ErrorBoundary>

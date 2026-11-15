@@ -8,6 +8,7 @@ export type GatewayRoute =
   | 'artifacts'
   | 'jobs'
   | 'memory'
+  | 'loops'
   | 'activity'
   | 'agents'
   | 'tools'
@@ -37,6 +38,7 @@ export const gatewayDestinations = [
   { id: 'runs', route: 'activity', title: 'Runs', path: '/activity?tab=runs', group: 'more' },
   { id: 'events', route: 'activity', title: 'Activity log', path: '/activity?tab=events', group: 'more' },
   { id: 'artifacts', route: 'artifacts', title: 'Artifacts', path: '/artifacts', group: 'more' },
+  { id: 'loops', route: 'loops', title: 'Open loops', path: '/loops', group: 'more' },
   { id: 'skills', route: 'agents', title: 'Skills', path: '/agents?tab=skills', group: 'more' },
   { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'more' },
   { id: 'server-services', route: 'system', title: 'Services', path: '/system?tab=services', group: 'more' },
@@ -103,6 +105,7 @@ const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
   '/artifacts': 'artifacts',
   '/jobs': 'jobs',
   '/memory': 'memory',
+  '/loops': 'loops',
   '/activity': 'activity',
   '/agents': 'agents',
   '/tools': 'tools',

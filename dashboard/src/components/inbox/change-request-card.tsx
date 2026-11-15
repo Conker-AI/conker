@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { BookmarkPlus, Bot, CalendarClock, CircleHelp, Users, Wrench } from 'lucide-react'
+import { BookmarkPlus, Bot, CalendarClock, CircleHelp, ListChecks, Users, Wrench } from 'lucide-react'
 import { IdentityMark } from '@/components/brand/identity-mark'
 import { serviceIn } from '@/components/brand/service'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { gatewayConversationLink } from '@/components/gateway/navigation'
+import { dueLabel } from '@/lib/due-date'
 import { toolDraftStatus, type ChangeRequest, type ToolDraftRequest } from '@/lib/gateway/change-requests'
 import { AgentDetails, TeamDetails } from './agent-request-details'
 import { InboxCard, type InboxFact } from './inbox-card'
@@ -16,10 +17,10 @@ import { ReplyBox } from './reply-box'
 // What approving does, and what kind of thing it is, per request kind.
 const LABELS: Record<ChangeRequest['kind'], { action: string; kind: string }> = {
   ai_job: { action: 'Create job', kind: 'AI job' }, tool_draft: { action: 'Review', kind: 'Tool' }, memory: { action: 'Remember', kind: 'Memory' },
-  agent: { action: 'Create agent', kind: 'Agent' }, team: { action: 'Create team', kind: 'Team' }, other: { action: '', kind: 'Request' },
+  agent: { action: 'Create agent', kind: 'Agent' }, team: { action: 'Create team', kind: 'Team' }, promise: { action: 'Track it', kind: 'Promise' }, other: { action: '', kind: 'Request' },
 }
 const ICONS: Record<ChangeRequest['kind'], ReactNode> = {
-  ai_job: <CalendarClock />, tool_draft: <Wrench />, memory: <BookmarkPlus />, agent: <Bot />, team: <Users />, other: <CircleHelp />,
+  ai_job: <CalendarClock />, tool_draft: <Wrench />, memory: <BookmarkPlus />, agent: <Bot />, team: <Users />, promise: <ListChecks />, other: <CircleHelp />,
 }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const effects = { read: 'Only reads', prepare: 'Prepares things, sends nothing', write: 'Changes or sends things' } as const
@@ -48,6 +49,12 @@ function Details({ request }: { request: ChangeRequest }) {
     <p className="text-xs text-muted-foreground">It reads with tools that need no confirmation; anything that would change something still asks you.</p>
   </dl>
   if (request.kind === 'memory') return <p className="text-xs text-muted-foreground">Saved word for word. You can change or forget it any time in Memory.</p>
+  if (request.kind === 'promise') return <dl className="grid gap-3 text-sm">
+    <div><dt className="text-xs text-muted-foreground">Who promised</dt><dd>{request.payload.by === 'owner' ? 'You' : 'Conker'}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">Due</dt><dd>{request.payload.dueOn ? dueLabel(request.payload.dueOn) : 'No day set'}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">The promise</dt><dd className="whitespace-pre-wrap">{request.payload.text}</dd></div>
+    <p className="text-xs text-muted-foreground">It goes on your open loops list. You can mark it done or drop it any time.</p>
+  </dl>
   if (request.kind === 'agent') return <AgentDetails request={request} />
   if (request.kind === 'team') return <TeamDetails request={request} />
   if (request.kind === 'other') return null
@@ -140,7 +147,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
     ['Came', `${age(request.createdAt, now)} · ${new Date(request.createdAt * 1000).toLocaleString()}`], ...(request.sessionId ? [['Chat', chatLink(request.sessionId)] as InboxFact] : [])]
   const footer = error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined
   // An agent says what it does (its role); a team its objective; the details show the rest exactly as filed.
-  const text = request.kind === 'memory' ? request.payload.text : request.kind === 'agent' ? request.payload.role : request.kind === 'team' ? request.payload.objective
+  const text = request.kind === 'memory' || request.kind === 'promise' ? request.payload.text : request.kind === 'agent' ? request.payload.role : request.kind === 'team' ? request.payload.objective
     : request.summary || (request.kind === 'tool_draft' ? request.payload.description : '')
   // A tool or job request that names a service shows its logo (a Telegram tool reads as Telegram at a glance).
   const brand = request.kind === 'ai_job' || request.kind === 'tool_draft' ? serviceIn(request.title, text) : null

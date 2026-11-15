@@ -8,6 +8,8 @@ import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
 import { createMemoryBeliefsClient } from './memory-beliefs'
+import { createMemoryUsesClient } from './memory-uses'
+import { createOpenLoopsClient } from './open-loops'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
 import { createChatAnswersClient } from './chat-answers'
@@ -334,6 +336,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     /** Memories worth tidying: duplicates, disagreements, expired, unused. Read only. */
     memoryCare: createMemoryCareClient(auth),
     memoryBeliefs: createMemoryBeliefsClient(auth),
+    memoryUses: createMemoryUsesClient(auth),
+    openLoops: createOpenLoopsClient(auth),
     promptEnhance: createPromptEnhanceClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */
     chatAnswers: createChatAnswersClient(auth),

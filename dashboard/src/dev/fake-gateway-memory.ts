@@ -4,6 +4,7 @@
  * and the pending-forget intent live here so the Memory screens and search see one copy.
  */
 import { GatewayError } from '@/lib/gateway/transport'
+import { fakeOpenLoops } from './fake-gateway-loops'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; onDispatch?: () => void }
@@ -53,6 +54,8 @@ export function createFakeMemory(fail: (status: number) => never) {
     memories,
     deliveryFor,
     handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
+      const loops = fakeOpenLoops(path, method, options)
+      if (loops) return loops
       let match: RegExpMatchArray | null
       if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/memories\/([^/]+)$/)) && method === 'GET') {
         const item = memories.find(row => row.type === 'memory' && row.id === match![1])
@@ -129,6 +132,12 @@ export function createFakeMemory(fail: (status: number) => never) {
 
 Context: say what you already know and what is unclear.
 Output: a short answer first, then the reasons.`, notes: ['Added a goal, context and the shape of the answer.'], modelId: 'preview-drafting', templateId: null, fields: {} }
+      }
+      const uses = path.match(/^\/api\/control\/pi\/memory\/([A-Za-z0-9][A-Za-z0-9_.:-]{0,199})\/uses$/)
+      if (uses && method === 'GET') {
+        const counts: Record<string, [number, number]> = { mem_judo: [3, 2], mem_physics: [1, 1] }, [total, chats] = counts[uses[1]] ?? [0, 0]
+        const at = Date.now() / 1000
+        return { memoryId: uses[1], since: at - 30 * 86_400, total, chats, nextAfter: null, items: total ? [{ sessionId: 'ses_' + '1'.repeat(16), sessionTitle: 'Plan my week', turnId: 'turn_' + '1'.repeat(16), source: 'context', revision: 1, at }] : [] }
       }
       if (path === '/api/control/pi/memory/beliefs' && method === 'GET') {
         const origins: Record<string, 'stated' | 'concluded'> = { mem_judo: 'stated', mem_physics: 'stated', mem_revision: 'concluded' }
