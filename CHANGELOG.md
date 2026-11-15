@@ -8,6 +8,8 @@ which module versions a release pins.
 
 - **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)
 
+- **An update no longer fails when Pi is recreated.** Services that join Pi's network (the decisions sidecar and the Claude plan runtime) cannot be stopped once Pi is replaced, so `docker compose up` exited with an error and the update rolled back a stack that was coming up fine. The update now removes those services first; `up` starts them again under the new Pi. (#361)
+
 ## 0.2.0
 
 - **Installed `conker` waits as long as the dev CLI, and lists every verb.** The relay inside the Pi and gateway containers now takes its wait from the caller, so `team run`, `team next` and `prompt enhance` get their 660 s instead of failing at 30 s while Pi finishes the call; the installed help names `memory beliefs|upkeep|used` and `team run|next|show|finish` (a test fails when a verb of those groups is missing); chat titles, memories and loop text are printed with terminal control characters removed; a refusal reason is cut at 300 characters. (hunt3 owner-cli F1, F2, F3, F4)
