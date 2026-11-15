@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -307,3 +308,34 @@ def test_the_launcher_forwards_the_owner_commands(ubuntu_cli, argv):
     assert result.returncode == 0, result.stderr
     forwarded = json.loads(result.stdout.strip().splitlines()[-1])
     assert forwarded == ["--root", str(ubuntu_cli.deployment), "--layout", "ubuntu", *argv]
+
+
+def test_the_owner_cli_passes_a_slow_routes_timeout_to_the_relay(monkeypatch):
+    sent = {}
+
+    def request(command, service, path, body=None, method=None, query=None, timeout=30):
+        sent["timeout"] = timeout
+        return {}
+
+    monkeypatch.setattr(config_cli, "request", request)
+    owner_cli.caller(["docker", "compose"])(None, "pi", "/prompts/enhance", {"text": "x"}, timeout=660)
+    assert sent == {"timeout": 660}
+
+
+def test_every_memory_and_team_verb_is_in_the_installed_help():
+    usage = (ROOT / "conker").read_text(encoding="utf-8")
+    start = usage.index("cat <<USAGE")
+    block = usage[start : usage.index("\nUSAGE", start)]
+    action = next(a for a in build_parser("conker")._actions if a.dest == "command")
+    choices = cast(dict, action.choices)
+    for group in ("memory", "team"):
+        operation = next(a for a in choices[group]._actions if a.dest == "operation")
+        listed = re.findall(r"\$\{BOLD\}" + group + r"\$\{OFF\} ([a-z|]+)", block)
+        assert listed, group
+        assert set(operation.choices) <= set(listed[0].split("|")), group
+
+
+def test_stored_text_cannot_carry_terminal_controls_into_the_output():
+    from scripts.conker_inputs import plain
+
+    assert plain("a\x1b[2Jb\x07c\nd  e\x9bf") == "a [2Jb c d e f"

@@ -140,3 +140,13 @@ def test_bad_values_are_refused_before_calling_pi(monkeypatch, capsys):
     ):
         code, sent, out = calls(monkeypatch, capsys, arguments)
         assert code == 1 and sent == [] and out.err, arguments
+
+
+def test_a_loop_line_carries_no_terminal_control_characters():
+    from scripts import conker_loops
+
+    item = {**LOOP, "text": "Send\x1b[2J the essay", "sessionTitle": "Ex\x1b]0;hacked\x07ams"}
+    page = {**PAGE, "items": [item]}
+    out = conker_loops.render(page)
+    assert not any(ord(char) < 32 and char != "\n" for char in out)
+    assert "Send [2J the essay" in out

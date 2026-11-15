@@ -542,8 +542,8 @@ def test_config_changes_settings_through_pi_inside_its_container(ubuntu_cli, tmp
     assert all(
         "compose --project-directory" in call and "exec -T pi python -c" in call for call in calls
     )
-    assert log.count("\n GET /owner/settings\n") == 4
-    assert log.count("\n POST /owner/settings\n") == 2
+    assert log.count("\n 30 GET /owner/settings\n") == 4
+    assert log.count("\n 30 POST /owner/settings\n") == 2
 
     ubuntu_cli.docker_log.unlink()
     bad = ubuntu_cli("config", "set", "appearance.accent", "green")

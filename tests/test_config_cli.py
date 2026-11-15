@@ -55,6 +55,7 @@ def test_an_installed_stack_is_reached_inside_the_pi_container(monkeypatch):
         "python",
         "-c",
         config_cli.RELAY,
+        "30",
         "GET",
         "/owner/settings",
     ]
@@ -117,7 +118,7 @@ def test_the_relay_calls_pi_with_its_own_key_and_reports_the_status():
     try:
         got, posted = (
             subprocess.run(
-                [sys.executable, "-c", relay, method, "/owner/settings"],
+                [sys.executable, "-c", relay, "30", method, "/owner/settings"],
                 input=sent,
                 capture_output=True,
                 env=environment,
@@ -162,6 +163,7 @@ def test_toolgate_settings_are_reached_inside_the_gateway_container(monkeypatch)
         "python",
         "-c",
         config_cli.TOOLGATE_RELAY,
+        "30",
         "PUT",
         "/v2/owner/settings",
     ]
@@ -229,7 +231,7 @@ def test_the_toolgate_relay_sends_the_owner_key_and_the_method():
     try:
         got, put = (
             subprocess.run(
-                [sys.executable, "-c", config_cli.TOOLGATE_RELAY, method, path],
+                [sys.executable, "-c", config_cli.TOOLGATE_RELAY, "30", method, path],
                 input=sent,
                 capture_output=True,
                 env=environment,
@@ -249,3 +251,23 @@ def test_the_toolgate_relay_sends_the_owner_key_and_the_method():
         ("GET", "/v2/owner/settings", "owner-key", None),
         ("PUT", "/v2/owner/settings", "owner-key", {"expected_revision": 0}),
     ]
+
+
+def test_a_slow_route_is_given_the_time_it_asks_for(monkeypatch):
+    seen = []
+
+    def run(sent, **options):
+        seen.append((sent[-3], options["timeout"]))
+        return SimpleNamespace(returncode=0, stdout=b"200\n{}", stderr=b"")
+
+    monkeypatch.setattr(config_cli.subprocess, "run", run)
+    config_cli.request(["docker", "compose"], "pi", "/team-runs", {"x": 1}, timeout=660)
+    assert seen == [("660", 750)]
+    assert "float(sys.argv[1])" in config_cli.RELAY
+    assert "timeout=wait" in config_cli.RELAY
+    assert "float(sys.argv[1])" in config_cli.TOOLGATE_RELAY
+
+
+def test_a_refusal_reason_is_capped():
+    long = json.dumps({"detail": "x" * 5000}).encode()
+    assert len(config_cli.reason(long)) <= 305

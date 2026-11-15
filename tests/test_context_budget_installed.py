@@ -44,8 +44,8 @@ def test_budget_starts_the_settings_of_a_chat_that_has_none(pi, capsys):
     (read, nothing), (write, sent) = pi.calls
     command = config_cli.compose(Path("/srv/conker"), "ubuntu")
     relay = ["exec", "-T", "pi", "python", "-c", config_cli.RELAY]
-    assert read == [*command, *relay, "GET", "/context/ses_1"] and nothing == b""
-    assert write == [*command, *relay, "POST", "/context/ses_1"]
+    assert read == [*command, *relay, "30", "GET", "/context/ses_1"] and nothing == b""
+    assert write == [*command, *relay, "30", "POST", "/context/ses_1"]
     assert json.loads(sent) == {
         "expected_revision": 0,
         "policy": {

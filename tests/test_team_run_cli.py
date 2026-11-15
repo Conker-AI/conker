@@ -192,7 +192,7 @@ def test_the_installed_launcher_relays_exactly_the_team_run_routes(monkeypatch):
 
     sent = []
     monkeypatch.setattr(
-        config_cli, "request", lambda command, service, path, body, query=None: sent.append(path)
+        config_cli, "request", lambda command, service, path, body, query=None, timeout=30: sent.append(path)
     )
     call = owner_cli.caller(["team", "run"])
     for path, body in (
