@@ -27,8 +27,8 @@ import os, sys, urllib.error, urllib.request
 class Stay(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args):
         return None
-method, path = sys.argv[1:3]
-wait = float(sys.argv[3]) if len(sys.argv) > 3 else 30
+wait = float(sys.argv[1])
+method, path = sys.argv[2:4]
 request = urllib.request.Request(
     "http://127.0.0.1:8050" + path,
     data=sys.stdin.buffer.read() if method == "POST" else None,
@@ -50,8 +50,8 @@ import os, sys, urllib.error, urllib.request
 class Stay(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args):
         return None
-method, path = sys.argv[1:3]
-wait = float(sys.argv[3]) if len(sys.argv) > 3 else 30
+wait = float(sys.argv[1])
+method, path = sys.argv[2:4]
 request = urllib.request.Request(
     os.environ["GATEWAY_TOOLGATE_URL"].rstrip("/") + path,
     data=sys.stdin.buffer.read() if method != "GET" else None,
@@ -152,9 +152,9 @@ def request(
                 "python",
                 "-c",
                 relay,
+                str(timeout),
                 method or ("GET" if body is None else "POST"),
                 path,
-                str(timeout),
             ],
             input=b""
             if body is None

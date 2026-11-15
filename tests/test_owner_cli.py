@@ -119,7 +119,7 @@ class Relay:
         monkeypatch.setattr(config_cli.subprocess, "run", self.run)
 
     def run(self, argv, **options):
-        method, path = argv[argv.index(config_cli.RELAY) + 1 :][:2]
+        method, path = argv[-2:]
         body = json.loads(options["input"]) if options["input"] else None
         self.sent.append((method, path, body))
         status, value = self.answers[(method, path)]

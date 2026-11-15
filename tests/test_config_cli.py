@@ -55,11 +55,11 @@ def test_an_installed_stack_is_reached_inside_the_pi_container(monkeypatch):
         "python",
         "-c",
         config_cli.RELAY,
+        "30",
         "GET",
         "/owner/settings",
-        "30",
     ]
-    assert nothing == b"" and write[-3:-1] == ["POST", "/owner/settings"]
+    assert nothing == b"" and write[-2:] == ["POST", "/owner/settings"]
     assert json.loads(sent) == body
     for stdout, code, stderr, message in [
         (b'409\n{"detail": {"code": "revision_conflict"}}', 0, b"", "changed while"),
@@ -118,7 +118,7 @@ def test_the_relay_calls_pi_with_its_own_key_and_reports_the_status():
     try:
         got, posted = (
             subprocess.run(
-                [sys.executable, "-c", relay, method, "/owner/settings"],
+                [sys.executable, "-c", relay, "30", method, "/owner/settings"],
                 input=sent,
                 capture_output=True,
                 env=environment,
@@ -163,9 +163,9 @@ def test_toolgate_settings_are_reached_inside_the_gateway_container(monkeypatch)
         "python",
         "-c",
         config_cli.TOOLGATE_RELAY,
+        "30",
         "PUT",
         "/v2/owner/settings",
-        "30",
     ]
     assert json.loads(payload) == body
     answers.append(
@@ -180,7 +180,7 @@ def test_toolgate_settings_are_reached_inside_the_gateway_container(monkeypatch)
         match=r"^ToolGate refused it \(HTTP 422\): Too long\. Nothing was saved\.$",
     ):
         config_cli.request(command, "toolgate-owner", "/v2/owner/lockdown", {"x": 1})
-    assert calls[-1][0][-3:-1] == ["POST", "/v2/owner/lockdown"]
+    assert calls[-1][0][-2:] == ["POST", "/v2/owner/lockdown"]
     with pytest.raises(ValueError, match="only PUT"):
         config_cli.request(command, "pi", "/owner/settings", body, method="DELETE")
     with pytest.raises(ValueError, match="only PUT"):
@@ -231,7 +231,7 @@ def test_the_toolgate_relay_sends_the_owner_key_and_the_method():
     try:
         got, put = (
             subprocess.run(
-                [sys.executable, "-c", config_cli.TOOLGATE_RELAY, method, path],
+                [sys.executable, "-c", config_cli.TOOLGATE_RELAY, "30", method, path],
                 input=sent,
                 capture_output=True,
                 env=environment,
@@ -257,15 +257,15 @@ def test_a_slow_route_is_given_the_time_it_asks_for(monkeypatch):
     seen = []
 
     def run(sent, **options):
-        seen.append((sent[-1], options["timeout"]))
+        seen.append((sent[-3], options["timeout"]))
         return SimpleNamespace(returncode=0, stdout=b"200\n{}", stderr=b"")
 
     monkeypatch.setattr(config_cli.subprocess, "run", run)
     config_cli.request(["docker", "compose"], "pi", "/team-runs", {"x": 1}, timeout=660)
     assert seen == [("660", 750)]
-    assert "float(sys.argv[3])" in config_cli.RELAY
+    assert "float(sys.argv[1])" in config_cli.RELAY
     assert "timeout=wait" in config_cli.RELAY
-    assert "float(sys.argv[3])" in config_cli.TOOLGATE_RELAY
+    assert "float(sys.argv[1])" in config_cli.TOOLGATE_RELAY
 
 
 def test_a_refusal_reason_is_capped():
