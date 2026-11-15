@@ -14,6 +14,8 @@ import type { GatewayAgentNote } from '../gateway/jobs'
 import type { MemoryUpkeepPage } from '../gateway/memory-care'
 import type { ChatOutput } from '../gateway/chat-names'
 import type { BeliefPage } from '../gateway/memory-beliefs'
+import type { MemoryUsePage } from '../gateway/memory-uses'
+import type { OpenLoopPage } from '../gateway/open-loops'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
@@ -32,6 +34,8 @@ type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? t
 export const piWire = {
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
+  memoryUses: true satisfies Same<MemoryUsePage, PiResponse<'/memory/{memory_id}/uses', 'get'>>,
+  openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,

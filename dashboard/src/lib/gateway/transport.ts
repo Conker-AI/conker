@@ -130,6 +130,8 @@ routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$
 routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
 // Memory care, what Conker believes about the owner, and the prompt wand: owner reads and one unsent rewrite.
 routes.GET.unshift(/^\/api\/control\/pi\/memory\/(?:upkeep|beliefs)$/)
+routes.GET.unshift(/^\/api\/control\/pi\/memory\/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}\/uses$/)
+routes.GET.unshift(/^\/api\/control\/pi\/open-loops$/)
 routes.POST.unshift(/^\/api\/control\/pi\/prompts\/enhance$/)
 routes.GET.unshift(/^\/api\/diagnostics$/)
 // Authored agents are owner-controlled records; every mutation receives operation-bound verification.
