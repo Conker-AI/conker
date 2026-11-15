@@ -6,13 +6,15 @@ which module versions a release pins.
 
 ## Unreleased
 
-- **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting.
+- **conker prompt templates, and enhance --template (R-F8).** `conker prompt templates list|show ID|add --name N --fields FILE|-|remove ID --yes` keeps your prompt templates in Pi (four starters, yours), and `conker prompt enhance --template ID "TEXT"` has the wand fill that template from a draft, naming any required field still empty. Also on the installed `./conker` through the owner relay (only the template routes). Needs a Pi release with `/prompts/templates`. (#356)
+- **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting. (#348)
 - **conker prompt enhance (B1).** `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` has Jev rewrite an unsent draft into a clearer prompt and prints it with what changed and the model that wrote it; nothing is sent or saved. Needs Pi with `POST /prompts/enhance` (Pi one model call on the drafting model, counted by the daily spending cap). Also on an installed stack as `./conker prompt enhance`. (#344)
-- **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override).
+- **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override). (#341)
+- **Development pin of Pi moved, types regenerated.** `scripts/workspace-sources.json` follows Pi main so the dashboard can read the new routes (`/memory/upkeep`, `/memory/beliefs`, `/memory/{id}/uses`, `/open-loops`); `versions.env` still pins the released Pi 0.25.0 (#342)
 
 
 - **Docs cut, round 7.** Removed the unlinked behavioral UX playbook (2026-10-04 proposals, superseded by `dashboard/DESIGN.md`); the developer guide no longer names `ConkerClient` or `dev:legacy-fixtures` and lists ADR-0012 to 0014; two doc links and one path fixed; CONTRIBUTING starter tasks match what is still open (#340).
-- **conker memory used ID (R-U3).** Lists the answers that used one memory (needs Pi with `GET /memory/{id}/uses`): time, source, chat title and ids, the memory's revision then; read only, paged. Also on an installed stack through `./conker` (scripts/owner_cli.py allows that one read route by pattern).
+- **conker memory used ID (R-U3).** Lists the answers that used one memory (needs Pi with `GET /memory/{id}/uses`): time, source, chat title and ids, the memory's revision then; read only, paged. Also on an installed stack through `./conker` (scripts/owner_cli.py allows that one read route by pattern). (#339)
 
 - **`scripts/` becomes a package, step 2: the development CLI and workspace.** The `conker_*` modules, `workspace*`, `local_stack` and the other helpers of `scripts/conker.py` import each other as `scripts.X`; every entry point (`conker.py`, `owner_cli.py`, `context_cli.py`, `import_cli.py`, `tool_draft_cli.py`, `workspace.py`, `workspace_models.py`, `local_stack.py`) still runs by path from any folder. No change for installed stacks (#338).
 - **`scripts/` becomes a package, step 1: the release acceptance gate.** `release_acceptance`, `release_checks` and `release_first_run` import each other as `scripts.X`, and the gate still runs as `python3 scripts/release_acceptance.py` from any folder. No change for installed stacks (#337).
@@ -21,7 +23,7 @@ which module versions a release pins.
   for and how each updates; the source-built Ubuntu section says what only it does and what each Compose
   overlay of the repository install is for. (#334)
 
-- **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due
+- **Promises across chats, from the CLI.** `conker loops list` shows what you and Conker promised, soonest due (#333)
   first, with overdue ones marked; `conker loops add` files one for a chat and `done`, `drop` and `reopen`
   close or reopen it. Installed stacks run it as `./conker loops`. Needs Pi with Conker-AI/pi#251.
 
@@ -58,6 +60,10 @@ which module versions a release pins.
   and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
   search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
   failure exits non-zero. (#318)
+- **The check reads the new routes too.** `conker post-update-check` also fails when Pi does not serve a
+  route added since 0.25.0 (prompt enhance, team runs, memory uses, recall notices, quiet and tomorrow;
+  checked in Pi's container, nothing is called) and reads memory beliefs, memory care and open loops with
+  `limit=1`. (#354)
 
 - **A page for every CLI group.** `docs/reference/` has pages for `conker agent`/`team`, `memory` and
   `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
@@ -84,7 +90,7 @@ which module versions a release pins.
 - **Memory care.** Memory has a "Memory care" button that lists what is worth tidying (memories that disagree, saved twice,
   almost the same, past their date, not used for a while), each with its words and a link to fix or forget it.
   Read only; needs Pi with Conker-AI/pi#250. (#343)
-- **Docs say what teams and skills are.** The glossary and guides no longer mention team templates (Pi's templates are for agents, kept for recovery; there are no built-in teams) or agents holding skills (a skill is picked per message and is not attached to an agent); the Teams editor calls a role's own text "Extra instructions for this team", since Pi appends it to the agent's instructions. Text only.
+- **Docs say what teams and skills are.** The glossary and guides no longer mention team templates (Pi's templates are for agents, kept for recovery; there are no built-in teams) or agents holding skills (a skill is picked per message and is not attached to an agent); the Teams editor calls a role's own text "Extra instructions for this team", since Pi appends it to the agent's instructions. Text only. (#347)
 - **`conker team run` (and `next`, `show`, `finish`).** Run a saved team from the CLI, one role at a time: `run` starts a run from a chat and runs its first role, `next --reviewed` runs the next role over the team's handoff after you read the last answer, `show` and `finish [--cancel]` read and end it. Also on an installed stack as `./conker team ...`. Needs a Pi with the owner-scope `/team-runs` routes; Pi refuses a run while the daily spending cap is off. (#346)
 
 - **The composer names the model.** The model choice no longer says "Default model": it shows the exact model and where it runs ("Qwen 2.5 3B · Local (Ollama)"), or "Auto · picks per message" with a router. Under Auto, the mode button shows what Auto chose (Hard, Thinking, Web) so it is not a mystery. (#345)
