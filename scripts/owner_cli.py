@@ -69,12 +69,33 @@ ROUTE_PATTERNS = (
     ("GET", re.compile(r"/collaboration/teams/team_[0-9a-f]{32}")),
     ("POST", re.compile(r"/team-runs/from-team/team_[0-9a-f]{32}")),
     ("GET", re.compile(r"/team-runs/teamrun_[0-9a-f]{32}")),
-    ("POST", re.compile(r"/team-runs/teamrun_[0-9a-f]{32}/(?:steps|finish)")),
+    ("POST", re.compile(r"/team-runs/teamrun_[0-9a-f]{32}/(?:steps|finish|reconcile)")),
 )
+PREFERENCES = "/owner/preferences"
+CAP_ONLY = "POST /owner/preferences may only change spendingCap."
+
+
+def _only_the_cap(body, seen) -> None:
+    """Refuse a preferences write that is not the spending cap at the revision just read."""
+
+    def others(preferences):
+        return {key: value for key, value in preferences.items() if key != "spendingCap"}
+
+    if not (seen and isinstance(body, dict) and set(body) == {"expected_revision", "preferences"}):
+        raise ValueError(CAP_ONLY)
+    wanted = body["preferences"]
+    if (
+        body["expected_revision"] != seen["revision"]
+        or not isinstance(wanted, dict)
+        or not isinstance(wanted.get("spendingCap"), dict)
+        or others(wanted) != others(seen["preferences"])
+    ):
+        raise ValueError(CAP_ONLY)
 
 
 def caller(command: list[str]):
     """The modules' request: only ROUTES, through the relay."""
+    seen: dict = {}  # the last good read of the owner preferences: revision and preferences
 
     def call(_config, service: str, path: str, body=None, *, query=None, timeout=30, **_options):
         method = "GET" if body is None else "POST"
@@ -83,7 +104,13 @@ def caller(command: list[str]):
         )
         if service != "pi" or not known:
             raise ValueError(f"{method} {path} cannot be reached from this command.")
-        return config_cli.request(command, service, path, body, query=query, timeout=timeout)
+        if method == "POST" and path == PREFERENCES:
+            _only_the_cap(body, seen)
+        reply = config_cli.request(command, service, path, body, query=query, timeout=timeout)
+        if method == "GET" and path == PREFERENCES and isinstance(reply, dict):
+            if "revision" in reply and isinstance(reply.get("preferences"), dict):
+                seen.update(revision=reply["revision"], preferences=reply["preferences"])
+        return reply
 
     return call
 

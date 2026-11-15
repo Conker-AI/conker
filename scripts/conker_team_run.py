@@ -45,6 +45,13 @@ def register(team_commands):
     finish.add_argument("run_id", help="The run's id (teamrun_...)")
     finish.add_argument("--cancel", action="store_true", help="End it as cancelled")
     finish.add_argument("--json", action="store_true", help="Print Pi's reply")
+    reconcile = team_commands.add_parser(
+        "reconcile",
+        help="Check where a held run stands after you approved its tool in the Inbox; "
+        "it never resumes or re-sends anything",
+    )
+    reconcile.add_argument("run_id", help="The run's id (teamrun_...)")
+    reconcile.add_argument("--json", action="store_true", help="Print Pi's reply")
 
 
 def _id(pattern, value, name):
@@ -171,7 +178,22 @@ def _finish(args, config, request):
     return None
 
 
+def _reconcile(args, config, request):
+    run_id = _id(RUN_ID, args.run_id, "the run")
+    run = pi_call(request, config, f"/team-runs/{run_id}/reconcile", {})
+    if args.json:
+        return run
+    print("\n".join(_summary(run)))
+    return None
+
+
 def operation(args, config, request):
     """Run one team-run subcommand and return the value to print (None: printed)."""
-    handler = {"run": _start, "next": _next, "show": _show, "finish": _finish}[args.operation]
+    handler = {
+        "run": _start,
+        "next": _next,
+        "show": _show,
+        "finish": _finish,
+        "reconcile": _reconcile,
+    }[args.operation]
     return handler(args, config, request)
