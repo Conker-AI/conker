@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.2.0
+
 - **Installed `conker` waits as long as the dev CLI, and lists every verb.** The relay inside the Pi and gateway containers now takes its wait from the caller, so `team run`, `team next` and `prompt enhance` get their 660 s instead of failing at 30 s while Pi finishes the call; the installed help names `memory beliefs|upkeep|used` and `team run|next|show|finish` (a test fails when a verb of those groups is missing); chat titles, memories and loop text are printed with terminal control characters removed; a refusal reason is cut at 300 characters. (hunt3 owner-cli F1, F2, F3, F4)
 - **conker prompt templates, and enhance --template (R-F8).** `conker prompt templates list|show ID|add --name N --fields FILE|-|remove ID --yes` keeps your prompt templates in Pi (four starters, yours), and `conker prompt enhance --template ID "TEXT"` has the wand fill that template from a draft, naming any required field still empty. Also on the installed `./conker` through the owner relay (only the template routes). Needs a Pi release with `/prompts/templates`. (#356)
 - **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting. (#348)
@@ -106,6 +108,16 @@ which module versions a release pins.
 - **Promise cards in the Inbox (#359).** When Conker asks to track a promise, the card shows the sentence, who promised (you or Conker) and the due day, with Track it, Don't and Change like the other requests.
 - **"Where was this used?" on a memory (#359).** On What Conker believes, each memory can say how many answers in how many chats used it. It is read only when you ask, so the list makes no extra calls.
 - **Open loops screen (#359).** A read-only list of what you and Conker promised, with the due day, an Overdue mark and the chat each came from; Still open and Done filters. It is one search away (Ctrl+K) and names `conker loops` for changes. The "memory changed" Inbox card is not built yet: the browser has no route that lists those notices.
+
+### Pinned in this release
+
+| Module | Version |
+|---|---|
+| Pi | v0.26.0 |
+| ToolGate | v0.17.0 |
+| MemoryGate | v0.10.0 |
+| SystemGate | v0.5.4 |
+| Embeddings | v0.1.9 |
 
 ## 0.1.0
 
