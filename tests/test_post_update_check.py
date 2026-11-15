@@ -16,6 +16,8 @@ import post_update_check as checks  # noqa: E402
 
 LAST = "0006-notices"
 JOB = f"/jobs/{checks.MORNING_CHECK_IN}"
+UPKEEP_KINDS = ("exactDuplicates", "nearDuplicates", "contradictions", "expired", "notRecalled")
+SERVED = ["GET /health", *checks.NEW_ROUTES]
 
 
 def answers(**changes):
@@ -30,6 +32,23 @@ def answers(**changes):
         "/memory/objects": {"results": []},
         "/inbox": {"needsYou": [{"kind": "approval", "title": "Send the report"}]},
         JOB: {"definition": {"name": "Morning check-in", "enabled": True}},
+        "/memory/beliefs": {
+            "total": 12,
+            "counts": {"stated": 5, "concluded": 7, "needsReview": 0},
+            "items": [],
+            "nextAfter": None,
+        },
+        "/memory/upkeep": {
+            "memoriesChecked": 40,
+            "truncated": False,
+            **{kind: {"items": [], "total": 0} for kind in UPKEEP_KINDS},
+        },
+        "/open-loops": {
+            "today": "2026-11-15",
+            "timeZone": "Europe/Berlin",
+            "items": [],
+            "nextAfter": None,
+        },
     }
     good.update(changes)
     return good
@@ -43,6 +62,7 @@ def probe(
     newest: str | None = "0.1.0",
     known: str = LAST,
     drill: str | None = "passed",
+    served=None,
 ):
     source = tmp_path / "source"
     source.mkdir(exist_ok=True)
@@ -71,7 +91,11 @@ def probe(
     made = checks.Probe(
         run=lambda argv: (codes or {}).get(" ".join(argv), 0),
         pi=read,
-        in_pi=lambda _line: known + "\n",
+        in_pi=lambda line: (
+            "\n".join(SERVED if served is None else served)
+            if line == checks.ROUTE_TABLE
+            else known + "\n"
+        ),
         latest=lambda: None if newest is None else {"version": newest},
         source=source,
         state=state,
@@ -98,6 +122,10 @@ def test_a_healthy_stack_passes_every_check(tmp_path):
         "Inbox",
         "self-check",
         "Morning check-in",
+        "new routes",
+        "memory beliefs",
+        "memory care",
+        "open loops",
         "backup drill",
         "release page",
     ]
@@ -129,6 +157,10 @@ def unreachable(message="Pi did not answer"):
         ({"drill": "failed"}, "backup drill"),
         ({"pi": answers(**{"/inference/spending": {"cap": {}}})}, "spending cap"),
         ({"pi": answers(**{"/memory/objects": unreachable()})}, "memory search"),
+        ({"served": ["GET /health"]}, "new routes"),
+        ({"pi": answers(**{"/memory/beliefs": unreachable()})}, "memory beliefs"),
+        ({"pi": answers(**{"/memory/upkeep": {"memoriesChecked": 1}})}, "memory care"),
+        ({"pi": answers(**{"/open-loops": unreachable("Pi refused: not found")})}, "open loops"),
     ],
 )
 def test_each_failure_fails_only_its_own_check(tmp_path, changes, name):
@@ -150,6 +182,9 @@ def test_an_unreachable_pi_fails_every_pi_check_and_the_rest_still_run(tmp_path)
         "Inbox",
         "self-check",
         "Morning check-in",
+        "memory beliefs",
+        "memory care",
+        "open loops",
     ):
         assert results[name] == "fail"
     assert results["health"] == results["update path"] == results["backup drill"] == "ok"
@@ -165,6 +200,20 @@ def test_what_is_not_a_failure_says_so_and_passes(tmp_path):
     assert "turned off by the owner" in shown["Morning check-in"].detail
     assert shown["backup drill"].outcome == "skip"
     assert "fail" not in outcomes(results).values()
+
+
+def test_a_missing_route_is_named_and_the_new_reads_say_what_they_found(tmp_path):
+    made, _ = probe(tmp_path, served=["GET /health", "POST /prompts/enhance"])
+    shown = {item.name: item for item in checks.run_checks(made)}
+
+    assert "POST /team-runs/from-team/{team_id}" in shown["new routes"].detail
+    assert "POST /prompts/enhance" not in shown["new routes"].detail
+
+    healthy, _ = probe(tmp_path)
+    ok_shown = {item.name: item for item in checks.run_checks(healthy)}
+    assert ok_shown["memory beliefs"].detail == "12 memories listed (5 you stated, 7 concluded)"
+    assert "40 memories checked: 0 exactDuplicates" in ok_shown["memory care"].detail
+    assert ok_shown["open loops"].detail == "answers for 2026-11-15 (Europe/Berlin)"
 
 
 def test_a_newer_release_fails_the_update_path_and_skips_the_release_page(tmp_path):

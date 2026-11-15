@@ -25,18 +25,38 @@ from update_check import CheckError, check, installed_version, latest_release
 MORNING_CHECK_IN = "job_beca06ba345a8b3170a4d8e2473fe00f"  # pi/schedule/agent_jobs.py BUILT_IN
 # Run in Pi's container: the newest migration the running Pi knows (pi/conversation/upgrades.py).
 LAST_MIGRATION = "from pi.conversation.upgrades import MIGRATIONS; print(MIGRATIONS[-1].id)"
+# Run in Pi's container: every method and path the running Pi serves (importing the app starts nothing).
+ROUTE_TABLE = (
+    "from pi.api.server import app; "
+    "print(chr(10).join(f'{m} {r.path}' for r in app.routes for m in sorted(getattr(r, 'methods', None) or ())))"
+)
+# What the release after 0.25.0 added that has no read of its own: it must be served, not called
+# (enhancing a prompt spends a model call, a team run starts work).
+NEW_ROUTES = (
+    "POST /prompts/enhance",
+    "POST /team-runs/from-team/{team_id}",
+    "GET /team-runs/{identity}",
+    "GET /memory/{memory_id}/uses",
+    "POST /memory/recall-notices/{notice_id}/dismiss",
+    "GET /insights/quiet",
+    "GET /insights/tomorrow",
+)
 # Pi's reads this command may make, GET only.
 ROUTES = {
     "/health",
     "/inference/spending",
     "/memory/objects",
+    "/memory/beliefs",
+    "/memory/upkeep",
+    "/open-loops",
     "/inbox",
     f"/jobs/{MORNING_CHECK_IN}",
 }
 RETIRED_KINDS = {"memory"}  # memory proposals left the Inbox (pi docs/inbox-kinds.md, merge 2)
 NOT_CHECKED = (
     "Not checked here (they need a chat or the dashboard): a new chat answers; a chat moved to "
-    "Trash leaves search and Restore brings it back; Home shows Jump back in."
+    "Trash leaves search and Restore brings it back; Home shows Jump back in; the composer's "
+    "wand and Effort chip; a team run's first step; a recall notice after a correction."
 )
 
 
@@ -138,6 +158,35 @@ def inbox(probe: Probe) -> tuple[Result, Result]:
     return listed, health
 
 
+def new_routes(probe: Probe) -> Result:
+    served = set(probe.in_pi(ROUTE_TABLE).splitlines())
+    missing = [route for route in NEW_ROUTES if route not in served]
+    if missing:
+        return fail("new routes", "this Pi does not serve " + ", ".join(missing))
+    return ok("new routes", f"Pi serves all {len(NEW_ROUTES)} routes added since 0.25.0")
+
+
+def beliefs(probe: Probe) -> Result:
+    page = probe.pi("/memory/beliefs", query={"limit": 1})
+    counts = page["counts"]
+    detail = f"{page['total']} memories listed ({counts['stated']} you stated, "
+    return ok("memory beliefs", detail + f"{counts['concluded']} concluded)")
+
+
+def memory_care(probe: Probe) -> Result:
+    page = probe.pi("/memory/upkeep", query={"limit": 1})
+    kinds = ("exactDuplicates", "nearDuplicates", "contradictions", "expired", "notRecalled")
+    found = ", ".join(f"{page[kind]['total']} {kind}" for kind in kinds)
+    cut = " (list cut)" if page["truncated"] else ""
+    return ok("memory care", f"{page['memoriesChecked']} memories checked: {found}{cut}")
+
+
+def open_loops(probe: Probe) -> Result:
+    page = probe.pi("/open-loops", query={"limit": 1})
+    more = " (more on the next page)" if page["nextAfter"] else ""
+    return ok("open loops", f"answers for {page['today']} ({page['timeZone']}){more}")
+
+
 def morning_check_in(probe: Probe) -> Result:
     definition = probe.pi(f"/jobs/{MORNING_CHECK_IN}")["definition"]
     if definition["enabled"]:
@@ -176,6 +225,10 @@ CHECKS: tuple[tuple[tuple[str, ...], Callable[[Probe], Result | tuple[Result, ..
     (("memory search",), memory_search),
     (("Inbox", "self-check"), inbox),
     (("Morning check-in",), morning_check_in),
+    (("new routes",), new_routes),
+    (("memory beliefs",), beliefs),
+    (("memory care",), memory_care),
+    (("open loops",), open_loops),
     (("backup drill",), backups),
     (("release page",), release_page),
 )
