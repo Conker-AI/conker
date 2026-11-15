@@ -49,10 +49,22 @@ ROUTES = {
     ("GET", "/open-loops"),
     ("POST", "/open-loops"),
     ("POST", "/prompts/enhance"),
+    ("GET", "/prompts/templates"),
+    ("POST", "/prompts/templates"),
 }
 # Routes with an id in the path: (method, whole-path pattern).
 ROUTE_PATTERNS = (
     ("POST", re.compile(r"/open-loops/loop_[0-9a-f]{32}/state")),
+    (
+        "GET",
+        re.compile(r"/prompts/templates/(?:tpl_[0-9a-f]{32}|starter-[a-z0-9]+(?:-[a-z0-9]+)*)"),
+    ),
+    (
+        "POST",
+        re.compile(
+            r"/prompts/templates/(?:tpl_[0-9a-f]{32}|starter-[a-z0-9]+(?:-[a-z0-9]+)*)/delete"
+        ),
+    ),
     ("GET", MEMORY_USES),
     ("GET", re.compile(r"/collaboration/teams/team_[0-9a-f]{32}")),
     ("POST", re.compile(r"/team-runs/from-team/team_[0-9a-f]{32}")),

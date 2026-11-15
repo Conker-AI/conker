@@ -7,6 +7,7 @@ which module versions a release pins.
 ## Unreleased
 
 - **Installed `conker` waits as long as the dev CLI, and lists every verb.** The relay inside the Pi and gateway containers now takes its wait from the caller, so `team run`, `team next` and `prompt enhance` get their 660 s instead of failing at 30 s while Pi finishes the call; the installed help names `memory beliefs|upkeep|used` and `team run|next|show|finish` (a test fails when a verb of those groups is missing); chat titles, memories and loop text are printed with terminal control characters removed; a refusal reason is cut at 300 characters. (hunt3 owner-cli F1, F2, F3, F4)
+- **conker prompt templates, and enhance --template (R-F8).** `conker prompt templates list|show ID|add --name N --fields FILE|-|remove ID --yes` keeps your prompt templates in Pi (four starters, yours), and `conker prompt enhance --template ID "TEXT"` has the wand fill that template from a draft, naming any required field still empty. Also on the installed `./conker` through the owner relay (only the template routes). Needs a Pi release with `/prompts/templates`. (#356)
 - **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting. (#348)
 - **conker prompt enhance (B1).** `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` has Jev rewrite an unsent draft into a clearer prompt and prints it with what changed and the model that wrote it; nothing is sent or saved. Needs Pi with `POST /prompts/enhance` (Pi one model call on the drafting model, counted by the daily spending cap). Also on an installed stack as `./conker prompt enhance`. (#344)
 - **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override). (#341)
@@ -60,6 +61,10 @@ which module versions a release pins.
   and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
   search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
   failure exits non-zero. (#318)
+- **The check reads the new routes too.** `conker post-update-check` also fails when Pi does not serve a
+  route added since 0.25.0 (prompt enhance, team runs, memory uses, recall notices, quiet and tomorrow;
+  checked in Pi's container, nothing is called) and reads memory beliefs, memory care and open loops with
+  `limit=1`. (#354)
 
 - **A page for every CLI group.** `docs/reference/` has pages for `conker agent`/`team`, `memory` and
   `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
@@ -96,6 +101,7 @@ which module versions a release pins.
 - **What Conker believes.** Memory has a "What Conker believes" button: every memory with whose words it came from (you told me, or I worked it out), whether a source was later forgotten, when it was last used and whether it disagrees with another, filtered by who said it or by what needs a look. Read only; each memory opens for Fix or forget. Needs Pi with Conker-AI/pi#248. Also fixes the browser transport, which did not list the Memory care and prompt wand routes, so those two would have been refused on a real server. (#350)
 - **Effort chip in the composer (#351).** Each existing chat can set Auto, Light, Medium, High or Max effort from the bar; it says when the answering models ignore effort. Auto's proposed effort shows on the mode button. The prompt wand now folds into More options on narrow bars, where it covered that button.
 - **Skills in the agent editor (#352).** An agent can carry up to three enabled skills; tick them in its editor. A skill that was removed or turned off stays listed so it can be dropped. The dashboard's dev pin of Pi moves to a build with team-run background steps.
+- **Thinking, Search and Complexity chips; Effort before the chat exists.** The Mode popover now holds only the presets (Auto, Fast, Balanced, Deep); every value it used to hold has its own chip on the bar, showing its value, an "auto" tag while Auto chose it, Auto's reason, and Back to Auto. Changing a chip shows Custom. A new chat can set Effort before it starts: it is saved with the chat's output settings once the chat exists. The composer bar wraps instead of letting More options sit under Access and Incognito on a 320 px phone.
 
 ## 0.1.0
 

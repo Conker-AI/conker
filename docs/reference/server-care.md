@@ -67,9 +67,12 @@ touched. One update at a time, never to an older release.
 
 **After an update**, `conker post-update-check` runs every check of a release in one go and changes
 nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
-search, the Inbox, the Morning check-in, the last restore drill and the release page. Each prints
-one line (`ok`, `FAIL` or `skip`); it exits 1 when any failed. A new chat, the Trash and Home's
-Jump back in are left for you to try in the dashboard.
+search, the Inbox, the Morning check-in, that Pi serves every route added since 0.25.0 (prompt
+enhance, team runs, memory uses, recall notices, quiet and tomorrow), the memory beliefs, memory
+care and open loops reads, the last restore drill and the release page. Each prints one line
+(`ok`, `FAIL` or `skip`); it exits 1 when any failed. A new chat, the Trash, Home's Jump back in,
+the composer's wand and Effort chip, a team run's first step and a recall notice after a
+correction are left for you to try in the dashboard.
 
 ## What the result means, and what to do
 
