@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Switch } from '@/components/ui/switch'
 import type { AutoSettings, AutoSettingsField, Complexity, Research } from '@/lib/gateway/auto-settings'
 import { gatewayError } from '@/lib/gateway/transport'
 import { complexityHints, composerModes, effectiveMode, modeLabel, modePresets, type ComposerMode, type ModeValues } from './composer-mode'
@@ -18,18 +17,30 @@ type Props = {
   apply: (values: { think: boolean; researchMode: Research }) => void
   /** Complexity is sent with the turn; the workspace reads it at send time. */
   onHints: (hints: { isAnalysis?: true }) => void
+  children: ReactNode
 }
 
-const options = <T extends string>(values: readonly T[], labels: Record<T, string>) => values.map(value => ({ value, label: labels[value] }))
-const complexityOptions = options(['easy', 'hard'] as const, { easy: 'Easy', hard: 'Hard' })
-const researchOptions = options(['off', 'web', 'deep'] as const, { off: 'Off', web: 'Web', deep: 'Deep' })
+/** What the chips read: the values on screen, what Auto chose and why, and the one way back to Auto. */
+export type ComposerModeState = {
+  current: ComposerMode | 'custom'; disabled: boolean
+  /** Auto's proposal while Auto is in effect, else null: a chip tags itself "auto" and shows its reason from it. */
+  auto: AutoSettings | null
+  complexity: Complexity; setComplexity: (value: Complexity) => void
+  think: boolean; research: Research; apply: Props['apply']
+  choose: (mode: ComposerMode) => void
+  status: { kind: 'idle' | 'choosing' | 'error'; message?: string }
+}
+const ModeContext = createContext<ComposerModeState | null>(null)
+/** Null outside a composer, so a chip then renders nothing. */
+// eslint-disable-next-line react-refresh/only-export-components -- the hook belongs with its provider
+export const useComposerMode = () => useContext(ModeContext)
 
-/** One composer per chat; remount it per draft so a mode never leaks between chats. */
-export function ModeControl({ text, think, research, thinkAvailable, harnessDisabled, sessionId, disabled, propose, apply, onHints }: Props) {
+/** One composer per chat; remount it per draft so a mode never leaks between chats. Presets only set the chips. */
+export function ComposerModeProvider({ text, think, research, thinkAvailable, harnessDisabled, sessionId, disabled, propose, apply, onHints, children }: Props) {
   const [mode, setMode] = useState<ComposerMode>('auto')
   const [complexity, setComplexity] = useState<Complexity>('easy')
   const [proposal, setProposal] = useState<(AutoSettings & { text: string }) | null>(null)
-  const [status, setStatus] = useState<{ kind: 'idle' | 'choosing' | 'error'; message?: string }>({ kind: 'idle' })
+  const [status, setStatus] = useState<ComposerModeState['status']>({ kind: 'idle' })
   const values: ModeValues = { complexity, think, research }
   const current = effectiveMode(mode, values, proposal, thinkAvailable)
   const trimmed = text.trim()
@@ -57,31 +68,29 @@ export function ModeControl({ text, think, research, thinkAvailable, harnessDisa
     const preset = modePresets[next]
     setComplexity(preset.complexity); apply({ think: preset.think && thinkAvailable, researchMode: preset.research })
   }
-  // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
-  const summary = mode === 'auto' && current === 'auto' && proposal ? ` · ${[complexity === 'hard' ? 'Hard' : 'Easy', think && 'Thinking', research !== 'off' && (research === 'deep' ? 'Deep research' : 'Web'), proposal.effort && `${proposal.effort[0].toUpperCase()}${proposal.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
-  const reason = (field: AutoSettingsField) => mode === 'auto' && current === 'auto' && proposal ? <p className="text-xs leading-5 text-muted-foreground">{proposal.reasons[field]}</p> : null
-  const note = status.kind === 'choosing' ? 'Choosing settings…'
-    : status.kind === 'error' ? status.message
-      : current === 'custom' ? 'Custom: your choices are used. Pick a mode to reset them.'
-        : mode === 'auto' ? proposal ? `Chosen automatically (${proposal.modelId}). Change any value to customize.` : 'Conker chooses once you type your message.'
-          : 'Change any value to customize.'
-  return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className={composerOutlined} disabled={disabled} aria-label={`Mode: ${modeLabel(current)}${summary}`} />}><Sparkles className="size-4 @max-[24rem]:hidden" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}{summary && <span className="font-normal text-muted-foreground @max-[40rem]:hidden">{summary}</span>}</PopoverTrigger>
-    <PopoverContent align="start" className="max-h-(--available-height) w-80 space-y-4 overflow-y-auto">
-      <RadioGroup value={mode} onValueChange={value => choose(value as ComposerMode)} aria-label="Mode" className="gap-2">
-        {composerModes.map(item => <Label key={item.id} className="flex items-start gap-2 font-normal"><RadioGroupItem value={item.id} className="mt-0.5" /><span className="space-y-0.5"><span className="block text-sm font-medium">{item.label}</span><span className="block text-xs text-muted-foreground">{item.description}</span></span></Label>)}
-      </RadioGroup>
-      <div className="space-y-3 border-t pt-3">
-        <Setting label="Complexity" value={complexity} options={complexityOptions} onChange={setComplexity} disabled={disabled} />{reason('complexity')}
-        <div className="flex items-center justify-between gap-3"><Label htmlFor="mode-think" className="text-sm">Think</Label><Switch id="mode-think" checked={think} disabled={disabled || !thinkAvailable} onCheckedChange={checked => apply({ think: checked, researchMode: research })} /></div>{reason('think')}
-        <Setting label="Research" value={research} options={researchOptions} onChange={value => apply({ think, researchMode: value })} disabled={disabled} />{reason('research')}
-        {proposal?.effort && mode === 'auto' && current === 'auto' && <p className="text-xs leading-5 text-muted-foreground">Effort {proposal.effort}: {proposal.reasons.effort}. Set it with the Effort button.</p>}
-      </div>
-      <p role="status" className="text-xs leading-5 text-muted-foreground">{note}</p>
-    </PopoverContent></Popover>
+  const auto = mode === 'auto' && current === 'auto' ? proposal : null
+  return <ModeContext.Provider value={{ current, disabled, auto, complexity, setComplexity, think, research, apply, choose, status }}>{children}</ModeContext.Provider>
 }
 
-function Setting<T extends string>({ label, value, options, onChange, disabled }: { label: string; value: T; options: { value: T; label: string }[]; onChange: (value: T) => void; disabled: boolean }) {
-  return <div className="flex items-center justify-between gap-3"><span className="text-sm">{label}</span><div role="group" aria-label={label} className="flex gap-1">
-    {options.map(option => <Button key={option.value} type="button" size="sm" variant={value === option.value ? 'secondary' : 'ghost'} aria-pressed={value === option.value} disabled={disabled} onClick={() => onChange(option.value)}>{option.label}</Button>)}
-  </div></div>
+/** The presets. They are only a quick way to set the chips; changing a chip afterwards shows Custom. */
+export function ModePresetControl() {
+  const state = useComposerMode()
+  if (!state) return null
+  const { current, auto, status, disabled, choose } = state
+  // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
+  const summary = auto ? ` · ${[state.complexity === 'hard' ? 'Hard' : 'Easy', state.think && 'Thinking', state.research !== 'off' && (state.research === 'deep' ? 'Deep research' : 'Web'), auto.effort && `${auto.effort[0].toUpperCase()}${auto.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
+  const reasons: [string, AutoSettingsField][] = [['Complexity', 'complexity'], ['Thinking', 'think'], ['Search', 'research']]
+  const note = status.kind === 'choosing' ? 'Choosing settings…'
+    : status.kind === 'error' ? status.message
+      : current === 'custom' ? 'Custom: you changed a chip. Pick a preset to reset them.'
+        : current === 'auto' ? auto ? `Chosen automatically (${auto.modelId}). Change a chip to customize.` : 'Conker chooses once you type your message.'
+          : 'Presets only set the chips. Change a chip to customize.'
+  return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className={composerOutlined} disabled={disabled} aria-label={`Mode: ${modeLabel(current)}${summary}`} />}><Sparkles className="size-4 @max-[24rem]:hidden" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}{summary && <span className="font-normal text-muted-foreground @max-[40rem]:hidden">{summary}</span>}</PopoverTrigger>
+    <PopoverContent align="start" className="max-h-(--available-height) w-80 space-y-4 overflow-y-auto">
+      <RadioGroup value={current === 'custom' ? '' : current} onValueChange={value => choose(value as ComposerMode)} aria-label="Mode" className="gap-2">
+        {composerModes.map(item => <Label key={item.id} className="flex items-start gap-2 font-normal"><RadioGroupItem value={item.id} className="mt-0.5" /><span className="space-y-0.5"><span className="block text-sm font-medium">{item.label}</span><span className="block text-xs text-muted-foreground">{item.description}</span></span></Label>)}
+      </RadioGroup>
+      {auto && <ul className="space-y-1 border-t pt-3 text-xs leading-5 text-muted-foreground">{reasons.map(([label, field]) => <li key={field}><span className="font-medium text-foreground">{label}:</span> {auto.reasons[field]}</li>)}{auto.effort && <li><span className="font-medium text-foreground">Effort {auto.effort}:</span> {auto.reasons.effort}</li>}</ul>}
+      <p role="status" className="text-xs leading-5 text-muted-foreground">{note}</p>
+    </PopoverContent></Popover>
 }

@@ -54,7 +54,8 @@ assert.match(composer, /id !== 'model' && toolbarWidth < FOLD_BELOW\[id\]/, 'Ite
 assert.match(composer, /portalProps=\{\{ keepMounted: true \}\}/, 'Folded controls stay mounted, so they keep their state and values')
 assert.match(composer, /aria-label="More options"/)
 assert.match(composer, /<MoreHorizontal /, 'The overflow is a plain "…" button')
-assert.match(composer, /ref=\{toolbar\} className="flex min-w-0 flex-nowrap/, 'The toolbar row never wraps')
+assert.match(composer, /ref=\{toolbar\} className="flex min-w-0 flex-wrap/, 'The toolbar row wraps instead of letting controls overlap')
+assert.match(composer, /\{controls\}\{onBar\}/, 'Controls and items share the one wrapping row, so the actions sit after the last of them')
 assert.match(composer, /<ComposerItemContext\.Provider value=\{report\}>/)
 assert.match(composer, /<div className="ml-auto flex shrink-0 items-center gap-1">\{bar\}<\/div>/, 'Voice typing and Send (or Stop) stay at the end of the bar')
 // The ui Textarea styles its wrapper span; the composer drops that box and styles the field itself.
@@ -63,11 +64,13 @@ assert.doesNotMatch(composer, /className="max-h-\[min[^"]*rounded-none border-0/
 assert.match(composer, /enterKeyHint=\{enterSends \? 'send' : 'enter'\}/, 'Phones keep Enter for a new line')
 
 // Each control registers itself, reports its value and shows when it differs from the default.
-for (const [file, id] of [['template-composer.tsx', 'template'], ['model-picker.tsx', 'model'], ['skill-picker.tsx', 'skills'], ['chat-output-control.tsx', 'output'], ['think-control.tsx', 'think'], ['session-access-control.tsx', 'access'], ['privacy-control.tsx', 'incognito'], ['new-chat-privacy-control.tsx', 'incognito']]) {
+for (const [file, id] of [['template-composer.tsx', 'template'], ['model-picker.tsx', 'model'], ['skill-picker.tsx', 'skills'], ['chat-output-control.tsx', 'output'], ['think-control.tsx', 'think'], ['mode-chips.tsx', 'search'], ['mode-chips.tsx', 'complexity'], ['session-access-control.tsx', 'access'], ['privacy-control.tsx', 'incognito'], ['new-chat-privacy-control.tsx', 'incognito']]) {
   const source = read(`src/components/gateway/${file}`)
   assert.match(source, new RegExp(`composerItem\\(\\w+, '${id}'\\)`), `${file} is the ${id} item`)
-  assert.match(source, new RegExp(`useComposerValue\\('${id}'`), `${file} reports its value`)
-  if (id !== 'model') assert.match(source, /aria-pressed=/, `${file} says whether it is set`)
+  const chip = ['think', 'search', 'complexity'].includes(id)
+  assert.match(chip ? read('src/components/gateway/mode-chips.tsx') : source, chip ? /useComposerValue\(id, named\)/ : new RegExp(`useComposerValue\\('${id}'`), `${file} reports its value`)
+  if (chip) assert.match(source, new RegExp(`<ModeChip id="${id}"`), `${file} is a mode chip`)
+  if (!['model', 'think', 'search', 'complexity'].includes(id)) assert.match(source, /aria-pressed=/, `${file} says whether it is set`)
 }
 assert.match(read('src/components/gateway/new-chat-extras.tsx'), /composerItem\(NewChatMediaPlaceholders, 'media'\)/)
 

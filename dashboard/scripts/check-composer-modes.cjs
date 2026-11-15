@@ -49,7 +49,10 @@ for (const broken of [
   assert.deepEqual(calls[0], { target: '/api/pi/models/auto-settings', options: { method: 'POST', body: { text: 'Best laptop?', session_id: 'ses_1', harness_disabled: true } } })
 
   const workspace = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
-  assert.equal((workspace.match(/<ModeControl /g) ?? []).length, 2, 'Both composers carry the mode control')
+  assert.equal((workspace.match(/<ComposerModeProvider /g) ?? []).length, 2, 'Both composers carry the mode state')
+  assert.equal((workspace.match(/<ModePresetControl \/>/g) ?? []).length, 2, 'Both composers carry the presets')
+  for (const chip of ['ThinkControl', 'SearchControl', 'ComplexityControl']) assert.equal((workspace.match(new RegExp(`<${chip}[ />]`, 'g')) ?? []).length, 2, `Both composers carry the ${chip} chip`)
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'src/components/gateway/mode-control.tsx'), 'utf8'), /Switch|Setting label/, 'The Mode popover holds presets only; every setting has its chip')
   assert.match(workspace, /promotedDraft\.researchMode, Boolean\(modeHints\.current\.new\?\.isAnalysis\)\)/, 'A new chat sends the complexity chosen on its draft')
   assert.match(workspace, /saved\.researchMode, Boolean\(modeHints\.current\[id\]\?\.isAnalysis\)\)/, 'Replies send the complexity on screen')
   const runtime = fs.readFileSync(path.join(root, 'src/lib/gateway/runtime.ts'), 'utf8')

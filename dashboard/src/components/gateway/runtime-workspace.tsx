@@ -23,6 +23,8 @@ import { GatewayError, gatewayError } from '@/lib/gateway/transport'
 import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 import type { NewChatPrivacy } from './new-chat-privacy-control'
+import { saveNewChatEffort } from './new-chat-effort'
+import type { ChatEffort } from '@/lib/gateway/chat-names'
 import { chooseTemplate, useTemplateActive } from './composer-parts'
 import { TaskDispatchReview } from './task-dispatch-review'
 import { NewChatView } from './new-chat-view'
@@ -73,6 +75,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const setThinkChoice = (id: string, think: boolean) => draftController.edit(id === '__new__' ? 'new' : id, { think })
   const [pendingStart, setPendingStart] = useState<PendingDraftStart | null>(null)
   const [startMissing, setStartMissing] = useState(false)
+  // Effort picked before the chat exists; it is saved with the new chat's output settings once the chat is created.
+  const [firstEffort, setFirstEffort] = useState<ChatEffort>('auto')
   const safeTaskIntent = visibleTaskDispatchIntent(taskIntent, forgottenIds)
   const setSelected = (value: string | null) => workspace.setState({ selected: value, turnCheck: null })
   const setCreateUnknown = (value: 'unchecked' | 'checked' | null) => workspace.setState({ createUnknown: value })
@@ -290,6 +294,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     if (workspace.getState().epoch !== epoch || !activeRef.current) return
     if (original) setSessionAgents(current => ({ ...current, [receipt.sessionId]: original.agentId ?? 'companion' }))
     openSession(receipt.sessionId); clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setStartMissing(false); void refreshList(); chooseTemplate('new', null)
+    if (firstEffort !== 'auto') {
+      const failure = await saveNewChatEffort(control, receipt.sessionId, firstEffort); setFirstEffort('auto')
+      if (workspace.getState().epoch !== epoch || !activeRef.current) return
+      if (failure) setNotice(failure)
+    }
     if (send && original && saved.base.revision === receipt.draftRevision && sameDraft(saved.value, original, receipt.sessionId)) {
       workspace.setState({ operation: null })
       await dispatchSubmission(receipt.sessionId, original.text, createTurnRequestId(), undefined, undefined, undefined, undefined, undefined, saved.base)
@@ -561,7 +570,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <NewChatView visible={visible} firstAgent={firstAgent} activeAgentName={activeAgentName} firstMessage={firstMessage} setFirstMessage={setFirstMessage} newChatComposer={newChatComposer} createPending={createPending} sendPending={sendPending} createUnknown={createUnknown} dictating={dictating}
           startChat={startChat} templateActive={templateActive} firstValue={firstValue} firstPrivacy={firstPrivacy} client={client} draftController={draftController} modeHints={modeHints} control={control} setFirstAgent={setFirstAgent} firstModel={firstModel}
-          setFirstModel={setFirstModel} firstSkills={firstSkills} setSkillChoices={setSkillChoices} setThinkChoice={setThinkChoice} setFirstPrivacy={setFirstPrivacy} setDictating={setDictating} draftEntries={draftEntries}
+          setFirstModel={setFirstModel} firstSkills={firstSkills} setSkillChoices={setSkillChoices} setThinkChoice={setThinkChoice} firstEffort={firstEffort} setFirstEffort={setFirstEffort} setFirstPrivacy={setFirstPrivacy} setDictating={setDictating} draftEntries={draftEntries}
           createError={createError} pendingStart={pendingStart} recoverChatStart={recoverChatStart} startMissing={startMissing} /> : <OpenChatView visible={visible} knownForgotten={knownForgotten} current={current} safeSessions={safeSessions} selected={selected} control={control}
           pending={pending} historyLoading={historyLoading} attempt={attempt} chat={chat} observation={observation} focusedMessageId={focusedMessageId} thinkingCancellation={thinkingCancellation} draftController={draftController} replyComposer={replyComposer}
           turnDetailsOpen={turnDetailsOpen} setTurnDetailsOpen={setTurnDetailsOpen} operation={operation} detailPending={detailPending} sendPending={sendPending} resumeTurn={resumeTurn} client={client} privacy={privacy} harnessBySession={harnessBySession}

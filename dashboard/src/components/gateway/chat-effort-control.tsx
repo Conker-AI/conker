@@ -22,13 +22,16 @@ function supportNote(support: ChatOutput['effortSupport']) {
 }
 
 /** Effort for this chat: how hard the answering model thinks, from Light to Max. It reaches only the answer, and higher costs more. */
-export function ChatEffortControl({ control, sessionId, disabled }: { control: GatewayControlClient; sessionId: string; disabled: boolean }) {
+export function ChatEffortControl({ control, sessionId, disabled, pending }: { control: GatewayControlClient; sessionId: string | null; disabled: boolean
+  /** A chat that does not exist yet keeps its effort here; the workspace saves it with the chat's output settings once the chat is created. */
+  pending?: { value: ChatEffort; set: (value: ChatEffort) => void } }) {
   const [saved, setSaved] = useState<ChatOutput | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const latest = useRef(0)
 
   const load = async (keepError = '') => {
+    if (!sessionId) return
     const ticket = ++latest.current
     setError(keepError)
     try {
@@ -40,12 +43,14 @@ export function ChatEffortControl({ control, sessionId, disabled }: { control: G
   }
   // The bar names the effort, so it is read when the chat opens, not when the popover does.
   useEffect(() => {
+    if (!sessionId) return
     let live = true
     control.chatNames.output(sessionId).then(result => { if (live) setSaved(result) }).catch(failure => { if (live) setError(chatFeatureMessage(failure)) })
     return () => { live = false }
   }, [control, sessionId])
 
   const choose = async (effort: ChatEffort) => {
+    if (!sessionId) { pending?.set(effort); return }
     if (!saved) return
     setSaving(true)
     setError('')
@@ -60,7 +65,7 @@ export function ChatEffortControl({ control, sessionId, disabled }: { control: G
     }
   }
 
-  const effort = saved?.output.effort ?? 'auto'
+  const effort = (sessionId ? saved?.output.effort : pending?.value) ?? 'auto'
   const named = effort === 'auto' ? null : `Effort: ${labelOf(effort)}`
   const note = supportNote(saved?.effortSupport)
   useComposerValue('effort', named)
@@ -74,9 +79,9 @@ export function ChatEffortControl({ control, sessionId, disabled }: { control: G
         <div className="space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Effort</span>
           <SegmentedControl size="sm" role="radiogroup" aria-label="Effort" className="w-full">
-            {stops.map(([value, text]) => <SegmentedControlItem key={value} role="radio" aria-checked={effort === value} data-pressed={effort === value ? '' : undefined} disabled={saving || !saved} className="flex-1 px-1" onClick={() => { if (effort !== value) void choose(value) }}>{text}</SegmentedControlItem>)}
+            {stops.map(([value, text]) => <SegmentedControlItem key={value} role="radio" aria-checked={effort === value} data-pressed={effort === value ? '' : undefined} disabled={saving || Boolean(sessionId) && !saved} className="flex-1 px-1" onClick={() => { if (effort !== value) void choose(value) }}>{text}</SegmentedControlItem>)}
           </SegmentedControl>
-          <p className="text-xs text-muted-foreground">How hard the answering model thinks. Higher effort is slower and costs more. Auto leaves it to the model.</p>
+          <p className="text-xs text-muted-foreground">How hard the answering model thinks. Higher effort is slower and costs more. Auto leaves it to the model.{!sessionId && ' It is saved with the chat when it starts.'}</p>
         </div>
         {note && <p role="status" className="text-xs text-muted-foreground">{note}</p>}
         {error && <ChatFeatureError text={error} />}
