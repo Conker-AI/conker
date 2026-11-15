@@ -44,6 +44,8 @@ never decides by itself that a handoff condition holds.
   team's handoff. `--reviewed` says its condition holds.
 - `conker team show RUN_ID`: the run's state and steps.
 - `conker team finish RUN_ID [--cancel]`: ends the run as completed (or cancelled).
+- `conker team reconcile RUN_ID`: checks where a held run stands after you approved its tool in
+  the Inbox; it never resumes or re-sends anything.
 
 Pi refuses to start or step a run while the daily spending cap is off (`conker spending`), and
 every paid model call of a role passes that cap. Add `--json` to print Pi's reply.

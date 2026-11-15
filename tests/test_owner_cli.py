@@ -339,3 +339,54 @@ def test_stored_text_cannot_carry_terminal_controls_into_the_output():
     from scripts.conker_inputs import plain
 
     assert plain("a\x1b[2Jb\x07c\nd  e\x9bf") == "a [2Jb c d e f"
+
+
+# --- the relay may change only the spending cap in the owner preferences ------------------------
+
+CAP = {"enabled": True, "cents": 500, "tokens": 2_000_000}
+PREFS = {"spendingCap": CAP, "other": 1}
+
+
+def preferences_call(monkeypatch, *, read=True):
+    sent = []
+
+    def request(command, service, path, body, query=None, timeout=30):
+        sent.append((path, body))
+        return {"revision": 7, "preferences": PREFS}
+
+    monkeypatch.setattr(config_cli, "request", request)
+    call = owner_cli.caller(["docker", "compose"])
+    if read:
+        call(None, "pi", "/owner/preferences")
+    return call, sent
+
+
+def test_a_write_of_only_the_cap_passes_through_the_relay(monkeypatch):
+    call, sent = preferences_call(monkeypatch)
+    body = {"expected_revision": 7, "preferences": {**PREFS, "spendingCap": {**CAP, "cents": 1}}}
+    call(None, "pi", "/owner/preferences", body)
+    assert sent[-1] == ("/owner/preferences", body)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"expected_revision": 7, "preferences": {"spendingCap": CAP, "other": 2}},
+        {"expected_revision": 6, "preferences": PREFS},
+        {"expected_revision": 7, "preferences": PREFS, "extra": 1},
+        {"expected_revision": 7, "preferences": {"other": 1}},
+        {"expected_revision": 7, "preferences": {"spendingCap": "off", "other": 1}},
+    ],
+)
+def test_a_preferences_write_that_is_not_only_the_cap_is_refused(monkeypatch, body):
+    call, sent = preferences_call(monkeypatch)
+    with pytest.raises(ValueError, match="may only change spendingCap"):
+        call(None, "pi", "/owner/preferences", body)
+    assert len(sent) == 1  # only the read reached config_cli.request
+
+
+def test_a_preferences_write_without_a_read_is_refused(monkeypatch):
+    call, sent = preferences_call(monkeypatch, read=False)
+    with pytest.raises(ValueError, match="may only change spendingCap"):
+        call(None, "pi", "/owner/preferences", {"expected_revision": 7, "preferences": PREFS})
+    assert not sent

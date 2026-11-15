@@ -1024,7 +1024,7 @@ ${BOLD}conker${OFF} - your companion, on this machine
   ${BOLD}memory${OFF} search|beliefs|upkeep|used "WORDS" [--limit N]
               Find memories by their words, as the Memory screen does
   ${BOLD}agent${OFF} create --name NAME --role ROLE --instructions TEXT [--tool ID...]
-              Make an agent now (${BOLD}team${OFF} create|run|next|show|finish: create --name NAME --objective TEXT --role NAME AGENT TEXT...)
+              Make an agent now (${BOLD}team${OFF} create|run|next|show|finish|reconcile: create --name NAME --objective TEXT --role NAME AGENT TEXT...)
   ${BOLD}inbox${OFF} [--json]
               Everything that happened and everything that needs you
   ${BOLD}spending${OFF} [cap --dollars N | --tokens N | --on | --off]

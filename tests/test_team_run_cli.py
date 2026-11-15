@@ -201,15 +201,25 @@ def test_the_installed_launcher_relays_exactly_the_team_run_routes(monkeypatch):
         (f"/team-runs/{RUN}", None),
         (f"/team-runs/{RUN}/steps", {}),
         (f"/team-runs/{RUN}/finish", {}),
+        (f"/team-runs/{RUN}/reconcile", {}),
     ):
         call({}, "pi", path, body)
-    assert len(sent) == 5
+    assert len(sent) == 6
     for path, body in (
-        (f"/team-runs/{RUN}/reconcile", {}),  # not offered from the CLI
         (f"/team-runs/{RUN}", {}),  # a GET route cannot be posted to
         (f"/team-runs/from-team/{TEAM}", None),
         ("/team-runs/teamrun_short", None),
     ):
         with pytest.raises(ValueError, match="cannot be reached"):
             call({}, "pi", path, body)
-    assert len(sent) == 5
+    assert len(sent) == 6
+
+
+def test_reconcile_posts_an_empty_body_and_prints_the_run(monkeypatch, capsys):
+    code, sent, out = calls(
+        monkeypatch, capsys, ["team", "reconcile", RUN], answers=[run_view(steps=["role1"])]
+    )
+    assert code == 0 and paths(sent) == [("POST", f"/team-runs/{RUN}/reconcile")]
+    assert body(sent[0]) == {} and f"Run {RUN}: ready" in out.out
+    code, sent, out = calls(monkeypatch, capsys, ["team", "reconcile", "teamrun_x"])
+    assert code == 1 and not sent
