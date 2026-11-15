@@ -82,7 +82,8 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
           : request.kind === 'tool_draft' ? { text: 'Saved as a draft. Check it, then publish it.', link: { to: '/tools?view=drafts', label: 'Open your drafts' } }
             : request.kind === 'agent' ? { text: 'Agent created. Archive it in Agents to undo.', link: made ? { to: `/agents/${encodeURIComponent(made)}/edit`, label: 'Open the agent' } : { to: '/agents', label: 'Open Agents' } }
               : request.kind === 'team' ? { text: 'Team created. Running it stays yours.', link: { to: made ? `/agents?tab=teams&team=${encodeURIComponent(made)}` : '/agents?tab=teams', label: 'Open the team' } }
-                : { text: 'Remembered.', link: { to: '/memory', label: 'Open memory' } })
+                : request.kind === 'promise' ? { text: 'Added to your open loops.' }
+                  : { text: 'Remembered.', link: { to: '/memory', label: 'Open memory' } })
     } catch (cause) { setFailure({ id: request.id, message: message(cause) }) }
     finally { setPending(null) }
   }, [client, drafts, navigate])

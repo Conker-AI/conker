@@ -26,6 +26,11 @@ const toolDraft = z.union([
   z.object({ ...described, status: z.literal('ready').optional(), document: z.record(z.string(), z.unknown()), issues: z.array(issue).max(20), steps: z.array(z.string().max(500)).max(60).default([]) }).passthrough(),
 ])
 const memory = z.object({ text: z.string().min(1).max(2000) }).strict()
+/** One promise Conker would put on the open-loops list: his own or Conker's, with a day when one was named. */
+const promise = z.object({
+  text: z.string().min(1).max(500), by: z.enum(['owner', 'conker']),
+  dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(), messageId: z.string().max(200).nullish(),
+}).passthrough()
 const toolIds = z.array(z.string().min(1).max(200)).max(1000)
 /** A new agent exactly as Conker filed it (Pi's AgentInput): it exists only once he approves. */
 const agent = z.object({
@@ -46,7 +51,7 @@ const base = {
   state: z.enum(['open', 'approved', 'declined', 'failed']), result: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.number().nonnegative(), decidedAt: z.number().nonnegative().nullable(),
 }
-const KINDS = ['ai_job', 'tool_draft', 'memory', 'agent', 'team']
+const KINDS = ['ai_job', 'tool_draft', 'memory', 'agent', 'team', 'promise']
 /** What Conker asked to create, exactly as filed; only the owner's approval makes it real. */
 const known = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('ai_job'), payload: aiJob }).strict(),
@@ -54,6 +59,7 @@ const known = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('memory'), payload: memory }).strict(),
   z.object({ ...base, kind: z.literal('agent'), payload: agent }).strict(),
   z.object({ ...base, kind: z.literal('team'), payload: team }).strict(),
+  z.object({ ...base, kind: z.literal('promise'), payload: promise }).strict(),
 ])
 /**
  * A kind this dashboard does not know yet (a newer Pi): one plain card instead of a failed list. It
@@ -72,6 +78,7 @@ export type ChangeRequest = z.infer<typeof request>
 export type ToolDraftRequest = Extract<ChangeRequest, { kind: 'tool_draft' }>
 export type AgentRequest = Extract<ChangeRequest, { kind: 'agent' }>
 export type TeamRequest = Extract<ChangeRequest, { kind: 'team' }>
+export type PromiseRequest = Extract<ChangeRequest, { kind: 'promise' }>
 export type ToolDraftStatus = 'drafting' | 'ready' | 'failed' | 'needs_detail'
 
 /** Where a tool request is: Conker drafting it, asking him something, a draft ready to review, or a failed attempt. */
@@ -109,7 +116,7 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     async list(signal?: AbortSignal): Promise<ChangeRequest[]> {
       return parse(collection, await auth.request('/api/control/pi/change-requests', { signal })).results
     },
-    /** Creates the cron job, memory, agent or team exactly as filed; the session is enough (each can be undone). */
+    /** Creates the cron job, memory, agent, team or promise exactly as filed; the session is enough (each can be undone). */
     async approve(id: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/approve`, { method: 'POST', body: {} }))
     },

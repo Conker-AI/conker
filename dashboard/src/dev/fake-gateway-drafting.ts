@@ -27,6 +27,7 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     base('f', 'tool_draft', 'Tool: Search the web for me', 'Search the web and bring me the best three links.', { description: 'Search the web and bring me the best three links.', status: 'needs_detail', question: 'Which search engine should it use, and should it read the pages or only list the links?', askedIn: session }, 1200),
     base('e', 'tool_draft', 'Tool: Post my notes to Telegram', 'Send my lecture notes to the study group on Telegram.', { description: 'Send my lecture notes to the study group on Telegram.', status: 'failed', error: 'None of your tools can send Telegram messages. Connect Telegram in Tools, then try again.' }, 5400, null),
     ...agentRequests(base),
+    base('9', 'promise', 'Track: Send Maya the invoice', 'The owner promised, due 2026-11-20: Send Maya the invoice', { text: 'Send Maya the invoice', by: 'owner', dueOn: '2026-11-20', messageId: null }, 5400),
     base('c', 'memory', 'Remember: physics exam', 'The physics exam is on Thursday 30 October, room 204.', { text: 'The physics exam is on Thursday 30 October, room 204.' }, 7200),
   ]
   const closed: Json[] = []
@@ -97,7 +98,7 @@ export function createFakeChangeRequests(session: string, now: () => number, cre
     const [request] = open.splice(index, 1), payload = request.payload as Json
     const result = act[2] === 'decline' ? null : act[2] === 'saved' ? { draftId: body?.draftId }
       : request.kind === 'ai_job' ? { jobId: createJob(String(payload.name), payload.timing as Json, String(payload.timeZone)).id }
-        : request.kind === 'agent' ? { agentId: `agent_${'1'.repeat(32)}` } : request.kind === 'team' ? { teamId: `team_${'7'.repeat(32)}` } : { memoryId: 'mem_preview' }
+        : request.kind === 'agent' ? { agentId: `agent_${'1'.repeat(32)}` } : request.kind === 'team' ? { teamId: `team_${'7'.repeat(32)}` } : request.kind === 'promise' ? { loopId: `loop_${'5'.repeat(32)}` } : { memoryId: 'mem_preview' }
     const decided = { ...request, state: act[2] === 'decline' ? 'declined' : 'approved', result, decidedAt: now() }
     closed.push(decided)
     return structuredClone(decided)
