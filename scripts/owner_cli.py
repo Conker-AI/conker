@@ -11,6 +11,7 @@ method, so nothing else in Pi is open from here.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -114,7 +115,7 @@ def caller(command: list[str]):
             and "revision" in reply
             and isinstance(reply.get("preferences"), dict)
         ):
-            seen.update(revision=reply["revision"], preferences=reply["preferences"])
+            seen.update(revision=reply["revision"], preferences=copy.deepcopy(reply["preferences"]))
         return reply
 
     return call
