@@ -8,7 +8,7 @@ import { Children, cloneElement, createContext, Fragment, isValidElement, useCon
  */
 
 /** The composer items, in bar order after the mode and agent controls. */
-export const composerItemIds = ['model', 'template', 'skills', 'output', 'think', 'effort', 'access', 'incognito', 'media', 'enhance'] as const
+export const composerItemIds = ['model', 'template', 'skills', 'output', 'effort', 'think', 'search', 'complexity', 'access', 'incognito', 'media', 'enhance'] as const
 export type ComposerItemId = typeof composerItemIds[number]
 export type ComposerItemValues = Partial<Record<ComposerItemId, string>>
 
@@ -20,6 +20,8 @@ export const FOLD_BELOW: Record<Exclude<ComposerItemId, 'model'>, number> = {
   skills: 640,
   think: 600,
   effort: 580,
+  search: 570,
+  complexity: 540,
   output: 560,
   access: 460,
   enhance: 520,
