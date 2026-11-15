@@ -2287,6 +2287,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/prompts/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description Every template: the starters first, then the owner's own, newest first.
+         */
+        get: operations["list_templates_prompts_templates_get"];
+        put?: never;
+        /**
+         * Create Template
+         * @description Save a new template (at most 100).
+         */
+        post: operations["create_template_prompts_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prompts/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Template
+         * @description One template with its fields.
+         */
+        get: operations["read_template_prompts_templates__template_id__get"];
+        put?: never;
+        /**
+         * Update Template
+         * @description Replace a template's name, description and fields; `expected_revision` must match.
+         */
+        post: operations["update_template_prompts_templates__template_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prompts/templates/{template_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Template
+         * @description Delete a template, a starter too: a deleted starter does not come back.
+         */
+        post: operations["delete_template_prompts_templates__template_id__delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/artifacts": {
         parameters: {
             query?: never;
@@ -6241,7 +6309,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ai_job" | "tool_draft" | "memory" | "agent" | "team";
+            kind: "ai_job" | "tool_draft" | "memory" | "agent" | "team" | "promise";
             /** Title */
             title: string;
             /** Summary */
@@ -7652,8 +7720,10 @@ export interface components {
             templateId?: string | null;
             /** Fields */
             fields?: {
-                [key: string]: string;
+                [key: string]: string | string[] | boolean;
             };
+            /** Missing */
+            missing?: string[];
         };
         /** Enqueue */
         Enqueue: {
@@ -10475,12 +10545,108 @@ export interface components {
             agentReferenceState: "available" | "unavailable" | "selection-conflict";
         };
         /** Template */
-        Template: {
+        "Template-Input": {
             /** Name */
             name: string;
             /** Description */
             description: string;
             agent: components["schemas"]["AgentInput"];
+        };
+        /** Template */
+        "Template-Output": {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Fields */
+            fields: components["schemas"]["TemplateField"][];
+            /** Starter */
+            starter: boolean;
+            /** Revision */
+            revision: number;
+            /** Createdat */
+            createdAt: number;
+            /** Updatedat */
+            updatedAt: number;
+        };
+        /** TemplateBody */
+        TemplateBody: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Fields */
+            fields: components["schemas"]["TemplateField"][];
+        };
+        /** TemplateDelete */
+        TemplateDelete: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
+        /** TemplateDeleted */
+        TemplateDeleted: {
+            /** Id */
+            id: string;
+            /** Deleted */
+            deleted: boolean;
+        };
+        /** TemplateField */
+        TemplateField: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "shortText" | "longText" | "list" | "choice" | "number" | "date" | "switch";
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Example */
+            example?: string | null;
+            /** Help */
+            help?: string | null;
+            /** Options */
+            options?: string[] | null;
+            /**
+             * Multiple
+             * @default false
+             */
+            multiple: boolean;
+        };
+        /** TemplatePage */
+        TemplatePage: {
+            /** Items */
+            items: components["schemas"]["Template-Output"][];
+            /** Total */
+            total: number;
+        };
+        /** TemplateReceipt */
+        TemplateReceipt: {
+            template: components["schemas"]["Template-Output"];
+        };
+        /** TemplateUpdate */
+        TemplateUpdate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Fields */
+            fields: components["schemas"]["TemplateField"][];
+            /** Expected Revision */
+            expected_revision: number;
         };
         /** Text */
         Text: {
@@ -10771,7 +10937,7 @@ export interface components {
         UpdateTemplate: {
             /** Expected Revision */
             expected_revision: number;
-            definition: components["schemas"]["Template"];
+            definition: components["schemas"]["Template-Input"];
         };
         /** UpkeepItem */
         UpkeepItem: {
@@ -14626,7 +14792,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Template"];
+                "application/json": components["schemas"]["Template-Input"];
             };
         };
         responses: {
@@ -16316,6 +16482,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnhancedPrompt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_prompts_templates_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplatePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_template_prompts_templates_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_template_prompts_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_template_prompts_templates__template_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_prompts_templates__template_id__delete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateDelete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDeleted"];
                 };
             };
             /** @description Validation Error */
