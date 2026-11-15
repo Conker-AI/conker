@@ -59,6 +59,10 @@ which module versions a release pins.
   and changes nothing: health, doctor, the installed release, Pi's database upgrades, the spending cap, memory
   search, the Inbox, the self-check, the Morning check-in, the last restore drill and the release page; any
   failure exits non-zero. (#318)
+- **The check reads the new routes too.** `conker post-update-check` also fails when Pi does not serve a
+  route added since 0.25.0 (prompt enhance, team runs, memory uses, recall notices, quiet and tomorrow;
+  checked in Pi's container, nothing is called) and reads memory beliefs, memory care and open loops with
+  `limit=1`. (#354)
 
 - **A page for every CLI group.** `docs/reference/` has pages for `conker agent`/`team`, `memory` and
   `spending`, and a test fails when a group or verb in `conker help` has no page. (#319)
