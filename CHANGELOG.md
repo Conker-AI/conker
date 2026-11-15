@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Installed `conker` waits as long as the dev CLI, and lists every verb.** The relay inside the Pi and gateway containers now takes its wait from the caller, so `team run`, `team next` and `prompt enhance` get their 660 s instead of failing at 30 s while Pi finishes the call; the installed help names `memory beliefs|upkeep|used` and `team run|next|show|finish` (a test fails when a verb of those groups is missing); chat titles, memories and loop text are printed with terminal control characters removed; a refusal reason is cut at 300 characters. (hunt3 owner-cli F1, F2, F3, F4)
 - **conker chat output --effort (B1).** `conker chat output set SESSION --effort auto|light|medium|high|max` sets how hard the answering model thinks in one chat (Pi's new `effort` output setting); `output show` lists `effortSupport`. Needs a Pi release with the setting. (#348)
 - **conker prompt enhance (B1).** `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` has Jev rewrite an unsent draft into a clearer prompt and prints it with what changed and the model that wrote it; nothing is sent or saved. Needs Pi with `POST /prompts/enhance` (Pi one model call on the drafting model, counted by the daily spending cap). Also on an installed stack as `./conker prompt enhance`. (#344)
 - **Dead code out of `scripts/`.** `postgres_state` in `scripts/workspace.py` had no caller (found with vulture, every other name it reports is called or an interface override). (#341)

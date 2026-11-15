@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 from scripts import conker_team_run
 from scripts.conker_context import MEMORY_USES, pi_call
+from scripts.conker_inputs import plain
 
 ROLE_TOKENS = 50_000
 ROLE_CENTS = 25
@@ -163,7 +164,7 @@ def render_beliefs(page):
         )
     ]
     for item in page["items"]:
-        text = " ".join(item["text"].split())
+        text = plain(item["text"])
         lines.append(
             f"{item['origin']:<9}  {item['confidence'] or '-':<6}  "
             f"backed-by-{item['evidence']['supporting']}  {text}  "
@@ -287,7 +288,7 @@ def render_upkeep(page):
             for memory_id in item["ids"]:
                 memory = memories.get(memory_id)
                 if memory:
-                    text = " ".join(memory["text"].split())
+                    text = plain(memory["text"])
                     lines.append(f"    {memory_id} rev {memory['revision']}  {text}")
         more = group["total"] - len(group["items"])
         if more > 0:
@@ -339,7 +340,7 @@ def render_uses(page):
         )
     ]
     for item in page["items"]:
-        title = " ".join(item["sessionTitle"].split()) or "(untitled)"
+        title = plain(item["sessionTitle"]) or "(untitled)"
         revision = f" rev {item['revision']}" if item["revision"] is not None else ""
         lines.append(
             f"{_when(item['at'])}  {item['source']:<7}  {title}  "

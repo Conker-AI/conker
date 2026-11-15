@@ -64,14 +64,14 @@ ROUTE_PATTERNS = (
 def caller(command: list[str]):
     """The modules' request: only ROUTES, through the relay."""
 
-    def call(_config, service: str, path: str, body=None, *, query=None, **_options):
+    def call(_config, service: str, path: str, body=None, *, query=None, timeout=30, **_options):
         method = "GET" if body is None else "POST"
         known = (method, path) in ROUTES or any(
             method == verb and pattern.fullmatch(path) for verb, pattern in ROUTE_PATTERNS
         )
         if service != "pi" or not known:
             raise ValueError(f"{method} {path} cannot be reached from this command.")
-        return config_cli.request(command, service, path, body, query=query)
+        return config_cli.request(command, service, path, body, query=query, timeout=timeout)
 
     return call
 

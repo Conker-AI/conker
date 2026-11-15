@@ -8,6 +8,7 @@ import re
 from datetime import date
 
 from scripts.conker_context import pi_call
+from scripts.conker_inputs import plain
 
 LOOP_ID = r"loop_[0-9a-f]{32}"
 SESSION = r"[A-Za-z0-9_-]{1,128}"
@@ -76,8 +77,8 @@ def render(page):
         due = item["dueOn"] or "undated"
         mark = "  OVERDUE" if item["overdue"] else ""
         state = "" if item["state"] == "open" else f"  [{item['state']}]"
-        title = item["sessionTitle"] or item["sessionId"]
-        text = " ".join(item["text"].split())
+        title = plain(item["sessionTitle"] or item["sessionId"])
+        text = plain(item["text"])
         lines.append(
             f"{due:<10}  {item['promisedBy']:<6}  {text}{mark}{state}  ({item['id']} in {title})"
         )

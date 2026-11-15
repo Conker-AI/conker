@@ -16,6 +16,12 @@ MCP_ID = r"mcp\.[a-z0-9][a-z0-9.-]{1,74}"
 TOOL_ID = r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"
 
 
+def plain(text):
+    """One line of stored text that is safe to print: control characters (a terminal escape
+    sequence in a chat title or a memory) become spaces, and runs of spaces collapse."""
+    return " ".join(re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", str(text)).split())
+
+
 def identity(value, pattern, label, maximum=128):
     if (
         not isinstance(value, str)

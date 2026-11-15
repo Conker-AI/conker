@@ -28,6 +28,7 @@ class Stay(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args):
         return None
 method, path = sys.argv[1:3]
+wait = float(sys.argv[3]) if len(sys.argv) > 3 else 30
 request = urllib.request.Request(
     "http://127.0.0.1:8050" + path,
     data=sys.stdin.buffer.read() if method == "POST" else None,
@@ -36,7 +37,7 @@ request = urllib.request.Request(
 )
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), Stay())
 try:
-    with opener.open(request, timeout=30) as response:
+    with opener.open(request, timeout=wait) as response:
         status, body = response.status, response.read()
 except urllib.error.HTTPError as error:
     status, body = error.code, error.read()
@@ -50,6 +51,7 @@ class Stay(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args):
         return None
 method, path = sys.argv[1:3]
+wait = float(sys.argv[3]) if len(sys.argv) > 3 else 30
 request = urllib.request.Request(
     os.environ["GATEWAY_TOOLGATE_URL"].rstrip("/") + path,
     data=sys.stdin.buffer.read() if method != "GET" else None,
@@ -59,7 +61,7 @@ request = urllib.request.Request(
 )
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), Stay())
 try:
-    with opener.open(request, timeout=30) as response:
+    with opener.open(request, timeout=wait) as response:
         status, body = response.status, response.read()
 except urllib.error.HTTPError as error:
     status, body = error.code, error.read()
@@ -111,15 +113,24 @@ def reason(content: bytes) -> str:
         return ""
     if isinstance(detail, dict):
         detail = detail.get("message")
-    return f": {detail.rstrip('.')}" if isinstance(detail, str) and detail else ""
+    if not isinstance(detail, str) or not detail:
+        return ""
+    return f": {detail[:300].rstrip('.')}"
 
 
 def request(
-    command: list[str], service: str, path: str, body=None, method=None, query=None
+    command: list[str],
+    service: str,
+    path: str,
+    body=None,
+    method=None,
+    query=None,
+    timeout: float = 30,
 ):
     """conker_config's request: one call through the relay in the service's container. A save
     is a POST unless it names PUT (ToolGate replaces its whole settings document). A query is
-    encoded here, after the path is checked, so it can never change the path."""
+    encoded here, after the path is checked, so it can never change the path. `timeout` is how long
+    the relay waits for the service; the host waits 90 s longer for the relay itself."""
     if service not in RELAYS:
         raise NotConfirmed(
             f"Settings kept by {service} cannot be reached from this host yet."
@@ -143,12 +154,13 @@ def request(
                 relay,
                 method or ("GET" if body is None else "POST"),
                 path,
+                str(timeout),
             ],
             input=b""
             if body is None
             else json.dumps(body, ensure_ascii=False).encode(),
             capture_output=True,
-            timeout=120,
+            timeout=timeout + 90,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
