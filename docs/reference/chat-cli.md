@@ -114,7 +114,7 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
-An installed stack runs `inbox`, `spending`, `loops`, `prompt enhance`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+An installed stack runs `inbox`, `spending`, `loops`, `prompt enhance`, `prompt templates`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
 
 ## Open loops
 
@@ -130,7 +130,9 @@ Promises across every chat you can see: what you said you would do and what Conk
 
 `conker prompt enhance "TEXT" [--chat CHAT_ID] [--template ID] [--json]` - Jev rewrites an unsent draft (1-8000 characters) into a clearer, better organised prompt: goal or role, context, task and wanted output format. Prints the rewrite, then what changed and which model wrote it. Nothing is sent or saved: copy the text into a chat yourself.
 
-It makes one model call on the drafting model (the answer model when none is set) that sees only your draft, no memory and no history. A paid model counts in the daily spending cap; when the cap is reached, or cannot be checked, nothing is sent and the command says so. With `--chat`, a chat that has helper models off is refused. `--template` is accepted but Pi refuses it for now: prompt templates exist only in the dashboard, so this command only rewrites. Needs Pi with `POST /prompts/enhance`.
+It makes one model call on the drafting model (the answer model when none is set) that sees only your draft, no memory and no history. A paid model counts in the daily spending cap; when the cap is reached, or cannot be checked, nothing is sent and the command says so. With `--chat`, a chat that has helper models off is refused. With `--template ID` the same call fills that prompt template from your draft instead of rewriting it: Pi checks each value the model gives against the template's field and builds the prompt itself, and the command also names any required field still empty. An unknown template id is refused (404 `template_not_found`); a draft that fits no field is 422 `nothing_filled`. Needs Pi with `POST /prompts/enhance` (templates: a Pi that has `/prompts/templates`).
+
+`conker prompt templates list|show ID|add --name NAME [--description TEXT] --fields FILE|-|remove ID --yes` - your prompt templates, kept in Pi: four starters (Research, Bug report, Plan, Email) that you can delete, and your own. `list` prints one line each; `show ID` prints the fields (id, type, label, required, options); `add` reads a JSON list of fields from a file or from stdin (`-`), for example `[{"id": "topic", "label": "Topic", "type": "longText", "required": true}]`, and prints the new `tpl_` id; `remove` needs `--yes` and a deleted starter does not come back. Types: `shortText`, `longText`, `list`, `choice` (with `options`), `number`, `date`, `switch`. Pi checks every field; editing a template stays in the dashboard. Nothing here sends a message.
 
 ## Memory, Agents and Teams
 
