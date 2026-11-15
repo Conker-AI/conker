@@ -142,6 +142,25 @@ def test_an_update_stages_snapshots_swaps_and_is_reported_applied(deployment):
     assert told(deployment)[0]["results"] == []  # each receipt is reported once
 
 
+def test_services_in_pis_network_are_removed_before_the_stack_comes_up(deployment):
+    compose = json.loads((deployment / "compose.json").read_text(encoding="utf-8"))
+    compose["services"] = {
+        "pi": {},
+        "decisions": {"network_mode": "service:pi"},
+        "subscriptions": {"network_mode": "service:pi"},
+        "gateway": {"network_mode": "none"},
+    }
+    (deployment / "compose.json").write_text(json.dumps(compose), encoding="utf-8")
+    host = Host(deployment, {"0.2.0": True})
+    assert update(deployment, host)[1].run()["status"] == "applied"
+    order = [" ".join(call) for call in host.calls]
+    remove = next(
+        i for i, line in enumerate(order) if line.endswith("rm -sf decisions subscriptions")
+    )
+    up = next(i for i, line in enumerate(order) if line.endswith("up -d --remove-orphans"))
+    assert remove < up
+
+
 def test_a_failed_health_check_rolls_back_and_the_inbox_hears_why(deployment):
     host = Host(deployment, {"0.1.0": True, "0.2.0": False})
     with pytest.raises(UpdateError, match="prior release was restored"):

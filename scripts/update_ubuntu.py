@@ -370,6 +370,17 @@ class UbuntuTransport:
         shutil.copy2(self.compose_file, recovery / "compose.json")
         swap_in(staging, self.sources, recovery / "sources")  # sources/ exists at every instant
 
+    def _network_joiners(self) -> list[str]:
+        try:
+            services = json.loads(self.compose_file.read_text(encoding="utf-8")).get("services", {})
+        except (OSError, ValueError):
+            return []
+        return sorted(
+            name
+            for name, spec in services.items()
+            if str(spec.get("network_mode", "")).startswith("service:")
+        )
+
     def _start(self, what: str) -> None:
         extra = {"CONKER_WORKSPACES_DIR": folder} if (folder := self.workspaces()) else {}
         prepare = self.sources / "companion" / "deploy" / "ubuntu" / "prepare.py"
@@ -377,6 +388,10 @@ class UbuntuTransport:
             [sys.executable, str(prepare), self.origin() or ""], f"preparing {what}", env=extra
         )
         self._run(self._compose("build"), f"building {what}", timeout=BUILD_SECONDS)
+        # Services that join another service's network (Pi's) cannot be stopped once that
+        # service is recreated, so `up -d` fails; remove them first, `up` starts them again.
+        if joined := self._network_joiners():
+            self._run(self._compose("rm", "-sf", *joined), f"stopping {', '.join(joined)}")
         self._run(
             self._compose("up", "-d", "--remove-orphans"),
             f"starting {what}",
