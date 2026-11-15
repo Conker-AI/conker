@@ -107,9 +107,14 @@ def caller(command: list[str]):
         if method == "POST" and path == PREFERENCES:
             _only_the_cap(body, seen)
         reply = config_cli.request(command, service, path, body, query=query, timeout=timeout)
-        if method == "GET" and path == PREFERENCES and isinstance(reply, dict):
-            if "revision" in reply and isinstance(reply.get("preferences"), dict):
-                seen.update(revision=reply["revision"], preferences=reply["preferences"])
+        if (
+            method == "GET"
+            and path == PREFERENCES
+            and isinstance(reply, dict)
+            and "revision" in reply
+            and isinstance(reply.get("preferences"), dict)
+        ):
+            seen.update(revision=reply["revision"], preferences=reply["preferences"])
         return reply
 
     return call
