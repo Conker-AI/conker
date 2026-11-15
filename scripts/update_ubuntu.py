@@ -370,6 +370,12 @@ class UbuntuTransport:
         shutil.copy2(self.compose_file, recovery / "compose.json")
         swap_in(staging, self.sources, recovery / "sources")  # sources/ exists at every instant
 
+    def _network_joiners(self) -> list[str]:
+        services = json.loads(self.compose_file.read_text(encoding="utf-8")).get("services", {})
+        return sorted(
+            n for n, spec in services.items() if spec.get("network_mode", "").startswith("service:")
+        )
+
     def _start(self, what: str) -> None:
         extra = {"CONKER_WORKSPACES_DIR": folder} if (folder := self.workspaces()) else {}
         prepare = self.sources / "companion" / "deploy" / "ubuntu" / "prepare.py"
@@ -377,6 +383,9 @@ class UbuntuTransport:
             [sys.executable, str(prepare), self.origin() or ""], f"preparing {what}", env=extra
         )
         self._run(self._compose("build"), f"building {what}", timeout=BUILD_SECONDS)
+        # Services in Pi's network cannot be stopped once Pi is recreated: remove them first.
+        if joined := self._network_joiners():
+            self._run(self._compose("rm", "-sf", *joined), f"stopping {', '.join(joined)}")
         self._run(
             self._compose("up", "-d", "--remove-orphans"),
             f"starting {what}",
