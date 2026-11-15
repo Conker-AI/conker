@@ -141,3 +141,155 @@ def test_the_relay_opens_only_the_enhance_route():
         call(None, "pi", "/prompts/other", {"text": "x"})
     with pytest.raises(ValueError):
         call(None, "pi", "/prompts/enhance")  # a read of a write-only route
+
+
+# --- prompt templates ---
+
+TEMPLATE_ID = "tpl_" + "b" * 32
+TEMPLATE = {
+    "id": TEMPLATE_ID,
+    "name": "Trip",
+    "description": "Plan a trip.",
+    "fields": [
+        {
+            "id": "where",
+            "label": "Where",
+            "type": "shortText",
+            "required": True,
+            "multiple": False,
+        },
+        {
+            "id": "pace",
+            "label": "Pace",
+            "type": "choice",
+            "required": False,
+            "multiple": True,
+            "options": ["Slow", "Fast"],
+        },
+    ],
+    "starter": False,
+    "revision": 1,
+    "createdAt": 1.0,
+    "updatedAt": 1.0,
+}
+STARTER = {**TEMPLATE, "id": "starter-plan", "name": "Plan", "starter": True}
+PAGE = {"items": [STARTER, TEMPLATE], "total": 2}
+
+
+def test_list_and_show_print_readable_text(monkeypatch, capsys):
+    code, sent, out = calls(monkeypatch, capsys, ["templates", "list"], [PAGE])
+    assert code == 0 and sent[0].get_method() == "GET"
+    assert urlsplit(sent[0].full_url).path == "/prompts/templates"
+    lines = out.out.splitlines()
+    assert lines[0] == "2 templates."
+    assert lines[1].startswith("starter-plan  Plan  (starter, 2 fields)")
+    assert lines[2].startswith(f"{TEMPLATE_ID}  Trip  (2 fields)")
+
+    code, sent, out = calls(
+        monkeypatch, capsys, ["templates", "show", TEMPLATE_ID], [{"template": TEMPLATE}]
+    )
+    assert code == 0 and urlsplit(sent[0].full_url).path == f"/prompts/templates/{TEMPLATE_ID}"
+    assert f"Trip  ({TEMPLATE_ID}, version 1)" in out.out
+    assert "where        shortText  Where  required" in out.out
+    assert "Slow | Fast (several)" in out.out
+
+
+def test_list_and_show_can_print_json(monkeypatch, capsys):
+    _, _, out = calls(monkeypatch, capsys, ["templates", "list", "--json"], [PAGE])
+    assert json.loads(out.out) == PAGE
+    reply = {"template": TEMPLATE}
+    _, _, out = calls(monkeypatch, capsys, ["templates", "show", TEMPLATE_ID, "--json"], [reply])
+    assert json.loads(out.out) == reply
+
+
+def test_add_reads_the_fields_file_and_prints_the_new_id(monkeypatch, capsys, tmp_path):
+    fields = [{"id": "topic", "label": "Topic", "type": "longText", "required": True}]
+    path = tmp_path / "fields.json"
+    path.write_text(json.dumps(fields), encoding="utf-8")
+    arguments = ["templates", "add", "--name", "Trip", "--description", "d", "--fields", str(path)]
+    code, sent, out = calls(monkeypatch, capsys, arguments, [{"template": TEMPLATE}])
+    assert code == 0 and sent[0].get_method() == "POST"
+    assert json.loads(sent[0].data) == {"name": "Trip", "description": "d", "fields": fields}
+    assert out.out == f"Saved Trip as {TEMPLATE_ID}.\n"
+
+
+def test_add_reads_fields_from_stdin(monkeypatch, capsys):
+    fields = [{"id": "topic", "label": "Topic", "type": "shortText"}]
+    stdin = SimpleNamespace(buffer=io.BytesIO(json.dumps(fields).encode()))
+    monkeypatch.setattr(sys, "stdin", stdin)
+    arguments = ["templates", "add", "--name", "T", "--fields", "-"]
+    code, sent, _ = calls(monkeypatch, capsys, arguments, [{"template": TEMPLATE}])
+    assert code == 0 and json.loads(sent[0].data)["fields"] == fields
+
+
+def test_remove_needs_yes_and_posts_the_delete(monkeypatch, capsys):
+    code, sent, out = calls(monkeypatch, capsys, ["templates", "remove", TEMPLATE_ID])
+    assert code == 1 and sent == [] and "--yes" in out.err
+    done = {"id": TEMPLATE_ID, "deleted": True}
+    code, sent, out = calls(
+        monkeypatch, capsys, ["templates", "remove", TEMPLATE_ID, "--yes"], [done]
+    )
+    assert code == 0 and sent[0].get_method() == "POST"
+    assert urlsplit(sent[0].full_url).path == f"/prompts/templates/{TEMPLATE_ID}/delete"
+    assert json.loads(out.out) == done
+
+
+def test_bad_template_input_is_refused_before_calling_pi(monkeypatch, capsys, tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"not": "a list"}', encoding="utf-8")
+    broken = tmp_path / "broken.json"
+    broken.write_text("{nope", encoding="utf-8")
+    for arguments in (
+        ["templates", "show", "../x"],
+        ["templates", "show", "tpl_short"],
+        ["templates", "remove", "x", "--yes"],
+        ["templates", "add", "--name", "T", "--fields", str(bad)],
+        ["templates", "add", "--name", "T", "--fields", str(broken)],
+    ):
+        code, sent, out = calls(monkeypatch, capsys, arguments)
+        assert code == 1 and sent == [] and out.err, arguments
+
+
+def test_enhance_names_the_required_fields_still_empty(monkeypatch, capsys):
+    reply = {**REPLY, "templateId": "starter-plan", "missing": ["Goal", "Deadline"]}
+    _, _, out = calls(
+        monkeypatch, capsys, ["enhance", "plan", "--template", "starter-plan"], [reply]
+    )
+    assert "Still empty (required): Goal, Deadline" in out.out
+
+
+def test_the_installed_launcher_reaches_the_template_routes(monkeypatch, capsys):
+    relay = Relay(
+        monkeypatch,
+        {
+            ("GET", "/prompts/templates"): (200, PAGE),
+            ("GET", f"/prompts/templates/{TEMPLATE_ID}"): (200, {"template": TEMPLATE}),
+            ("POST", "/prompts/templates"): (200, {"template": TEMPLATE}),
+            ("POST", f"/prompts/templates/{TEMPLATE_ID}/delete"): (
+                200,
+                {"id": TEMPLATE_ID, "deleted": True},
+            ),
+        },
+    )
+    assert main("prompt", "templates", "list") == 0
+    assert main("prompt", "templates", "show", TEMPLATE_ID) == 0
+    assert main("prompt", "templates", "remove", TEMPLATE_ID, "--yes") == 0
+    assert [(m, p) for m, p, _ in relay.sent] == [
+        ("GET", "/prompts/templates"),
+        ("GET", f"/prompts/templates/{TEMPLATE_ID}"),
+        ("POST", f"/prompts/templates/{TEMPLATE_ID}/delete"),
+    ]
+    assert relay.sent[2][2] == {}
+    capsys.readouterr()
+
+
+def test_the_relay_opens_only_the_template_routes_it_needs():
+    call = owner_cli.caller(["fixture"])
+    for path, body in (
+        ("/prompts/templates/other", None),
+        (f"/prompts/templates/{TEMPLATE_ID}", {"name": "x"}),  # editing stays in the dashboard
+        (f"/prompts/templates/{TEMPLATE_ID}/delete", None),  # a delete is a write
+        (f"/prompts/templates/{TEMPLATE_ID}/extra", {}),
+    ):
+        with pytest.raises(ValueError):
+            call(None, "pi", path, body)

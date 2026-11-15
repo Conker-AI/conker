@@ -10,6 +10,8 @@ import re
 from urllib.error import HTTPError
 
 from scripts.conker_context import pi_call
+from scripts.conker_templates import operation as templates_operation
+from scripts.conker_templates import register as register_templates
 
 TEXT_LIMIT = 8000
 CHAT = r"ses_[0-9a-f]{16}"
@@ -22,10 +24,11 @@ def register(commands):
     enhance = verbs.add_parser("enhance", help="Rewrite a draft with Jev; nothing is sent or saved")
     enhance.add_argument("text", help="Your draft, 1-8000 characters")
     enhance.add_argument(
-        "--template", help="A prompt template id (Pi does not offer templates yet and refuses one)"
+        "--template", help="Fill this prompt template from the draft (see `prompt templates list`)"
     )
     enhance.add_argument("--chat", help="The chat the draft is for, so its privacy applies")
     enhance.add_argument("--json", action="store_true", help="Print Pi's reply as JSON")
+    register_templates(verbs)
 
 
 def enhance_body(args):
@@ -46,8 +49,11 @@ def enhance_body(args):
 
 
 def render(reply):
-    """The rewritten prompt, then what Jev changed and which model wrote it."""
+    """The rewritten (or template-filled) prompt, then what Jev changed, any required field still
+    empty and which model wrote it."""
     lines = [reply["text"]]
+    if reply.get("missing"):
+        lines += ["", "Still empty (required): " + ", ".join(reply["missing"])]
     if reply["notes"]:
         lines += ["", "What changed:"] + [f"- {note}" for note in reply["notes"]]
     lines += ["", f"Written by {reply['modelId']}. Nothing was sent or saved."]
@@ -70,7 +76,9 @@ def _refused(exc):
 
 
 def operation(args, config, request):
-    """Run `prompt enhance`; returns the value to print, or None when it printed itself."""
+    """Run a prompt verb; returns the value to print, or None when it printed itself."""
+    if args.operation == "templates":
+        return templates_operation(args, config, request)
 
     def asking(*call, **options):
         try:
