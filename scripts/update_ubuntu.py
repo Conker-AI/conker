@@ -371,14 +371,9 @@ class UbuntuTransport:
         swap_in(staging, self.sources, recovery / "sources")  # sources/ exists at every instant
 
     def _network_joiners(self) -> list[str]:
-        try:
-            services = json.loads(self.compose_file.read_text(encoding="utf-8")).get("services", {})
-        except (OSError, ValueError):
-            return []
+        services = json.loads(self.compose_file.read_text(encoding="utf-8")).get("services", {})
         return sorted(
-            name
-            for name, spec in services.items()
-            if str(spec.get("network_mode", "")).startswith("service:")
+            n for n, spec in services.items() if spec.get("network_mode", "").startswith("service:")
         )
 
     def _start(self, what: str) -> None:
@@ -388,8 +383,7 @@ class UbuntuTransport:
             [sys.executable, str(prepare), self.origin() or ""], f"preparing {what}", env=extra
         )
         self._run(self._compose("build"), f"building {what}", timeout=BUILD_SECONDS)
-        # Services that join another service's network (Pi's) cannot be stopped once that
-        # service is recreated, so `up -d` fails; remove them first, `up` starts them again.
+        # Services in Pi's network cannot be stopped once Pi is recreated: remove them first.
         if joined := self._network_joiners():
             self._run(self._compose("rm", "-sf", *joined), f"stopping {', '.join(joined)}")
         self._run(
