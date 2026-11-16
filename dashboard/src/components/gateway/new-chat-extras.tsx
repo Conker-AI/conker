@@ -17,11 +17,19 @@ export function ConversationStarters({ disabled, onPick }: { disabled: boolean; 
   </div>
 }
 
-/** Calls start from a saved chat's header and video is not connected; the composer folds these notes when narrow. */
-export function NewChatMediaPlaceholders() {
-  return <div className="w-full space-y-1.5 px-2 py-1 text-sm text-muted-foreground">
-    <p className="flex items-start gap-2"><Phone className="mt-0.5 size-4 shrink-0" />Voice call: send a message first, then call from the chat header.</p>
-    <p className="flex items-start gap-2"><Video className="mt-0.5 size-4 shrink-0" />Video calls are not connected yet.</p>
-  </div>
+const callButton = 'shrink-0 cursor-not-allowed text-muted-foreground opacity-60'
+
+/**
+ * Voice and video call, as their own toolbar buttons. A call starts from a saved chat, and video is not
+ * connected yet, so on a new chat both stand disabled with the reason as their tooltip. They are the
+ * last items to fold into the overflow menu.
+ */
+export function NewChatCallButtons() {
+  const voice = 'Send a message first, then call from the chat header'
+  const video = 'Video calls are not connected yet'
+  return <span className="flex shrink-0 items-center gap-1">
+    <Button type="button" size="icon-sm" variant="ghost" aria-disabled="true" aria-label={`Voice call. ${voice}`} title={voice} className={callButton} onClick={event => event.preventDefault()}><Phone className="size-4" /><span data-label className="sr-only">Voice call</span></Button>
+    <Button type="button" size="icon-sm" variant="ghost" aria-disabled="true" aria-label={`Video call. ${video}`} title={video} className={callButton} onClick={event => event.preventDefault()}><Video className="size-4" /><span data-label className="sr-only">Video call</span></Button>
+  </span>
 }
-composerItem(NewChatMediaPlaceholders, 'media')
+composerItem(NewChatCallButtons, 'media')

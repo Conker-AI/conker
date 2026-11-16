@@ -92,7 +92,7 @@ test('auto-name on an empty chat gives empty', async () => {
 test('auto-name with a stale revision gives revision_conflict', async () => {
   await refused(client.autoName(A, 0), error => assert.equal(error.code, 'revision_conflict'))
 })
-const support = [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-haiku', providerId: 'anthropic', applies: null }]
+const support = [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-sonnet-5-5', providerId: 'claude-code', applies: null }]
 test('output of a new chat is all auto at revision 0', async () => {
   assert.deepEqual(await client.output(A), { revision: 0, output: { format: 'auto', length: 'auto', language: 'auto', level: 'auto', effort: 'auto' }, effortSupport: support })
 })

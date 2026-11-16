@@ -53,13 +53,13 @@ assert.equal(workspace.getState().title, '')
 assert.equal(workspace.getState().createUnknown, null)
 console.log('Gateway workspace send guards, explicit uncertainty resolution, retained drafts/locks and auth-reset epoch checks passed.')
 
-assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} value=\{firstModel\}/,
+assert.match(workspaceSource, /GatewayModelPicker client=\{control\} value=\{firstModel\}/,
   'The first-message composer must expose the answer model before dispatch')
 assert.match(workspaceSource, /GatewayAgentPicker compact client=\{control\} value=\{firstAgent\}/,
   'The first-message composer must expose the durable agent before creating the conversation')
 assert.match(workspaceSource, /client\.drafts\.start\(savedStart!\.requestId, savedStart!\.revision, signal\)/,
   'Session creation atomically promotes the exact saved intent, including agent and privacy')
-assert.match(workspaceSource, /GatewayModelPicker compact client=\{control\} value=\{firstModel\}[^\n]+manualRequired=\{firstPrivacy\.harnessDisabled\}/,
+assert.match(workspaceSource, /GatewayModelPicker client=\{control\} value=\{firstModel\}[^\n]+manualRequired=\{firstPrivacy\.harnessDisabled\}/,
   'Disabling the harness before creation must require an explicit answer model')
 assert.match(workspaceSource, /firstPrivacy\.harnessDisabled && !firstModel/,
   'The first message must stay blocked until the required manual model is selected')
@@ -67,10 +67,10 @@ assert.doesNotMatch(workspaceSource, /new-chat-composer"[^\n]+autoFocus/,
   'The new-chat composer must not unconditionally open a mobile keyboard')
 assert.match(workspaceSource, /matchMedia\('\(pointer: fine\) and \(min-width: 768px\)'\)/,
   'Desktop fine-pointer devices may still receive convenient composer focus')
-assert.match(workspaceSource, /GatewayModelPicker compact[^\n]+[\s\S]*NewChatPrivacyControl[^\n]+[\s\S]*<NewChatMediaPlaceholders \/>[\s\S]*NewChatVoiceControl[^\n]+[\s\S]*aria-label="Send message"/,
+assert.match(workspaceSource, /GatewayModelPicker[^\n]+[\s\S]*NewChatPrivacyControl[^\n]+[\s\S]*<NewChatCallButtons \/>[\s\S]*NewChatVoiceControl[^\n]+[\s\S]*aria-label="Send message"/,
   'The first-message composer toolbar must keep identity, privacy, call, dictation and send controls together')
 const extrasSource = fs.readFileSync(path.join(__dirname, '../src/components/gateway/new-chat-extras.tsx'), 'utf8')
-assert.match(extrasSource, /Voice call: send a message first, then call from the chat header\.[\s\S]*Video calls are not connected yet\./, 'Call and video placeholders stay honest about being unavailable (behind More)')
+assert.match(extrasSource, /Send a message first, then call from the chat header[\s\S]*Video calls are not connected yet/, 'Call and video buttons stay honest about being unavailable (their tooltips say why)')
 assert.match(extrasSource, /starters\.map\(item => <Button key=\{item\.label\}[^\n]*\{item\.label\}<\/Button>/,
   'Conversation starters show their words, so their names are visible and accessible')
 assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyControl|to="\/tools"[\s\S]{0,500}NewChatPrivacyControl/,

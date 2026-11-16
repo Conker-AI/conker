@@ -71,7 +71,7 @@ search, the Inbox, the Morning check-in, that Pi serves every route added since 
 enhance, team runs, memory uses, recall notices, quiet and tomorrow), the memory beliefs, memory
 care and open loops reads, the last restore drill and the release page. Each prints one line
 (`ok`, `FAIL` or `skip`); it exits 1 when any failed. A new chat, the Trash, Home's Jump back in,
-the composer's wand and Effort chip, a team run's first step and a recall notice after a
+the composer's wand and the model menu's Effort, a team run's first step and a recall notice after a
 correction are left for you to try in the dashboard.
 
 ## What the result means, and what to do

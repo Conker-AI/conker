@@ -226,6 +226,38 @@ export function MenuRadioItem({
   );
 }
 
+/**
+ * A radio row with its check at the end, in place of an optional hint (a number key): the model and
+ * effort menus read like a list of values, the chosen one ticked.
+ */
+export function MenuRadioRow({
+  className,
+  children,
+  hint,
+  ...props
+}: MenuPrimitive.RadioItem.Props & { hint?: React.ReactNode }): React.ReactElement {
+  return (
+    <MenuPrimitive.RadioItem
+      className={cn(
+        "group/row flex min-h-8 cursor-default select-none items-center gap-3 rounded-sm px-2 py-1 text-base text-foreground outline-none data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm",
+        className,
+      )}
+      data-slot="menu-radio-item"
+      {...props}
+    >
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <span className="flex w-4 shrink-0 justify-end">
+        <MenuPrimitive.RadioItemIndicator>
+          <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.252 12.7 10.2 18.63 18.748 5.37" />
+          </svg>
+        </MenuPrimitive.RadioItemIndicator>
+        {hint !== undefined && <MenuShortcut className="tracking-normal group-data-checked/row:hidden">{hint}</MenuShortcut>}
+      </span>
+    </MenuPrimitive.RadioItem>
+  );
+}
+
 export function MenuGroupLabel({
   className,
   inset,
@@ -343,6 +375,7 @@ export {
   MenuCheckboxItem as DropdownMenuCheckboxItem,
   MenuRadioGroup as DropdownMenuRadioGroup,
   MenuRadioItem as DropdownMenuRadioItem,
+  MenuRadioRow as DropdownMenuRadioRow,
   MenuGroupLabel as DropdownMenuLabel,
   MenuSeparator as DropdownMenuSeparator,
   MenuShortcut as DropdownMenuShortcut,

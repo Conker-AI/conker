@@ -49,6 +49,7 @@
     "check:message-context-rule": "node scripts/check-message-context-rule.cjs",
     "check:composer-modes": "node scripts/check-composer-modes.cjs",
     "check:composer": "node scripts/check-composer.cjs",
+    "check:model-menu": "node scripts/check-model-menu.cjs",
     "check:message-details": "node scripts/check-message-details.cjs",
     "check:tool-draft-id": "node scripts/check-tool-draft-id.cjs",
     "check:turn-outcomes": "node scripts/check-turn-outcomes.cjs",
