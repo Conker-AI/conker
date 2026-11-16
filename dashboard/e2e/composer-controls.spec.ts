@@ -153,6 +153,7 @@ for (const width of [320, 390]) {
     expect(reachable).toBe(true)
     const heightsOf = (role: 'menuitem' | 'menuitemradio') => page.getByRole(role).evaluateAll(rows => rows.map(row => Math.round(row.getBoundingClientRect().height)))
     await modelButton(page).click()
+    await expect(page.getByRole('menuitemradio').nth(3)).toBeVisible()
     const models = await heightsOf('menuitemradio'), submenus = await heightsOf('menuitem')
     expect(models).toHaveLength(4)
     expect(submenus).toHaveLength(2)
