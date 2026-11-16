@@ -6,6 +6,8 @@ export async function open(page: Page, address: string) {
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(address)
   await page.locator('main:not([role="status"])').first().waitFor()
+  // The dev server loads modules on first use; a key pressed before it settles can be lost.
+  await page.waitForLoadState('networkidle')
   return errors
 }
 
