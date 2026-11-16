@@ -12,7 +12,7 @@ export const composerItemIds = ['model', 'template', 'skills', 'output', 'think'
 export type ComposerItemId = typeof composerItemIds[number]
 export type ComposerItemValues = Partial<Record<ComposerItemId, string>>
 
-/** The toolbar width in px under which an item folds into the overflow menu; the highest folds first, so the call buttons (media) fold last. */
+/** The toolbar width in px under which an item folds into the overflow menu; the highest folds first, so the call buttons (media) fold last. A phone bar wraps before they fold: the two call buttons wrap together onto the next row. */
 export const FOLD_BELOW: Record<Exclude<ComposerItemId, 'model'>, number> = {
   incognito: 720,
   template: 680,
@@ -22,7 +22,7 @@ export const FOLD_BELOW: Record<Exclude<ComposerItemId, 'model'>, number> = {
   complexity: 540,
   output: 560,
   access: 460,
-  media: 300,
+  media: 240,
   enhance: 520,
 }
 

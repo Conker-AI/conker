@@ -136,3 +136,32 @@ test('Effort can be chosen before the chat exists and is saved with it', async (
   await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort', { timeout: 10_000 })
   expect(errors).toEqual([])
 })
+
+for (const width of [320, 390]) {
+  test(`on a ${width} px phone the model button shows its label, the call buttons stand in the toolbar and the menu rows are 44 px tall`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+    const errors = await open(page, '/chat')
+    await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5')
+    await expect(modelButton(page)).toContainText('Sonnet 5.5')
+    // The call buttons are real toolbar buttons, not folded into More options, at the smallest width too.
+    await expect(page.getByRole('button', { name: /^Voice call/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Video call/ })).toBeVisible()
+    // On touch, a toolbar button's tap area is 44 px: the point 4 px above a 32 px button still lands on it.
+    const reachable = await page.getByRole('button', { name: /^Voice call/ }).evaluate(button => { const box = button.getBoundingClientRect(); return document.elementFromPoint(box.x + box.width / 2, box.y - 4)?.closest('button') === button })
+    expect(reachable).toBe(true)
+    const heightsOf = (role: 'menuitem' | 'menuitemradio') => page.getByRole(role).evaluateAll(rows => rows.map(row => Math.round(row.getBoundingClientRect().height)))
+    await modelButton(page).click()
+    const models = await heightsOf('menuitemradio'), submenus = await heightsOf('menuitem')
+    expect(models).toHaveLength(4)
+    expect(submenus).toHaveLength(2)
+    await page.getByRole('menuitem', { name: /^Effort/ }).click()
+    await expect(page.getByRole('menuitemradio', { name: 'Max' })).toBeVisible()
+    const efforts = (await heightsOf('menuitemradio')).slice(-5)
+    expect(efforts).toHaveLength(5)
+    for (const height of [...models, ...submenus, ...efforts]) expect(height).toBeGreaterThanOrEqual(44)
+    expect(errors).toEqual([])
+    await context.close()
+  })
+}

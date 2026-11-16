@@ -70,7 +70,7 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
     } finally { setAdding(false) }
   }
   const lostModel = Boolean(value && catalogue && !models.some(model => model.id === value))
-  return <div className="flex min-w-0 items-center gap-1 max-sm:shrink-0">
+  return <div className="flex min-w-0 items-center gap-1">
     <ModelMenu name={name} disabled={disabled || !catalogue} layout={layout} manualRequired={manualRequired} auto={Boolean(router)} lostModel={lostModel}
       selected={value || (router ? AUTO_KEY : selectedModelId)} onSelect={key => onChange(key === AUTO_KEY ? '' : key)}
       effort={effort ? { value: chatEffort.effort, onChange: next => void chatEffort.choose(next), disabled: disabled || chatEffort.saving || !chatEffort.ready, note: chatEffort.note, error: chatEffort.error, newChat: chatEffort.newChat } : undefined}
