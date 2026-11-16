@@ -25,10 +25,10 @@ from update_check import CheckError, check, installed_version, latest_release
 MORNING_CHECK_IN = "job_beca06ba345a8b3170a4d8e2473fe00f"  # pi/schedule/agent_jobs.py BUILT_IN
 # Run in Pi's container: the newest migration the running Pi knows (pi/conversation/upgrades.py).
 LAST_MIGRATION = "from pi.conversation.upgrades import MIGRATIONS; print(MIGRATIONS[-1].id)"
-# Run in Pi's container: every method and path the running Pi serves (importing the app starts nothing).
+# Run in Pi's container: every method and path the running Pi serves (read from the OpenAPI document: included routers do not show in app.routes).
 ROUTE_TABLE = (
     "from pi.api.server import app; "
-    "print(chr(10).join(f'{m} {r.path}' for r in app.routes for m in sorted(getattr(r, 'methods', None) or ())))"
+    "print(chr(10).join(f'{m.upper()} {p}' for p, ops in app.openapi()['paths'].items() for m in ops))"
 )
 # What the release after 0.25.0 added that has no read of its own: it must be served, not called
 # (enhancing a prompt spends a model call, a team run starts work).
