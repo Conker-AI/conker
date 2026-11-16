@@ -10,6 +10,6 @@ export async function saveNewChatEffort(control: GatewayControlClient | undefine
     await control.chatNames.saveOutput(sessionId, { ...saved.output, effort }, saved.revision)
     return null
   } catch (failure) {
-    return `The chat was created, but its effort was not saved: ${chatFeatureMessage(failure)} Set it with the Effort button.`
+    return `The chat was created, but its effort was not saved: ${chatFeatureMessage(failure)} Set it from the model button.`
   }
 }

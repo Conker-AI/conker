@@ -56,7 +56,7 @@ RETIRED_KINDS = {"memory"}  # memory proposals left the Inbox (pi docs/inbox-kin
 NOT_CHECKED = (
     "Not checked here (they need a chat or the dashboard): a new chat answers; a chat moved to "
     "Trash leaves search and Restore brings it back; Home shows Jump back in; the composer's "
-    "wand and Effort chip; a team run's first step; a recall notice after a correction."
+    "wand and the model menu's Effort; a team run's first step; a recall notice after a correction."
 )
 
 
