@@ -1,6 +1,13 @@
 // The composer names the model that will answer and shows what Auto chose, on the bar itself.
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { open } from './pages'
+
+const modelButton = (page: Page) => page.getByRole('button', { name: /^Answer model: / })
+const openEffort = async (page: Page) => {
+  await modelButton(page).click()
+  await page.getByRole('menuitem', { name: /^Effort/ }).click()
+}
 
 test('the composer names the answering model and what Auto chose', async ({ page }) => {
   // No saved draft: the preview's draft loading after typing is a conflict the app reports, not this flow.
@@ -9,7 +16,9 @@ test('the composer names the answering model and what Auto chose', async ({ page
   const box = page.getByRole('textbox').first()
   await box.fill('Compare these two contracts and tell me which one is riskier for me')
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByText(/ · (Local|Claude|OpenRouter|OpenAI)/).first()).toBeVisible()
+  // The button names the model alone: no provider, no plan name.
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5')
+  await expect(page.getByText(/Claude Code subscription/)).toHaveCount(0)
   await expect(page.getByText('Default model', { exact: true })).toHaveCount(0)
   expect(errors).toEqual([])
 })
@@ -32,12 +41,62 @@ test('the wand rewrites the draft without sending it, and Undo brings the origin
   expect(errors).toEqual([])
 })
 
-test('the Effort button sets how hard the model thinks and says when a model ignores it', async ({ page }) => {
+test('the model menu lists the Claude models with their numbers, a tick on the current one, Effort and More models', async ({ page }) => {
   const errors = await open(page, '/chat?session=ses_1111111111111111')
-  await page.getByRole('button', { name: 'Effort', exact: true }).click()
+  await modelButton(page).click()
+  const rows = page.getByRole('menuitemradio')
+  await expect(rows).toHaveText([/^Opus 5\.51$/, /^Fable 5\.22$/, /^Sonnet 5\.5/, /^Haiku 5\.54$/])
+  await expect(page.getByRole('menuitemradio', { name: 'Sonnet 5.5' })).toBeChecked()
+  await expect(page.getByRole('menuitem', { name: /^Effort/ })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'More models' }).click()
+  for (const name of ['Fable 5.1', 'Haiku 4.5', 'Sonnet 5', 'Opus 5', 'Fable 5', 'Opus 4.8', 'Opus 4.7', 'Opus 4.6', 'Sonnet 4.6', 'Qwen 2.5 3B', 'Qwen 3 4B']) await expect(page.getByRole('menuitemradio', { name, exact: true })).toBeVisible()
+  // The provider joins no row, and no Effort chip stands in the toolbar.
+  await expect(page.getByRole('menuitemradio', { name: /Claude Code subscription/ })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /^Effort/ })).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('the number keys choose a model and the button names it', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+  const errors = await open(page, '/chat')
+  await modelButton(page).click()
+  await page.keyboard.press('1')
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Opus 5.5')
+  await modelButton(page).click()
+  await expect(page.getByRole('menuitemradio', { name: 'Opus 5.5' })).toBeChecked()
+  await page.keyboard.press('4')
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Haiku 5.5')
+  expect(errors).toEqual([])
+})
+
+test('Effort is a submenu of the model button: it is set there, shown beside the model and says when a model ignores it', async ({ page }) => {
+  const errors = await open(page, '/chat?session=ses_1111111111111111')
+  await openEffort(page)
+  await expect(page.getByText('Higher effort means more thorough responses, but takes longer and uses your limits faster.')).toBeVisible()
   await expect(page.getByText('Not used by 1 of the 2 models that may answer.')).toBeVisible()
-  await page.getByRole('radio', { name: 'High' }).click()
-  await expect(page.getByRole('button', { name: 'Effort: High' })).toBeVisible()
+  await expect(page.getByRole('menuitemradio', { name: /^(Auto|Light|Medium|High|Max)$/ })).toHaveText(['Auto', 'Light', 'Medium', 'High', 'Max'])
+  await page.getByRole('menuitemradio', { name: 'High' }).click()
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort')
+  await expect(modelButton(page)).toContainText('Sonnet 5.5High')
+  // It was saved with the chat: the menu shows it again after reopening.
+  await openEffort(page)
+  await expect(page.getByRole('menuitemradio', { name: 'High' })).toBeChecked()
+  expect(errors).toEqual([])
+})
+
+test('a new chat has voice and video call buttons in the toolbar, disabled, with the reason as their tooltip', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+  const errors = await open(page, '/chat')
+  const voice = page.getByRole('button', { name: /^Voice call/ }), video = page.getByRole('button', { name: /^Video call/ })
+  await expect(voice).toBeVisible()
+  await expect(voice).toHaveAttribute('aria-disabled', 'true')
+  await expect(voice).toHaveAttribute('title', 'Send a message first, then call from the chat header')
+  await expect(video).toHaveAttribute('aria-disabled', 'true')
+  await expect(video).toHaveAttribute('title', 'Video calls are not connected yet')
+  // No explanatory lines: the words live in the tooltips.
+  await expect(page.getByText(/Voice call: send a message first|Video calls are not connected yet/)).toHaveCount(0)
   expect(errors).toEqual([])
 })
 
@@ -68,13 +127,12 @@ test('the Thinking and Complexity chips show what Auto chose and why, a changed 
 test('Effort can be chosen before the chat exists and is saved with it', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
-  await page.getByRole('button', { name: 'Effort', exact: true }).click()
+  await openEffort(page)
   await expect(page.getByText('It is saved with the chat when it starts.')).toBeVisible()
-  await page.getByRole('radio', { name: 'High' }).click()
-  await expect(page.getByRole('button', { name: 'Effort: High' })).toBeVisible()
-  await page.keyboard.press('Escape')
+  await page.getByRole('menuitemradio', { name: 'High' }).click()
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort')
   await page.getByRole('textbox').first().fill('plan my week around judo and school')
   await page.getByRole('button', { name: 'Send message' }).click()
-  await expect(page.getByRole('button', { name: 'Effort: High' })).toBeVisible({ timeout: 10_000 })
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort', { timeout: 10_000 })
   expect(errors).toEqual([])
 })

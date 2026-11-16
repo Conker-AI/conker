@@ -28,7 +28,7 @@ export function createFakeChatNames(_now: () => number, fail: (status: number) =
   const outputOf = (id: string) => outputs.get(id) ?? outputs.set(id, { revision: 0, format: 'auto', length: 'auto', language: 'auto', level: 'auto', effort: 'auto' }).get(id)!
   const titleBody = (title: string, record: TitleRecord) => ({ revision: record.revision, title, source: record.source, modelId: record.modelId })
   const outputBody = (record: OutputRecord) => ({ revision: record.revision, output: { format: record.format, length: record.length, language: record.language, level: record.level, effort: record.effort },
-    effortSupport: [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-haiku', providerId: 'anthropic', applies: null }] })
+    effortSupport: [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-sonnet-5-5', providerId: 'claude-code', applies: null }] })
 
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     const match = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/(title\/auto|title|output)$/)

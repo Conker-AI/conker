@@ -33,7 +33,9 @@ assert.deepEqual(items.splitComposerItems(null, null), { items: [], actions: [] 
 // Fold order: every item but the model folds below its own width, the least used first.
 assert.deepEqual(Object.keys(items.FOLD_BELOW).sort(), items.composerItemIds.filter(id => id !== 'model').sort(), 'Every item except the model has a fold width')
 assert.ok(!('model' in items.FOLD_BELOW), 'The model never folds')
-assert.ok(items.FOLD_BELOW.media > items.FOLD_BELOW.incognito && items.FOLD_BELOW.output > items.FOLD_BELOW.access, 'Media folds first, access last')
+assert.ok(items.FOLD_BELOW.incognito > items.FOLD_BELOW.access && items.FOLD_BELOW.output > items.FOLD_BELOW.access, 'Incognito folds first')
+assert.ok(Object.entries(items.FOLD_BELOW).every(([id, width]) => id === 'media' || width > items.FOLD_BELOW.media), 'The call buttons fold last, after every other item')
+assert.ok(!items.composerItemIds.includes('effort'), 'Effort is no toolbar item: it lives in the model menu')
 
 // The fold line and overflow name only what differs from a default, in bar order.
 let values = {}
@@ -72,7 +74,7 @@ for (const [file, id] of [['template-composer.tsx', 'template'], ['model-picker.
   if (chip) assert.match(source, new RegExp(`<ModeChip id="${id}"`), `${file} is a mode chip`)
   if (!['model', 'think', 'search', 'complexity'].includes(id)) assert.match(source, /aria-pressed=/, `${file} says whether it is set`)
 }
-assert.match(read('src/components/gateway/new-chat-extras.tsx'), /composerItem\(NewChatMediaPlaceholders, 'media'\)/)
+assert.match(read('src/components/gateway/new-chat-extras.tsx'), /composerItem\(NewChatCallButtons, 'media'\)/)
 
 // Language level is a four-stop control inside the Output popover.
 const output = read('src/components/gateway/chat-output-control.tsx')

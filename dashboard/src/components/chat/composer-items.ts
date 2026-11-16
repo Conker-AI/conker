@@ -8,22 +8,21 @@ import { Children, cloneElement, createContext, Fragment, isValidElement, useCon
  */
 
 /** The composer items, in bar order after the mode and agent controls. */
-export const composerItemIds = ['model', 'template', 'skills', 'output', 'effort', 'think', 'search', 'complexity', 'access', 'incognito', 'media', 'enhance'] as const
+export const composerItemIds = ['model', 'template', 'skills', 'output', 'think', 'search', 'complexity', 'access', 'incognito', 'media', 'enhance'] as const
 export type ComposerItemId = typeof composerItemIds[number]
 export type ComposerItemValues = Partial<Record<ComposerItemId, string>>
 
-/** The toolbar width in px under which an item folds into the overflow menu; lower folds first. */
+/** The toolbar width in px under which an item folds into the overflow menu; the highest folds first, so the call buttons (media) fold last. */
 export const FOLD_BELOW: Record<Exclude<ComposerItemId, 'model'>, number> = {
-  media: 760,
   incognito: 720,
   template: 680,
   skills: 640,
   think: 600,
-  effort: 580,
   search: 570,
   complexity: 540,
   output: 560,
   access: 460,
+  media: 300,
   enhance: 520,
 }
 

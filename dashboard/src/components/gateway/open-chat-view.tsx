@@ -33,7 +33,6 @@ import { GatewayCallLauncher } from './call-workspace'
 import { GatewaySessionAgentControl } from './session-agent-control'
 import { NewChatVoiceControl } from './new-chat-voice-control'
 import { ComplexityControl, ComposerModeProvider, ModePresetControl, SearchControl, TemplateInput, TemplatePicker } from './composer-parts'
-import { ChatEffortControl } from './chat-effort-control'
 import { PromptEnhanceControl } from './prompt-enhance-control'
 import { ChatTitle } from './chat-title'
 import { nameChat } from './chat-title-actions'
@@ -93,10 +92,9 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
       <ChatComposer key={selected} chat={chat} inputRef={replyComposer} dictating={dictating} input={templateActive ? <TemplateInput draftKey={selected} disabled={chat.setDraft.availability !== 'enabled'} onText={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} onSubmit={() => { if (chat.send.availability === 'enabled') void chat.send.run() }} /> : undefined} controls={<>
         <ModePresetControl />{control && current?.status === 'open' && <GatewaySessionAgentControl compact key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}</>} actions={<>
         <TemplatePicker draftKey={selected} disabled={sendPending || detailPending || !active || Boolean(attempt) || current?.status !== 'open'} />
-        {control && <GatewayModelPicker compact key={`model:${selected}`} client={control} value={selectedValue.modelId ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => draftController.edit(selected, { modelId: value || null })} />}
+        {control && <GatewayModelPicker key={`model:${selected}`} client={control} value={selectedValue.modelId ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => draftController.edit(selected, { modelId: value || null })} effort={current && current.status === 'open' ? { sessionId: current.id } : undefined} />}
         <GatewaySkillPicker key={`skills:${selected}`} client={client} value={selectedValue.skillIds} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={ids => setSkillChoices(selected, ids)} />
         {control && current && current.status === 'open' && <ChatOutputControl key={`output:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} onChanged={refreshChat} />}
-        {control && current && current.status === 'open' && <ChatEffortControl key={`effort:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} />}
         <ThinkControl companion={activeAgentId === 'companion'} checked={selectedValue.think} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={think => setThinkChoice(selected, think)} />
         <SearchControl />
         <ComplexityControl />

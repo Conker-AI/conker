@@ -4,6 +4,7 @@
  * and the computed setup status, all in the real routes' wire shapes.
  */
 import { followAnswerRoles } from '../lib/api/model-roles'
+import { CLAUDE_PROVIDER_ID, claudeModels } from '../lib/gateway/claude-models'
 import type { ModelRolesConfiguration } from '../lib/api/model-roles'
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
@@ -31,13 +32,14 @@ export function createFakeSetup(preview: { setupStep?: 'model' | 'memory' | 'cap
   }
   const role = (modelId: string | null, eligible: string[]) => ({ enabled: modelId !== null, eligibleModelIds: eligible, modelId, timeoutMs: 30000, failure: 'stop', fallbackModelIds: [], followAnswer: false })
   const models: { revision: number; configuration: Json } = { revision: 1, configuration: {
-    providers: [{ id: 'ollama', name: 'Local (Ollama)', enabled: true }],
+    providers: [{ id: 'ollama', name: 'Local (Ollama)', enabled: true }, { id: CLAUDE_PROVIDER_ID, name: 'Claude Code subscription', enabled: true }],
     models: [
+      ...claudeModels.map(claude => ({ id: claude.route, providerId: CLAUDE_PROVIDER_ID, name: claude.name, route: claude.route, enabled: true, routingDescription: '' })),
       { id: 'qwen-small', providerId: 'ollama', name: 'Qwen 2.5 3B', route: 'qwen2.5:3b', enabled: true, routingDescription: 'Fast, everyday chat' },
       { id: 'qwen-4b', providerId: 'ollama', name: 'Qwen 3 4B', route: 'qwen3:4b', enabled: true, routingDescription: 'Slower, a little smarter' },
     ],
-    defaultModelId: 'qwen-small',
-    roleSettings: { answerMode: 'manual', roles: { answer: role('qwen-small', ['qwen-small']), routing: role(null, []), 'context-selection': role(null, []), summarization: role(null, []), 'memory-ranking': role(null, []), proposals: role(null, []) } },
+    defaultModelId: 'claude-sonnet-5-5',
+    roleSettings: { answerMode: 'manual', roles: { answer: role('claude-sonnet-5-5', [...claudeModels.map(claude => claude.route), 'qwen-small', 'qwen-4b']), routing: role(null, []), 'context-selection': role(null, []), summarization: role(null, []), 'memory-ranking': role(null, []), proposals: role(null, []) } },
   } }
   const rehearsalStatus = (): Json => ({
     schemaVersion: 1, state: rehearsalComplete ? 'complete' : rehearsalMemoryReviewed && rehearsalApproval === 'complete' ? 'ready' : 'in_progress',
