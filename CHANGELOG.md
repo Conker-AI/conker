@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)
+
 - **An update no longer fails when Pi is recreated.** Services that join Pi's network (the decisions sidecar and the Claude plan runtime) cannot be stopped once Pi is replaced, so `docker compose up` exited with an error and the update rolled back a stack that was coming up fine. The update now removes those services first; `up` starts them again under the new Pi. (#361)
 
 ## 0.2.0
