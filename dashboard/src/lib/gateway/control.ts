@@ -27,6 +27,7 @@ import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayHostOpsClient } from './host-ops'
 import { createUpdatesClient } from './updates'
 import { createGatewayTeamsClient } from './teams'
+import { createTeamRunsClient } from './team-runs'
 import { createNativeSessionsClient } from './native-sessions'
 import { createMemoryCorrectionsClient } from './memory-corrections'
 import { createCodexSessionsClient } from './codex-sessions'
@@ -363,6 +364,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     hostOps: createGatewayHostOpsClient(auth),
     updates: createUpdatesClient(auth),
     teams: createGatewayTeamsClient(auth),
+    /** A team run read by its id, and the owner's next steps on it: run the next role, check, end. */
+    teamRuns: createTeamRunsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),
     search: createGatewaySearchClient(auth),

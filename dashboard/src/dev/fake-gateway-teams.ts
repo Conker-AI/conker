@@ -2,6 +2,8 @@
  * Development-only team definition for the preview: one team with versions, archive and restore,
  * each change guarded by the expected revision like Pi.
  */
+import { createFakeTeamRuns } from './fake-gateway-team-runs'
+
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
@@ -20,8 +22,12 @@ export function createFakeTeams(now: () => number, fail: (status: number) => nev
   const team: Json = { schemaVersion: 1, id: teamId, revision: 1, name: teamDefinition.name, archived_at: null, created_at: now() - 4000, updated_at: now() - 4000,
     authority: 'none', execution: 'configuration-only', contentIncluded: true, reference_validation: 'external-references-unverified', definition: teamDefinition,
     agentReferences: [{ roleId: 'planner', agentId: `agent_${'1'.repeat(32)}`, revision: 1 }, { roleId: 'reviewer', agentId: 'companion', revision: 1 }], agentReferenceState: 'available' }
+  // Runs of this team are read by id, like Pi (it has no list of them).
+  const runs = createFakeTeamRuns(now, fail, () => team.definition as Json, () => String(team.id))
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     let match: RegExpMatchArray | null
+    const run = runs(path, method, options)
+    if (run !== undefined) return run
     if (path === '/api/control/pi/collaboration/teams' && method === 'GET') {
       const { definition, agentReferences, agentReferenceState, ...summary } = team
       void definition; void agentReferences; void agentReferenceState

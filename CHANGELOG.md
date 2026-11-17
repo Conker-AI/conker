@@ -7,6 +7,7 @@ which module versions a release pins.
 ## Unreleased
 
 - **Inbox card: a memory you corrected was used.** When answers written earlier used a memory he has since corrected or forgot, the Inbox says so in plain words, lists the chats by title with a link to each, and has a Dismiss button that hides the card only. It counts in the Inbox badge. Reads Pi's `GET /memory/recall-notices` (Pi #285); the dev pin of Pi must be bumped after that merges. (#364)
+- **Team runs have a screen.** Under Agents > Teams you can open a run by the id `conker team run` prints, read where it stands in plain words, start the next role after you read the last answer, check a waiting role, and finish or cancel the run; with the daily spending cap off it says so. Pi has no list of runs, so opened runs are remembered in this browser (#365).
 
 - **One model button, as in Claude Code.** The composer's model button names the model alone (no plan name), with the effort beside it. Its menu lists Opus 5.5, Fable 5.2, Sonnet 5.5 and Haiku 5.5 with number keys 1-4, an Effort submenu (Auto to Max) and More models (older Claude models and the rest); the separate Effort chip is gone, and a row adds the Claude models to the owner's list. Voice and video call are toolbar buttons that wrap to the next row before they fold. On a phone the button shows its label and every menu row is 44 px tall. (#363)
 
