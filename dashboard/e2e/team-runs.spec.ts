@@ -89,6 +89,8 @@ test('team runs: a run waiting for an approval sends him to the Inbox and offers
 
 test('team runs: a run opened once is remembered in this browser and listed again', async ({ page }) => {
   await openRun(page)
+  // Only a run Pi has answered for is remembered: wait for it before closing.
+  await expect(page.getByRole('dialog').getByText('Between roles')).toBeVisible()
   await page.keyboard.press('Escape')
   await page.reload()
   await page.locator('main:not([role="status"])').first().waitFor()
