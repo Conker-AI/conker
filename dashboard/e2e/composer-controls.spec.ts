@@ -107,10 +107,10 @@ test('the Thinking and Complexity chips show what Auto chose and why, a changed 
   const errors = await open(page, '/chat')
   await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
-  await page.getByRole('button', { name: 'Thinking: On (auto)' }).click()
+  await page.getByRole('button', { name: 'Think first: On (auto)' }).click()
   await expect(page.getByText('Auto chose this:')).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Complexity: Hard (auto)' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Difficulty: Hard (auto)' })).toBeVisible()
   // The old Mode popover held Think, Complexity and Research switches; it now holds the presets only.
   await page.getByRole('button', { name: /^Mode: / }).click()
   await expect(page.getByRole('radio', { name: /Fast/ })).toBeVisible()
