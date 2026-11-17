@@ -14,27 +14,28 @@ function load(file, deps = {}) {
 
 const templates = load('src/lib/chat/prompt-templates.ts')
 
-// Check template structure and order
-assert.deepEqual(templates.builtinTemplates.map(t => t.id), ['research', 'writing', 'code', 'analysis', 'summary'], 'Template ids in order')
+// The starters now live in Pi (GET /prompts/templates), so the dashboard holds no template of its own.
+// These forms have the shape Pi's starters have; the compile rules must give the text Pi builds too.
+assert.equal(templates.builtinTemplates, undefined, 'The dashboard no longer ships its own starter templates')
+const f = (id, label, type, extra = {}) => ({ id, label, type, required: false, multiple: false, ...extra })
+const research = { id: 'starter-research', name: 'Research', description: '', fields: [
+  f('subject', 'Subject', 'longText', { required: true }), f('do', 'Do', 'list'), f('dont', "Don't", 'list'), f('output', 'Output', 'choice', { options: ['Report', 'Table', 'Slides', 'File'] }), f('context', 'Context', 'longText')] }
+const code = { id: 'code', name: 'Code', description: '', fields: [
+  f('task', 'Task', 'longText', { required: true }), f('language', 'Language', 'shortText'), f('constraints', 'Constraints', 'list'), f('tests', 'Include tests', 'switch')] }
+const analysis = { id: 'analysis', name: 'Analysis', description: '', fields: [
+  f('question', 'Question', 'longText', { required: true }), f('options', 'Options', 'list'), f('criteria', 'Criteria', 'list'), f('deadline', 'Decide by', 'date')] }
+const summary = { id: 'summary', name: 'Summary', description: '', fields: [
+  f('source', 'Source', 'longText', { required: true }), f('format', 'Format', 'shortText'), f('maxWords', 'Maximum words', 'number')] }
 
-for (const template of templates.builtinTemplates) {
+for (const template of [research, code, analysis, summary]) {
   assert(template.fields.length <= 12, `Template ${template.id} has at most 12 fields`)
-  
-  const fieldIds = template.fields.map(f => f.id)
+  const fieldIds = template.fields.map(field => field.id)
   assert(new Set(fieldIds).size === fieldIds.length, `Template ${template.id} has unique field ids`)
-  
-  const requiredFields = template.fields.filter(f => f.required)
-  assert(requiredFields.length > 0, `Template ${template.id} has at least one required field`)
-  
-  for (const field of template.fields) {
-    if (field.type === 'choice') {
-      assert(field.options && field.options.length > 0, `Choice field ${field.id} in ${template.id} has options`)
-    }
-  }
+  assert(template.fields.some(field => field.required), `Template ${template.id} has at least one required field`)
 }
 
 // Check Research example compilation
-const researchTemplate = templates.builtinTemplates.find(t => t.id === 'research')
+const researchTemplate = research
 const researchValues = {
   subject: 'Best laptop',
   do: ['Compare battery', '  '],
@@ -54,7 +55,7 @@ Output: Table`
 assert.equal(templates.compilePrompt(researchTemplate, researchValues), expectedResearch, 'Research example compiles correctly')
 
 // Check list uses bullet points and switch behavior
-const codeTemplate = templates.builtinTemplates.find(t => t.id === 'code')
+const codeTemplate = code
 const codeValues = { task: 'Write function', language: 'TypeScript', constraints: ['No loops', 'No recursion'], tests: true }
 const codePrompt = templates.compilePrompt(codeTemplate, codeValues)
 assert.match(codePrompt, /Constraints:\n- No loops\n- No recursion/, 'List uses bullet points')
@@ -79,12 +80,12 @@ const codePromptFalse = templates.compilePrompt(codeTemplate, codeValuesFalse)
 assert(!codePromptFalse.includes('Include tests'), 'Switch false omits field')
 
 // Check number and date formatting
-const analysisTemplate = templates.builtinTemplates.find(t => t.id === 'analysis')
+const analysisTemplate = analysis
 const analysisValues = { question: 'Which laptop?', options: ['MacBook', 'Dell'], criteria: ['Price'], deadline: '2024-12-01' }
 const analysisPrompt = templates.compilePrompt(analysisTemplate, analysisValues)
 assert.match(analysisPrompt, /Decide by: 2024-12-01/, 'Date formats as label: value')
 
-const summaryTemplate = templates.builtinTemplates.find(t => t.id === 'summary')
+const summaryTemplate = summary
 const summaryValues = { source: 'Long text here', format: 'Bullet points', maxWords: '100' }
 const summaryPrompt = templates.compilePrompt(summaryTemplate, summaryValues)
 assert.match(summaryPrompt, /Maximum words: 100/, 'Number formats as label: value')

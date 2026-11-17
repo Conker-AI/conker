@@ -12,6 +12,7 @@ import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
+import { createPromptTemplatesClient } from './prompt-templates'
 import { createChatAnswersClient } from './chat-answers'
 import { createChatReviewsClient } from './chat-reviews'
 import { createChatNamesClient } from './chat-names'
@@ -26,6 +27,7 @@ import type { GatewayHostInventoryClient } from './host-inventory'
 import { createGatewayHostOpsClient } from './host-ops'
 import { createUpdatesClient } from './updates'
 import { createGatewayTeamsClient } from './teams'
+import { createTeamRunsClient } from './team-runs'
 import { createNativeSessionsClient } from './native-sessions'
 import { createMemoryCorrectionsClient } from './memory-corrections'
 import { createCodexSessionsClient } from './codex-sessions'
@@ -339,6 +341,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     memoryUses: createMemoryUsesClient(auth),
     openLoops: createOpenLoopsClient(auth),
     promptEnhance: createPromptEnhanceClient(auth),
+    promptTemplates: createPromptTemplatesClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */
     chatAnswers: createChatAnswersClient(auth),
     chatReviews: createChatReviewsClient(auth),
@@ -360,6 +363,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     hostOps: createGatewayHostOpsClient(auth),
     updates: createUpdatesClient(auth),
     teams: createGatewayTeamsClient(auth),
+    /** A team run read by its id, and the owner's next steps on it: run the next role, check, end. */
+    teamRuns: createTeamRunsClient(auth),
     filesystem: createGatewayFilesystemClient(auth),
     calls: createGatewayCallsClient(auth),
     search: createGatewaySearchClient(auth),
