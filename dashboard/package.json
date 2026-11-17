@@ -63,6 +63,7 @@
     "check:answer-ui": "node scripts/check-answer-ui.mjs",
     "check:voice": "node scripts/check-voice.cjs",
     "check:theme": "node scripts/check-theme.cjs",
+    "check:plain-words": "node scripts/check-plain-words.cjs",
     "check:route-actions": "node scripts/check-route-actions.cjs",
     "check:settings": "node scripts/check-settings.cjs && node scripts/check-server-setting.cjs",
     "check:pwa": "node scripts/check-pwa.cjs",

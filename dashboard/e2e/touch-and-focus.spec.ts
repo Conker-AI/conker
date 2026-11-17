@@ -5,7 +5,7 @@
 //  - Keyboard focus is visible on every control the Tab key reaches, in both themes, and the ring colour has 3:1
 //    contrast against the page (WCAG 1.4.11).
 import { devices, expect, test, type Page } from '@playwright/test'
-import { open } from './pages'
+import { card, open } from './pages'
 
 const TOUCH = 44
 const PHONE = { viewport: { width: 390, height: 844 }, userAgent: devices['Pixel 7'].userAgent, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
@@ -110,5 +110,48 @@ for (const theme of ['light', 'dark'] as const) test.describe(`keyboard focus, $
     }
     expect(lost, `controls Tab reached with no visible focus on ${address}`).toEqual([])
     expect(errors).toEqual([])
+  })
+})
+
+// Dialogs opened and closed with the keyboard alone: focus moves inside, Escape closes, focus goes back.
+test.describe('dialogs by keyboard', () => {
+  const focusInside = (page: Page, selector: string) => page.evaluate(sel => !!document.activeElement?.closest(sel), selector)
+
+  test('Ctrl+K search: focus lands inside, Escape closes it', async ({ page }) => {
+    await open(page, '/overview')
+    await page.keyboard.press('Control+k')
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect.poll(() => focusInside(page, '[role="dialog"]')).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  })
+
+  test('forget confirmation: focus lands inside, Escape closes it and focus returns', async ({ page }) => {
+    await open(page, '/memory')
+    await page.getByRole('combobox', { name: 'Memory view' }).click()
+    await page.getByRole('option', { name: 'List' }).click()
+    await page.getByRole('button', { name: 'Select items' }).click()
+    await page.getByRole('checkbox', { name: 'Physics worksheet due Fridays', exact: true }).click()
+    const forget = page.getByRole('button', { name: 'Forget…' })
+    await forget.focus()
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Forget 1 memory permanently?' })
+    await expect(dialog).toBeVisible()
+    await expect.poll(() => focusInside(page, '[role="dialog"]')).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(forget).toBeFocused()
+  })
+
+  test('"are you sure" before a send: opens by keyboard, Escape sends nothing and focus returns', async ({ page }) => {
+    await open(page, '/inbox')
+    const send = card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true })
+    await send.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await expect.poll(() => focusInside(page, '[role="alertdialog"]')).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(send).toBeFocused()
   })
 })

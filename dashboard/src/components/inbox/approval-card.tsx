@@ -113,9 +113,9 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       </div>
     </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went.{proofLine ? ` ${proofLine}` : ''} {labels.no} and Change run nothing.</p>}
   </InboxCard>
-  if (confirming) return <>
-    <ApprovalConfirm request={request} busy={busy} onConfirm={() => { setConfirming(false); onDecide('approved', false, '') }} onCancel={() => { setConfirming(false); setConfirmName('') }} />
+  // The card stays in the same place in the tree so its button is still there when the dialog closes and gets the focus back.
+  return <>
+    {confirming && <ApprovalConfirm request={request} busy={busy} onConfirm={() => { setConfirming(false); onDecide('approved', false, '') }} onCancel={() => { setConfirming(false); setConfirmName('') }} />}
     {card}
   </>
-  return card
 }

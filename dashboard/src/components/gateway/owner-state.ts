@@ -23,7 +23,7 @@ export function canReleaseExpiredOwnerDecision(request: OwnerRequest, attempt: R
   return !!attempt?.checked && !!attempt.conflict && attempt.status === 'approved' && request.status === 'pending' && request.unavailableReason === 'expired'
 }
 export const ownerUnavailableText: Record<NonNullable<OwnerRequest['unavailableReason']>, string> = {
-  invalid_origin: 'ToolGate could not verify the original action. This record cannot authorize execution.',
+  invalid_origin: 'Conker could not verify where this action came from. This record cannot approve anything.',
   invalid_action: 'The saved action is incomplete or invalid. Request fresh confirmation through the tool.',
   arguments_unavailable: 'The complete arguments cannot be displayed. Approval is unavailable.',
   unsupported_subject: 'This action type is not supported by this owner review surface yet.',

@@ -308,7 +308,7 @@ export function ToolConfiguration({ definition, onChange }: { definition: ToolDe
         </ReferenceSection>
         <ReferenceSection title="Runtime boundary">
           <p className="text-sm text-muted-foreground">
-            ToolGate stores this draft. Compilation, publication, credential binding and execution remain unavailable.
+            Conker stores this draft. Compilation, publication, credential binding and execution remain unavailable.
           </p>
         </ReferenceSection>
       </div>

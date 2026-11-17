@@ -3,7 +3,7 @@ import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-deliv
 import type { Action, MessageMemoryFeedback } from './contract'
 import type { MemoryUndoState } from './memory-undo'
 
-const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
+const unsupported: Action = { availability: 'unsupported', reason: 'Not available here.' }
 const labels: Record<MemoryDelivery['state'], string> = { pending: 'Memory pending', saved: 'Remembered', filtered: 'Not added to memory', unavailable: 'Couldn’t check memory', excluded: 'Memory excluded', removed: 'Removed from memory' }
 const explanation: Record<NonNullable<MemoryDelivery['reasonCode']>, string> = {
   queued: 'This message is queued for a memory check. Saving the chat does not confirm a memory write.',

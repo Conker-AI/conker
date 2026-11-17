@@ -9,7 +9,7 @@ const engineerWords = /\bRevision \d|records? loaded|recorded relationships|\ben
 // Words the sweep of 2026-11-15 found on live screens (words.md), each now replaced by a plain word: cron (Jobs),
 // ToolGate, gateway, opaque target, immutable, "Model ID" / "Tool IDs", "chip" for a setting, Incognito (Private
 // chat), "Take snapshot" (Check now), British "summarised", "Prompt improved", router ids such as jev-preview.
-const sweepWords = /\bcron\b|\bToolGate\b|\bgateway\b|\bopaque\b|\bimmutable\b|\bModel IDs?\b|\bTool IDs\b|\bchips?\b|\bIncognito\b|Take snapshot|\bsummari[sz]ed\b|Prompt improved|execution policy|verified receipt|\bjev-[a-z]+/i
+const sweepWords = /\bcron\b|\b(?:Tool|Memory|System)Gate\b|\bgateway\b|\bopaque\b|\bimmutable\b|\bModel IDs?\b|\bTool IDs\b|\bchips?\b|\bIncognito\b|Take snapshot|\bsummari[sz]ed\b|Prompt improved|execution policy|verified receipt|\bjev-[a-z]+/i
 
 for (const place of places) test(`plain words: ${place}`, async ({ page }) => {
   const errors = await open(page, place)

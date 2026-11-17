@@ -10,7 +10,7 @@ export type GatewayOperationReview = { title: string; path: string; target: stri
 export function describeGatewayOperation(operation: GatewayVerifiedOperation): GatewayOperationReview {
   const { path, body } = operation
   const parts = path.split('/')
-  let title = 'Confirm gateway operation', target = path
+  let title = 'Confirm this action', target = path
   const details: string[] = []
   const safeId = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null
   const safeName = (value: unknown) => typeof value === 'string' && value.trim().length > 0 && value.length <= 160 && [...value].every(character => character.codePointAt(0)! >= 32 && character.codePointAt(0) !== 127) ? value.trim() : null
@@ -106,7 +106,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     return { title: 'Approve Conker’s request', path, target: `Request ${parts[5]}`, details: ['Creates exactly what the Inbox card shows: the job or the memory. Nothing else changes.'] }
   }
   if (path === '/api/owner/access/delegate') {
-    return { title: body.enabled ? 'Let Conker decide by your settings' : 'Ask me for everything that asks', path, target: 'Conker in ToolGate', details: [body.enabled ? 'Your chat, agent and tool settings decide what runs without asking. Sensitive tools and system controls always ask you.' : 'Every tool goes back to its own setting; nothing Conker decides skips asking you.'] }
+    return { title: body.enabled ? 'Let Conker decide by your settings' : 'Ask me for everything that asks', path, target: 'How Conker uses tools', details: [body.enabled ? 'Your chat, agent and tool settings decide what runs without asking. Sensitive tools and system controls always ask you.' : 'Every tool goes back to its own setting; nothing Conker decides skips asking you.'] }
   }
   if (/^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/sensitive$/.test(path)) {
     return { title: body.sensitive ? 'Always ask me for this tool' : 'Let settings decide this tool', path, target: `Tool ${parts[4]}`, details: [body.sensitive ? 'No chat switch, agent or AI can run it without you.' : 'Your chat, agent and tool settings decide again.'] }
@@ -118,7 +118,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     return { title: `Import chats from ${parts[5] === 'claude' ? 'Claude' : 'ChatGPT'}`, path, target: 'The file you previewed', details: ['Saves read-only copies of the chats in that exact file. Chats already imported are skipped.', 'Your own messages are offered to memory if the preview said so.'] }
   }
   if (path === '/api/owner/tool-settings') {
-    return { title: 'Save how tools run', path, target: 'ToolGate settings', details: ['Changes time limits, the Terminal’s resources, web search or the time an approved action has to start. None of them can go past ToolGate’s own limits.'] }
+    return { title: 'Save how tools run', path, target: 'Tool settings', details: ['Changes time limits, the Terminal’s resources, web search or the time an approved action has to start. None of them can go past the built-in limits.'] }
   }
   if (path === '/api/owner/lockdown') {
     return { title: body.enabled ? 'Turn on lockdown' : 'Turn off lockdown', path, target: 'Every tool and workflow', details: [body.enabled ? 'No tool or workflow runs until you turn it off.' : 'Tools and workflows can run again; your access settings still decide what asks you first.'] }

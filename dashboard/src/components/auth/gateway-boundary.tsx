@@ -18,7 +18,7 @@ type GatewayProps = { store: GatewayStore; onSignedOut?: () => void }
 
 function GatewayFrame({ title, description, children, authenticated = false }: { title: string; description: string; children: ReactNode; authenticated?: boolean }) {
   return <div className="min-h-svh bg-background text-foreground">
-    <header className="border-b"><PageContainer className="flex items-center gap-3 py-4"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" /><span className="font-semibold">Conker</span><Badge variant="outline">{authenticated ? "Signed in" : "Gateway"}</Badge><div className="ml-auto"><ModeToggle /></div></PageContainer></header>
+    <header className="border-b"><PageContainer className="flex items-center gap-3 py-4"><CompanionPortrait portrait="/conker.png" name="Conker" tone="graphite" /><span className="font-semibold">Conker</span><Badge variant="outline">{authenticated ? "Signed in" : "Sign in"}</Badge><div className="ml-auto"><ModeToggle /></div></PageContainer></header>
     <main className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 sm:px-6 sm:py-12"><PageHeader title={title} description={description} />{children}</main>
   </div>
 }
@@ -29,7 +29,7 @@ function GatewaySignIn({ store }: { store: GatewayStore }) {
   const passwordInput = useRef<HTMLInputElement>(null)
   return <GatewayFrame title="Sign in to Conker" description="Use the owner password configured on the machine hosting Conker.">
     <form className="space-y-5" onSubmit={async event => { event.preventDefault(); if (!password || pending) return; if (await store.getState().login(password)) setPassword(""); else { passwordInput.current?.focus(); passwordInput.current?.select() } }}>
-      <div className="space-y-2"><Label htmlFor="gateway-password">Owner password</Label><Input ref={passwordInput} id="gateway-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="gateway-password-help" aria-invalid={error ? true : undefined} autoFocus /><p id="gateway-password-help" className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is sent only to this gateway.</p></div>
+      <div className="space-y-2"><Label htmlFor="gateway-password">Owner password</Label><Input ref={passwordInput} id="gateway-password" name="password" type="password" autoComplete="current-password" maxLength={2048} required disabled={pending} value={password} onChange={event => setPassword(event.target.value)} aria-describedby="gateway-password-help" aria-invalid={error ? true : undefined} autoFocus /><p id="gateway-password-help" className="text-xs text-muted-foreground">Spaces and Unicode are preserved. The password is sent only to your server.</p></div>
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error.message}</p>}
       <FormActions><Button type="submit" disabled={pending || !password}>{pending ? "Signing in…" : "Sign in"}</Button></FormActions>
     </form>
@@ -87,7 +87,7 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
   }, [store, signedIn])
 
   if (state.phase === "authenticated" && gatewaySessionUnlocked(state.session) && !state.pending && !state.logoutUnconfirmed) return <>{children}</>
-  if (state.phase === "checking") return <GatewayFrame title="Checking your session" description="Verifying access with this gateway before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
+  if (state.phase === "checking") return <GatewayFrame title="Checking your session" description="Checking your access before opening your workspace."><p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><RefreshCw className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Please wait…</p></GatewayFrame>
   if (state.logoutUnconfirmed) return <GatewayFrame title="Sign-out was not confirmed" description="This screen is locked. The server session may still be active until sign-out succeeds or the host revokes it.">
     {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
     <Button onClick={() => void signOut(store, onSignedOut)}><LogOut />Retry sign out</Button>
@@ -99,7 +99,7 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
     {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
   </GatewayFrame>
   if (state.phase === "anonymous" || state.phase === "authenticated" && !gatewaySessionUnlocked(state.session)) return <GatewaySignIn store={store} />
-  return <GatewayFrame title="Could not verify access" description="Check that the gateway is running and that you opened its configured HTTPS address.">
+  return <GatewayFrame title="Could not verify access" description="Check that your server is running and that you opened its secure (HTTPS) address.">
     {state.error && <p role="alert" className="text-sm text-destructive-foreground">{state.error.message}</p>}
     <Button onClick={() => void store.getState().revalidate()}><RefreshCw />Retry connection</Button>
     <p className="text-xs leading-5 text-muted-foreground">No workspace data is shown while access is unverified. Retrying checks the session; it does not repeat a previous workspace action.</p>
@@ -110,7 +110,7 @@ export function GatewayBoundary({ store, children, onSignedOut }: GatewayProps &
 export function GatewayStatusSurface({ store, onSignedOut }: GatewayProps) {
   const { session, pending, error } = useStore(store)
   if (!session?.authenticated) return null
-  return <GatewayFrame authenticated title="Your browser is signed in" description="Authentication is connected to this gateway. The live conversation workspace is not connected to this screen yet.">
+  return <GatewayFrame authenticated title="Your browser is signed in" description="You are signed in to your server. The live conversation workspace is not connected to this screen yet.">
     <dl className="space-y-4 rounded-lg border bg-card p-5 text-card-foreground"><div><dt className="text-sm text-muted-foreground">Session status</dt><dd className="mt-1 text-sm font-medium">Authenticated</dd></div><div><dt className="text-sm text-muted-foreground">Absolute session expiry</dt><dd className="mt-1 text-sm"><time dateTime={new Date(session.expiresAt * 1000).toISOString()}>{new Date(session.expiresAt * 1000).toLocaleString()}</time></dd></div></dl>
     <p className="text-sm leading-6 text-muted-foreground">The server also expires idle sessions. Checking access does not connect tools, start work or load fixture records.</p>
     {error && <p role="alert" className="text-sm text-destructive-foreground">{error.message}</p>}

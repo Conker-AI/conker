@@ -29,6 +29,6 @@ const services = (() => {
 })()
 
 export default function GatewayEntry() {
-  if (!services.value) return <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-background p-6 text-foreground"><PageHeader title="Open Conker over HTTPS" /><p role="alert" className="max-w-lg text-center text-sm text-muted-foreground">{services.error} Open the configured HTTPS gateway address. No connection was attempted.</p></main>
+  if (!services.value) return <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-background p-6 text-foreground"><PageHeader title="Open Conker over HTTPS" /><p role="alert" className="max-w-lg text-center text-sm text-muted-foreground">{services.error} Open the secure (HTTPS) address of your server. No connection was attempted.</p></main>
   return <><GatewayBoundary store={services.value.store}><GatewayWorkspace owner={services.value.owner} proposals={services.value.proposals} ownerState={services.value.ownerState} control={services.value.control} authStore={services.value.store} runtime={services.value.runtime} activity={services.value.activity} conversationState={services.value.workspace} activityState={services.value.activityState} sourcePrivacy={services.value.sourcePrivacy} /></GatewayBoundary><GatewayOperationVerification store={services.value.verification} authStore={services.value.store} /></>
 }

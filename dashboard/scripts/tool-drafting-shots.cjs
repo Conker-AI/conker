@@ -79,7 +79,7 @@ async function shoot(browser, width, theme) {
   await roles.waitFor()
   await page.getByText(': how new memories are sorted').scrollIntoViewIfNeeded()
   await page.getByText(': how new memories are sorted').click()
-  await page.getByText('MemoryGate asks this model').waitFor()
+  await page.getByText("Conker's memory asks this model").waitFor()
   await page.getByText(': how new memories are sorted').evaluate(node => node.scrollIntoView({ block: 'center' }))
   await page.screenshot({ path: name('8-model-roles') })
 

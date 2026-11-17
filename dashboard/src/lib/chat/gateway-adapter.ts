@@ -39,7 +39,7 @@ export type GatewayChatHandlers = {
   resumeTurn?: (turnId: string) => void | Promise<void>
   reviewTurn?: (turnId: string, destination: TurnDestination) => void
 } & Record<RecoveryAction, () => void | Promise<void>>
-const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
+const unsupported: Action = { availability: 'unsupported', reason: 'Not available here.' }
 
 /** Reads fresh eligibility on invocation, retaining the selected session and request identity. */
 export function gatewayChatContract(state: GatewayChatState, read: () => GatewayChatState, handlers: () => GatewayChatHandlers): ChatContract {
