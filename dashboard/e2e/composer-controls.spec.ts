@@ -31,6 +31,7 @@ test('the wand rewrites the draft without sending it, and Undo brings the origin
   const draft = 'plan my week around judo and school'
   await box.fill(draft)
   await page.getByRole('button', { name: 'Improve my prompt' }).click()
+  await page.getByRole('button', { name: /^Just rewrite it/ }).click()
   await expect(page.getByText('Prompt improved')).toBeVisible()
   await expect(box).toHaveValue(/^Goal: plan my week/)
   await expect(page.getByText('changed in another tab')).toHaveCount(0)

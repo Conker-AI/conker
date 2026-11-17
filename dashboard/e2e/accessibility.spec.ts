@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { card, open } from './pages'
 
-const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs']
+const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs', '/agents?tab=templates']
 
 async function violations(page: Page, include?: string) {
   // Skeletons mark themselves busy; check the loaded screen, not the placeholder.
@@ -58,6 +58,23 @@ for (const theme of ['light', 'dark'] as const) test.describe(theme, () => {
     await card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true }).click()
     await expect(page.getByRole('alertdialog')).toBeVisible()
     expect(await violations(page, '[role="alertdialog"]')).toEqual([])
+  })
+
+  test('axe: template editor', async ({ page }) => {
+    await open(page, '/agents?tab=templates')
+    await page.getByRole('button', { name: 'More actions for Research' }).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    expect(await violations(page, '[role="dialog"]')).toEqual([])
+  })
+
+  test('axe: wand template picker', async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+    await open(page, '/chat')
+    await page.getByRole('textbox').first().fill('Best laptop for travel')
+    await page.getByRole('button', { name: 'Improve my prompt' }).click()
+    await expect(page.getByRole('button', { name: /^Research/ })).toBeVisible()
+    expect(await violations(page, '[role="dialog"]')).toEqual([])
   })
 
   test('axe: forget confirmation', async ({ page }) => {

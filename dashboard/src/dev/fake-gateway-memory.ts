@@ -5,6 +5,7 @@
  */
 import { GatewayError } from '@/lib/gateway/transport'
 import { fakeOpenLoops } from './fake-gateway-loops'
+import { createFakePrompts } from './fake-gateway-prompts'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; onDispatch?: () => void }
@@ -50,12 +51,15 @@ export function createFakeMemory(fail: (status: number) => never) {
     }
     return message.memory_delivery ?? receipt
   }
+  const prompts = createFakePrompts()
   const api = {
     memories,
     deliveryFor,
     handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
       const loops = fakeOpenLoops(path, method, options)
       if (loops) return loops
+      const prompted = prompts.handle(path, method, options)
+      if (prompted) return prompted
       let match: RegExpMatchArray | null
       if ((match = path.match(/^\/api\/control\/pi\/memory\/corrections\/memories\/([^/]+)$/)) && method === 'GET') {
         const item = memories.find(row => row.type === 'memory' && row.id === match![1])
@@ -123,15 +127,6 @@ export function createFakeMemory(fail: (status: number) => never) {
         forgetReceipts.set(requestId, { intent, receipt }); pendingForget = null
         try { globalThis.sessionStorage?.removeItem(forgetKey) } catch { /* Preview storage is optional. */ }
         return receipt
-      }
-      // Pi's prompt enhance has no screen of its own in the preview, so it is answered here.
-      if (path === '/api/control/pi/prompts/enhance' && method === 'POST') {
-        const text = String((options.body as { text?: unknown } | undefined)?.text ?? '').trim()
-        if (!text) throw new GatewayError('http', 422)
-        return { text: `Goal: ${text}
-
-Context: say what you already know and what is unclear.
-Output: a short answer first, then the reasons.`, notes: ['Added a goal, context and the shape of the answer.'], modelId: 'preview-drafting', templateId: null, fields: {} }
       }
       const uses = path.match(/^\/api\/control\/pi\/memory\/([A-Za-z0-9][A-Za-z0-9_.:-]{0,199})\/uses$/)
       if (uses && method === 'GET') {

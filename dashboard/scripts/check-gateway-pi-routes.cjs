@@ -23,9 +23,23 @@ async function main() {
   await transport.request('/api/control/pi/memory/mem_judo/uses', { query: { limit: 1 } })
   await transport.request('/api/control/pi/open-loops', { query: { state: 'done', limit: 50 } })
   assert.equal(urls.length, 5)
+  // Prompt templates: the list, one template by either kind of id, a save and a delete; nothing else under /prompts.
+  const posts = []
+  const writer = createGatewayTransport({ origin, fetch: async (url, init) => { posts.push([init?.method, url]); return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }) } })
+  const csrfToken = 'c'.repeat(43)
+  const mine = 'tpl_' + '0123456789abcdef'.repeat(2)
+  for (const id of ['starter-research', 'starter-bug-report', mine]) await writer.request(`/api/control/pi/prompts/templates/${id}`)
+  await writer.request('/api/control/pi/prompts/templates')
+  await writer.request('/api/control/pi/prompts/templates', { method: 'POST', csrfToken, body: { name: 'A', description: '', fields: [] } })
+  await writer.request(`/api/control/pi/prompts/templates/${mine}`, { method: 'POST', csrfToken, body: { expected_revision: 1 } })
+  await writer.request(`/api/control/pi/prompts/templates/${mine}/delete`, { method: 'POST', csrfToken, body: { expected_revision: 1 } })
+  assert.equal(posts.length, 7)
+  for (const bad of ['/api/control/pi/prompts/templates/other', '/api/control/pi/prompts/templates/tpl_short', '/api/control/pi/prompts/templates/starter-x/extra', '/api/control/pi/prompts/templates/starter-x/delete/more']) await assert.rejects(writer.request(bad), error => error.kind === 'validation', bad)
+  await assert.rejects(writer.request(`/api/control/pi/prompts/templates/${mine}/delete`), error => error.kind === 'validation', 'delete is a POST only')
+  await assert.rejects(writer.request('/api/control/pi/prompts/enhance'), error => error.kind === 'validation', 'enhance is a POST only')
   assert.ok(urls[2].includes('origin=stated'))
   // Team runs: one run by its id, its steps, check and finish. Pi's browser contract also allows starting a run; the browser never does.
-  const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32), csrfToken = 'x'.repeat(43)
+  const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32)
   await transport.request(run)
   for (const action of ['steps', 'reconcile', 'finish']) await transport.request(`${run}/${action}`, { method: 'POST', csrfToken, body: {} })
   assert.equal(urls.length, 9); urls.length = 5
@@ -37,6 +51,7 @@ async function main() {
   await assert.rejects(transport.request('/api/control/pi/memory/mem_judo/uses/extra'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/memory/unknown'), error => error.kind === 'validation')
   assert.throws(() => snapshotGatewayOperation('/api/control/pi/prompts/other', {}), error => error.kind === 'validation')
+  console.log('Pi routes: memory care, beliefs, prompt enhance and prompt templates pass the transport; unknown routes are refused')
   console.log('Pi routes: memory care, beliefs, team runs and prompt enhance pass the transport; unknown routes are refused')
 }
 main().catch(error => { console.error(error); process.exit(1) })
