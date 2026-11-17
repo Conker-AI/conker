@@ -30,7 +30,7 @@ async function main() {
   const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32), csrfToken = 'x'.repeat(43)
   await transport.request(run)
   for (const action of ['steps', 'reconcile', 'finish']) await transport.request(`${run}/${action}`, { method: 'POST', csrfToken, body: {} })
-  assert.equal(urls.length, 9); urls.length = 5
+  assert.equal(urls.length, 10); urls.length = 6
   await assert.rejects(transport.request('/api/control/pi/team-runs'), error => error.kind === 'validation')
   await assert.rejects(transport.request(`${run}/steps`), error => error.kind === 'validation')
   assert.equal(snapshotGatewayOperation(`${run}/finish`, { expected_revision: 3, state: 'cancelled' }).path, `${run}/finish`)
