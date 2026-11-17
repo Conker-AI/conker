@@ -5,10 +5,11 @@ const path = require("node:path")
 
 const root = path.join(__dirname, "..", "src")
 const banned = /\b(ToolGate|MemoryGate|SystemGate)\b|(?<=[A-Za-z,.] )[Gg]ateways?(?= [a-z]|[.,;!?])|gateway['’]s\b/
-// App.tsx: a build setting an owner never sets. imported-chats.tsx: matches the text Pi sends in a problem field; the owner sees a plain sentence built from it.
+// App.tsx: a build setting an owner never sets. imported-chats.tsx: matches the text Pi sends in a problem field; the owner sees a plain sentence built from it. fake-gateway-team-runs.ts: Pi's own wire text for the run limits, never shown.
 const allowed = [
   { file: "App.tsx", text: "Invalid dashboard mode" },
-  { file: "components/gateway/imported-chats.tsx", text: "startsWith('MemoryGate refused the import listener')" }
+  { file: "components/gateway/imported-chats.tsx", text: "startsWith('MemoryGate refused the import listener')" },
+  { file: "dev/fake-gateway-team-runs.ts", text: "separate ToolGate authorization" }
 ]
 
 function* walk(dir) {
