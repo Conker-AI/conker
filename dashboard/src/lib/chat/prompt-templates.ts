@@ -4,65 +4,6 @@ export type PromptTemplate = { id: string; name: string; description: string; fi
 export type FieldValue = string | string[] | boolean
 export type TemplateValues = Record<string, FieldValue>
 
-export const builtinTemplates: readonly PromptTemplate[] = [
-  {
-    id: 'research',
-    name: 'Research',
-    description: 'Find out about a subject and report back.',
-    fields: [
-      { id: 'subject', label: 'Subject', type: 'longText', required: true, example: 'Best laptop under $1000 for coding and travel' },
-      { id: 'do', label: 'Do', type: 'list', example: 'Compare battery life' },
-      { id: 'dont', label: 'Don\'t', type: 'list', example: 'Gaming laptops' },
-      { id: 'output', label: 'Output', type: 'choice', options: ['Report', 'Table', 'Slides', 'File'] },
-      { id: 'context', label: 'Context', type: 'longText', example: 'I write Python and travel by train' }
-    ] as const
-  },
-  {
-    id: 'writing',
-    name: 'Writing',
-    description: 'Draft text for someone in a chosen tone.',
-    fields: [
-      { id: 'topic', label: 'What to write', type: 'longText', required: true },
-      { id: 'audience', label: 'Audience', type: 'shortText' },
-      { id: 'tone', label: 'Tone', type: 'choice', options: ['Friendly', 'Neutral', 'Formal', 'Persuasive'] },
-      { id: 'length', label: 'Length', type: 'choice', options: ['Short', 'Medium', 'Long'] },
-      { id: 'include', label: 'Must include', type: 'list' }
-    ] as const
-  },
-  {
-    id: 'code',
-    name: 'Code',
-    description: 'Write or change code.',
-    fields: [
-      { id: 'task', label: 'Task', type: 'longText', required: true },
-      { id: 'language', label: 'Language', type: 'shortText', example: 'TypeScript' },
-      { id: 'constraints', label: 'Constraints', type: 'list' },
-      { id: 'tests', label: 'Include tests', type: 'switch' }
-    ] as const
-  },
-  {
-    id: 'analysis',
-    name: 'Analysis',
-    description: 'Weigh options and recommend one.',
-    fields: [
-      { id: 'question', label: 'Question', type: 'longText', required: true },
-      { id: 'options', label: 'Options', type: 'list' },
-      { id: 'criteria', label: 'Criteria', type: 'list' },
-      { id: 'deadline', label: 'Decide by', type: 'date' }
-    ] as const
-  },
-  {
-    id: 'summary',
-    name: 'Summary',
-    description: 'Shorten something long.',
-    fields: [
-      { id: 'source', label: 'Text to summarize', type: 'longText', required: true },
-      { id: 'format', label: 'Format', type: 'choice', options: ['Paragraph', 'Bullet points', 'One line'] },
-      { id: 'maxWords', label: 'Maximum words', type: 'number' }
-    ] as const
-  }
-] as const
-
 export function emptyValues(template: PromptTemplate): TemplateValues {
   const values: TemplateValues = {}
   for (const field of template.fields) {

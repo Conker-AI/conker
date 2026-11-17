@@ -17,12 +17,18 @@ import type { BeliefPage } from '../gateway/memory-beliefs'
 import type { MemoryUsePage } from '../gateway/memory-uses'
 import type { OpenLoopPage } from '../gateway/open-loops'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
+import type { TemplateDeleted, TemplatePage, TemplateReceipt } from '../gateway/prompt-templates'
+import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
 /** The JSON body Pi answers a route with, from the generated OpenAPI types. */
 type PiResponse<P extends keyof paths, M extends keyof paths[P]> =
   paths[P][M] extends { responses: infer R } ? Json<Ok<R>> : never
+
+/** The JSON body Pi accepts on a route. */
+type PiRequest<P extends keyof paths, M extends keyof paths[P]> =
+  paths[P][M] extends { requestBody: { content: { 'application/json': infer J } } } ? J : never
 
 /** Pydantic always sends fields with defaults, though the generator marks them optional; strict wire schemas may also leave fields optional. */
 type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
@@ -32,12 +38,19 @@ type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
 type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? true : false) : false
 
 export const piWire = {
+  // Pi's team-run replies are `unknown` in its OpenAPI, so only what the browser sends is bound here.
+  teamRunStep: true satisfies Same<TeamRunStepBody, PiRequest<'/team-runs/{identity}/steps', 'post'>>,
+  teamRunFinish: true satisfies Same<TeamRunFinishBody, PiRequest<'/team-runs/{identity}/finish', 'post'>>,
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
   memoryUses: true satisfies Same<MemoryUsePage, PiResponse<'/memory/{memory_id}/uses', 'get'>>,
   openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
+  promptTemplates: true satisfies Same<TemplatePage, PiResponse<'/prompts/templates', 'get'>>,
+  promptTemplate: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'get'>>,
+  promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
+  promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
   project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,

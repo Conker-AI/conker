@@ -48,7 +48,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
             }}>
         <ChatComposerFrame id="new-chat-composer" label={`Message ${activeAgentName}`} placeholder={`Ask ${activeAgentName} anything, or give it a task...`} value={firstMessage} onChange={setFirstMessage} inputRef={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} onSend={() => { if (!dictating) void startChat() }} input={templateActive ? <TemplateInput draftKey="new" disabled={createPending || sendPending || Boolean(createUnknown)} onText={setFirstMessage} onSubmit={() => { if (!dictating) void startChat() }} /> : undefined} controls={<>
             <ModePresetControl />{control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}</>} actions={<>
-              <TemplatePicker draftKey="new" disabled={createPending || sendPending || Boolean(createUnknown)} />
+              <TemplatePicker draftKey="new" client={control?.promptTemplates} disabled={createPending || sendPending || Boolean(createUnknown)} />
               {control && <GatewayModelPicker client={control} value={firstModel} disabled={createPending || sendPending || Boolean(createUnknown)} manualRequired={firstPrivacy.harnessDisabled} onChange={setFirstModel} effort={{ sessionId: null, pending: { value: firstEffort, set: setFirstEffort } }} />}
               <GatewaySkillPicker client={client} value={firstSkills} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={ids => setSkillChoices('__new__', ids)} />
               <ThinkControl companion={firstAgent === 'companion'} checked={firstValue.think} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={think => setThinkChoice('__new__', think)} />
@@ -56,7 +56,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
               <ComplexityControl />
               <NewChatPrivacyControl revisionKey={JSON.stringify(firstValue.privacy)} value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
               <NewChatCallButtons />
-              {control && <PromptEnhanceControl client={control.promptEnhance} value={firstMessage} onChange={setFirstMessage} options={{ privacy: firstPrivacy }} disabled={createPending || sendPending || Boolean(createUnknown) || dictating} />}
+              {control && <PromptEnhanceControl client={control.promptEnhance} templates={control.promptTemplates} value={firstMessage} onChange={setFirstMessage} options={{ privacy: firstPrivacy }} disabled={createPending || sendPending || Boolean(createUnknown) || dictating} />}
               <NewChatVoiceControl value={firstMessage} onChange={setFirstMessage} input={newChatComposer} onRecordingChange={setDictating} disabled={!visible || createPending || sendPending || Boolean(createUnknown)} />
               <AnimatedIconButton icon={SendIcon} type="submit" size="icon" className="size-9 shrink-0 rounded-full" aria-label="Send message" disabled={dictating || createPending || sendPending || !firstMessage.trim() || !draftCanSend(draftEntries.new) || firstPrivacy.harnessDisabled && !firstModel || Boolean(createUnknown)} />
         </>} />
