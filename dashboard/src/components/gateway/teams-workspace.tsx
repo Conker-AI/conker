@@ -15,6 +15,7 @@ import { useListSelection } from '@/components/design-system/list-selection'
 import { byName, byNewest, useListView } from '@/components/design-system/list-view'
 import { runBulk } from '@/components/design-system/list-bulk'
 import { GatewayPageFrame } from './page-frame'
+import { TeamRunDialog, TeamRunsSection } from './team-runs'
 import type { AgentProfile, GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayRuntimeClient, RuntimeSession } from '@/lib/gateway/runtime'
 import { gatewayError } from '@/lib/gateway/transport'
@@ -79,7 +80,8 @@ function TeamDefinition({ value, agents }: { value: GatewayTeamDefinition; agent
 }
 
 export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayControlClient; runtime: GatewayRuntimeClient }) {
-  const [params, setParams] = useSearchParams(), selectedId = params.get('team')
+  const [params, setParams] = useSearchParams(), selectedId = params.get('team'), runParam = params.get('run'), runId = runParam && /^teamrun_[0-9a-f]{32}$/.test(runParam) ? runParam : null
+  const openRun = (id: string | null) => { const next = new URLSearchParams(params); if (id) next.set('run', id); else next.delete('run'); setParams(next) }
   const [teams, setTeams] = useState<Awaited<ReturnType<typeof control.teams.list>>['results'] | null>(null), [agents, setAgents] = useState<AgentProfile[]>([]), [sessions, setSessions] = useState<RuntimeSession[]>([])
   const [error, setError] = useState<string | null>(null), [selected, setSelected] = useState<GatewayTeam | null>(null), [history, setHistory] = useState<GatewayTeamRevision | null>(null), [reload, setReload] = useState(0)
   const [editing, setEditing] = useState<GatewayTeam | 'new' | null>(null), [archive, setArchive] = useState<GatewayTeam | null>(null), [pending, setPending] = useState(false), [discard, setDiscard] = useState(false), [editorDirty, setEditorDirty] = useState(false)
@@ -144,7 +146,9 @@ export function GatewayTeamsWorkspace({ control, runtime }: { control: GatewayCo
       {visible.map(item => <ListLine key={item.id} id={item.id} selection={selection} actions={rowMenu(item)} to={`/agents?tab=teams&team=${item.id}`} icon={<Users />} title={item.name}
         sub={item.archived_at === null ? 'Saved setup' : 'Archived setup'} meta={`Version ${item.revision}`} />)}
     </ListCard>}
+    <TeamRunsSection control={control} onOpen={openRun} />
   </div>
+  <TeamRunDialog key={runId ?? 'none'} control={control} runId={runId} onClose={() => openRun(null)} />
   <Dialog open={Boolean(selectedId) && editing === null} onOpenChange={open => { if (!open) { const next = new URLSearchParams(params); next.delete('team'); setParams(next); setSelected(null) } }}><TaskDialogContent title={selected?.definition.name ?? 'Team'} description="Its setup and every earlier version" size="wide">{selected ? <div className="flex min-h-0 flex-1 flex-col"><OverlayBody><div className="space-y-6"><div className="flex flex-wrap items-center gap-2"><Badge variant={selected.archived_at ? 'secondary' : 'outline'}>{selected.archived_at ? 'Archived' : 'Saved setup'}</Badge><Badge variant="outline">{agentStateLabels[selected.agentReferenceState]}</Badge><span className="text-xs text-muted-foreground">Version {selected.revision}</span></div><TeamDefinition value={selected.definition} agents={agents} /><section className="space-y-3 border-t pt-5"><h3 className="text-sm font-semibold">Earlier versions</h3><HistoryList control={control} team={selected} pending={pending} onInspect={inspectRevision} /></section>{error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}</div></OverlayBody><FormActions inset description="Teams are saved here. Nothing on this screen starts one."><Button variant="outline" disabled={pending} onClick={() => setArchive(selected)}>{selected.archived_at ? <RotateCcw /> : <Archive />}{selected.archived_at ? 'Restore' : 'Archive'}</Button>{!selected.archived_at && <Button disabled={pending} onClick={() => setEditing(selected)}>Edit team</Button>}</FormActions></div> : <p role="status" className="p-6 text-sm text-muted-foreground">Loading team…</p>}</TaskDialogContent></Dialog>
   <Dialog open={editing !== null} onOpenChange={open => !open && (editorDirty ? setDiscard(true) : setEditing(null))}><TaskDialogContent title={editing === 'new' ? 'New team' : 'Edit team'} description="Define roles, limits, context, and explicit handoffs." size="wide"><TeamEditor initial={editing === 'new' ? undefined : editing ?? undefined} agents={agents} sessions={sessions} onDirtyChange={setEditorDirty} onSave={save} onCancel={() => (editorDirty ? setDiscard(true) : setEditing(null))} /></TaskDialogContent></Dialog>
   <ConfirmationDialog open={discard} onOpenChange={open => !open && setDiscard(false)} title="Discard team changes?" description="Your unsaved roles, handoffs, and budgets will be lost." actionLabel="Discard changes" pending={false} onConfirm={() => { setDiscard(false); setEditorDirty(false); setEditing(null) }} />

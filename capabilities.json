@@ -186,10 +186,10 @@
     },
     {
       "id": "teams-collaboration", "name": "Agent teams and collaboration", "authority": "pi", "state": "active", "frozen": "Kept as built; no new features until the hero screens (chat, calls, Home, character) ship.",
-      "gatewayRoutes": ["/api/control/pi/collaboration/teams", "/api/control/pi/collaboration/teams/{id}", "/api/control/pi/collaboration/teams/{id}/update", "/api/control/pi/collaboration/teams/{id}/archive", "/api/control/pi/collaboration/teams/{id}/restore", "/api/control/pi/collaboration/teams/{id}/versions", "/api/control/pi/collaboration/teams/{id}/versions/{revision}"],
+      "gatewayRoutes": ["/api/control/pi/collaboration/teams", "/api/control/pi/collaboration/teams/{id}", "/api/control/pi/collaboration/teams/{id}/update", "/api/control/pi/collaboration/teams/{id}/archive", "/api/control/pi/collaboration/teams/{id}/restore", "/api/control/pi/collaboration/teams/{id}/versions", "/api/control/pi/collaboration/teams/{id}/versions/{revision}", "/api/control/pi/team-runs/{id}", "/api/control/pi/team-runs/{id}/steps", "/api/control/pi/team-runs/{id}/reconcile", "/api/control/pi/team-runs/{id}/finish"],
       "uiRoutes": ["/agents?tab=teams"], "cliCommands": ["conker inspect teams", "conker apply teams FILE"],
       "deploymentRequirements": ["GATEWAY_PI_OWNER_KEY", "PI_OWNER_KEY_SHA256", "durable Pi store", "saved agent profiles"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/teams.ts", "contains": "execution: z.literal('configuration-only')"}, {"path": "dashboard/src/components/gateway/teams-workspace.tsx", "contains": "Nothing on this screen starts one"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "preparation and execution remain outside the browser"}, {"path": "conker", "contains": "cmd_inspect"}]
+      "evidence": [{"path": "dashboard/src/lib/gateway/teams.ts", "contains": "execution: z.literal('configuration-only')"}, {"path": "dashboard/src/components/gateway/teams-workspace.tsx", "contains": "Nothing on this screen starts one"}, {"path": "dashboard/src/lib/gateway/transport.ts", "contains": "preparing a team and starting a run remain outside the browser"}, {"path": "dashboard/src/components/gateway/team-runs.tsx", "contains": "Nothing runs unless you start it here"}, {"path": "dashboard/src/lib/gateway/team-runs.ts", "contains": "Runs one role in the background"}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "owner-files", "name": "Owner read-only file inventory", "authority": "toolgate", "state": "active",

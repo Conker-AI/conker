@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Team runs have a screen.** Under Agents > Teams you can open a run by the id `conker team run` prints, read where it stands in plain words, start the next role after you read the last answer, check a waiting role, and finish or cancel the run; with the daily spending cap off it says so. Pi has no list of runs, so opened runs are remembered in this browser (#365).
+
 - **One model button, as in Claude Code.** The composer's model button names the model alone (no plan name), with the effort beside it. Its menu lists Opus 5.5, Fable 5.2, Sonnet 5.5 and Haiku 5.5 with number keys 1-4, an Effort submenu (Auto to Max) and More models (older Claude models and the rest); the separate Effort chip is gone, and a row adds the Claude models to the owner's list. Voice and video call are toolbar buttons that wrap to the next row before they fold. On a phone the button shows its label and every menu row is 44 px tall. (#363)
 
 - **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)

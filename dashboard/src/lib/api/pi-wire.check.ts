@@ -17,12 +17,17 @@ import type { BeliefPage } from '../gateway/memory-beliefs'
 import type { MemoryUsePage } from '../gateway/memory-uses'
 import type { OpenLoopPage } from '../gateway/open-loops'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
+import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
 /** The JSON body Pi answers a route with, from the generated OpenAPI types. */
 type PiResponse<P extends keyof paths, M extends keyof paths[P]> =
   paths[P][M] extends { responses: infer R } ? Json<Ok<R>> : never
+
+/** The JSON body Pi accepts on a route. */
+type PiRequest<P extends keyof paths, M extends keyof paths[P]> =
+  paths[P][M] extends { requestBody: { content: { 'application/json': infer J } } } ? J : never
 
 /** Pydantic always sends fields with defaults, though the generator marks them optional; strict wire schemas may also leave fields optional. */
 type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
@@ -32,6 +37,9 @@ type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
 type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? true : false) : false
 
 export const piWire = {
+  // Pi's team-run replies are `unknown` in its OpenAPI, so only what the browser sends is bound here.
+  teamRunStep: true satisfies Same<TeamRunStepBody, PiRequest<'/team-runs/{identity}/steps', 'post'>>,
+  teamRunFinish: true satisfies Same<TeamRunFinishBody, PiRequest<'/team-runs/{identity}/finish', 'post'>>,
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
   memoryUses: true satisfies Same<MemoryUsePage, PiResponse<'/memory/{memory_id}/uses', 'get'>>,
