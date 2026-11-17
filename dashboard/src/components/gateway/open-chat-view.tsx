@@ -91,7 +91,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         }}>
       <ChatComposer key={selected} chat={chat} inputRef={replyComposer} dictating={dictating} input={templateActive ? <TemplateInput draftKey={selected} disabled={chat.setDraft.availability !== 'enabled'} onText={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} onSubmit={() => { if (chat.send.availability === 'enabled') void chat.send.run() }} /> : undefined} controls={<>
         <ModePresetControl />{control && current?.status === 'open' && <GatewaySessionAgentControl compact key={`agent:${selected}`} client={control} sessionId={selected} activeAgentId={activeAgentId} activeAgentName={activeAgentName} disabled={pending || Boolean(attempt)} onSaved={agentId => setSessionAgents(current => ({ ...current, [selected]: agentId }))} />}</>} actions={<>
-        <TemplatePicker draftKey={selected} disabled={sendPending || detailPending || !active || Boolean(attempt) || current?.status !== 'open'} />
+        <TemplatePicker draftKey={selected} client={control?.promptTemplates} disabled={sendPending || detailPending || !active || Boolean(attempt) || current?.status !== 'open'} />
         {control && <GatewayModelPicker key={`model:${selected}`} client={control} value={selectedValue.modelId ?? ''} disabled={sendPending || detailPending || !active || Boolean(attempt)} manualRequired={Boolean(harnessBySession?.[selected])} onChange={value => draftController.edit(selected, { modelId: value || null })} effort={current && current.status === 'open' ? { sessionId: current.id } : undefined} />}
         <GatewaySkillPicker key={`skills:${selected}`} client={client} value={selectedValue.skillIds} disabled={sendPending || detailPending || !active || !!attempt || current?.status !== 'open'} harnessDisabled={Boolean(harnessBySession?.[selected])} onChange={ids => setSkillChoices(selected, ids)} />
         {control && current && current.status === 'open' && <ChatOutputControl key={`output:${current.id}`} control={control} sessionId={current.id} disabled={sendPending || detailPending || !active || Boolean(attempt)} onChanged={refreshChat} />}
@@ -99,7 +99,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         <SearchControl />
         <ComplexityControl />
         {headerExtra}
-        {control && <PromptEnhanceControl key={`wand:${selected}`} client={control.promptEnhance} value={chat.draft} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} options={{ sessionId: selected }} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation) || dictating || sendPending || Boolean(attempt)} />}
+        {control && <PromptEnhanceControl key={`wand:${selected}`} client={control.promptEnhance} templates={control.promptTemplates} value={chat.draft} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} options={{ sessionId: selected }} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation) || dictating || sendPending || Boolean(attempt)} />}
         <NewChatVoiceControl value={chat.draft} input={replyComposer} onRecordingChange={setDictating} disabled={!visible || chat.setDraft.availability !== 'enabled' || Boolean(chat.generation)} onChange={value => { if (chat.setDraft.availability === 'enabled') void chat.setDraft.run(value) }} />
       </>} />
       </ComposerModeProvider>

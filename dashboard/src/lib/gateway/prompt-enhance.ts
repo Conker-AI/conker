@@ -9,13 +9,13 @@ const enhanced = z.object({
 }).strict()
 
 export type EnhancedPrompt = z.infer<typeof enhanced>
-export type EnhanceOptions = { sessionId?: string | null; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean }; signal?: AbortSignal }
+export type EnhanceOptions = { sessionId?: string | null; templateId?: string | null; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean }; signal?: AbortSignal }
 
 export function createPromptEnhanceClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
-    /** Rewrites an unsent draft. One model call on Pi's side, so press once and wait. */
-    async enhance(text: string, { sessionId, privacy, signal }: EnhanceOptions = {}): Promise<EnhancedPrompt> {
-      const body = { text, ...(sessionId ? { sessionId } : {}), ...(privacy && Object.keys(privacy).length ? { privacy } : {}) }
+    /** Rewrites an unsent draft, or fills a template from it when `templateId` is given. One model call on Pi's side, so press once and wait. */
+    async enhance(text: string, { sessionId, templateId, privacy, signal }: EnhanceOptions = {}): Promise<EnhancedPrompt> {
+      const body = { text, ...(sessionId ? { sessionId } : {}), ...(templateId ? { templateId } : {}), ...(privacy && Object.keys(privacy).length ? { privacy } : {}) }
       const result = enhanced.safeParse(await auth.request('/api/control/pi/prompts/enhance', { method: 'POST', body, signal }))
       if (!result.success) throw new GatewayError('invalid-response')
       return result.data

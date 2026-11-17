@@ -49,6 +49,10 @@ export async function run() {
     chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),
     promptEnhance: () => control.promptEnhance.enhance('Plan my week'),
+    promptTemplates: () => control.promptTemplates.list(),
+    promptTemplate: () => control.promptTemplates.get('starter-research'),
+    promptTemplateSaved: async () => { const made = await control.promptTemplates.create({ name: 'Check', description: '', fields: [{ id: 'topic', label: 'Topic', type: 'shortText', required: false, multiple: false }] }); return control.promptTemplates.update(made.id, { name: 'Checked', description: '', fields: made.fields }, made.revision) },
+    promptTemplateDeleted: async () => { const made = await control.promptTemplates.create({ name: 'Gone', description: '', fields: [{ id: 'topic', label: 'Topic', type: 'shortText', required: false, multiple: false }] }); return control.promptTemplates.remove(made.id, made.revision) },
   }
 }
 `

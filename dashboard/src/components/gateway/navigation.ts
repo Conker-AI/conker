@@ -40,6 +40,7 @@ export const gatewayDestinations = [
   { id: 'artifacts', route: 'artifacts', title: 'Artifacts', path: '/artifacts', group: 'more' },
   { id: 'loops', route: 'loops', title: 'Open loops', path: '/loops', group: 'more' },
   { id: 'skills', route: 'agents', title: 'Skills', path: '/agents?tab=skills', group: 'more' },
+  { id: 'prompt-templates', route: 'agents', title: 'Prompt templates', path: '/agents?tab=templates', group: 'more' },
   { id: 'companion', route: 'companion-settings', title: 'Companion', path: '/settings/companion', group: 'more' },
   { id: 'server-services', route: 'system', title: 'Services', path: '/system?tab=services', group: 'more' },
   { id: 'server-backups', route: 'system', title: 'Backups', path: '/system?tab=backups', group: 'more' },
@@ -60,7 +61,7 @@ export const gatewayCommandDestinations = gatewayDestinations
 // up that section instead (Containers opens from Services, which replaced it in the list).
 const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string, string?])[]>> = {
   activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
-  agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills']],
+  agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills'], ['templates', 'Prompt templates']],
   system: [['overview', 'Overview'], ['services', 'Services'], ['backups', 'Backups'], ['processes', 'Processes'], ['ports', 'Ports'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files'], ['containers', 'Containers', 'services']],
   'companion-settings': [['identity', 'Identity & soul'], ['speaking', 'Speaking style'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['modes', 'Expression & modes'], ['harness', 'Harness']],
 }
@@ -143,7 +144,7 @@ export function gatewaySystemSection(search: string): GatewaySystemSection {
   return gatewaySystemSections.find(section => section === requested) ?? 'overview'
 }
 
-export function gatewayAgentSection(search: string): 'agents' | 'teams' | 'skills' {
+export function gatewayAgentSection(search: string): 'agents' | 'teams' | 'skills' | 'templates' {
   const tab = new URLSearchParams(search).get('tab')
-  return tab === 'teams' || tab === 'skills' ? tab : 'agents'
+  return tab === 'teams' || tab === 'skills' || tab === 'templates' ? tab : 'agents'
 }
