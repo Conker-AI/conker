@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Dead ends say what to do.** A held update has its own Inbox card with the steps, a link to the guide and no Update button until it is cleared. A failed or interrupted answer that ran nothing names its cause and has Try again, which sends the same message. A failed AI job shows why at the top of its page and can be run again (#367).
 - **The wand can fill one of your prompt templates, and templates have a screen.** The composer wand now offers a plain rewrite or a template: it fills the template from your unsent draft, says which fields it filled, which it left blank and which required ones are still empty, puts the text in the box with Show original and Undo, and sends nothing. Agents > Prompt templates (also in Ctrl+K) lists, makes, edits and deletes your templates (1 to 12 typed fields each); a change someone saved first is refused in plain words and your edits stay. The five browser-only starter forms are gone: the composer picker reads the same list from Pi (its four starters). Needs Pi with `/prompts/templates`. (#366)
 - **Team runs have a screen.** Under Agents > Teams you can open a run by the id `conker team run` prints, read where it stands in plain words, start the next role after you read the last answer, check a waiting role, and finish or cancel the run; with the daily spending cap off it says so. Pi has no list of runs, so opened runs are remembered in this browser (#365).
 

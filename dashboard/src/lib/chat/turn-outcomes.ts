@@ -1,4 +1,4 @@
-import type { RuntimeTurn } from '@/lib/gateway/runtime'
+import type { RuntimeMessage, RuntimeTurn } from '@/lib/gateway/runtime'
 import type { TurnCheck } from '@/components/gateway/runtime-state'
 
 const unfinished = new Set(['awaiting_approval', 'awaiting_budget', 'acted_no_reply', 'action_in_progress', 'outcome_unknown'])
@@ -15,10 +15,33 @@ export function visibleTurnOutcomes(turns: readonly RuntimeTurn[], answering = f
   return ordered.filter(turn => unfinished.has(turn.status) || uncertainActions.has(turn.action?.state ?? '') || turn.status === 'interrupted' && turn.acted || !answering && turn === latest && terminal.has(turn.status))
 }
 
+/**
+ * Why an answer failed, in plain words, from the reason Pi saved with the turn. Only reasons Pi is
+ * known to give are recognised; anything else gets the general line, never the raw text.
+ */
+function failureCause(detail: string | null) {
+  if (detail && /spending cap is reached/i.test(detail)) return 'Today’s spending limit is reached, so paid models are paused until tomorrow. Choose a free or local model to keep going, then try again.'
+  if (detail && /capacity is busy/i.test(detail)) return 'The model on your own computer was busy with another job. Wait a moment, then try again.'
+  return 'The model did not send back an answer. It may be offline or overloaded. Try again, or choose another model.'
+}
+
+/** A turn that ended without an answer and without doing anything: sending the same message again repeats no work. */
+export const retryableTurn = (turn: RuntimeTurn) => (turn.status === 'failed' || turn.status === 'interrupted') && !turn.acted && !turn.action
+
+/** The words to send again for a turn that ended without an answer: its own message, else the newest one the owner wrote that nothing answered. */
+export function retryText(messages: readonly RuntimeMessage[], turnId: string): string | null {
+  const ordered = [...messages].sort((a, b) => a.sequence - b.sequence)
+  const own = ordered.filter(message => message.role === 'user' && message.turnId === turnId).at(-1)
+  const last = ordered.filter(message => message.role === 'user' && message.turnId === undefined).at(-1)
+  const found = own ?? (last && !ordered.some(message => message.role === 'assistant' && message.sequence > last.sequence) ? last : undefined)
+  return found?.content.kind === 'text' && found.content.text.trim() ? found.content.text : null
+}
+
 /** Fixed public guidance, never arbitrary provider exceptions or request text. */
 export function turnOutcomeCopy(turn: RuntimeTurn) {
   const uncertain = ['outcome_unknown', 'action_in_progress'].includes(turn.status) || uncertainActions.has(turn.action?.state ?? '')
   const consequence = uncertain ? 'The tool outcome is not confirmed. Sending the request again could repeat work.'
+    : turn.status === 'failed' && !turn.acted && !turn.action ? 'Nothing ran for this message. It is kept in this chat.'
     : turn.acted ? turn.status === 'acted_no_reply' ? 'A tool action was recorded. Asking only for the reply will not repeat it.' : 'A tool action was recorded. Review its outcome before sending this request again.'
     : turn.action ? 'An action record exists. Review its saved status before repeating the request.'
     : 'No tool action is recorded for this turn. Your message is kept in this chat.'
@@ -29,10 +52,11 @@ export function turnOutcomeCopy(turn: RuntimeTurn) {
     : turn.status === 'acted_no_reply' ? turn.acted ? 'The turn has no completed reply. You can check its saved status or ask for the missing reply.' : 'The turn reports a missing reply, but its action record is incomplete. Check saved history before continuing.'
     : turn.status === 'action_in_progress' ? 'Conker is still waiting for the action’s result. Check what happened asks your tools about it without sending it again.'
     : turn.status === 'outcome_unknown' ? 'This action was running when something stopped, so its result was never confirmed. Check what happened asks your tools about it without sending it again.'
-    : turn.status === 'interrupted' ? 'Work was interrupted before the turn finished. Check the saved outcome before continuing.'
+    : turn.status === 'interrupted' ? retryableTurn(turn) ? 'Conker was interrupted before it finished the answer, for example by a restart. Nothing ran. Try again to get the answer.' : 'Work was interrupted before the turn finished. Check the saved outcome before continuing.'
     : ['cancelled', 'canceled'].includes(turn.status) ? 'Generation was stopped. Any messages and recorded work remain in this chat.'
     : modelUnavailable ? 'The configured model could not answer. Review model availability, or choose another answer model before sending a new request.'
     : toolUnavailable ? 'The model requested a tool that is unavailable in this chat. Review enabled tools or revise your request.'
+    : turn.status === 'failed' ? failureCause(turn.detail)
     : 'Conker stopped before completing a reply. Check the saved outcome before sending a new request.'
   const title = ({ failed: 'Conker couldn’t finish the reply', interrupted: 'This turn was interrupted', cancelled: 'Response stopped', canceled: 'Response stopped', awaiting_approval: 'Waiting for your approval', awaiting_budget: 'Waiting for a spending decision', acted_no_reply: 'The reply is missing', action_in_progress: 'Action still in progress', outcome_unknown: 'Action outcome is unconfirmed' } as Record<string, string>)[turn.status]
   return { title, description, consequence, modelUnavailable, toolUnavailable }

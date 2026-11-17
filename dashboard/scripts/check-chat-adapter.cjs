@@ -31,7 +31,7 @@ async function main() {
     const message = { id: 'm1', sessionId: 'a', sequence: 7, role: 'assistant', createdAt: '2026-09-25T10:00:00Z', content: { kind: 'text', text: 'Saved answer' } }
     const base = { sessionId: 'a', epoch: 1, active: true, current: { id: 'a', status: 'open', messages: [message], turns: [], pendingSubmissions: [] }, draft: 'Next', pending: false, sendPending: false, detailPending: false, forgotten: false, reviewed: false, notice: null, error: null, rejected: null, inFlight: null, preview: null }
     let state = { ...base }, calls = []
-    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'saveArtifact', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown', 'resumeTurn', 'reviewTurn'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
+    const handlers = Object.fromEntries(['send', 'setDraft', 'checkHistory', 'stop', 'copy', 'saveArtifact', 'check', 'retrySameRequest', 'restoreDraft', 'releaseUnstarted', 'acknowledgeFound', 'acknowledgeUnknown', 'resumeTurn', 'reviewTurn', 'retryTurn'].map(name => [name, (...args) => { calls.push([name, ...args]) }]))
     const project = () => gatewayChatContract(state, () => state, () => handlers)
     const run = async action => { assert.equal(action.availability, 'enabled'); await action.run() }
     let chat = project()
@@ -98,8 +98,8 @@ async function main() {
     const failedState = { ...base, current: { ...base.current, messages: [{ ...message, role: 'user', content: { kind: 'text', text: 'A saved user request' } }], turns: [failedTurn] } }
     state = failedState; calls = []; chat = project()
     assert.equal(chat.outcomes.length, 1); assert.match(chat.outcomes[0].title, /couldn’t finish/)
-    assert.match(chat.outcomes[0].consequence, /No tool action is recorded/); assert.match(chat.outcomes[0].description, /tool that is unavailable/)
-    assert.deepEqual(chat.outcomes[0].controls.map(control => control.label), ['Check saved history', 'Review tools'])
+    assert.match(chat.outcomes[0].consequence, /Nothing ran for this message/); assert.match(chat.outcomes[0].description, /tool that is unavailable/)
+    assert.deepEqual(chat.outcomes[0].controls.map(control => control.label), ['Try again', 'Check saved history', 'Review tools'])
     state = { ...failedState, current: { ...failedState.current, turns: [{ ...failedTurn, detail: 'model requested unavailable tool' }] } }
     assert.ok(project().outcomes[0].controls.some(control => control.label === 'Review tools'), 'Historical unavailable-tool failures keep the same fixed guidance')
     state = failedState
@@ -107,8 +107,23 @@ async function main() {
     assert.match(failedMarkup, /<section[^>]*aria-label="Conker couldn’t finish the reply"/)
     assert.match(failedMarkup, /A saved user request/); assert.match(failedMarkup, /Check saved history/)
     assert.equal(calls.length, 0, 'Rendering a durable failure never retries model or tool work')
-    await run(chat.outcomes[0].controls[0].action); assert.deepEqual(calls, [['checkHistory']]); assert.equal(state.draft, 'Next')
-    const oldReview = chat.outcomes[0].controls[1].action
+    const control = label => chat.outcomes[0].controls.find(item => item.label === label)
+    await run(control('Check saved history').action); assert.deepEqual(calls, [['checkHistory']]); assert.equal(state.draft, 'Next')
+    // Try again: the same words through the normal send, only when nothing else sits in the composer and nothing ran.
+    assert.equal(control('Try again').primary, true); assert.equal(control('Try again').action.availability, 'disabled', 'A different draft in the composer is never replaced')
+    calls = []; state = { ...failedState, draft: '' }; chat = project(); await run(control('Try again').action); assert.deepEqual(calls, [['retryTurn', 'turn_failed']])
+    state = { ...failedState, draft: 'A saved user request' }; chat = project(); assert.equal(control('Try again').action.availability, 'enabled', 'The composer already holding the same words is fine')
+    for (const patch of [{ epoch: 2 }, { active: false }, { forgotten: true }, { pending: false, sendPending: true }, { current: { ...failedState.current, turns: [{ ...failedTurn, status: 'complete' }] } }]) {
+      state = { ...failedState, draft: '' }; chat = project(); const retry = control('Try again')?.action; state = { ...failedState, draft: '', ...patch }; calls = []
+      if (retry) await retry.run(); assert.equal(calls.length, 0, 'Try again rechecks the saved turn and the composer before sending')
+    }
+    for (const patch of [{ acted: true }, { action: { id: 'action_a', state: 'completed', jobId: null } }, { status: 'cancelled' }]) {
+      state = { ...failedState, draft: '', current: { ...failedState.current, turns: [{ ...failedTurn, ...patch }] } }; assert.ok(!project().outcomes[0].controls.some(item => item.label === 'Try again'), `No Try again when ${JSON.stringify(patch)}`)
+    }
+    state = { ...failedState, draft: '', current: { ...failedState.current, messages: [{ ...message, role: 'assistant', sequence: 9, content: { kind: 'text', text: 'Answered' } }, ...failedState.current.messages.map(item => ({ ...item, sequence: 1 }))] } }
+    assert.ok(!project().outcomes[0].controls.some(item => item.label === 'Try again'), 'A message that was answered is not offered again')
+    state = failedState; chat = project(); calls = []
+    const oldReview = control('Review tools').action
     for (const patch of [{ epoch: 2 }, { active: false }, { forgotten: true }, { sessionId: 'b' }, { current: { ...failedState.current, turns: [{ ...failedTurn, status: 'complete' }] } }]) {
       calls = []; state = { ...failedState, ...patch }; await oldReview.run(); assert.equal(calls.length, 0, 'Outcome navigation rechecks the saved source and turn')
     }
