@@ -22,7 +22,10 @@ export type ChatForgetErrorCode = typeof chatForgetErrorCodes[number]
 /** Pi's coded refusals on the prompt wand and prompt template routes; the UI words each one. */
 export const promptErrorCodes = ['template_not_found', 'nothing_filled', 'unusable', 'revision_conflict', 'too_many', 'helpers_off', 'not_configured', 'unavailable', 'not_found', 'spending_cap_reached', 'spending_cap_unavailable'] as const
 export type PromptErrorCode = typeof promptErrorCodes[number]
-type GatewayErrorCode = 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode | ChatForgetErrorCode | PromptErrorCode
+/** Pi's coded refusals on the team-run routes (/team-runs); the screen words each one. */
+export const teamRunErrorCodes = ['spending_cap_off', 'spending_cap_unavailable', 'revision_conflict', 'request_conflict', 'not_found', 'run_blocked', 'unknown_role', 'handoff_required', 'handoff_limit', 'turn_limit', 'usage_unknown', 'token_stop', 'cost_stop', 'input_limit', 'source_unavailable', 'result_unavailable', 'unresolved_run', 'blocked_run', 'team_busy', 'initial_role'] as const
+export type TeamRunErrorCode = typeof teamRunErrorCodes[number]
+type GatewayErrorCode = TeamRunErrorCode | PromptErrorCode | 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode | ChatForgetErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -205,9 +208,13 @@ routes.POST.unshift(/^\/api\/control\/pi\/system\/files\/listings$/, /^\/api\/co
 // Browser call audio is one bounded transient WAV turn; capture and playback remain client-owned.
 routes.GET.unshift(/^\/api\/control\/pi\/calls\/browser\/(?:capabilities|active\/[A-Za-z0-9_-]{1,200}|call_[a-f0-9]{32})$/)
 routes.POST.unshift(/^\/api\/control\/pi\/calls\/browser$/, /^\/api\/control\/pi\/calls\/browser\/call_[a-f0-9]{32}\/(?:update|interrupt|end|turns|audio)$/)
-// Team configuration is durable and revisioned; preparation and execution remain outside the browser.
+// Team configuration is durable and revisioned; preparing a team and starting a run remain outside the browser.
 routes.GET.unshift(/^\/api\/control\/pi\/collaboration\/teams(?:\/team_[0-9a-f]{32}(?:\/versions(?:\/[1-9][0-9]{0,9})?)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/collaboration\/teams$/, /^\/api\/control\/pi\/collaboration\/teams\/team_[0-9a-f]{32}\/(?:update|archive|restore)$/)
+// Team runs: read one by its id (Pi has no list), run the next role, check a held one, end it. Starting a run stays on the CLI.
+const teamRunRoute = /^\/api\/control\/pi\/team-runs\/teamrun_[0-9a-f]{32}(?:\/(?:steps|reconcile|finish))?$/
+routes.GET.unshift(/^\/api\/control\/pi\/team-runs\/teamrun_[0-9a-f]{32}$/)
+routes.POST.unshift(/^\/api\/control\/pi\/team-runs\/teamrun_[0-9a-f]{32}\/(?:steps|reconcile|finish)$/)
 // Terminal creation is password-verified. Operations on that admitted ephemeral lease use the signed-in session.
 routes.GET.unshift(/^\/api\/terminal\/current$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}$/)
 routes.POST.unshift(/^\/api\/terminal$/, /^\/api\/terminal\/[A-Za-z0-9_-]{16,100}\/(?:input|resize|close)$/)
@@ -429,6 +436,11 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && promptErrorCodes.includes(value.detail.code as PromptErrorCode)) code = value.detail.code as PromptErrorCode
             } catch { /* Known prompt codes only; Pi's text is never displayed. */ }
+          } else if (teamRunRoute.test(path) && [404, 409, 503].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && teamRunErrorCodes.includes(value.detail.code as TeamRunErrorCode)) code = value.detail.code as TeamRunErrorCode
+            } catch { /* Known team-run codes only; Pi's text is never displayed. */ }
           } else if (chatFeatureRoute.test(path) && [403, 404, 409, 422, 503].includes(response.status)) {
             try {
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
