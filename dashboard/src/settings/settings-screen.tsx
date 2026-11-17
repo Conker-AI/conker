@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
-import { CollectionSearch } from '@/components/design-system'
+import { CollectionSearch, PageHeader } from '@/components/design-system'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { GatewayPageFrame } from '@/components/gateway/page-frame'
@@ -27,7 +27,7 @@ const OLD_TABS: Record<string, { group: string; focus?: string }> = {
 function ChatScopeRow({ setting }: { setting: Setting }) {
   return <div className="py-3">
     <p className="text-sm font-medium leading-5">{setting.title}</p>
-    <p className="mt-0.5 text-sm leading-5 text-muted-foreground">{setting.description} <span className="whitespace-nowrap">Set in each {setting.scope}.</span></p>
+    <p className="mt-0.5 text-sm leading-5 text-muted-foreground">{setting.description} <span className="whitespace-nowrap">Change this inside a {setting.scope}.</span></p>
   </div>
 }
 
@@ -64,7 +64,7 @@ function GroupNav({ selected, onPick, query, onQuery, advanced, onAdvanced, chan
           const Icon = groupIcon(group.icon)
           const active = group.id === selected && !query && !changedOnly
           return <button key={group.id} type="button" aria-current={active ? 'page' : undefined} onClick={() => onPick(group.id)}
-            className={cn('flex min-h-9 items-center gap-2.5 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring', active && 'bg-accent font-medium')}>
+            className={cn('flex min-h-9 pointer-coarse:min-h-11 items-center gap-2.5 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring', active && 'bg-accent font-medium')}>
             <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{group.title}</span><ChevronRight aria-hidden="true" className="size-4 text-muted-foreground md:hidden" />
           </button>
         })}
@@ -124,6 +124,7 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
   }
 
   return <GatewayPageFrame className="p-0 sm:p-0">
+    <PageHeader actionsOnly title="Settings" />
     <div className="grid w-full gap-6 p-4 sm:p-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
       <aside className={cn('md:sticky md:top-0 md:max-h-[calc(100dvh-6rem)] md:self-start md:overflow-y-auto md:pb-6', (group || query.trim() || changedOnly) && 'hidden md:block')}>
         <GroupNav selected={group?.id ?? topics[0].id} onPick={pick} query={query} onQuery={setQuery} advanced={advanced} onAdvanced={value => state.set(advancedSetting, value)}

@@ -31,6 +31,11 @@ export function PageHeader({ title, description, actions, status, density = "sta
   </header>
 }
 
+/** The one level 1 heading of a screen that has no page header of its own (a chat is named by its title). */
+export function PageTitle({ className, ...props }: ComponentProps<"h1">) {
+  return <h1 className={className} {...props} />
+}
+
 /** Sections group related work without introducing another surface. */
 export function WorkspaceSection({ title, description, action, children, divided = true }: {
   title: ReactNode; description?: ReactNode; action?: ReactNode; children?: ReactNode; divided?: boolean

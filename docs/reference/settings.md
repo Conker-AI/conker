@@ -81,7 +81,7 @@ How Conker looks on your screens.
 | **Message style**<br>`appearance.message_style` | How messages are drawn in chats. Choices: Flat, Bubbles, Cards. (saved, not used yet) | Flat | owner settings |
 | **Portraits in chat**<br>`appearance.portraits` | Shows the agent's portrait next to its messages. (saved, not used yet) | on | owner settings |
 | **Sidebar**<br>`appearance.sidebar` | How the sidebar starts on large screens. Choices: Open, Collapsed, Collapse on small screens. (applies right away) | Open | owner settings |
-| **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Cron jobs, Server. (applies right away) | Projects, Memory, Agents, Tools, Cron jobs, Server | owner settings |
+| **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Jobs, Server. (applies right away) | Projects, Memory, Agents, Tools, Jobs, Server | owner settings |
 | **Chat views**<br>`appearance.chat_views` | Which views a chat's title bar offers. Choices: Context, Thinking, Files, Browser, Terminal, Logs. (saved, not used yet) | Context, Thinking, Files, Browser, Terminal, Logs | owner settings |
 
 ### Motion and sound
@@ -113,7 +113,7 @@ What your first screen shows.
 | **Tiles on Home**<br>`home.tiles` | Which tiles Home shows. Choices: Needs you, Today, Plan allowance, Running now, Coming up, Recent chats, Ideas, Done today, Your goals, Server health, Spending. (saved, not used yet) | Needs you, Plan allowance, Coming up, Done today | owner settings |
 | **Waiting items on Home**<br>`home.needs_count` | How many waiting items Home shows before the rest stay in the Inbox. 1 to 5. (applies right away) | `3` | owner settings |
 | **Greeting**<br>`home.greeting` | The line at the top of Home. Choices: None, Short, Encouraging, when earned. (applies right away) | Short | owner settings |
-| **Quick actions**<br>`home.quick_actions` | Buttons on Home for things you do often. Choices: New chat, Voice note, Add a memory, Run a tool, New cron job. (saved, not used yet) | New chat, Add a memory | owner settings |
+| **Quick actions**<br>`home.quick_actions` | Buttons on Home for things you do often. Choices: New chat, Voice note, Add a memory, Run a tool, New job. (saved, not used yet) | New chat, Add a memory | owner settings |
 | **Plan usage ring**<br>`home.plan_ring` | Where your plan allowance ring shows. Choices: On Home, In the message box, Both, Off. (applies right away) | Both | owner settings |
 
 ## Your day
@@ -199,7 +199,7 @@ How requests, questions and the daily ritual work.
 | **Later means**<br>`inbox.later` | When a card you moved to Later comes back. Choices: Next ritual, Tonight, Tomorrow morning. (saved, not used yet) | Next ritual | owner settings |
 | **Badge count**<br>`inbox.badge` | What the Inbox count includes. Choices: Everything, Urgent only, Off. (saved, not used yet) | Everything | owner settings |
 | **Keep Handled**<br>`inbox.handled_days` | How long the list of what Conker did stays. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
-| **Keep AI-job notes**<br>`inbox.notes_days` | How long findings from cron jobs stay in the Inbox. 1 to 90 days. (saved, not used yet) | `14` days | owner settings |
+| **Keep AI-job notes**<br>`inbox.notes_days` | How long findings from jobs stay in the Inbox. 1 to 90 days. (saved, not used yet) | `14` days | owner settings |
 | **Approve similar together**<br>`inbox.batch` | Lets you approve many of one kind at once; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 
 ## Notifications
@@ -217,7 +217,7 @@ When and how Conker gets your attention.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Notify me about**<br>`notifications.events` | Which events send a notification. Choices: Requests, Conker's questions, Cron job findings, Failures, Budget limits, Plan usage, Server problems, Updates, Backups. (saved, not used yet) | Requests, Conker's questions, Failures, Budget limits, Plan usage | owner settings |
+| **Notify me about**<br>`notifications.events` | Which events send a notification. Choices: Requests, Conker's questions, Job findings, Failures, Budget limits, Plan usage, Server problems, Updates, Backups. (saved, not used yet) | Requests, Conker's questions, Failures, Budget limits, Plan usage | owner settings |
 | **Urgent means**<br>`notifications.urgent` | What may reach you during quiet hours. Choices: Failures, Money, Security, A person waiting. (saved, not used yet) | Failures, Money, Security | owner settings |
 | **Remind again**<br>`notifications.repeat` | Whether an unopened notification comes back. Choices: Never, After an hour, After a day. (saved, not used yet) | Never | owner settings |
 | **Show text in notifications**<br>`notifications.preview` | Shows what a notification is about; off shows only that something needs you. (saved, not used yet) | on | owner settings |
@@ -396,7 +396,7 @@ What Conker's search looks through.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Included sources**<br>`search.sources` | Which kinds of records search looks through. Choices: Chats, Memory, Projects, Artifacts, Tasks, Cron jobs, Agents, Tools, Activity. (applies right away) | Chats, Memory, Projects, Artifacts, Tasks, Cron jobs, Agents, Tools, Activity | pi `/search/settings` `sources` |
+| **Included sources**<br>`search.sources` | Which kinds of records search looks through. Choices: Chats, Memory, Projects, Artifacts, Tasks, Jobs, Agents, Tools, Activity. (applies right away) | Chats, Memory, Projects, Artifacts, Tasks, Jobs, Agents, Tools, Activity | pi `/search/settings` `sources` |
 | **Archived chats**<br>`search.archived` | Includes archived chats in search results. (saved, not used yet) | off | owner settings |
 
 ### Search levels
@@ -565,7 +565,7 @@ What Conker remembers about you and for how long.
 | **When memories disagree**<br>`memory.conflicts` | What happens when a new memory contradicts an old one. Choices: Ask you, Keep the newer, Keep both. (saved, not used yet) | Ask you | owner settings |
 | **Memory map**<br>`memory.map` | Shows memories as a map of connected things. (applies right away) | on | owner settings |
 
-## Proactivity and cron jobs
+## Proactivity and jobs
 
 What Conker does on its own and on a schedule.
 
@@ -586,24 +586,24 @@ What Conker does on its own and on a schedule.
 | **Research time a day**<br>`companion.daily_budget.research_minutes` | The most minutes of research Conker does on its own in one day. 0 to 1440 minutes. (applies right away) | `30` minutes | pi `/owner/preferences` `dailyBudget.researchMinutes` |
 | **Spending a day**<br>`companion.daily_budget.cost_cents` | The most Conker spends on its own in one day. 0 to 100000 cents. (applies right away) | `0` cents | pi `/owner/preferences` `dailyBudget.costCents` |
 
-### Cron jobs
+### Jobs
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Access for new cron jobs**<br>`proactivity.jobs.access` | Whether a new cron job uses its agent's access or a stricter one. Choices: Agent's access, One step stricter. (saved, not used yet) | Agent's access | owner settings |
-| **When a run is still going**<br>`proactivity.jobs.overlap` | What happens when a cron job is due while its last run still works. Choices: Skip the new run, Run it after. (saved, not used yet) | Skip the new run | owner settings |
-| **Allowed triggers**<br>`proactivity.jobs.triggers` | What may start a cron job. Choices: A time, A tool's answer changing, A webhook, Something in Conker. (saved, not used yet) | A time, A tool's answer changing, A webhook, Something in Conker | owner settings |
-| **Shortest interval**<br>`proactivity.jobs.min_interval` | How often a cron job may run at most. 1 to 1440 minutes. (saved, not used yet) | `5` minutes | owner settings |
-| **Runs a day**<br>`proactivity.jobs.max_runs` | The most runs one cron job makes in a day. 1 to 1000. (saved, not used yet) | `100` | owner settings |
-| **Results in the Inbox**<br>`proactivity.jobs.results` | When a cron job's result shows in the Inbox. Choices: Only when something needs you, Always, Never. (saved, not used yet) | Only when something needs you | owner settings |
-| **When a cron job fails**<br>`proactivity.jobs.on_failure` | What happens after a failed run. Choices: Tell me, Try again, Pause the job. (saved, not used yet) | Tell me | owner settings |
+| **Access for new jobs**<br>`proactivity.jobs.access` | Whether a new job uses its agent's access or a stricter one. Choices: Agent's access, One step stricter. (saved, not used yet) | Agent's access | owner settings |
+| **When a run is still going**<br>`proactivity.jobs.overlap` | What happens when a job is due while its last run still works. Choices: Skip the new run, Run it after. (saved, not used yet) | Skip the new run | owner settings |
+| **Allowed triggers**<br>`proactivity.jobs.triggers` | What may start a job. Choices: A time, A tool's answer changing, A webhook, Something in Conker. (saved, not used yet) | A time, A tool's answer changing, A webhook, Something in Conker | owner settings |
+| **Shortest interval**<br>`proactivity.jobs.min_interval` | How often a job may run at most. 1 to 1440 minutes. (saved, not used yet) | `5` minutes | owner settings |
+| **Runs a day**<br>`proactivity.jobs.max_runs` | The most runs one job makes in a day. 1 to 1000. (saved, not used yet) | `100` | owner settings |
+| **Results in the Inbox**<br>`proactivity.jobs.results` | When a job's result shows in the Inbox. Choices: Only when something needs you, Always, Never. (saved, not used yet) | Only when something needs you | owner settings |
+| **When a job fails**<br>`proactivity.jobs.on_failure` | What happens after a failed run. Choices: Tell me, Try again, Pause the job. (saved, not used yet) | Tell me | owner settings |
 | **Tries after a failure**<br>`proactivity.jobs.retries` | How many times a failed run is tried again. 0 to 5. (saved, not used yet) | `1` | owner settings |
 
 ### Webhooks
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Webhook calls an hour**<br>`proactivity.hooks.rate` | The most webhook calls one cron job accepts in an hour. 1 to 600. (saved, not used yet) | `60` | owner settings |
+| **Webhook calls an hour**<br>`proactivity.hooks.rate` | The most webhook calls one job accepts in an hour. 1 to 600. (saved, not used yet) | `60` | owner settings |
 | **Largest webhook payload**<br>`proactivity.hooks.size` | The largest payload a webhook accepts. 1 to 16 KB. (saved, not used yet) | `16` KB | owner settings |
 | **Keep webhook payloads**<br>`proactivity.hooks.keep_days` | How long webhook payloads are kept. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
 
@@ -708,7 +708,7 @@ What Conker may do without asking you, and what always asks.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Always ask about**<br>`access.always_ask_kinds` | Kinds of actions that ask you every time. (saved, not used yet) | Banking, Passwords, Government, Health | owner settings |
-| **Pause everything**<br>`access.pause` | Stops every cron job and anything that would run without you. (saved, not used yet) | off | owner settings |
+| **Pause everything**<br>`access.pause` | Stops every job and anything that would run without you. (saved, not used yet) | off | owner settings |
 | **Lockdown**<br>`access.lockdown` | Stops every tool and workflow run, read-only ones too, until you turn it off. (applies right away) | off | toolgate `/v2/owner/lockdown` `lockdown` |
 | **Ask for your password**<br>`access.reverify` | How often changes ask for your password again. Choices: Every time, Once every 10 minutes, Once per sign-in. (saved, not used yet) | Every time | owner settings |
 | **After outside content**<br>`access.outside` | How long a chat stays stricter after it read someone else's text. Choices: For the whole chat, Until you clear it. (saved, not used yet) | For the whole chat | owner settings |

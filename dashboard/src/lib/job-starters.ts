@@ -1,7 +1,7 @@
 import type { GatewayJobTiming } from './gateway/jobs'
 
 /**
- * Starters: ready-made AI jobs on the Cron jobs screen ("Start from an idea"). A starter only fills
+ * Starters: ready-made AI jobs on the Jobs screen ("Start from an idea"). A starter only fills
  * in the New AI job form (name, instructions, timing, agent); the owner changes what they like and
  * creates it with the usual password check. Nothing here runs, schedules or behaves on its own: a
  * starter is words and a suggested time, the same as typing them. Proactive work stays the owner's

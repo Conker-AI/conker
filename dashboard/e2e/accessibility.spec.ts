@@ -2,7 +2,7 @@
 // gateway. A violation fails the test and names the rule and the elements it found.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { card, open } from './pages'
+import { allPlaces, card, open } from './pages'
 
 const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs']
 
@@ -69,5 +69,18 @@ for (const theme of ['light', 'dark'] as const) test.describe(theme, () => {
     await page.getByRole('button', { name: 'Forget…' }).click()
     await expect(page.getByRole('dialog', { name: 'Forget 1 memory permanently?' })).toBeVisible()
     expect(await violations(page, '[role="dialog"]')).toEqual([])
+  })
+})
+
+// A screen-reader user jumps to the page heading first: every place has exactly one, and it is not hidden.
+test.describe('page headings', () => {
+  for (const place of allPlaces) test(`one heading level 1: ${place}`, async ({ page }) => {
+    const errors = await open(page, place)
+    await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
+    await page.waitForTimeout(800)
+    const headings = await page.getByRole('heading', { level: 1 }).allInnerTexts()
+    const names = await page.getByRole('heading', { level: 1 }).evaluateAll(nodes => nodes.map(node => (node.textContent ?? '').trim()))
+    expect(names.filter(Boolean), `heading level 1 on ${place} (found ${headings.length})`).toHaveLength(1)
+    expect(errors).toEqual([])
   })
 })

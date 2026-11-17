@@ -7,6 +7,7 @@ import type { ChatEffort } from '@/lib/gateway/chat-names'
 import { ChatComposerFrame } from '@/components/chat/composer'
 import { BackToChats } from '@/components/chat/history'
 import { GatewayHeader } from './header'
+import { PageTitle } from '@/components/design-system'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { GatewayModelPicker } from './model-picker'
 import { GatewayAgentPicker } from './agent-picker'
@@ -34,7 +35,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
   pendingStart: PendingDraftStart | null; recoverChatStart: (replay?: boolean) => Promise<void>; startMissing: boolean
 }) {
   return <>
-    {visible && <GatewayHeader context={<><BackToChats /><span className="truncate text-sm font-medium">New chat</span></>} />}
+    {visible && <GatewayHeader context={<><BackToChats /><PageTitle className="truncate text-sm font-medium">New chat</PageTitle></>} />}
     <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pb-[10vh] pt-8">
       <div className="my-auto w-full max-w-[768px]">
         <div className="mb-7 flex flex-col items-center gap-3 sm:mb-8">

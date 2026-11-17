@@ -53,7 +53,7 @@
             },
             {
               "value": "jobs",
-              "label": "Cron jobs"
+              "label": "Jobs"
             },
             {
               "value": "agents",

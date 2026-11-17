@@ -102,7 +102,8 @@
   --popover-foreground: var(--color-neutral-800);
   --primary: var(--color-neutral-800);
   --primary-foreground: var(--color-neutral-50);
-  --ring: var(--color-neutral-400);
+  /* neutral-500, not 400: a focus ring needs 3:1 against the page (WCAG 1.4.11); 400 on white is 2.5:1. */
+  --ring: var(--color-neutral-500);
   --secondary: --alpha(var(--color-black) / 4%);
   --secondary-foreground: var(--color-neutral-800);
   --chart-1: var(--color-orange-600);
@@ -121,7 +122,7 @@
   --sidebar-foreground: color-mix(in srgb, var(--color-neutral-800) 64%, var(--sidebar));
   --sidebar-primary: var(--color-neutral-800);
   --sidebar-primary-foreground: var(--color-neutral-50);
-  --sidebar-ring: var(--color-neutral-400);
+  --sidebar-ring: var(--color-neutral-500);
 }
 
 .dark {
@@ -246,6 +247,13 @@
   summary {
     padding-block: max(0px, calc((1.5rem - 1lh) / 2));
   }
+  /* On a touch screen a disclosure toggle is 44 px tall (its neighbours sit right beside it, so a reach
+     around it would steal their taps). */
+  @media (pointer: coarse) {
+    summary {
+      padding-block: max(0px, calc((2.75rem - 1lh) / 2));
+    }
+  }
   body {
     @apply bg-background text-foreground font-sans;
     letter-spacing: var(--tracking-normal);
@@ -256,6 +264,11 @@
 
 @layer utilities {
   .elevation-surface { box-shadow: var(--shadow-surface); }
+  /* A small standalone link or control keeps its look; on a touch screen it is tapped from a 44 px square. */
+  @media (pointer: coarse) {
+    .tap-44 { position: relative; }
+    .tap-44::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 2.75rem); height: max(100%, 2.75rem); transform: translate(-50%, -50%); }
+  }
 }
 
 

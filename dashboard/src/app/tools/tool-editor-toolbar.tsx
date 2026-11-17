@@ -75,7 +75,7 @@ export function ToolEditorToolbar({
       <div className="tool-title">
         <strong className="truncate text-sm">{definition.name}</strong>
         <span className="text-xs text-muted-foreground">
-          {dirty ? "Unsaved draft" : "Draft"} · ToolGate draft
+          {dirty ? "Unsaved draft" : "Draft"}
         </span>
       </div>
       <Select

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "proactivity",
-  "title": "Proactivity and cron jobs",
+  "title": "Proactivity and jobs",
   "description": "What Conker does on its own and on a schedule.",
   "icon": "zap",
   "category": "brain",
@@ -146,12 +146,12 @@
     },
     {
       "id": "jobs",
-      "title": "Cron jobs",
+      "title": "Jobs",
       "settings": [
         {
           "id": "proactivity.jobs.access",
-          "title": "Access for new cron jobs",
-          "description": "Whether a new cron job uses its agent's access or a stricter one.",
+          "title": "Access for new jobs",
+          "description": "Whether a new job uses its agent's access or a stricter one.",
           "type": "select",
           "default": "agent",
           "tier": "basic",
@@ -171,7 +171,7 @@
         {
           "id": "proactivity.jobs.overlap",
           "title": "When a run is still going",
-          "description": "What happens when a cron job is due while its last run still works.",
+          "description": "What happens when a job is due while its last run still works.",
           "type": "select",
           "default": "skip",
           "tier": "advanced",
@@ -191,7 +191,7 @@
         {
           "id": "proactivity.jobs.triggers",
           "title": "Allowed triggers",
-          "description": "What may start a cron job.",
+          "description": "What may start a job.",
           "type": "list",
           "default": [
             "time",
@@ -224,7 +224,7 @@
         {
           "id": "proactivity.jobs.min_interval",
           "title": "Shortest interval",
-          "description": "How often a cron job may run at most.",
+          "description": "How often a job may run at most.",
           "type": "number",
           "default": 5,
           "tier": "advanced",
@@ -238,7 +238,7 @@
         {
           "id": "proactivity.jobs.max_runs",
           "title": "Runs a day",
-          "description": "The most runs one cron job makes in a day.",
+          "description": "The most runs one job makes in a day.",
           "type": "number",
           "default": 100,
           "tier": "advanced",
@@ -251,7 +251,7 @@
         {
           "id": "proactivity.jobs.results",
           "title": "Results in the Inbox",
-          "description": "When a cron job's result shows in the Inbox.",
+          "description": "When a job's result shows in the Inbox.",
           "type": "select",
           "default": "needs_you",
           "tier": "basic",
@@ -274,7 +274,7 @@
         },
         {
           "id": "proactivity.jobs.on_failure",
-          "title": "When a cron job fails",
+          "title": "When a job fails",
           "description": "What happens after a failed run.",
           "type": "select",
           "default": "tell",
@@ -318,7 +318,7 @@
         {
           "id": "proactivity.hooks.rate",
           "title": "Webhook calls an hour",
-          "description": "The most webhook calls one cron job accepts in an hour.",
+          "description": "The most webhook calls one job accepts in an hour.",
           "type": "number",
           "default": 60,
           "tier": "advanced",

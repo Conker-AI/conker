@@ -204,7 +204,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         <div className="flex flex-col gap-3">
           {/* Never "All clear" while loading or when part of the Inbox failed to load. */}
           <p className="text-sm text-muted-foreground"><span className={summary.state === 'loading' ? 'conker-reveal' : undefined}>{summary.text}</span></p>
-          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
+          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 pointer-coarse:gap-3">
             {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + waitingChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>

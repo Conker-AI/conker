@@ -58,10 +58,10 @@ export function SearchControl() {
 composerItem(SearchControl, 'search')
 
 const complexityOptions = [['easy', 'Easy'], ['hard', 'Hard']] as const
-/** Complexity: Hard sends the message down the analysis route; Easy is the ordinary route. */
+/** Difficulty: Easy answers straight away; Hard has the thinking model work on it first. */
 export function ComplexityControl() {
   const mode = useComposerMode()
   if (!mode) return null
-  return <ModeChip id="complexity" label="Complexity" icon={Scale} value={mode.complexity} defaultValue="easy" options={complexityOptions} field="complexity" hint="Hard sends this message down the analysis route. Easy is the ordinary route." onPick={value => mode.setComplexity(value as Complexity)} />
+  return <ModeChip id="complexity" label="Difficulty" icon={Scale} value={mode.complexity} defaultValue="easy" options={complexityOptions} field="complexity" hint="Easy: answer straight away. Hard: think it through first." onPick={value => mode.setComplexity(value as Complexity)} />
 }
 composerItem(ComplexityControl, 'complexity')

@@ -1,4 +1,4 @@
-// Proves the pure logic behind the per-message "Context rule" menu: setting a rule, "Default" clearing it,
+// Proves the pure logic behind the per-message "What Conker remembers from this message" menu: setting a rule, "Default" clearing it,
 // other messages' rules kept, invalid ids and rules refused, and the label for each rule.
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -60,8 +60,8 @@ function main() {
 
   // Each rule has its own label word, in the Context sheet's words, capitalised.
   assert.deepEqual([...messageRules].sort(), ['allow-summary', 'exclude', 'keep-exact', 'retrieve'])
-  assert.deepEqual(ruleWords, { 'keep-exact': 'kept word for word', exclude: 'left out', 'allow-summary': 'may be summarised', retrieve: 'brought back when relevant' })
-  assert.deepEqual(messageRules.map(ruleLabel), ['Kept word for word', 'Left out', 'May be summarised', 'Brought back when relevant'])
+  assert.deepEqual(ruleWords, { 'keep-exact': 'always kept exactly', exclude: 'left out', 'allow-summary': 'OK to shorten', retrieve: 'brought back when it matters' })
+  assert.deepEqual(messageRules.map(ruleLabel), ['Always kept exactly', 'Left out', 'OK to shorten', 'Brought back when it matters'])
 
   console.log('Message context rule check passed')
 }

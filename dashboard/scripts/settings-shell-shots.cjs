@@ -77,7 +77,7 @@ async function steps(context, width, theme) {
   }
   await choose('appearance.sidebar', 'Collapsed')
   if (desktop) assert.equal(await sidebar.getAttribute('data-state'), 'collapsed', 'Collapsed applies at once')
-  for (const place of ['Agents', 'Cron jobs']) { await row('appearance.sidebar_places').getByText(place, { exact: true }).click(); await page.waitForFunction(() => !document.body.innerText.includes('Saving…')) }
+  for (const place of ['Agents', 'Jobs']) { await row('appearance.sidebar_places').getByText(place, { exact: true }).click(); await page.waitForFunction(() => !document.body.innerText.includes('Saving…')) }
   await changed('appearance.sidebar_places')
   if (desktop) {
     assert.equal(await page.locator('[data-sidebar="sidebar"] a[href="/agents"]').count(), 0, 'Agents left the sidebar at once')

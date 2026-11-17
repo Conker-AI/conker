@@ -20,13 +20,13 @@ async function main() {
   // ToolGate's check of the saved draft wins; the quick local check covers only unsaved edits.
   const saved = createToolDefinition('saved-live', 'Saved live')
   const toolgate = [{ path: 'toolgate', message: 'Referenced step must run on every path to this node.', nodeId: 'result' }]
-  assert.deepEqual(editorValidation(saved, true, false, toolgate), { issues: toolgate, label: 'ToolGate: needs attention' }, 'ToolGate finds what the quick check misses')
+  assert.deepEqual(editorValidation(saved, true, false, toolgate), { issues: toolgate, label: 'Checked: needs attention' }, 'ToolGate finds what the quick check misses')
   const unlinked = structuredClone(saved); unlinked.edges = []
   assert.deepEqual(editorValidation(unlinked, true, false, []).issues, [], 'ToolGate saying valid wins over the quick check')
   assert.ok(editorValidation(unlinked, true, true, []).issues.length, 'Unsaved edits get instant feedback from the quick check')
-  assert.match(editorValidation(unlinked, true, true, []).label, /save to check with ToolGate/)
-  assert.equal(editorValidation(saved, true, false, 'checking').label, 'Checking with ToolGate\u2026')
-  assert.match(editorValidation(saved, true, false, 'failed').label, /ToolGate didn\u2019t answer/, 'No answer is said, not hidden')
+  assert.match(editorValidation(unlinked, true, true, []).label, /save to check it/)
+  assert.equal(editorValidation(saved, true, false, 'checking').label, 'Checking\u2026')
+  assert.match(editorValidation(saved, true, false, 'failed').label, /check didn\u2019t answer/, 'No answer is said, not hidden')
   assert.equal(editorValidation(saved, false, false).label, 'Definition valid', 'The local preview has only the local check')
   // Rules ToolGate does not have are gone from live drafts.
   const typed = structuredClone(saved)

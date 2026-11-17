@@ -28,20 +28,20 @@ export function PromptEnhanceControl({ client, value, onChange, options, disable
   }
   const edited = result?.kind === 'done' && value !== result.text
   return <Popover open={open} onOpenChange={setOpen}>
-    <PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className="shrink-0" aria-label="Improve my prompt" title="Improve my prompt" disabled={disabled || busy || !value.trim()} onClick={event => { if (!result) { event.preventDefault(); void press() } }} />}>
-      <Wand2 className={busy ? 'size-4 animate-pulse motion-reduce:animate-none' : 'size-4'} aria-hidden="true" /><span data-label className="sr-only">Improve my prompt</span>
+    <PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className="shrink-0" aria-label="Improve wording" title="Improve wording" disabled={disabled || busy || !value.trim()} onClick={event => { if (!result) { event.preventDefault(); void press() } }} />}>
+      <Wand2 className={busy ? 'size-4 animate-pulse motion-reduce:animate-none' : 'size-4'} aria-hidden="true" /><span data-label className="sr-only">Improve wording</span>
     </PopoverTrigger>
     <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] space-y-3">
       {result?.kind === 'error' && <><p role="alert" className="text-sm text-destructive-foreground">{result.message}</p>
         <Button type="button" size="sm" variant="outline" onClick={() => { setResult(null); setOpen(false); void press() }}>Try again</Button></>}
       {result?.kind === 'done' && <>
-        <p className="flex items-center gap-1.5 text-sm font-medium"><Sparkles className="size-4" aria-hidden="true" />Prompt improved</p>
-        <p className="text-xs text-muted-foreground">Nothing was sent. Read it, edit it, then send when you are happy.</p>
+        <p className="flex items-center gap-1.5 text-sm font-medium"><Sparkles className="size-4" aria-hidden="true" />Rewritten. Not sent yet.</p>
+        <p className="text-xs text-muted-foreground">Read it and edit it, then send when you are happy.</p>
         {result.notes.length > 0 && <ul className="list-disc space-y-1 pl-4 text-xs">{result.notes.map(note => <li key={note}>{note}</li>)}</ul>}
         <details className="text-xs"><summary className="cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">Show original</summary><p className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted px-2 py-1.5">{result.original}</p></details>
         <div className="flex items-center gap-2">
           <Button type="button" size="sm" variant="outline" disabled={edited} onClick={() => { onChange(result.original); setResult(null); setOpen(false) }}>Undo</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => { setResult(null); setOpen(false) }}>Keep</Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { setResult(null); setOpen(false) }}>Use this</Button>
           {edited && <span className="text-xs text-muted-foreground">You changed it since.</span>}
         </div></>}
     </PopoverContent>

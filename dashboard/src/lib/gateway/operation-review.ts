@@ -50,7 +50,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
       '/summary': ['Save summary', 'Saves a new version of this chat’s summary. Older versions stay.'],
       '/summary/restore': ['Restore summary', 'Saves an older summary as the newest version.'],
       '/summary/draft': ['Draft a summary', 'A helper model proposes a summary. Nothing is saved.'],
-      '/compact': ['Fold messages into the summary', 'Saves the summary and lets the covered messages be summarised instead of sent in full.'],
+      '/compact': ['Fold messages into the summary', 'Saves the summary and lets the covered messages be shortened instead of sent in full.'],
       '/items': ['Add a decision or open question', 'Adds it to what Conker keeps in mind for this chat.'],
       '/items/:id/state': ['Change a decision or open question', 'Marks it done, withdrawn or active again.'],
     }
@@ -103,7 +103,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     return { title, path, target, details }
   }
   if (/^\/api\/control\/pi\/change-requests\/creq_[0-9a-f]{32}\/approve$/.test(path)) {
-    return { title: 'Approve Conker’s request', path, target: `Request ${parts[5]}`, details: ['Creates exactly what the Inbox card shows: the cron job or the memory. Nothing else changes.'] }
+    return { title: 'Approve Conker’s request', path, target: `Request ${parts[5]}`, details: ['Creates exactly what the Inbox card shows: the job or the memory. Nothing else changes.'] }
   }
   if (path === '/api/owner/access/delegate') {
     return { title: body.enabled ? 'Let Conker decide by your settings' : 'Ask me for everything that asks', path, target: 'Conker in ToolGate', details: [body.enabled ? 'Your chat, agent and tool settings decide what runs without asking. Sensitive tools and system controls always ask you.' : 'Every tool goes back to its own setting; nothing Conker decides skips asking you.'] }
@@ -128,10 +128,10 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     return { title: 'Add a memory', path, target: 'Your memory', details: [`Saves the text you wrote, word for word (${length} characters). You can change or forget it later.`] }
   }
   if (/^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/adopt$/.test(path)) {
-    return { title: 'Make this job yours', path, target: `Cron job ${parts[5]}`, details: ['Treats it as your own job: it keeps running even if the chat that made it is forgotten.'] }
+    return { title: 'Make this job yours', path, target: `Job ${parts[5]}`, details: ['Treats it as your own job: it keeps running even if the chat that made it is forgotten.'] }
   }
   if (path === '/api/control/pi/jobs/agent') {
-    return { title: 'Create a cron job', path, target: safeName(body.name) ?? 'New cron job', details: ['Each run, Conker carries out your instructions with its tools. Anything that would change or send something still asks you.'] }
+    return { title: 'Create a job', path, target: safeName(body.name) ?? 'New job', details: ['Each run, Conker carries out your instructions with its tools. Anything that would change or send something still asks you.'] }
   }
   if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(path)) { title = 'Save tool draft'; target = `Draft ${parts[4]}`; details.push('Saves the editor document only. Does not publish, execute or grant access.') }
   else if (/^\/api\/owner\/editor-drafts\/[A-Za-z][A-Za-z0-9_-]{0,63}\/publish$/.test(path)) { title = 'Publish workflow version'; target = `Draft ${parts[4]}`; details.push(body.conkerMayUse === true ? 'Creates an immutable version with pinned dependencies and lets Conker use it: Conker sees it in its tools and its key gets access. Does not run it.' : 'Creates an immutable version with pinned dependencies. Does not run it or grant agent access.'); details.push(body.authorization === 'auto' ? 'Scoped callers may run this version without per-run approval.' : 'Each run requires owner confirmation.') }

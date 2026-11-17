@@ -188,7 +188,7 @@
         {
           "id": "access.pause",
           "title": "Pause everything",
-          "description": "Stops every cron job and anything that would run without you.",
+          "description": "Stops every job and anything that would run without you.",
           "type": "toggle",
           "default": false,
           "tier": "basic",

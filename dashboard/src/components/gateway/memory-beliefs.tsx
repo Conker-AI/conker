@@ -13,8 +13,8 @@ import { MemoryUsesLine } from './memory-uses-line'
 
 const filters: { id: string; label: string; value: BeliefFilter }[] = [
   { id: 'all', label: 'Everything', value: { origin: 'all', state: 'all' } },
-  { id: 'stated', label: 'You told me', value: { origin: 'stated', state: 'all' } },
-  { id: 'concluded', label: 'I worked it out', value: { origin: 'concluded', state: 'all' } },
+  { id: 'stated', label: 'You told Conker', value: { origin: 'stated', state: 'all' } },
+  { id: 'concluded', label: 'Conker worked it out', value: { origin: 'concluded', state: 'all' } },
   { id: 'review', label: 'Needs a look', value: { origin: 'all', state: 'needs_review' } },
 ]
 const memoryLink = (id: string) => `/memory?view=database&kind=memory&record=${encodeURIComponent(id)}`
@@ -22,7 +22,7 @@ const day = (value: string | null) => value ? new Intl.DateTimeFormat(undefined,
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
 function why(belief: Belief) {
-  const support = belief.origin === 'stated' ? 'You told me this.' : `I worked this out${belief.evidence.supporting ? ` from ${plural(belief.evidence.supporting, 'thing you said', 'things you said')}` : ''}.`
+  const support = belief.origin === 'stated' ? 'You told Conker this.' : `Conker worked this out${belief.evidence.supporting ? ` from ${plural(belief.evidence.supporting, 'thing you said', 'things you said')}` : ''}.`
   const withdrawn = belief.evidence.withdrawn ? ` ${plural(belief.evidence.withdrawn, 'source was', 'sources were')} later forgotten.` : ''
   return support + withdrawn
 }
@@ -58,10 +58,10 @@ export function GatewayMemoryBeliefs({ client, uses }: { client: MemoryBeliefsCl
       <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-5">
         <PageHeader actionsOnly title="What Conker believes" actions={<WorkspaceAction iconOnly aria-label="Check again" title="Check again" disabled={loading} onClick={reload}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
         <div className="space-y-1">
-          <Link to="/memory" className="inline-flex items-center gap-1 text-sm text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />Memory</Link>
-          <p className="text-sm text-muted-foreground">What I hold about you, and where each thing came from. Open one to fix it or forget it.</p>
+          <Link to="/memory" className="tap-44 inline-flex items-center gap-1 text-sm text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />Memory</Link>
+          <p className="text-sm text-muted-foreground">What Conker knows about you, and where each thing came from. Open one to fix it or forget it.</p>
         </div>
-        {page && <p className="text-sm text-muted-foreground" role="status">{plural(page.counts.stated, 'thing', 'things')} you told me · {plural(page.counts.concluded, 'thing', 'things')} I worked out · {page.counts.needsReview} to look at</p>}
+        {page && <p className="text-sm text-muted-foreground" role="status">{plural(page.counts.stated, 'thing', 'things')} you told Conker · {plural(page.counts.concluded, 'thing', 'things')} Conker worked out · {page.counts.needsReview} to look at</p>}
         <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
           {filters.map(item => <Button key={item.id} type="button" size="sm" variant={filterId === item.id ? 'secondary' : 'outline'} aria-pressed={filterId === item.id} onClick={() => pick(item.id)}>{item.label}</Button>)}
         </div>
@@ -73,7 +73,7 @@ export function GatewayMemoryBeliefs({ client, uses }: { client: MemoryBeliefsCl
           <ul className="flex flex-col gap-2">{page.items.map(belief => <li key={belief.id} className="space-y-1 rounded-xl border px-4 py-3">
             <div className="flex min-w-0 items-start gap-3">
               <span className="min-w-0 flex-1 text-sm">{belief.text}</span>
-              <Link to={memoryLink(belief.id)} className="shrink-0 text-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open this memory to fix or forget it: ${belief.text}`}>Fix or forget</Link>
+              <Link to={memoryLink(belief.id)} className="tap-44 shrink-0 text-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open this memory to fix or forget it: ${belief.text}`}>Fix or forget</Link>
             </div>
             <p className="text-xs text-muted-foreground">{why(belief)}{belief.state === 'needs_review' ? ' Needs a look.' : ''}</p>
             <p className="text-xs text-muted-foreground">{belief.lastRecalledAt ? `Last used ${day(belief.lastRecalledAt)}.` : 'Not used in an answer yet.'}{belief.conflicts.length ? ` Disagrees with ${plural(belief.conflicts.length, 'other memory', 'other memories')}.` : ''}</p>

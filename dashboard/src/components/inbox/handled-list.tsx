@@ -11,7 +11,7 @@ const WHO: Record<HandledAction['decidedBy'], string> = {
 }
 
 const OWN: Record<string, string> = {
-  'conker.remember': 'Remembered something', 'conker.schedule': 'Made a cron job', 'conker.draft_tool': 'Drafted a tool',
+  'conker.remember': 'Remembered something', 'conker.schedule': 'Made a job', 'conker.draft_tool': 'Drafted a tool',
   'conker.create_agent': 'Made an agent', 'conker.create_team': 'Made a team', 'conker.run_agent': 'Ran another agent', 'conker.recall': 'Searched memory',
 }
 // What Conker made at once is undone by archiving it where it lives (Handled items do not name it).

@@ -29,7 +29,7 @@ const messages: Record<GatewayErrorKind, string> = {
   'invalid-response': 'Your Conker server sent back something unexpected. Nothing was retried.',
   'too-large': 'That’s too large to send from the browser (64 KB limit).',
   'response-too-large': 'The answer is too large to show here (8 MB limit).',
-  http: 'Your Conker server turned that down. Nothing was retried.',
+  http: 'Conker couldn’t do that. Nothing was retried; try again.',
   'login-rejected': 'That password didn’t match this Conker. Try again or reset it on the host.',
   'rate-limited': 'Too many login attempts. Wait before trying again.',
   dependency: 'Part of Conker isn’t running right now. Nothing was retried; check Server.',

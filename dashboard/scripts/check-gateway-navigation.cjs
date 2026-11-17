@@ -18,13 +18,13 @@ const { gatewayCommandDestinations, gatewaySidebarDestinations, gatewayDestinati
 
 assert.equal(new Set(gatewayCommandDestinations.map(item => item.path)).size, gatewayCommandDestinations.length, 'Command destinations must be unique')
 assert.equal(new Set(gatewaySidebarDestinations.map(item => item.path)).size, gatewaySidebarDestinations.length, 'Sidebar destinations must be unique')
-assert.deepEqual(gatewaySidebarDestinations.map(item => item.title), ['Home', 'Inbox', 'Chats', 'Projects', 'Memory', 'Agents', 'Tools', 'Cron jobs', 'Server', 'Settings'],
+assert.deepEqual(gatewaySidebarDestinations.map(item => item.title), ['Home', 'Inbox', 'Chats', 'Projects', 'Memory', 'Agents', 'Tools', 'Jobs', 'Server', 'Settings'],
   'The sidebar lists the approved places in order (prototype v7)')
 assert.deepEqual(gatewayDestinations.filter(item => item.group === 'overview').map(item => item.id), ['today', 'inbox', 'chats'])
 assert.deepEqual(gatewayDestinations.filter(item => item.group === 'workspace').map(item => item.id), ['projects', 'memory', 'agents', 'tools', 'jobs'])
 assert.deepEqual(gatewayDestinations.filter(item => item.group === 'system').map(item => item.id), ['system', 'settings'])
 assert.ok(gatewayCommandDestinations.some(item => item.id === 'chat' && item.title === 'New chat'), 'New chat stays one search away and behind Ask Conker')
-assert.equal(gatewayCommandDestinations.find(item => item.path === '/setup').title, 'Setup & readiness')
+assert.equal(gatewayCommandDestinations.find(item => item.path === '/setup').title, 'Setup')
 assert.equal(resolveGatewayRoute('/'), 'today', 'Conker opens on Home, the glance-and-go screen')
 assert.equal(resolveGatewayRoute('/overview'), 'today', 'Home keeps its address')
 for (const item of gatewayCommandDestinations) assert.ok(resolveGatewayRoute(new URL(item.path, 'https://conker.test').pathname), `${item.path} must resolve in the connected workspace`)

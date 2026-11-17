@@ -11,7 +11,7 @@ export function BackToChats() {
   const phone = useIsMobile()
   const back = useBackToChats()
   if (!phone) return null
-  return <Button type="button" variant="ghost" size="icon" className="-mx-1 shrink-0 text-muted-foreground hover:text-foreground" aria-label="Back to chats" title="Back to chats" onClick={back}><ArrowLeft aria-hidden="true" /></Button>
+  return <Button type="button" variant="ghost" size="icon" className="-mx-1 shrink-0 text-muted-foreground hover:text-foreground pointer-coarse:mx-0" aria-label="Back to chats" title="Back to chats" onClick={back}><ArrowLeft aria-hidden="true" /></Button>
 }
 
 export function ConversationHistory({ sessionId, focusedMessageId, children }: { sessionId: string; focusedMessageId?: string | null; children: ReactNode }) {

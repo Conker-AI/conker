@@ -58,7 +58,7 @@ function ResumeCard({ item }: { item: ResumeItem }) {
 }
 
 function SeeAll({ to, children }: { to: string; children: string }) {
-  return <Link to={to} className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" aria-hidden="true" /></Link>
+  return <Link to={to} className="tap-44 inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" aria-hidden="true" /></Link>
 }
 
 function ResumeLoading() {

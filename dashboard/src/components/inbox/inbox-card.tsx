@@ -25,7 +25,7 @@ export function InboxCard({ icon, title, source, primary, openLabel, summary, ac
   const answer = primary ?? (openLabel && <Button type="button" size="sm" variant="outline" onClick={() => setExpanded(true)}>{openLabel}</Button>)
   return <Card render={<article aria-label={title} />} className={cn('min-w-0 gap-0 p-0', className)}>
     <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 p-3 sm:flex-nowrap">
-      <button type="button" className="flex min-w-0 flex-1 basis-48 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <button type="button" className="flex min-h-11 min-w-0 flex-1 basis-48 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-expanded={expanded} aria-controls={body} onClick={() => setExpanded(value => !value)}>
         <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground [&_svg]:size-4">{icon}</span>
         <span className="min-w-0 flex-1">
@@ -41,7 +41,7 @@ export function InboxCard({ icon, title, source, primary, openLabel, summary, ac
       {children}
       {actions && <div className="flex min-w-0 flex-col gap-3">{actions}</div>}
       {(facts.length > 0 || advanced) && <div className="flex min-w-0 flex-col gap-3">
-        <button type="button" className="group inline-flex w-fit items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        <button type="button" className="tap-44 group inline-flex w-fit items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           aria-expanded={more} aria-controls={record} onClick={() => setMore(value => !value)}>
           Advanced<ChevronRight aria-hidden="true" className={cn('size-3.5 transition-transform motion-reduce:transition-none', more && 'rotate-90')} />
         </button>

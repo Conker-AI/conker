@@ -5,20 +5,20 @@ import type { HostBackupList, HostReceipt, HostService, HostServicesStatus } fro
  * for the Server screens and the password sheet, so a restart reads the same everywhere.
  */
 const names: Record<string, string> = {
-  pi: 'Pi', gateway: 'Web access', memorygate: 'Memory', toolgate: 'Tools', postgres: 'Memory database',
+  pi: 'Chat engine', gateway: 'Dashboard', memorygate: 'Memory', toolgate: 'Tools', postgres: 'Memory storage',
   qdrant: 'Memory search', embeddings: 'Meaning search', ollama: 'Local models', searxng: 'Web search',
-  systemgate: 'Server readings', subscriptions: 'Plan sign-ins', 'sandbox-runner': 'Tool sandbox',
-  'package-proxy': 'Package downloads', 'owner-terminal': 'Terminal', 'data-owner': 'Folder permissions',
+  systemgate: 'Server health', subscriptions: 'Plan sign-ins', 'sandbox-runner': 'Tool sandbox',
+  'package-proxy': 'Package downloads', 'owner-terminal': 'Terminal', 'data-owner': 'Folder setup',
 }
 const jobs: Record<string, string> = {
-  pi: 'Runs your chats, agents and cron jobs.', gateway: 'Serves this page and signs you in.', memorygate: 'Keeps and recalls what Conker remembers.',
+  pi: 'Runs your chats, agents and jobs.', gateway: 'Serves this page and signs you in.', memorygate: 'Keeps and recalls what Conker remembers.',
   toolgate: 'Runs tools and checks what they may do.', postgres: 'Stores memories and their history.', qdrant: 'Finds memories by meaning.',
   embeddings: 'Turns text into numbers for meaning search.', ollama: 'Runs the AI models on this server.', searxng: 'Searches the web for Conker.',
   systemgate: 'Reads the server’s health for this page.', subscriptions: 'Uses your Claude and ChatGPT plans.', 'sandbox-runner': 'Runs tool commands in a closed box.',
-  'package-proxy': 'Fetches packages for the tool sandbox.', 'owner-terminal': 'Opens the terminal on this page.', 'data-owner': 'Sets folder permissions once when Conker starts.',
+  'package-proxy': 'Fetches packages for the tool sandbox.', 'owner-terminal': 'Opens the terminal on this page.', 'data-owner': 'Fixes folder permissions each time Conker starts.',
 }
 const pauses: Record<string, string> = {
-  pi: 'Chats and cron jobs stop until it is back; a reply being written may be cut off.',
+  pi: 'Chats and jobs stop until it is back; a reply being written may be cut off.',
   gateway: 'This page loses the connection for a moment and reconnects by itself.',
   memorygate: 'Conker can’t recall or save memories until it is back.',
   toolgate: 'Tools stop until it is back; a tool that is running may be cut off.',

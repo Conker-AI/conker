@@ -129,9 +129,9 @@ async function main() {
   assert.equal(words.servicesSummary(status, ['memorygate']), 'Restarting Memory… Web search needs a look.')
   assert.equal(words.servicesSummary(status, ['searxng']), 'Restarting Web search… The other service is running.')
   const three = { ...status, services: [...status.services, { ...status.services[0], service: 'pi' }] }
-  assert.equal(words.servicesSummary(three, ['pi']), 'Restarting Pi… 1 of the other 2 are running fine. Web search needs a look.')
-  assert.equal(words.servicesSummary(three, ['memorygate', 'pi']), 'Restarting Memory and Pi… Web search needs a look.')
-  assert.equal(words.receiptTitle({ operation: 'services.restart', arguments: { service: 'pi' }, outcome: 'unknown' }), 'Can’t tell if Pi restarted')
+  assert.equal(words.servicesSummary(three, ['pi']), 'Restarting Chat engine… 1 of the other 2 are running fine. Web search needs a look.')
+  assert.equal(words.servicesSummary(three, ['memorygate', 'pi']), 'Restarting Memory and Chat engine… Web search needs a look.')
+  assert.equal(words.receiptTitle({ operation: 'services.restart', arguments: { service: 'pi' }, outcome: 'unknown' }), 'Can’t tell if Chat engine restarted')
   assert.equal(words.receiptTitle({ operation: 'backup.run', arguments: {}, outcome: 'done' }), 'Backed up and checked')
   const order = words.sortReceipts(['done', 'failed', 'working', 'unknown'].map((outcome, index) => receipt(`ui_order_${index}_0000000000`, 'backup.run', {}, outcome))).map(row => row.outcome)
   assert.deepEqual(order, ['working', 'unknown', 'failed', 'done'], 'Live first, then what needs a look')

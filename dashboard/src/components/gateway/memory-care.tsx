@@ -40,7 +40,7 @@ export function GatewayMemoryCare({ client }: { client: MemoryCareClient }) {
       <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-5">
         <PageHeader actionsOnly title="Memory care" actions={<WorkspaceAction iconOnly aria-label="Check memory again" title="Check memory again" disabled={loading} onClick={load}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
         <div className="space-y-1">
-          <Link to="/memory" className="inline-flex items-center gap-1 text-sm text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />Memory</Link>
+          <Link to="/memory" className="tap-44 inline-flex items-center gap-1 text-sm text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden="true" />Memory</Link>
           <p className="text-sm text-muted-foreground">Memories worth a look. Nothing here changes by itself: open one to fix it or forget it.</p>
         </div>
         {failed && !page && <InlineError error={failed.error} title="Memory care didn’t load" onRetry={load} />}
@@ -59,7 +59,7 @@ export function GatewayMemoryCare({ client }: { client: MemoryCareClient }) {
                 const memory = page.memories?.[id]
                 return <li key={id} className="flex min-w-0 items-start gap-3 py-2 first:pt-0 last:pb-0">
                   <span className="min-w-0 flex-1 text-sm">{memory ? memory.text : 'This memory is not shown here.'}{memory?.state === 'needs_review' && <span className="ml-2 text-xs text-muted-foreground">Needs a look</span>}</span>
-                  <Link to={memoryLink(id)} className="shrink-0 text-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open this memory to fix or forget it: ${memory?.text ?? id}`}>Fix or forget</Link>
+                  <Link to={memoryLink(id)} className="tap-44 shrink-0 text-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open this memory to fix or forget it: ${memory?.text ?? id}`}>Fix or forget</Link>
                 </li>
               })}</ul>
               {item.reason && <p className="mt-2 text-xs text-muted-foreground">{item.reason}</p>}

@@ -67,3 +67,6 @@
  .memory-workspace-status { padding:5px 8px; }
 }
 @media (prefers-reduced-motion:reduce) { .memory-point,.memory-point-label { transition:none; } }
+
+/* On a touch screen the controls sit 12 px apart so their 44 px tap areas do not overlap. */
+@media (pointer: coarse) { .memory-workspace-toolbar, .memory-workspace-toolbar.memory-appbar-toolbar { gap:12px; } }

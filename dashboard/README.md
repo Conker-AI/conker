@@ -28,7 +28,7 @@ start the frontend.
 ## Screen map
 
 The sidebar follows the owner-approved structure: **Overview** (Home, Inbox, Chats),
-**Workspace** (Projects, Memory, Agents, Tools, Cron jobs) and **System** (Server, Settings).
+**Workspace** (Projects, Memory, Agents, Tools, Jobs) and **System** (Server, Settings).
 [`src/components/gateway/navigation.ts`](src/components/gateway/navigation.ts) is its one
 source of truth; every other place is one search away (Ctrl/Cmd+K).
 
@@ -41,7 +41,7 @@ source of truth; every other place is one search away (Ctrl/Cmd+K).
 | `/memory` | Memories, the memory map, sources, corrections and forgetting. |
 | `/agents` | Agents, teams and skills. |
 | `/tools` | Tools, workflow drafts, MCP servers and which tools Conker may use. |
-| `/jobs` | Cron jobs and their runs. |
+| `/jobs` | Jobs and their runs. |
 | `/system` | Server: health, processes, ports, containers, terminal, native sessions, files. |
 | `/settings` | Every setting by topic (`?group=TOPIC`). |
 | `/settings/companion` | Character Studio: identity, style, appearance, voice and modes. |

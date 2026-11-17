@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { PageTitle } from '@/components/design-system'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { nameChat, writeTitle } from './chat-title-actions'
 
@@ -16,7 +17,7 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
   const busy = useRef(false)
   const cancelled = useRef(false)
 
-  if (!control || !sessionId) return <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{title}</h2>
+  if (!control || !sessionId) return <PageTitle className="min-w-0 flex-1 truncate text-sm font-medium">{title}</PageTitle>
 
   const run = (write: (revision: number) => Promise<unknown>) => writeTitle(control, sessionId, onChanged, write)
 
@@ -40,7 +41,7 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
 
   if (editing) {
     // On a phone the header cell is too narrow to type in, so the field spans the bar while editing.
-    return <h2 className="min-w-0 flex-1 text-sm font-medium max-sm:fixed max-sm:inset-x-3 max-sm:top-3 max-sm:z-30 max-sm:bg-background">
+    return <PageTitle className="min-w-0 flex-1 text-sm font-medium max-sm:fixed max-sm:inset-x-3 max-sm:top-3 max-sm:z-30 max-sm:bg-background">
       <Input
         size="sm"
         value={value}
@@ -57,11 +58,11 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
         aria-label="Chat name"
         className="max-w-sm text-sm font-medium max-sm:max-w-none"
       />
-    </h2>
+    </PageTitle>
   }
 
   return <div className="flex min-w-0 flex-1 items-center gap-1">
-    <h2 className="min-w-0 truncate text-sm font-medium">
+    <PageTitle className="min-w-0 truncate text-sm font-medium">
       <Button
         variant="ghost"
         size="xs"
@@ -73,7 +74,7 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
       >
         <span className="truncate">{title}</span>
       </Button>
-    </h2>
+    </PageTitle>
     <Button variant="ghost" size="icon-xs" className="shrink-0 max-md:hidden" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
       {naming ? <Spinner /> : <Sparkles />}
     </Button>

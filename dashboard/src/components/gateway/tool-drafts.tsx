@@ -82,7 +82,7 @@ export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDr
       emptyDescription={view.query.trim() ? 'Try other words, or start a new draft.' : 'Create a draft to get started.'}
       emptyAction={view.query.trim() ? undefined : <Button onClick={() => setCreating(true)}><Plus aria-hidden="true" />New tool</Button>} icon={<Wrench />}
       footer={page.next_after && <Button variant="outline" size="sm" disabled={busy} onClick={() => void more()}>{busy ? 'Loading…' : 'Load more drafts'}</Button>}>
-      {view.rows.map(item => <ListLine key={item.id} to={`/tools?draft=${item.id}`} icon={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} sub={item.kind} meta={when(item.updated_at)} />)}
+      {view.rows.map(item => <ListLine key={item.id} to={`/tools?draft=${item.id}`} icon={<IdentityMark brand={serviceIn(item.name)} kind={item.kind === 'workflow' ? 'workflow' : 'tool'} name={item.name} />} title={item.name} sub={item.kind === 'workflow' ? 'Workflow' : item.kind === 'connector' ? 'Connector' : item.kind} meta={when(item.updated_at)} />)}
     </ListCard>}
     <NewToolDialog drafts={client} open={creating} onOpenChange={setCreating} />
   </GatewayPageFrame>

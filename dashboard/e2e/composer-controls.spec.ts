@@ -30,8 +30,8 @@ test('the wand rewrites the draft without sending it, and Undo brings the origin
   const box = page.getByRole('textbox').first()
   const draft = 'plan my week around judo and school'
   await box.fill(draft)
-  await page.getByRole('button', { name: 'Improve my prompt' }).click()
-  await expect(page.getByText('Prompt improved')).toBeVisible()
+  await page.getByRole('button', { name: 'Improve wording' }).click()
+  await expect(page.getByText('Rewritten. Not sent yet.')).toBeVisible()
   await expect(box).toHaveValue(/^Goal: plan my week/)
   await expect(page.getByText('changed in another tab')).toHaveCount(0)
   await page.getByText('Show original').click()
@@ -101,16 +101,16 @@ test('a new chat has voice and video call buttons in the toolbar, disabled, with
   expect(errors).toEqual([])
 })
 
-test('the Thinking and Complexity chips show what Auto chose and why, a changed chip shows Custom, and Back to Auto restores them', async ({ page }) => {
+test('the Think first and Difficulty chips show what Auto chose and why, a changed chip shows Custom, and Back to Auto restores them', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
   await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
-  await page.getByRole('button', { name: 'Thinking: On (auto)' }).click()
+  await page.getByRole('button', { name: 'Think first: On (auto)' }).click()
   await expect(page.getByText('Auto chose this:')).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Complexity: Hard (auto)' })).toBeVisible()
-  // The old Mode popover held Think, Complexity and Research switches; it now holds the presets only.
+  await expect(page.getByRole('button', { name: 'Difficulty: Hard (auto)' })).toBeVisible()
+  // The old Mode popover held Think first, Difficulty and Research switches; it now holds the presets only.
   await page.getByRole('button', { name: /^Mode: / }).click()
   await expect(page.getByRole('radio', { name: /Fast/ })).toBeVisible()
   await expect(page.getByRole('switch')).toHaveCount(0)

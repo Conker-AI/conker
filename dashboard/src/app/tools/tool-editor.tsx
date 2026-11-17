@@ -173,7 +173,7 @@ export function ToolEditor({
           "Apply or discard pending source and argument changes before saving.",
         );
       await liveSave(definition);
-      setNotice("Draft saved to ToolGate.");
+      setNotice("Draft saved.");
     });
   const connect = (connection: Connection) => {
     const from = definition.nodes.find((n) => n.id === connection.source);
@@ -278,7 +278,7 @@ export function ToolEditor({
         save={save}
         exportDefinition={exportDefinition}
       />
-      <p className="tools-feedback text-xs text-muted-foreground">Saved in ToolGate. Publish a saved version, grant caller access, then run it with its existing approval rules.</p>
+      <p className="tools-feedback text-xs text-muted-foreground">Saved. Publish it, choose who may use it, then run it. Anything that needs your OK still asks first.</p>
       {error && (
         <div role="alert" className="tools-feedback text-destructive-foreground">
           {error}
@@ -397,10 +397,10 @@ export function ToolEditor({
             `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : "Save to preserve changes"}`}
         </span>
         <span className="hidden sm:inline">
-          {checkLabel} · Published runs via ToolGate
+          {checkLabel}
         </span>
       </footer>
-      <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved ToolGate draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />
+      <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />
     </div>
   );
 }

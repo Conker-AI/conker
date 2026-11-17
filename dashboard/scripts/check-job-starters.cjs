@@ -70,7 +70,7 @@ async function main() {
   const workspace = read('src/components/gateway/jobs-workspace.tsx'), dialog = read('src/components/gateway/new-agent-job-dialog.tsx')
   assert.match(workspace, /Start from an idea/)
   assert.match(workspace, /onClick=\{\(\) => startNew\(starter\)\}/, 'Picking an idea opens the form with it')
-  assert.doesNotMatch(workspace, /createAgentJob\(/, 'The Cron jobs screen never creates a job from an idea itself')
+  assert.doesNotMatch(workspace, /createAgentJob\(/, 'The Jobs screen never creates a job from an idea itself')
   assert.equal(dialog.match(/createAgentJob\(/g).length, 1, 'The form creates in one place: its submit')
   assert.match(dialog, /const submit = async \(event: FormEvent\) => \{\s*event\.preventDefault\(\)/)
   assert.doesNotMatch(dialog, /asks for your password/, 'Creating a job needs only the session (ADR-0010)')
