@@ -135,7 +135,9 @@ routes.POST.unshift(/^\/api\/host\/chatgpt$/)
 routes.GET.unshift(/^\/api\/control\/pi\/search(?:\/(?:settings|capabilities))?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/search\/settings$/)
 // Memory care, what Conker believes about the owner, and the prompt wand: owner reads and one unsent rewrite.
-routes.GET.unshift(/^\/api\/control\/pi\/memory\/(?:upkeep|beliefs)$/)
+routes.GET.unshift(/^\/api\/control\/pi\/memory\/(?:upkeep|beliefs|recall-notices)$/)
+// Memories he corrected or forgot that earlier answers had used: list, and hide one card (the session alone is enough).
+routes.POST.unshift(/^\/api\/control\/pi\/memory\/recall-notices\/mrn_[0-9a-f]{32}\/dismiss$/)
 routes.GET.unshift(/^\/api\/control\/pi\/memory\/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}\/uses$/)
 routes.GET.unshift(/^\/api\/control\/pi\/open-loops$/)
 routes.POST.unshift(/^\/api\/control\/pi\/prompts\/enhance$/)

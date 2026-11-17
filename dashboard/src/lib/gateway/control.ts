@@ -7,6 +7,7 @@ import { createGatewayImportsClient } from './imports'
 import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
+import { createRecallNoticesClient } from './recall-notices'
 import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
@@ -335,6 +336,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     jobs: createGatewayJobsClient(auth),
     changeRequests: createChangeRequestsClient(auth),
     asks: createAsksClient(auth),
+    /** Memories he corrected or forgot that earlier answers had used (the Inbox card). */
+    recallNotices: createRecallNoticesClient(auth),
     /** Memories worth tidying: duplicates, disagreements, expired, unused. Read only. */
     memoryCare: createMemoryCareClient(auth),
     memoryBeliefs: createMemoryBeliefsClient(auth),

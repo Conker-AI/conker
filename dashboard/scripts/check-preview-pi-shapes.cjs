@@ -45,6 +45,7 @@ export async function run() {
     agent: async () => control.agent(first(await control.agents())),
     memoryUpkeep: () => control.memoryCare.upkeep(),
     memoryUses: () => control.memoryUses.uses('mem_judo'),
+    recallNotices: () => control.recallNotices.list(),
     openLoops: () => control.openLoops.list('open'),
     chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),

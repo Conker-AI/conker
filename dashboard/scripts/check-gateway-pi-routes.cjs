@@ -22,7 +22,9 @@ async function main() {
   await transport.request('/api/control/pi/memory/beliefs', { query: { origin: 'stated', state: 'all', limit: 50 } })
   await transport.request('/api/control/pi/memory/mem_judo/uses', { query: { limit: 1 } })
   await transport.request('/api/control/pi/open-loops', { query: { state: 'done', limit: 50 } })
-  assert.equal(urls.length, 5)
+  await transport.request('/api/control/pi/memory/recall-notices')
+  assert.equal(snapshotGatewayOperation('/api/control/pi/memory/recall-notices/mrn_' + '0'.repeat(32) + '/dismiss', {}).path, '/api/control/pi/memory/recall-notices/mrn_' + '0'.repeat(32) + '/dismiss')
+  assert.equal(urls.length, 6)
   // Prompt templates: the list, one template by either kind of id, a save and a delete; nothing else under /prompts.
   const posts = []
   const writer = createGatewayTransport({ origin, fetch: async (url, init) => { posts.push([init?.method, url]); return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }) } })
@@ -42,7 +44,7 @@ async function main() {
   const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32)
   await transport.request(run)
   for (const action of ['steps', 'reconcile', 'finish']) await transport.request(`${run}/${action}`, { method: 'POST', csrfToken, body: {} })
-  assert.equal(urls.length, 9); urls.length = 5
+  assert.equal(urls.length, 10); urls.length = 6
   await assert.rejects(transport.request('/api/control/pi/team-runs'), error => error.kind === 'validation')
   await assert.rejects(transport.request(`${run}/steps`), error => error.kind === 'validation')
   assert.equal(snapshotGatewayOperation(`${run}/finish`, { expected_revision: 3, state: 'cancelled' }).path, `${run}/finish`)
@@ -51,7 +53,6 @@ async function main() {
   await assert.rejects(transport.request('/api/control/pi/memory/mem_judo/uses/extra'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/memory/unknown'), error => error.kind === 'validation')
   assert.throws(() => snapshotGatewayOperation('/api/control/pi/prompts/other', {}), error => error.kind === 'validation')
-  console.log('Pi routes: memory care, beliefs, prompt enhance and prompt templates pass the transport; unknown routes are refused')
-  console.log('Pi routes: memory care, beliefs, team runs and prompt enhance pass the transport; unknown routes are refused')
+  console.log('Pi routes: memory care, beliefs, recall notices, team runs, prompt enhance and prompt templates pass the transport; unknown routes are refused')
 }
 main().catch(error => { console.error(error); process.exit(1) })
