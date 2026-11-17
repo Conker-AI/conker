@@ -59,7 +59,7 @@ assert.match(composer, /<MoreHorizontal /, 'The overflow is a plain "…" button
 assert.match(composer, /ref=\{toolbar\} className="flex min-w-0 flex-wrap/, 'The toolbar row wraps instead of letting controls overlap')
 assert.match(composer, /\{controls\}\{onBar\}/, 'Controls and items share the one wrapping row, so the actions sit after the last of them')
 assert.match(composer, /<ComposerItemContext\.Provider value=\{report\}>/)
-assert.match(composer, /<div className="ml-auto flex shrink-0 items-center gap-1">\{bar\}<\/div>/, 'Voice typing and Send (or Stop) stay at the end of the bar')
+assert.match(composer, /<div className="ml-auto flex shrink-0 items-center gap-1 pointer-coarse:gap-3">\{bar\}<\/div>/, 'Voice typing and Send (or Stop) stay at the end of the bar')
 // The ui Textarea styles its wrapper span; the composer drops that box and styles the field itself.
 assert.match(composer, /<Textarea [^\n]*unstyled className="block \[&>textarea\]:[^"]*\[&>textarea\]:resize-none/, 'No square box around the text box and no resize grip')
 assert.doesNotMatch(composer, /className="max-h-\[min[^"]*rounded-none border-0/, 'Field styles never go to the wrapper again')

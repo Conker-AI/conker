@@ -23,6 +23,7 @@ function harness(file, name, initialProps) {
     if (dependency === '@/lib/gateway/transport') return { gatewayError: error => error }
     if (dependency === '@/components/design-system/list-view') return { byName: () => () => 0, byNewest: () => () => 0 }
     if (dependency === '@/lib/gateway/skills') return { SKILL_MAX_CHARACTERS: 32000, SKILL_BROWSER_MAX_BYTES: 61440, skillImportBytes: value => Buffer.byteLength(JSON.stringify({ markdown: value })) }
+    if (dependency === '@/lib/skill-label') return { skillLabel: value => value }
     return new Proxy({}, { get: (_, key) => key === 'Button' ? 'button' : key === 'Textarea' ? 'textarea' : key === 'Input' ? 'input' : key === 'Link' ? 'a' : 'section' })
   }, module, module.exports)
   function render(next = props) { props = next; cursor = 0; dirty = false; tree = module.exports[name](props); while (effects.length) effects.shift()(); return tree }
