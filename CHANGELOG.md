@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The wand can fill one of your prompt templates, and templates have a screen.** The composer wand now offers a plain rewrite or a template: it fills the template from your unsent draft, says which fields it filled, which it left blank and which required ones are still empty, puts the text in the box with Show original and Undo, and sends nothing. Agents > Prompt templates (also in Ctrl+K) lists, makes, edits and deletes your templates (1 to 12 typed fields each); a change someone saved first is refused in plain words and your edits stay. The five browser-only starter forms are gone: the composer picker reads the same list from Pi (its four starters). Needs Pi with `/prompts/templates`. (#366)
+
 - **One model button, as in Claude Code.** The composer's model button names the model alone (no plan name), with the effort beside it. Its menu lists Opus 5.5, Fable 5.2, Sonnet 5.5 and Haiku 5.5 with number keys 1-4, an Effort submenu (Auto to Max) and More models (older Claude models and the rest); the separate Effort chip is gone, and a row adds the Claude models to the owner's list. Voice and video call are toolbar buttons that wrap to the next row before they fold. On a phone the button shows its label and every menu row is 44 px tall. (#363)
 
 - **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)
