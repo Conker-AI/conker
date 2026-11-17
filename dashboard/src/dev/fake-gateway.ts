@@ -5,6 +5,7 @@
  */
 import { GatewayError } from '@/lib/gateway/transport'
 import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
+import { createFakeRecallNotices } from './fake-gateway-recall'
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
 import { createFakeCalls } from './fake-gateway-calls'
@@ -84,7 +85,7 @@ function seed(): Session[] {
 export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'capabilities' | 'protection' | 'rehearsal' } = {}) {
   const runtimesHandle = createFakeRuntimes(fail)
   const { handle: memoryHandle, memories, deliveryFor } = createFakeMemory(fail)
-  const hostOps = createFakeHostOps(new URLSearchParams(globalThis.location?.search).get('preview-host')), providerCredentials = createFakeProviderCredentials(), agentJobs = createFakeAgentJobs(() => jobs), seedAgentJobs = withFakeAgentJobs(agentJobs)
+  const hostOps = createFakeHostOps(new URLSearchParams(globalThis.location?.search).get('preview-host')), recallNotices = createFakeRecallNotices(new URLSearchParams(globalThis.location?.search).get('preview-recall'), [[previewSessions.week, 'Plan my week'], [previewSessions.sky, 'Why is the sky blue?']], now, fail), providerCredentials = createFakeProviderCredentials(), agentJobs = createFakeAgentJobs(() => jobs), seedAgentJobs = withFakeAgentJobs(agentJobs)
   const sessions = seed()
   const thinkingScenario = globalThis.sessionStorage?.getItem('conker-fake-fail') === 'thinking-cancel-timeout'
   if (thinkingScenario) sessions[0].thinking = [{ session_id: sessions[0].id, turn_id: String(sessions[0].turns[0].id), input_message_id: sessions[0].messages[0].id, created_at: now(), status: 'running', provider: 'ollama', model: 'qwen2.5:7b', result: null, detail: null }]
@@ -564,9 +565,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/api/pi/tools') return { status: 'ok', results: [...tools, ...agentJobs(path, method, undefined, fail).results as Json[]] }
     const setupHandled = setupHandle(path, method, options)
     if (setupHandled !== undefined) return setupHandled
-    const memoryHandled = memoryHandle(path, method, options)
-    if (memoryHandled !== undefined) return memoryHandled
-    return fail(404)
+    return memoryHandle(path, method, options) ?? recallNotices(path, method) ?? fail(404)
   }
 
   /** Server-sent preview stream, answered for the live chat's fetch. */

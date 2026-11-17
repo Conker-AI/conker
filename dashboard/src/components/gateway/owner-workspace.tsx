@@ -18,6 +18,9 @@ import { ChangeRequestCard } from '@/components/inbox/change-request-card'
 import { useChangeRequests } from '@/components/inbox/change-requests'
 import { HandledList } from '@/components/inbox/handled-list'
 import { AskCard } from '@/components/inbox/ask-card'
+import { RecallNoticeCard } from '@/components/inbox/recall-notice-card'
+import { useRecallNotices } from '@/components/inbox/recall-notices'
+import type { RecallNoticesClient } from '@/lib/gateway/recall-notices'
 import { useApprovalFollow } from '@/components/inbox/approval-follow'
 import { approvalProgressText } from '@/components/inbox/approval-progress'
 import { inboxSummary } from '@/components/inbox/inbox-summary'
@@ -40,7 +43,7 @@ import type { GatewayHostOpsClient } from '@/lib/gateway/host-ops'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, drafts, access, updates, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -60,6 +63,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const notes = useAgentNotes(checks, active && !requestId)
   const requests = useChangeRequests(changes, drafts, active && !requestId)
   const questions = useAsks(asks, active && !requestId)
+  const memories = useRecallNotices(recall, active && !requestId)
   const approvals = useApprovalFollow(client, active)
   const { isLater, later, restore } = useLater()
   const [now, setNow] = useState(Date.now)
@@ -172,7 +176,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   // A tool Conker is still drafting is shown, but it does not need him yet.
   const waitingChanges = nowChanges.filter(item => !isDrafting(item))
   const nowAsks = questions.items.filter(item => !isLater(askKey(item.id))), laterAsks = questions.items.filter(item => isLater(askKey(item.id)))
-  const needsCount = nowDecisions.length + waitingChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length
+  const needsCount = nowDecisions.length + waitingChanges.length + nowAsks.length + nowIdeas.length + nowNotes.length + memories.items.length
   const today = new Date(now).toDateString()
   const decidedToday = rows.filter(row => row.decision && new Date(row.decision.at).toDateString() === today).length
   // Nothing is summarized until every source answered; a source that failed is named, never counted as empty.
@@ -182,10 +186,11 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     { answered: notes.answered, failed: notes.error !== null },
     { answered: requests.answered, failed: requests.error !== null },
     { answered: questions.answered, failed: questions.error !== null },
+    { answered: memories.answered, failed: memories.error !== null },
   ], needsCount, decidedToday)
   // Filters only once everything loaded: a count for a source that didn't load would be a guess.
   const view = summary.state === 'ready' ? filter : 'all'
-  const showDecisions = view === 'all' || view === 'decisions', showIdeas = view === 'all' || view === 'ideas', showNotes = view === 'all' || view === 'checks'
+  const showDecisions = view === 'all' || view === 'decisions', showIdeas = view === 'all' || view === 'ideas', showNotes = view === 'all' || view === 'checks', showMemories = view === 'all'
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
   const card = (row: OwnerRequest, detail = false) => <ApprovalCard key={row.id} request={row} now={now} detail={detail}
     note={retained.notes[row.id] ?? ''} attempt={retained.attempts[row.id]} busy={busy || loading} processing={retained.pendingId === row.id}
@@ -193,7 +198,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     onDecide={(status, retry, note) => void decide(row, status, retry, note)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
-  const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load(); void requests.load(); void questions.load() } }
+  const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load(); void requests.load(); void questions.load(); void memories.load() } }
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
   const laterCount = (showDecisions ? laterDecisions.length + laterChanges.length + laterAsks.length : 0) + (showIdeas ? laterIdeas.length : 0) + (showNotes ? laterNotes.length : 0)
@@ -232,14 +237,16 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         {showIdeas && ideas.error !== null && <InlineError error={ideas.error} title="Ideas didn’t load" onRetry={() => ideas.load()} />}
         {showDecisions && requests.error !== null && <InlineError error={requests.error} title="Conker’s requests didn’t load" onRetry={() => requests.load()} />}
         {showDecisions && questions.error !== null && <InlineError error={questions.error} title="Conker’s questions didn’t load" onRetry={() => questions.load()} />}
+        {showMemories && memories.error !== null && <InlineError error={memories.error} title="Memory notices didn’t load" onRetry={() => memories.load()} />}
         {showNotes && notes.error !== null && <InlineError error={notes.error} title="Notes from your AI jobs didn’t load" onRetry={() => notes.load()} />}
-        {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
+        {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) || (showMemories && memories.items.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
           {showDecisions && nowDecisions.map(row => card(row))}
           {showDecisions && nowChanges.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
             onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onAnswer={request.kind === 'tool_draft' ? text => requests.answer(request, text) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
           {showDecisions && nowAsks.map(ask => <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
             onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />)}
           {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}
+          {showMemories && memories.items.map(notice => <RecallNoticeCard key={notice.id} notice={notice} busy={memories.pending === notice.id} error={memories.failure?.id === notice.id ? memories.failure.message : null} onDismiss={() => void memories.dismiss(notice)} />)}
           {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
             onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
         </section> : summary.state === 'ready' && <Empty className="py-10 md:py-14">

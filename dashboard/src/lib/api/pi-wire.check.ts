@@ -16,6 +16,7 @@ import type { ChatOutput } from '../gateway/chat-names'
 import type { BeliefPage } from '../gateway/memory-beliefs'
 import type { MemoryUsePage } from '../gateway/memory-uses'
 import type { OpenLoopPage } from '../gateway/open-loops'
+import type { RecallNoticePage } from '../gateway/recall-notices'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 import type { TemplateDeleted, TemplatePage, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
@@ -44,6 +45,7 @@ export const piWire = {
   memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
   memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
   memoryUses: true satisfies Same<MemoryUsePage, PiResponse<'/memory/{memory_id}/uses', 'get'>>,
+  recallNotices: true satisfies Same<RecallNoticePage, PiResponse<'/memory/recall-notices', 'get'>>,
   openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
