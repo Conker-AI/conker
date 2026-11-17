@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Inbox card: a memory you corrected was used.** When answers written earlier used a memory he has since corrected or forgot, the Inbox says so in plain words, lists the chats by title with a link to each, and has a Dismiss button that hides the card only. It counts in the Inbox badge. Reads Pi's `GET /memory/recall-notices` (Pi #285); the dev pin of Pi must be bumped after that merges. (#364)
+
 - **One model button, as in Claude Code.** The composer's model button names the model alone (no plan name), with the effort beside it. Its menu lists Opus 5.5, Fable 5.2, Sonnet 5.5 and Haiku 5.5 with number keys 1-4, an Effort submenu (Auto to Max) and More models (older Claude models and the rest); the separate Effort chip is gone, and a row adds the Claude models to the owner's list. Voice and video call are toolbar buttons that wrap to the next row before they fold. On a phone the button shows its label and every menu row is 44 px tall. (#363)
 
 - **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)
