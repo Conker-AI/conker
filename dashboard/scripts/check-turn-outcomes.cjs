@@ -8,7 +8,7 @@ const sourcePath = process.env.TURN_OUTCOMES_SOURCE || path.join(root, 'src/lib/
 const source = fs.readFileSync(sourcePath, 'utf8')
 const loaded = { exports: {} }
 new Function('require', 'module', 'exports', ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => { throw new Error('Turn outcomes must have no runtime dependencies') }, loaded, loaded.exports)
-const { parkedTurn, visibleTurnOutcomes, turnOutcomeCopy, sameTurnOutcome, turnCheckCopy } = loaded.exports
+const { parkedTurn, visibleTurnOutcomes, turnOutcomeCopy, sameTurnOutcome, turnCheckCopy, retryableTurn, retryText } = loaded.exports
 
 const turn = (extra = {}) => ({ id: 'trn_1', sessionId: 'ses_1', status: 'complete', acted: false, startedAt: '2026-10-17T10:00:00Z', endedAt: '2026-10-17T10:00:08Z', provider: null, model: null, inputTokens: null, outputTokens: null, costUsd: null, detail: null, action: null, memory: {}, ...extra })
 
@@ -122,7 +122,27 @@ assert.strictEqual(turnOutcomeCopy(toolUnavailableTurn2).toolUnavailable, true, 
 
 // Test generic failed description
 const genericFailed = turn({ status: 'failed', detail: 'some other error' })
-assert.strictEqual(turnOutcomeCopy(genericFailed).description, 'Conker stopped before completing a reply. Check the saved outcome before sending a new request.', 'generic failed description')
+assert.strictEqual(turnOutcomeCopy(genericFailed).description, 'The model did not send back an answer. It may be offline or overloaded. Try again, or choose another model.', 'A failed answer with an unrecognised reason gets the general cause')
+assert.strictEqual(turnOutcomeCopy(turn({ status: 'failed', detail: null })).description, turnOutcomeCopy(genericFailed).description, 'A failed answer with no reason gets the general cause')
+// The cause is named for the reasons Pi is known to give, in fixed words.
+const capTurn = turn({ status: 'failed', detail: "Today's spending cap is reached, so paid models are paused until tomorrow. Raise it with `conker spending cap`." })
+assert.match(turnOutcomeCopy(capTurn).description, /^Today’s spending limit is reached, so paid models are paused until tomorrow\./, 'spending limit cause')
+assert.ok(!turnOutcomeCopy(capTurn).description.includes("Today's"), 'The saved reason is not echoed')
+assert.ok(!/conker spending|`/.test(turnOutcomeCopy(capTurn).description), 'No command is shown to the owner')
+assert.match(turnOutcomeCopy(turn({ status: 'failed', detail: 'Local inference capacity is busy.' })).description, /busy with another job/, 'busy local model cause')
+assert.strictEqual(turnOutcomeCopy(turn({ status: 'failed' })).consequence, 'Nothing ran for this message. It is kept in this chat.', 'A failed answer that ran nothing says so')
+assert.match(turnOutcomeCopy(turn({ status: 'interrupted' })).description, /Nothing ran\. Try again/, 'An interrupted answer that ran nothing can be tried again')
+assert.match(turnOutcomeCopy(turn({ status: 'interrupted', acted: true })).description, /^Work was interrupted/, 'An interrupted answer that acted keeps the careful words')
+
+// 3b. Which turns can be sent again, and with which words
+assert.ok(retryableTurn(turn({ status: 'failed' })) && retryableTurn(turn({ status: 'interrupted' })), 'failed and interrupted turns that ran nothing can be tried again')
+for (const patch of [{ status: 'failed', acted: true }, { status: 'failed', action: { id: 'a', state: 'completed' } }, { status: 'interrupted', acted: true }, { status: 'cancelled' }, { status: 'complete' }, { status: 'outcome_unknown' }]) assert.ok(!retryableTurn(turn(patch)), `not retryable: ${JSON.stringify(patch)}`)
+const said = (id, sequence, role, text, turnId) => ({ id, sessionId: 'ses_1', sequence, role, createdAt: '2026-10-17T10:00:00Z', agentId: null, ...(turnId ? { turnId } : {}), content: text === null ? { kind: 'unavailable', reason: 'forgotten' } : { kind: 'text', text } })
+assert.equal(retryText([said('m1', 1, 'user', 'first', 'trn_a'), said('m2', 2, 'assistant', 'answer', 'trn_a'), said('m3', 3, 'user', 'second', 'trn_b')], 'trn_b'), 'second', 'The turn’s own message')
+assert.equal(retryText([said('m1', 1, 'user', 'first'), said('m2', 2, 'assistant', 'answer'), said('m3', 3, 'user', 'second')], 'trn_b'), 'second', 'Without turn links, the newest message nothing answered')
+assert.equal(retryText([said('m1', 1, 'user', 'first'), said('m2', 2, 'assistant', 'answer')], 'trn_b'), null, 'A message that was answered is not sent again')
+assert.equal(retryText([said('m1', 1, 'user', null, 'trn_b')], 'trn_b'), null, 'Forgotten words are never sent')
+assert.equal(retryText([said('m1', 1, 'user', '   ', 'trn_b')], 'trn_b'), null, 'Empty words are never sent')
 
 // Safety test - no provider text leaks
 const secretTurn = turn({ status: 'failed', detail: 'Provider said: sk-secret-123 boom' })
