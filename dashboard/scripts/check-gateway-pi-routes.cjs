@@ -39,7 +39,7 @@ async function main() {
   await assert.rejects(writer.request('/api/control/pi/prompts/enhance'), error => error.kind === 'validation', 'enhance is a POST only')
   assert.ok(urls[2].includes('origin=stated'))
   // Team runs: one run by its id, its steps, check and finish. Pi's browser contract also allows starting a run; the browser never does.
-  const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32), csrfToken = 'x'.repeat(43)
+  const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32)
   await transport.request(run)
   for (const action of ['steps', 'reconcile', 'finish']) await transport.request(`${run}/${action}`, { method: 'POST', csrfToken, body: {} })
   assert.equal(urls.length, 9); urls.length = 5
