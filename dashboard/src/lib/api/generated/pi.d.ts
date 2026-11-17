@@ -4483,6 +4483,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/memory/recall-notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Recall Notices
+         * @description Open notices that earlier answers used a memory since changed (read only).
+         *
+         *     Ids, counts and chat titles, no words. Only visible chats count: a chat that is forgotten
+         *     or in the Trash is left out, and a notice that reaches no visible answer is not listed.
+         */
+        get: operations["list_recall_notices_memory_recall_notices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memory/recall-notices/{notice_id}/dismiss": {
         parameters: {
             query?: never;
@@ -9550,6 +9573,60 @@ export interface components {
             medianAnswerSeconds: number | null;
             /** Quietshare */
             quietShare: number | null;
+        };
+        /** RecallChat */
+        RecallChat: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+        };
+        /** RecallNotice */
+        RecallNotice: {
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "memory-recall";
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Since */
+            since: number;
+            /** Memoryid */
+            memoryId: string;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "corrected" | "forgotten" | "changed";
+            /** Answers */
+            answers: number;
+            /** Chats */
+            chats: number;
+            /** Sessionids */
+            sessionIds: string[];
+            /** Sessions */
+            sessions: components["schemas"]["RecallChat"][];
+            source: components["schemas"]["RecallSource"];
+        };
+        /** RecallNoticePage */
+        RecallNoticePage: {
+            /** Items */
+            items: components["schemas"]["RecallNotice"][];
+        };
+        /** RecallSource */
+        RecallSource: {
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "memory-recall";
+            /** Noticeid */
+            noticeId: string;
+            /** Memoryid */
+            memoryId: string;
         };
         /** Receipt */
         Receipt: {
@@ -21506,6 +21583,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recall_notices_memory_recall_notices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecallNoticePage"];
                 };
             };
             /** @description Validation Error */
