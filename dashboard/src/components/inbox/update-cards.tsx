@@ -11,6 +11,8 @@ import { UPDATE_EFFECT, when } from '@/lib/server-actions'
 import { InboxCard } from './inbox-card'
 
 const READ_AGAIN_MS = 60_000
+/** The owner's guide to a held update: what to run, which backup to restore, and how to clear the hold. */
+const HELD_GUIDE = 'https://github.com/Conker-AI/conker/blob/main/docs/reference/server-care.md#when-an-update-is-held'
 
 /**
  * Conker updates in the Inbox (owner, 2026-11-12: "like a phone app"). The server checks once a day;
@@ -49,16 +51,19 @@ export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClie
     setStarting(true)
     try { await actions.start({ operation: 'update.run', arguments: { version } }) } finally { setStarting(false) }
   }
+  const results = overview?.results ?? [], held = results.filter(result => result.outcome === 'held')
+  const dismissResult = (id: string) => () => void settle(id, () => updates.dismiss(id))
   return <>
-    {offer && <OfferCard offer={offer} busy={starting || pending !== null || actions.busy !== null} error={failure?.key === offer.version ? failure.message : null}
+    {held.map(result => <HeldCard key={result.id} result={result} error={failure?.key === result.id ? failure.message : null} onDismiss={dismissResult(result.id)} />)}
+    {offer && <OfferCard offer={offer} held={held.length > 0} busy={starting || pending !== null || actions.busy !== null} error={failure?.key === offer.version ? failure.message : null}
       progress={running ? <ReceiptLine receipt={running} live working="Conker is switching to the new version. This page may lose the connection for a few minutes and reconnects by itself; the result shows here." />
         : tried ? <AttemptLine attempt={tried} onCheck={() => void actions.checkAttempt('update')} />
         : ended ? <div className="flex flex-col gap-1.5"><ReceiptLine receipt={ended} />{ended.outcome === 'unknown' && <p className="text-sm text-muted-foreground">Update again first puts back the version Conker had, if the cut-off update changed anything, then updates.</p>}</div> : null}
       settled={refused}
       onUpdate={() => void update(offer.version)}
       onSkip={() => void settle(offer.version, () => updates.skip(offer.version))} />}
-    {(overview?.results ?? []).map(result => <ResultCard key={result.id} result={result} error={failure?.key === result.id ? failure.message : null}
-      onDismiss={() => void settle(result.id, () => updates.dismiss(result.id))} />)}
+    {results.map(result => result.outcome === 'held' ? null : <ResultCard key={result.id} result={result} outcome={result.outcome} error={failure?.key === result.id ? failure.message : null}
+      onDismiss={dismissResult(result.id)} />)}
   </>
 }
 
@@ -66,16 +71,21 @@ function published(offer: UpdateOffer) {
   return offer.publishedAt && !Number.isNaN(Date.parse(offer.publishedAt)) ? `published ${when(offer.publishedAt)}` : `found ${when(offer.foundAt * 1000)}`
 }
 
-function OfferCard({ offer, busy, error, progress, settled, onUpdate, onSkip }: {
-  offer: UpdateOffer; busy: boolean; error: string | null; progress: ReactNode; settled: boolean; onUpdate: () => void; onSkip: () => void
+function OfferCard({ offer, held, busy, error, progress, settled, onUpdate, onSkip }: {
+  offer: UpdateOffer; held: boolean; busy: boolean; error: string | null; progress: ReactNode; settled: boolean; onUpdate: () => void; onSkip: () => void
 }) {
   const locked = progress !== null && !settled
-  return <InboxCard icon={<CircleArrowUp className="text-primary" />} title={offer.title} source={`New Conker release · ${published(offer)}`}
-    primary={locked ? undefined : <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update</Button>}
+  // While an update is held the server starts no other one, so Update is replaced by the reason (server-care.md).
+  return <InboxCard icon={<CircleArrowUp className="text-primary" />} title={offer.title} source={held ? `Waiting for the held update to be fixed · ${published(offer)}` : `New Conker release · ${published(offer)}`}
+    primary={locked || held ? undefined : <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update</Button>}
     onLater={locked ? undefined : onSkip} laterLabel="Skip this version"
     actions={<>
       {progress}
-      {!locked && <>
+      {!locked && held && <>
+        <p role="status">Update is switched off for now. The last update is held, and Conker starts no new one until you have fixed that. The card above says what to do.</p>
+        <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSkip}>Skip this version</Button></div>
+      </>}
+      {!locked && !held && <>
         <p className="text-muted-foreground">{UPDATE_EFFECT} If the new version doesn’t start properly, Conker goes back to the one it has now by itself.</p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update to {offer.version}</Button>
@@ -89,17 +99,34 @@ function OfferCard({ offer, busy, error, progress, settled, onUpdate, onSkip }: 
   </InboxCard>
 }
 
-const outcomeWords: Record<UpdateResult['outcome'], { icon: ReactNode; source: string; next: string | null }> = {
+const outcomeWords: Record<Exclude<UpdateResult['outcome'], 'held'>, { icon: ReactNode; source: string; next: string | null }> = {
   applied: { icon: <CircleCheck className="text-success-foreground" />, source: 'Conker is running the new version', next: null },
   rolled_back: { icon: <RotateCcw className="text-warning-foreground" />, source: 'Conker went back to the version it had', next: 'Conker is back on the version it had and answers its health checks. If the new version had already changed Pi’s database, Conker put back Pi’s copy from the snapshot taken before the update. If anything else looks wrong, restore that snapshot (Server > Backups).' },
-  held: { icon: <TriangleAlert className="text-destructive-foreground" />, source: 'Needs you: restore the snapshot', next: 'Conker could not prove the old version works again, so it stopped and changes nothing more. Restore the snapshot taken before the update (Server > Backups, or conker recovery-status on the server).' },
   failed: { icon: <CircleX className="text-muted-foreground" />, source: 'Nothing changed', next: 'The update stopped before switching, so Conker runs as before.' },
 }
 
-function ResultCard({ result, error, onDismiss }: { result: UpdateResult; error: string | null; onDismiss: () => void }) {
-  const words = outcomeWords[result.outcome]
+function ResultCard({ result, outcome, error, onDismiss }: { result: UpdateResult; outcome: Exclude<UpdateResult['outcome'], 'held'>; error: string | null; onDismiss: () => void }) {
+  const words = outcomeWords[outcome]
   return <InboxCard icon={words.icon} title={result.title} source={`${words.source} · ${when(result.finishedAt * 1000)}`}
     onLater={onDismiss} laterLabel="Dismiss" summary={words.next ?? undefined}
     actions={error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined}
+    facts={result.reason ? [['Why', result.reason]] : []} />
+}
+
+/** An update the server could not put back to a working state: what happened, what to do, and where the full steps are. */
+function HeldCard({ result, error, onDismiss }: { result: UpdateResult; error: string | null; onDismiss: () => void }) {
+  return <InboxCard icon={<TriangleAlert className="text-destructive-foreground" />} title={result.title} source={`Needs you: Conker will not update again until this is fixed · ${when(result.finishedAt * 1000)}`}
+    defaultExpanded onLater={onDismiss} laterLabel="Hide for now"
+    summary="Conker went back to the old version after the update failed, but could not confirm that the old version works. It stopped there and changed nothing more. It starts no new update until you clear this hold."
+    actions={<>
+      <ol className="flex list-decimal flex-col gap-2 pl-5">
+        <li>On the server, run this to see which parts answer:<div className="mt-1"><Command>conker status</Command></div></li>
+        <li>Restore the backup Conker took just before the update. A restore makes a separate copy and does not replace the running server by itself, so the last step is done by hand.</li>
+        <li>When the server is the way you want it, remove the hold. The guide shows the one file to delete. Updates work again after that.</li>
+      </ol>
+      <p><a href={HELD_GUIDE} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Read the steps: “When an update is held”</a></p>
+      <p className="text-muted-foreground">Hiding this card does not clear the hold.</p>
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
+    </>}
     facts={result.reason ? [['Why', result.reason]] : []} />
 }

@@ -13,6 +13,7 @@ import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
+import { createPromptTemplatesClient } from './prompt-templates'
 import { createChatAnswersClient } from './chat-answers'
 import { createChatReviewsClient } from './chat-reviews'
 import { createChatNamesClient } from './chat-names'
@@ -343,6 +344,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     memoryUses: createMemoryUsesClient(auth),
     openLoops: createOpenLoopsClient(auth),
     promptEnhance: createPromptEnhanceClient(auth),
+    promptTemplates: createPromptTemplatesClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */
     chatAnswers: createChatAnswersClient(auth),
     chatReviews: createChatReviewsClient(auth),

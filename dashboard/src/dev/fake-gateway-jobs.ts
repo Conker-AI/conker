@@ -22,6 +22,14 @@ export function createFakeJobs(now: () => number, fail: (status: number) => neve
     status: 'completed', manual: false, budgetBound: false, receiptRecorded: true, outcomeCode: 'COMPLETED',
     authority: 'none', contentIncluded: false, execution: 'resolved',
   }]]])
+  // `?preview-jobs=failed`: the AI job "Morning news digest" (seeded with the AI jobs) has failed runs, the newest without a code.
+  if (new URLSearchParams(globalThis.location?.search).get('preview-jobs') === 'failed') {
+    const failed = (hoursAgo: number, outcomeCode: string | null): Json => ({
+      schemaVersion: 1, id: `scheduled_${(hoursAgo + 6000).toString(16).padStart(32, '0')}`, jobId: `job_${'a'.repeat(32)}`, jobRevision: 1, scheduledAt: now() - hoursAgo * 3600, startedAt: now() - hoursAgo * 3600,
+      status: 'failed', manual: false, budgetBound: false, receiptRecorded: false, outcomeCode, authority: 'none', contentIncluded: false, execution: 'resolved',
+    })
+    jobRuns.set(`job_${'a'.repeat(32)}`, [failed(2, null), failed(26, 'HELD_BACK')])
+  }
   const manualJobRequests = new Map<string, Json>()
   return { jobs, handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     let match: RegExpMatchArray | null

@@ -18,6 +18,7 @@ import type { MemoryUsePage } from '../gateway/memory-uses'
 import type { OpenLoopPage } from '../gateway/open-loops'
 import type { RecallNoticePage } from '../gateway/recall-notices'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
+import type { TemplateDeleted, TemplatePage, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
@@ -48,6 +49,10 @@ export const piWire = {
   openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
+  promptTemplates: true satisfies Same<TemplatePage, PiResponse<'/prompts/templates', 'get'>>,
+  promptTemplate: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'get'>>,
+  promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
+  promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
   projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
   project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,
