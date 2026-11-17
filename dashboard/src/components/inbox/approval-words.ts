@@ -13,6 +13,11 @@ export function friendlyValue(value: unknown): string {
   if (typeof value === 'object') return Object.entries(value).map(([key, item]) => `${humanize(key)}: ${friendlyValue(item)}`).join('; ') || 'None'
   return String(value)
 }
+/** A payment in one line ("Pay $14.50 for: domain yearly renewal"), or null when the arguments are not an amount, a currency and an item. */
+export function payLine(args: Record<string, unknown> | null): string | null {
+  if (!args || typeof args.amount !== 'number' || typeof args.currency !== 'string' || typeof args.item !== 'string') return null
+  try { return `Pay ${new Intl.NumberFormat('en', { style: 'currency', currency: args.currency }).format(args.amount)} for: ${args.item}` } catch { return null }
+}
 /** The name he must type before a level-3 delete confirms: the first string argument among the fixed keys. */
 export function deleteConfirmName(request: OwnerRequest): string {
   if (request.action.args) for (const key of ['name', 'title', 'path', 'file', 'target', 'id']) {

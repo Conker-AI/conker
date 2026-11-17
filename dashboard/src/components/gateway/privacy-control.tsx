@@ -37,18 +37,18 @@ export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }
     finally { if (!lifetime.current?.signal.aborted) setPending(false) }
   }
   const active = saved?.settings.privacy.memoryDisabled || saved?.settings.privacy.harnessDisabled
-  useComposerValue('incognito', active ? 'Incognito' : null)
-  const label = active ? 'Incognito: on' : 'Incognito'
+  useComposerValue('incognito', active ? 'Private chat' : null)
+  const label = active ? 'Private chat: on' : 'Private chat'
   return <Popover open={open} onOpenChange={value => { if (!pending) { setOpen(value); if (value && saved) setDraft(saved.settings.privacy) } }}>
     <PopoverTrigger render={<Button type="button" size="sm" className={cn('shrink-0 rounded-full font-normal', !active && 'text-muted-foreground')} variant={active ? 'secondary' : 'ghost'} aria-pressed={Boolean(active)} aria-label={label} disabled={disabled} />}><HatGlasses className="size-4" /><span data-label className="sr-only">{label}</span></PopoverTrigger>
     <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
-      <div><p className="text-sm font-medium">Chat privacy</p><p className="mt-0.5 text-xs text-muted-foreground">Controls future messages in this chat.</p></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-memory" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Use memory</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall and learn useful details.</span></Label><Switch id="live-use-memory" checked={!draft.memoryDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, memoryDisabled: !value }))} /></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Use assistant tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Route models and prepare tool actions.</span></Label><Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} /></div>
+      <div><p className="text-sm font-medium">Private chat</p><p className="mt-0.5 text-xs text-muted-foreground">Controls future messages in this chat.</p></div>
+      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-memory" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Remember this chat</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall what you told Conker and learn from this chat.</span></Label><Switch id="live-use-memory" checked={!draft.memoryDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, memoryDisabled: !value }))} /></div>
+      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Let Conker use tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Pick the best model and prepare actions for you to approve.</span></Label><Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} /></div>
       <p className="text-xs text-muted-foreground">Messages still stay in chat history.</p>
       {pending && <p role="status" className="text-xs text-muted-foreground">Checking settings…</p>}
       {error && <div className="space-y-2"><p role="alert" className="text-xs text-destructive-foreground">{error}</p><Button variant="outline" size="sm" disabled={pending} onClick={() => void reload()}>Try again</Button></div>}
-      <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Save</Button>
+      <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Done</Button>
     </PopoverContent>
   </Popover>
 }

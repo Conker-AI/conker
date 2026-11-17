@@ -478,7 +478,7 @@
             },
             {
               "value": "jobs",
-              "label": "Cron jobs"
+              "label": "Jobs"
             },
             {
               "value": "server",

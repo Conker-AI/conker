@@ -34,7 +34,7 @@ const titles = new Set()
 for (const target of writes) {
   assert.ok(allowed(target), `${target} is a chat write`)
   const review = describeGatewayOperation({ path: target, body: {} })
-  assert.notEqual(review.title, 'Confirm gateway operation', `${target} has a plain name in the password sheet`)
+  assert.notEqual(review.title, 'Confirm this action', `${target} has a plain name in the password sheet`)
   titles.add(review.title)
 }
 // Ids outside Pi's exact shapes, extra segments and query strings are refused before any request.

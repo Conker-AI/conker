@@ -188,7 +188,7 @@ async function main() {
   assert.equal(memoryFeedback('m', null, refresh).memoryId, null); assert.equal(memoryFeedback('m', { phase: 'error', receipts: {}, truncated: false }, refresh).memoryId, null)
   assert.equal(memoryFeedback('m', { phase: 'ready', receipts: { m: parseMemoryDelivery(wire('saved')) }, truncated: false }, refresh, { action: refresh, state: { phase: 'forgotten' } }).label, 'Forgotten')
   assert.match(memoryFeedback('old', { phase: 'ready', receipts: {}, truncated: true }, refresh).description, /latest 100/)
-  assert.equal(memoryFeedback('m', null, refresh).label, 'Checking memory status…', 'Neither saved chat text nor model prose is a memory acknowledgement')
+  assert.equal(memoryFeedback('m', null, refresh).label, 'Checking memory…', 'Neither saved chat text nor model prose is a memory acknowledgement')
 
   let timer = scheduler(), published = [], calls = 0
   let watch = watchMemoryDelivery({ ...timer, read: async () => { calls++; return parseMemoryDeliveryRead(envelope([{ message_id: 'message_one', ...wire('pending') }]), 'session_one') }, available: () => true, publish: state => published.push(state), forgotten() { assert.fail('Unexpected forget') } })

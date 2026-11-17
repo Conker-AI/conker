@@ -19,7 +19,7 @@ export type GatewayRoute =
 /**
  * The connected product's labels and destinations have one source of truth. Sidebar groups follow
  * the owner-approved structure (prototype v7): Overview (Home, Inbox, Chats), Workspace (Projects,
- * Memory, Agents, Tools, Cron jobs) and Server (Server, Settings). `more` places stay reachable
+ * Memory, Agents, Tools, Jobs) and Server (Server, Settings). `more` places stay reachable
  * through search and links on the pages that own them.
  */
 export const gatewayDestinations = [
@@ -30,7 +30,7 @@ export const gatewayDestinations = [
   { id: 'memory', route: 'memory', title: 'Memory', path: '/memory', group: 'workspace' },
   { id: 'agents', route: 'agents', title: 'Agents', path: '/agents', group: 'workspace' },
   { id: 'tools', route: 'tools', title: 'Tools', path: '/tools', group: 'workspace' },
-  { id: 'jobs', route: 'jobs', title: 'Cron jobs', path: '/jobs', group: 'workspace' },
+  { id: 'jobs', route: 'jobs', title: 'Jobs', path: '/jobs', group: 'workspace' },
   { id: 'system', route: 'system', title: 'Server', path: '/system', group: 'system' },
   { id: 'settings', route: 'settings', title: 'Settings', path: '/settings', group: 'system' },
   { id: 'chat', route: 'chat', title: 'New chat', path: '/chat', group: 'more' },
@@ -46,7 +46,7 @@ export const gatewayDestinations = [
   { id: 'server-backups', route: 'system', title: 'Backups', path: '/system?tab=backups', group: 'more' },
   { id: 'server-containers', route: 'system', title: 'Containers', path: '/system?tab=containers', group: 'more' },
   { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'more' },
-  { id: 'setup', route: 'setup', title: 'Setup & readiness', path: '/setup', group: 'more' },
+  { id: 'setup', route: 'setup', title: 'Setup', path: '/setup', group: 'more' },
 ] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: 'overview' | 'workspace' | 'system' | 'more' }[]
 export type GatewayDestination = typeof gatewayDestinations[number]
 export const gatewaySidebarGroups = [

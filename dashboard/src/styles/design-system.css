@@ -23,6 +23,8 @@
 .workspace-appbar { container-type:inline-size; container-name:workspace-appbar; }
 .workspace-appbar-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(12rem,420px) minmax(0,1fr); align-items:center; gap:1rem; min-height:var(--appbar-height); padding:0.5rem var(--workspace-gutter); }
 .workspace-appbar-context, .workspace-appbar-actions, .workspace-route-actions { display:flex; min-width:0; align-items:center; gap:0.5rem; }
+/* On a touch screen the 32 px controls sit 12 px apart, so their 44 px tap areas do not overlap. */
+@media (pointer: coarse) { .workspace-appbar-context, .workspace-appbar-actions, .workspace-route-actions { gap:0.75rem; } }
 .workspace-appbar-actions { justify-content:flex-end; }
 .workspace-route-actions:empty { display:none; }
 .workspace-appbar-summary:empty { display:none; }
@@ -30,6 +32,8 @@
 .workspace-appbar-context .workspace-sidebar-trigger { width:2rem; height:2rem; margin-left:-0.5rem; flex-shrink:0; }
 .workspace-search-trigger { width:100%; justify-content:flex-start; color:var(--muted-foreground); background:var(--background); box-shadow:none; }
 .workspace-search-trigger:hover { color:var(--foreground); }
+/* The unlayered `box-shadow:none` above would otherwise cancel the Button's focus ring. */
+.workspace-search-trigger:focus-visible { box-shadow:0 0 0 2px var(--ring); }
 .workspace-appbar-toolbar { min-width:0; padding:0.5rem var(--workspace-gutter); border-top:1px solid var(--border); }
 .workspace-search-dialog { max-width:44rem; }
 @media (max-width:1023px) {

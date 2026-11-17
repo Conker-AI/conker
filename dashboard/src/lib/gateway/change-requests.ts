@@ -116,7 +116,7 @@ export function createChangeRequestsClient(auth: Pick<GatewayAuthClient, 'reques
     async list(signal?: AbortSignal): Promise<ChangeRequest[]> {
       return parse(collection, await auth.request('/api/control/pi/change-requests', { signal })).results
     },
-    /** Creates the cron job, memory, agent, team or promise exactly as filed; the session is enough (each can be undone). */
+    /** Creates the job, memory, agent, team or promise exactly as filed; the session is enough (each can be undone). */
     async approve(id: string): Promise<ChangeRequest> {
       return parse(request, await auth.request(`${path(id)}/approve`, { method: 'POST', body: {} }))
     },

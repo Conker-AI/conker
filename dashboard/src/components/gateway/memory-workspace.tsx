@@ -7,6 +7,7 @@ import { MemoryList } from './memory-list'
 import { AddMemory } from './add-memory'
 import { ForgetMemoryRecovery } from './forget-memory-recovery'
 import { GatewayHeader } from './header'
+import { PageHeader } from '@/components/design-system'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Maximize, Minimize, RefreshCw } from 'lucide-react'
@@ -195,6 +196,7 @@ export function GatewayMemoryWorkspace({ client, authStore, sourcePrivacy }: { c
       <Button ref={memoryRefresh} size="icon" variant="ghost" aria-label="Refresh memory" disabled={busy} onClick={refresh}><RefreshCw /></Button>
       <Button size="icon" variant="ghost" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize /> : <Maximize />}</Button>
     </div>} />
+    <PageHeader actionsOnly title="Memory" />
     {!(failed && !page) && <><MemoryCorrection control={correction} focusTarget={memoryRefresh} />
     <ForgetMemoryRecovery client={client} revision={`${revision}:${forgetRevision}`} onResolved={forgetResolved} />
     {error && <p role="alert" className="border-b p-3 text-sm text-destructive-foreground">{error}</p>}

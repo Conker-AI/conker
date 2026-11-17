@@ -112,11 +112,11 @@ export type SavedCheck = "checking" | "failed" | ValidationIssue[]
  * gives instant feedback on unsaved edits, or stands in (and says so) until ToolGate answers.
  */
 export function editorValidation(definition: ToolDefinition, live: boolean, dirty: boolean, saved?: SavedCheck): { issues: ValidationIssue[]; label: string } {
-  if (live && saved !== undefined && !dirty && Array.isArray(saved)) return { issues: saved, label: saved.length ? "ToolGate: needs attention" : "ToolGate: valid" }
+  if (live && saved !== undefined && !dirty && Array.isArray(saved)) return { issues: saved, label: saved.length ? "Checked: needs attention" : "Checked: valid" }
   const issues = validateToolDefinition(definition, live)
   const quick = issues.length ? "Needs attention" : "Definition valid"
   if (!live || saved === undefined) return { issues, label: quick }
-  return { issues, label: dirty ? `${quick} · save to check with ToolGate` : saved === "checking" ? "Checking with ToolGate…" : `${quick} · ToolGate didn’t answer` }
+  return { issues, label: dirty ? `${quick} · save to check it` : saved === "checking" ? "Checking…" : `${quick} · check didn’t answer` }
 }
 export function parseToolDefinition(source: string): ToolDefinition {
   if (source.length > 150000) throw new Error("Definition exceeds the preview size limit.")

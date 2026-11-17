@@ -140,7 +140,7 @@
             },
             {
               "value": "new_job",
-              "label": "New cron job"
+              "label": "New job"
             }
           ]
         },

@@ -38,7 +38,7 @@ async function shoot(browser, width, theme) {
   await page.getByText('Couldn’t draft it:').waitFor()
   await snap('1-inbox-states')
   // Failed, Change: his words come back to edit.
-  const failed = page.getByRole('article', { name: 'Tool: Post my notes to Telegram' })
+  const failed = page.getByRole('article', { name: 'Post my notes to Telegram' })
   await failed.getByRole('button', { name: 'Change' }).click()
   await failed.getByRole('button', { name: 'Draft again' }).waitFor()
   await failed.screenshot({ path: name('2-inbox-failed-change') })
@@ -54,7 +54,7 @@ async function shoot(browser, width, theme) {
 
   // Review: saved as a draft, then opened in Tools with ToolGate's check.
   await page.goto(`${base}/inbox`)
-  const ready = page.getByRole('article', { name: 'Tool: Study group digest' })
+  const ready = page.getByRole('article', { name: 'Study group digest' })
   await ready.getByRole('button', { name: 'Review' }).click()
   await page.waitForURL(/\/tools\?draft=.+&request=creq_/)
   await page.getByText(/ToolGate: (valid|needs attention)/).first().waitFor({ state: 'attached' })
@@ -79,7 +79,7 @@ async function shoot(browser, width, theme) {
   await roles.waitFor()
   await page.getByText(': how new memories are sorted').scrollIntoViewIfNeeded()
   await page.getByText(': how new memories are sorted').click()
-  await page.getByText('MemoryGate asks this model').waitFor()
+  await page.getByText("Conker's memory asks this model").waitFor()
   await page.getByText(': how new memories are sorted').evaluate(node => node.scrollIntoView({ block: 'center' }))
   await page.screenshot({ path: name('8-model-roles') })
 

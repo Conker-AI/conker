@@ -15,6 +15,7 @@ import { useListSelection } from '@/components/design-system/list-selection'
 import { byName, byNewest, useListView } from '@/components/design-system/list-view'
 import { runBulk } from '@/components/design-system/list-bulk'
 import { GatewayPageFrame } from './page-frame'
+import { skillLabel } from '@/lib/skill-label'
 
 const template = '---\nname: my-skill\ndescription: Describe when this skill helps.\n---\n\n# Instructions\n\nDescribe the approach and the expected result.\n'
 function errorMessage(error: unknown) {
@@ -62,7 +63,7 @@ function SkillImport({ client, replacing, onSaved, onCancel, onPending }: { clie
       <div className="space-y-2"><Label htmlFor="skill-file">SKILL.md file</Label><Input id="skill-file" type="file" accept=".md,text/markdown,text/plain" disabled={pending || reading} onChange={event => void readFile(event.target.files?.[0])} /></div>
       <div className="space-y-2"><Label htmlFor="skill-source">Source</Label><Textarea id="skill-source" spellCheck={false} className="min-h-64 font-mono text-xs" value={markdown} disabled={pending || reading} onChange={event => setMarkdown(event.target.value)} /><p className="text-xs text-muted-foreground">YAML frontmatter needs a lowercase name and a description. {characterLength.toLocaleString()} / {SKILL_MAX_CHARACTERS.toLocaleString()} characters.</p></div>
       {exceedsBrowserLimit && <p role="alert" className="text-sm text-destructive-foreground">This source exceeds the browser import limit of 60 KiB after encoding. Shorten it or import it with the Conker CLI.</p>}
-      {replacing && <p className="text-sm text-muted-foreground">Replace {replacing.name} at revision {replacing.revision}. Its current {replacing.enabled ? 'enabled' : 'disabled'} state is preserved. Keep its name unchanged.</p>}
+      {replacing && <p className="text-sm text-muted-foreground">Replace {skillLabel(replacing.name)} (version {replacing.revision}). Its current {replacing.enabled ? 'enabled' : 'disabled'} state is preserved. Keep its name unchanged.</p>}
       {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
     </OverlayBody>
     <FormActions inset><Button type="button" variant="outline" disabled={pending} onClick={onCancel}>Cancel</Button><Button type="submit" disabled={pending || reading || !markdown.trim() || characterLength > SKILL_MAX_CHARACTERS || exceedsBrowserLimit}>{pending ? 'Saving…' : replacing ? 'Replace this revision' : 'Import skill'}</Button></FormActions>
@@ -93,7 +94,7 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
   function saved(value: SkillRecord) {
     listGeneration.current++; detailGeneration.current++
     setRows(current => [...(current ?? []).filter(row => row.id !== value.id), value].sort((a, b) => a.name.localeCompare(b.name)))
-    setRecord(value); setEditor(null); setNotice(`Saved ${value.name}, revision ${value.revision}.`)
+    setRecord(value); setEditor(null); setNotice(`Saved ${skillLabel(value.name)}, version ${value.revision}.`)
     setParams(current => { const next = new URLSearchParams(current); next.set('skill', value.id); return next })
   }
   async function toggle(value: SkillRecord) {
@@ -129,7 +130,7 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
   const shown = !!selectedId && view.rows.some(row => row.id === selectedId)
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => { selection.stop(); setFilter(value) }}>{text}</FilterChip>
   const picked = view.rows.filter(row => selection.has(row.id))
-  const rowMenu = (row: SkillMetadata) => <ListLineMenu label={`More actions for ${row.name}`}>
+  const rowMenu = (row: SkillMetadata) => <ListLineMenu label={`More actions for ${skillLabel(row.name)}`}>
     {row.enabled
       ? <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([row], false)}><PowerOff aria-hidden="true" />Disable</DropdownMenuItem>
       : <DropdownMenuItem disabled={writing} onClick={() => void setEnabled([row], true)}><Power aria-hidden="true" />Enable</DropdownMenuItem>}
@@ -150,13 +151,13 @@ export function GatewaySkillsWorkspace({ client }: { client: GatewaySkillsClient
           emptyAction={view.query.trim() ? undefined : <Button onClick={() => setEditor({ replacing: null })}><FileUp />Import skill</Button>} icon={<BookOpen />}>
           {view.rows.map(row => <ListLine key={row.id} id={row.id} selection={selection} actions={rowMenu(row)}
             to={row.id === selectedId ? '/agents?tab=skills' : `/agents?tab=skills&skill=${encodeURIComponent(row.id)}`} expanded={row.id === selectedId} details={row.id === selectedId && details}
-            icon={<BookOpen className="size-5 text-muted-foreground" />} title={row.name} sub={row.description} badge={row.enabled ? 'Enabled' : 'Disabled'} meta={`Version ${row.revision}`} />)}
+            icon={<BookOpen className="size-5 text-muted-foreground" />} title={skillLabel(row.name)} sub={row.description} badge={row.enabled ? 'Enabled' : 'Disabled'} meta={`Version ${row.revision}`} />)}
         </ListCard>
         <p className="text-sm text-muted-foreground">Enabled skills are available in the chat picker. They apply only when you select them; importing never runs scripts or grants tool access.</p>
       </>}
       {!shown && details}
       {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     </div>
-    <Dialog open={!!editor} onOpenChange={open => { if (!open && !editorPending) setEditor(null) }}>{editor && <TaskDialogContent title={editor.replacing ? `Replace ${editor.replacing.name}` : 'Import a skill'} description="Review the instructions that will be available for your chats." size="wide" showCloseButton={!editorPending}><SkillImport client={client} replacing={editor.replacing} onSaved={saved} onCancel={() => setEditor(null)} onPending={setEditorPending} /></TaskDialogContent>}</Dialog>
+    <Dialog open={!!editor} onOpenChange={open => { if (!open && !editorPending) setEditor(null) }}>{editor && <TaskDialogContent title={editor.replacing ? `Replace ${skillLabel(editor.replacing.name)}` : 'Import a skill'} description="Review the instructions that will be available for your chats." size="wide" showCloseButton={!editorPending}><SkillImport client={client} replacing={editor.replacing} onSaved={saved} onCancel={() => setEditor(null)} onPending={setEditorPending} /></TaskDialogContent>}</Dialog>
   </GatewayPageFrame>
 }

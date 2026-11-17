@@ -73,15 +73,15 @@ export function ChatComposerFrame({ id, label, placeholder, value, onChange, onS
   const onBar = items.filter(item => !isFolded(item.id)).map(item => item.node)
   const folded = items.filter(item => isFolded(item.id)).map(item => item.node)
   const named = itemSummary(Object.fromEntries(Object.entries(moreValues).filter(([id]) => isFolded(id as ComposerItemId))))
-  return <ComposerItemContext.Provider value={report}><form aria-label="Message composer" className="@container relative min-w-0 rounded-3xl border bg-card text-card-foreground shadow-composer transition-colors focus-within:border-foreground/16" onSubmit={event => { event.preventDefault(); onSend() }}>
+  return <ComposerItemContext.Provider value={report}><form aria-label="Message composer" className="@container relative min-w-0 rounded-3xl border bg-card text-card-foreground shadow-composer transition-colors focus-within:border-foreground/16 has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-2 has-[textarea:focus-visible]:ring-ring" onSubmit={event => { event.preventDefault(); onSend() }}>
     {input ?? <><Label htmlFor={id} className="sr-only">{label}</Label>
     <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} enterKeyHint={enterSends ? 'send' : 'enter'} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (enterSends && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} unstyled className="block [&>textarea]:max-h-[min(16.5rem,calc(var(--app-height)*0.3+1.5rem))] [&>textarea]:min-h-16 [&>textarea]:resize-none [&>textarea]:overflow-y-auto [&>textarea]:bg-transparent [&>textarea]:px-4 [&>textarea]:pb-2 [&>textarea]:pt-4 [&>textarea]:text-base" />
     <p id={`${id}-help`} className="sr-only">{enterSends ? 'Enter to send. Shift+Enter for a new line.' : 'Enter for a new line. Use the Send button to send.'}</p></>}
     {folded.length > 0 && <p aria-hidden className="truncate px-4 pb-1 text-sm text-muted-foreground">{named.join(' · ')}</p>}
-    <div ref={toolbar} className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1 px-3 pb-3">
+    <div ref={toolbar} className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1 px-3 pb-3 pointer-coarse:gap-3">
       {controls}{onBar}
       {folded.length > 0 && <ComposerOverflow values={named}>{folded}</ComposerOverflow>}
-      <div className="ml-auto flex shrink-0 items-center gap-1">{bar}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-1 pointer-coarse:gap-3">{bar}</div>
     </div>
     {feedback && <div className="px-4 pb-3">{feedback}</div>}
   </form></ComposerItemContext.Provider>

@@ -261,10 +261,10 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
 
   return <GatewayPageFrame className="h-full" tabIndex={0} aria-label="Activity workspace"><div className="space-y-5">
     <PageHeader actionsOnly density="compact" title="Activity" description="Track tasks and review saved activity." actions={<><WorkspaceAction iconOnly aria-label="Refresh activity" title="Refresh activity" disabled={loading} onClick={() => void load()}><RefreshCw /></WorkspaceAction><WorkspaceAction keepVisible disabled={!!retained.mutation} onClick={openCreate}><Plus />New task</WorkspaceAction></>} />
-    <p className="text-xs leading-5 text-muted-foreground">A task is something you want done, linked to a chat. Use Work on this task to have Conker pick it up; only you can mark it done.</p>
+    <p className="text-xs leading-5 text-muted-foreground">{tab === 'tasks' ? 'A task is something you want done, linked to a chat. Use Work on this task to have Conker pick it up; only you can mark it done.' : tab === 'runs' ? 'Each run is one go at a job or an agent’s work, with how it ended.' : 'A log of what changed and when.'}</p>
     {retained.notice && <p role="status" className="text-sm text-muted-foreground">{retained.notice}</p>}{(retained.error || error) && <p role="alert" className="text-sm text-destructive-foreground">{retained.error || error}</p>}{recovery}
     {(taskFilter || runFilter || sessionFilter) && <div className="flex flex-wrap items-center gap-3 text-xs"><span>Showing one source</span><details className="text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><span className="break-all">{taskFilter || runFilter || sessionFilter}</span></details><Button size="sm" variant="outline" onClick={() => setParams({ tab })}>Clear source filter</Button></div>}
-    {(loading || listStatus === 'loading') && <p role="status" className="text-xs text-muted-foreground">Loading {tab === 'runs' ? 'attempts' : tab}...</p>}
+    {(loading || listStatus === 'loading') && <p role="status" className="text-xs text-muted-foreground">Loading {tab === 'runs' ? 'runs' : tab}...</p>}
     {listStatus === 'failed' && <Button variant="outline" disabled={loading} onClick={() => void load()}>Retry read</Button>}
     {/* Details open in place above the table (owner: no side windows). */}
     <InlineDetails open={active && !!(taskId || runId || eventId) && !dialog} onOpenChange={open => { if (!open) closeDetails() }} title={safeSelectedTask?.id === taskId ? taskTitle(safeSelectedTask) : taskId ? 'Task' : runId ? 'Attempt' : 'Activity'} description="Saved details" busy={busy}>
@@ -272,9 +272,9 @@ export function GatewayActivityWorkspace({ client, runtime, state, sourcePrivacy
     </InlineDetails>
     {listStatus === 'ready' && <>
       {tab === 'tasks' && <GatewayTasksTable tasks={safeTasks} filter={filter} onFilter={setFilter} linkFor={taskLink} onArchive={archiveMany} disabled={!!retained.mutation} emptyAction={!loading ? <Button disabled={!!retained.mutation} onClick={openCreate}>Create a task</Button> : undefined} />}
-      {tab === 'runs' && (runs.length ? <GatewayRunsTable runs={runs} onOpen={openRun} /> : !loading && <CollectionEmpty title="No saved attempts" description="Attempts appear here when the connected service supplies a saved activity record. Creating a task does not create an attempt." action={<Button variant="outline" render={<Link to="/chats" />}>Open conversations</Button>} />)}
-      {tab === 'events' && (events.length ? <GatewayEventsTable events={events} onOpen={openEvent} /> : !loading && <CollectionEmpty title="No saved activity" description="Task changes and supplied activity appear here without authored content." />)}
-      {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(true, cursor)}>Load more {tab === 'runs' ? 'attempts' : tab}</Button>}
+      {tab === 'runs' && (runs.length ? <GatewayRunsTable runs={runs} onOpen={openRun} /> : !loading && <CollectionEmpty title="Nothing has run yet" description="Jobs and agent work show up here. Creating a task does not start a run." action={<Button variant="outline" render={<Link to="/chats" />}>Open conversations</Button>} />)}
+      {tab === 'events' && (events.length ? <GatewayEventsTable events={events} onOpen={openEvent} /> : !loading && <CollectionEmpty title="Nothing has happened yet" description="Task changes and other activity show up here." />)}
+      {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(true, cursor)}>Load more {tab === 'runs' ? 'runs' : tab}</Button>}
       {(tasks.length > 0 || runs.length > 0 || events.length > 0) && <p className="text-xs text-muted-foreground">Search and sorting apply to loaded records. Use Load more to include earlier records.</p>}
     </>}
   </div>

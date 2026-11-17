@@ -5,6 +5,7 @@ import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { readToolRecord, type ToolRecordView } from '@/lib/chat/tool-record'
 
 const variants = { ok: 'success', failed: 'error', 'timed out': 'error', declined: 'warning', unknown: 'outline' } as const satisfies Record<ToolRecordView['status'], string>
+const statusWords = { ok: 'Done', failed: 'Failed', 'timed out': 'Timed out', declined: 'Declined', unknown: 'Unknown' } as const satisfies Record<ToolRecordView['status'], string>
 const block = 'max-h-80 overflow-auto rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]'
 
 function duration(ms: number) {
@@ -15,15 +16,15 @@ function duration(ms: number) {
 export function ToolRecord({ text, sequence }: { text: string; sequence: number }) {
   const record = readToolRecord(text)
   return <details className="group min-w-0 rounded-lg border bg-card">
-    <summary aria-label={`Tool ${record.label}, ${record.status}, step ${sequence}`} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring">
+    <summary aria-label={`Tool ${record.label}, ${statusWords[record.status]}, step ${sequence}`} className="flex min-h-9 pointer-coarse:min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring">
       <Wrench aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       <span className="shrink-0 font-medium">{record.label}</span>
-      <Badge variant={variants[record.status]} className="shrink-0">{record.status}</Badge>
+      <Badge variant={variants[record.status]} className="shrink-0">{statusWords[record.status]}</Badge>
       {record.summary !== record.status && <span className="min-w-0 truncate text-muted-foreground">{record.summary}</span>}
       {record.durationMs !== null && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{duration(record.durationMs)}</span>}
     </summary>
     <div className="space-y-3 border-t px-3 py-3">
-      {record.chat && <Link className="block text-sm underline underline-offset-4" to={gatewayConversationLink(record.chat)}>Open its chat</Link>}
+      {record.chat && <Link className="tap-44 block text-sm underline underline-offset-4" to={gatewayConversationLink(record.chat)}>Open its chat</Link>}
       {record.output && <pre className={block}>{record.output}</pre>}
       {record.error && <pre className={`${block} text-destructive-foreground`}>{record.error}</pre>}
       <details>

@@ -41,7 +41,7 @@ export type GatewayChatHandlers = {
   /** Sends the words of a turn that ended without an answer once more, through the normal send. */
   retryTurn?: (turnId: string) => void | Promise<void>
 } & Record<RecoveryAction, () => void | Promise<void>>
-const unsupported: Action = { availability: 'unsupported', reason: 'Not supported by the gateway.' }
+const unsupported: Action = { availability: 'unsupported', reason: 'Not available here.' }
 
 /** Reads fresh eligibility on invocation, retaining the selected session and request identity. */
 export function gatewayChatContract(state: GatewayChatState, read: () => GatewayChatState, handlers: () => GatewayChatHandlers): ChatContract {

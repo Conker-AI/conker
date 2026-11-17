@@ -57,7 +57,7 @@ function Tile({ area, label, icon, count, link, children, className }: {
 }
 
 function TileLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" /></Link>
+  return <Link to={to} className="tap-44 inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{children}<ArrowUpRight className="size-3.5" /></Link>
 }
 
 function TileLoading({ rows = 2 }: { rows?: number }) {
@@ -192,12 +192,12 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
                 </>}
         </Tile>}
 
-        <Tile area="coming" label="Coming up" icon={<CalendarClock />} link={<TileLink to="/jobs">Cron jobs</TileLink>}>
+        <Tile area="coming" label="Coming up" icon={<CalendarClock />} link={<TileLink to="/jobs">Jobs</TileLink>}>
           {waiting('jobs') ? <TileLoading /> : missing('jobs') ? <TileFailed onRetry={retry} />
             : home.coming.length ? <ul className="flex flex-col gap-2">{home.coming.map(job => <li key={job.id} className="flex min-w-0 items-baseline gap-3 text-sm">
               <span className="min-w-0 flex-1 truncate">{job.name}</span><span className="shrink-0 tabular-nums text-muted-foreground">{when(job.at)}</span>
             </li>)}</ul>
-              : <p className="text-sm text-muted-foreground">No cron jobs are scheduled.</p>}
+              : <p className="text-sm text-muted-foreground">No jobs are scheduled.</p>}
         </Tile>
 
         <Tile area="work" label="Conker’s work" icon={<Sparkles />} link={<TileLink to="/activity?tab=runs">Runs</TileLink>}>
@@ -216,7 +216,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
         {showTasks && <Tile area="done" label="Completed" icon={<ListChecks />} count={missing('tasks') ? null : home.completed.filter(item => item.today).length || null} link={<TileLink to="/activity">Tasks</TileLink>}>
           {waiting('tasks') ? <TileLoading rows={4} /> : missing('tasks') ? <TileFailed onRetry={retry} />
             : home.completed.length ? <ul className="flex flex-col divide-y">{home.completed.map(task => <li key={task.id}>
-              <Link to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} className="flex min-w-0 items-start gap-3 py-2.5 text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+              <Link to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} className="flex min-h-6 pointer-coarse:min-h-11 min-w-0 items-start gap-3 py-2.5 text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                 <CheckCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden="true" />
                 <span className="min-w-0 flex-1 line-clamp-2">{task.title}</span>
                 <span className="shrink-0 tabular-nums text-xs text-muted-foreground">{when(task.at)}</span>
@@ -235,7 +235,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
         <Tile area="quick" label="Quick actions" icon={<Zap />}>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" render={<Link to="/chat" />}><MessagesSquare />New chat</Button>
-            <Button variant="outline" size="sm" render={<Link to="/jobs" />}><CalendarClock />Cron jobs</Button>
+            <Button variant="outline" size="sm" render={<Link to="/jobs" />}><CalendarClock />Jobs</Button>
             <Button variant="outline" size="sm" render={<Link to="/system?tab=terminal" />}><SquareTerminal />Terminal</Button>
           </div>
         </Tile>

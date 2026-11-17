@@ -38,7 +38,7 @@ export function CharacterPreview({ profile }: { profile: CharacterDraft }) {
       </div>
       <div className="space-y-3 border-t pt-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium">Character voice</p><Badge variant="outline">Not connected</Badge></div>
         {profile.studio.voice.reference ? <><p className="text-xs break-words text-muted-foreground">Reference: {profile.studio.voice.reference.name}</p><audio key={profile.studio.voice.reference.src} controls preload="metadata" src={profile.studio.voice.reference.src} aria-label="Play character voice reference" className="w-full min-w-0" onPlay={() => setActivity("speaking")} onPause={() => setActivity("idle")} onEnded={() => setActivity("idle")} /></> : <p className="text-xs leading-5 text-muted-foreground">Describe a voice or add a recording in Voice. Qwen speech generation and read-aloud will use this identity when connected.</p>}
-        <Link to="/settings/companion?tab=voice" className="inline-flex min-h-6 items-center text-xs underline underline-offset-4">Open Voice</Link>
+        <Link to="/settings/companion?tab=voice" className="tap-44 inline-flex min-h-6 items-center text-xs underline underline-offset-4">Open Voice</Link>
       </div>
     </StudioSection>
   </aside>

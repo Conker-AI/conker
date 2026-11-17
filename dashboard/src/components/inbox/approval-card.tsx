@@ -10,7 +10,7 @@ import { canReleaseExpiredOwnerDecision, ownerDecisionEligibility, ownerUnavaila
 import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
 import { ApprovalConfirm } from './approval-confirm'
-import { deleteConfirmName, friendlyValue, humanize } from './approval-words'
+import { deleteConfirmName, friendlyValue, humanize, payLine } from './approval-words'
 
 const timestamp = (value: string) => new Date(value).toLocaleString()
 function relativeTime(value: string, now: number) {
@@ -60,7 +60,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       <div className="flex flex-wrap gap-2">
         {eligibility.approve && <Button type="button" size="sm" variant={serious ? 'destructive' : 'default'} disabled={busy || !confirmTyped} onClick={() => level === 2 ? setConfirming(true) : onDecide('approved', false, '')}>{labels.yes}</Button>}
         <Button type="button" size="sm" variant="outline" disabled={busy || !eligibility.reject} onClick={() => onDecide('rejected', false, '')}>{labels.no}</Button>
-        <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} onClick={() => setChanging(true)}>Change</Button>
+        <Button type="button" size="sm" variant="ghost" disabled={busy || !eligibility.reject} title="Tell Conker what to do instead" onClick={() => setChanging(true)}>Change</Button>
       </div>
     </div> : null
   // Folded: the tool's own yes, one tap away (it runs exactly what opening the card shows). Level 2
@@ -99,6 +99,7 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       </div>}
     </>}>
     {request.action.args === null ? <p className="text-muted-foreground">Complete arguments are unavailable. Approval is disabled.</p>
+      : request.card === 'pay' && payLine(request.action.args) ? <p className="font-medium">{payLine(request.action.args)}</p>
       : <dl className="flex flex-col gap-3">{Object.entries(request.action.args).map(([key, value]) => <div key={key} className="grid min-w-0 gap-1 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"><dt className="break-words text-muted-foreground">{humanize(key)}</dt><dd className="min-w-0"><ArgumentValue value={value} /></dd></div>)}</dl>}
     {expired && !attempt && <p className="text-muted-foreground">This request expired. Nothing was done.</p>}
     {request.unavailableReason && <p className="text-muted-foreground">{ownerUnavailableText[request.unavailableReason]}</p>}
@@ -112,9 +113,9 @@ export function ApprovalCard({ request, now, detail, note, attempt, busy, proces
       </div>
     </div> : open && <p className="text-muted-foreground">{labels.yes} runs exactly this, once, now; the chat shows how it went.{proofLine ? ` ${proofLine}` : ''} {labels.no} and Change run nothing.</p>}
   </InboxCard>
-  if (confirming) return <>
-    <ApprovalConfirm request={request} busy={busy} onConfirm={() => { setConfirming(false); onDecide('approved', false, '') }} onCancel={() => { setConfirming(false); setConfirmName('') }} />
+  // The card stays in the same place in the tree so its button is still there when the dialog closes and gets the focus back.
+  return <>
+    {confirming && <ApprovalConfirm request={request} busy={busy} onConfirm={() => { setConfirming(false); onDecide('approved', false, '') }} onCancel={() => { setConfirming(false); setConfirmName('') }} />}
     {card}
   </>
-  return card
 }

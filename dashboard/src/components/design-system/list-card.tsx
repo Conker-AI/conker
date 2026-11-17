@@ -12,7 +12,7 @@ import type { ListSelection } from "./list-selection"
 export type ListSort<T extends string = string> = { value: T; options: readonly { value: T; label: string }[]; onChange: (value: T) => void }
 
 /**
- * A list in a card with its own search on top (owner, prototype v4: Chats and Cron jobs). One
+ * A list in a card with its own search on top (owner, prototype v4: Chats and Jobs). One
  * pattern for every long list: search, sort, filter chips, select mode with bulk actions, one
  * line per item, then a footer for paging or notes.
  */
@@ -34,13 +34,13 @@ export function ListCard({ query, onQueryChange, label, placeholder, count, unit
       <span role="status" className="mr-auto pl-1 text-sm tabular-nums">{selection.count ? `${selection.count} selected` : "Select items"}</span>
       <div className="flex flex-wrap items-center gap-1">{bulkActions}</div>
       <Button type="button" size="sm" variant="ghost" onClick={selection.stop}>Done</Button>
-    </div> : <div className="flex items-center gap-2 border-b p-2">
+    </div> : <div className="flex items-center gap-2 border-b p-2 pointer-coarse:gap-3">
       {onQueryChange && label && placeholder && <CollectionSearch compact label={label} placeholder={placeholder} value={query ?? ""} onChange={event => onQueryChange(event.target.value)} />}
       <span className={cn("shrink-0 text-xs tabular-nums text-muted-foreground", onQueryChange ? "hidden pr-1 sm:inline" : "mr-auto px-2")}>{count} {unit}</span>
       {sort && <SortMenu sort={sort} />}
       {selection && <Button type="button" size="sm" variant="ghost" className="shrink-0" aria-label="Select items" title="Select items" onClick={selection.start}><ListChecks aria-hidden="true" /><span className="hidden sm:inline">Select</span></Button>}
     </div>}
-    {filters && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 border-b px-2 py-1.5">{filters}</div>}
+    {filters && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 border-b px-2 py-1.5 pointer-coarse:gap-3">{filters}</div>}
     <div className="min-w-0">
       {count ? <ul className="flex flex-col divide-y">{children}</ul>
         : emptyContent !== undefined ? <div className="p-4">{emptyContent}</div>

@@ -14,7 +14,7 @@ const labels = { metadata: 'Records', text: 'Exact retained text', semantic: 'Se
 const statusAdvice: Record<string, string> = {
   partial: 'partially searched — refine your query or check Search settings',
   degraded: 'running slowly — results may be incomplete; retry shortly',
-  unavailable: 'unreachable — check the gateway connection and retry'
+  unavailable: 'unreachable — check your connection to the server and retry'
 }
 
 /** The palette itself, loaded on first use; state, shortcuts and navigation stay in the provider. */

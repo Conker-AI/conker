@@ -8,10 +8,10 @@ export const messageRules: readonly MessageRule[] = ['keep-exact', 'exclude', 'a
 
 /** The same words the Context sheet uses. */
 export const ruleWords: Record<MessageRule, string> = {
-  'keep-exact': 'kept word for word',
+  'keep-exact': 'always kept exactly',
   exclude: 'left out',
-  'allow-summary': 'may be summarised',
-  retrieve: 'brought back when relevant',
+  'allow-summary': 'OK to shorten',
+  retrieve: 'brought back when it matters',
 }
 
 const messageIdPattern = /^msg_[0-9a-f]{16}$/

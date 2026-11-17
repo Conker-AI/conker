@@ -38,6 +38,8 @@ export function MemoryList({ client, page, title, kind, link, selectedKey, onOpe
   const [reviewed, setReviewed] = useState<MemoryForgetPreview[] | null>(null)
   const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null)
   const requestId = useRef<string | null>(null)
+  // The button is disabled while the memories are read, so the browser drops its focus; the dialog hands it back on close.
+  const forgetButton = useRef<HTMLButtonElement>(null)
 
   async function review() {
     if (pending || !selection.count) return
@@ -70,7 +72,7 @@ export function MemoryList({ client, page, title, kind, link, selectedKey, onOpe
 
   return <>
     <ListCard count={view.rows.length} unit={`of ${page.total} loaded`} sort={view.sort} selection={forgettable.length ? selection : undefined}
-      bulkActions={<Button type="button" size="sm" variant="outline" disabled={pending || !selection.count} onClick={() => void review()}><Trash2 aria-hidden="true" />{pending && !reviewed ? 'Reading…' : 'Forget…'}</Button>}
+      bulkActions={<Button ref={forgetButton} type="button" size="sm" variant="outline" disabled={pending || !selection.count} onClick={() => void review()}><Trash2 aria-hidden="true" />{pending && !reviewed ? 'Reading…' : 'Forget…'}</Button>}
       emptyTitle="No memories" emptyDescription="Saved memories will appear here.">
       {view.rows.map(item => <ListLine key={key(item)} id={item.type === 'memory' ? item.id : undefined} selection={item.type === 'memory' ? selection : undefined}
         to={link(item)} onClick={() => onOpen(item)} icon={<Brain />} title={title(item)}
@@ -78,7 +80,7 @@ export function MemoryList({ client, page, title, kind, link, selectedKey, onOpe
         sub={`${kind(item)} · ${connections(item)} ${connections(item) === 1 ? 'connection' : 'connections'}`} />)}
     </ListCard>
     <ConfirmationDialog open={!!reviewed} onOpenChange={open => { if (!open && !pending) { setReviewed(null); setError(null); requestId.current = null } }}
-      title={`Forget ${memories(reviewed?.length ?? 0)} permanently?`} actionLabel="Forget permanently" pending={pending} error={error} onConfirm={confirm}
+      finalFocus={forgetButton} title={`Forget ${memories(reviewed?.length ?? 0)} permanently?`} actionLabel="Forget permanently" pending={pending} error={error} onConfirm={confirm}
       description="Conker removes these exact versions and their recalled copies. This can’t be undone. The chats they came from are kept.">
       <ol className="max-h-72 space-y-2 overflow-auto text-sm">
         {reviewed?.map(item => <li key={item.memoryId} className="whitespace-pre-wrap break-words border-l-2 pl-3">{item.text}</li>)}

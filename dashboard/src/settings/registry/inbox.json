@@ -250,7 +250,7 @@
         {
           "id": "inbox.notes_days",
           "title": "Keep AI-job notes",
-          "description": "How long findings from cron jobs stay in the Inbox.",
+          "description": "How long findings from jobs stay in the Inbox.",
           "type": "number",
           "default": 14,
           "tier": "advanced",

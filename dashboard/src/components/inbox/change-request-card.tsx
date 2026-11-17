@@ -135,6 +135,9 @@ function AnswerForm({ question, askedIn, busy, onAnswer }: { question: string | 
  * progress line, then Review (ready) or the reason with Try again and Change (failed). When the
  * drafter asked a question (needs_detail) the card shows it with a box and Answer.
  */
+/** The card already says what kind it is, so a filed title's own "Tool: " or "Job: " prefix is dropped. */
+const plainTitle = (title: string) => title.replace(/^(Tool|Cron job|Job|Workflow): /, '') || title
+
 export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecline, onRetry, onAnswer, onLater }: {
   request: ChangeRequest; now: number; busy: boolean; error: string | null
   onApprove: () => void; onDecline: (reply?: string) => void; onRetry?: (description?: string) => void; onAnswer?: (text: string) => Promise<boolean>; onLater?: () => void
@@ -153,11 +156,12 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   const brand = request.kind === 'ai_job' || request.kind === 'tool_draft' ? serviceIn(request.title, text) : null
   const icon = brand ? <IdentityMark brand={brand} className="size-full border-0 bg-transparent" /> : ICONS[request.kind]
   // A title that already says it all is not repeated underneath.
+  const title = plainTitle(request.title)
   const summary = text && !request.title.includes(text.trim()) ? text : undefined
   const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined
   if (request.kind === 'other') {
     // A kind this dashboard does not know yet: shown plainly, never approved from here.
-    return <InboxCard icon={icon} title={request.title} source={`${kind} · Conker’s request`} summary={summary} facts={[...facts, ['Kind', request.filedKind]]} onLater={onLater} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={title} source={`${kind} · Conker’s request`} summary={summary} facts={[...facts, ['Kind', request.filedKind]]} onLater={onLater} footer={footer} actions={<>
       <p className="text-xs text-muted-foreground">This version of the dashboard can’t show what approving would make. Update Conker to review it, or decline it.</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>{busy ? 'Working…' : 'Don’t'}</Button>
@@ -167,7 +171,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   }
   if (request.kind === 'tool_draft' && status === 'drafting') {
     // Working: nothing to decide yet, so no answers and no Later; only the chat it came from.
-    return <InboxCard icon={icon} title={request.title} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={title} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
       <p role="status" className="flex items-center gap-2 text-sm"><Spinner aria-hidden="true" className="size-4 text-muted-foreground motion-reduce:animate-none" />Conker is drafting this tool…</p>
       <p className="text-xs text-muted-foreground">You can leave this page. The draft shows up here when it’s ready.</p>
       {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
@@ -176,7 +180,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   if (request.kind === 'tool_draft' && request.payload.status === 'needs_detail') {
     // Waiting for him: the question, a box and Answer. The chat it was asked in is one tap away.
     const { question, askedIn } = request.payload
-    return <InboxCard icon={icon} title={request.title} source={`${kind} · Needs one detail`} openLabel="Answer" summary={summary} facts={facts} advanced={talk} onLater={onLater}
+    return <InboxCard icon={icon} title={title} source={`${kind} · Needs one detail`} openLabel="Answer" summary={summary} facts={facts} advanced={talk} onLater={onLater}
       footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error} Your answer is kept.</p> : undefined}
       actions={<AnswerForm question={question} askedIn={askedIn} busy={busy || !onAnswer} onAnswer={text => onAnswer?.(text) ?? Promise.resolve(false)} />} />
   }
@@ -191,7 +195,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
         <Button type="button" size="sm" variant="ghost" disabled={busy || !onRetry} onClick={() => { setWords(words.trim() ? words : request.payload.description); setChanging(true) }}>Change</Button>
         {request.sessionId && chatLink(request.sessionId)}
       </div>
-    return <InboxCard icon={icon} title={request.title} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
+    return <InboxCard icon={icon} title={title} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
       primary={<Button type="button" size="sm" disabled={busy || !onRetry} onClick={() => onRetry?.()}>{busy ? 'Working…' : 'Try again'}</Button>} actions={<>
       <p className="text-sm text-destructive-foreground"><span className="font-medium">Couldn’t draft it:</span> {reason}</p>
       {answers}
@@ -205,7 +209,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
       {request.sessionId && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setChanging(true)}>Change</Button>}
     </div>
-  return <InboxCard icon={icon} title={request.title} source={request.kind === 'memory' ? 'Memory · To remember' : `${kind} · ${request.sessionId ? 'Conker’s request' : 'Your request'}`} summary={summary}
+  return <InboxCard icon={icon} title={title} source={request.kind === 'memory' ? 'Memory · To remember' : `${kind} · ${request.sessionId ? 'Conker’s request' : 'Your request'}`} summary={summary}
     primary={!changing && <Button type="button" size="sm" disabled={busy} onClick={onApprove}>{busy ? 'Working…' : action}</Button>}
     actions={<>{request.kind === 'tool_draft' && <Steps request={request} />}{answers}</>} facts={facts} advanced={talk} onLater={onLater} footer={footer}>
     <Details request={request} />

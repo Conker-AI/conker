@@ -78,7 +78,7 @@ export function useChangeRequests(client: ChangeRequestsClient | undefined, draf
         return
       }
       setNotice(decided.state === 'failed' ? { text: `“${request.title}” wasn’t made: ${String(decided.result?.reason ?? 'unknown reason')}` }
-        : request.kind === 'ai_job' ? { text: 'Cron job created. It runs on its schedule.', link: made ? { to: `/jobs/${made}`, label: 'Open the job' } : undefined }
+        : request.kind === 'ai_job' ? { text: 'Job created. It runs on its schedule.', link: made ? { to: `/jobs/${made}`, label: 'Open the job' } : undefined }
           : request.kind === 'tool_draft' ? { text: 'Saved as a draft. Check it, then publish it.', link: { to: '/tools?view=drafts', label: 'Open your drafts' } }
             : request.kind === 'agent' ? { text: 'Agent created. Archive it in Agents to undo.', link: made ? { to: `/agents/${encodeURIComponent(made)}/edit`, label: 'Open the agent' } : { to: '/agents', label: 'Open Agents' } }
               : request.kind === 'team' ? { text: 'Team created. Running it stays yours.', link: { to: made ? `/agents?tab=teams&team=${encodeURIComponent(made)}` : '/agents?tab=teams', label: 'Open the team' } }

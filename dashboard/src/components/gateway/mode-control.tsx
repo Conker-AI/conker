@@ -72,19 +72,19 @@ export function ComposerModeProvider({ text, think, research, thinkAvailable, ha
   return <ModeContext.Provider value={{ current, disabled, auto, complexity, setComplexity, think, research, apply, choose, status }}>{children}</ModeContext.Provider>
 }
 
-/** The presets. They are only a quick way to set the chips; changing a chip afterwards shows Custom. */
+/** The presets. They are only a quick way to set the settings; changing one afterwards shows Custom. */
 export function ModePresetControl() {
   const state = useComposerMode()
   if (!state) return null
   const { current, auto, status, disabled, choose } = state
   // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
-  const summary = auto ? ` · ${[state.complexity === 'hard' ? 'Hard' : 'Easy', state.think && 'Thinking', state.research !== 'off' && (state.research === 'deep' ? 'Deep research' : 'Web'), auto.effort && `${auto.effort[0].toUpperCase()}${auto.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
-  const reasons: [string, AutoSettingsField][] = [['Complexity', 'complexity'], ['Thinking', 'think'], ['Search', 'research']]
+  const summary = auto ? ` · ${[state.complexity === 'hard' ? 'Hard' : 'Easy', state.think && 'Think first', state.research !== 'off' && (state.research === 'deep' ? 'Deep research' : 'Web'), auto.effort && `${auto.effort[0].toUpperCase()}${auto.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
+  const reasons: [string, AutoSettingsField][] = [['Difficulty', 'complexity'], ['Think first', 'think'], ['Search', 'research']]
   const note = status.kind === 'choosing' ? 'Choosing settings…'
     : status.kind === 'error' ? status.message
-      : current === 'custom' ? 'Custom: you changed a chip. Pick a preset to reset them.'
-        : current === 'auto' ? auto ? `Chosen automatically (${auto.modelId}). Change a chip to customize.` : 'Conker chooses once you type your message.'
-          : 'Presets only set the chips. Change a chip to customize.'
+      : current === 'custom' ? 'Custom: you changed a setting. Pick a preset to start again.'
+        : current === 'auto' ? auto ? 'Picked for you by Auto. Change any setting to take over.' : 'Conker chooses once you type your message.'
+          : 'Presets only fill in the settings. Change any of them to take over.'
   return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className={composerOutlined} disabled={disabled} aria-label={`Mode: ${modeLabel(current)}${summary}`} />}><Sparkles className="size-4 @max-[24rem]:hidden" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}{summary && <span className="font-normal text-muted-foreground @max-[40rem]:hidden">{summary}</span>}</PopoverTrigger>
     <PopoverContent align="start" className="max-h-(--available-height) w-80 space-y-4 overflow-y-auto">
       <RadioGroup value={current === 'custom' ? '' : current} onValueChange={value => choose(value as ComposerMode)} aria-label="Mode" className="gap-2">

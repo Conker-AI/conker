@@ -14,7 +14,7 @@ import { ChatFeatureError } from '@/components/chat/chat-feature-error'
 
 const defaults = { window: '128000', reserve: '4096', other: '0' }
 type Section = 'settings' | 'rules' | 'decisions' | 'questions' | 'add'
-const ruleWords: [string, string][] = [['keep-exact', 'kept word for word'], ['exclude', 'left out'], ['allow-summary', 'may be summarised'], ['retrieve', 'brought back when relevant']]
+const ruleWords: [string, string][] = [['keep-exact', 'always kept exactly'], ['exclude', 'left out'], ['allow-summary', 'OK to shorten'], ['retrieve', 'brought back when it matters']]
 const stateWords: Record<string, string> = { withdrawn: 'Withdrawn', superseded: 'Replaced', resolved: 'Resolved', active: 'Active', open: 'Open' }
 
 const toNumber = (text: string) => text.trim() === '' ? Number.NaN : Number(text)

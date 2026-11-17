@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import type { AgentConfiguration, GatewayControlClient } from '@/lib/gateway/control'
 import type { SkillMetadata } from '@/lib/gateway/skills'
+import { skillLabel } from '@/lib/skill-label'
 
 const MAX_SKILLS = 3
 
@@ -38,7 +39,7 @@ export function AgentSkills({ client, value, onChange, disabled }: { client: Gat
             {enabled.map(skill => {
               const on = chosen.includes(skill.id), full = !on && chosen.length >= MAX_SKILLS
               return <li key={skill.id} className="p-2.5"><Label className="flex items-start gap-3"><Checkbox checked={on} disabled={full} onCheckedChange={next => toggle(skill.id, next === true)} className="mt-0.5" />
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm">{skill.name}</span>{skill.description && <span className="block text-xs leading-5 text-muted-foreground">{skill.description}</span>}</span></Label></li>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm">{skillLabel(skill.name)}</span>{skill.description && <span className="block text-xs leading-5 text-muted-foreground">{skill.description}</span>}</span></Label></li>
             })}
             {gone.map(id => <li key={id} className="flex items-center justify-between gap-3 p-2.5"><span className="min-w-0 text-sm"><span className="block truncate">{id}</span><span className="block text-xs text-muted-foreground">Removed or turned off. It is skipped until you turn it back on.</span></span>
               <Button type="button" size="sm" variant="outline" onClick={() => toggle(id, false)}>Remove</Button></li>)}

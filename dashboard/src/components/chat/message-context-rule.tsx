@@ -23,7 +23,7 @@ export function MessageContextRule({ message }: { message: ChatMessage }) {
   const choose = (value: string) => void rules.set(message.id, value === 'default' ? null : value as MessageRule)
   return <>
     <Menu>
-      <MenuTrigger render={<Button variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground" aria-label="Context rule" title="Context rule" disabled={tools.disabled || rules.saving} />}>
+      <MenuTrigger render={<Button variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground" aria-label="What Conker remembers from this message" title="What Conker remembers from this message" disabled={tools.disabled || rules.saving} />}>
         <Layers aria-hidden />
       </MenuTrigger>
       <MenuPopup align="start">

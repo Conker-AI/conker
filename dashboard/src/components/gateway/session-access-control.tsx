@@ -53,10 +53,10 @@ export function GatewaySessionAccessControl({ client, sessionId, disabled }: { c
         </Label>)}
       </RadioGroup>
       <p className="text-xs leading-5 text-muted-foreground">Sensitive tools always ask you. After this chat reads outside content (a web page, an email, someone’s message), it is one step stricter.</p>
-      {delegate === false && <p className="text-xs leading-5">Conker can’t decide for your tools yet. <Link className="font-medium underline underline-offset-4" to="/settings?tab=access">Turn it on in Settings, Access</Link>.</p>}
+      {delegate === false && <p className="text-xs leading-5">The AI check is off. <Link className="font-medium underline underline-offset-4" to="/settings?tab=access">Turn it on in Settings &gt; Access and safety</Link>.</p>}
       {pending && <p role="status" className="text-xs text-muted-foreground">Checking settings…</p>}
       {error && <p role="alert" className="text-xs text-destructive-foreground">{error}</p>}
-      <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Save</Button>
+      <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Done</Button>
     </PopoverContent>
   </Popover>
 }

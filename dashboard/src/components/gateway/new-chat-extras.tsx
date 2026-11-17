@@ -12,7 +12,7 @@ const starters = [
 ]
 
 export function ConversationStarters({ disabled, onPick }: { disabled: boolean; onPick: (text: string) => void }) {
-  return <div className="mt-5 flex flex-wrap justify-center gap-2" role="group" aria-label="Conversation starters">
+  return <div className="mt-5 flex flex-wrap justify-center gap-2 pointer-coarse:gap-3" role="group" aria-label="Conversation starters">
     {starters.map(item => <Button key={item.label} type="button" variant="outline" size="sm" className="rounded-full font-normal" disabled={disabled} onClick={() => onPick(item.text)}><item.icon className="text-muted-foreground" />{item.label}</Button>)}
   </div>
 }

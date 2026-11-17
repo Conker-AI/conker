@@ -4,7 +4,7 @@
 
 The owner-approved structure (prototype v7, conker-ui brief): a floating sidebar with **Ask Conker**
 (new chat) and the light/dark switch on top, then places only, in three groups: Overview (Home,
-Inbox, Chats), Workspace (Projects, Memory, Agents, Tools, Cron jobs) and Server (Server, which
+Inbox, Chats), Workspace (Projects, Memory, Agents, Tools, Jobs) and Server (Server, which
 folds open to its sections, and Settings). **Search** (Ctrl/Cmd+K) sits in the top bar. No chat
 history, profile badge, help or status links in the sidebar; Sign out and the Appearance settings
 live in Settings, unfinished setup shows at the top of Home.
@@ -55,9 +55,9 @@ shows the warning style with Check again and never retries by itself. Failed loa
 Long lists follow the approved prototype (v4): a narrow page with one card that holds its own search
 on top, one line per item (icon, a title that says what it is, a muted sub-line, a time) and a
 footer for paging and end-of-list notes. The shared pieces are `ListCard` and `ListLine` in the
-design system (`src/components/design-system/list-card.tsx`); Chats, Cron jobs, Projects,
+design system (`src/components/design-system/list-card.tsx`); Chats, Jobs, Projects,
 Artifacts, Agents, Teams, Skills, Tools, MCP tools, Memory's List, Activity's Tasks and native
-sessions use them. Filters are `FilterChip`s with counts under the search (Cron jobs: All / Enabled
+sessions use them. Filters are `FilterChip`s with counts under the search (Jobs: All / Enabled
 / Paused; Inbox the same way); Archived chips appear only once something is archived, so an empty
 filter never shows. While a list loads it shows `ListSkeleton`; if it fails, `InlineError` takes
 the card's place and refreshes itself when the server answers again. Activity's Runs and Activity
@@ -281,7 +281,7 @@ consequences; and whether it directs the user toward their intended action.
 
 | Component family | Shared rule | Active consumers |
 | --- | --- | --- |
-| Find a record | A list searches inside its own `ListCard`; the appbar keeps Search (Ctrl/Cmd+K). A `DataTable` puts its query in the appbar through `WorkspaceSearch`, whose scope menu offers Search all Conker with the same query. No second page-search field. | Chats, Projects, Agents, Cron jobs, Artifacts, Tools, Skills, Memory List; Activity's tables |
+| Find a record | A list searches inside its own `ListCard`; the appbar keeps Search (Ctrl/Cmd+K). A `DataTable` puts its query in the appbar through `WorkspaceSearch`, whose scope menu offers Search all Conker with the same query. No second page-search field. | Chats, Projects, Agents, Jobs, Artifacts, Tools, Skills, Memory List; Activity's tables |
 | Browse records | `ListCard` + `ListLine`; one quiet card per list. Grouped rows use `CollectionSection` + `CollectionRow` (64px minimum row). | The record libraries; Server Services and Backups |
 | Compare structured records | `DataTable` uses `CollectionToolbar` and `collection-surface`, preserving sorting, columns, keyboard opening and pagination. Native tables use the shared table primitives, not separately styled HTML. | Activity's Runs and Activity log |
 | Edit related fields | `WorkspaceSection` owns the 16px semibold heading, readable description, 16px within-group gap and 24px separation. `StudioSection` delegates to it. | Settings > Providers, Server pages, Character Studio |
@@ -462,7 +462,7 @@ Dimensions describe roles. A small inline action can use the compact variant; co
 
 Consistency means equivalent controls behave and look alike; it does not mean every screen repeats the same stack of cards. Define the first useful action or piece of information before choosing a composition. The selected theme owns color, type family, tracking, corners and elevation; the screen owns reading order and emphasis.
 
-- **Collections** (Chats, Agents, Tools, Cron jobs): use `GatewayPageFrame` with a `ListCard`. Keep heading/help, search and results close, with 16px between related regions. Keep the 64px minimum row and usable controls; reclaim overhead before shrinking content. At 1280×720, aim to begin an ordinary unfiltered list in the upper third to two-fifths of the viewport, allowing real content to wrap. Tabs stay in the appbar.
+- **Collections** (Chats, Agents, Tools, Jobs): use `GatewayPageFrame` with a `ListCard`. Keep heading/help, search and results close, with 16px between related regions. Keep the 64px minimum row and usable controls; reclaim overhead before shrinking content. At 1280×720, aim to begin an ordinary unfiltered list in the upper third to two-fifths of the viewport, allowing real content to wrap. Tabs stay in the appbar.
 - **Forms and settings**: retain the standard heading, 24px between meaningful sections and existing task-specific editors. Bound long prose inside the full-width page when it aids reading; do not cap the whole route.
 - **Conversations and tools**: preserve their viewport-filling variants and existing control ownership. They do not need collection headings to be consistent. Memory uses the canvas role with its own workflow toolbar, including when showing its List view.
 

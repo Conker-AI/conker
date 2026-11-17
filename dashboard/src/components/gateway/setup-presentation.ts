@@ -6,7 +6,7 @@ export const setupLabels: Record<SetupStep['id'], { title: string; description: 
   model: { title: 'Choose how it thinks', description: 'The selected answer model responds successfully.' },
   memory: { title: 'Choose what it remembers', description: 'Memory is either verified or intentionally left off.' },
   capabilities: { title: 'Connect capabilities', description: 'Useful tools are available through the action boundary.' },
-  boundaries: { title: 'Set action boundaries', description: 'Approval and execution policy has been reviewed.' },
+  boundaries: { title: 'Set action boundaries', description: 'Conker has checked that approvals work.' },
   protection: { title: 'Protect the installation', description: 'A recoverable backup has been created and verified.' },
   rehearsal: { title: 'Run a real rehearsal', description: 'Conversation, memory, and approval paths work together.' },
 }

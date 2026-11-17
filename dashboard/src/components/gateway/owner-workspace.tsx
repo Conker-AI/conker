@@ -209,7 +209,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         <div className="flex flex-col gap-3">
           {/* Never "All clear" while loading or when part of the Inbox failed to load. */}
           <p className="text-sm text-muted-foreground"><span className={summary.state === 'loading' ? 'conker-reveal' : undefined}>{summary.text}</span></p>
-          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
+          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 pointer-coarse:gap-3">
             {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + waitingChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
@@ -227,7 +227,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
       {requests.notice && !requestId && <p role="status" className="text-sm leading-6 text-muted-foreground">{requests.notice.text}{requests.notice.link && <> <Link className="font-medium text-foreground underline underline-offset-4" to={requests.notice.link.to}>{requests.notice.link.label}</Link></>}</p>}
       {undo && !requestId && <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Moved “{undo.title}” to Later.
         <Button type="button" size="xs" variant="outline" onClick={() => { restore(undo.key); setUndo(null) }}>Undo</Button></p>}
-      {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check the gateway&apos;s owner-channel configuration if this persists.</p>}
+      {error && <p role="alert" className="text-sm text-destructive-foreground">{error} Check that your server is running if this persists.</p>}
       {(requestId || summary.state !== 'loading') && loadError !== null && <InlineError error={loadError} title={requestId ? undefined : 'Permission requests didn’t load'} onRetry={() => load()} />}
       {requestId ? (current ? card(current, true) : loading && <ListSkeleton rows={2} label="Loading the request…" />) : <>
         {alerts && alerts.unseen > 0 && !requestId && <PasswordAlertCard alerts={alerts} now={now} busy={alertsBusy} error={alertsError}

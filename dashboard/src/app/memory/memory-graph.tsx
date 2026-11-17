@@ -110,13 +110,13 @@ export function MemoryGraph({ graph, hierarchy, selectedId, focusRequest, onSele
       onEdgeMouseEnter={(_, edge) => setHoverEdge(edge.id)} onEdgeMouseLeave={() => setHoverEdge('')}
       onMove={(_, viewport) => setZoom(viewport.zoom)} onPaneClick={() => { if (!focus) { setGroupId(''); onSelect(null) } }}
       nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} fitView fitViewOptions={{ padding: .22, maxZoom: 1 }} minZoom={.08} maxZoom={2.5} aria-label="Memory connections" />
-    <div className="memory-canvas-caption pointer-events-none"><span className="font-medium text-foreground">{hierarchy ? "Memory tree" : "Memory map"}</span><span>{connectionStatus ?? `${visibleNodes.filter(node => node.data.record.kind !== 'folder').length} memories · ${edges.filter(edge => edge.kind !== 'parent').length} links`}</span><div className="memory-canvas-legend"><span><i />Relationships</span><span><i className="is-organization" />Type grouping</span></div></div>
+    <div className="memory-canvas-caption pointer-events-none"><span className="font-medium text-foreground">{hierarchy ? "Memory tree" : "Memory map"}</span><span>{connectionStatus ?? `${visibleNodes.filter(node => node.data.record.kind !== 'folder').length} memories · ${edges.filter(edge => edge.kind !== 'parent').length} links`}</span><div className="memory-canvas-legend"><span><i />Relationships</span><span><i className="is-organization" />Grouped by type</span></div></div>
     <div className="memory-canvas-controls"><div className="flex gap-1 rounded-lg border bg-background p-1">
       <Button size="icon" variant="ghost" aria-label="Zoom in" title="Zoom in" onClick={() => void instance?.zoomIn()}><Plus /></Button>
       <Button size="icon" variant="ghost" aria-label="Zoom out" title="Zoom out" onClick={() => void instance?.zoomOut()}><Minus /></Button>
       <Button size="icon" variant="ghost" aria-label="Fit all points" title="Fit all points" onClick={() => void instance?.fitView({ padding: .22, maxZoom: 1 })}><Maximize /></Button>
       <Button size="icon" variant="ghost" aria-label="Reset positions" title="Reset positions" onClick={() => { setNodes(initial); setFocus(false); requestAnimationFrame(() => void instance?.fitView({ padding: .22, maxZoom: 1 })) }}><RotateCcw /></Button>
     </div>{active && <div className="flex gap-1 rounded-lg border bg-background p-1"><Button size="sm" variant={focus ? "secondary" : "ghost"} onClick={() => { setFocus(!focus); setDepth(1) }}><ScanSearch />{focus ? "Show all" : "Neighbors"}</Button>{focus && <Button size="sm" variant="ghost" onClick={() => setDepth(depth === 1 ? 2 : 1)}>{depth === 1 ? "2 hops" : "1 hop"}</Button>}</div>}</div>
-    <span className="memory-zoom pointer-events-none">{Math.round(zoom * 100)}%</span>
+    <span className="memory-zoom pointer-events-none">Zoom {Math.round(zoom * 100)}%</span>
   </div>
 }
