@@ -24,11 +24,19 @@ async function main() {
   await transport.request('/api/control/pi/open-loops', { query: { state: 'done', limit: 50 } })
   assert.equal(urls.length, 5)
   assert.ok(urls[2].includes('origin=stated'))
+  // Team runs: one run by its id, its steps, check and finish. Pi's browser contract also allows starting a run; the browser never does.
+  const run = '/api/control/pi/team-runs/teamrun_' + 'a'.repeat(32), csrfToken = 'x'.repeat(43)
+  await transport.request(run)
+  for (const action of ['steps', 'reconcile', 'finish']) await transport.request(`${run}/${action}`, { method: 'POST', csrfToken, body: {} })
+  assert.equal(urls.length, 9); urls.length = 5
+  await assert.rejects(transport.request('/api/control/pi/team-runs'), error => error.kind === 'validation')
+  await assert.rejects(transport.request(`${run}/steps`), error => error.kind === 'validation')
+  assert.equal(snapshotGatewayOperation(`${run}/finish`, { expected_revision: 3, state: 'cancelled' }).path, `${run}/finish`)
   assert.equal(snapshotGatewayOperation('/api/control/pi/prompts/enhance', { text: 'plan my week' }).path, '/api/control/pi/prompts/enhance')
   await assert.rejects(transport.request('/api/control/pi/open-loops/loop_0/state'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/memory/mem_judo/uses/extra'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/memory/unknown'), error => error.kind === 'validation')
   assert.throws(() => snapshotGatewayOperation('/api/control/pi/prompts/other', {}), error => error.kind === 'validation')
-  console.log('Pi routes: memory care, beliefs and prompt enhance pass the transport; unknown routes are refused')
+  console.log('Pi routes: memory care, beliefs, team runs and prompt enhance pass the transport; unknown routes are refused')
 }
 main().catch(error => { console.error(error); process.exit(1) })

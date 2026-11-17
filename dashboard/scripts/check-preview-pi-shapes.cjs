@@ -49,6 +49,7 @@ export async function run() {
     chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),
     promptEnhance: () => control.promptEnhance.enhance('Plan my week'),
+    teamRun: () => control.teamRuns.get('teamrun_' + 'a'.repeat(32)),
   }
 }
 `
@@ -62,7 +63,8 @@ async function main() {
     const reads = await require(output).run()
     const bound = fs.readFileSync(path.join(root, 'src/lib/api/pi-wire.check.ts'), 'utf8').match(/^ {2}(\w+): true satisfies/gm).map(line => line.trim().split(':')[0])
     // Writes that start or speak in a live call: listed so a new binding cannot be skipped silently.
-    const unread = new Set(['call', 'callAudio'])
+    // Team-run bodies are what the browser sends; check-gateway-team-runs.cjs sends them.
+    const unread = new Set(['call', 'callAudio', 'teamRunStep', 'teamRunFinish'])
     for (const name of bound) assert.ok(name in reads || unread.has(name), `${name} is bound to Pi in pi-wire.check.ts; read it here or list it as unread`)
     const failures = []
     for (const [name, read] of Object.entries(reads)) {
