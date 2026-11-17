@@ -93,13 +93,13 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
   }
   const observations = new Map<string, { signature: string; revision: number }>()
   // Reloadable, development-only saved outcomes. They never invoke a provider or tool.
-  const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
+  const outcomeScenario = globalThis.sessionStorage?.getItem('conker-fake-fail')?.match(/^turn-(failed|failed-cap|failed-plain|interrupted|interrupted-acted|unreplied|unknown|approval)$/)?.[1]
   if (outcomeScenario) {
     const session = sessions[0], turn = session.turns[0]
-    session.messages = session.messages.filter(message => message.role === 'user')
-    Object.assign(turn, { status: ({ unreplied: 'acted_no_reply', unknown: 'outcome_unknown', approval: 'awaiting_approval', 'interrupted-acted': 'interrupted' } as Record<string, string>)[outcomeScenario] ?? outcomeScenario,
+    session.messages = session.messages.filter(message => message.role === 'user').slice(0, 1); session.turns = [turn] // a later turn would hide this one
+    Object.assign(turn, { status: ({ unreplied: 'acted_no_reply', unknown: 'outcome_unknown', approval: 'awaiting_approval', 'interrupted-acted': 'interrupted', 'failed-cap': 'failed', 'failed-plain': 'failed' } as Record<string, string>)[outcomeScenario] ?? outcomeScenario,
       acted: ['unreplied', 'interrupted-acted'].includes(outcomeScenario) ? 1 : 0,
-      detail: outcomeScenario === 'failed' ? 'The model requested an unavailable tool. This request was not executed.' : null,
+      detail: outcomeScenario === 'failed' ? 'The model requested an unavailable tool. This request was not executed.' : outcomeScenario === 'failed-cap' ? "Today's spending cap is reached, so paid models are paused until tomorrow. Raise it with `conker spending cap`." : outcomeScenario === 'failed-plain' ? 'provider returned no choices' : null,
       action: ['unreplied', 'unknown', 'approval', 'interrupted-acted'].includes(outcomeScenario) ? { id: 'act_preview_outcome', state: outcomeScenario === 'unknown' ? 'outcome_unknown' : outcomeScenario === 'approval' ? 'awaiting_approval' : 'completed', job_id: null } : null,
       approval_request_id: outcomeScenario === 'approval' ? 'req_email_coach' : null })
   }

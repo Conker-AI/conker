@@ -8,7 +8,7 @@ import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, hasActiveRunti
 import type { MemoryDeliveryWatchState } from '@/components/gateway/memory-delivery-watch'
 import { memoryFeedback } from './memory-feedback'
 import type { MemoryUndoState } from './memory-undo'
-import { parkedTurn, sameTurnOutcome, turnCheckCopy, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
+import { parkedTurn, retryableTurn, retryText, sameTurnOutcome, turnCheckCopy, turnOutcomeCopy, visibleTurnOutcomes, type TurnDestination } from './turn-outcomes'
 
 export type GatewayChatState = {
   sessionId: string; epoch: number; active: boolean; current: RuntimeSessionDetail | null
@@ -38,6 +38,8 @@ export type GatewayChatHandlers = {
   undoMemory?: (messageId: string, memoryId: string) => void
   resumeTurn?: (turnId: string) => void | Promise<void>
   reviewTurn?: (turnId: string, destination: TurnDestination) => void
+  /** Sends the words of a turn that ended without an answer once more, through the normal send. */
+  retryTurn?: (turnId: string) => void | Promise<void>
 } & Record<RecoveryAction, () => void | Promise<void>>
 const unsupported: Action = { availability: 'unsupported', reason: 'Not available here.' }
 
@@ -136,6 +138,9 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     const review = (label: string, destination: TurnDestination) => { if (handlers().reviewTurn) controls.push(control(label, handler => handler.reviewTurn?.(turn.id, destination))) }
     if (turn.status === 'awaiting_approval' && turn.approvalRequestId) review('Review action', 'approval')
     else if (turn.action || turn.acted || ['outcome_unknown', 'action_in_progress', 'awaiting_budget'].includes(turn.status)) review('Review saved action', 'run')
+    // Only when nothing ran: the same message goes through the normal send, and the composer holds nothing else.
+    const retry = retryableTurn(turn) ? retryText(state.current?.messages ?? [], turn.id) : null
+    if (handlers().retryTurn && retry) controls.unshift(control('Try again', handler => handler.retryTurn?.(turn.id), value => recoverable(value) && (!value.draft.trim() || value.draft === retry), true))
     if (copy.modelUnavailable) review('Review models', 'models')
     if (copy.toolUnavailable) review('Review tools', 'tools')
     if (handlers().resumeTurn && (turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted)) controls.push(control(turn.status === 'acted_no_reply' ? 'Ask only for the reply' : 'Continue after approval', handler => handler.resumeTurn?.(turn.id), recoverable, true))

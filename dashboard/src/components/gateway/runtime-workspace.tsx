@@ -21,6 +21,7 @@ import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, t
 import { followLivePreview } from '@/lib/gateway/live-preview'
 import { GatewayError, gatewayError } from '@/lib/gateway/transport'
 import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
+import { retryTurnText } from './retry-turn'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 import type { NewChatPrivacy } from './new-chat-privacy-control'
 import { saveNewChatEffort } from './new-chat-effort'
@@ -539,6 +540,10 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       else if (destination === 'run') navigate(`/activity?tab=runs&run=${encodeURIComponent(turn.id)}`)
       else if (destination === 'models') navigate('/settings?tab=providers')
       else if (destination === 'tools') navigate('/tools')
+    },
+    retryTurn: turnId => {
+      const text = selected && activeRef.current && !workspace.getState().operation && !privacy.getState().sessionIds.includes(selected) ? retryTurnText(chatLatest.current?.snapshot.current, turnId, !!workspace.getState().uncertain[selected], draftController.current(selected)?.value.text ?? '') : null
+      if (selected && text) { draftController.edit(selected, { text }); return dispatchSubmission(selected, text, createTurnRequestId()) }
     },
     refreshMemory: memoryRead.refresh, undoMemory: memoryUndo.undo,
     copy: copyMessage, saveArtifact, exportAnswer: control ? (message, format) => control.exports.answer(message.sessionId, message.id, format) : undefined, setDraft: text => { if (selected) draftController.edit(selected, { text }) },
