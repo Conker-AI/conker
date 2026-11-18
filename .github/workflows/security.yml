@@ -14,6 +14,7 @@ on:
       - ".github/workflows/security.yml"
       - "dashboard/package.json"
       - "dashboard/package-lock.json"
+      - "dashboard/scripts/audit-npm.cjs"
       - "services/decisions/requirements.txt"
       - "versions.env"
   workflow_dispatch:
@@ -39,7 +40,8 @@ jobs:
       # scripts/api-types.mjs never does (it passes parsed documents). Drop the override once they catch up.
       - name: npm packages, moderate advisories and above
         working-directory: dashboard
-        run: npm audit --audit-level=moderate
+        # audit-npm.cjs is `npm audit --audit-level=moderate` minus the advisories it names with a reason.
+        run: node scripts/audit-npm.cjs
 
   decisions:
     name: Decisions sidecar dependencies
