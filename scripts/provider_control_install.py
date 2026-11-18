@@ -63,11 +63,13 @@ def install(root: Path, source: Path, layout: str):
         "--socket",
         str(socket),
     ]
+    # No PrivateTmp: in a user unit it builds a user namespace where the sandbox runner's uid (65533)
+    # reads as "nobody", so `conker update` rejected the agent workspaces folder and rolled back.
     unit = (
         "[Unit]\nDescription=Conker private provider control\n\n[Service]\n"
         f"WorkingDirectory={working_directory(source)}\nExecStart={' '.join(map(quoted, arguments))}\n"
         "Restart=on-failure\nRestartSec=2\nUMask=0077\nNoNewPrivileges=true\n"
-        "PrivateTmp=true\nStandardOutput=null\nStandardError=null\n\n[Install]\nWantedBy=default.target\n"
+        "StandardOutput=null\nStandardError=null\n\n[Install]\nWantedBy=default.target\n"
     )
     path = unit_directory / name
     if path.is_symlink():
