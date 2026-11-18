@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.3.0
+
 - **The weekly dependency check accepts one named advisory.** picomatch (a build tool of vite and eslint, never shipped) has a ReDoS advisory with no patched release, which turned every PR that touches `versions.env` red. `dashboard/scripts/audit-npm.cjs` runs `npm audit` and skips only advisories it lists with a reason; anything else at moderate or above still fails. (#370)
 - **Every place has a page heading, controls are easy to tap, and live screens speak plainly.** One level 1 heading per place, 44 px tap areas on touch screens that no longer overlap, a focus ring with 3:1 contrast, focus returning after the forget and "Are you sure" dialogs, skill names as words, and no ToolGate, MemoryGate or "gateway" in text you read; `npm run check:plain-words` and new e2e checks keep it so. (#368)
 - **Inbox card: a memory you corrected was used.** When answers written earlier used a memory he has since corrected or forgot, the Inbox says so in plain words, lists the chats by title with a link to each, and has a Dismiss button that hides the card only. It counts in the Inbox badge. Reads Pi's `GET /memory/recall-notices` (Pi #285); the dev pin of Pi must be bumped after that merges. (#364)
@@ -18,6 +20,16 @@ which module versions a release pins.
 - **`conker post-update-check` no longer reports served routes as missing.** It listed Pi's routes from `app.routes`, which hides routes of included routers on this FastAPI, so the "new routes" check failed on a Pi that served them. It now reads the OpenAPI document. (#362)
 
 - **An update no longer fails when Pi is recreated.** Services that join Pi's network (the decisions sidecar and the Claude plan runtime) cannot be stopped once Pi is replaced, so `docker compose up` exited with an error and the update rolled back a stack that was coming up fine. The update now removes those services first; `up` starts them again under the new Pi. (#361)
+
+### Pinned in this release
+
+| Module | Version |
+|---|---|
+| Pi | v0.27.0 |
+| ToolGate | v0.17.0 |
+| MemoryGate | v0.10.0 |
+| SystemGate | v0.5.4 |
+| Embeddings | v0.1.9 |
 
 ## 0.2.0
 
