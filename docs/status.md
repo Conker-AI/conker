@@ -22,7 +22,7 @@ it, or that a server runs it.
 <!-- generated:release -->
 | Service | Version | |
 |---|---|---|
-| Pi and the Gateway | 0.26.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
+| Pi and the Gateway | 0.27.0 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
 | ToolGate | 0.17.0 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.10.0 | Memory with sources; its AI through Pi |
 | SystemGate | 0.5.4 | Read-only view of the machine |
