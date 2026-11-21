@@ -1,10 +1,12 @@
 import json
+import os
 import subprocess
+from pathlib import Path
 
 import pytest
 
 from scripts.provider_control import ProviderControl
-from scripts.provider_control_install import working_directory
+from scripts.provider_control_install import install, working_directory
 from scripts.provider_secrets import ProviderSecretError
 
 
@@ -259,3 +261,20 @@ def test_a_release_with_direct_providers_offers_every_row(tmp_path):
     saved = stage(control, provider="groq")
     assert "synthetic-provider-key" not in json.dumps(saved)
     assert control.store.staged_path("groq").read_bytes() == b"synthetic-provider-key"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="systemd user units are Linux only")
+def test_helper_unit_has_no_private_tmp(tmp_path, monkeypatch):
+    # PrivateTmp in a user unit builds a user namespace where uid 65533 reads as nobody, which
+    # made `conker update` reject the agent workspaces folder (and fail every update from the UI).
+    source = tmp_path / "source"
+    (source / "scripts").mkdir(parents=True)
+    (source / "scripts" / "provider_control.py").write_text("")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: None)
+
+    installed = install(tmp_path / "root", source, "ubuntu")
+
+    unit = (tmp_path / "home" / ".config/systemd/user" / installed["service"]).read_text()
+    assert "PrivateTmp" not in unit
+    assert "NoNewPrivileges=true" in unit

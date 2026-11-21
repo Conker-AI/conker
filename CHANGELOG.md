@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Updating from the Inbox works on a server.** The host helper's systemd unit had `PrivateTmp=true`, which in a user unit builds a user namespace where the sandbox runner's uid (65533) reads as "nobody". `prepare.py` then refused the agent workspaces folder, so the update failed at its first step, its rollback failed the same way, and the server put a hold on updates. The unit no longer has it. An existing server needs the line removed from `~/.config/systemd/user/conker-providers-*.service` (then `systemctl --user daemon-reload` and a restart). (#371)
 ## 0.3.0
 
 - **The weekly dependency check accepts one named advisory.** picomatch (a build tool of vite and eslint, never shipped) has a ReDoS advisory with no patched release, which turned every PR that touches `versions.env` red. `dashboard/scripts/audit-npm.cjs` runs `npm audit` and skips only advisories it lists with a reason; anything else at moderate or above still fails. (#370)
