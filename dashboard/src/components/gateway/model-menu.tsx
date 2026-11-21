@@ -69,7 +69,7 @@ export function ModelMenu({ name, disabled, layout, selected, auto, manualRequir
       {add?.error && <p role="alert" className="px-2 py-1 text-xs text-destructive-foreground">{add.error}</p>}
       {(effort || layout.more.length > 0) && <DropdownMenuSeparator />}
       {effort && <DropdownMenuSub>
-        <DropdownMenuSubTrigger className={ROW} disabled={effort.disabled}><span>Effort</span><span className="ms-auto text-xs text-muted-foreground">{effortLabel(effort.value)}</span></DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger className={ROW} disabled={effort.disabled}><span>Effort</span>{effort.value === 'auto' && <span className="ms-2 rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium leading-none text-muted-foreground">Auto</span>}</DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="w-72 max-w-[calc(100vw-1rem)]">
           <p className="px-2 py-1.5 text-xs text-muted-foreground">Higher effort means more thorough responses, but takes longer and uses your limits faster.</p>
           <DropdownMenuRadioGroup value={effort.value} onValueChange={value => { effort.onChange(value as ChatEffort); setOpen(false) }} aria-label="Effort">
