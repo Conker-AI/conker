@@ -125,7 +125,8 @@ export function createRefresh(env: RefreshEnv, store = createRefreshState()) {
       reachable = probed; note = checked
       if (changed) {
         // A manual refresh replaces the page when nothing is being sent; every other case only says so.
-        if (manual && !bound.busy()) { env.reload(); return }
+        // Leave 'refreshing' first: a page that asks "leave site?" and is answered Stay must not stay stuck.
+        if (manual && !bound.busy()) { set({ status: 'done', lastDoneAt: env.now(), note: 'none' }); env.reload(); return }
         set({ newBuild: true })
         if (!buildAnnounced) { buildAnnounced = true; bound.onNewBuild() }
       }

@@ -34,7 +34,7 @@ function world(overrides = {}) {
     unsaved: () => flags.unsaved, dialogOpen: () => flags.dialog,
     fetchEntry: async () => { if (flags.served instanceof Error) throw flags.served; return flags.served },
     runningEntry: () => flags.running, get prod() { return flags.prod },
-    reload: () => { calls.reload++ }, updateWorker: () => { calls.worker++ },
+    reload: () => { calls.reload++; calls.statusAtReload = refresh.store.getState().status }, updateWorker: () => { calls.worker++ },
   }
   const script = { answers: [started, fresh], offers: [null, '0.2.0'], ...overrides }
   const deps = {
@@ -93,6 +93,11 @@ async function main() {
   await w.refresh.refreshAll('return'); assert.equal(w.calls.reload, 0, 'Auto never reloads, even when idle: it offers a button')
   await w.refresh.refreshAll('manual'); assert.equal(w.calls.reload, 1, 'Manual reloads a changed build when nothing is being sent')
   w.flags.busy = true; w.time.now += 1; await w.refresh.refreshAll('manual'); assert.equal(w.calls.reload, 1, 'Never while a send is in progress')
+  // A reload the browser cancels (Stay on the leave-page prompt) must not leave the button spinning.
+  w = world(); w.flags.prod = true; w.flags.running = '/assets/index-old.js'; w.flags.served = '/assets/index-new.js'
+  await w.refresh.refreshAll('manual'); assert.equal(w.calls.reload, 1)
+  assert.equal(w.calls.statusAtReload, 'done', 'Status is left before reload, so a cancelled reload is not stuck')
+  assert.notEqual(w.state().status, 'refreshing')
   // The same build, a failed fetch and the dev server never reload.
   for (const set of [flags => { flags.served = '/assets/index-old.js' }, flags => { flags.served = new Error('offline') }, flags => { flags.prod = false }]) {
     w = world(); w.flags.prod = true; w.flags.running = '/assets/index-old.js'; w.flags.served = '/assets/index-new.js'; set(w.flags)
