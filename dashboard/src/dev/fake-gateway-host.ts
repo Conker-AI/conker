@@ -8,7 +8,7 @@ type Receipt = { id: string; operation: string; arguments: Record<string, string
 /**
  * Preview-only host helper (ADR-0014) for the Server screens, in the helper's exact shapes. Pick a
  * state with `?preview-host=`: first-use, same-disk, unmounted, unavailable, docker, held, busy,
- * refused, lost, unknown, failed, working. Actions finish after a few seconds; nothing leaves the tab.
+ * refused, lost, unknown, failed, working, no-update-check (an older server that does not know update.check). Actions finish after a few seconds; nothing leaves the tab.
  */
 export function createFakeHostOps(scenario: string | null) {
   const minute = 60_000, hour = 60 * minute, day = 24 * hour, start = Date.now()
@@ -31,6 +31,8 @@ export function createFakeHostOps(scenario: string | null) {
     'update.run': 'The update did not finish. The Inbox says whether Conker went back to the version it had.',
   }
   const checks: Record<string, string> = { 'services.restart': 'services.status', 'backup.run': 'backup.list', 'backup.verify': 'backup.verify', 'update.run': 'services.status' }
+  // update.check never waits: the first call starts a check that ends 1.5 s later, then the answer holds for 90 s.
+  let checking: number | null = null, lastCheck: number | null = null
   const updates = createFakeUpdates(new URLSearchParams(globalThis.location?.search).get('preview-updates'))
   const receipt = (id: string, operation: string, args: Record<string, string>, source: 'ui' | 'cli', started: number, outcome: Receipt['outcome'], ended: number | null): Receipt => ({
     id, operation, arguments: args, argumentsDigest: digest(id), source, startedAt: iso(started), endedAt: ended === null ? null : iso(ended), outcome,
@@ -99,6 +101,18 @@ export function createFakeHostOps(scenario: string | null) {
       if (scenario === 'docker' && operation === 'services.status') fail(503, 'host_unavailable', 'Docker did not answer.')
       if (operation === 'services.status') return { operation, result: status() }
       if (operation === 'backup.list') return { operation, result: backups() }
+      if (operation === 'update.check' && scenario !== 'no-update-check') {
+        const at = Date.now()
+        // Tests read how many checks the page asked for.
+        const asked = globalThis as { __conkerFakeUpdateChecks?: number }
+        asked.__conkerFakeUpdateChecks = (asked.__conkerFakeUpdateChecks ?? 0) + 1
+        if (checking !== null && at - checking >= 1500) { checking = null; lastCheck = at; updates.checked() }
+        const answer = (state: string, last: number | null) => ({ state, checkedAt: last === null ? null : iso(last), ok: last === null ? null : true, reason: null, nextCheckAfter: last === null ? null : iso(last + 90_000) })
+        if (checking !== null) return { operation, result: answer('running', lastCheck) }
+        if (lastCheck !== null && at - lastCheck < 90_000) return { operation, result: answer('fresh', lastCheck) }
+        checking = at
+        return { operation, result: answer('started', lastCheck) }
+      }
       return fail(422, 'invalid_host_operation', 'This server read is not allowed.')
     }
     if (path === '/api/host/ops' && method === 'GET') { settle(); return { schemaVersion: 1, operations: structuredClone(journal), damagedRecords: 0 } }

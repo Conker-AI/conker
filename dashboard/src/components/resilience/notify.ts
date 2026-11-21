@@ -28,3 +28,11 @@ export function notifyFailure(title: string, detail?: unknown, retry?: () => voi
 export function notifyDone(title: string, description?: string) {
   toastManager.add({ type: 'success', title, description, timeout: 4000 })
 }
+
+/** A plain notice with one button: it opens a place (`to`) or runs `run`, and closes the notice. */
+export function notifyAction(title: string, label: string, to: string | null, run?: () => void) {
+  const id: string = toastManager.add({
+    type: 'info', title, timeout: 0,
+    actionProps: { children: label, onClick: () => { toastManager.close(id); if (to) open(to); run?.() } },
+  })
+}

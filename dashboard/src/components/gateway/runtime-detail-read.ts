@@ -1,6 +1,9 @@
 import type { RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { readRuntimeWithDeadline, type ReadTiming } from './runtime-read-deadline'
 
+/** "Refresh everything" reads the open chat again through the same reader (see use-refresh-chat.ts). */
+export { useRefreshChat } from './use-refresh-chat'
+
 /** Explicit history reads share an invalidation generation with the quiet observer. */
 export function createRuntimeDetailReader(options: ReadTiming & {
   read: (id: string, signal: AbortSignal) => Promise<RuntimeSessionDetail>

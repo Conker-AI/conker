@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Server } from 'lucide-react'
+import { ChevronRight, Plus, RefreshCw, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -15,6 +15,9 @@ import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { gatewayPageNavigation, gatewaySidebarDestinations, gatewaySidebarGroups, type GatewayDestination } from './navigation'
 import { placeIcons } from './page-icons'
+// Its own file, so the first download stays small; the placeholder holds the place and the size.
+const RefreshButton = lazy(() => import('./refresh-button').then(module => ({ default: module.RefreshButton })))
+
 /** Places the owner can hide (Settings, Appearance, Sidebar places); Home, Inbox, Chats and Settings always show. */
 const optional: Partial<Record<GatewayDestination['id'], string>> = { projects: 'projects', memory: 'memory', agents: 'agents', tools: 'tools', jobs: 'jobs', system: 'server' }
 const ALL_PLACES = ['projects', 'memory', 'agents', 'tools', 'jobs', 'server']
@@ -75,6 +78,7 @@ export function GatewaySidebar({ conversationState, badge }: { conversationState
       <div className="flex gap-2 group-data-[collapsible=icon]:flex-col">
         <Button className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden" onClick={newChat}><Plus />Ask Conker</Button>
         <Tooltip><TooltipTrigger render={<Button size="icon" className="hidden group-data-[collapsible=icon]:inline-flex" aria-label="Ask Conker" onClick={newChat} />}><Plus /></TooltipTrigger><TooltipPopup side="right">Ask Conker</TooltipPopup></Tooltip>
+        <Suspense fallback={<Button variant="outline" size="icon" aria-label="Refresh everything" disabled><RefreshCw aria-hidden="true" /></Button>}><RefreshButton /></Suspense>
         <ModeToggle variant="outline" />
       </div>
     </SidebarHeader>

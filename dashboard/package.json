@@ -68,6 +68,7 @@
     "check:route-actions": "node scripts/check-route-actions.cjs",
     "check:settings": "node scripts/check-settings.cjs && node scripts/check-server-setting.cjs",
     "check:pwa": "node scripts/check-pwa.cjs",
+    "check:refresh": "node scripts/check-refresh.cjs",
     "check:reachability": "node scripts/check-source-reachability.cjs",
     "check": "npm run check:reachability && node scripts/run-checks.mjs",
     "check:memory-delivery": "node scripts/check-memory-delivery.cjs",

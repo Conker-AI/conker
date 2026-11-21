@@ -183,6 +183,23 @@ function serviceWorker({ shell = [], online = true, stored = {} } = {}) {
   const css = read('src/pwa/phone.css')
   assert.match(css, /\[data-slot="sidebar-wrapper"\] \{\s*height: var\(--app-height\);/, 'The app frame uses the visible height')
   // Enter: a new line on phones (Send button sends), send elsewhere; the keyboard's key says which.
+  // A window left open across a server update reloads once when a screen's file is gone, never in a loop.
+  const staleBuild = load('src/pwa/stale-build.ts')
+  const staleView = (stored = null) => {
+    const handlers = {}, state = { reloads: 0, stored, prevented: 0 }
+    const view = { addEventListener: (type, fn) => { handlers[type] = fn }, location: { reload: () => { state.reloads++ } },
+      sessionStorage: { getItem: () => state.stored, setItem: (_key, value) => { state.stored = value } } }
+    staleBuild.reloadOnStaleBuild(view)
+    return { state, fire: () => handlers['vite:preloadError']({ preventDefault: () => { state.prevented++ } }) }
+  }
+  let stale = staleView(); stale.fire()
+  assert.equal(stale.state.reloads, 1); assert.equal(stale.state.prevented, 1, 'The failed import is handled, the page reloads')
+  stale.fire(); assert.equal(stale.state.reloads, 1, 'A second failure straight after does not reload again')
+  stale = staleView(String(Date.now() - 120_000)); stale.fire(); assert.equal(stale.state.reloads, 1, 'A minute later it may reload once more')
+  const brokenStorage = { addEventListener: (type, fn) => { brokenStorage.fire = fn }, location: { reload() { throw new Error('must not reload') } }, get sessionStorage() { throw new Error('blocked') } }
+  staleBuild.reloadOnStaleBuild(brokenStorage); brokenStorage.fire({ preventDefault() {} })
+  assert.match(read('src/pwa/index.ts'), /reloadOnStaleBuild\(\)/, 'Built apps start the stale-build guard')
+
   const enterKey = load('src/pwa/enter-key.ts', { react: {}, '@/hooks/use-mobile': {} })
   assert.equal(enterKey.enterSends(true, true), false, 'On a phone Enter adds a new line')
   assert.equal(enterKey.enterSends(true, false), true, 'A narrow desktop window keeps Enter to send')

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { GatewayOwnerClient } from '@/lib/gateway/owner'
 import type { GatewayProposalClient } from '@/lib/gateway/proposals'
 import type { GatewayOwnerState } from './owner-state'
-import { lazy, Suspense, useCallback, useLayoutEffect, useState } from 'react'
+import { Fragment, lazy, Suspense, useCallback, useLayoutEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ import { ConnectedWorkspaceShell } from './workspace-shell'
 import { SessionDiscoveryProvider } from './session-discovery-provider'
 import { useAppearanceSync } from '@/settings/appearance'
 import { rememberOpenedChat } from '@/lib/recent-chats'
+import { useRefreshState, useRefreshWiring } from './use-refresh'
 
 // Chat-only header controls: they render inside the chat's Suspense, so the entry need not carry them.
 const GatewayPrivacyControl = lazy(() => import('./privacy-control').then(module => ({ default: module.GatewayPrivacyControl })))
@@ -79,6 +80,9 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
 }) {
   const location = useLocation(), navigate = useNavigate(), [params] = useSearchParams()
   useAppearanceSync(control)
+  useRefreshWiring(control, conversationState)
+  // Refresh everything keys the routed screens, so each one reads again; the chat panel below is never keyed.
+  const refreshEpoch = useRefreshState(state => state.epoch)
   const [harnessBySession, setHarnessBySession] = useState<Record<string, boolean>>({})
   const savedPrivacy = useCallback((id: string, disabled: boolean) => setHarnessBySession(current => ({ ...current, [id]: disabled })), [])
   const route = resolveGatewayRoute(location.pathname)
@@ -104,7 +108,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
   // Chat and Memory own their header so their controls stay with workspace state.
   return <SessionDiscoveryProvider runtime={runtime} authStore={authStore} workspace={conversationState} privacy={sourcePrivacy}><UniversalSearchProvider client={control.search} authStore={authStore} workspace={conversationState} sourcePrivacy={sourcePrivacy}><WorkspaceChromeProvider><InboxAttentionProvider owner={owner} proposals={proposals} checks={control.jobs} changes={control.changeRequests} asks={control.asks} recall={control.recallNotices} conversationState={conversationState}><ConnectedWorkspaceShell runtime={runtime} conversationState={conversationState} sourcePrivacy={sourcePrivacy} badge={badge} header={chatActive || memoryActive ? <></> : <GatewayHeader />} sidebar={<GatewaySidebar conversationState={conversationState} badge={badge} />}>
     <ConnectionBanner probe={() => control.gatewayHealth()} />
-    <ErrorBoundary resetKeys={[location.pathname, location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}>
+    <ErrorBoundary resetKeys={[location.pathname, location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}><Fragment key={refreshEpoch}>
       {homeActive && <GatewayTodayWorkspace runtime={runtime} activity={activity} owner={owner} proposals={proposals} control={control} />}
       {chatsActive && (params.get('view') === 'import' ? <GatewayChatImport client={control.imports} /> : params.get('view') === 'imported' ? <GatewayImportedChats client={control.imports} /> : <GatewayChatsWorkspace runtime={runtime} authStore={authStore} conversationState={conversationState} sourcePrivacy={sourcePrivacy} imports={control.imports} chatNames={control.chatNames} chatForget={control.chatForget} />)}
       {setupActive && <GatewaySetupProgress client={control} />}
@@ -119,7 +123,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {route === 'loops' && <GatewayOpenLoops client={control.openLoops} />}
       {artifactsActive && <GatewayArtifactsWorkspace control={control} activity={activity} />}
       {jobsActive && <GatewayJobsWorkspace control={control} />}
-    </Suspense></ErrorBoundary>
+    </Fragment></Suspense></ErrorBoundary>
     {!supported && <div className="space-y-3 p-6"><PageHeader title="This page isn’t available yet" density="compact" /><p className="text-sm text-muted-foreground">Nothing is wrong. This part of Conker isn’t built yet.</p><Button variant="outline" render={<Link to="/overview" />}>Go to Home</Button></div>}
     <div className={cn('min-h-0 flex-1 flex-col', chatActive ? 'flex' : 'hidden')} aria-hidden={!chatActive}><ErrorBoundary resetKeys={[session]} fallback={workspaceError}><Suspense fallback={chatActive ? <ChatSkeleton /> : null}><GatewayRuntimeWorkspace headerExtra={session ? <><GatewaySessionAccessControl key={`access:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} /><GatewayPrivacyControl key={`privacy:${session}`} client={control} sessionId={session} disabled={dispatchBlocked} onPrivacy={savedPrivacy} /></> : null} harnessBySession={harnessBySession} control={control} client={runtime} activityClient={activity} authStore={authStore} state={conversationState} sourcePrivacy={sourcePrivacy} visible={chatActive} onSelectSession={selectSession} /></Suspense></ErrorBoundary></div>
     {activityActive && <ErrorBoundary resetKeys={[location.search]} fallback={workspaceError}><Suspense fallback={workspaceFallback}><div className="min-h-0 flex-1"><GatewayActivityWorkspace client={activity} runtime={runtime} state={activityState} sourcePrivacy={sourcePrivacy} active dispatchBlocked={dispatchBlocked} retainedTaskId={retainedTaskId} onWork={task => {
