@@ -6,6 +6,7 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Effort in the model menu.** "Auto" is a small tag next to the word Effort instead of grey text at the end of the row; a chosen level is not repeated there (the model button names it). (#372)
 - **Updating from the Inbox works on a server.** The host helper's systemd unit had `PrivateTmp=true`, which in a user unit builds a user namespace where the sandbox runner's uid (65533) reads as "nobody". `prepare.py` then refused the agent workspaces folder, so the update failed at its first step, its rollback failed the same way, and the server put a hold on updates. The unit no longer has it. An existing server needs the line removed from `~/.config/systemd/user/conker-providers-*.service` (then `systemctl --user daemon-reload` and a restart). (#371)
 ## 0.3.0
 
