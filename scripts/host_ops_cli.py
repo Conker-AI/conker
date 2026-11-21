@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
                 "arguments": {name: value for name, _, value in pairs},
             }
             if OPERATIONS[args.operation].read:
-                print(json.dumps(host.read(body), indent=2))
+                print(json.dumps(host.read(body, wait=True), indent=2))
                 return 0
             receipt = host.start(
                 {"id": f"cli-{uuid.uuid4().hex}", **body}, source="cli", wait=True
