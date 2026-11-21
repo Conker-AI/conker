@@ -125,20 +125,14 @@ test('the Thinking chip shows what Auto chose and why, a changed chip shows Cust
   expect(errors).toEqual([])
 })
 
-test('a preset sets the model, the effort, thinking and search together', async ({ page }) => {
+test('a mode asks Conker to decide the settings from the message', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
   await page.getByRole('button', { name: /^Mode: / }).click()
-  await page.getByRole('radio', { name: /Fast/ }).click()
-  await page.keyboard.press('Escape')
-  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Haiku 5.5, Light effort')
-  await expect(page.getByRole('button', { name: /^Mode: Fast/ })).toBeVisible()
-  await page.getByRole('button', { name: /^Mode: / }).click()
   await page.getByRole('radio', { name: /Deep/ }).click()
   await page.keyboard.press('Escape')
-  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Opus 5.5, High effort')
-  await expect(page.getByRole('button', { name: 'Search: Deep' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^Mode: Deep/ })).toBeVisible()
+  await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
+  await expect(page.getByRole('button', { name: /^Mode: Deep · / })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByRole('button', { name: /^Difficulty/ })).toHaveCount(0)
   expect(errors).toEqual([])
 })
