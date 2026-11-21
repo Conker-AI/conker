@@ -6,7 +6,8 @@ export type Complexity = 'easy' | 'hard'
 export type Research = 'off' | 'web' | 'deep'
 export type AutoSettingsField = 'complexity' | 'think' | 'research'
 export type AutoEffort = 'light' | 'medium' | 'high' | 'max'
-export type AutoSettings = { complexity: Complexity; think: boolean; research: Research; effort?: AutoEffort; reasons: Record<AutoSettingsField, string> & { effort?: string }; modelId: string }
+export type AutoMode = 'auto' | 'fast' | 'balanced' | 'deep'
+export type AutoSettings = { complexity: Complexity; think: boolean; research: Research; effort?: AutoEffort; reasons: Record<AutoSettingsField, string> & { effort?: string; model?: string }; modelId: string; answerModelId?: string }
 
 const fields: readonly AutoSettingsField[] = ['complexity', 'think', 'research']
 const efforts: readonly unknown[] = ['light', 'medium', 'high', 'max']
@@ -16,22 +17,26 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
 export function parseAutoSettings(value: unknown): AutoSettings {
   const bad = (): never => { throw new GatewayError('validation') }
   if (!record(value) || !record(value.reasons)) return bad()
-  const { complexity, think, research, reasons, modelId, effort } = value as Record<string, unknown> & { reasons: Record<string, unknown> }
+  const { complexity, think, research, reasons, modelId, effort, answerModelId } = value as Record<string, unknown> & { reasons: Record<string, unknown> }
   if (complexity !== 'easy' && complexity !== 'hard') return bad()
   if (research !== 'off' && research !== 'web' && research !== 'deep') return bad()
   if (typeof think !== 'boolean' || typeof modelId !== 'string' || !modelId) return bad()
   // An effort and its reason come together or not at all; a reply without them is still valid.
   const withEffort = effort !== undefined
   if (withEffort ? !efforts.includes(effort) || !okReason(reasons.effort) : reasons.effort !== undefined) return bad()
-  if (Object.keys(reasons).length !== fields.length + (withEffort ? 1 : 0) || !fields.every(field => okReason(reasons[field]))) return bad()
+  const withModel = answerModelId !== undefined
+  if (withModel && (typeof answerModelId !== 'string' || !answerModelId || !okReason(reasons.model))) return bad()
+  if (!withModel && reasons.model !== undefined) return bad()
+  if (Object.keys(reasons).length !== fields.length + (withEffort ? 1 : 0) + (withModel ? 1 : 0) || !fields.every(field => okReason(reasons[field]))) return bad()
   const base: AutoSettings = { complexity, think, research, modelId, reasons: { complexity: reasons.complexity as string, think: reasons.think as string, research: reasons.research as string } }
-  return withEffort ? { ...base, effort: effort as AutoEffort, reasons: { ...base.reasons, effort: reasons.effort as string } } : base
+  const out: AutoSettings = withEffort ? { ...base, effort: effort as AutoEffort, reasons: { ...base.reasons, effort: reasons.effort as string } } : base
+  return withModel ? { ...out, answerModelId: answerModelId as string, reasons: { ...out.reasons, model: reasons.model as string } } : out
 }
 
 export function createAutoSettingsClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
-    async propose(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal } = {}): Promise<AutoSettings> {
-      const response = await auth.request('/api/pi/models/auto-settings', { method: 'POST', body: { text, ...(options.sessionId ? { session_id: options.sessionId } : {}), ...(options.harnessDisabled ? { harness_disabled: true } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+    async propose(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; mode?: AutoMode; signal?: AbortSignal } = {}): Promise<AutoSettings> {
+      const response = await auth.request('/api/pi/models/auto-settings', { method: 'POST', body: { text, ...(options.sessionId ? { session_id: options.sessionId } : {}), ...(options.harnessDisabled ? { harness_disabled: true } : {}), ...(options.mode && options.mode !== 'auto' ? { mode: options.mode } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
       return parseAutoSettings(response)
     },
   }

@@ -19,35 +19,30 @@ const proposal = { complexity: 'hard', think: true, research: 'web', reasons: { 
 
 const layout = { top: [{ id: 'm-opus', name: 'Opus 5.5', number: 1 }, { id: 'm-sonnet', name: 'Sonnet 5.5', number: 3 }, { id: 'm-haiku', name: 'Haiku 5.5', number: 4 }], more: [] }
 const values = (over = {}) => ({ think: false, research: 'off', effort: 'auto', modelId: '', ...over })
-const fast = { think: false, research: 'off', effort: 'light', modelId: 'm-haiku' }
-const deep = { think: true, research: 'deep', effort: 'high', modelId: 'm-opus' }
-
 assert.deepEqual(modes.composerModes.map(mode => mode.id), ['auto', 'fast', 'balanced', 'deep'])
-assert.deepEqual(modes.modePresets.deep, { tier: 'opus', effort: 'high', think: true, research: 'deep' })
-assert.deepEqual(modes.modePresets.fast, { tier: 'haiku', effort: 'light', think: false, research: 'off' })
-assert.equal(modes.tierModelId(layout, 'sonnet'), 'm-sonnet')
-assert.equal(modes.tierModelId({ top: [], more: [] }, 'opus'), null, 'A tier the list lacks has no model')
-assert.equal(modes.modeTarget('auto', null, true, layout), null, 'Auto has no values until the routing model answers')
-assert.deepEqual(modes.modeTarget('deep', null, false, layout), { think: false, research: 'deep', effort: 'high', modelId: 'm-opus' }, 'Thinking only where available')
+assert.equal(modes.modePresets, undefined, 'Modes are no longer fixed presets')
+assert.equal(modes.modeTarget(null, true, layout), null, 'No values until the routing model answers')
+const decided = { ...proposal, effort: 'high', answerModelId: 'm-opus', reasons: { ...proposal.reasons, effort: 'Hard.', model: 'Needs depth.' } }
+assert.deepEqual(modes.modeTarget(decided, true, layout), { think: true, research: 'web', effort: 'high', modelId: 'm-opus' })
+assert.deepEqual(modes.modeTarget(decided, false, layout).think, false, 'Thinking only where available')
+assert.equal(modes.modeTarget({ ...decided, answerModelId: 'gone' }, true, layout).modelId, null, 'A model not on the list is never set')
+assert.equal(modes.modeTarget(proposal, true, layout).modelId, null, 'The routing model id is never the answer model')
 assert.equal(modes.offersModel(layout, 'm-opus'), true)
-assert.equal(modes.offersModel(layout, 'jev'), false, 'Auto never sets a model that is not on the list')
-assert.equal(modes.effectiveMode('auto', values(), null, true, layout), 'auto')
-assert.equal(modes.effectiveMode('auto', values({ think: true, research: 'web', modelId: 'jev' }), proposal, true, layout), 'auto', 'An Auto proposal with no effort leaves the effort alone')
-assert.equal(modes.effectiveMode('auto', values({ think: true, research: 'web', effort: 'high', modelId: 'jev' }), { ...proposal, effort: 'high' }, true, layout), 'auto')
-assert.equal(modes.effectiveMode('auto', values({ think: true, research: 'web', effort: 'light', modelId: 'jev' }), { ...proposal, effort: 'high' }, true, layout), 'custom', 'A changed effort shows Custom')
-assert.equal(modes.effectiveMode('auto', values({ think: false, research: 'web', modelId: 'jev' }), proposal, true, layout), 'custom', 'Changing a proposed value shows Custom')
-assert.equal(modes.effectiveMode('fast', fast, null, true, layout), 'fast')
-assert.equal(modes.effectiveMode('fast', { ...fast, research: 'web' }, null, true, layout), 'custom')
-assert.equal(modes.effectiveMode('fast', { ...fast, modelId: 'm-opus' }, null, true, layout), 'custom', 'Another model shows Custom')
-assert.equal(modes.effectiveMode('fast', { ...fast, effort: 'max' }, null, true, layout), 'custom', 'Another effort shows Custom')
-assert.equal(modes.effectiveMode('fast', { ...fast, modelId: 'anything' }, null, true, { top: [], more: [] }), 'fast', 'With no model for the tier, any model matches')
-assert.equal(modes.effectiveMode('deep', { ...deep, think: false }, null, false, layout), 'deep', 'Unavailable thinking does not force Custom')
+assert.equal(modes.offersModel(layout, 'jev'), false)
+for (const mode of ['auto', 'fast', 'balanced', 'deep']) {
+  assert.equal(modes.effectiveMode(mode, values(), null, true, layout), mode, 'No proposal keeps the mode')
+  assert.equal(modes.effectiveMode(mode, values({ think: true, research: 'web', effort: 'high', modelId: 'm-opus' }), decided, true, layout), mode)
+  assert.equal(modes.effectiveMode(mode, values({ think: true, research: 'web', effort: 'light', modelId: 'm-opus' }), decided, true, layout), 'custom', 'A changed effort shows Custom')
+  assert.equal(modes.effectiveMode(mode, values({ think: true, research: 'web', effort: 'high', modelId: 'm-haiku' }), decided, true, layout), 'custom', 'A changed model shows Custom')
+}
 assert.equal(modes.modeLabel('custom'), 'Custom')
 
 assert.deepEqual(auto.parseAutoSettings(proposal), proposal)
 // Effort comes with its reason or not at all.
 const withEffort = { ...proposal, effort: 'high', reasons: { ...proposal.reasons, effort: 'A hard question.' } }
 assert.deepEqual(auto.parseAutoSettings(withEffort), withEffort)
+assert.deepEqual(auto.parseAutoSettings(decided), decided)
+for (const bad of [{ ...proposal, answerModelId: 'x' }, { ...proposal, reasons: { ...proposal.reasons, model: 'x' } }, { ...decided, answerModelId: '' }]) assert.throws(() => auto.parseAutoSettings(bad))
 for (const bad of [{ ...proposal, effort: 'high' }, { ...proposal, reasons: { ...proposal.reasons, effort: 'x' } }, { ...withEffort, effort: 'extreme' }, { ...withEffort, reasons: { ...withEffort.reasons, effort: ' ' } }]) assert.throws(() => auto.parseAutoSettings(bad))
 for (const broken of [
   { ...proposal, complexity: 'medium' }, { ...proposal, research: 'maybe' }, { ...proposal, think: 'yes' }, { ...proposal, modelId: '' },

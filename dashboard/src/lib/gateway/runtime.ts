@@ -3,7 +3,7 @@ import { GatewayError, gatewayError } from './transport'
 import { parseSkills, validateSkillIds } from './skills'
 import type { GatewayDraftClient } from './drafts'
 import type { GatewayTurnUsageClient } from './turn-usage'
-import type { AutoSettings } from './auto-settings'
+import type { AutoMode, AutoSettings } from './auto-settings'
 import type { MemoryDelivery } from './memory-delivery'
 import type { GatewayHistoryClient } from './session-history'
 
@@ -308,7 +308,7 @@ export function createGatewayRuntimeClient(auth: Pick<GatewayAuthClient, 'reques
       return unique(array(response.results, 200).map(session))
     },
     /** Auto mode: the routing model proposes settings for a draft; nothing is saved or granted. */
-    async proposeSettings(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal } = {}): Promise<AutoSettings> { return (await auto()).propose(text, options) },
+    async proposeSettings(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; mode?: AutoMode; signal?: AbortSignal } = {}): Promise<AutoSettings> { return (await auto()).propose(text, options) },
     async getSession(sessionId: string, options: { signal?: AbortSignal } = {}): Promise<RuntimeSessionDetail> {
       inputId(sessionId)
       const response = await auth.request(`/api/pi/sessions/${sessionId}`, { ...(options.signal ? { signal: options.signal } : {}) })
