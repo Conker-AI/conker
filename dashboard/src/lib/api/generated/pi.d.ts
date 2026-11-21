@@ -11484,6 +11484,12 @@ export interface components {
              * @default false
              */
             harness_disabled: boolean;
+            /**
+             * Mode
+             * @default auto
+             * @enum {string}
+             */
+            mode: "auto" | "fast" | "balanced" | "deep";
         };
         /** Update */
         pi__models__evaluations__Update: {
