@@ -11,6 +11,9 @@ checks again at once, which is wanted: that check closes the old offer in Pi.
 
 from __future__ import annotations
 
+import contextlib
+import os
+import signal
 import subprocess
 import threading
 import time
@@ -25,6 +28,8 @@ if TYPE_CHECKING:
 
 SUCCESS_GAP = 90  # seconds with no new check after one that worked
 FAILURE_GAP = 15 * 60  # and after one that failed (GitHub down, or its hourly limit used up)
+REPORT_GAP = 60  # but GitHub answered and only Pi could not be told: try again soon
+GITHUB_EXIT, REPORT_EXIT = 1, 3  # `conker update --check` exit codes (scripts/update_check.py)
 ON_DEMAND_TIMEOUT = 120  # a hung GitHub must not leave "running" for the daily path's 10 minutes
 
 
@@ -34,6 +39,24 @@ def iso(seconds: float | None) -> str | None:
     return datetime.fromtimestamp(seconds, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def run_in_group(argv, *, timeout, **options) -> subprocess.CompletedProcess:
+    """subprocess.run, but a timeout ends the whole process group: `conker` is a shell script that
+    starts python, and killing only the shell would leave the check running unseen."""
+    group = {"start_new_session": True} if os.name == "posix" else {}
+    options.pop("check", None)
+    with subprocess.Popen(argv, **options, **group) as process:
+        try:
+            return subprocess.CompletedProcess(argv, process.wait(timeout=timeout))
+        except subprocess.TimeoutExpired:
+            if os.name == "posix":
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+            process.wait()
+            raise
+
+
 class UpdateCheckGate:
     def __init__(self, *, spawn, runner=None, clock=time.time):
         self.spawn, self.runner, self.clock = spawn, runner, clock
@@ -41,13 +64,14 @@ class UpdateCheckGate:
         self._running = False
         self._checked_at: float | None = None
         self._ok: bool | None = None
+        self._why: str | None = None  # why the last finished check failed
         self._next_after = 0.0
 
     def _answer(self, state: str, reason: str | None = None) -> dict:
         with self._guard:
             now = self.clock()
-            if reason is None and self._ok is False and state in {"fresh", "running", "started"}:
-                reason = "failed"
+            if reason is None and self._ok is False and state == "fresh":
+                reason = self._why  # started and running are not outcomes: no reason
             return {
                 "state": state,
                 "checkedAt": iso(self._checked_at),
@@ -63,11 +87,20 @@ class UpdateCheckGate:
             self._running = True
             return True
 
-    def _finish(self, ok: bool) -> None:
+    def _finish(self, code: int | None) -> None:
+        """Close the flight. `code` is the check's exit code, None when it could not run."""
         with self._guard:
             now = self.clock()
+            ok = code == 0
             self._checked_at, self._ok = now, ok
-            self._next_after = now + (SUCCESS_GAP if ok else FAILURE_GAP)
+            if ok:
+                self._why, gap = None, SUCCESS_GAP
+            elif code == REPORT_EXIT:
+                self._why, gap = "failed", REPORT_GAP
+            else:
+                self._why = "github_unreachable" if code == GITHUB_EXIT else "failed"
+                gap = FAILURE_GAP
+            self._next_after = now + gap
             self._running = False
 
     def _unclaim(self) -> None:
@@ -82,8 +115,8 @@ class UpdateCheckGate:
             "env": host._environment(),
         }
 
-    def _run(self, host: HostOps, runner, timeout: int) -> bool:
-        """One `conker update --check --report`; no output is kept. True when it ended 0."""
+    def _run(self, host: HostOps, runner, timeout: int) -> int:
+        """One `conker update --check --report`; no output is kept. Returns its exit code."""
         command = self._command(host)
         done = runner(
             command["args"],
@@ -95,7 +128,7 @@ class UpdateCheckGate:
             timeout=timeout,
             check=False,
         )
-        return getattr(done, "returncode", 0) == 0
+        return getattr(done, "returncode", 0)
 
     def daily(self, host: HostOps, runner, timeout: int) -> bool:
         """The daily check: not throttled, but it shares the single flight and leaves the stamp.
@@ -104,7 +137,8 @@ class UpdateCheckGate:
         found."""
         if host.layout != "ubuntu" or not self._claim():
             return False
-        ran = False
+        code: int | None = None
+        ran: bool | None = False
         try:
             if update_running(host.root / "state" / "update"):
                 return False
@@ -113,19 +147,20 @@ class UpdateCheckGate:
                 return False
             lock.release()
             ran = True
-            self._finish(self._run(host, runner, timeout))
+            code = self._run(host, runner, timeout)
         except (OSError, subprocess.SubprocessError):
-            if ran:
-                self._finish(False)
-            return False
+            ran = None  # counted as a failed check below, but it did not run
         finally:
-            if not ran:
+            # Whatever happened, the flight ends: a stuck "running" would block every later check.
+            if ran is not False:
+                self._finish(code)
+            else:
                 self._unclaim()
-        return True
+        return ran is True
 
     def request(self, host: HostOps, *, wait: bool = False) -> dict:
         """The `update.check` read: start one check in the background unless one is running, the
-        last one was recent, or an update or another action holds its lock. `wait` (the CLI,
+        last one was recent, or an update or another action holds its lock (probed, not kept). `wait` (the CLI,
         whose process would end first) runs it here instead."""
         if host.layout != "ubuntu":
             return self._answer("unsupported")
@@ -141,21 +176,20 @@ class UpdateCheckGate:
             lock = OperationLock(host.lock_path)
             if not lock.acquire():
                 return self._answer("skipped", "host_busy")
+            lock.release()  # only a probe: the check is a read, and must not make an action busy
         except OSError:
             return self._answer("skipped", "failed")
         if not self._claim():  # another request won the race for the flight
-            lock.release()
             return self._answer("running")
 
         def work() -> None:
-            ok = False
+            code: int | None = None
             try:
-                ok = self._run(host, self.runner or subprocess.run, ON_DEMAND_TIMEOUT)
+                code = self._run(host, self.runner or run_in_group, ON_DEMAND_TIMEOUT)
             except (OSError, subprocess.SubprocessError):
                 pass  # fixed words in the answer: the child's output is never kept
             finally:
-                self._finish(ok)
-                lock.release()
+                self._finish(code)
 
         try:
             if wait:
@@ -164,6 +198,5 @@ class UpdateCheckGate:
                 self.spawn(work)
         except BaseException:
             self._unclaim()
-            lock.release()
             raise
         return self._answer("started")

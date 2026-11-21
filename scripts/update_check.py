@@ -434,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
         reported = report(args.root, args.layout, result) if args.report else None
     except failures as error:
         print(f"Conker could not tell the Inbox: {error}", file=sys.stderr)
-        return 1
+        return 3  # GitHub answered; the host helper retries sooner than after a GitHub failure
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:

@@ -227,3 +227,26 @@ def test_the_command_says_why_it_could_not_check(tmp_path, monkeypatch, capsys):
     )
     assert code == 1
     assert "could not check for updates: GitHub could not be reached." in capsys.readouterr().err
+
+
+def test_a_report_the_inbox_could_not_take_exits_3_not_1(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(update_check, "latest_release", lambda: {"version": "0.1.0"})
+    monkeypatch.setattr(update_check, "check", lambda _source: {"running": "0.1.0", "latest": None})
+
+    def refuse(*_args):
+        raise OSError("Pi is restarting")
+
+    monkeypatch.setattr(update_check, "relay", refuse)
+    code = update_check.main(
+        [
+            "--root",
+            str(tmp_path),
+            "--source",
+            str(source(tmp_path, "0.1.0")),
+            "--layout",
+            "repository",
+            "--report",
+        ]
+    )
+    assert code == 3  # GitHub answered: the host helper retries sooner than after exit 1
+    assert "could not tell the Inbox" in capsys.readouterr().err

@@ -48,8 +48,10 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   answers at once. One gate serves the daily check and this read: a single flight, no new check for
   90 s after one that worked and 15 min after one that failed (GitHub's anonymous API allows 60
   requests an hour for the whole address), and a skip while `update.lock` is held or another
-  action holds the action lock. The on-demand check holds the action lock until it ends, so an
-  action started meanwhile is refused as busy and can be retried; it stops after 120 s. Like the
+  action holds the action lock. The on-demand check only probes the action lock and lets it go,
+  so an action started meanwhile is not refused; it stops after 120 s (its whole process group).
+  The check's exit code names a failure: 1 is GitHub (`github_unreachable`, 15 min), 3 is Pi not
+  told (`failed`, 60 s); anything else is `failed`. Like the
   daily check it has side effects (`state/update/offer.json`, a report to Pi) but leaves no
   journal row. The daily check is not throttled by the gate, but leaves its stamp.
 

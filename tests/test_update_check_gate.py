@@ -6,9 +6,11 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import socketserver
 import subprocess
 import threading
+import time
 from types import SimpleNamespace
 from typing import cast
 
@@ -116,7 +118,7 @@ def test_a_failed_check_backs_off_for_fifteen_minutes(tmp_path):
     queue.pop()()
     clock.now += host_ops_check.SUCCESS_GAP + 1
     failed = result(ops)
-    assert (failed["state"], failed["ok"], failed["reason"]) == ("fresh", False, "failed")
+    assert (failed["state"], failed["ok"], failed["reason"]) == ("fresh", False, "github_unreachable")
     clock.now += host_ops_check.FAILURE_GAP
     assert result(ops)["state"] == "started"
     queue.pop()()
@@ -157,23 +159,75 @@ def test_a_running_action_skips_the_check(tmp_path):
     assert queue == [] and result(ops)["state"] == "started"
 
 
-def test_the_check_holds_the_action_lock_until_it_ends(tmp_path):
+def test_the_check_does_not_hold_the_action_lock(tmp_path):
     ops, queue = make(tmp_path)
-    result(ops)
+    result(ops)  # in flight: an update or backup started now must not be refused as busy
     other = OperationLock(ops.lock_path)
-    assert not other.acquire()  # an update.run now would be refused as busy
-    with pytest.raises(HostOpsError) as error:
-        ops.start(
-            {
-                "id": "ui-update-0123456789abcdef",
-                "operation": "update.run",
-                "arguments": {"version": "0.25.0"},
-            }
-        )
-    assert error.value.code == "host_busy"
-    queue.pop()()
     assert other.acquire()
     other.release()
+    queue.pop()()
+
+
+def test_started_and_running_carry_no_reason_even_after_a_failure(tmp_path):
+    clock = Clock()
+    ops, queue = make(tmp_path, Check(1, 0), clock=clock)
+    result(ops)
+    queue.pop()()
+    clock.now += host_ops_check.FAILURE_GAP
+    started = result(ops)
+    assert (started["state"], started["ok"], started["reason"]) == ("started", False, None)
+    assert result(ops)["reason"] is None  # running
+
+
+def test_exit_codes_name_the_failure_and_a_report_failure_retries_soon(tmp_path):
+    clock = Clock()
+    ops, queue = make(tmp_path, Check(host_ops_check.GITHUB_EXIT), clock=clock)
+    result(ops)
+    queue.pop()()
+    assert result(ops)["reason"] == "github_unreachable"
+    clock.now += host_ops_check.REPORT_GAP + 1
+    assert result(ops)["state"] == "fresh"  # GitHub failures still wait 15 minutes
+    ops, queue = make(tmp_path / "b", Check(host_ops_check.REPORT_EXIT), clock=clock)
+    result(ops)
+    queue.pop()()
+    clock.now += host_ops_check.REPORT_GAP + 1
+    assert result(ops)["state"] == "started"  # Pi could not be told: soon again
+
+
+@pytest.mark.parametrize("daily", [False, True])
+def test_an_unexpected_error_never_leaves_the_flight_stuck(tmp_path, daily):
+    def broken(*_args, **_kwargs):
+        raise ValueError("odd argv")
+
+    ops, queue = make(tmp_path, broken)
+    if daily:
+        with pytest.raises(ValueError):
+            host_ops.check_for_updates(ops, runner=broken)
+    else:
+        result(ops)
+        with pytest.raises(ValueError):
+            queue.pop()()
+    after = result(ops)
+    assert after["state"] == "fresh" and after["ok"] is False  # not "running" for ever
+    ops.update_gate._next_after = 0.0
+    assert result(ops)["state"] == "started"
+
+
+def test_a_timeout_kills_the_whole_process_group(tmp_path):
+    if os.name != "posix":
+        pytest.skip("process groups are POSIX")
+    marker = tmp_path / "grandchild.pid"
+    script = f"sh -c 'echo $$ > {marker}; sleep 30' & wait"
+    with pytest.raises(subprocess.TimeoutExpired):
+        host_ops_check.run_in_group(["sh", "-c", script], timeout=1)
+    pid = int(marker.read_text())
+    for _ in range(50):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.1)
+    pytest.fail("the grandchild outlived the timeout")
 
 
 def test_the_repository_layout_is_unsupported(tmp_path):
@@ -283,7 +337,7 @@ def test_a_waited_read_ends_the_check_before_it_answers(tmp_path):
 
 def test_conker_ops_run_update_check_waits_and_prints_json(tmp_path, monkeypatch, capsys):
     check = Check()
-    monkeypatch.setattr(subprocess, "run", check)
+    monkeypatch.setattr(host_ops_check, "run_in_group", check)
     code = host_ops_cli.main(
         [
             "--root",

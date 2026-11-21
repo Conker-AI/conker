@@ -24,7 +24,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-from scripts.host_ops_check import UpdateCheckGate
+from scripts.host_ops_check import UpdateCheckGate, run_in_group
 from scripts.host_ops_journal import OP_ID, Journal, OperationLock, finished, started
 from scripts.host_ops_reads import (
     SERVICE,
@@ -464,7 +464,7 @@ CHECK_EVERY = 24 * 3600
 CHECK_TIMEOUT = 10 * 60
 
 
-def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
+def check_for_updates(host: HostOps, runner=run_in_group) -> bool:
     """One `conker update --check --report`: the newest release and any finished update go to
     the Inbox. Skipped while a server action runs or a `conker update` from a shell holds
     update.lock: an update moves the sources the check reads the running version from, and a
