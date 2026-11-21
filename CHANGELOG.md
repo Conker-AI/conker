@@ -6,8 +6,20 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.5.0
+
 - **Refresh everything, and a release check when you enter.** A refresh button beside Ask Conker reads every screen again and asks the server to look for a new Conker release now (not only once a day); a found release shows as a notice with a View button and as the card in the Inbox. Opening the app, or coming back after five minutes, does the quiet part by itself and never reloads or remounts anything while you have unsaved work or a chat is sending. A window left open across an update reloads once when its files are gone. (#377)
 - **The server checks for a new release when you open the app.** A new host read, `update.check`, starts the update check in the background and answers at once (never more than once every 90 seconds, 15 minutes after a failure, and not while an update or another server action runs), so a release shows up in the Inbox without waiting for the daily check. `conker ops run update.check` runs it from a shell. (#376)
+
+### Pinned in this release
+
+| Module | Version |
+|---|---|
+| Pi | v0.29.0 |
+| ToolGate | v0.17.0 |
+| MemoryGate | v0.10.0 |
+| SystemGate | v0.5.4 |
+| Embeddings | v0.1.9 |
 
 ## 0.4.0
 
