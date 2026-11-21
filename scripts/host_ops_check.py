@@ -42,9 +42,8 @@ def iso(seconds: float | None) -> str | None:
 def run_in_group(argv, *, timeout, **options) -> subprocess.CompletedProcess:
     """subprocess.run, but a timeout ends the whole process group: `conker` is a shell script that
     starts python, and killing only the shell would leave the check running unseen."""
-    group = {"start_new_session": True} if os.name == "posix" else {}
     options.pop("check", None)
-    with subprocess.Popen(argv, **options, **group) as process:
+    with subprocess.Popen(argv, **options, start_new_session=os.name == "posix") as process:
         try:
             return subprocess.CompletedProcess(argv, process.wait(timeout=timeout))
         except subprocess.TimeoutExpired:
