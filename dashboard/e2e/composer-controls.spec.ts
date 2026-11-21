@@ -132,7 +132,7 @@ test('a mode asks Conker to decide the settings from the message', async ({ page
   await page.getByRole('radio', { name: /Deep/ }).click()
   await page.keyboard.press('Escape')
   await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
-  await expect(page.getByRole('button', { name: /^Mode: Deep · / })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('button', { name: /^Mode: Deep Â· / })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByRole('button', { name: /^Difficulty/ })).toHaveCount(0)
   expect(errors).toEqual([])
 })
