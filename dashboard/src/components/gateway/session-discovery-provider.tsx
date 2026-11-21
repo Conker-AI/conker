@@ -3,6 +3,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeClient } from '@/lib/gateway/runtime'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
+import { refreshState } from '@/lib/refresh-state'
 import { createSessionDiscovery } from './session-discovery'
 import { SessionDiscoveryContext } from './session-discovery-context'
 
@@ -17,7 +18,9 @@ export function SessionDiscoveryProvider({ runtime, authStore, workspace, privac
     const activity = () => discovery.wake()
     window.addEventListener('focus', activity); window.addEventListener('online', activity); window.addEventListener('offline', activity)
     document.addEventListener('visibilitychange', activity)
+    const refreshed = refreshState.subscribe((state, before) => { if (state.reads !== before.reads) activity() })
     return () => {
+      refreshed()
       window.removeEventListener('focus', activity); window.removeEventListener('online', activity); window.removeEventListener('offline', activity)
       document.removeEventListener('visibilitychange', activity); discovery.stop()
     }

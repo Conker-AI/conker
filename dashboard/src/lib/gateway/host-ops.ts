@@ -3,8 +3,8 @@ import type { GatewayAuthClient } from './auth'
 import { GatewayError, gatewayError } from './transport'
 
 /**
- * Server actions through the host helper (ADR-0014), as the gateway passes them on: two reads
- * (services.status, backup.list) with the signed-in session, three actions (backup.verify,
+ * Server actions through the host helper (ADR-0014), as the gateway passes them on: three reads
+ * (services.status, backup.list, update.check) with the signed-in session, three actions (backup.verify,
  * services.restart, backup.run) with the session too (none deletes anything), `update.run` with the
  * password (the gateway answers 428 and the transport asks once), and the receipts.
  * Shapes are exactly the helper's; the browser makes each action's id, so a retry with the same id
@@ -34,6 +34,19 @@ const backupList = z.object({
 }).strict()
 const operationName = z.string().regex(/^[a-z]+(?:\.[a-z]+)+$/)
 const argumentsRecord = z.record(z.string().max(64), z.string().regex(VALUE))
+/**
+ * `update.check` never waits for GitHub: it starts at most one background check and answers at once.
+ * started = one was spawned now; running = one is already in flight; fresh = inside the throttle
+ * window, so checkedAt and ok show the last finished check; skipped = an update or another action is
+ * running (reason says which); unsupported = this layout has no daily check. ok is null until a check
+ * has finished since the helper started.
+ */
+const updateCheck = z.object({
+  state: z.enum(['started', 'running', 'fresh', 'skipped', 'unsupported']),
+  checkedAt: time.nullable(), ok: z.boolean().nullable(),
+  reason: z.enum(['update_running', 'host_busy', 'github_unreachable', 'failed']).nullable(),
+  nextCheckAfter: time.nullable(),
+}).strict()
 const receipt = z.object({
   id: z.string().regex(HOST_OP_ID), operation: operationName, arguments: argumentsRecord,
   argumentsDigest: z.string().regex(/^[0-9a-f]{64}$/), source: z.enum(['ui', 'cli']),
@@ -46,6 +59,7 @@ const receipts = z.object({ schemaVersion: z.literal(1), operations: z.array(rec
 export type HostService = z.infer<typeof service>
 export type HostServicesStatus = z.infer<typeof servicesStatus>
 export type HostBackupList = z.infer<typeof backupList>
+export type HostUpdateCheck = z.infer<typeof updateCheck>
 export type HostReceipt = z.infer<typeof receipt>
 export type HostReceipts = z.infer<typeof receipts>
 export type HostAction =
@@ -73,7 +87,7 @@ export function createHostOpId() {
 
 export function createGatewayHostOpsClient(auth: Pick<GatewayAuthClient, 'request'>) {
   // A function declaration, not a generic arrow, so checks that read this file as TSX parse it.
-  async function read<T>(operation: 'services.status' | 'backup.list', schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
+  async function read<T>(operation: 'services.status' | 'backup.list' | 'update.check', schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
     const value = await auth.request('/api/host/read', { method: 'POST', body: { operation, arguments: {} }, signal })
     if (value.operation !== operation) throw new GatewayError('invalid-response')
     return parse(schema, value.result)
@@ -81,6 +95,8 @@ export function createGatewayHostOpsClient(auth: Pick<GatewayAuthClient, 'reques
   return {
     status: (signal?: AbortSignal) => read('services.status', servicesStatus, signal),
     backups: (signal?: AbortSignal) => read('backup.list', backupList, signal),
+    /** Asks the server to look for a new release now; answers at once, the finished check comes from a later call. */
+    checkUpdate: (signal?: AbortSignal) => read('update.check', updateCheck, signal),
     async receipts(signal?: AbortSignal): Promise<HostReceipts> {
       return parse(receipts, await auth.request('/api/host/ops', { signal }))
     },

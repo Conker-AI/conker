@@ -18,6 +18,8 @@ export function createFakeStatus(now: () => number, iso: (seconds: number) => st
       if (scenario === 'provider-readiness-timeout') return new Promise<Json>(() => { /* Isolated timeout fixture; no provider request. */ })
       return { local: { provider: 'ollama', model: 'qwen2.5:3b', health: { status: 'ok' } }, direct: {}, hosted: { status: 'not_configured' } }
     }
+    // sessionStorage 'conker-fake-fail' = 'gateway-health': the server does not answer (Refresh everything shows its error).
+    if (path === '/health' && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'gateway-health') return fail(503)
     if (path === '/health') return { service: 'gateway', version: '0.1.0', status: 'ok', checked_at: iso(now()), age_seconds: 0,
       checks: { owner_login: { status: 'ok' }, runtime: { status: 'ok' }, owner_channel: { status: 'ok' } } }
     if (path === '/api/diagnostics') return {

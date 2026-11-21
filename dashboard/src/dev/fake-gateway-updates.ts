@@ -6,7 +6,8 @@ type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () =
 /**
  * Preview-only Conker updates (pi/owner/updates.py shapes), served beside the fake host helper so
  * Update can run `update.run` there. Pick a state with `?preview-updates=`: offer (default), none,
- * rolled-back, held, failed, applied. In the preview an update finishes applied a few seconds later.
+ * rolled-back, held, failed, applied, on-check (no offer until the first check finishes, as when the
+ * server finds a release the moment the owner enters). In the preview an update finishes applied a few seconds later.
  */
 export function createFakeUpdates(scenario: string | null) {
   const now = Date.now() / 1000, hour = 3600
@@ -16,7 +17,7 @@ export function createFakeUpdates(scenario: string | null) {
     '- **Language level.** Each chat can answer Strict, Plain, Normal or Deep.',
     '- Fixes: web search through SearXNG answers again; outside content can no longer pose as you.',
   ].join('\n')
-  const offer = scenario === 'none' ? null : {
+  const offer = scenario === 'none' || scenario === 'on-check' ? null : {
     version: '0.2.0', title: 'Update available: 0.2.0', notes, url: 'https://github.com/Conker-AI/conker/releases/tag/v0.2.0',
     publishedAt: new Date((now - 5 * hour) * 1000).toISOString().replace(/\.\d+Z$/, 'Z'), foundAt: now - 2 * hour,
   }
@@ -28,9 +29,12 @@ export function createFakeUpdates(scenario: string | null) {
   if (scenario === 'failed') results.push(result('c', 'failed', 'Update to 0.1.1 did not start', 'preflight failed: less than 20 GB is free on the server', 20))
   if (scenario === 'applied') results.push(result('d', 'applied', 'Updated to 0.1.1', null, 20))
   const state = { offer: offer as Json | null, results }
+  const found = { ...(offer ?? {}), version: '0.2.0', title: 'Update available: 0.2.0', notes, url: 'https://github.com/Conker-AI/conker/releases/tag/v0.2.0', publishedAt: new Date((now - hour) * 1000).toISOString().replace(/\.\d+Z$/, 'Z'), foundAt: now }
 
   const fail = (status: number, code: string, detail: string): never => { throw new GatewayError('http', status, undefined, code as never, detail) }
   return {
+    /** The host fake calls this when a check finishes: in `on-check` Pi now hears about the release. */
+    checked() { if (scenario === 'on-check' && !state.offer) state.offer = found },
     /** The host fake calls this when `update.run` ends: Pi hears the result and closes the offer. */
     finished(version: string, applied: boolean) {
       if (state.offer?.version === version) state.offer = null

@@ -470,7 +470,7 @@ Use 4–8px within a label/detail group, 16px between related controls or list r
 
 Review the complete vertical stack, not each component in isolation. Desktop and narrow screenshots must show the leading task, readable supporting content, intact corners and reachable actions. Shared token compliance is a baseline, not a substitute for this review.
 
-Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The light/dark switch sits beside Ask Conker at the top of the sidebar; Sign out lives in Settings. Conversation appbar controls use the compact 32px control role.
+Page section links remain in one scrollable appbar row on narrow screens; the current section scrolls into view. The light/dark switch and **Refresh everything** sit beside Ask Conker at the top of the sidebar (Refresh reads every screen again and asks the server to look for a new release; it asks first only when something is unsaved, never touches the open chat or its unsent text, and says "Couldn’t check for updates" softly instead of failing; entering the app or coming back after five minutes does the quiet part on its own and never remounts a screen or reloads while work is open); Sign out lives in Settings. Conversation appbar controls use the compact 32px control role.
 
 `LayoutFrame` owns the viewport-height frame. The connected shell uses its `canvas` variant, so the appbar stays outside each page's own scroll region (`GatewayPageFrame`). The inset clips its children to the theme-derived radius. On mobile the sidebar opens as a sheet. Conversations keep their own transcript scroll region.
 

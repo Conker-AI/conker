@@ -9,6 +9,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import type { UpdateOffer, UpdateResult, UpdatesClient, UpdatesOverview } from '@/lib/gateway/updates'
 import { UPDATE_EFFECT, when } from '@/lib/server-actions'
 import { InboxCard } from './inbox-card'
+import { useRefreshState } from '@/components/gateway/use-refresh'
 
 const READ_AGAIN_MS = 60_000
 /** The owner's guide to a held update: what to run, which backup to restore, and how to clear the hold. */
@@ -26,12 +27,14 @@ export function UpdateCards({ updates, hostOps, active }: { updates: UpdatesClie
   const [starting, setStarting] = useState(false) // one click, one start: busy turns on only once the request is sent
   const load = useCallback(async () => { try { setOverview(await updates.list()) } catch { setOverview(null) } }, [updates])
   const actions = useServerActions(hostOps, () => void load())
+  // A check from Refresh or from entering the app found a release: read what Pi now offers.
+  const found = useRefreshState(state => state.updateFound)
   useEffect(() => {
     if (!active) return
     queueMicrotask(() => { void load() })
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void load() }, READ_AGAIN_MS)
     return () => window.clearInterval(timer)
-  }, [active, load])
+  }, [active, load, found])
   async function settle(key: string, write: () => Promise<void>) {
     if (pending) return
     setPending(key); setFailure(null)

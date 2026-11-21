@@ -9,6 +9,7 @@ import type { AsksClient } from '@/lib/gateway/asks'
 import type { RecallNoticesClient } from '@/lib/gateway/recall-notices'
 import { InboxAttentionContext } from '@/lib/workspace-chrome'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
+import { useRefreshState } from './use-refresh'
 
 /**
  * One read of the Inbox count for the whole shell: decisions waiting for the owner, Conker's
@@ -21,6 +22,7 @@ export function InboxAttentionProvider({ owner, proposals, checks, changes, asks
   const location = useLocation()
   const selected = useStore(conversationState, value => value.selected)
   const operation = useStore(conversationState, value => value.operation)
+  const reads = useRefreshState(state => state.reads)
   const [count, setCount] = useState<number | null>(null)
   const request = useRef<AbortController | null>(null)
   const refresh = useCallback(() => {
@@ -42,6 +44,6 @@ export function InboxAttentionProvider({ owner, proposals, checks, changes, asks
     let cancelled = false
     if (!operation) queueMicrotask(() => { if (!cancelled) refresh() })
     return () => { cancelled = true; request.current?.abort() }
-  }, [operation, selected, location.pathname, refresh])
+  }, [operation, selected, location.pathname, reads, refresh])
   return <InboxAttentionContext.Provider value={count}>{children}</InboxAttentionContext.Provider>
 }

@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **Refresh everything, and a release check when you enter.** A refresh button beside Ask Conker reads every screen again and asks the server to look for a new Conker release now (not only once a day); a found release shows as a notice with a View button and as the card in the Inbox. Opening the app, or coming back after five minutes, does the quiet part by itself and never reloads or remounts anything while you have unsaved work or a chat is sending. A window left open across an update reloads once when its files are gone. (#TBD)
+
 ## 0.4.0
 
 - **Conker decides the mode.** Auto, Fast, Balanced and Deep are no longer fixed presets: the routing model reads your message as you write it and decides the answer model, effort, thinking and search, and the mode only leans it (Fast toward quick, Deep toward thorough). Changing any setting shows Custom. Needs Pi 0.28.0. (#374)

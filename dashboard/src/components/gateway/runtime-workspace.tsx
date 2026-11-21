@@ -6,7 +6,7 @@ import { applyThinkingCancellationRead } from './thinking-cancellation'
 import { useMemoryDelivery } from './use-memory-delivery'
 import { useMemoryUndo } from './use-memory-undo'
 import { useRuntimeObservation } from './use-runtime-observation'
-import { createRuntimeDetailReader } from './runtime-detail-read'
+import { createRuntimeDetailReader, useRefreshChat } from './runtime-detail-read'
 import { useSessionDiscovery } from './session-discovery-context'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
 import type { Attempt, Generation } from '@/lib/chat/contract'
@@ -186,6 +186,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     },
   }), [client, authStore, privacy, workspace])
   const refreshDetail = useCallback((id: string) => detailReader.refresh(id), [detailReader])
+  useRefreshChat({ active: !!active, selected, busy: !!operation, refreshDetail, draftController })
   useEffect(() => {
     const auth = authStore.subscribe((value, before) => {
       if (value.session?.sessionId !== before.session?.sessionId || value.phase !== before.phase || value.pending !== before.pending || value.logoutUnconfirmed !== before.logoutUnconfirmed) detailReader.cancel()

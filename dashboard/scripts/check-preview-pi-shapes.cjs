@@ -55,6 +55,8 @@ export async function run() {
     promptTemplateSaved: async () => { const made = await control.promptTemplates.create({ name: 'Check', description: '', fields: [{ id: 'topic', label: 'Topic', type: 'shortText', required: false, multiple: false }] }); return control.promptTemplates.update(made.id, { name: 'Checked', description: '', fields: made.fields }, made.revision) },
     promptTemplateDeleted: async () => { const made = await control.promptTemplates.create({ name: 'Gone', description: '', fields: [{ id: 'topic', label: 'Topic', type: 'shortText', required: false, multiple: false }] }); return control.promptTemplates.remove(made.id, made.revision) },
     teamRun: () => control.teamRuns.get('teamrun_' + 'a'.repeat(32)),
+    updates: () => control.updates.list(),
+    updateCheck: () => control.hostOps.checkUpdate(),
   }
 }
 `

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { refreshState } from '@/lib/refresh-state'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { cachedServerSetting, cacheServerSetting, DEVICE_EVENT, readDeviceValue } from './device'
 import { publishServerSettings, serverSetting, subscribeServerSettings } from './server-setting'
@@ -60,7 +61,8 @@ export function useAppearanceSync(client: GatewayControlClient) {
     const returned = () => { if (document.visibilityState === 'visible') read() }
     read()
     document.addEventListener('visibilitychange', returned)
-    return () => { window.removeEventListener(DEVICE_EVENT, applyDevice); document.removeEventListener('visibilitychange', returned); unsubscribe(); controller.abort() }
+    const refreshed = refreshState.subscribe((state, before) => { if (state.reads !== before.reads) read() })
+    return () => { refreshed(); window.removeEventListener(DEVICE_EVENT, applyDevice); document.removeEventListener('visibilitychange', returned); unsubscribe(); controller.abort() }
   }, [client])
 }
 
