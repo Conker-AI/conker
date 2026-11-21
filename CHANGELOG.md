@@ -6,6 +6,8 @@ which module versions a release pins.
 
 ## Unreleased
 
+- **The server checks for a new release when you open the app.** A new host read, `update.check`, starts the update check in the background and answers at once (never more than once every 90 seconds, 15 minutes after a failure, and not while an update or another server action runs), so a release shows up in the Inbox without waiting for the daily check. `conker ops run update.check` runs it from a shell. (#TBD)
+
 ## 0.4.0
 
 - **Conker decides the mode.** Auto, Fast, Balanced and Deep are no longer fixed presets: the routing model reads your message as you write it and decides the answer model, effort, thinking and search, and the mode only leans it (Fast toward quick, Deep toward thorough). Changing any setting shows Custom. Needs Pi 0.28.0. (#374)

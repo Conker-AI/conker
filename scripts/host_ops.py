@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
+from scripts.host_ops_check import UpdateCheckGate
 from scripts.host_ops_journal import OP_ID, Journal, OperationLock, finished, started
 from scripts.host_ops_reads import (
     SERVICE,
@@ -35,7 +36,6 @@ from scripts.host_ops_reads import (
 )
 from scripts.setup import SetupError, check_protection_policy
 from scripts.update_check import offer_arguments, offered
-from scripts.update_core import update_running
 
 CUT_OFF = (
     "This was cut off before it finished, so it may or may not have happened. "
@@ -61,6 +61,8 @@ OPERATIONS = {
     for item in (
         Operation("services.status", True, {}),
         Operation("backup.list", True, {}),
+        # Starts the update check in the background and answers at once (host_ops_check.py).
+        Operation("update.check", True, {}),
         Operation(
             "backup.verify",
             False,
@@ -201,6 +203,8 @@ class HostOps:
         policy=None,
         now=utc_now,
         spawn=thread_spawn,
+        update_runner=None,
+        clock=time.time,
     ):
         if layout not in {"ubuntu", "repository"}:
             raise ValueError("Unknown installation layout.")
@@ -216,16 +220,21 @@ class HostOps:
         self.lock_path = directory / "operation.lock"
         self.runner, self.reader, self.now, self.spawn = runner, reader, now, spawn
         self.policy = policy or self._saved_policy
+        self.update_gate = UpdateCheckGate(spawn=spawn, runner=update_runner, clock=clock)
 
-    def read(self, value: object) -> dict:
+    def read(self, value: object, *, wait: bool = False) -> dict:
         if not isinstance(value, dict) or set(value) != {"operation", "arguments"}:
             raise invalid("Supply only the operation and its arguments.")
         operation = operation_named(value["operation"], read=True)
         typed_arguments(operation, value["arguments"])
         if operation.name == "services.status":
             result = {"services": self._containers(), **holds(self.root)}
-        else:
+        elif operation.name == "update.check":
+            result = self.update_gate.request(self, wait=wait)
+        elif operation.name == "backup.list":
             result = backups(self.root, self.policy())
+        else:  # a new read must never fall into the backups branch
+            raise invalid("This server read is not allowed.")
         return {"operation": operation.name, "result": result}
 
     def start(self, value: object, *, source: str = "ui", wait: bool = False) -> dict:
@@ -461,28 +470,7 @@ def check_for_updates(host: HostOps, runner=subprocess.run) -> bool:
     update.lock: an update moves the sources the check reads the running version from, and a
     release reported as running mid-update is no longer offered. Keeps no output; a failure is tried again at the next check. Only the Ubuntu layout: the
     repository layout cannot update to a release (`conker update --to` is refused there)."""
-    if host.layout != "ubuntu":
-        return False
-    try:
-        if update_running(host.root / "state" / "update"):
-            return False
-        lock = OperationLock(host.lock_path)
-        if not lock.acquire():
-            return False
-        lock.release()
-        runner(
-            host._conker("update", "--check", "--report"),
-            cwd=host.root,
-            env=host._environment(),
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=CHECK_TIMEOUT,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return True
+    return host.update_gate.daily(host, runner, CHECK_TIMEOUT)
 
 
 DOCKER_WAIT = 10 * 60  # after a reboot this user unit may start before Docker does
