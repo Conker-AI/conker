@@ -6,10 +6,23 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.4.0
+
 - **Conker decides the mode.** Auto, Fast, Balanced and Deep are no longer fixed presets: the routing model reads your message as you write it and decides the answer model, effort, thinking and search, and the mode only leans it (Fast toward quick, Deep toward thorough). Changing any setting shows Custom. Needs Pi 0.28.0. (#374)
 - **Modes do something.** Fast, Balanced and Deep set the model, the effort, thinking and search together (Haiku/Light/no web, Sonnet/Medium/web, Opus/High/thinking and deep research), and Auto sets the effort and the model it picked when the model is on your list. The Difficulty chip is gone: Effort is the one dial. (#373)
 - **Effort in the model menu.** "Auto" is a small tag next to the word Effort instead of grey text at the end of the row; a chosen level is not repeated there (the model button names it). (#372)
 - **Updating from the Inbox works on a server.** The host helper's systemd unit had `PrivateTmp=true`, which in a user unit builds a user namespace where the sandbox runner's uid (65533) reads as "nobody". `prepare.py` then refused the agent workspaces folder, so the update failed at its first step, its rollback failed the same way, and the server put a hold on updates. The unit no longer has it. An existing server needs the line removed from `~/.config/systemd/user/conker-providers-*.service` (then `systemctl --user daemon-reload` and a restart). (#371)
+
+### Pinned in this release
+
+| Module | Version |
+|---|---|
+| Pi | v0.28.0 |
+| ToolGate | v0.17.0 |
+| MemoryGate | v0.10.0 |
+| SystemGate | v0.5.4 |
+| Embeddings | v0.1.9 |
+
 ## 0.3.0
 
 - **The weekly dependency check accepts one named advisory.** picomatch (a build tool of vite and eslint, never shipped) has a ReDoS advisory with no patched release, which turned every PR that touches `versions.env` red. `dashboard/scripts/audit-npm.cjs` runs `npm audit` and skips only advisories it lists with a reason; anything else at moderate or above still fails. (#370)
