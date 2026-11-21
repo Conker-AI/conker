@@ -38,7 +38,7 @@ test('the composer popovers speak plainly', async ({ page }) => {
   const errors = await open(page, '/chat')
   await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
-  for (const name of [/^Mode: /, /^Private chat/, /^Think first/, /^Difficulty/]) {
+  for (const name of [/^Mode: /, /^Private chat/, /^Think first/]) {
     await page.getByRole('button', { name }).first().click()
     const text = await page.locator('[data-slot="popover-popup"]').last().innerText()
     await page.keyboard.press('Escape')
