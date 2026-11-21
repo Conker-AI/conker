@@ -95,7 +95,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const [taskError, setTaskError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const newChatComposer = useRef<HTMLTextAreaElement>(null)
-  const replyComposer = useRef<HTMLTextAreaElement>(null), modeHints = useRef<Record<string, { isAnalysis?: true }>>({}), templateActive = useTemplateActive(selected ?? 'new')
+  const replyComposer = useRef<HTMLTextAreaElement>(null), templateActive = useTemplateActive(selected ?? 'new')
   const [dictating, setDictating] = useState(false)
   // Display-only text of the answer being written; the saved turn replaces it.
   const [preview, setPreview] = useState<{ sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null>(null)
@@ -413,13 +413,13 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       if (!prior && promotedDraft) {
         const live = draftController.current(id)
         if (!live || live.base?.revision !== promotedDraft.revision || !sameDraft(live.value, promotedDraft, id)) throw new Error('The draft changed before sending. Review it, then send again.')
-        requestOptions = createRequestOptions(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode, Boolean(modeHints.current.new?.isAnalysis))
+        requestOptions = createRequestOptions(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode)
       } else if (!prior && !taskBinding) {
         draftController.edit(id, { modelId: requestOptions.modelId ?? null, skillIds: requestOptions.skillIds ?? [], think: !!requestOptions.think })
         const saved = await draftController.flush(id)
         if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
         if (saved.text !== text) throw new Error('The draft changed while preparing to send. Review it, then send again.')
-        requestOptions = createRequestOptions(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode, Boolean(modeHints.current[id]?.isAnalysis))
+        requestOptions = createRequestOptions(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode)
       }
       if (prepared) {
         if (!activityClient || workspace.getState().uncertain[id]) throw new Error('Review the previous request before starting task work.')
@@ -574,13 +574,13 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     <div className="flex min-h-0 flex-1">
       <section aria-label="Selected conversation" className="flex min-h-0 min-w-0 flex-1 flex-col">
         {!selected ? <NewChatView visible={visible} firstAgent={firstAgent} activeAgentName={activeAgentName} firstMessage={firstMessage} setFirstMessage={setFirstMessage} newChatComposer={newChatComposer} createPending={createPending} sendPending={sendPending} createUnknown={createUnknown} dictating={dictating}
-          startChat={startChat} templateActive={templateActive} firstValue={firstValue} firstPrivacy={firstPrivacy} client={client} draftController={draftController} modeHints={modeHints} control={control} setFirstAgent={setFirstAgent} firstModel={firstModel}
+          startChat={startChat} templateActive={templateActive} firstValue={firstValue} firstPrivacy={firstPrivacy} client={client} draftController={draftController} control={control} setFirstAgent={setFirstAgent} firstModel={firstModel}
           setFirstModel={setFirstModel} firstSkills={firstSkills} setSkillChoices={setSkillChoices} setThinkChoice={setThinkChoice} firstEffort={firstEffort} setFirstEffort={setFirstEffort} setFirstPrivacy={setFirstPrivacy} setDictating={setDictating} draftEntries={draftEntries}
           createError={createError} pendingStart={pendingStart} recoverChatStart={recoverChatStart} startMissing={startMissing} /> : <OpenChatView visible={visible} knownForgotten={knownForgotten} current={current} safeSessions={safeSessions} selected={selected} control={control}
           pending={pending} historyLoading={historyLoading} attempt={attempt} chat={chat} observation={observation} focusedMessageId={focusedMessageId} thinkingCancellation={thinkingCancellation} draftController={draftController} replyComposer={replyComposer}
           turnDetailsOpen={turnDetailsOpen} setTurnDetailsOpen={setTurnDetailsOpen} operation={operation} detailPending={detailPending} sendPending={sendPending} resumeTurn={resumeTurn} client={client} privacy={privacy} harnessBySession={harnessBySession}
           active={active} draftEntries={draftEntries} forgottenIds={forgottenIds} draft={draft} recover={recover} recoveryActions={recoveryActions} reviewed={reviewed} setReviewed={setReviewed} safeTaskIntent={safeTaskIntent} workspace={workspace}
-          selectedValue={selectedValue} activeAgentId={activeAgentId} activeAgentName={activeAgentName} setSessionAgents={setSessionAgents} modeHints={modeHints} headerExtra={headerExtra} setDictating={setDictating} dictating={dictating} templateActive={templateActive}
+          selectedValue={selectedValue} activeAgentId={activeAgentId} activeAgentName={activeAgentName} setSessionAgents={setSessionAgents} headerExtra={headerExtra} setDictating={setDictating} dictating={dictating} templateActive={templateActive}
           inspectSubmission={inspectSubmission} setSkillChoices={setSkillChoices} setThinkChoice={setThinkChoice} />}
       </section>
     </div>

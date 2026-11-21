@@ -21,15 +21,15 @@ import { NewChatVoiceControl } from './new-chat-voice-control'
 import { PromptEnhanceControl } from './prompt-enhance-control'
 import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
 import { SendIcon } from '@/components/icons/animated/icons'
-import { ComplexityControl, ComposerModeProvider, ConversationStarters, ModePresetControl, NewChatCallButtons, SearchControl, TemplateInput, TemplatePicker } from './composer-parts'
+import { ComposerModeProvider, ConversationStarters, ModePresetControl, NewChatCallButtons, SearchControl, TemplateInput, TemplatePicker } from './composer-parts'
 
 /** New-chat composer with the agent identity, draft, privacy, recovery and start controls shown before a conversation exists. */
 export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage, setFirstMessage, newChatComposer, createPending, sendPending, createUnknown, dictating,
-  startChat, templateActive, firstValue, firstPrivacy, client, draftController, modeHints, control, setFirstAgent, firstModel, setFirstModel, firstSkills, setSkillChoices,
+  startChat, templateActive, firstValue, firstPrivacy, client, draftController, control, setFirstAgent, firstModel, setFirstModel, firstSkills, setSkillChoices,
   setThinkChoice, firstEffort, setFirstEffort, setFirstPrivacy, setDictating, draftEntries, createError, pendingStart, recoverChatStart, startMissing }: {
   visible: boolean; firstAgent: string; activeAgentName: string; firstMessage: string; setFirstMessage: (text: string) => void; newChatComposer: RefObject<HTMLTextAreaElement | null>
   createPending: boolean; sendPending: boolean; createUnknown: 'unchecked' | 'checked' | null; dictating: boolean; startChat: () => Promise<void>; templateActive: boolean
-  firstValue: DraftValue; firstPrivacy: NewChatPrivacy; client: GatewayRuntimeClient; draftController: DraftController; modeHints: RefObject<Record<string, { isAnalysis?: true }>>; control?: GatewayControlClient
+  firstValue: DraftValue; firstPrivacy: NewChatPrivacy; client: GatewayRuntimeClient; draftController: DraftController; control?: GatewayControlClient
   setFirstAgent: (agentId: string) => void; firstModel: string; setFirstModel: (modelId: string) => void; firstSkills: string[]; setSkillChoices: (id: string, skillIds: string[]) => void; setThinkChoice: (id: string, think: boolean) => void; firstEffort: ChatEffort; setFirstEffort: (effort: ChatEffort) => void
   setFirstPrivacy: (privacy: NewChatPrivacy, reviewed?: string) => void; setDictating: Dispatch<SetStateAction<boolean>>; draftEntries: Record<string, DraftEntry>; createError: string | null
   pendingStart: PendingDraftStart | null; recoverChatStart: (replay?: boolean) => Promise<void>; startMissing: boolean
@@ -42,10 +42,7 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
           <span className="flex size-20 items-center justify-center overflow-hidden rounded-full border bg-card shadow-sm">{firstAgent === 'companion' ? <img src="/conker.png" alt="" width="60" height="60" className="size-[75%] object-contain" /> : <Bot className="size-8 text-muted-foreground" />}</span>
           <h2 className="text-center text-3xl font-semibold">{activeAgentName}</h2>
         </div>
-        <ComposerModeProvider key="mode:new" text={firstMessage} think={firstValue.think} research={firstValue.researchMode} thinkAvailable={firstAgent === 'companion' && !firstPrivacy.harnessDisabled} harnessDisabled={firstPrivacy.harnessDisabled} sessionId={null} disabled={createPending || sendPending || Boolean(createUnknown)} propose={client.proposeSettings} apply={values => draftController.edit('new', values)} onHints={hints => {
-              // eslint-disable-next-line react-hooks/immutability -- modeHints is a mutable ref owned by GatewayRuntimeWorkspace
-              modeHints.current.new = hints
-            }}>
+        <ComposerModeProvider key="mode:new" text={firstMessage} think={firstValue.think} research={firstValue.researchMode} thinkAvailable={firstAgent === 'companion' && !firstPrivacy.harnessDisabled} harnessDisabled={firstPrivacy.harnessDisabled} sessionId={null} disabled={createPending || sendPending || Boolean(createUnknown)} modelId={firstModel} setModel={setFirstModel} propose={client.proposeSettings} apply={values => draftController.edit('new', values)}>
         <ChatComposerFrame id="new-chat-composer" label={`Message ${activeAgentName}`} placeholder={`Ask ${activeAgentName} anything, or give it a task...`} value={firstMessage} onChange={setFirstMessage} inputRef={newChatComposer} disabled={createPending || sendPending || Boolean(createUnknown)} onSend={() => { if (!dictating) void startChat() }} input={templateActive ? <TemplateInput draftKey="new" disabled={createPending || sendPending || Boolean(createUnknown)} onText={setFirstMessage} onSubmit={() => { if (!dictating) void startChat() }} /> : undefined} controls={<>
             <ModePresetControl />{control && <GatewayAgentPicker compact client={control} value={firstAgent} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstAgent} />}</>} actions={<>
               <TemplatePicker draftKey="new" client={control?.promptTemplates} disabled={createPending || sendPending || Boolean(createUnknown)} />
@@ -53,7 +50,6 @@ export function NewChatView({ visible, firstAgent, activeAgentName, firstMessage
               <GatewaySkillPicker client={client} value={firstSkills} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={ids => setSkillChoices('__new__', ids)} />
               <ThinkControl companion={firstAgent === 'companion'} checked={firstValue.think} disabled={createPending || sendPending || Boolean(createUnknown)} harnessDisabled={firstPrivacy.harnessDisabled} onChange={think => setThinkChoice('__new__', think)} />
               <SearchControl />
-              <ComplexityControl />
               <NewChatPrivacyControl revisionKey={JSON.stringify(firstValue.privacy)} value={firstPrivacy} disabled={createPending || sendPending || Boolean(createUnknown)} onChange={setFirstPrivacy} />
               <NewChatCallButtons />
               {control && <PromptEnhanceControl client={control.promptEnhance} templates={control.promptTemplates} value={firstMessage} onChange={setFirstMessage} options={{ privacy: firstPrivacy }} disabled={createPending || sendPending || Boolean(createUnknown) || dictating} />}

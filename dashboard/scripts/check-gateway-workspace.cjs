@@ -77,7 +77,7 @@ assert.doesNotMatch(workspaceSource, /to="\/memory"[\s\S]{0,500}NewChatPrivacyCo
   'Global Memory and Tools destinations must not masquerade as per-chat composer controls')
 assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{activeAgentId\}[^\n]+onSaved=/,
   'An open conversation must expose an explicit future-turn agent handoff')
-assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode, Boolean\(modeHints\.current\.new\?\.isAnalysis\)\)/,
+assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode\)/,
   'First-message options and exact draft revision cross atomic session promotion')
 assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? composer\?\.modelId/)
 assert.match(workspaceSource, /client.submitRequest\([^\n]+\.\.\.requestOptions/,

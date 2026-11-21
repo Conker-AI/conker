@@ -17,7 +17,7 @@ test('the composer names the answering model and what Auto chose', async ({ page
   await box.fill('Compare these two contracts and tell me which one is riskier for me')
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
   // The button names the model alone: no provider, no plan name.
-  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5')
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort')
   await expect(page.getByText(/Claude Code subscription/)).toHaveCount(0)
   await expect(page.getByText('Default model', { exact: true })).toHaveCount(0)
   expect(errors).toEqual([])
@@ -102,7 +102,7 @@ test('a new chat has voice and video call buttons in the toolbar, disabled, with
   expect(errors).toEqual([])
 })
 
-test('the Thinking and Complexity chips show what Auto chose and why, a changed chip shows Custom, and Back to Auto restores them', async ({ page }) => {
+test('the Thinking chip shows what Auto chose and why, a changed chip shows Custom, and Back to Auto restores them', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
   await page.getByRole('textbox').first().fill('Compare these two contracts and tell me which one is riskier for me')
@@ -110,7 +110,6 @@ test('the Thinking and Complexity chips show what Auto chose and why, a changed 
   await page.getByRole('button', { name: 'Think first: On (auto)' }).click()
   await expect(page.getByText('Auto chose this:')).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Difficulty: Hard (auto)' })).toBeVisible()
   // The old Mode popover held Think, Complexity and Research switches; it now holds the presets only.
   await page.getByRole('button', { name: /^Mode: / }).click()
   await expect(page.getByRole('radio', { name: /Fast/ })).toBeVisible()
@@ -123,6 +122,24 @@ test('the Thinking and Complexity chips show what Auto chose and why, a changed 
   await page.getByRole('button', { name: 'Back to Auto' }).click()
   await expect(page.getByRole('button', { name: /^Mode: Auto · / })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('a preset sets the model, the effort, thinking and search together', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+  const errors = await open(page, '/chat')
+  await page.getByRole('button', { name: /^Mode: / }).click()
+  await page.getByRole('radio', { name: /Fast/ }).click()
+  await page.keyboard.press('Escape')
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Haiku 5.5, Light effort')
+  await expect(page.getByRole('button', { name: /^Mode: Fast/ })).toBeVisible()
+  await page.getByRole('button', { name: /^Mode: / }).click()
+  await page.getByRole('radio', { name: /Deep/ }).click()
+  await page.keyboard.press('Escape')
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Opus 5.5, High effort')
+  await expect(page.getByRole('button', { name: 'Search: Deep' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Mode: Deep/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Difficulty/ })).toHaveCount(0)
   expect(errors).toEqual([])
 })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GatewayControlClient, OwnerModelsConfiguration } from '@/lib/gateway/control'
 import { GatewayError } from '@/lib/gateway/transport'
 import { addClaudeModels, hasClaudePlan, missingClaudeModels, modelMenuLayout } from '@/lib/gateway/claude-models'
@@ -8,6 +8,7 @@ import { PlanUsageRing } from './plan-usage-ring'
 import { composerItem, useComposerValue } from '@/components/chat/composer-items'
 import { AUTO_KEY, ModelMenu } from './model-menu'
 import { useChatEffort, type PendingEffort } from './use-chat-effort'
+import { useComposerMode } from './mode-control'
 
 /**
  * The composer's model button. One button holds the answer model and the chat's effort: its menu lists
@@ -23,6 +24,13 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
   const chatEffort = useChatEffort(client, effort?.sessionId ?? null, effort?.pending)
+  // A mode (Fast, Balanced, Deep, Auto) sets the model and the effort through here.
+  const mode = useComposerMode()
+  const connect = mode?.connect
+  const chooseEffort = useRef(chatEffort.choose)
+  useEffect(() => { chooseEffort.current = chatEffort.choose })
+  const hasEffort = Boolean(effort)
+  const effortValue = chatEffort.effort, effortReady = chatEffort.ready && !chatEffort.saving
   // Settings > Home > Plan usage ring: in the message box, on Home, both or off.
   const ring = useServerSetting<'home' | 'composer' | 'both' | 'off'>('home.plan_ring', 'both')
   useEffect(() => {
@@ -41,6 +49,12 @@ export function GatewayModelPicker({ client, value, onChange, disabled, manualRe
   }, [client])
   const models = useMemo(() => catalogue?.models.filter(model => model.providerId !== 'decisions' && model.enabled && catalogue.providers.some(provider => provider.id === model.providerId && provider.enabled) && catalogue.roleSettings.roles.answer.eligibleModelIds.includes(model.id)) ?? [], [catalogue])
   const layout = useMemo(() => catalogue ? modelMenuLayout(catalogue, models) : { top: [], more: [] }, [catalogue, models])
+
+  useEffect(() => {
+    if (!connect || !catalogue) return
+    connect({ layout, effort: effortValue, ready: hasEffort && effortReady, setEffort: next => void chooseEffort.current(next) })
+    return () => connect(null)
+  }, [connect, catalogue, layout, effortValue, hasEffort, effortReady])
 
   // Determine plan provider for selected model
   const selectedModelId = value || catalogue?.roleSettings.roles.answer.modelId || ''

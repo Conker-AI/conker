@@ -4,30 +4,37 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import type { AutoSettings, AutoSettingsField, Complexity, Research } from '@/lib/gateway/auto-settings'
+import type { AutoSettings, AutoSettingsField, Research } from '@/lib/gateway/auto-settings'
+import type { ChatEffort } from '@/lib/gateway/chat-names'
+import type { ModelMenuLayout } from '@/lib/gateway/claude-models'
 import { gatewayError } from '@/lib/gateway/transport'
-import { complexityHints, composerModes, effectiveMode, modeLabel, modePresets, type ComposerMode, type ModeValues } from './composer-mode'
+import { composerModes, effectiveMode, modeLabel, modePresets, offersModel, tierModelId, type ComposerMode, type ModeValues } from './composer-mode'
 import { composerOutlined } from './composer-select'
+import { effortLabel } from './use-chat-effort'
 
 type Propose = (text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; signal?: AbortSignal }) => Promise<AutoSettings>
 type Props = {
   text: string; think: boolean; research: Research; thinkAvailable: boolean; harnessDisabled: boolean; sessionId: string | null; disabled: boolean
+  /** The model chosen for the next message ('' is the default) and the way to choose another. */
+  modelId: string; setModel: (modelId: string) => void
   propose: Propose
   /** Writes think and research into the draft, where Pi saves them with the message. */
   apply: (values: { think: boolean; researchMode: Research }) => void
-  /** Complexity is sent with the turn; the workspace reads it at send time. */
-  onHints: (hints: { isAnalysis?: true }) => void
   children: ReactNode
 }
+
+/** What the model button tells the mode: the models on offer, the chat's effort and the way to set it. */
+export type ModeBridge = { layout: ModelMenuLayout; effort: ChatEffort; ready: boolean; setEffort: (effort: ChatEffort) => void }
 
 /** What the chips read: the values on screen, what Auto chose and why, and the one way back to Auto. */
 export type ComposerModeState = {
   current: ComposerMode | 'custom'; disabled: boolean
   /** Auto's proposal while Auto is in effect, else null: a chip tags itself "auto" and shows its reason from it. */
   auto: AutoSettings | null
-  complexity: Complexity; setComplexity: (value: Complexity) => void
-  think: boolean; research: Research; apply: Props['apply']
+  think: boolean; research: Research; effort: ChatEffort; apply: Props['apply']
   choose: (mode: ComposerMode) => void
+  /** The model button reports its models and effort here so a mode can set them. */
+  connect: (bridge: ModeBridge | null) => void
   status: { kind: 'idle' | 'choosing' | 'error'; message?: string }
 }
 const ModeContext = createContext<ComposerModeState | null>(null)
@@ -35,19 +42,20 @@ const ModeContext = createContext<ComposerModeState | null>(null)
 // eslint-disable-next-line react-refresh/only-export-components -- the hook belongs with its provider
 export const useComposerMode = () => useContext(ModeContext)
 
-/** One composer per chat; remount it per draft so a mode never leaks between chats. Presets only set the chips. */
-export function ComposerModeProvider({ text, think, research, thinkAvailable, harnessDisabled, sessionId, disabled, propose, apply, onHints, children }: Props) {
+/** One composer per chat; remount it per draft so a mode never leaks between chats. A mode sets the model, effort, thinking and search together. */
+export function ComposerModeProvider({ text, think, research, thinkAvailable, harnessDisabled, sessionId, disabled, modelId, setModel, propose, apply, children }: Props) {
   const [mode, setMode] = useState<ComposerMode>('auto')
-  const [complexity, setComplexity] = useState<Complexity>('easy')
+  const [bridge, setBridge] = useState<ModeBridge | null>(null)
   const [proposal, setProposal] = useState<(AutoSettings & { text: string }) | null>(null)
   const [status, setStatus] = useState<ComposerModeState['status']>({ kind: 'idle' })
-  const values: ModeValues = { complexity, think, research }
-  const current = effectiveMode(mode, values, proposal, thinkAvailable)
+  const effort = bridge?.effort ?? 'auto'
+  const values: ModeValues = { think, research, effort, modelId }
+  const layout = bridge?.layout ?? null
+  const current = effectiveMode(mode, values, proposal, thinkAvailable, layout)
   const trimmed = text.trim()
   // Callbacks change identity on every parent render; only real input changes may restart a proposal.
-  const latest = useRef({ propose, apply, onHints, thinkAvailable })
-  useEffect(() => { latest.current = { propose, apply, onHints, thinkAvailable } })
-  useEffect(() => { latest.current.onHints(complexityHints(complexity)) }, [complexity])
+  const latest = useRef({ propose, apply, setModel, thinkAvailable, bridge })
+  useEffect(() => { latest.current = { propose, apply, setModel, thinkAvailable, bridge } })
   useEffect(() => {
     if (mode !== 'auto' || current === 'custom' || disabled || trimmed.length < 8 || proposal?.text === trimmed) return
     if (harnessDisabled) { queueMicrotask(() => setStatus({ kind: 'error', message: 'Auto needs helper models, which are off for this chat. Choose the settings yourself.' })); return }
@@ -56,8 +64,11 @@ export function ComposerModeProvider({ text, think, research, thinkAvailable, ha
       setStatus({ kind: 'choosing' })
       latest.current.propose(trimmed, { sessionId, harnessDisabled, signal: controller.signal }).then(result => {
         if (controller.signal.aborted) return
-        setProposal({ ...result, text: trimmed }); setComplexity(result.complexity); setStatus({ kind: 'idle' })
-        latest.current.apply({ think: result.think && latest.current.thinkAvailable, researchMode: result.research })
+        const now = latest.current
+        setProposal({ ...result, text: trimmed }); setStatus({ kind: 'idle' })
+        now.apply({ think: result.think && now.thinkAvailable, researchMode: result.research })
+        if (offersModel(now.bridge?.layout ?? null, result.modelId)) now.setModel(result.modelId)
+        if (result.effort && now.bridge?.ready) now.bridge.setEffort(result.effort)
       }).catch(error => { if (!controller.signal.aborted) setStatus({ kind: 'error', message: gatewayError(error).message }) })
     }, 900)
     return () => { clearTimeout(timer); controller.abort() }
@@ -66,10 +77,13 @@ export function ComposerModeProvider({ text, think, research, thinkAvailable, ha
     setMode(next); setStatus({ kind: 'idle' })
     if (next === 'auto') { setProposal(null); return }
     const preset = modePresets[next]
-    setComplexity(preset.complexity); apply({ think: preset.think && thinkAvailable, researchMode: preset.research })
+    apply({ think: preset.think && thinkAvailable, researchMode: preset.research })
+    const id = tierModelId(layout, preset.tier)
+    if (id) setModel(id)
+    if (bridge?.ready) bridge.setEffort(preset.effort)
   }
   const auto = mode === 'auto' && current === 'auto' ? proposal : null
-  return <ModeContext.Provider value={{ current, disabled, auto, complexity, setComplexity, think, research, apply, choose, status }}>{children}</ModeContext.Provider>
+  return <ModeContext.Provider value={{ current, disabled, auto, think, research, effort, apply, choose, connect: setBridge, status }}>{children}</ModeContext.Provider>
 }
 
 /** The presets. They are only a quick way to set the settings; changing one afterwards shows Custom. */
@@ -78,13 +92,13 @@ export function ModePresetControl() {
   if (!state) return null
   const { current, auto, status, disabled, choose } = state
   // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
-  const summary = auto ? ` · ${[state.complexity === 'hard' ? 'Hard' : 'Easy', state.think && 'Think first', state.research !== 'off' && (state.research === 'deep' ? 'Deep research' : 'Web'), auto.effort && `${auto.effort[0].toUpperCase()}${auto.effort.slice(1)} effort`].filter(Boolean).join(' · ')}` : ''
-  const reasons: [string, AutoSettingsField][] = [['Difficulty', 'complexity'], ['Think first', 'think'], ['Search', 'research']]
+  const summary = auto ? ` · ${[state.think && 'Think first', state.research !== 'off' && (state.research === 'deep' ? 'Deep research' : 'Web'), auto.effort && `${effortLabel(auto.effort)} effort`].filter(Boolean).join(' · ')}` : ''
+  const reasons: [string, AutoSettingsField][] = [['Think first', 'think'], ['Search', 'research']]
   const note = status.kind === 'choosing' ? 'Choosing settings…'
     : status.kind === 'error' ? status.message
       : current === 'custom' ? 'Custom: you changed a setting. Pick a preset to start again.'
         : current === 'auto' ? auto ? 'Picked for you by Auto. Change any setting to take over.' : 'Conker chooses once you type your message.'
-          : 'Presets only fill in the settings. Change any of them to take over.'
+          : 'A preset sets the model, effort, thinking and search together. Change any of them to take over.'
   return <Popover><PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className={composerOutlined} disabled={disabled} aria-label={`Mode: ${modeLabel(current)}${summary}`} />}><Sparkles className="size-4 @max-[24rem]:hidden" />{modeLabel(current)}{status.kind === 'choosing' ? '…' : ''}{summary && <span className="font-normal text-muted-foreground @max-[40rem]:hidden">{summary}</span>}</PopoverTrigger>
     <PopoverContent align="start" className="max-h-(--available-height) w-80 space-y-4 overflow-y-auto">
       <RadioGroup value={current === 'custom' ? '' : current} onValueChange={value => choose(value as ComposerMode)} aria-label="Mode" className="gap-2">

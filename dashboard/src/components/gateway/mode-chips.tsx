@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react'
-import { Globe, Scale } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control'
 import { composerItem, useComposerValue, type ComposerItemId } from '@/components/chat/composer-items'
-import type { AutoSettingsField, Complexity, Research } from '@/lib/gateway/auto-settings'
+import type { AutoSettingsField, Research } from '@/lib/gateway/auto-settings'
 import { useComposerMode } from './mode-control'
 
 /**
@@ -56,12 +56,3 @@ export function SearchControl() {
   return <ModeChip id="search" label="Search" icon={Globe} value={mode.research} defaultValue="off" options={searchOptions} field="research" hint="Web looks things up for this message. Deep runs a longer research pass." onPick={value => mode.apply({ think: mode.think, researchMode: value as Research })} />
 }
 composerItem(SearchControl, 'search')
-
-const complexityOptions = [['easy', 'Easy'], ['hard', 'Hard']] as const
-/** Difficulty: Easy answers straight away; Hard has the thinking model work on it first. */
-export function ComplexityControl() {
-  const mode = useComposerMode()
-  if (!mode) return null
-  return <ModeChip id="complexity" label="Difficulty" icon={Scale} value={mode.complexity} defaultValue="easy" options={complexityOptions} field="complexity" hint="Easy: answer straight away. Hard: think it through first." onPick={value => mode.setComplexity(value as Complexity)} />
-}
-composerItem(ComplexityControl, 'complexity')
