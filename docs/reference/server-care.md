@@ -44,7 +44,8 @@ copy somewhere encrypted. The agents' workspaces folder is not part of a backup.
 ## Update to a new release
 
 **From the Inbox** (once the server runs a release that has self-update). The server looks for a
-new release once a day. When there is one, the Inbox shows **Update available** with what changed.
+new release once a day, and again when you open the app or tap **Refresh everything** (at most
+once every 90 seconds). When there is one, the Inbox shows **Update available** with what changed.
 Tap **Update** and give your password. The update runs on the server and its result arrives in the
 Inbox. **Skip** hides that release.
 

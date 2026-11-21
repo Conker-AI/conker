@@ -32,6 +32,7 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   |---|---|---|---|
   | `services.status` | read | none | `docker ps` and `docker inspect` of the `conker` project, a few fields kept |
   | `backup.list` | read | none | the saved setup backup folder (`conker setup protection`) and its snapshot names |
+  | `update.check` | read | none | starts `conker update --check --report` in the background and answers at once with a state (`started`, `running`, `fresh`, `skipped`, `unsupported`), when the last check ended and whether it worked; see the 2026-11-21 amendment |
   | `backup.verify` | action | `snapshot`: a snapshot folder name | `conker verify-backup FOLDER/NAME` |
   | `services.restart` | action | `service`: a running Compose service of this install | `conker restart SERVICE` |
   | `backup.run` | action | none | `conker setup run protection` (back up, verify, keep the saved number) |
@@ -40,6 +41,19 @@ named operations in `scripts/host_ops.py`, served on the same socket.**
   The helper also runs `conker update --check --report` ten minutes after it starts and then once
   a day, skipping while an action holds the lock. It is a read, not an action: no receipt. It tells
   Pi about a newer release (an Inbox offer) and about finished updates (their receipts, each once).
+
+  Amended 2026-11-21: the check also runs when the owner opens the app or taps Refresh, as the
+  read `update.check` (no arguments, no password, no receipt). The helper socket serves one request
+  at a time, so the read never waits for GitHub: it starts at most one background check and
+  answers at once. One gate serves the daily check and this read: a single flight, no new check for
+  90 s after one that worked and 15 min after one that failed (GitHub's anonymous API allows 60
+  requests an hour for the whole address), and a skip while `update.lock` is held or another
+  action holds the action lock. The on-demand check only probes the action lock and lets it go,
+  so an action started meanwhile is not refused; it stops after 120 s (its whole process group).
+  The check's exit code names a failure: 1 is GitHub (`github_unreachable`, 15 min), 3 is Pi not
+  told (`failed`, 60 s); anything else is `failed`. Like the
+  daily check it has side effects (`state/update/offer.json`, a report to Pi) but leaves no
+  journal row. The daily check is not throttled by the gate, but leaves its stamp.
 
   Amended 2026-11-13: an `update.run` cut off part way (a reboot, a killed helper) is the one
   thing the helper finishes on its own, because Conker must not stay between two versions. When it

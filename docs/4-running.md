@@ -357,6 +357,7 @@ conker ops                                     # recent server actions, newest f
 conker ops show ID                             # one receipt as JSON
 conker ops run services.status                 # each service's state
 conker ops run services.restart service=memorygate
+conker ops run update.check                    # check for a new release now (waits for the result)
 conker ops run backup.list                     # the saved backup folder and its snapshots
 conker ops run backup.verify snapshot=snapshot-20261029T040000Z-1a2b3c4d
 conker ops run backup.run                      # back up to the saved folder, verify, keep the set number
