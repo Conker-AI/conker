@@ -7,13 +7,15 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 SPEC = importlib.util.spec_from_file_location(
     "workspace_launcher", Path(__file__).resolve().parents[1] / "scripts/workspace.py"
 )
-workspace = importlib.util.module_from_spec(SPEC)
+assert SPEC is not None and SPEC.loader is not None
+workspace: Any = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(workspace)
 
 
@@ -163,7 +165,7 @@ def starting_service(tmp_path, monkeypatch):
         monkeypatch.setattr(workspace, "ORDER", ("pi",))
         # Use the base executable so Windows has no venv launcher descendant to orphan.
         process = subprocess.Popen(
-            [sys._base_executable, str(script), "serve", "pi"],
+            [cast(Any, sys)._base_executable, str(script), "serve", "pi"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

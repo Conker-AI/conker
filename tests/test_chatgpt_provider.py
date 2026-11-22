@@ -2,6 +2,7 @@ import http.client
 import io
 import json
 from email.message import Message
+from typing import Any, cast
 
 import pytest
 
@@ -49,7 +50,7 @@ class Accounts:
 
 
 def test_sign_in_code_returned_once_no_credentials_in_projection(tmp_path):
-    accounts = Accounts()
+    accounts: Any = Accounts()
     control = ChatGPTControl(tmp_path, None, rpc=accounts)
     started = control.apply({"operation": "login"})
     assert started["deviceCode"]["userCode"] == "TEST-1234"
@@ -64,7 +65,7 @@ def test_sign_in_code_returned_once_no_credentials_in_projection(tmp_path):
 
 
 def test_connected_catalogue_and_revision_bound_disconnect(tmp_path):
-    accounts = Accounts()
+    accounts: Any = Accounts()
     control = ChatGPTControl(tmp_path, None, rpc=accounts)
     control.apply({"operation": "login"})
     accounts.account = {
@@ -96,7 +97,7 @@ def test_unavailable_runtime_cannot_accept_auth(tmp_path):
 
 @pytest.mark.parametrize("problem", ["runtime_unavailable", "provider_operation_failed"])
 def test_failed_account_read_hides_stale_identity_without_erasing_auth(tmp_path, problem):
-    accounts = Accounts()
+    accounts: Any = Accounts()
     accounts.account = {"type": "chatgpt", "planType": "plus"}
     control = ChatGPTControl(tmp_path, None, rpc=accounts)
     connected = control.apply({"operation": "models"})
@@ -248,7 +249,7 @@ def test_real_responses_mapping_streaming_and_reasoning_redaction():
     assert events[0] == {"type": "text", "delta": "Hello"}
     assert events[1]["inputTokens"] == 10
     assert "PRIVATE" not in json.dumps(events)
-    sent = json.loads(opener.request.data)
+    sent = json.loads(cast(Any, opener.request).data)
     assert sent["store"] is False and sent["stream"] is True
     assert sent["instructions"] == "Conker instructions"
     assert "tools" not in sent and "temperature" not in sent

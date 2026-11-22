@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -522,7 +523,7 @@ def test_refusals_various_formats(invoke, capsys):
             "http://private",
             404,
             "Not Found",
-            {},
+            cast(Any, {}),
             io.BytesIO(b'{"detail": "no such session"}'),
         )
     ]
@@ -538,7 +539,7 @@ def test_refusals_various_formats(invoke, capsys):
             "http://private",
             422,
             "Unprocessable Entity",
-            {},
+            cast(Any, {}),
             io.BytesIO(b'{"detail": [{"loc": ["body"], "msg": "bad"}]}'),
         )
     ]
@@ -549,7 +550,9 @@ def test_refusals_various_formats(invoke, capsys):
 
     # Test 409 with non-JSON body
     calls.clear()
-    state["responses"] = [HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(b"not json"))]
+    state["responses"] = [
+        HTTPError("http://private", 409, "Conflict", cast(Any, {}), io.BytesIO(b"not json"))
+    ]
     assert run("show", "ses_a") == 1
     assert len(calls) == 1
     check_headers(0)
@@ -562,7 +565,7 @@ def test_refusals_various_formats(invoke, capsys):
             "http://private",
             500,
             "Internal Server Error",
-            {},
+            cast(Any, {}),
             io.BytesIO(b"server error"),
         )
     ]
