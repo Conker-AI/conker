@@ -233,7 +233,7 @@ describe('tool workspace: what the editor shows', () => {
     expect(editorValidation(broken, false, true).label).toBe('Needs attention')
   })
 
-  it('lets ToolGate’s answer win for a saved live draft', () => {
+  it('lets the server’s own check win for a saved live draft', () => {
     expect(editorValidation(valid, true, false, [])).toEqual({ issues: [], label: 'Checked: valid' })
     const issue = { path: 'nodes', message: 'No' }
     expect(editorValidation(valid, true, false, [issue])).toEqual({ issues: [issue], label: 'Checked: needs attention' })

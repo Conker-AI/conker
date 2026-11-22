@@ -312,7 +312,7 @@ describe('tool run: which draft a published tool came from', () => {
     expect(workflowTool('email.send')).toBeNull()
   })
 
-  it('hashes a draft id the way ToolGate names it', async () => {
+  it('hashes a draft id the way the tools service names it', async () => {
     const id = await automationIdFor('my-draft')
     expect(id).toMatch(/^editor-[0-9a-f]{32}$/)
     expect(await automationIdFor('my-draft')).toBe(id)
