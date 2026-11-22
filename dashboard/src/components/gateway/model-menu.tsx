@@ -56,7 +56,7 @@ export function ModelMenu({ name, disabled, layout, selected, auto, manualRequir
   const rows = (items: ModelMenuLayout['top']) => items.map(row => <DropdownMenuRadioRow key={row.id ?? row.name} className={ROW} value={row.id ?? `missing:${row.name}`} disabled={!row.id} hint={row.number} title={row.id ? undefined : 'Not in your model list yet'}>{row.name}</DropdownMenuRadioRow>)
   return <DropdownMenu open={open} onOpenChange={setOpen}>
     <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="sm" disabled={disabled} aria-label={`Answer model: ${name}${effortText ? `, ${effortText} effort` : ''}`} className="min-w-0 max-w-[11.5rem] font-normal text-muted-foreground sm:max-w-56" />}>
-      <span aria-hidden className="min-w-0 truncate"><span className="text-foreground">{name}</span>{effortText && <span className="ms-1.5">{effortText}</span>}</span>
+      <span aria-hidden className="min-w-0 truncate"><span className="text-foreground">{name}</span>{effortText && <>{' '}<span className="ms-1.5">{effortText}</span></>}</span>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" side="top" className="w-64 max-w-[calc(100vw-1rem)]" onKeyDown={onKeyDown}>
       <DropdownMenuRadioGroup value={selected} onValueChange={value => pick(String(value))} aria-label="Answer model">

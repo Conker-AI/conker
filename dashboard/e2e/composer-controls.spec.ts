@@ -82,7 +82,7 @@ test('Effort is a submenu of the model button: it is set there, shown beside the
   await expect(page.getByRole('menuitemradio', { name: /^(Auto|Light|Medium|High|Max)$/ })).toHaveText(['Auto', 'Light', 'Medium', 'High', 'Max'])
   await page.getByRole('menuitemradio', { name: 'High' }).click()
   await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5, High effort')
-  await expect(modelButton(page)).toContainText('Sonnet 5.5High')
+  await expect(modelButton(page)).toContainText('Sonnet 5.5 High')
   // It was saved with the chat: the menu shows it again after reopening.
   await openEffort(page)
   await expect(page.getByRole('menuitemradio', { name: 'High' })).toBeChecked()
