@@ -52,6 +52,8 @@ test('update: offer, Update, updating, then running the new version', async ({ p
   const errors = await open(page, '/inbox')
   await page.getByRole('button', { name: 'Update', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Update', exact: true })).toBeHidden()
+  // The folded card already says an update is running, without opening it.
+  await expect(page.getByRole('article', { name: /^Update available: 0\.2\.0/ }).getByText(/^Updating to 0\.2\.0\.\.\./)).toBeVisible()
   // The progress line is in the opened card.
   await page.getByRole('button', { name: /^Update available: 0\.2\.0/ }).click()
   await expect(page.getByText(/Conker is switching to the new version/)).toBeVisible()
