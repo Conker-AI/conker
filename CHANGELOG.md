@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.5.3
+
+Beta build from main. Changes since the last tag:
+
+- docs: 4-running.md 464 -> 266 lines, status page current (#386)
+- types: tests group 2 baseline 33 -> 0 (#389)
+
 ## 0.5.0
 
 - **Refresh everything, and a release check when you enter.** A refresh button beside Ask Conker reads every screen again and asks the server to look for a new Conker release now (not only once a day); a found release shows as a notice with a View button and as the card in the Inbox. Opening the app, or coming back after five minutes, does the quiet part by itself and never reloads or remounts anything while you have unsaved work or a chat is sending. A window left open across an update reloads once when its files are gone. (#377)
