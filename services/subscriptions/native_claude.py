@@ -257,7 +257,7 @@ class Claude:
         ]
         if cancellation:
             cancellation.check()
-        process = subprocess.Popen(
+        process: Any = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
