@@ -10,7 +10,7 @@ while the daily spending cap is off, and every paid call of a role passes that c
 import re
 import uuid
 
-from scripts.conker_context import pi_call
+from scripts.cli.conker_context import pi_call
 
 TEAM_ID = re.compile(r"team_[0-9a-f]{32}")
 RUN_ID = re.compile(r"teamrun_[0-9a-f]{32}")

@@ -10,8 +10,8 @@ import re
 import sys
 from pathlib import Path
 
-from scripts.conker_context import pi_call
-from scripts.conker_inputs import read_text
+from scripts.cli.conker_context import pi_call
+from scripts.cli.conker_inputs import read_text
 
 TEMPLATE_ID = r"(?:tpl_[0-9a-f]{32}|starter-[a-z0-9]+(?:-[a-z0-9]+)*)"
 FIELDS_LIMIT = 64000

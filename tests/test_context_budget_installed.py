@@ -118,7 +118,8 @@ def test_a_concurrent_change_saves_nothing_and_says_so(pi, capsys):
 
 def install(ubuntu_cli):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"
-    for name in ("conker_context.py", "conker_inputs.py", "context_cli.py"):
+    for name in ("cli/conker_context.py", "cli/conker_inputs.py", "context_cli.py"):
+        (scripts / name).parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
 
 

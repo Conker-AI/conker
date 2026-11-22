@@ -1,6 +1,6 @@
 """conker workflow: describe a workflow in words, review the draft, then publish it.
 
-Drafting is a tool request in Pi (POST /tool-drafts, scripts/tool_drafts.py): `draft` is
+Drafting is a tool request in Pi (POST /tool-drafts, scripts/cli/tool_drafts.py): `draft` is
 `conker tool draft`, and `from-chat` files one from your own message in a chat. Pi drafts it in
 the background and the draft waits in the Inbox; `dismiss` declines such a request. ToolGate
 stores drafts in its editor and validates them: `list`, `show` and `publish` work on those.
@@ -15,7 +15,7 @@ from collections.abc import Set as AbstractSet
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
-from scripts import tool_drafts
+from scripts.cli import tool_drafts
 
 DRAFT_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")

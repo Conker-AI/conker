@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from scripts import conker as cli
-from scripts.conker_inbox import _format_time, render
+from scripts.cli.conker_inbox import _format_time, render
 
 
 @pytest.fixture

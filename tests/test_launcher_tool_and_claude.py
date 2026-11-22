@@ -40,7 +40,8 @@ else:
 )
 def test_tool_draft_files_the_request_in_pi_and_waits_for_it(ubuntu_cli, tmp_path):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"
-    for name in ("tool_drafts.py", "tool_draft_cli.py"):
+    for name in ("cli/tool_drafts.py", "tool_draft_cli.py"):
+        (scripts / name).parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
     fake, state = tmp_path / "fake_pi.py", tmp_path / "pi-calls.json"
     fake.write_text(FAKE_PI, encoding="utf-8")
@@ -79,7 +80,8 @@ def test_tool_draft_files_the_request_in_pi_and_waits_for_it(ubuntu_cli, tmp_pat
 
 def test_tool_draft_checks_its_arguments_before_docker(ubuntu_cli):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"
-    for name in ("tool_drafts.py", "tool_draft_cli.py"):
+    for name in ("cli/tool_drafts.py", "tool_draft_cli.py"):
+        (scripts / name).parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
     assert ubuntu_cli("tool").returncode == 2
     assert ubuntu_cli("tool", "draft", "x", "--request-id", "short").returncode == 2

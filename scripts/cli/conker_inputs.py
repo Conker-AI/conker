@@ -277,7 +277,7 @@ def history_query(values):
 
 def codex_sessions() -> ModuleType:
     """native_codex_sessions, which lives with the subscriptions image (services/subscriptions)."""
-    folder = str(Path(__file__).resolve().parents[1] / "services" / "subscriptions")
+    folder = str(Path(__file__).resolve().parents[2] / "services" / "subscriptions")
     if folder not in sys.path:
         sys.path.append(folder)
     return importlib.import_module("native_codex_sessions")

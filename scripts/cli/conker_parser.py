@@ -5,18 +5,18 @@ from pathlib import Path
 
 from conker_config import register as register_config
 
-from scripts.assistant_imports import register as register_import
-from scripts.conker_agents import register as register_agents
-from scripts.conker_chat import register as register_chat
-from scripts.conker_context import register as register_context
-from scripts.conker_files import register as register_files
-from scripts.conker_inbox import register as register_inbox
-from scripts.conker_loops import register as register_loops
-from scripts.conker_messages import register as register_message
-from scripts.conker_prompt import register as register_prompt
-from scripts.conker_spending import add_parser as register_spending
-from scripts.conker_workflows import register as register_workflows
-from scripts.tool_drafts import register as register_tool
+from scripts.cli.assistant_imports import register as register_import
+from scripts.cli.conker_agents import register as register_agents
+from scripts.cli.conker_chat import register as register_chat
+from scripts.cli.conker_context import register as register_context
+from scripts.cli.conker_files import register as register_files
+from scripts.cli.conker_inbox import register as register_inbox
+from scripts.cli.conker_loops import register as register_loops
+from scripts.cli.conker_messages import register as register_message
+from scripts.cli.conker_prompt import register as register_prompt
+from scripts.cli.conker_spending import add_parser as register_spending
+from scripts.cli.conker_workflows import register as register_workflows
+from scripts.cli.tool_drafts import register as register_tool
 
 
 def build_parser(description):

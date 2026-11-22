@@ -18,8 +18,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import import_cli
 
-from scripts import assistant_imports
 from scripts import conker as cli
+from scripts.cli import assistant_imports
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT = json.dumps([{"uuid": "k1", "name": "Essay", "chat_messages": []}]).encode()
@@ -158,7 +158,7 @@ def test_oversized_and_missing_exports_are_refused_before_pi_is_called(tmp_path,
 
 
 def test_the_parser_takes_preview_or_yes_but_not_both(capsys):
-    from scripts import conker_parser
+    from scripts.cli import conker_parser
 
     parser = conker_parser.build_parser("conker")
     parsed = parser.parse_args(["import", "chatgpt", "export.zip"])
@@ -254,7 +254,8 @@ sys.stdout.write("200\\n" + os.environ["FAKE_PI_ANSWER"])
 )
 def test_installed_launcher_previews_through_the_pi_container(ubuntu_cli, tmp_path, export):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"
-    for name in ("assistant_imports.py", "import_cli.py"):
+    for name in ("cli/assistant_imports.py", "import_cli.py"):
+        (scripts / name).parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
     fake, state = tmp_path / "fake_pi.py", tmp_path / "pi-call.json"
     fake.write_text(FAKE_PI, encoding="utf-8")
