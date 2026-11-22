@@ -1,0 +1,17 @@
+# gitleaks: the default rules, plus the false positives below. Each entry names a proven fake value.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+# The workspace tests check that an install keeps the owner's existing keys. Their stand-in keys
+# are made-up strings ("private-<name>-retained-123456", "owner-existing-key-1234567890123456"),
+# not keys any service ever issued. Only these values, only in these two files.
+description = "Fake keys in the workspace test fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^tests/test_workspace_(memory|search)\.py$''']
+regexes = [
+  '''^private-[a-z-]+-retained-123456$''',
+  '''^owner-existing-key-1234567890123456$''',
+]
