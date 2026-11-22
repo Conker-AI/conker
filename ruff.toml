@@ -34,5 +34,5 @@ ignore = [
 "tests/*" = ["N802", "RUF012", "F811"]  # F811: pytest fixtures are imported, then requested by name
 
 [format]
-# Formatting would push these past the 600-line limit; split them, then drop the entry.
-exclude = ["deploy/ubuntu/prepare.py", "tests/test_installer.py", "tests/test_release_acceptance.py"]
+# Formatting would push this past the 600-line limit; split it, then drop the entry.
+exclude = ["deploy/ubuntu/prepare.py"]
