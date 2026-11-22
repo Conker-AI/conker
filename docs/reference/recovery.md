@@ -295,7 +295,7 @@ does not reconcile data and is not a supported recovery procedure.
 
 ```sh
 python3 -m pip install -r requirements-dev.txt
-python3 -m pytest tests/test_recovery.py -q
+python3 -m pytest tests/test_recovery.py tests/test_recovery_snapshots.py tests/test_recovery_restore.py -q
 CONKER_RECOVERY_DOCKER=1 python3 -m pytest tests/test_recovery_docker.py -q
 ```
 
