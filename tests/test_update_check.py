@@ -250,3 +250,41 @@ def test_a_report_the_inbox_could_not_take_exits_3_not_1(tmp_path, monkeypatch, 
     )
     assert code == 3  # GitHub answered: the host helper retries sooner than after exit 1
     assert "could not tell the Inbox" in capsys.readouterr().err
+
+
+def beta_page(version, prerelease=True):
+    value = page("v" + version)
+    value["prerelease"] = prerelease
+    return value
+
+
+def test_the_beta_channel_takes_the_newest_version_including_prereleases():
+    listing = [beta_page("0.5.2"), beta_page("0.5.10"), {"tag_name": "nightly"}, page("v0.5.0")]
+    opener = Opener(json.dumps(listing).encode())
+    found = update_check.latest_release(opener, channel="beta")
+    assert found is not None and found["version"] == "0.5.10"
+    assert opener.requests[0].full_url == update_check.RELEASE_LIST
+
+
+def test_the_stable_channel_still_refuses_a_prerelease():
+    opener = Opener(json.dumps(beta_page("0.5.2")).encode())
+    with pytest.raises(update_check.CheckError):
+        update_check.latest_release(opener)
+
+
+def test_the_channel_is_stable_unless_the_owner_set_beta(tmp_path):
+    assert update_check.read_channel(tmp_path) == "stable"
+    (tmp_path / "channel").write_text("beta\n", encoding="utf-8")
+    assert update_check.read_channel(tmp_path) == "beta"
+    (tmp_path / "channel").write_text("whatever", encoding="utf-8")
+    assert update_check.read_channel(tmp_path) == "stable"
+
+
+def test_set_channel_writes_the_file_and_the_check_then_reads_beta(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(update_check, "latest_release", lambda opener=None, channel="stable": seen.append(channel))
+    args = ["--root", str(tmp_path), "--source", str(source(tmp_path / "src", "0.5.0")), "--layout", "ubuntu"]
+    assert update_check.main([*args, "--set-channel", "beta"]) == 0
+    assert (tmp_path / "state" / "update" / "channel").read_text(encoding="utf-8").strip() == "beta"
+    update_check.main(args)
+    assert seen == ["beta"]

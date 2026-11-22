@@ -24,6 +24,9 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 RELEASES = "https://api.github.com/repos/Conker-AI/conker/releases/latest"
+# The beta channel also sees pre-releases (cut from every green main, .github/workflows/beta.yml).
+RELEASE_LIST = "https://api.github.com/repos/Conker-AI/conker/releases?per_page=15"
+CHANNELS = ("stable", "beta")
 # The commit a release tag names, as 40 hex digits (Accept: application/vnd.github.sha).
 TAG_COMMIT = "https://api.github.com/repos/Conker-AI/{repository}/commits/v{version}"
 # The versions.env a Conker commit holds (Accept: application/vnd.github.raw).
@@ -94,14 +97,14 @@ def _notes(body: object) -> str:
     return kept + "\n\n(The full notes are on the release page.)"
 
 
-def parse_release(value: object) -> dict:
+def parse_release(value: object, *, allow_prerelease: bool = False) -> dict:
     """The fields Conker uses, checked; anything else on the page is ignored."""
     if not isinstance(value, dict):
         raise CheckError("The release answer was not an object.")
     tag = value.get("tag_name")
     if not isinstance(tag, str) or not tag.startswith("v") or not VERSION.fullmatch(tag[1:]):
         raise CheckError("The latest release is not named vX.Y.Z.")
-    if value.get("draft") or value.get("prerelease"):
+    if value.get("draft") or (value.get("prerelease") and not allow_prerelease):
         raise CheckError("The latest release is a draft or a pre-release.")
     if value.get("html_url") != RELEASE_PAGE + tag:
         raise CheckError("The latest release page is not Conker's.")
@@ -114,10 +117,14 @@ def parse_release(value: object) -> dict:
     }
 
 
-def latest_release(opener=None) -> dict | None:
-    """The newest published release, read without a key; None when none is published yet."""
+def latest_release(opener=None, channel: str = "stable") -> dict | None:
+    """The newest published release, read without a key; None when none is published yet.
+
+    The beta channel reads the release list and takes the newest version, pre-releases included;
+    an entry that is not a Conker release is skipped there, not fatal."""
+    beta = channel == "beta"
     request = Request(
-        RELEASES,
+        RELEASE_LIST if beta else RELEASES,
         headers={
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -136,9 +143,29 @@ def latest_release(opener=None) -> dict | None:
     if len(raw) > MAX_ANSWER:
         raise CheckError("The release answer was too large.")
     try:
-        return parse_release(json.loads(raw))
+        document = json.loads(raw)
     except (ValueError, UnicodeDecodeError):
         raise CheckError("The release answer was not JSON.") from None
+    if not beta:
+        return parse_release(document)
+    if not isinstance(document, list):
+        raise CheckError("The release list was not a list.")
+    found = []
+    for entry in document:
+        try:
+            found.append(parse_release(entry, allow_prerelease=True))
+        except CheckError:
+            continue
+    return max(found, key=lambda release: version_key(release["version"])) if found else None
+
+
+def read_channel(directory: Path) -> str:
+    """`beta` only when the owner set it (`--set-channel beta`); anything else is stable."""
+    try:
+        value = (directory / "channel").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "stable"
+    return value if value in CHANNELS else "stable"
 
 
 def _read(url: str, accept: str, limit: int, what: str, opener=None) -> bytes:
@@ -413,10 +440,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--layout", choices=("ubuntu", "repository"), required=True)
     parser.add_argument("--report", action="store_true", help="also tell Pi (the Inbox)")
     parser.add_argument("--json", action="store_true", help="print the result as JSON")
+    parser.add_argument("--set-channel", choices=CHANNELS, help="follow stable releases or beta builds, then stop")
     args = parser.parse_args(argv)
     failures = (CheckError, OSError, subprocess.SubprocessError)
+    if args.set_channel:
+        directory = update_directory(args.root, args.layout)
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "channel").write_text(f"{args.set_channel}\n", encoding="utf-8")
+        print(f"Update channel: {args.set_channel}.")
+        return 0
     try:
-        result = check(args.source)
+        try:
+            channel = read_channel(update_directory(args.root, args.layout))
+        except (OSError, subprocess.SubprocessError):
+            channel = "stable"  # no update folder yet (a checkout that is not one): the stable path says why
+        result = check(args.source) if channel == "stable" else check(args.source, lambda: latest_release(channel=channel))
         if args.layout == "ubuntu":  # before Pi offers it, so the Inbox's Update finds it
             save_offers(update_directory(args.root, args.layout), result)
     except failures as error:
