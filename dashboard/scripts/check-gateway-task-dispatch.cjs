@@ -18,7 +18,7 @@ const { taskDispatchProblem, prepareTaskDispatch, readTaskDispatchSources, visib
 const { createGatewayRuntimeWorkspaceState, canSubmitRuntime, canReleaseTaskConflict, recoverSubmissionDraft } = load('src/components/gateway/runtime-state.ts')
 const { createGatewayRuntimeClient } = load('src/lib/gateway/runtime.ts')
 const { GatewayError } = load('src/lib/gateway/transport.ts')
-const runtimeWorkspace = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
+const runtimeWorkspace = ['runtime-workspace.tsx', 'runtime-chat-start.ts', 'runtime-submissions.ts', 'new-chat-view.tsx', 'open-chat-view.tsx'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}`), 'utf8')).join('\n')
 assert.match(runtimeWorkspace, /dispatched = true\s+if \(prepared\)[^\n]+open: false[^\n]+\n\s+setRejected/,
   'A dispatched task must reveal the streaming transcript and Stop control before waiting for the submission response')
 assert.match(runtimeWorkspace, /if \(!dispatched \|\| error instanceof RuntimeMutationError && error.outcome === 'rejected' \|\| error instanceof GatewayError && \['validation', 'configuration', 'too-large'\]\.includes\(error.kind\)\) \{\s+if \(prepared\)[^\n]+open: true/,

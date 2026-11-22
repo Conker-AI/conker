@@ -56,7 +56,7 @@ for (const broken of [
   assert.deepEqual(await client.propose('Best laptop?', { sessionId: 'ses_1', harnessDisabled: true }), proposal)
   assert.deepEqual(calls[0], { target: '/api/pi/models/auto-settings', options: { method: 'POST', body: { text: 'Best laptop?', session_id: 'ses_1', harness_disabled: true } } })
 
-  const workspace = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
+  const workspace = ['runtime-workspace.tsx', 'runtime-chat-start.ts', 'runtime-submissions.ts', 'new-chat-view.tsx', 'open-chat-view.tsx'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}`), 'utf8')).join('\n')
   assert.equal((workspace.match(/<ComposerModeProvider /g) ?? []).length, 2, 'Both composers carry the mode state')
   assert.equal((workspace.match(/<ModePresetControl \/>/g) ?? []).length, 2, 'Both composers carry the presets')
   for (const chip of ['ThinkControl', 'SearchControl']) assert.equal((workspace.match(new RegExp(`<${chip}[ />]`, 'g')) ?? []).length, 2, `Both composers carry the ${chip} chip`)

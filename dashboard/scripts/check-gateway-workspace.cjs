@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
-const workspaceSource = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.resolve(__dirname, `../src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
+const workspaceSource = ['runtime-workspace.tsx', 'runtime-chat-start.ts', 'runtime-submissions.ts', 'new-chat-view.tsx', 'open-chat-view.tsx'].map(name => fs.readFileSync(path.resolve(__dirname, `../src/components/gateway/${name}`), 'utf8')).join('\n')
 const file = path.resolve(__dirname, '../src/components/gateway/runtime-state.ts')
 const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const loaded = { exports: {} }

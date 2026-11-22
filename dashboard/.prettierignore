@@ -166,3 +166,11 @@ src/lib/gateway/owner.ts
 src/lib/gateway/proposals.ts
 src/settings/access-blocks.tsx
 src/settings/blocks.tsx
+# Moved verbatim out of runtime-workspace.tsx, fake-gateway.ts and control.ts (kept as a reviewable move); check scripts also match some of them as text.
+src/components/gateway/runtime-chat-start.ts
+src/components/gateway/runtime-submissions.ts
+src/dev/fake-gateway-agents.ts
+src/dev/fake-gateway-projects.ts
+src/dev/fake-gateway-search.ts
+src/dev/fake-gateway-usage.ts
+src/lib/gateway/control-schemas.ts

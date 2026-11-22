@@ -4,7 +4,6 @@
  * the real screens and validators run unchanged. Never imported by the production entry.
  */
 import { GatewayError } from '@/lib/gateway/transport'
-import { searchSources, type SearchResult, type SearchSettings } from '@/lib/gateway/search'
 import { createFakeRecallNotices } from './fake-gateway-recall'
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
@@ -25,6 +24,10 @@ import { createFakeTeams } from './fake-gateway-teams'
 import { createFakeTasks } from './fake-gateway-tasks'
 import { createFakeLibrary } from './fake-gateway-library'
 import { createFakeJobs } from './fake-gateway-jobs'
+import { createFakeProjects } from './fake-gateway-projects'
+import { createFakeAgents } from './fake-gateway-agents'
+import { createFakeSearch } from './fake-gateway-search'
+import { fakeTurnUsage } from './fake-gateway-usage'
 import { withAgentTools } from './fake-gateway-agent-steps'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 import { previewComposerDrafts } from './fake-gateway-resume'
@@ -104,11 +107,6 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       action: ['unreplied', 'unknown', 'approval', 'interrupted-acted'].includes(outcomeScenario) ? { id: 'act_preview_outcome', state: outcomeScenario === 'unknown' ? 'outcome_unknown' : outcomeScenario === 'approval' ? 'awaiting_approval' : 'completed', job_id: null } : null,
       approval_request_id: outcomeScenario === 'approval' ? 'req_email_coach' : null })
   }
-  let searchSettings: SearchSettings = { revision: 0, configuration: { sources: [...searchSources], exactText: true, semantic: false, reranking: false } }
-  try {
-    const value = JSON.parse(globalThis.localStorage?.getItem('conker-preview-search-settings') ?? 'null') as SearchSettings | null
-    if (value && Number.isInteger(value.revision) && value.revision >= 0 && Array.isArray(value.configuration?.sources) && value.configuration.sources.every(source => searchSources.includes(source)) && typeof value.configuration.exactText === 'boolean') searchSettings = { revision: value.revision, configuration: { ...value.configuration, semantic: false, reranking: false } }
-  } catch { /* Preview preferences are optional; malformed storage uses safe defaults. */ }
   const composerDrafts = new Map<string, Json>(previewComposerDrafts(now, previewSessions))
   const draftStarts = new Map<string, Json>()
   const emptyComposerDraft = (key: string): Json => ({ schemaVersion: 1, session_id: key === 'new' ? null : key.split('/')[0], task_id: key.split('/')[1] ?? null, content_status: 'available', revision: 0, text: '', updated_at: null, model_id: null, skill_ids: [], think: false, research_mode: 'off', ...(key === 'new' ? { title: '', agent_id: null, privacy: {} } : {}) })
@@ -134,45 +132,17 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     { id: 'email.send', name: 'Send email', description: 'Sends an email. Always asks you first.', inputs: [{ name: 'to', type: 'string', required: true }, { name: 'subject', type: 'string' }, { name: 'body', type: 'string' }] },
     { id: 'research.search', name: 'Web search', description: 'Searches the web and returns short, sourced results.', inputs: [{ name: 'query', type: 'string', required: true }] },
   ]
-  const agentProfile = (id: string, kind: 'companion' | 'agent', name: string, role: string, instructions: string): Json => ({
-    schemaVersion: 1, id, kind, revision: 1, configuration: { name, role, instructions, modelId: null, toolIds: [], memory: { scope: 'conversation', memoryIds: [] } },
-    created_at: now() - 7200, updated_at: now() - 7200, archived_at: null, change_kind: 'created', authority: 'none', execution: 'not-integrated', reference_validation: 'not-performed',
-  })
-  const agents: Json[] = [
-    agentProfile('companion', 'companion', 'Conker', 'Your daily companion', 'Help the owner think clearly, plan realistically, and stay in control.'),
-    agentProfile(`agent_${'1'.repeat(32)}`, 'agent', 'Research partner', 'Focused research and synthesis', 'Investigate a question, distinguish evidence from inference, and return concise sourced findings.'),
-  ]
+  const { handle: agentsHandle, agents } = createFakeAgents(now, fail, () => ++counter)
   const charactersHandle = createFakeCharacters(now, fail)
   const terminalHandle = createFakeTerminal(fail)
-  const projectView = (id: string, revision: number, fields: Json, links: Json[] = [], archivedAt: number | null = null): Json => ({
-    schemaVersion: 1, id, revision, ...fields, createdAt: now() - 5400, updatedAt: now() - 900, archivedAt, links,
-    authority: 'none', contentIncluded: false, grantsInherited: false,
-  })
-  const projects: Json[] = [projectView(`project_${'2'.repeat(32)}`, 1, {
-    name: 'School and judo', description: 'Plans, deadlines, and training commitments that shape the week.',
-    instructions: 'Keep school deadlines realistic around Tuesday and Thursday training. Prefer short morning study blocks.',
-  }, [{ reference: { kind: 'conversation', sessionId: previewSessions.week }, mode: 'live-reference', snapshot: { originSessionId: previewSessions.week, linkedAt: now() - 3600 }, availability: 'available', label: 'Plan my week', labelSource: 'live-source', privacy: { memoryDisabled: false, harnessDisabled: false, incognito: false } }])]
-  const artifactView = (id: string, title: string, content: Json, createdAt = iso(now() - 4200)): Json => ({
-    schemaVersion: 1, id, title, revision: 1, createdAt, updatedAt: createdAt, archivedAt: null,
-    provenance: 'pi', origin: 'owner-authored', source: null, task: null, availability: 'available', privacy: null,
-    privateOrigin: false, taskAvailability: 'none', authority: 'none', execution: 'not-wired', contentIncluded: true,
-    versionCount: 1, currentVersion: 1,
-    versions: [{ version: 1, title, content, createdAt, author: 'owner', note: 'Created by owner.', citations: [] }],
-  })
-  const artifacts: Json[] = [artifactView(`artifact_${'3'.repeat(32)}`, 'Weekly plan', {
-    kind: 'markdown', text: '# This week\n\n- Finish the physics worksheet by Friday.\n- Keep Tuesday and Thursday homework light around judo.\n- Use one short morning revision block.',
-  })]
-  const artifactSummary = (item: Json): Json => {
-    const { versions, ...summary } = item
-    void versions
-    return { ...summary, contentIncluded: false }
-  }
+  const { handle: projectsHandle, projects, artifacts } = createFakeProjects(now, iso, fail, () => ++counter, sessions, previewSessions.week)
   const { handle: jobsHandle, jobs } = createFakeJobs(now, fail, () => ++counter)
   const teamsHandle = createFakeTeams(now, fail, () => ++counter)
   const tasksHandle = createFakeTasks(now, fail)
   const libraryHandle = createFakeLibrary(now, fail)
   const statusHandle = createFakeStatus(now, iso, fail)
   const sessionSettings = new Map<string, Json>()
+  const searchHandle = createFakeSearch(fail, { sessions, sessionSettings, memories, projects, artifacts, agents, tools, jobs })
   const memory = { configured: true, pending_ingestion: 0, blocked_delivery: 0, pending_deletion: 0, notices: [] }
   const find = (id: string) => sessions.find(item => item.id === id) ?? fail(404)
 
@@ -274,47 +244,8 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       }
       return structuredClone(saved)
     }
-    if (method === 'GET' && ['/api/control/pi/search', '/api/control/pi/search/settings'].includes(path) && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'search') fail(503)
-    if (path === '/api/control/pi/search/settings') {
-      if (method === 'POST') {
-        if (options.body?.expected_revision !== searchSettings.revision) fail(409)
-        const configuration = options.body?.configuration as SearchSettings['configuration']
-        if (!configuration || configuration.semantic || configuration.reranking) fail(422)
-        searchSettings = { revision: searchSettings.revision + 1, configuration }
-        globalThis.localStorage?.setItem('conker-preview-search-settings', JSON.stringify(searchSettings))
-      }
-      return searchSettings
-    }
-    if (path === '/api/control/pi/search/capabilities') return { sources: [...searchSources], exactText: true, semanticSources: [], reranking: false, indexing: 'source-owned', scanLimit: 200 }
-    if (path === '/api/control/pi/search' && method === 'GET') {
-      const query = String(options.query?.q ?? '').trim().toLocaleLowerCase(), stage = String(options.query?.stage ?? 'metadata')
-      const results: SearchResult[] = []
-      const add = (source: SearchResult['source'], recordId: string, title: string, text: string, href: string, role: SearchResult['role'] = null) => {
-        if (!searchSettings.configuration.sources.includes(source) || !query || !(stage === 'text' ? text : `${title}\n${text}`).toLocaleLowerCase().includes(query)) return
-        const position = Math.max(0, text.toLocaleLowerCase().indexOf(query) - 80)
-        results.push({ id: `${source}:${recordId}:${stage}`, source, recordId, title, excerpt: text.slice(position, position + 400), href, role, matchType: stage === 'text' ? 'text' : 'metadata' })
-      }
-      if (stage === 'metadata' || stage === 'text' && searchSettings.configuration.exactText) {
-        for (const session of sessions) {
-          const privacy = (sessionSettings.get(session.id)?.settings as Json | undefined)?.privacy as Json | undefined
-          if (privacy?.memoryDisabled || privacy?.harnessDisabled) continue
-          if (stage === 'text') for (const message of session.messages) if (message.role !== 'tool') add('conversations', message.id, session.title, message.content, `/chat?session=${session.id}&message=${message.id}`, message.role)
-          else add('conversations', session.id, session.title, '', `/chat?session=${session.id}`)
-        }
-        for (const item of memories) add('memory', item.id, item.title, item.preview, `/memory?view=database&record=${item.id}&kind=${item.type}`)
-        for (const item of projects) add('projects', String(item.id), String(item.name), String(stage === 'text' ? item.instructions : item.description), `/projects/${item.id}`)
-        for (const item of artifacts) {
-          const versions = item.versions as Json[], body = versions[versions.length - 1]?.content as Json
-          if (item.availability === 'available' && !item.privateOrigin) add('artifacts', String(item.id), String(item.title), stage === 'text' && ['markdown', 'code'].includes(String(body?.kind)) ? String(body.text) : '', `/artifacts/${item.id}`)
-        }
-        for (const item of agents) { const config = item.configuration as Json; add('agents', String(item.id), String(config.name), String(stage === 'text' ? config.instructions : config.role), item.id === 'companion' ? '/settings/companion?tab=harness' : `/agents/${item.id}/edit`) }
-        for (const item of tools) add('tools', item.id, item.name, item.description, `/tools?tool=${encodeURIComponent(item.id)}`)
-        for (const item of jobs) { const config = item.definition as Json; add('jobs', String(item.id), String(config.name), String(config.state), `/jobs/${item.id}`) }
-      }
-      const offset = Number(options.query?.cursor ?? 0)
-      if (!Number.isInteger(offset) || offset < 0) fail(422)
-      return { stage, results: results.slice(offset, offset + 30), nextCursor: results.length > offset + 30 ? String(offset + 30) : null, coverage: stage === 'semantic' ? [] : searchSettings.configuration.sources.map(source => ({ source, status: 'searched' })), ranking: { status: 'disabled' } }
-    }
+    const searchHandled = searchHandle(path, method, options)
+    if (searchHandled !== undefined) return searchHandled
     // Failure-path switch: sessionStorage 'conker-fake-fail' = 'sessions' makes the chat list fail.
     if (method === 'GET' && path === '/api/pi/sessions' && globalThis.sessionStorage?.getItem('conker-fake-fail') === 'sessions') fail(503)
     const terminalHandled = terminalHandle(path, method, options)
@@ -387,22 +318,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/usage$/)) && method === 'GET') {
       const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
       const turn = owner.turns.find(item => item.id === match![1])!
-      const legacy = owner.id === previewSessions.sky
-      const attempts = [
-        { id: 'usage_01', lane: 'foreground', role: 'routing', provider_id: 'ollama-local', model_id: 'router', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at), ended_at: Number(turn.started_at) + 0.2, elapsed_ms: 200, input_tokens: 48, output_tokens: 8, cached_tokens: null, cost_usd: null },
-        { id: 'usage_02', lane: 'foreground', role: 'answer', provider_id: 'ollama-local', model_id: 'talking', provider: 'ollama', model: 'qwen2.5:3b', actual_provider: 'ollama', actual_model: 'qwen2.5:3b', status: 'reported', failure_kind: null, started_at: Number(turn.started_at) + 0.2, ended_at: Number(turn.started_at) + 2.4, elapsed_ms: 2200, input_tokens: 230, output_tokens: 80, cached_tokens: 0, cost_usd: null },
-        { id: 'usage_03', lane: 'thinking', role: 'thinking', provider_id: 'ollama-local', model_id: 'thinking', provider: 'ollama', model: 'qwen2.5:7b', actual_provider: null, actual_model: null, status: 'failed', failure_kind: 'preempted', started_at: Number(turn.started_at) + 0.4, ended_at: Number(turn.started_at) + 3, elapsed_ms: 2600, input_tokens: null, output_tokens: null, cached_tokens: null, cost_usd: null },
-      ]
-      const lane = (name: string) => {
-        const rows = attempts.filter(row => row.lane === name), fields = ['input_tokens', 'output_tokens', 'cached_tokens', 'cost_usd', 'summed_call_ms'] as const
-        const entries = fields.map(field => {
-          const values = rows.map(row => field === 'summed_call_ms' ? row.elapsed_ms : row[field]), missing = values.filter(value => value === null).length
-          return { field, known: values.reduce<number>((sum, value) => sum + (value ?? 0), 0), missing, complete: !legacy && missing === 0 }
-        })
-        return { attempt_count: rows.length, pending_count: 0, reported_count: rows.filter(row => row.status === 'reported').length, failed_count: rows.filter(row => row.status === 'failed').length,
-          totals: Object.fromEntries(entries.map(row => [row.field, row.complete ? row.known : null])), known_subtotal: Object.fromEntries(entries.map(row => [row.field, row.known])), complete: Object.fromEntries(entries.map(row => [row.field, row.complete])), unknown_counts: Object.fromEntries(entries.map(row => [row.field, row.missing])) }
-      }
-      return { schemaVersion: 1, turn_id: turn.id, session_id: owner.id, content_status: 'available', scope: 'turn_provider_attempts', coverage: legacy ? 'legacy_partial' : 'complete', foreground: lane('foreground'), thinking: lane('thinking'), attempts, attempts_truncated: false }
+      return fakeTurnUsage(turn, owner.id, owner.id === previewSessions.sky)
     }
     if ((match = path.match(/^\/api\/pi\/turns\/([^/]+)\/resume$/))) {
       const owner = sessions.find(item => item.turns.some(turn => turn.id === match![1])) ?? fail(404)
@@ -451,95 +367,10 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
       }
       return current
     }
-    if (path === '/api/control/pi/agents' && method === 'GET') return { schemaVersion: 1, results: agents }
-    if (path === '/api/control/pi/agents' && method === 'POST') {
-      const created = agentProfile(`agent_${(++counter).toString(16).padStart(32, '0')}`, 'agent', String(options.body?.name), String(options.body?.role), String(options.body?.instructions))
-      created.configuration = options.body ?? {}; agents.push(created); return created
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/agents\/(companion|agent_[0-9a-f]{32})$/)) && method === 'GET') return agents.find(item => item.id === match![1]) ?? fail(404)
-    if ((match = path.match(/^\/api\/control\/pi\/agents\/(companion|agent_[0-9a-f]{32})\/update$/)) && method === 'POST') {
-      const item = agents.find(row => row.id === match![1]) ?? fail(404)
-      if (item.revision !== options.body?.expected_revision || item.archived_at !== null) fail(409)
-      Object.assign(item, { revision: Number(item.revision) + 1, configuration: options.body?.configuration, updated_at: now(), change_kind: 'updated' })
-      return item
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/agents\/(agent_[0-9a-f]{32})\/archive$/)) && method === 'POST') {
-      const item = agents.find(row => row.id === match![1]) ?? fail(404)
-      if (item.revision !== options.body?.expected_revision) fail(409)
-      const archived = options.body?.archived === true
-      Object.assign(item, { revision: Number(item.revision) + 1, archived_at: archived ? now() : null, updated_at: now(), change_kind: archived ? 'archived' : 'restored' })
-      return item
-    }
-    if (path === '/api/control/pi/projects' && method === 'GET') return { schemaVersion: 1, results: projects, nextCursor: null }
-    if (path === '/api/control/pi/projects' && method === 'POST') {
-      const created = projectView(`project_${(++counter).toString(16).padStart(32, '0')}`, 1, options.body ?? {})
-      projects.push(created)
-      return created
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/projects\/(project_[0-9a-f]{32})$/)) && method === 'GET') return projects.find(item => item.id === match![1]) ?? fail(404)
-    if ((match = path.match(/^\/api\/control\/pi\/projects\/(project_[0-9a-f]{32})\/(update|archive|link|unlink)$/)) && method === 'POST') {
-      const item = projects.find(row => row.id === match![1]) ?? fail(404)
-      if (item.revision !== options.body?.expected_revision) fail(409)
-      const action = match[2]
-      if (action === 'update') Object.assign(item, options.body?.fields)
-      if (action === 'archive') item.archivedAt = options.body?.archived ? now() : null
-      if (action === 'link') {
-        const reference = options.body?.reference as Json, key = JSON.stringify(reference)
-        if ((item.links as Json[]).some(link => JSON.stringify(link.reference) === key)) fail(409)
-        const source = reference.kind === 'conversation' ? sessions.find(session => session.id === reference.sessionId) : null
-        ;(item.links as Json[]).push({ reference, mode: 'live-reference', snapshot: { originSessionId: source?.id ?? previewSessions.week, linkedAt: now() }, availability: source ? 'available' : 'unavailable', label: source?.title ?? 'Unavailable source', labelSource: source ? 'live-source' : 'unavailable', privacy: source ? { memoryDisabled: false, harnessDisabled: false, incognito: false } : null })
-      }
-      if (action === 'unlink') {
-        const key = JSON.stringify(options.body?.reference)
-        item.links = (item.links as Json[]).filter(link => JSON.stringify(link.reference) !== key)
-      }
-      item.revision = Number(item.revision) + 1
-      item.updatedAt = now()
-      return item
-    }
-    if (path === '/api/control/pi/artifacts' && method === 'GET') return { schemaVersion: 1, results: artifacts.map(artifactSummary), nextCursor: null }
-    if ((path === '/api/control/pi/artifacts' || path === '/api/control/pi/artifacts/from-message') && method === 'POST') {
-      const copied = path.endsWith('/from-message'), title = String(options.body?.title ?? 'Untitled artifact')
-      const content = copied
-        ? { kind: 'markdown', text: sessions.flatMap(item => item.messages).find(item => item.id === options.body?.messageId)?.content ?? 'Copied response' }
-        : options.body?.content as Json
-      const created = artifactView(`artifact_${(++counter).toString(16).padStart(32, '0')}`, title, content)
-      if (copied) Object.assign(created, {
-        origin: 'conversation-copy', source: { sessionId: options.body?.sessionId, messageId: options.body?.messageId },
-        privacy: { memoryDisabled: false, harnessDisabled: false, incognito: false },
-      })
-      artifacts.push(created)
-      return created
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/artifacts\/(artifact_[0-9a-f]{32})\/export$/)) && method === 'GET') {
-      const item = artifacts.find(row => row.id === match![1]) ?? fail(404), versions = item.versions as Json[]
-      const selected = versions.find(version => version.version === Number(options.query?.version ?? item.currentVersion)) ?? fail(404)
-      const content = selected.content as Json, kind = String(content.kind)
-      const text = kind === 'markdown' || kind === 'html' || kind === 'code' ? String(content.text) : JSON.stringify(content, null, 2)
-      const mime = kind === 'table' ? 'text/csv;charset=utf-8' : ['chart', 'diagram', 'media'].includes(kind) ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8'
-      return { schemaVersion: 1, artifactId: item.id, version: selected.version, filename: 'artifact.txt', mime, text, provenance: 'pi', privateOrigin: item.privateOrigin, authority: 'none', contentIncluded: true, execution: 'not-wired' }
-    }
-    if ((match = path.match(/^\/api\/control\/pi\/artifacts\/(artifact_[0-9a-f]{32})$/)) && method === 'GET') return artifacts.find(item => item.id === match![1]) ?? fail(404)
-    if ((match = path.match(/^\/api\/control\/pi\/artifacts\/(artifact_[0-9a-f]{32})\/(versions|restore|archive)$/)) && method === 'POST') {
-      const item = artifacts.find(row => row.id === match![1]) ?? fail(404)
-      if (item.revision !== options.body?.expected_revision) fail(409)
-      const versions = item.versions as Json[], action = match[2]
-      if (action === 'archive') item.archivedAt = options.body?.archived ? iso(now()) : null
-      else {
-        const source = action === 'restore' ? versions.find(version => version.version === options.body?.version) ?? fail(404) : null
-        const prior = versions.at(-1)!, number = Number(prior.version) + 1
-        const next = action === 'restore'
-          ? { ...structuredClone(source), version: number, createdAt: iso(now()), author: 'owner', note: `Restored version ${source!.version} as a new version.`, restoredFromVersion: source!.version }
-          : { version: number, title: options.body?.title ?? item.title, content: options.body?.content, createdAt: iso(now()), author: 'owner', note: options.body?.note ?? 'Edited by owner.', citations: options.body?.preserveCitations ? prior.citations ?? [] : [] }
-        versions.push(next)
-        item.title = next.title
-        item.versionCount = versions.length
-        item.currentVersion = number
-      }
-      item.revision = Number(item.revision) + 1
-      item.updatedAt = iso(now())
-      return item
-    }
+    const agentsHandled = agentsHandle(path, method, options)
+    if (agentsHandled !== undefined) return agentsHandled
+    const projectsHandled = projectsHandle(path, method, options)
+    if (projectsHandled !== undefined) return projectsHandled
     if (path.startsWith('/api/control/pi/jobs/agent') || path === '/api/owner/tool-settings' || path === '/api/owner/lockdown' || path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts') || path === '/api/control/pi/memory/remember' || path.startsWith('/api/control/pi/asks') || path.startsWith('/api/control/pi/owner/') || path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities' || /^\/api\/control\/pi\/jobs\/job_[0-9a-f]{32}\/(?:hook(\/revoke)?|adopt)$/.test(path)) return agentJobs(path, method, options.body, fail); seedAgentJobs(path); if (path === '/api/control/pi/jobs' && method === 'GET') return { schemaVersion: 1, results: jobs, nextCursor: null }
     const jobsHandled = jobsHandle(path, method, options)
     if (jobsHandled !== undefined) return jobsHandled
