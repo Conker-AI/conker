@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { plainWords } from '@/lib/plain-words'
 import { Link } from 'react-router-dom'
 import { AlertCircle, ArrowRight, Check, Circle, CircleDashed, Copy, MessageSquare, Minus, RefreshCw, ShieldCheck, Terminal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -282,7 +283,7 @@ function RehearsalControl({ client, onRecorded }: { client: GatewayControlClient
   return <div className="mt-5 space-y-4 border-t pt-4">
     <div className="divide-y rounded-md border">{rows.map(item => <div key={item.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 p-3">
       <span className={cn('mt-0.5 flex size-7 items-center justify-center rounded-full border text-muted-foreground', item.phase.state === 'complete' && 'border-primary bg-primary text-primary-foreground', ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) && 'border-destructive/50 text-destructive-foreground')}>{item.phase.state === 'complete' ? <Check className="size-4" /> : item.phase.state === 'awaiting_owner' ? <CircleDashed className="size-4" /> : ['refused', 'outcome_unknown', 'invalid_policy'].includes(item.phase.state) ? <AlertCircle className="size-4" /> : <Circle className="size-4" />}</span>
-      <div className="min-w-0"><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-medium">{item.title}</p><span className="text-xs text-muted-foreground">{item.phase.state === 'complete' ? 'Verified' : item.phase.state === 'awaiting_owner' ? 'Waiting for you' : item.phase.state === 'missing' ? 'Not yet' : 'Needs attention'}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{item.phase.detail}</p>
+      <div className="min-w-0"><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-medium">{item.title}</p><span className="text-xs text-muted-foreground">{item.phase.state === 'complete' ? 'Verified' : item.phase.state === 'awaiting_owner' ? 'Waiting for you' : item.phase.state === 'missing' ? 'Not yet' : 'Needs attention'}</span></div><p className="mt-1 text-xs leading-5 text-muted-foreground">{plainWords(item.phase.detail)}</p>
         {item.id === 'conversation' && item.phase.state === 'missing' && <Button className="mt-2" variant="outline" size="sm" render={<Link to="/chat" />}><MessageSquare />Open companion</Button>}
         {item.id === 'memory' && item.phase.state === 'missing' && <Button className="mt-2" variant="outline" size="sm" disabled={pending !== ''} onClick={() => void reviewMemory()}>{pending === 'memory' ? 'Recording…' : 'I reviewed memory setup'}</Button>}
         {item.id === 'approval' && item.phase.state === 'missing' && <Button className="mt-2" variant="outline" size="sm" disabled={pending !== ''} onClick={() => void startApproval()}>{pending === 'approval' ? 'Starting…' : 'Start approval check'}</Button>}
