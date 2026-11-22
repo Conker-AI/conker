@@ -64,7 +64,7 @@ def render(value):
             elif item["kind"] == "attention":
                 line = f"  {marker} {title}: {item.get('status', '')}"
             elif item["kind"] == "change-request":
-                filed = (item.get("source") or {}).get("requestKind")
+                filed = str((item.get("source") or {}).get("requestKind"))
                 line = f"  {marker} {title} · {REQUEST_KINDS.get(filed, 'request')}"
             elif item["kind"] == "plan" and item.get("resetsAt"):
                 line = f"  {marker} {title}, resets {_format_reset(item['resetsAt'], tz)}"

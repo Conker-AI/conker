@@ -16,6 +16,7 @@ import unicodedata
 from collections.abc import Mapping
 from contextlib import contextmanager, suppress
 from pathlib import Path
+from typing import IO, cast
 from urllib.parse import parse_qsl
 
 from chatgpt_provider import CODEX_VERSION
@@ -154,7 +155,7 @@ def _row(value):
         or provider != display(provider, 200)
     ):
         raise SessionError()
-    preview = display(value.get("preview"), MAX_STDOUT)
+    preview = cast(str, display(value.get("preview"), MAX_STDOUT))
     return {
         "id": identity,
         "name": display(value.get("name"), 300, nullable=True),
@@ -328,7 +329,9 @@ class Sessions:
                         process.wait(timeout=2)
                     except (OSError, subprocess.SubprocessError):
                         pass
-                for stream in (process.stdin, process.stdout, process.stderr):
+                for stream in cast(
+                    "tuple[IO[bytes], ...]", (process.stdin, process.stdout, process.stderr)
+                ):
                     stream.close()
                 with self.command_lock:
                     if self.process is process:

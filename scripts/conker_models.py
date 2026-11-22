@@ -7,10 +7,12 @@ model that is not in the catalogue or a change made after this command read the 
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 PATH = "/models/configuration"
 
 
-def set_role(request, config, role: str, model: str | None, backups: list[str] = ()) -> dict:
+def set_role(request, config, role: str, model: str | None, backups: Sequence[str] = ()) -> dict:
     saved = request(config, "pi", PATH)
     configuration = saved.get("configuration")
     if configuration is None:
