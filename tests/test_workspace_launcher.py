@@ -11,6 +11,8 @@ from typing import Any, cast
 
 import pytest
 
+from scripts import workspace_state as ownership
+
 SPEC = importlib.util.spec_from_file_location(
     "workspace_launcher", Path(__file__).resolve().parents[1] / "scripts/workspace.py"
 )
@@ -72,21 +74,21 @@ def test_gateway_without_a_certificate_yet_is_waited_for(tmp_path, monkeypatch):
 
 
 def test_unrelated_listener_is_never_adopted(tmp_path, monkeypatch):
-    monkeypatch.setattr(workspace, "STATE", tmp_path)
+    monkeypatch.setattr(ownership, "STATE", tmp_path)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         listener.listen()
-        monkeypatch.setattr(workspace, "PORTS", {"pi": listener.getsockname()[1]})
+        monkeypatch.setattr(ownership, "PORTS", {"pi": listener.getsockname()[1]})
         with pytest.raises(SystemExit, match="unrelated process"):
             workspace.owned_listener({}, "pi")
 
 
 def test_closed_port_does_not_require_a_pid(tmp_path, monkeypatch):
-    monkeypatch.setattr(workspace, "STATE", tmp_path)
+    monkeypatch.setattr(ownership, "STATE", tmp_path)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
-    monkeypatch.setattr(workspace, "PORTS", {"pi": port})
+    monkeypatch.setattr(ownership, "PORTS", {"pi": port})
     assert workspace.owned_listener({}, "pi") is False
 
 
@@ -100,7 +102,7 @@ def test_same_label_with_another_volume_is_rejected(tmp_path, monkeypatch):
         listener.bind(("127.0.0.1", 0))
         listener.listen()
         port = listener.getsockname()[1]
-        monkeypatch.setattr(workspace, "PORTS", {"postgres": port})
+        monkeypatch.setattr(ownership, "PORTS", {"postgres": port})
         details = [
             {
                 "State": {"Running": True},
@@ -117,7 +119,7 @@ def test_same_label_with_another_volume_is_rejected(tmp_path, monkeypatch):
             }
         ]
         monkeypatch.setattr(
-            workspace,
+            ownership,
             "run",
             lambda *a, **kw: "test" if "--format" in a else json.dumps(details),
         )
@@ -131,16 +133,16 @@ def test_same_label_with_another_volume_is_rejected(tmp_path, monkeypatch):
 def test_stale_pid_is_not_enough_to_adopt_a_listener(tmp_path, monkeypatch):
     (tmp_path / "pi").mkdir()
     (tmp_path / "pi/pid").write_text("123")
-    monkeypatch.setattr(workspace, "STATE", tmp_path)
+    monkeypatch.setattr(ownership, "STATE", tmp_path)
 
     def reject_identity(*args, **kwargs):
         raise subprocess.CalledProcessError(1, "identity check")
 
-    monkeypatch.setattr(workspace, "run", reject_identity)
+    monkeypatch.setattr(ownership, "run", reject_identity)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         listener.listen()
-        monkeypatch.setattr(workspace, "PORTS", {"pi": listener.getsockname()[1]})
+        monkeypatch.setattr(ownership, "PORTS", {"pi": listener.getsockname()[1]})
         with pytest.raises(SystemExit, match="not owned"):
             workspace.owned_listener({"python": "managed-python"}, "pi")
 
@@ -162,6 +164,10 @@ def starting_service(tmp_path, monkeypatch):
         monkeypatch.setattr(workspace, "ROOT", root)
         monkeypatch.setattr(workspace, "STATE", state)
         monkeypatch.setattr(workspace, "PORTS", {"pi": reserved.getsockname()[1]})
+        # The ownership checks look these up in their own module.
+        monkeypatch.setattr(ownership, "ROOT", root)
+        monkeypatch.setattr(ownership, "STATE", state)
+        monkeypatch.setattr(ownership, "PORTS", {"pi": reserved.getsockname()[1]})
         monkeypatch.setattr(workspace, "ORDER", ("pi",))
         # Use the base executable so Windows has no venv launcher descendant to orphan.
         process = subprocess.Popen(
@@ -223,7 +229,7 @@ def test_foreign_recorded_process_is_refused_even_without_listener(
     monkeypatch,
 ):
     config, process, _reserved = starting_service
-    monkeypatch.setattr(workspace, "ROOT", tmp_path / "another-workspace")
+    monkeypatch.setattr(ownership, "ROOT", tmp_path / "another-workspace")
     with pytest.raises(SystemExit, match="not owned"):
         workspace.owned_process(config, "pi")
     assert process.poll() is None
@@ -338,9 +344,9 @@ def test_postgres_ownership_does_not_depend_on_published_port(
             "Mounts": [{"Destination": "/var/lib/postgresql/data", "Name": "owned-volume"}],
         }
     ]
-    monkeypatch.setattr(workspace, "port_listening", lambda _service: listening)
+    monkeypatch.setattr(ownership, "port_listening", lambda _service: listening)
     monkeypatch.setattr(
-        workspace,
+        ownership,
         "run",
         lambda *a, **kw: "owned-postgres" if "--format" in a else json.dumps(details),
     )
@@ -348,20 +354,20 @@ def test_postgres_ownership_does_not_depend_on_published_port(
 
 
 def test_uninspectable_container_is_not_reported_stopped(monkeypatch):
-    monkeypatch.setattr(workspace, "port_listening", lambda _service: False)
+    monkeypatch.setattr(ownership, "port_listening", lambda _service: False)
 
     def failed(*_args, **_kwargs):
         raise subprocess.CalledProcessError(1, "docker")
 
-    monkeypatch.setattr(workspace, "run", failed)
+    monkeypatch.setattr(ownership, "run", failed)
     with pytest.raises(SystemExit, match="Could not inspect"):
         workspace.owned_process({"postgres_container": "owned-postgres"}, "postgres")
 
 
 @pytest.mark.parametrize("listening", [True, False])
 def test_missing_container_is_stopped_only_without_listener(monkeypatch, listening):
-    monkeypatch.setattr(workspace, "port_listening", lambda _service: listening)
-    monkeypatch.setattr(workspace, "run", lambda *_a, **_kw: "similarly-named-container")
+    monkeypatch.setattr(ownership, "port_listening", lambda _service: listening)
+    monkeypatch.setattr(ownership, "run", lambda *_a, **_kw: "similarly-named-container")
     if listening:
         with pytest.raises(SystemExit, match="unrelated process"):
             workspace.owned_process({"postgres_container": "owned-postgres"}, "postgres")
