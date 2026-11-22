@@ -9,6 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from scripts import local_stack, workspace
+from scripts import workspace_state as ownership
 from scripts.devstack import workspace_search as search
 
 
@@ -202,7 +203,7 @@ def test_an_owned_qdrant_container_is_recognised_by_label_port_and_volume(monkey
     def fake_run(*args, **options):
         return "q" if args[1] == "container" else json.dumps(details)
 
-    monkeypatch.setattr(workspace, "run", fake_run)
+    monkeypatch.setattr(ownership, "run", fake_run)
     settings = {"qdrant_container": "q", "qdrant_volume": "q"}
     assert workspace.container_state(settings, True, "qdrant") == "listening"
     details[0]["Mounts"][0]["Name"] = "someone-else"
